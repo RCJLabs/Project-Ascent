@@ -1,7 +1,9 @@
 import type { Program, ProgramId, ProgramStage } from '../types';
 import { BASE_CAMP } from './baseCamp';
+import { GRAVITY_DEFIED } from './gravityDefied';
 import { GROUND_ZERO } from './groundZero';
 import { IRON_GRIP } from './ironGrip';
+import { LOCKDOWN } from './lockdown';
 
 /**
  * The full catalog the port is working toward (PLAN.md §4.1). Ids are
@@ -23,7 +25,7 @@ export const PLANNED_PROGRAM_IDS: readonly ProgramId[] = [
 ];
 
 /** Programs converted to the new schema so far, in catalog order. */
-export const PROGRAMS: Program[] = [GROUND_ZERO, BASE_CAMP, IRON_GRIP];
+export const PROGRAMS: Program[] = [GROUND_ZERO, BASE_CAMP, GRAVITY_DEFIED, LOCKDOWN, IRON_GRIP];
 
 const BY_ID = new Map<ProgramId, Program>(PROGRAMS.map((p) => [p.id, p]));
 
@@ -41,4 +43,4 @@ export const STAGE_META: Record<ProgramStage, { label: string; blurb: string }> 
 
 export const STAGE_ORDER: ProgramStage[] = ['start', 'foundations', 'style', 'advanced', 'ongoing'];
 
-export { BASE_CAMP, GROUND_ZERO, IRON_GRIP };
+export { BASE_CAMP, GRAVITY_DEFIED, GROUND_ZERO, IRON_GRIP, LOCKDOWN };

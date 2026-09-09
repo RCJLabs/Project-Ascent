@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DRILLS, filterDrills, getDrill } from './drills';
 import { getMetric, METRICS } from './metrics';
 import { PROTOCOLS } from './protocols';
-import { BASE_CAMP, GROUND_ZERO, IRON_GRIP, PROGRAMS } from './programs';
+import { BASE_CAMP, GRAVITY_DEFIED, GROUND_ZERO, IRON_GRIP, LOCKDOWN, PROGRAMS } from './programs';
 import { parseCount, phaseForWeek } from './types';
 import { validateCatalog, validateProgram } from './validate';
 
@@ -197,6 +197,81 @@ describe('Base Camp', () => {
     const pull = broken.sessionTypes.find((t) => t.id === 'eng')!.blocks!.find((b) => b.id === 'pull')!;
     pull.perPhase['headspace']!.mergedInto = 'nope';
     expect(validateProgram(broken).join(' ')).toMatch(/merges into unknown block 'nope'/);
+  });
+});
+
+describe('Gravity Defied', () => {
+  it('drives two separate session types from the drill library', () => {
+    const drillDriven = GRAVITY_DEFIED.sessionTypes.filter((t) => t.drillsByWeek);
+    expect(drillDriven.map((t) => t.id)).toEqual(['tech', 'perf']);
+    // The two tracks of drills must not collide on any week.
+    for (let week = 1; week <= 12; week++) {
+      const ids = drillDriven.map((t) => t.drillsByWeek![week]);
+      expect(new Set(ids).size, `week ${week}`).toBe(2);
+    }
+  });
+
+  it('shares one armor prescription across all phases', () => {
+    const armor = GRAVITY_DEFIED.sessionTypes
+      .find((t) => t.id === 'eng')!
+      .blocks!.find((b) => b.id === 'armor')!;
+    const names = Object.values(armor.perPhase).map((p) => p.exercises.map((e) => e.name).join());
+    expect(new Set(names).size).toBe(1);
+    // ...while the coaching differs every phase.
+    const rationales = Object.values(armor.perPhase).map((p) => p.rationale);
+    expect(new Set(rationales).size).toBe(3);
+  });
+});
+
+describe('Lockdown', () => {
+  it('states its entry requirement as checkable data', () => {
+    expect(LOCKDOWN.prerequisites!.metrics).toEqual([{ metricId: 'max_boulder_grade', atLeast: 3 }]);
+    expect(LOCKDOWN.prerequisites!.note).toMatch(/V3/);
+  });
+
+  it('wires the static-strength protocols into its lock-off progression', () => {
+    const lockOff = LOCKDOWN.sessionTypes
+      .find((t) => t.id === 'sa')!
+      .blocks!.find((b) => b.id === 'lock_off')!;
+    expect(Object.values(lockOff.perPhase).map((p) => p.exercises[0]!.protocolId)).toEqual([
+      'frenchies',
+      'offset_lock_offs',
+      'one_arm_negatives',
+    ]);
+  });
+
+  it('caps and spaces the heavy session', () => {
+    const cap = LOCKDOWN.constraints.find((c) => c.kind === 'max-per-week');
+    expect(cap).toMatchObject({ sessionTypeId: 'sa', count: 2 });
+    const gap = LOCKDOWN.constraints.find((c) => c.kind === 'min-gap-hours');
+    expect(gap).toMatchObject({ between: ['sa'], hours: 48 });
+  });
+});
+
+describe('library coverage', () => {
+  it('every drill is used by at least one program', () => {
+    const referenced = new Set<string>();
+    for (const program of PROGRAMS) {
+      for (const type of program.sessionTypes) {
+        for (const id of Object.values(type.drillsByWeek ?? {})) referenced.add(id);
+      }
+    }
+    const orphans = DRILLS.filter((d) => !referenced.has(d.id)).map((d) => d.id);
+    expect(orphans).toEqual([]);
+  });
+
+  it('every protocol is used by at least one program', () => {
+    const referenced = new Set<string>();
+    for (const program of PROGRAMS) {
+      for (const type of program.sessionTypes) {
+        for (const block of type.blocks ?? []) {
+          for (const entry of Object.values(block.perPhase)) {
+            for (const ex of entry.exercises) if (ex.protocolId) referenced.add(ex.protocolId);
+          }
+        }
+      }
+    }
+    expect(Object.keys(PROTOCOLS).filter((id) => !referenced.has(id))).toEqual([]);
   });
 });
 

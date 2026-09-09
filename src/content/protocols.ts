@@ -75,6 +75,48 @@ export const PROTOCOLS: Record<ProtocolId, Protocol> = {
       'A five-second tuck lever is a real stimulus. Progress the shape, not just the clock.',
     ],
   },
+
+  density_hangs: {
+    id: 'density_hangs',
+    name: 'Density Hangs',
+    description:
+      'Long, sub-maximal hangs — 30 to 40 seconds at or near bodyweight. Trains connective-tissue density and endurance in the half-crimp rather than peak strength. The target sensation is dull fatigue, never pump.',
+    timer: { workSec: 30, restSec: 0, repsPerSet: 1, setRestSec: 180 },
+    grip: 'Half crimp or open hand, 20mm edge',
+    cues: [
+      'RPE 6-7. Dull fatigue, not pump.',
+      'Progress by time OR load, never both in the same week.',
+      'If you start shaking, drop off — shaking recruits the wrong patterns.',
+    ],
+  },
+
+  frenchies: {
+    id: 'frenchies',
+    name: 'Frenchies',
+    description:
+      'One cycle is: pull all the way up, hold at the top 5s, lower to 90° and hold 5s, lower to 120° and hold 5s, then dead hang. Trains the three critical lock-off angles in a single set.',
+    timer: { workSec: 5, restSec: 0, repsPerSet: 3, setRestSec: 180 },
+    cues: ['One to two cycles per set, 3 sets, 3 min rest.', 'RPE 7-8.'],
+  },
+
+  offset_lock_offs: {
+    id: 'offset_lock_offs',
+    name: 'Offset Lock-Offs',
+    description:
+      'One hand on the bar, the other on a towel hanging 6-12 inches below. Pull to the bar and hold 5 seconds at 90°. The uneven loading forces the working arm to hold far more than half bodyweight — the stepping stone to one-arm strength.',
+    timer: { workSec: 5, restSec: 0, repsPerSet: 1, setRestSec: 180 },
+    cues: ['Towel hangs 6-12 inches below the bar.', 'Hold at 90° on the bar-side arm.'],
+  },
+
+  one_arm_negatives: {
+    id: 'one_arm_negatives',
+    name: 'One-Arm Negatives',
+    description:
+      'Jump or step to a one-arm lock-off at the bar, then lower yourself on that arm for 5 seconds. The most powerful isometric progression in these programs — direct carryover to powerful pulls off single hands.',
+    timer: { workSec: 5, restSec: 0, repsPerSet: 1, setRestSec: 180 },
+    cues: ['Use a foot on a chair for assistance as needed.', 'Five seconds of controlled lowering is the work.'],
+    safety: ['Skip entirely with any elbow symptom — this is the highest-load pulling exercise in the program.'],
+  },
 };
 
 export function getProtocol(id: ProtocolId): Protocol | undefined {

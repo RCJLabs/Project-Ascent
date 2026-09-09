@@ -32,6 +32,14 @@ export const METRICS: Record<MetricId, Metric> = {
     higherIsBetter: true,
     description: 'Added weight used for 7/3 repeaters at the prescribed RPE.',
   },
+  density_hang_bw_20mm: {
+    id: 'density_hang_bw_20mm',
+    label: 'Density Hang BW 20mm',
+    unit: 'sec',
+    kind: 'number',
+    higherIsBetter: true,
+    description: 'Bodyweight half-crimp hang on a 20mm edge held at sub-maximal effort.',
+  },
   min_edge: {
     id: 'min_edge',
     label: 'Min Edge Achievable',
@@ -96,6 +104,31 @@ export const METRICS: Record<MetricId, Metric> = {
     higherIsBetter: true,
   },
 
+  box_jump_height: {
+    id: 'box_jump_height',
+    label: 'Box Jump Height',
+    unit: 'in',
+    kind: 'number',
+    higherIsBetter: true,
+    description: 'Highest box cleared with a controlled, silent landing.',
+  },
+  explosive_pullups: {
+    id: 'explosive_pullups',
+    label: 'Explosive Pull-Ups',
+    unit: 'reps',
+    kind: 'number',
+    higherIsBetter: true,
+    description: 'Consecutive chest-to-bar pull-ups performed at speed.',
+  },
+  landing_control: {
+    id: 'landing_control',
+    label: 'Landing Control',
+    unit: 'pass/fail',
+    kind: 'passfail',
+    higherIsBetter: true,
+    description: 'Absorbing a dyno fall with knees and hips, hands off the ground.',
+  },
+
   // Core
   core_plank: {
     id: 'core_plank',
@@ -112,6 +145,14 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'passfail',
     higherIsBetter: true,
     description: 'Twenty controlled reps with the lower back staying flat on the floor.',
+  },
+  hollow_body: {
+    id: 'hollow_body',
+    label: 'Hollow Body',
+    unit: 'sec',
+    kind: 'number',
+    higherIsBetter: true,
+    description: 'Hollow body hold with the lower back pressed into the floor.',
   },
   core_lever: {
     id: 'core_lever',
@@ -165,6 +206,24 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'grade',
     scale: 'YDS',
     higherIsBetter: true,
+  },
+  max_dynamic_grade: {
+    id: 'max_dynamic_grade',
+    label: 'Max Dynamic Grade',
+    unit: '',
+    kind: 'grade',
+    scale: 'V',
+    higherIsBetter: true,
+    description: 'Hardest boulder sent whose crux is a committing dynamic move.',
+  },
+  max_static_grade: {
+    id: 'max_static_grade',
+    label: 'Max Static Grade',
+    unit: '',
+    kind: 'grade',
+    scale: 'V',
+    higherIsBetter: true,
+    description: 'Hardest boulder sent with no dynamic moves.',
   },
   flash_grade: {
     id: 'flash_grade',
