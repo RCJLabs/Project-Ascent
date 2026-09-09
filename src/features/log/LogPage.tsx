@@ -4,6 +4,14 @@ import { AlertTriangle, ArrowLeft, Check, Clock, Flame, Plus, RotateCw, Sparkles
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
 import { addDays, fromKey, today } from '@/engine/dates';
+import {
+  describeSpan,
+  durationFromSpan,
+  elapsedMs,
+  formatClock,
+  isLive,
+  isStale,
+} from '@/engine/live';
 import { plannedDay, prescriptionFor } from '@/engine/plan';
 import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
@@ -66,6 +74,9 @@ export function LogPage({ params }: { params: { date: string } }) {
 
   async function startSession(sessionTypeId?: string) {
     await create(date, {
+      // A clock only makes sense on the day it is ticking through. Logging
+      // Tuesday's session on Thursday has nothing to time.
+      ...(date === today() ? { startedAt: new Date().toISOString() } : {}),
       ...(activeProgramId ? { programId: activeProgramId } : {}),
       ...(sessionTypeId ? { sessionTypeId } : {}),
       ...(trackId ? { trackId } : {}),
@@ -288,6 +299,44 @@ function SessionEditor({
   const isRest = type?.isRest === true;
   const patch = (p: Partial<Session>) => onChange({ ...session, ...p });
 
+  const [now, setNow] = useState(() => Date.now());
+  const live = isLive(session);
+  const stale = isStale(session, now);
+  useEffect(() => {
+    if (!live) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [live]);
+  const elapsed = elapsedMs(session, now);
+
+  /** Close the session, and let the clock fill in the duration if it can. */
+  function complete() {
+    if (!session.startedAt || session.endedAt) {
+      patch({ completed: true });
+      return;
+    }
+    const endedAt = new Date().toISOString();
+    const measured = durationFromSpan(elapsedMs({ ...session, endedAt }));
+    patch({
+      completed: true,
+      endedAt,
+      // Never overwrite a duration typed by hand, and never invent one from
+      // a span the clock does not believe.
+      ...(session.durationMin === undefined && measured !== undefined
+        ? { durationMin: measured }
+        : {}),
+    });
+  }
+
+  /**
+   * Reopening is an edit, not a resumption. Leaving the start time in place
+   * would make yesterday's corrected session look abandoned an hour later.
+   */
+  function reopen() {
+    const { startedAt: _s, endedAt: _e, ...rest } = session;
+    onChange({ ...rest, completed: false, rewarded: false });
+  }
+
   const [scale, setScale] = useState<GradeScale>('V');
   const [grade, setGrade] = useState('V3');
   // One control instead of two: style is part of how a climb went, and a
@@ -369,11 +418,46 @@ function SessionEditor({
         {session.completed ? (
           <p className="text-sm text-positive flex items-center gap-1.5">
             <Check size={15} /> Logged
+            {session.endedAt && (
+              <span className="text-ink-soft font-normal">· {describeSpan(elapsed)} on the clock</span>
+            )}
+          </p>
+        ) : live && !stale ? (
+          <p className="flex items-center gap-2 text-sm">
+            <span className="relative flex size-2.5">
+              <span className="absolute inset-0 rounded-full bg-accent/60 animate-ping" />
+              <span className="relative size-2.5 rounded-full bg-accent" />
+            </span>
+            <span className="text-ink-soft">Live</span>
+            <span className="font-bold tabular-nums text-base">{formatClock(elapsed)}</span>
           </p>
         ) : (
           <p className="text-sm text-ink-soft">In progress — fill in what you did, then mark it complete.</p>
         )}
       </Card>
+
+      {stale && (
+        <Card>
+          <div className="flex items-baseline gap-2 mb-1.5">
+            <AlertTriangle size={15} className="text-warn shrink-0 translate-y-0.5" />
+            <h3 className="font-bold text-sm">This session was left open</h3>
+          </div>
+          <p className="text-sm text-ink-soft leading-relaxed mb-3">
+            The clock has been running for {describeSpan(elapsed)}
+            {durationFromSpan(elapsed) === undefined
+              ? ', which is too long to record as training. Finish it and set the duration yourself, or throw it away.'
+              : '. Finish it to keep what you logged, or throw it away.'}
+          </p>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={complete}>
+              <Check size={15} /> Finish it
+            </Button>
+            <Button size="sm" variant="danger" onClick={onDelete}>
+              <Trash2 size={15} /> Discard
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {isRest ? (
         <Card title="Recovery checklist">
@@ -622,8 +706,9 @@ function SessionEditor({
                 type="number"
                 inputMode="numeric"
                 value={session.durationMin ?? ''}
+                placeholder={live && !stale ? 'From the clock when you finish' : ''}
                 onChange={(e) => patch({ durationMin: e.target.value ? Number(e.target.value) : undefined })}
-                className="w-full bg-sunken border border-line rounded-xl px-3 py-2.5"
+                className="w-full bg-sunken border border-line rounded-xl px-3 py-2.5 placeholder:text-ink-soft/60"
               />
             </label>
             <button
@@ -671,12 +756,12 @@ function SessionEditor({
           className="w-full"
           // Reopening clears the acknowledgement: if the session changes, the
           // climber should see the new total rather than the old one.
-          onClick={() => patch({ completed: false, rewarded: false })}
+          onClick={reopen}
         >
           <X size={16} /> Reopen session
         </Button>
       ) : (
-        <Button size="lg" className="w-full" onClick={() => patch({ completed: true })}>
+        <Button size="lg" className="w-full" onClick={complete}>
           <Check size={18} /> Mark complete
         </Button>
       )}

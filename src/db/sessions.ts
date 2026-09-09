@@ -76,6 +76,14 @@ export interface Session {
   notes?: string;
   /** A planned deload week — excluded from training-load maths. */
   deload?: boolean;
+  /**
+   * When the session was started live, as wall-clock time. Present only for
+   * sessions started on their own day; logging Tuesday on Thursday has no
+   * clock to run. See engine/live.ts.
+   */
+  startedAt?: string;
+  /** When it was marked complete. Only set alongside `startedAt`. */
+  endedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { CalendarDays, Dumbbell, Mountain, Target, TrendingUp } from 'lucide-react';
+import { LiveBar, useLiveBanner } from './LiveBar';
 
 const TABS = [
   { href: '/', label: 'Home', icon: Mountain },
@@ -12,13 +13,17 @@ const TABS = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
+  const banner = useLiveBanner();
   return (
     <div className="min-h-dvh flex flex-col max-w-2xl mx-auto">
-      <main className="flex-1 px-4 pt-6 pb-24">{children}</main>
+      <main className={`flex-1 px-4 pt-6 ${banner ? 'pb-36' : 'pb-24'}`}>{children}</main>
       <nav
         className="fixed bottom-0 inset-x-0 bg-surface/95 backdrop-blur border-t border-line"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
+        <div className="max-w-2xl mx-auto">
+          <LiveBar banner={banner} />
+        </div>
         <div className="max-w-2xl mx-auto grid grid-cols-5">
           {TABS.map(({ href, label, icon: Icon }) => {
             const active = href === '/' ? location === '/' : location.startsWith(href);
