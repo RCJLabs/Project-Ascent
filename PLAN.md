@@ -589,9 +589,46 @@ Milestones are sequential; each ends runnable and useful.
   wall, best-of-day reward rules + rest-day boost, daily seed, stat/boon hooks, PB
   and pure-run tracking. *Done when: 60 fps on a mid-range phone, fully offline, and
   the rest-day ×1.5 payout applies.*
-- **M6 — Ship.** Live session mode, onboarding baseline, Coach's Corner, settings
-  (scales, theme, backup), disclaimer, polish pass, TWA packaging + assetlinks, Play
-  internal testing, store listing.
+- **M6 — Round out.** Live session mode, onboarding baseline, Coach's Corner, settings
+  (scales, theme, backup), disclaimer, polish pass. *Done: all of it.* Packaging and
+  release moved to M12 — shipping is the last phase, not the sixth.
+- **M7 — Depth in the log.** The things a real training log needs that the first pass
+  skipped: session templates (§5.2), calendar drag-to-move with live constraint
+  validation (§5.3), editing a logged session's date and splitting or merging days,
+  media on projects (the `media` store exists and has never been written to), and the
+  custom program builder the content model was built for. *Done when: a season can be
+  planned, re-planned and corrected without touching a text field twice.*
+- **M8 — Injury depth.** §9.7 is half-built: warmups filter, the finder steers away,
+  vitality takes a hit. Missing is everything that makes it a system — severity, side
+  and status on an injury, drills and exercises flagged across *all* programs rather
+  than just warmups, calendar annotation, bounties paused while the part is loaded,
+  and a return-to-climbing checklist per body part. *Done when: marking a pulley
+  changes what the app asks of you everywhere, not just in the warmup.*
+- **M9 — Content.** The part only a coach can write. First: the hole the finder
+  already exposes — there is no finger-strength program for a climber above V5
+  without a campus board, so Iron Grip blocks and a V7 boulderer gets recommended
+  maintenance. Then the glossary with inline term definitions, the app/injury/outdoor
+  guides, and deeper phase notes on the existing eleven programs. *Done when: the
+  finder has an honest answer for every equipment set.*
+- **M10 — The long arc.** Twelve-week programs end; the reason to open the app in
+  year three is not a program. Expedition-style sieges of named objectives (AUDIT.md
+  §7 calls this the one cut system worth reconsidering — real sessions advancing a
+  named climb was the old app's best long-arc hook), a season/year in review, and
+  milestones that outlast the altimeter. *Done when: there is something to work
+  toward that a single block cannot finish.*
+- **M11 — Hardening.** Before anyone else's data is in it. `deriveXp` is superlinear
+  and measured: 8ms at one year of logs, 42ms at five, 107ms at ten — and it runs on
+  every session write, with `useSkills` depending on it. Also: a service-worker
+  update prompt (an offline app can otherwise sit on a stale build indefinitely), a
+  keyboard and screen-reader pass to match the 320px pass already done, virtualised
+  lists for a decade-long journal, and import/export that handles media, partial
+  imports and conflicts. *Done when: ten years of logs is indistinguishable from one.*
+- **M12 — Ship.** TWA packaging + assetlinks, Play internal testing, store listing.
+
+**Known limitations carried forward:** program metadata grade ranges
+(`gradeRange.label`, e.g. "V5-V8") are authored strings and do not follow the Font
+/French display preference — converting them means re-authoring the content as
+structured ranges, which belongs with M9.
 - **Post-launch candidates:** Font/French scales (if not in M6), coach mode,
   media-on-projects, trivia toy, expedition-style long-arc sieges of famous climbs
   (the one cut system worth reconsidering — real sessions advancing a named objective
