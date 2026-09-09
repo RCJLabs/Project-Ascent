@@ -11,6 +11,8 @@ import { SettingsPage } from '@/features/settings/SettingsPage';
 import { InjuryPage } from '@/features/injury/InjuryPage';
 import { BoardPage } from '@/features/challenges/BoardPage';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
+import { CareerPage } from '@/features/career/CareerPage';
+import { YearPage } from '@/features/career/YearPage';
 import { FinderPage } from '@/features/finder/FinderPage';
 import { LogPage, TodayRedirect } from '@/features/log/LogPage';
 import { AssessmentsPage } from '@/features/assessments/AssessmentsPage';
@@ -100,6 +102,9 @@ function Shell() {
           <Route path="/build" component={BuilderList} />
           <Route path="/train/:id/start" component={StartProgramPage} />
           <Route path="/train/:id" component={ProgramDetailPage} />
+          <Route path="/career" component={CareerPage} />
+          <Route path="/year/:year" component={YearPage} />
+          <Route path="/year" component={YearPage} />
           <Route path="/objectives/:id" component={ObjectiveDetailPage} />
           <Route path="/objectives" component={ObjectivesPage} />
           <Route path="/board" component={BoardPage} />

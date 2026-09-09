@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, Check, Flag, Mountain } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Flag, Mountain } from 'lucide-react';
 import {
   EVEREST,
   HEIGHT,
@@ -150,6 +150,17 @@ export function AltimeterPage() {
               );
             })}
           </ol>
+          <p className="text-xs text-ink-soft mt-3 leading-relaxed">
+            {alt.laps > 0
+              ? `You have been round this ladder ${alt.laps === 1 ? 'once' : `${alt.laps} times`}. It repeats; your career does not.`
+              : 'The ladder ends at the top. Milestones that do not are on the career page.'}
+          </p>
+          <Link
+            href="/career"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent mt-2"
+          >
+            Career milestones <ArrowRight size={14} />
+          </Link>
         </Card>
       </div>
     </>

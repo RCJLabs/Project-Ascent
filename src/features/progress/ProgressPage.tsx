@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { Activity, AlertTriangle, BookOpen, CheckCircle2, ChevronRight, Info, Ruler, TrendingDown } from 'lucide-react';
+import { Activity, AlertTriangle, BookOpen, CalendarRange, CheckCircle2, ChevronRight, Info, Ruler, Trophy, TrendingDown } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
 import { useGradeLabel } from '@/ui/useGrade';
 import { assessmentBattery } from '@/engine/assessments';
 import { buildJournal } from '@/engine/journal';
+import { deriveCareer } from '@/engine/career';
+import { availableYears } from '@/engine/yearReview';
 import { deriveClimberState, type AcwrZone } from '@/engine/derive';
 import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
 import { useMetrics } from '@/store/metrics';
@@ -77,6 +79,74 @@ function JournalCard() {
           </p>
           <p className="text-xs text-ink-soft mt-0.5 truncate">
             {journal[0] ? journal[0].text : 'Session notes, beta and test notes, searchable.'}
+          </p>
+        </div>
+        <ChevronRight size={18} className="text-ink-soft shrink-0" />
+      </Link>
+    </Card>
+  );
+}
+
+/**
+ * Entry point into the long arc.
+ *
+ * The altimeter's ladder ends; this does not. Both are here rather than one
+ * replacing the other — height is a lifetime climb, the career list is a
+ * lifetime of days.
+ */
+function CareerCard() {
+  const byDate = useSessions((s) => s.byDate);
+  const display = useSettings((s) => s.display);
+
+  const career = useMemo(() => {
+    const sessions = Object.values(byDate).flat();
+    const state = deriveClimberState(sessions);
+    return deriveCareer({ sessions, records: state.personalRecords, display });
+  }, [byDate, display]);
+
+  const latest = career.achieved[0];
+  const next = career.next[0];
+
+  return (
+    <Card title="Career">
+      <Link href="/career" className="flex items-center gap-3">
+        <Trophy size={18} className="text-accent shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold truncate">
+            {latest ? latest.label : 'No milestones yet'}
+          </p>
+          <p className="text-xs text-ink-soft mt-0.5 truncate">
+            {latest
+              ? next
+                ? `Next: ${next.label}`
+                : `${career.achieved.length} so far`
+              : 'Worked out from the log, not handed out.'}
+          </p>
+        </div>
+        <ChevronRight size={18} className="text-ink-soft shrink-0" />
+      </Link>
+    </Card>
+  );
+}
+
+/** The year, summarised — and honestly compared with the one before it. */
+function YearCard() {
+  const byDate = useSessions((s) => s.byDate);
+  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const years = useMemo(() => availableYears(sessions), [sessions]);
+  const year = years[0];
+  if (year === undefined) return null;
+
+  return (
+    <Card title="Year in review">
+      <Link href={`/year/${year}`} className="flex items-center gap-3">
+        <CalendarRange size={18} className="text-accent shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold">{year}</p>
+          <p className="text-xs text-ink-soft mt-0.5 truncate">
+            {years.length > 1
+              ? `Compared like for like with ${year - 1}`
+              : 'Months, totals and the firsts that landed in it.'}
           </p>
         </div>
         <ChevronRight size={18} className="text-ink-soft shrink-0" />
@@ -293,6 +363,8 @@ export function ProgressPage() {
           )}
         </Card>
 
+        <CareerCard />
+        <YearCard />
         <AssessmentsCard />
         <JournalCard />
 
