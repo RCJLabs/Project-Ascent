@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ArrowLeft, Check, Clock, Plus, Timer, Trash2, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Check, Clock, Flame, Plus, RotateCw, Timer, Trash2, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
 import { addDays, fromKey, today } from '@/engine/dates';
 import { plannedDay, prescriptionFor } from '@/engine/plan';
+import { focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
 import type { Climb, Session } from '@/db/sessions';
 import { useProfile } from '@/store/profile';
@@ -161,6 +162,102 @@ export function LogPage({ params }: { params: { date: string } }) {
         )}
       </div>
     </>
+  );
+}
+
+function WarmupCard({
+  session,
+  day,
+  onWarmedUp,
+}: {
+  session: Session;
+  day: ReturnType<typeof plannedDay> | undefined;
+  onWarmedUp: () => void;
+}) {
+  const equipment = useProfile((s) => s.equipment);
+  const injuries = useProfile((s) => s.injuries);
+  const recentWarmups = useProfile((s) => s.recentWarmups);
+  const rememberWarmup = useProfile((s) => s.rememberWarmup);
+  const [plan, setPlan] = useState<WarmupPlan | null>(null);
+
+  function build(seed?: number) {
+    const next = generateWarmup({
+      equipment,
+      injuries: injuries.map((i) => i.part),
+      recent: recentWarmups,
+      ...(focusFor(day?.sessionType, day?.phase?.name) ? { focus: focusFor(day?.sessionType, day?.phase?.name)! } : {}),
+      climbing: Boolean(day?.sessionType && !day.isRest),
+      ...(seed !== undefined ? { seed } : {}),
+    });
+    setPlan(next);
+    rememberWarmup(next.exercises.map((e) => e.id));
+  }
+
+  return (
+    <Card title="Warmup">
+      {!plan ? (
+        <>
+          <p className="text-sm text-ink-soft mb-3">
+            {injuries.length > 0
+              ? `Built around your ${injuries.map((i) => i.part).join(' and ')} — nothing that loads it.`
+              : 'A warmup built for today\u2019s session, varied from your recent ones.'}
+          </p>
+          <Button variant="outline" className="w-full" onClick={() => build()}>
+            <Flame size={16} /> Build me a warmup
+          </Button>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-ink-soft">
+              {Math.round(plan.totalSeconds / 60)} min · {plan.exercises.length} exercises
+            </span>
+            <button
+              onClick={() => build(Math.floor(Math.random() * 1_000_000))}
+              className="text-sm font-semibold text-accent inline-flex items-center gap-1"
+            >
+              <RotateCw size={14} /> Swap
+            </button>
+          </div>
+
+          {plan.injuryFilterRelaxed && (
+            <p className="text-sm flex gap-2 items-start mb-3">
+              <AlertTriangle size={14} className="text-warn shrink-0 mt-0.5" />
+              Everything available loads something you have injured. Go gently, or skip the warmup and
+              rest instead.
+            </p>
+          )}
+
+          <ol className="grid gap-2 mb-3">
+            {plan.exercises.map((e, i) => (
+              <li key={e.id} className="bg-sunken rounded-xl p-3">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs font-bold text-ink-soft">{i + 1}</span>
+                  <span className="font-semibold text-sm flex-1">{e.name}</span>
+                  <span className="text-xs text-ink-soft">
+                    {e.seconds >= 60 ? `${Math.round(e.seconds / 60)} min` : `${e.seconds}s`}
+                  </span>
+                </div>
+                <p className="text-sm text-ink-soft mt-1 leading-relaxed">{e.description}</p>
+              </li>
+            ))}
+          </ol>
+
+          {plan.excluded.length > 0 && (
+            <p className="text-xs text-ink-soft mb-3">
+              Left out because of your injuries:{' '}
+              {[...new Set(plan.excluded.map((x) => x.exercise.name))].join(', ')}.
+            </p>
+          )}
+
+          {!session.warmup && (
+            <Button variant="outline" size="sm" className="w-full" onClick={onWarmedUp}>
+              <Check size={15} /> Done — mark warmed up
+            </Button>
+          )}
+        </>
+      )}
+    </Card>
   );
 }
 
@@ -443,6 +540,8 @@ function SessionEditor({
               })()}
             </Card>
           )}
+
+          <WarmupCard session={session} day={day} onWarmedUp={() => patch({ warmup: true })} />
 
           <Card title="Effort">
             <div className="mb-3">

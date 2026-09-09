@@ -4,6 +4,8 @@ import { AlertTriangle, ArrowLeft, Check, Lock, Sparkles } from 'lucide-react';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
 import { findProgram, type Experience, type FinderInput, type FinderResult, type Goal, type Recommendation } from '@/engine/finder';
 import type { Discipline, Equipment } from '@/content/types';
+import type { BodyPart } from '@/content/warmups';
+import { useProfile } from '@/store/profile';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
@@ -40,7 +42,15 @@ const EQUIPMENT: { value: Equipment; label: string; hint: string }[] = [
   { value: 'gym', label: 'Weights & bands', hint: 'Dumbbells, bar, resistance bands' },
 ];
 
-const BODY_PARTS = ['Fingers', 'A2 Pulley', 'Elbow', 'Shoulder', 'Wrist', 'Back', 'Knee'];
+const BODY_PARTS: { value: BodyPart; label: string }[] = [
+  { value: 'fingers', label: 'Fingers' },
+  { value: 'pulley', label: 'Pulley' },
+  { value: 'elbow', label: 'Elbow' },
+  { value: 'shoulder', label: 'Shoulder' },
+  { value: 'wrist', label: 'Wrist' },
+  { value: 'back', label: 'Back' },
+  { value: 'knee', label: 'Knee' },
+];
 
 function Chip({
   selected,
@@ -112,12 +122,23 @@ export function FinderPage() {
   const [sportGrade, setSportGrade] = useState('');
   const [goal, setGoal] = useState<Goal>('technique');
   const [daysPerWeek, setDaysPerWeek] = useState(4);
-  const [equipment, setEquipment] = useState<Equipment[]>(['wall', 'gym']);
-  const [injuries, setInjuries] = useState<string[]>([]);
-  const [result, setResult] = useState<FinderResult | null>(null);
+  // Read and write the profile directly rather than copying into local
+  // state: what you tell the finder about your gear and injuries *is* your
+  // profile, and a local copy seeded at mount goes stale when the store
+  // hydrates a moment later.
+  const equipment = useProfile((s) => s.equipment);
+  const setEquipment = useProfile((s) => s.setEquipment);
+  const storedInjuries = useProfile((s) => s.injuries);
+  const addInjury = useProfile((s) => s.addInjury);
+  const removeInjury = useProfile((s) => s.removeInjury);
+  const injuries = storedInjuries.map((i) => i.part);
 
-  const toggle = <T,>(list: T[], value: T, set: (v: T[]) => void) =>
-    set(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+  const toggleInjury = (part: BodyPart) => {
+    const existing = storedInjuries.find((i) => i.part === part);
+    if (existing) removeInjury(existing.id);
+    else addInjury(part);
+  };
+  const [result, setResult] = useState<FinderResult | null>(null);
 
   function run() {
     const input: FinderInput = {
@@ -280,7 +301,13 @@ export function FinderPage() {
               <Chip
                 key={e.value}
                 selected={equipment.includes(e.value)}
-                onClick={() => toggle(equipment, e.value, setEquipment)}
+                onClick={() =>
+                  setEquipment(
+                    equipment.includes(e.value)
+                      ? equipment.filter((x) => x !== e.value)
+                      : [...equipment, e.value],
+                  )
+                }
               >
                 <div className="font-semibold">{e.label}</div>
                 {e.hint && <div className="text-ink-soft text-xs mt-0.5">{e.hint}</div>}
@@ -291,16 +318,17 @@ export function FinderPage() {
 
         <Card title="Anything currently injured?">
           <p className="text-sm text-ink-soft mb-3">
-            Optional. Used to steer you away from programs that would load it hard.
+            Optional. Used to steer you away from programs that would load it hard, and kept out of
+            your warmups. Saved to your profile.
           </p>
           <div className="grid grid-cols-2 gap-2">
             {BODY_PARTS.map((part) => (
               <Chip
-                key={part}
-                selected={injuries.includes(part)}
-                onClick={() => toggle(injuries, part, setInjuries)}
+                key={part.value}
+                selected={injuries.includes(part.value)}
+                onClick={() => toggleInjury(part.value)}
               >
-                <span className="font-semibold">{part}</span>
+                <span className="font-semibold">{part.label}</span>
               </Chip>
             ))}
           </div>

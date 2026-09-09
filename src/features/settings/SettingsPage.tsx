@@ -1,10 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
 import { APP_VERSION } from '@/version';
 import { exportAll, hasRealData, importAll, parseExportFile, SCHEMA_VERSION } from '@/db';
+import type { BodyPart } from '@/content/warmups';
+import type { Equipment } from '@/content/types';
+import { useProfile } from '@/store/profile';
 import { applyTheme, useSettings, type ThemePreference } from '@/store/settings';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
+
+const GEAR: { value: Equipment; label: string }[] = [
+  { value: 'wall', label: 'Climbing wall' },
+  { value: 'hangboard', label: 'Hangboard' },
+  { value: 'campus', label: 'Campus board' },
+  { value: 'gym', label: 'Weights & bands' },
+];
+
+const PARTS: { value: BodyPart; label: string }[] = [
+  { value: 'fingers', label: 'Fingers' },
+  { value: 'pulley', label: 'Pulley' },
+  { value: 'wrist', label: 'Wrist' },
+  { value: 'elbow', label: 'Elbow' },
+  { value: 'shoulder', label: 'Shoulder' },
+  { value: 'back', label: 'Back' },
+  { value: 'hip', label: 'Hip' },
+  { value: 'knee', label: 'Knee' },
+  { value: 'ankle', label: 'Ankle' },
+];
 
 const THEMES: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -29,6 +51,11 @@ export function SettingsPage() {
   const setTheme = useSettings((s) => s.setTheme);
   const [storage, setStorage] = useState<StorageStatus>({ persisted: null });
   const [message, setMessage] = useState<string | null>(null);
+  const equipment = useProfile((s) => s.equipment);
+  const setEquipment = useProfile((s) => s.setEquipment);
+  const injuries = useProfile((s) => s.injuries);
+  const addInjury = useProfile((s) => s.addInjury);
+  const removeInjury = useProfile((s) => s.removeInjury);
   const [pendingImport, setPendingImport] = useState<{ text: string; hasData: boolean } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -118,6 +145,69 @@ export function SettingsPage() {
               >
                 {t.label}
               </Button>
+            ))}
+          </div>
+        </Card>
+
+        <Card title="What you can train on">
+          <p className="text-sm text-ink-soft mb-3">
+            Used by the program finder and to build your warmups.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {GEAR.map((g) => {
+              const on = equipment.includes(g.value);
+              return (
+                <button
+                  key={g.value}
+                  onClick={() =>
+                    setEquipment(on ? equipment.filter((e) => e !== g.value) : [...equipment, g.value])
+                  }
+                  className={`rounded-xl px-3 py-2.5 border text-sm text-left ${
+                    on ? 'border-accent bg-accent/10' : 'border-line bg-sunken text-ink-soft'
+                  }`}
+                >
+                  {g.label}
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+
+        <Card title="Injuries">
+          <p className="text-sm text-ink-soft mb-3">
+            Anything listed here is kept out of your warmups, and the finder will steer you away from
+            programs that load it.
+          </p>
+          {injuries.length > 0 && (
+            <ul className="grid gap-2 mb-3">
+              {injuries.map((injury) => (
+                <li
+                  key={injury.id}
+                  className="flex items-center justify-between gap-2 bg-sunken rounded-xl px-3 py-2.5"
+                >
+                  <div>
+                    <span className="font-semibold text-sm capitalize">{injury.part}</span>
+                    <span className="text-xs text-ink-soft ml-2">since {injury.since}</span>
+                  </div>
+                  <button
+                    onClick={() => removeInjury(injury.id)}
+                    className="text-sm font-semibold text-accent"
+                  >
+                    Healed
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {PARTS.filter((p) => !injuries.some((i) => i.part === p.value)).map((p) => (
+              <button
+                key={p.value}
+                onClick={() => addInjury(p.value)}
+                className="rounded-lg px-2.5 py-1.5 border border-line bg-sunken text-sm text-ink-soft"
+              >
+                + {p.label}
+              </button>
             ))}
           </div>
         </Card>

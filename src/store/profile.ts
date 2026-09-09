@@ -1,7 +1,16 @@
 import { create } from 'zustand';
 import { getDb } from '@/db';
+import type { BodyPart } from '@/content/warmups';
+import type { Equipment } from '@/content/types';
 import { today } from '@/engine/dates';
 import type { WeekPlan } from '@/engine/scheduler';
+
+export interface Injury {
+  id: string;
+  part: BodyPart;
+  since: string;
+  note?: string;
+}
 
 /**
  * The climber's active plan. Start dates are kept per program so switching
@@ -17,9 +26,19 @@ export interface ProfileState {
   tracks: Record<string, string>;
   /** programId → the weekly plan the climber committed to. */
   plans: Record<string, WeekPlan>;
+  /** What the climber can train on — shared by the finder and warmups. */
+  equipment: Equipment[];
+  /** Active injuries. The warmup generator and finder both read these. */
+  injuries: Injury[];
+  /** Warmup ids used recently, freshest first, so warmups stay varied. */
+  recentWarmups: string[];
   startProgram: (programId: string, plan: WeekPlan, trackId?: string, restart?: boolean) => void;
   setPlan: (programId: string, plan: WeekPlan) => void;
   stopProgram: () => void;
+  setEquipment: (equipment: Equipment[]) => void;
+  addInjury: (part: BodyPart, note?: string) => void;
+  removeInjury: (id: string) => void;
+  rememberWarmup: (ids: string[]) => void;
 }
 
 const KEY = 'active-plan';
@@ -29,6 +48,9 @@ interface Persisted {
   startDates: Record<string, string>;
   tracks: Record<string, string>;
   plans: Record<string, WeekPlan>;
+  equipment: Equipment[];
+  injuries: Injury[];
+  recentWarmups: string[];
 }
 
 function snapshot(s: ProfileState): Persisted {
@@ -37,6 +59,9 @@ function snapshot(s: ProfileState): Persisted {
     startDates: s.startDates,
     tracks: s.tracks,
     plans: s.plans,
+    equipment: s.equipment,
+    injuries: s.injuries,
+    recentWarmups: s.recentWarmups,
   };
 }
 
@@ -51,6 +76,9 @@ export const useProfile = create<ProfileState>((set, get) => ({
   startDates: {},
   tracks: {},
   plans: {},
+  equipment: ['wall', 'gym'],
+  injuries: [],
+  recentWarmups: [],
 
   startProgram: (programId, plan, trackId, restart = false) => {
     const s = get();
@@ -73,6 +101,33 @@ export const useProfile = create<ProfileState>((set, get) => ({
     set({ activeProgramId: null });
     void save(snapshot(get()));
   },
+
+  setEquipment: (equipment) => {
+    set({ equipment });
+    void save(snapshot(get()));
+  },
+
+  addInjury: (part, note) => {
+    const injury: Injury = {
+      id: `${part}-${Date.now()}`,
+      part,
+      since: today(),
+      ...(note ? { note } : {}),
+    };
+    set({ injuries: [...get().injuries, injury] });
+    void save(snapshot(get()));
+  },
+
+  removeInjury: (id) => {
+    set({ injuries: get().injuries.filter((i) => i.id !== id) });
+    void save(snapshot(get()));
+  },
+
+  rememberWarmup: (ids) => {
+    // Keep the last two warmups' worth so the generator can vary from them.
+    set({ recentWarmups: [...ids, ...get().recentWarmups].slice(0, 16) });
+    void save(snapshot(get()));
+  },
 }));
 
 export async function hydrateProfile(): Promise<void> {
@@ -86,6 +141,9 @@ export async function hydrateProfile(): Promise<void> {
       startDates: value.startDates ?? {},
       tracks: value.tracks ?? {},
       plans: value.plans ?? {},
+      equipment: value.equipment ?? ['wall', 'gym'],
+      injuries: value.injuries ?? [],
+      recentWarmups: value.recentWarmups ?? [],
     });
   } catch {
     useProfile.setState({ hydrated: true });
