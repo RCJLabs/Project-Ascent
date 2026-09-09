@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DRILLS, filterDrills, getDrill } from './drills';
-import { METRICS } from './metrics';
+import { getMetric, METRICS } from './metrics';
 import { PROTOCOLS } from './protocols';
-import { IRON_GRIP, PROGRAMS } from './programs';
+import { BASE_CAMP, GROUND_ZERO, IRON_GRIP, PROGRAMS } from './programs';
 import { parseCount, phaseForWeek } from './types';
 import { validateCatalog, validateProgram } from './validate';
 
@@ -108,6 +108,98 @@ describe('Iron Grip', () => {
   });
 });
 
+describe('Ground Zero', () => {
+  it('is a blocks-only program with no drills', () => {
+    expect(GROUND_ZERO.weeks).toBe(12);
+    for (const type of GROUND_ZERO.sessionTypes) {
+      expect(type.drillsByWeek).toBeUndefined();
+    }
+    expect(GROUND_ZERO.sessionTypes.filter((t) => t.blocks).length).toBe(2);
+  });
+
+  it('keeps structural days apart', () => {
+    const gap = GROUND_ZERO.constraints.find((c) => c.kind === 'min-gap-hours');
+    expect(gap).toMatchObject({ between: ['str'], hours: 48 });
+    const slots = GROUND_ZERO.recommendedLayout!.slots;
+    const strDays = Object.entries(slots)
+      .filter(([, t]) => t === 'str')
+      .map(([d]) => Number(d));
+    for (let i = 1; i < strDays.length; i++) {
+      expect(strDays[i]! - strDays[i - 1]!).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it('runs its core work as timed rounds', () => {
+    const core = GROUND_ZERO.sessionTypes
+      .find((t) => t.id === 'mob')!
+      .blocks!.find((b) => b.id === 'core_pillar')!;
+    expect(core.perPhase['alignment']!.circuit).toMatchObject({ rounds: '3', restBetweenRounds: '60s' });
+    // All exercises prescribed — not a pick-from-pool circuit.
+    expect(core.perPhase['alignment']!.circuit!.pick).toBeUndefined();
+  });
+
+  it('tracks a metric where lower is better', () => {
+    expect(GROUND_ZERO.assessments).toContain('toe_touch');
+    expect(getMetric('toe_touch')!.higherIsBetter).toBe(false);
+  });
+});
+
+describe('Base Camp', () => {
+  it('declares two tracks and tags every Engine Room strength line', () => {
+    expect(BASE_CAMP.tracks!.map((t) => t.id)).toEqual(['A', 'B']);
+    const engine = BASE_CAMP.sessionTypes.find((t) => t.id === 'eng')!;
+    for (const block of engine.blocks!) {
+      if (block.id === 'core_circuit') continue; // core is shared across tracks
+      for (const [phaseId, entry] of Object.entries(block.perPhase)) {
+        if (entry.mergedInto) continue;
+        const tracks = entry.exercises.map((e) => e.track);
+        expect(tracks, `${block.id}/${phaseId}`).toEqual(['A', 'B']);
+      }
+    }
+  });
+
+  it('models the core circuit as a pool with a selection rule', () => {
+    const core = BASE_CAMP.sessionTypes
+      .find((t) => t.id === 'eng')!
+      .blocks!.find((b) => b.id === 'core_circuit')!;
+    expect(core.perPhase['foundation']!.exercises).toHaveLength(9);
+    expect(core.perPhase['foundation']!.circuit).toMatchObject({ pick: 5, rounds: '2' });
+    // Phase 3 trims the selection, not the pool.
+    expect(core.perPhase['headspace']!.circuit!.pick).toBe(3);
+    expect(core.perPhase['headspace']!.exercises).toHaveLength(9);
+  });
+
+  it('merges Pull into Push for the final phase', () => {
+    const pull = BASE_CAMP.sessionTypes
+      .find((t) => t.id === 'eng')!
+      .blocks!.find((b) => b.id === 'pull')!;
+    expect(pull.perPhase['headspace']!.mergedInto).toBe('push');
+    expect(pull.perPhase['headspace']!.exercises).toHaveLength(0);
+    expect(pull.perPhase['foundation']!.exercises.length).toBeGreaterThan(0);
+  });
+
+  it('rejects a track that is not declared', () => {
+    const broken = structuredClone(BASE_CAMP);
+    broken.sessionTypes.find((t) => t.id === 'eng')!.blocks![0]!.perPhase['foundation']!.exercises[0]!.track =
+      'Z';
+    expect(validateProgram(broken).join(' ')).toMatch(/undeclared track 'Z'/);
+  });
+
+  it('rejects a circuit asking for more exercises than the pool holds', () => {
+    const broken = structuredClone(BASE_CAMP);
+    const core = broken.sessionTypes.find((t) => t.id === 'eng')!.blocks!.find((b) => b.id === 'core_circuit')!;
+    core.perPhase['foundation']!.circuit!.pick = 99;
+    expect(validateProgram(broken).join(' ')).toMatch(/asks for 99 of 9 exercises/);
+  });
+
+  it('rejects a merge into a block that does not exist', () => {
+    const broken = structuredClone(BASE_CAMP);
+    const pull = broken.sessionTypes.find((t) => t.id === 'eng')!.blocks!.find((b) => b.id === 'pull')!;
+    pull.perPhase['headspace']!.mergedInto = 'nope';
+    expect(validateProgram(broken).join(' ')).toMatch(/merges into unknown block 'nope'/);
+  });
+});
+
 describe('helpers', () => {
   it('parses the leading count out of a dosage string', () => {
     expect(parseCount('3')).toBe(3);
@@ -128,7 +220,10 @@ describe('helpers', () => {
   });
 
   it('filters drills by category and search', () => {
-    expect(filterDrills({ category: 'recovery' })).toHaveLength(2);
+    const recovery = filterDrills({ category: 'recovery' });
+    expect(recovery.length).toBeGreaterThan(0);
+    expect(recovery.every((d) => d.category === 'recovery')).toBe(true);
     expect(filterDrills({ search: 'campus board' }).length).toBeGreaterThan(0);
+    expect(filterDrills({ search: 'no drill mentions this' })).toHaveLength(0);
   });
 });

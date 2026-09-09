@@ -80,7 +80,39 @@ export const METRICS: Record<MetricId, Metric> = {
     description: 'Single-arm lock-off hold at 90 degrees of elbow flexion.',
   },
 
+  scapular_pushup: {
+    id: 'scapular_pushup',
+    label: 'Scapular Push-Up',
+    unit: 'reps',
+    kind: 'number',
+    higherIsBetter: true,
+    description: 'Protraction/retraction reps in a push-up position, with arms straight throughout.',
+  },
+  wrist_extensor_curls: {
+    id: 'wrist_extensor_curls',
+    label: 'Wrist Extensor Curls',
+    unit: 'reps',
+    kind: 'number',
+    higherIsBetter: true,
+  },
+
   // Core
+  core_plank: {
+    id: 'core_plank',
+    label: 'Core Plank',
+    unit: 'sec',
+    kind: 'number',
+    higherIsBetter: true,
+    description: 'Front plank held to the first form breakdown.',
+  },
+  dead_bug_20: {
+    id: 'dead_bug_20',
+    label: 'Dead Bug 20 reps',
+    unit: 'pass/fail',
+    kind: 'passfail',
+    higherIsBetter: true,
+    description: 'Twenty controlled reps with the lower back staying flat on the floor.',
+  },
   core_lever: {
     id: 'core_lever',
     label: 'Core Lever',
@@ -91,6 +123,23 @@ export const METRICS: Record<MetricId, Metric> = {
   },
 
   // Mobility
+  wall_angel: {
+    id: 'wall_angel',
+    label: 'Wall Angel',
+    unit: 'pass/fail',
+    kind: 'passfail',
+    higherIsBetter: true,
+    description:
+      'Back flat to the wall, arms sliding overhead with wrists and elbows staying in contact. A shoulder-mobility screen.',
+  },
+  toe_touch: {
+    id: 'toe_touch',
+    label: 'Toe Touch',
+    unit: 'in from floor',
+    kind: 'number',
+    higherIsBetter: false,
+    description: 'Distance from fingertips to the floor on a straight-leg forward fold. Lower is better.',
+  },
   flexibility: {
     id: 'flexibility',
     label: 'Flexibility',
@@ -116,6 +165,23 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'grade',
     scale: 'YDS',
     higherIsBetter: true,
+  },
+  flash_grade: {
+    id: 'flash_grade',
+    label: 'Flash Grade',
+    unit: '',
+    kind: 'grade',
+    scale: 'V',
+    higherIsBetter: true,
+    description: 'The hardest grade you reliably send first try.',
+  },
+  capacity_test_4x4: {
+    id: 'capacity_test_4x4',
+    label: 'Capacity Test (4x4)',
+    unit: 'sends',
+    kind: 'number',
+    higherIsBetter: true,
+    description: 'Completed climbs in a 4x4 interval session — a work-capacity benchmark.',
   },
 };
 

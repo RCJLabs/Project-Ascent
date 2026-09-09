@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
-import { AlertTriangle, ArrowLeft, Clock, Timer } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Clock, Layers, Timer } from 'lucide-react';
 import { getDrill } from '@/content/drills';
 import { getMetric } from '@/content/metrics';
 import { getProtocol } from '@/content/protocols';
 import { getProgram } from '@/content/programs';
-import type { Exercise, Phase, SessionType } from '@/content/types';
+import type { CircuitFormat, Exercise, Phase, SessionType, TrackId } from '@/content/types';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
 
@@ -45,7 +45,27 @@ function ExerciseRow({ ex }: { ex: Exercise }) {
   );
 }
 
-function SessionTypeCard({ type, phase }: { type: SessionType; phase: Phase }) {
+function circuitLine(circuit: CircuitFormat, poolSize: number): string {
+  const parts: string[] = [];
+  if (circuit.pick !== undefined) parts.push(`Pick ${circuit.pick} of ${poolSize}`);
+  if (circuit.work) parts.push(`${circuit.work} each`);
+  if (circuit.restBetween) parts.push(`${circuit.restBetween} rest`);
+  parts.push(`${circuit.rounds} ${circuit.rounds === '1' ? 'round' : 'rounds'}`);
+  if (circuit.restBetweenRounds) parts.push(`${circuit.restBetweenRounds} between rounds`);
+  return parts.join(' · ');
+}
+
+function SessionTypeCard({
+  type,
+  phase,
+  blockName,
+  track,
+}: {
+  type: SessionType;
+  phase: Phase;
+  blockName: (blockId: string) => string;
+  track: TrackId | null;
+}) {
   return (
     <Card>
       <div className="flex items-baseline gap-2 mb-1">
@@ -57,17 +77,33 @@ function SessionTypeCard({ type, phase }: { type: SessionType; phase: Phase }) {
       {type.blocks?.map((block) => {
         const entry = block.perPhase[phase.id];
         if (!entry) return null;
+        const shown = track ? entry.exercises.filter((ex) => !ex.track || ex.track === track) : entry.exercises;
         return (
           <div key={block.id} className="mb-4 last:mb-0">
             <h4 className="text-xs font-bold uppercase tracking-widest text-accent mb-1.5">
               {block.name}
             </h4>
             <p className="text-sm text-ink-soft leading-relaxed mb-2.5">{entry.rationale}</p>
-            <ul className="grid gap-2.5 bg-sunken rounded-xl p-3">
-              {entry.exercises.map((ex, i) => (
-                <ExerciseRow key={`${ex.name}-${i}`} ex={ex} />
-              ))}
-            </ul>
+
+            {entry.mergedInto ? (
+              <p className="text-sm bg-sunken rounded-xl p-3 flex items-center gap-2">
+                <Layers size={14} className="text-accent shrink-0" />
+                Performed inside <span className="font-semibold">{blockName(entry.mergedInto)}</span> this phase.
+              </p>
+            ) : (
+              <div className="bg-sunken rounded-xl p-3">
+                {entry.circuit && (
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-2.5 pb-2.5 border-b border-line">
+                    {circuitLine(entry.circuit, entry.exercises.length)}
+                  </p>
+                )}
+                <ul className="grid gap-2.5">
+                  {shown.map((ex, i) => (
+                    <ExerciseRow key={`${ex.name}-${i}`} ex={ex} />
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         );
       })}
@@ -113,6 +149,7 @@ function SessionTypeCard({ type, phase }: { type: SessionType; phase: Phase }) {
 export function ProgramDetailPage({ params }: { params: { id: string } }) {
   const program = getProgram(params.id);
   const [phaseIndex, setPhaseIndex] = useState(0);
+  const [track, setTrack] = useState<TrackId | null>(null);
 
   if (!program) {
     return (
@@ -131,6 +168,9 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
   }
 
   const phase = program.phases[phaseIndex]!;
+  const activeTrack = track ?? program.tracks?.[0]?.id ?? null;
+  const blockName = (blockId: string) =>
+    program.sessionTypes.flatMap((t) => t.blocks ?? []).find((b) => b.id === blockId)?.name ?? blockId;
 
   return (
     <>
@@ -198,6 +238,28 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
           </Card>
         )}
 
+        {program.tracks && (
+          <Card title="Choose your track">
+            <div className="grid gap-2">
+              {program.tracks.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTrack(t.id)}
+                  className={`text-left rounded-xl p-3 border transition-colors ${
+                    activeTrack === t.id ? 'border-accent bg-accent/10' : 'border-line bg-sunken'
+                  }`}
+                >
+                  <div className="font-semibold text-sm">{t.name}</div>
+                  <p className="text-sm text-ink-soft mt-0.5">{t.description}</p>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-ink-soft mt-2">
+              Pick one and stay on it for the whole program.
+            </p>
+          </Card>
+        )}
+
         <div>
           <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
             {program.phases.map((p, i) => (
@@ -235,7 +297,13 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
             {program.sessionTypes
               .filter((t) => !t.isRest)
               .map((type) => (
-                <SessionTypeCard key={type.id} type={type} phase={phase} />
+                <SessionTypeCard
+                  key={type.id}
+                  type={type}
+                  phase={phase}
+                  blockName={blockName}
+                  track={activeTrack}
+                />
               ))}
           </div>
         </div>

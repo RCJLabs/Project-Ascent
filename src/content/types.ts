@@ -24,6 +24,7 @@ export type SessionTypeId = string;
 export type DrillId = string;
 export type MetricId = string;
 export type ProtocolId = string;
+export type TrackId = string;
 
 /** Day of week, 0 = Sunday. Matches Date#getDay. */
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -109,6 +110,10 @@ export interface Exercise {
   name: string;
   /** Links to a Protocol so the logger can open its timer. */
   protocolId?: ProtocolId;
+  /** Which of the program's tracks this line belongs to. A climber picks a
+   *  track once and only sees its lines. The prototype encoded this as a
+   *  'Trk A:' prefix inside the exercise name. */
+  track?: TrackId;
   /** '3' or '3-5'. */
   sets?: string;
   /** '8-10', '12 per arm', '1-2-3-4-5 matched'. */
@@ -123,12 +128,39 @@ export interface Exercise {
   notes?: string;
 }
 
+/**
+ * Circuit structure, when a block runs as timed rounds rather than straight
+ * sets. `pick` marks the exercise list as a *pool* to choose from — the
+ * prototype listed all nine core exercises as if all nine were prescribed,
+ * while the coaching text said "pick 5".
+ */
+export interface CircuitFormat {
+  /** Choose this many from the pool. Omitted means do all of them. */
+  pick?: number;
+  rounds: string;
+  /** Work time per exercise, when they share one. */
+  work?: string;
+  /** Rest between exercises within a round. */
+  restBetween?: string;
+  /** Rest between rounds. */
+  restBetweenRounds?: string;
+}
+
+export interface PhasePrescription {
+  rationale: string;
+  exercises: Exercise[];
+  circuit?: CircuitFormat;
+  /** This block is folded into another block for this phase (e.g. Pull
+   *  supersetted into Push). Exercises may be empty when set. */
+  mergedInto?: string;
+}
+
 /** One exercise block (the old `cats`), with its own prescription and
  *  coaching rationale per phase. */
 export interface ExerciseBlock {
   id: string;
   name: string;
-  perPhase: Record<PhaseId, { rationale: string; exercises: Exercise[] }>;
+  perPhase: Record<PhaseId, PhasePrescription>;
 }
 
 // ── Session types ─────────────────────────────────────────────────────────
@@ -209,6 +241,17 @@ export interface ProgramIntro {
   graduation: string;
 }
 
+/**
+ * A parallel difficulty path through the same program — bodyweight versus
+ * loaded, say. The climber picks one at the start and keeps it for the
+ * whole program.
+ */
+export interface Track {
+  id: TrackId;
+  name: string;
+  description: string;
+}
+
 export interface Program {
   id: ProgramId;
   name: string;
@@ -219,6 +262,9 @@ export interface Program {
   weeks: number;
   intro: ProgramIntro;
   phases: Phase[];
+  /** Parallel difficulty paths. Exercises tagged with a `track` are shown
+   *  only when that track is selected. */
+  tracks?: Track[];
   sessionTypes: SessionType[];
   constraints: Constraint[];
   /** Human-readable scheduling prose, kept verbatim alongside `constraints`. */

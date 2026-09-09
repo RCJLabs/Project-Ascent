@@ -1,4 +1,6 @@
 import type { Program, ProgramId, ProgramStage } from '../types';
+import { BASE_CAMP } from './baseCamp';
+import { GROUND_ZERO } from './groundZero';
 import { IRON_GRIP } from './ironGrip';
 
 /**
@@ -20,8 +22,8 @@ export const PLANNED_PROGRAM_IDS: readonly ProgramId[] = [
   'outdoor_climbing',
 ];
 
-/** Programs converted to the new schema so far. */
-export const PROGRAMS: Program[] = [IRON_GRIP];
+/** Programs converted to the new schema so far, in catalog order. */
+export const PROGRAMS: Program[] = [GROUND_ZERO, BASE_CAMP, IRON_GRIP];
 
 const BY_ID = new Map<ProgramId, Program>(PROGRAMS.map((p) => [p.id, p]));
 
@@ -39,4 +41,4 @@ export const STAGE_META: Record<ProgramStage, { label: string; blurb: string }> 
 
 export const STAGE_ORDER: ProgramStage[] = ['start', 'foundations', 'style', 'advanced', 'ongoing'];
 
-export { IRON_GRIP };
+export { BASE_CAMP, GROUND_ZERO, IRON_GRIP };

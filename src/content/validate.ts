@@ -38,12 +38,20 @@ export function validateProgram(program: Program): string[] {
     where(`phases cover ${expected - 1} weeks, program declares ${program.weeks}`);
   }
 
+  // Tracks.
+  const trackIds = new Set<string>();
+  for (const track of program.tracks ?? []) {
+    if (trackIds.has(track.id)) where(`duplicate track id '${track.id}'`);
+    trackIds.add(track.id);
+  }
+
   // Session types.
   const typeIds = new Set<string>();
   for (const type of program.sessionTypes) {
     if (typeIds.has(type.id)) where(`duplicate session type id '${type.id}'`);
     typeIds.add(type.id);
 
+    const blockIds = new Set((type.blocks ?? []).map((b) => b.id));
     for (const block of type.blocks ?? []) {
       for (const phaseId of phaseIds) {
         if (!block.perPhase[phaseId]) {
@@ -55,10 +63,28 @@ export function validateProgram(program: Program): string[] {
           where(`block '${block.id}' references unknown phase '${phaseId}'`);
         }
         if (!entry.rationale.trim()) where(`block '${block.id}' phase '${phaseId}' has no rationale`);
-        if (entry.exercises.length === 0) where(`block '${block.id}' phase '${phaseId}' has no exercises`);
+        if (entry.exercises.length === 0 && !entry.mergedInto) {
+          where(`block '${block.id}' phase '${phaseId}' has no exercises`);
+        }
+        if (entry.mergedInto) {
+          if (!blockIds.has(entry.mergedInto)) {
+            where(`block '${block.id}' phase '${phaseId}' merges into unknown block '${entry.mergedInto}'`);
+          }
+          if (entry.mergedInto === block.id) {
+            where(`block '${block.id}' phase '${phaseId}' merges into itself`);
+          }
+        }
+        if (entry.circuit?.pick !== undefined && entry.circuit.pick > entry.exercises.length) {
+          where(
+            `block '${block.id}' phase '${phaseId}' asks for ${entry.circuit.pick} of ${entry.exercises.length} exercises`,
+          );
+        }
         for (const ex of entry.exercises) {
           if (ex.protocolId && !getProtocol(ex.protocolId)) {
             where(`exercise '${ex.name}' references unknown protocol '${ex.protocolId}'`);
+          }
+          if (ex.track && !trackIds.has(ex.track)) {
+            where(`exercise '${ex.name}' references undeclared track '${ex.track}'`);
           }
         }
       }
