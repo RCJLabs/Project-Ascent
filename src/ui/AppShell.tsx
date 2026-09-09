@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Dumbbell, Mountain, Settings, TrendingUp } from 'lucide-react';
+import { CalendarDays, Dumbbell, Mountain, Settings } from 'lucide-react';
 
 const TABS = [
   { href: '/', label: 'Home', icon: Mountain },
   { href: '/train', label: 'Train', icon: Dumbbell },
-  { href: '/progress', label: 'Progress', icon: TrendingUp },
+  { href: '/calendar', label: 'Calendar', icon: CalendarDays },
   { href: '/settings', label: 'Settings', icon: Settings },
 ] as const;
 

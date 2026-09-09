@@ -4,9 +4,14 @@ import { useHashLocation } from 'wouter/use-hash-location';
 import { HomePage } from '@/features/home/HomePage';
 import { PlaceholderPage } from '@/features/placeholder/PlaceholderPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
+import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { FinderPage } from '@/features/finder/FinderPage';
+import { LogPage, TodayRedirect } from '@/features/log/LogPage';
+import { StartProgramPage } from '@/features/plan/StartProgramPage';
 import { ProgramDetailPage } from '@/features/train/ProgramDetailPage';
 import { TrainPage } from '@/features/train/TrainPage';
+import { hydrateProfile } from '@/store/profile';
+import { useSessions } from '@/store/sessions';
 import { applyTheme, hydrateSettings, useSettings } from '@/store/settings';
 import { AppShell } from '@/ui/AppShell';
 
@@ -15,6 +20,8 @@ export function App() {
 
   useEffect(() => {
     void hydrateSettings();
+    void hydrateProfile();
+    void useSessions.getState().load();
   }, []);
 
   useEffect(() => {
@@ -28,7 +35,11 @@ export function App() {
           <Route path="/" component={HomePage} />
           <Route path="/train" component={TrainPage} />
           <Route path="/find" component={FinderPage} />
+          <Route path="/train/:id/start" component={StartProgramPage} />
           <Route path="/train/:id" component={ProgramDetailPage} />
+          <Route path="/calendar" component={CalendarPage} />
+          <Route path="/log/:date" component={LogPage} />
+          <Route path="/today" component={TodayRedirect} />
           <Route path="/progress">
             <PlaceholderPage
               title="Progress"

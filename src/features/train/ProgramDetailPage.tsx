@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
-import { AlertTriangle, ArrowLeft, Clock, Layers, Timer } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Clock, Layers, Play, Timer } from 'lucide-react';
 import { getDrill } from '@/content/drills';
 import { getMetric } from '@/content/metrics';
 import { getProtocol } from '@/content/protocols';
@@ -208,7 +208,15 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
               <div className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mt-1">Phases</div>
             </div>
           </div>
-          <p className="text-sm leading-relaxed">{program.intro.pitch}</p>
+          <p className="text-sm leading-relaxed mb-3">{program.intro.pitch}</p>
+          {program.kind === 'program' && (
+            <Link
+              href={`/train/${program.id}/start`}
+              className="inline-flex items-center justify-center gap-2 w-full bg-accent text-accent-ink font-semibold rounded-xl py-3 hover:bg-accent-strong transition-colors"
+            >
+              <Play size={16} /> Start this program
+            </Link>
+          )}
         </Card>
 
         <Card title="How it runs">
