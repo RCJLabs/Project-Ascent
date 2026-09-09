@@ -17,6 +17,7 @@ import {
   type SessionType,
 } from '@/content/types';
 import { dayOfWeek, programWeek } from './dates';
+import { effectivePlan, type WeekOverrides } from './reschedule';
 import type { WeekPlan } from './scheduler';
 
 export interface PlannedDay {
@@ -36,10 +37,13 @@ export function plannedDay(
   startDate: string,
   plan: WeekPlan,
   date: string,
+  /** Per-week exceptions, if the climber has moved anything. */
+  overrides?: WeekOverrides,
 ): PlannedDay {
   const week = programWeek(startDate, date, program.weeks);
   const phase = week === null ? undefined : phaseForWeek(program, week);
-  const typeId = plan[dayOfWeek(date) as 0 | 1 | 2 | 3 | 4 | 5 | 6];
+  const forWeek = effectivePlan(plan, overrides, date);
+  const typeId = forWeek[dayOfWeek(date) as 0 | 1 | 2 | 3 | 4 | 5 | 6];
   const sessionType = typeId ? program.sessionTypes.find((t) => t.id === typeId) : undefined;
 
   const drillId = week !== null && sessionType?.drillsByWeek ? sessionType.drillsByWeek[week] : undefined;
@@ -61,8 +65,9 @@ export function plannedRange(
   startDate: string,
   plan: WeekPlan,
   dates: string[],
+  overrides?: WeekOverrides,
 ): PlannedDay[] {
-  return dates.map((d) => plannedDay(program, startDate, plan, d));
+  return dates.map((d) => plannedDay(program, startDate, plan, d, overrides));
 }
 
 export interface BlockPrescription {

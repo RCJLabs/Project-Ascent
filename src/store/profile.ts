@@ -4,6 +4,7 @@ import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
 import { today } from '@/engine/dates';
 import type { BaselineAnswers } from '@/engine/onboarding';
+import { pruneOverrides, withOverride, type WeekOverrides } from '@/engine/reschedule';
 import type { WeekPlan } from '@/engine/scheduler';
 import { DEFAULT_PALETTE, type AvatarPalette } from '@/engine/avatar';
 
@@ -28,6 +29,9 @@ export interface ProfileState {
   tracks: Record<string, string>;
   /** programId → the weekly plan the climber committed to. */
   plans: Record<string, WeekPlan>;
+  /** programId → week start → that week's changed plan. A move defaults to
+   *  one week; see engine/reschedule.ts. */
+  weekOverrides: Record<string, WeekOverrides>;
   /** What the climber can train on — shared by the finder and warmups. */
   equipment: Equipment[];
   /** Active injuries. The warmup generator and finder both read these. */
@@ -50,6 +54,8 @@ export interface ProfileState {
   markExported: () => void;
   startProgram: (programId: string, plan: WeekPlan, trackId?: string, restart?: boolean) => void;
   setPlan: (programId: string, plan: WeekPlan) => void;
+  /** Change one week without touching the program's plan. */
+  setWeekPlan: (programId: string, weekStart: string, plan: WeekPlan) => void;
   stopProgram: () => void;
   setEquipment: (equipment: Equipment[]) => void;
   addInjury: (part: BodyPart, note?: string) => void;
@@ -65,6 +71,7 @@ interface Persisted {
   startDates: Record<string, string>;
   tracks: Record<string, string>;
   plans: Record<string, WeekPlan>;
+  weekOverrides: Record<string, WeekOverrides>;
   equipment: Equipment[];
   injuries: Injury[];
   recentWarmups: string[];
@@ -81,6 +88,7 @@ function snapshot(s: ProfileState): Persisted {
     startDates: s.startDates,
     tracks: s.tracks,
     plans: s.plans,
+    weekOverrides: s.weekOverrides,
     equipment: s.equipment,
     injuries: s.injuries,
     recentWarmups: s.recentWarmups,
@@ -103,6 +111,7 @@ export const useProfile = create<ProfileState>((set, get) => ({
   startDates: {},
   tracks: {},
   plans: {},
+  weekOverrides: {},
   equipment: ['wall', 'gym'],
   injuries: [],
   recentWarmups: [],
@@ -145,7 +154,17 @@ export const useProfile = create<ProfileState>((set, get) => ({
   },
 
   setPlan: (programId, plan) => {
-    set({ plans: { ...get().plans, [programId]: plan } });
+    // Changing the plan itself retires the per-week exceptions to the old
+    // one: they were written against a shape that no longer exists.
+    const { [programId]: _dropped, ...rest } = get().weekOverrides;
+    set({ plans: { ...get().plans, [programId]: plan }, weekOverrides: rest });
+    void save(snapshot(get()));
+  },
+
+  setWeekPlan: (programId, weekStart, plan) => {
+    const base = get().plans[programId] ?? {};
+    const forProgram = withOverride(get().weekOverrides[programId] ?? {}, weekStart, plan, base);
+    set({ weekOverrides: { ...get().weekOverrides, [programId]: pruneOverrides(forProgram, today()) } });
     void save(snapshot(get()));
   },
 
@@ -198,6 +217,7 @@ export async function hydrateProfile(): Promise<void> {
       startDates: value.startDates ?? {},
       tracks: value.tracks ?? {},
       plans: value.plans ?? {},
+      weekOverrides: value.weekOverrides ?? {},
       equipment: value.equipment ?? ['wall', 'gym'],
       injuries: value.injuries ?? [],
       recentWarmups: value.recentWarmups ?? [],

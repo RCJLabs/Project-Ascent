@@ -26,6 +26,7 @@ export function HomePage() {
   const activeProgramId = useProfile((s) => s.activeProgramId);
   const startDates = useProfile((s) => s.startDates);
   const plans = useProfile((s) => s.plans);
+  const weekOverrides = useProfile((s) => s.weekOverrides);
   const byDate = useSessions((s) => s.byDate);
   const hydrated = useSessions((s) => s.hydrated);
   const load = useSessions((s) => s.load);
@@ -38,7 +39,8 @@ export function HomePage() {
   const program = activeProgramId ? getProgram(activeProgramId) : undefined;
   const startDate = activeProgramId ? startDates[activeProgramId] : undefined;
   const plan = activeProgramId ? plans[activeProgramId] : undefined;
-  const day = program && startDate && plan ? plannedDay(program, startDate, plan, date) : undefined;
+  const overrides = activeProgramId ? weekOverrides[activeProgramId] : undefined;
+  const day = program && startDate && plan ? plannedDay(program, startDate, plan, date, overrides) : undefined;
   const logged = byDate[date] ?? [];
   const done = logged.some((s) => s.completed);
 

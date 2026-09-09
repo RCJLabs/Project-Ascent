@@ -49,6 +49,7 @@ export function LogPage({ params }: { params: { date: string } }) {
   const activeProgramId = useProfile((s) => s.activeProgramId);
   const startDates = useProfile((s) => s.startDates);
   const plans = useProfile((s) => s.plans);
+  const weekOverrides = useProfile((s) => s.weekOverrides);
   const tracks = useProfile((s) => s.tracks);
 
   const byDate = useSessions((s) => s.byDate);
@@ -65,10 +66,11 @@ export function LogPage({ params }: { params: { date: string } }) {
   const program = activeProgramId ? getProgram(activeProgramId) : undefined;
   const startDate = activeProgramId ? startDates[activeProgramId] : undefined;
   const plan = activeProgramId ? plans[activeProgramId] : undefined;
+  const overrides = activeProgramId ? weekOverrides[activeProgramId] : undefined;
   const trackId = activeProgramId ? tracks[activeProgramId] : undefined;
 
   const day = useMemo(
-    () => (program && startDate && plan ? plannedDay(program, startDate, plan, date) : undefined),
+    () => (program && startDate && plan ? plannedDay(program, startDate, plan, date, overrides) : undefined),
     [program, startDate, plan, date],
   );
 
