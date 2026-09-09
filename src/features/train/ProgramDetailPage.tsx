@@ -190,7 +190,10 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
       <Link href="/train" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
         <ArrowLeft size={15} /> Train
       </Link>
-      <PageHeader title={program.name} subtitle={program.subtitle} />
+      <PageHeader
+        title={program.name}
+        subtitle={program.author ? `${program.subtitle} · by ${program.author}` : program.subtitle}
+      />
 
       <div className="grid grid-cols-1 gap-3">
         <Card>

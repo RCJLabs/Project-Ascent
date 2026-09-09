@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ArrowLeft, ArrowRight, CircleCheck, Info, Plus, Trash2, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CircleCheck, Info, Plus, Share2, Trash2, TriangleAlert } from 'lucide-react';
 import type { Constraint, DayOfWeek, Equipment, Phase, Program, SessionType } from '@/content/types';
 import { allMetrics } from '@/engine/assessments';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
@@ -17,6 +17,7 @@ import {
   type Issue,
 } from '@/engine/customProgram';
 import { contentIssues, reconcileProgramPhases, trimDrills } from '@/engine/prescription';
+import { buildProgramFile, fileName } from '@/engine/programFile';
 import { useCustomPrograms } from '@/store/programs';
 import { useGradeOptions } from '@/ui/useGrade';
 import { Button } from '@/ui/Button';
@@ -92,6 +93,15 @@ export function BuilderPage({ params }: { params: { id: string } }) {
               onChange={(e) => edit({ name: e.target.value })}
               className={input}
               aria-label="Program name"
+            />
+          </Field>
+          <Field label="Your name (optional)">
+            <input
+              value={program.author ?? ''}
+              onChange={(e) => edit({ author: e.target.value || undefined })}
+              placeholder="Shown on the program if you share it"
+              className={input}
+              aria-label="Author"
             />
           </Field>
           <Field label="One-line subtitle">
@@ -308,6 +318,16 @@ export function BuilderPage({ params }: { params: { id: string } }) {
 
         <AssessmentsCard program={program} onChange={edit} />
 
+        <Card title="Share it">
+          <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+            Save the program as a file. Anyone with the app can import it — the whole thing travels,
+            blocks and prescriptions included.
+          </p>
+          <Button variant="outline" onClick={() => shareProgram(program)}>
+            <Share2 size={15} /> Save as a file
+          </Button>
+        </Card>
+
         <Card title="Danger zone">
           <Button
             variant="danger"
@@ -323,6 +343,19 @@ export function BuilderPage({ params }: { params: { id: string } }) {
       </div>
     </>
   );
+}
+
+/** Hand the program over as a download. */
+function shareProgram(program: Program): void {
+  const blob = new Blob([JSON.stringify(buildProgramFile(program), null, 2)], {
+    type: 'application/json',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName(program);
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 const input = 'w-full bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm';

@@ -284,6 +284,9 @@ export interface Program {
   id: ProgramId;
   name: string;
   subtitle: string;
+  /** Who wrote it. Shipped programs leave this unset; a shared one carries
+   *  its author's name so a program handed to an athlete says whose it is. */
+  author?: string;
   /**
    * 'program' is a structured, periodized block with a finish line.
    * 'mode' is open-ended logging — no progression to complete, no

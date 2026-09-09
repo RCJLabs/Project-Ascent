@@ -1,7 +1,9 @@
+import { useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, ArrowRight, Copy, Plus, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Copy, Plus, Upload, TriangleAlert } from 'lucide-react';
 import { PROGRAMS } from '@/content/programs';
 import { blankProgram, forkProgram, validateProgram } from '@/engine/customProgram';
+import { ProgramFileError, parseProgramFile } from '@/engine/programFile';
 import { useCustomPrograms } from '@/store/programs';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -12,10 +14,38 @@ export function BuilderList() {
   const custom = useCustomPrograms((s) => s.custom);
   const save = useCustomPrograms((s) => s.save);
   const [, navigate] = useLocation();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [notice, setNotice] = useState<{ tone: 'good' | 'bad'; lines: string[] } | null>(null);
 
   async function create(program = blankProgram()) {
     await save(program);
     navigate(`/build/${program.id}`);
+  }
+
+  async function importFile(files: FileList | null) {
+    const file = files?.[0];
+    if (!file) return;
+    try {
+      const { program, dropped } = parseProgramFile(await file.text());
+      await save(program);
+      // An import is never silently lossy: if anything could not survive the
+      // trip, it is named before the program opens.
+      setNotice({
+        tone: 'good',
+        lines: [
+          `Imported "${program.name}"${program.author ? ` by ${program.author}` : ''}.`,
+          ...dropped.map((d) => `Left out: ${d}.`),
+        ],
+      });
+      if (dropped.length === 0) navigate(`/build/${program.id}`);
+    } catch (e) {
+      setNotice({
+        tone: 'bad',
+        lines: [e instanceof ProgramFileError ? e.message : 'That file could not be read.'],
+      });
+    } finally {
+      if (fileRef.current) fileRef.current.value = '';
+    }
   }
 
   return (
@@ -29,6 +59,18 @@ export function BuilderList() {
       />
 
       <div className="grid grid-cols-1 gap-3">
+        {notice && (
+          <Card>
+            <ul className="grid grid-cols-1 gap-1">
+              {notice.lines.map((line, i) => (
+                <li key={i} className={`text-sm ${i === 0 && notice.tone === 'bad' ? 'text-danger' : 'text-ink-soft'}`}>
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+
         {custom.map((program) => {
           const issues = validateProgram(program);
           const errors = issues.filter((i) => i.level === 'error').length;
@@ -71,6 +113,23 @@ export function BuilderList() {
               </Button>
             ))}
           </div>
+        </Card>
+
+        <Card title="From someone else">
+          <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+            Open a program file a coach sent you. It arrives as a copy of your own — editable, and
+            with no way to touch anything you already wrote.
+          </p>
+          <Button variant="outline" onClick={() => fileRef.current?.click()}>
+            <Upload size={15} /> Open a program file
+          </Button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(e) => void importFile(e.target.files)}
+          />
         </Card>
       </div>
     </>
