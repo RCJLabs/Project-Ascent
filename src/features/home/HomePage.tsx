@@ -8,6 +8,7 @@ import { deriveClimberState } from '@/engine/derive';
 import { deriveStats } from '@/engine/stats';
 import { deriveVitality } from '@/engine/vitality';
 import { BoardCard } from '@/features/challenges/BoardPage';
+import { ReviewCard } from '@/features/review/ReviewPage';
 import { today } from '@/engine/dates';
 import { plannedDay } from '@/engine/plan';
 import { useXp } from '@/store/game';
@@ -57,6 +58,9 @@ export function HomePage() {
         <AltimeterCard />
         <Link href="/board" className="block bg-surface border border-line rounded-2xl p-4">
           <BoardCard />
+        </Link>
+        <Link href="/review" className="block bg-surface border border-line rounded-2xl p-4">
+          <ReviewCard />
         </Link>
 
         {!program && (

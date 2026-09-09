@@ -14,6 +14,7 @@ import { AssessmentsPage } from '@/features/assessments/AssessmentsPage';
 import { MetricDetailPage } from '@/features/assessments/MetricDetailPage';
 import { JournalPage } from '@/features/journal/JournalPage';
 import { ProgressPage } from '@/features/progress/ProgressPage';
+import { ReviewPage } from '@/features/review/ReviewPage';
 import { SkillsPage } from '@/features/skills/SkillsPage';
 import { ProjectDetailPage } from '@/features/projects/ProjectDetailPage';
 import { ProjectsPage } from '@/features/projects/ProjectsPage';
@@ -42,6 +43,7 @@ export function App() {
           <Route path="/" component={HomePage} />
           <Route path="/climber" component={ClimberPage} />
           <Route path="/skills" component={SkillsPage} />
+          <Route path="/review" component={ReviewPage} />
           <Route path="/altimeter" component={AltimeterPage} />
           <Route path="/train" component={TrainPage} />
           <Route path="/find" component={FinderPage} />
