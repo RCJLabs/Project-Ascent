@@ -14,6 +14,9 @@
 import {
   CLIMBER,
   HOOKS,
+  arrivalWindowAt,
+  spawnGapAt,
+  spawnWeightsAt,
   INVULNERABLE_MS,
   LANES,
   LANE_WIDTH,
@@ -252,7 +255,7 @@ function tick(state: RunState, dt: number): void {
 
   while (state.nextSpawnDistance < state.distance + VIEW.height) {
     spawnRow(state, state.nextSpawnDistance);
-    state.nextSpawnDistance += SPAWN.gap;
+    state.nextSpawnDistance += spawnGapAt(state.timeMs);
   }
 
   collide(state);
@@ -279,7 +282,7 @@ function threatenedAt(state: RunState, arrival: number): Set<number> {
   const lanes = new Set<number>();
   for (const entity of state.entities) {
     if (entity.collected || !isObstacle(entity.kind)) continue;
-    if (Math.abs(arrivalOf(state, entity) - arrival) > SPAWN.arrivalWindow) continue;
+    if (Math.abs(arrivalOf(state, entity) - arrival) > arrivalWindowAt(state.timeMs)) continue;
     for (let l = entity.lane; l < entity.lane + entity.lanes; l++) lanes.add(l);
   }
   return lanes;
@@ -293,7 +296,7 @@ function spawnRow(state: RunState, worldY: number): void {
   const row: Entity[] = [];
 
   for (let i = 0; i < count; i++) {
-    const category = pickWeighted(state.rng, SPAWN.weights as unknown as [string, number][]);
+    const category = pickWeighted(state.rng, spawnWeightsAt(state.timeMs));
     let kind: EntityKind;
     if (category === 'obstacle') {
       kind = pickWeighted(state.rng, SPAWN.obstacles as unknown as [ObstacleKind, number][]);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HOOKS, LANES, POWERUP, SPAWN, SPEED, VIEW } from './config';
+import { DIFFICULTY, HOOKS, LANES, POWERUP, SPAWN, SPEED, VIEW, arrivalWindowAt, difficultyAt, spawnGapAt, spawnWeightsAt } from './config';
 import {
   createRun,
   isObstacle,
@@ -162,10 +162,12 @@ describe('the wall it builds', () => {
     // obstacles land close enough together to be undodgeable: the window
     // here is about one lane change, which is the real test of fairness.
     // The spawner's own margin is twice this, so it errs on the safe side.
-    const undodgeable = SPAWN.arrivalWindow / 2;
+    const undodgeable = (t: number) => arrivalWindowAt(t) / 2;
     for (const seed of [1, 2, 3, 7, 42, 900, 12345, 88]) {
       const state = createRun({ seed, modifiers: { chalkSaves: 99999 } });
-      for (let t = 0; t < 60_000; t += 16) {
+      // Past ninety seconds, so the tightest wall the game ever builds is
+      // covered rather than just the opening minute.
+      for (let t = 0; t < 150_000; t += 16) {
         step(state, 16);
         if (t % 320 !== 0) continue;
         const arrivals = state.entities
@@ -174,7 +176,7 @@ describe('the wall it builds', () => {
         for (const { at } of arrivals) {
           const blocked = new Set<number>();
           for (const other of arrivals) {
-            if (Math.abs(other.at - at) > undodgeable) continue;
+            if (Math.abs(other.at - at) > undodgeable(state.timeMs)) continue;
             for (let l = other.e.lane; l < other.e.lane + other.e.lanes; l++) blocked.add(l);
           }
           expect(blocked.size, `seed ${seed} at ${Math.round(at)}`).toBeLessThan(LANES);
@@ -212,6 +214,39 @@ describe('the wall it builds', () => {
     }
   });
 
+  it('crowds the wall until ninety seconds, then holds it there', () => {
+    expect(difficultyAt(0)).toBe(0);
+    expect(difficultyAt(45_000)).toBeCloseTo(0.5);
+    expect(difficultyAt(DIFFICULTY.rampSeconds * 1000)).toBe(1);
+    expect(difficultyAt(600_000)).toBe(1);
+
+    // Rows close up and obstacles crowd out coins, both stopping at ninety.
+    expect(spawnGapAt(0)).toBe(DIFFICULTY.gap.start);
+    expect(spawnGapAt(45_000)).toBeLessThan(spawnGapAt(0));
+    expect(spawnGapAt(90_000)).toBe(DIFFICULTY.gap.end);
+    expect(spawnGapAt(300_000)).toBe(DIFFICULTY.gap.end);
+
+    const share = (t: number) => spawnWeightsAt(t).find(([k]) => k === 'obstacle')![1];
+    expect(share(0)).toBeCloseTo(DIFFICULTY.obstacleWeight.start);
+    expect(share(90_000)).toBeCloseTo(DIFFICULTY.obstacleWeight.end);
+    expect(share(300_000)).toBeCloseTo(DIFFICULTY.obstacleWeight.end);
+    // Power-ups keep their share the whole way.
+    for (const t of [0, 45_000, 90_000, 300_000]) {
+      expect(spawnWeightsAt(t).find(([k]) => k === 'powerup')![1]).toBe(DIFFICULTY.powerupWeight);
+      expect(spawnWeightsAt(t).reduce((sum, [, w]) => sum + w, 0)).toBeCloseTo(100);
+    }
+  });
+
+  it('keeps the dodge window in proportion as rows close up', () => {
+    // A fixed window would make the spawner refuse nearly every obstacle
+    // once rows tightened, and the wall would get easier the longer you
+    // survived — the opposite of the point.
+    expect(arrivalWindowAt(90_000)).toBeLessThan(arrivalWindowAt(0));
+    for (const t of [0, 30_000, 90_000, 300_000]) {
+      expect(arrivalWindowAt(t) / spawnGapAt(t)).toBeCloseTo(SPAWN.arrivalWindowRatio);
+    }
+  });
+
   it('spawns roughly the mix the plan asks for', () => {
     let obstacles = 0;
     let coins = 0;
@@ -233,9 +268,10 @@ describe('the wall it builds', () => {
     const total = obstacles + coins + powerups;
     expect(total).toBeGreaterThan(300);
     // Coins run a little high because a lane-blocking obstacle downgrades
-    // to one, which is the safety valve doing its job.
+    // to one, which is the safety valve doing its job. The share rises over
+    // a run as difficulty ramps, so this covers the whole ninety seconds.
     expect(obstacles / total).toBeGreaterThan(0.3);
-    expect(obstacles / total).toBeLessThan(0.5);
+    expect(obstacles / total).toBeLessThan(0.62);
     expect(powerups / total).toBeLessThan(0.09);
   });
 

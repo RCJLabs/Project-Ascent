@@ -31,23 +31,40 @@ export const SPEED = {
 /** 1 px climbed is 0.4 m, from the old tuning. */
 export const METRES_PER_PX = 0.4;
 
+/**
+ * How long the wall keeps getting harder.
+ *
+ * Speed caps at 480 px/s around 32 seconds, which is where the old tuning
+ * put it and where the run stops *feeling* like it is accelerating. From
+ * there to ninety seconds the pressure comes from density instead: rows
+ * arrive closer together and more of them are obstacles. After ninety
+ * seconds nothing changes again — the wall is as hard as it gets, and
+ * staying on it is the whole test.
+ */
+export const DIFFICULTY = {
+  rampSeconds: 90,
+  /** Distance between rows, at the start and at full difficulty. */
+  gap: { start: 240, end: 168 },
+  /** Obstacle share of the spawn mix, in percent. Coins take the rest. */
+  obstacleWeight: { start: 47.5, end: 66 },
+  /** Power-ups hold their share throughout. */
+  powerupWeight: 5,
+} as const;
+
 export const SPAWN = {
-  /** Distance between spawn rows, so density does not change with speed. */
-  gap: 240,
   /** Climbing before the first row, so a run does not open on a dodge. */
   grace: VIEW.height * 2,
   /**
    * Two obstacles arriving within this much of each other count as the same
    * moment. Debris drifts down between rows, so "one clear lane per row" is
    * not the same guarantee as "one clear lane at any instant".
+   *
+   * It is a fraction of the current gap rather than a constant: as rows
+   * close up, "the same moment" has to shrink with them or the spawner
+   * would refuse almost every obstacle and the wall would get *easier* the
+   * longer you survived.
    */
-  arrivalWindow: 130,
-  /** The mix, as the plan specifies it. */
-  weights: [
-    ['obstacle', 47.5],
-    ['coin', 47.5],
-    ['powerup', 5],
-  ] as const,
+  arrivalWindowRatio: 0.55,
   obstacles: [
     ['rock', 60],
     ['boulder', 25],
@@ -61,6 +78,35 @@ export const SPAWN = {
   /** A row may hold this many entities at most. */
   maxPerRow: 2,
 } as const;
+
+/** 0 at the start of a run, 1 once difficulty has finished rising. */
+export function difficultyAt(timeMs: number): number {
+  return Math.max(0, Math.min(1, timeMs / 1000 / DIFFICULTY.rampSeconds));
+}
+
+const lerp = (from: number, to: number, t: number) => from + (to - from) * t;
+
+export function spawnGapAt(timeMs: number): number {
+  return lerp(DIFFICULTY.gap.start, DIFFICULTY.gap.end, difficultyAt(timeMs));
+}
+
+export function arrivalWindowAt(timeMs: number): number {
+  return spawnGapAt(timeMs) * SPAWN.arrivalWindowRatio;
+}
+
+/** The spawn mix at a moment: obstacles crowd out coins as the run goes on. */
+export function spawnWeightsAt(timeMs: number): [string, number][] {
+  const obstacle = lerp(
+    DIFFICULTY.obstacleWeight.start,
+    DIFFICULTY.obstacleWeight.end,
+    difficultyAt(timeMs),
+  );
+  return [
+    ['obstacle', obstacle],
+    ['coin', 100 - DIFFICULTY.powerupWeight - obstacle],
+    ['powerup', DIFFICULTY.powerupWeight],
+  ];
+}
 
 export const SIZES = {
   rock: { width: LANE_WIDTH * 0.72, height: 34, lanes: 1, fallRate: 0 },
