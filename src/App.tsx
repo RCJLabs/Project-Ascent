@@ -37,19 +37,35 @@ import { WelcomePage } from '@/features/onboarding/WelcomePage';
 import { hydrateAll } from '@/store';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
-import { applyTheme, useSettings } from '@/store/settings';
+import { applyTextSize, applyTheme, useSettings } from '@/store/settings';
 import { AppShell } from '@/ui/AppShell';
 
 export function App() {
   const theme = useSettings((s) => s.theme);
+  const themeId = useSettings((s) => s.themeId);
+  const textSize = useSettings((s) => s.textSize);
 
   useEffect(() => {
     void hydrateAll();
   }, []);
 
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    applyTheme(theme, themeId);
+  }, [theme, themeId]);
+
+  useEffect(() => {
+    applyTextSize(textSize);
+  }, [textSize]);
+
+  // A themed palette depends on which mode the system is in, so it has to be
+  // repainted when that changes — otherwise switching the OS to dark at
+  // 'system' leaves the light palette on top of the dark defaults.
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-color-scheme: dark)');
+    const repaint = () => applyTheme(theme, themeId);
+    query.addEventListener('change', repaint);
+    return () => query.removeEventListener('change', repaint);
+  }, [theme, themeId]);
 
   return (
     <Router hook={useHashLocation}>

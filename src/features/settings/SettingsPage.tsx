@@ -19,11 +19,12 @@ import {
 } from '@/store/profile';
 import { rankTemplates } from '@/engine/templates';
 import { useTemplates } from '@/store/templates';
-import { applyTheme, useSettings, type ThemePreference } from '@/store/settings';
+import { TEXT_SCALE, useSettings, type TextSize, type ThemePreference } from '@/store/settings';
 import { Button } from '@/ui/Button';
 import { announce } from '@/ui/Announce';
 import { Card } from '@/ui/Card';
 import { Chip, SelectableCard } from '@/ui/Chip';
+import { THEMES as PALETTES } from '@/ui/themes';
 import { Input } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 
@@ -50,6 +51,13 @@ const PARTS: { value: BodyPart; label: string }[] = [
 const V_SAMPLE = ['V2', 'V5', 'V9'] as const;
 const YDS_SAMPLE = ['5.9', '5.11c', '5.13a'] as const;
 
+const TEXT_SIZES: { value: TextSize; label: string }[] = [
+  { value: 'small', label: 'Small' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'large', label: 'Large' },
+  { value: 'largest', label: 'Largest' },
+];
+
 const THEMES: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
@@ -71,6 +79,10 @@ function formatBytes(n?: number): string {
 export function SettingsPage() {
   const theme = useSettings((s) => s.theme);
   const setTheme = useSettings((s) => s.setTheme);
+  const themeId = useSettings((s) => s.themeId);
+  const setThemeId = useSettings((s) => s.setThemeId);
+  const textSize = useSettings((s) => s.textSize);
+  const setTextSize = useSettings((s) => s.setTextSize);
   const cues = useSettings((s) => s.cues);
   const setCues = useSettings((s) => s.setCues);
   const display = useSettings((s) => s.display);
@@ -182,21 +194,51 @@ export function SettingsPage() {
       <PageHeader title="Settings" />
       <div className="grid grid-cols-1 gap-3">
         <Card title="Appearance">
-          <div className="flex gap-2">
+          <div className="text-xs font-semibold text-ink-soft mb-1.5">Light or dark</div>
+          {/* wrap: three chips do not fit 320px at the largest text size. */}
+          <div className="flex flex-wrap gap-2 mb-4">
             {THEMES.map((t) => (
-              <Button
-                key={t.value}
-                variant={theme === t.value ? 'primary' : 'outline'}
-                size="sm"
-                onClick={() => {
-                  setTheme(t.value);
-                  applyTheme(t.value);
-                }}
-              >
+              <Chip key={t.value} active={theme === t.value} onClick={() => setTheme(t.value)}>
                 {t.label}
-              </Button>
+              </Chip>
             ))}
           </div>
+
+          <div className="text-xs font-semibold text-ink-soft mb-1.5">Palette</div>
+          <div className="grid grid-cols-1 gap-2 mb-4">
+            {PALETTES.map((palette) => (
+              <SelectableCard
+                key={palette.id}
+                selected={themeId === palette.id}
+                onClick={() => setThemeId(palette.id)}
+                label={`${palette.name}: ${palette.blurb}`}
+                className="flex items-center gap-3 bg-sunken"
+              >
+                <span className="flex gap-1 shrink-0" aria-hidden>
+                  {([palette.light.accent, palette.light.ink, palette.light.sunken] as const).map((c) => (
+                    <span key={c} className="w-4 h-4 rounded border border-line" style={{ background: c }} />
+                  ))}
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-semibold text-sm">{palette.name}</span>
+                  <span className="block text-xs text-ink-soft">{palette.blurb}</span>
+                </span>
+              </SelectableCard>
+            ))}
+          </div>
+
+          <div className="text-xs font-semibold text-ink-soft mb-1.5">Text size</div>
+          <div className="flex flex-wrap gap-2">
+            {TEXT_SIZES.map((size) => (
+              <Chip key={size.value} active={textSize === size.value} onClick={() => setTextSize(size.value)}>
+                <span style={{ fontSize: `${TEXT_SCALE[size.value]}em` }}>{size.label}</span>
+              </Chip>
+            ))}
+          </div>
+          <p className="text-xs text-ink-soft mt-2.5 leading-relaxed">
+            If your system asks for more contrast, the Slate palette is used automatically — unless
+            you have picked one yourself, in which case yours wins.
+          </p>
         </Card>
 
         <Card title="Grades">

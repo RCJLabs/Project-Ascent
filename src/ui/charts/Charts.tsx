@@ -44,23 +44,30 @@ function DataTable({
   rows: [string, string][];
 }) {
   return (
-    <table className="sr-only">
-      <caption>{caption}</caption>
-      <thead>
-        <tr>
-          <th scope="col">{head[0]}</th>
-          <th scope="col">{head[1]}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map(([key, value]) => (
-          <tr key={key}>
-            <th scope="row">{key}</th>
-            <td>{value}</td>
+    // The `sr-only` goes on a wrapper, not the table. A table treats a
+    // specified width as a minimum and expands to fit its content anyway,
+    // so `sr-only` on the table itself leaves a 459px-wide invisible
+    // element pushing the page sideways — measured at the largest text
+    // size on a 320px screen.
+    <div className="sr-only">
+      <table>
+        <caption>{caption}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{head[0]}</th>
+            <th scope="col">{head[1]}</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map(([key, value]) => (
+            <tr key={key}>
+              <th scope="row">{key}</th>
+              <td>{value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

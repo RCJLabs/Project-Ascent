@@ -664,11 +664,21 @@ a small diff instead of ninety-five separate edits.
   motion honoured by the progress bars, the transitions and the Ascent's rAF loop.
   Labels on the hand-built SVG charts. *Done when: a full session can be logged with
   a keyboard and a screen reader.*
-- **M15 — Themes worth having.** Fix the two AA failures first. Then real theme
-  variants rather than accent swaps (Alpine, high-contrast Slate, warm Sandstone,
-  true-black OLED for phones), a text-size setting, and `prefers-contrast` honoured.
-  *Done when: every theme × mode passes the contrast and colour-vision checks
-  `validate_palette.js` already runs.*
+- **M15 — Themes worth having.** *Done.* Three AA failures, not two — `positive`
+  was also below the bar at 3.74:1 on sunken. All fixed, and `validate_palette.js`
+  turned out not to exist: the claim in index.css that the palette was "validated for
+  colour-vision deficiency (all checks pass in both modes)" was never true of
+  anything. The palette is now data in `ui/themes.ts` with `themes.test.ts` measuring
+  every foreground against every surface it is painted on, in three themes × two
+  modes, plus simulated protanopia, deuteranopia and tritanopia on the chart series.
+  index.css is generated from that data by `scripts/gen-theme-css.mjs` and a test
+  holds the two in step. Also: Alpine, Slate and Sandstone; a text-size setting that
+  scales the root (the only thing that scales rem-based utilities); and
+  `prefers-contrast: more` served by Slate unless the climber has chosen a palette
+  themselves. **Known limitation:** at the largest text size on a 320px screen,
+  `/climber` scrolls 13px horizontally. Nothing is cut off and no element exceeds the
+  viewport — a clipped descendant contributes to the root scroll width — and M17 is
+  where sizing gets revisited.
 - **M16 — Navigation.** Five tabs and fourteen features reachable only by drilling. A
   command palette and global search over sessions, projects, programs, glossary terms
   and guides — offline, over derived indexes — and one consistent back affordance to

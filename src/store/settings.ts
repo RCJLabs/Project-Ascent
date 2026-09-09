@@ -2,17 +2,40 @@ import { create } from 'zustand';
 import { getDb } from '@/db';
 import { DEFAULT_DISPLAY, type BoulderDisplay, type GradeDisplay, type RouteDisplay } from '@/engine/grades';
 import { setCuesEnabled } from '@/lib/cues';
+import { DEFAULT_THEME_ID, applyPalette, getTheme } from '@/ui/themes';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
+
+/**
+ * Body text size, as a multiplier on the root font size.
+ *
+ * A setting rather than "just zoom the browser", because a TWA has no
+ * browser chrome to zoom from, and because zoom rescales the layout while
+ * this rescales only the type — which is what someone who wants bigger text
+ * usually means.
+ */
+export type TextSize = 'small' | 'normal' | 'large' | 'largest';
+
+export const TEXT_SCALE: Record<TextSize, number> = {
+  small: 0.92,
+  normal: 1,
+  large: 1.15,
+  largest: 1.3,
+};
 
 export interface SettingsState {
   hydrated: boolean;
   theme: ThemePreference;
+  /** Which palette. Independent of light/dark, which is the mode. */
+  themeId: string;
+  textSize: TextSize;
   /** How grades are read. Storage stays canonical V/YDS either way. */
   display: GradeDisplay;
   /** Timer beeps, game sounds and haptics. */
   cues: boolean;
   setTheme: (theme: ThemePreference) => void;
+  setThemeId: (id: string) => void;
+  setTextSize: (size: TextSize) => void;
   setCues: (value: boolean) => void;
   setBoulderDisplay: (value: BoulderDisplay) => void;
   setRouteDisplay: (value: RouteDisplay) => void;
@@ -22,21 +45,42 @@ const SETTINGS_KEY = 'settings';
 
 interface PersistedSettings {
   theme: ThemePreference;
+  themeId: string;
+  textSize: TextSize;
   cues: boolean;
   display: GradeDisplay;
 }
 
 function persisted(state: SettingsState): PersistedSettings {
-  return { theme: state.theme, cues: state.cues, display: state.display };
+  return {
+    theme: state.theme,
+    themeId: state.themeId,
+    textSize: state.textSize,
+    cues: state.cues,
+    display: state.display,
+  };
 }
 
 export const useSettings = create<SettingsState>((set, get) => ({
   hydrated: false,
   theme: 'system',
+  themeId: DEFAULT_THEME_ID,
+  textSize: 'normal',
   display: DEFAULT_DISPLAY,
   cues: true,
   setTheme: (theme) => {
     set({ theme });
+    applyTheme(theme, get().themeId);
+    void saveSettings(persisted(get()));
+  },
+  setThemeId: (id) => {
+    set({ themeId: id });
+    applyTheme(get().theme, id);
+    void saveSettings(persisted(get()));
+  },
+  setTextSize: (size) => {
+    set({ textSize: size });
+    applyTextSize(size);
     void saveSettings(persisted(get()));
   },
   setCues: (value) => {
@@ -69,6 +113,11 @@ export async function hydrateSettings(): Promise<void> {
       hydrated: true,
       cues,
       display: { ...DEFAULT_DISPLAY, ...value.display },
+      themeId: typeof value.themeId === 'string' ? value.themeId : DEFAULT_THEME_ID,
+      textSize:
+        typeof value.textSize === 'string' && value.textSize in TEXT_SCALE
+          ? (value.textSize as TextSize)
+          : 'normal',
       ...(value.theme === 'light' || value.theme === 'dark' || value.theme === 'system'
         ? { theme: value.theme }
         : {}),
@@ -80,10 +129,58 @@ export async function hydrateSettings(): Promise<void> {
   }
 }
 
-/** Reflect the theme preference onto <html data-theme>. 'system' removes
- *  the attribute so the CSS media query decides. */
-export function applyTheme(theme: ThemePreference): void {
+/**
+ * Put the chosen theme on the page.
+ *
+ * `data-theme` still decides light versus dark, and removing it hands that
+ * back to the CSS media query — so `system` keeps working with no script.
+ * The palette is then painted as custom properties on top, which is why a
+ * non-default theme is one style recalculation rather than a stylesheet
+ * swap and a flash.
+ *
+ * Alpine is the exception: it is what index.css already contains, so
+ * choosing it clears the inline properties instead of restating them, and
+ * the first frame after a reload is correct with no JavaScript at all.
+ */
+export function applyTheme(theme: ThemePreference, themeId: string = DEFAULT_THEME_ID): void {
   const root = document.documentElement;
   if (theme === 'system') delete root.dataset.theme;
   else root.dataset.theme = theme;
+
+  const dark =
+    theme === 'dark' ||
+    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  // The OS asking for more contrast is a real request, and there is a theme
+  // built for it. Only honoured while the climber is on the default — an
+  // explicit choice outranks a system preference.
+  const wantsContrast =
+    themeId === DEFAULT_THEME_ID && window.matchMedia('(prefers-contrast: more)').matches;
+  if (wantsContrast) {
+    const slate = getTheme('slate');
+    applyPalette(root, dark ? slate.dark : slate.light, dark ? 'dark' : 'light');
+    return;
+  }
+
+  if (themeId === DEFAULT_THEME_ID) {
+    for (const property of [...root.style]) {
+      if (property.startsWith('--c-') || property.startsWith('--viz-')) {
+        root.style.removeProperty(property);
+      }
+    }
+    return;
+  }
+  const chosen = getTheme(themeId);
+  applyPalette(root, dark ? chosen.dark : chosen.light, dark ? 'dark' : 'light');
+}
+
+/**
+ * Scale the type, and the rem-based spacing around it.
+ *
+ * Applied to the root because that is the only thing that works: every size
+ * in this app is a Tailwind utility in `rem`, so setting it on `body` would
+ * leave `text-sm` and `text-xs` untouched.
+ */
+export function applyTextSize(size: TextSize): void {
+  document.documentElement.style.setProperty('--text-scale', String(TEXT_SCALE[size]));
 }

@@ -83,6 +83,26 @@ describe('live regions', () => {
   });
 });
 
+describe('screen-reader-only content', () => {
+  it('never puts sr-only on a table', () => {
+    // A table treats a specified width as a minimum and expands to fit its
+    // content regardless, so `sr-only` on the table itself leaves a
+    // 459px-wide invisible element pushing the page sideways — measured at
+    // the largest text size on a 320px screen. The wrapper is the fix.
+    const offences = FILES.filter(({ source }) => /<table[^>]*className="[^"]*sr-only/.test(source));
+    expect(offences.map((f) => f.path)).toEqual([]);
+  });
+});
+
+describe('text size', () => {
+  it('scales the root, which is the only thing that scales Tailwind', () => {
+    const css = readFileSync('src/index.css', 'utf8');
+    // Every size in this app is a rem utility, so scaling `body` would
+    // leave text-sm and text-xs exactly where they were.
+    expect(css).toMatch(/html\s*\{[^}]*font-size:\s*calc\(100% \* var\(--text-scale/);
+  });
+});
+
 describe('motion', () => {
   it('honours prefers-reduced-motion globally', () => {
     const css = read('src/index.css');

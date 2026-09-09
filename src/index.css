@@ -11,32 +11,25 @@
   --c-surface: #ffffff;
   --c-sunken: #eef1f4;
   --c-ink: #17222b;
-  --c-ink-soft: #5b6b78;
+  --c-ink-soft: #55646f;
   --c-line: #dde3e9;
-  --c-accent: #2f7bb0;
-  --c-accent-strong: #24618c;
+  --c-accent: #2a6f9f;
+  --c-accent-strong: #215a82;
   --c-accent-ink: #ffffff;
-  --c-positive: #2e8b57;
-  --c-warn: #b3752a;
-  --c-danger: #b3403a;
-
-  /* Data-visualisation slots. Separate from the UI accent on purpose: these
-     are validated for colour-vision deficiency against the chart surface
-     (validate_palette.js, all checks pass in both modes). Status colours are
-     fixed and never themed — they must never impersonate a series. */
+  --c-positive: #277548;
+  --c-warn: #96601f;
+  --c-danger: #a83a34;
   --viz-1: #2a78d6;
-  --viz-2: #eb6834;
+  --viz-2: #c4521f;
   --viz-grid: #e6eaee;
-  --viz-good: #0ca30c;
-  --viz-warning: #fab219;
-  --viz-serious: #ec835a;
-  --viz-critical: #d03b3b;
+  --viz-good: #1a853e;
+  --viz-warning: #8f6900;
+  --viz-serious: #a33c00;
+  --viz-critical: #7d1418;
+
 }
 
 [data-theme='dark'] {
-  --viz-1: #3987e5;
-  --viz-2: #d95926;
-  --viz-grid: #24313d;
   --c-bg: #10181f;
   --c-surface: #182430;
   --c-sunken: #0c1319;
@@ -49,13 +42,18 @@
   --c-positive: #55b380;
   --c-warn: #d19a52;
   --c-danger: #d4706a;
+  --viz-1: #5c9fe8;
+  --viz-2: #e6874f;
+  --viz-grid: #24313d;
+  --viz-good: #31a05a;
+  --viz-warning: #e0aa3c;
+  --viz-serious: #f2a271;
+  --viz-critical: #fbd0cd;
+
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-  --viz-1: #3987e5;
-    --viz-2: #d95926;
-    --viz-grid: #24313d;
     --c-bg: #10181f;
     --c-surface: #182430;
     --c-sunken: #0c1319;
@@ -68,6 +66,14 @@
     --c-positive: #55b380;
     --c-warn: #d19a52;
     --c-danger: #d4706a;
+    --viz-1: #5c9fe8;
+    --viz-2: #e6874f;
+    --viz-grid: #24313d;
+    --viz-good: #31a05a;
+    --viz-warning: #e0aa3c;
+    --viz-serious: #f2a271;
+    --viz-critical: #fbd0cd;
+
   }
 }
 
@@ -140,6 +146,20 @@
 html,
 body {
   height: 100%;
+}
+
+:root {
+  --text-scale: 1;
+}
+
+/* Type scale.
+   Applied to the root, which is the only place that works: every size in
+   this app comes from a Tailwind utility in `rem`, so scaling `body` would
+   leave `text-sm` and `text-xs` exactly where they were. Scaling the root
+   takes the rem-based padding and gaps with it — which is the right
+   outcome, not a side effect: bigger text needs bigger targets around it. */
+html {
+  font-size: calc(100% * var(--text-scale, 1));
 }
 
 body {
