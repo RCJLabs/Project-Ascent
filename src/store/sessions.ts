@@ -7,6 +7,7 @@ import {
   putSession,
   type Session,
 } from '@/db/sessions';
+import { mergeSessions, moveSession } from '@/engine/sessionEdit';
 
 /**
  * Logged sessions, held in memory keyed by date so the calendar and logger
@@ -21,6 +22,11 @@ export interface SessionsState {
   create: (date: string, patch?: Partial<Session>) => Promise<Session>;
   update: (session: Session) => Promise<void>;
   remove: (session: Session) => Promise<void>;
+  /** Re-date a session. Its id encodes the date, so this is a write and a
+   *  delete rather than an edit. Returns the session at its new id. */
+  move: (session: Session, toDate: string) => Promise<Session>;
+  /** Fuse `b` into `a`, keeping `a`'s id. */
+  merge: (a: Session, b: Session) => Promise<Session>;
 }
 
 function index(sessions: Session[]): Record<string, Session[]> {
@@ -59,6 +65,29 @@ export const useSessions = create<SessionsState>((set, get) => ({
     await deleteSession(session.id);
     const day = (get().byDate[session.date] ?? []).filter((s) => s.id !== session.id);
     set({ byDate: { ...get().byDate, [session.date]: day } });
+  },
+
+  move: async (session, toDate) => {
+    if (toDate === session.date) return session;
+    // Write first, delete second: a failure between the two leaves a
+    // duplicate, which the climber can see and fix. The other order loses
+    // the session outright.
+    const moved = await putSession(moveSession(session, toDate, await nextIndex(toDate)));
+    await deleteSession(session.id);
+    const from = (get().byDate[session.date] ?? []).filter((s) => s.id !== session.id);
+    const to = [...(get().byDate[toDate] ?? []), moved];
+    set({ byDate: { ...get().byDate, [session.date]: from, [toDate]: to } });
+    return moved;
+  },
+
+  merge: async (a, b) => {
+    const merged = await putSession(mergeSessions(a, b));
+    await deleteSession(b.id);
+    const day = (get().byDate[a.date] ?? [])
+      .filter((s) => s.id !== b.id)
+      .map((s) => (s.id === merged.id ? merged : s));
+    set({ byDate: { ...get().byDate, [a.date]: day } });
+    return merged;
   },
 }));
 

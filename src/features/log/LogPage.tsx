@@ -3,7 +3,7 @@ import { Link, useLocation } from 'wouter';
 import { AlertTriangle, ArrowLeft, Check, Clock, Copy, Flame, Plus, RotateCw, Sparkles, Timer, Trash2, TrendingUp, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
-import { addDays, fromKey, today } from '@/engine/dates';
+import { addDays, fromKey, shortLabel, today } from '@/engine/dates';
 import {
   describeSpan,
   durationFromSpan,
@@ -30,6 +30,7 @@ import { Card } from '@/ui/Card';
 import { TimerSheet } from '@/ui/TimerSheet';
 import { useGradeLabel, useGradeOptions } from '@/ui/useGrade';
 import { alreadySaved, applyTemplate, rankTemplates, suggestName } from '@/engine/templates';
+import { canMerge, describeSession } from '@/engine/sessionEdit';
 
 const REST_ITEMS = [
   { key: 'hydration', label: 'Hydration' },
@@ -75,7 +76,11 @@ export function LogPage({ params }: { params: { date: string } }) {
   );
 
   const sessions = byDate[date] ?? [];
-  const session = sessions[0];
+  // A day can hold several sessions — the schema always allowed it, nextIndex
+  // hands out the slots, and templates create them. Showing only the first
+  // made the rest invisible, which reads as data loss.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const session = sessions.find((s) => s.id === selectedId) ?? sessions[0];
 
   async function startSession(sessionTypeId?: string) {
     await create(date, {
@@ -178,15 +183,37 @@ export function LogPage({ params }: { params: { date: string } }) {
           </>
         )}
 
+        {sessions.length > 1 && session && (
+          <SessionSwitcher
+            sessions={sessions}
+            current={session}
+            program={program}
+            onSelect={setSelectedId}
+          />
+        )}
+
         {session && (
           <SessionEditor
+            key={session.id}
             session={session}
             program={program}
             day={day}
             trackId={trackId}
+            others={sessions.filter((s) => s.id !== session.id)}
             onChange={(s) => void update(s)}
             onDelete={() => void remove(session)}
+            onMoved={(s) => setSelectedId(s.id)}
           />
+        )}
+
+        {session && sessions.length < 4 && (
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={() => void startSession(day?.sessionType?.id)}
+          >
+            <Plus size={15} /> Add another session today
+          </Button>
         )}
       </div>
     </>
@@ -297,15 +324,20 @@ function SessionEditor({
   program,
   day,
   trackId,
+  others,
   onChange,
   onDelete,
+  onMoved,
 }: {
   session: Session;
   program: ReturnType<typeof getProgram>;
   day: ReturnType<typeof plannedDay> | undefined;
   trackId: string | undefined;
+  /** The day's other sessions, which this one can be merged into. */
+  others: Session[];
   onChange: (s: Session) => void;
   onDelete: () => void;
+  onMoved: (s: Session) => void;
 }) {
   const type = program?.sessionTypes.find((t) => t.id === session.sessionTypeId);
   const gradeLabel = useGradeLabel();
@@ -769,6 +801,8 @@ function SessionEditor({
 
       {session.completed && <SaveTemplateCard session={session} typeName={type?.name} />}
 
+      <CorrectionCard session={session} others={others} typeName={type?.name} onMoved={onMoved} />
+
       {session.completed ? (
         <Button
           variant="outline"
@@ -1096,6 +1130,135 @@ function SaveTemplateCard({ session, typeName }: { session: Session; typeName?: 
           <Copy size={15} /> Save
         </Button>
       </div>
+    </Card>
+  );
+}
+
+/** Which of the day's sessions is on screen. */
+function SessionSwitcher({
+  sessions,
+  current,
+  program,
+  onSelect,
+}: {
+  sessions: Session[];
+  current: Session;
+  program: ReturnType<typeof getProgram>;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {sessions.map((s, i) => {
+        const typeName = program?.sessionTypes.find((t) => t.id === s.sessionTypeId)?.name;
+        return (
+          <button
+            key={s.id}
+            onClick={() => onSelect(s.id)}
+            className={`rounded-xl px-3 py-2 border text-left text-sm ${
+              s.id === current.id ? 'border-accent bg-accent/10' : 'border-line bg-sunken text-ink-soft'
+            }`}
+          >
+            <span className="font-semibold">#{i + 1}</span>{' '}
+            <span className="text-xs">{describeSession(s, typeName)}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Fixing a session that went in wrong: the date, or two entries that were
+ * really one. Both are corrections, and both drop the wall clock — see
+ * engine/sessionEdit.ts.
+ */
+function CorrectionCard({
+  session,
+  others,
+  typeName,
+  onMoved,
+}: {
+  session: Session;
+  others: Session[];
+  typeName?: string;
+  onMoved: (s: Session) => void;
+}) {
+  const move = useSessions((s) => s.move);
+  const merge = useSessions((s) => s.merge);
+  const [open, setOpen] = useState(false);
+  const [target, setTarget] = useState(session.date);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const mergeable = others
+    .map((other) => ({ other, check: canMerge(session, other) }))
+    .filter((m) => m.check.ok);
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="text-sm text-ink-soft underline self-center py-1.5">
+        Logged on the wrong day?
+      </button>
+    );
+  }
+
+  return (
+    <Card title="Correct this session">
+      <label className="text-sm block mb-3">
+        <span className="block text-ink-soft mb-1">Move to a different day</span>
+        <div className="flex flex-wrap gap-2">
+          <input
+            type="date"
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            aria-label="New date"
+            className="flex-1 min-w-0 bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm"
+          />
+          <Button
+            size="sm"
+            disabled={target === session.date || target === ''}
+            onClick={() => {
+              void move(session, target).then((moved) => {
+                onMoved(moved);
+                setMessage(`Moved to ${shortLabel(target)}.`);
+              });
+            }}
+          >
+            Move
+          </Button>
+        </div>
+      </label>
+
+      {mergeable.length > 0 && (
+        <div className="border-t border-line pt-3">
+          <p className="text-sm text-ink-soft mb-2">
+            Merge into another session on this day. Durations add up and the effort is averaged
+            across them, so your training load stays exactly what it was.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {mergeable.map(({ other }) => (
+              <Button
+                key={other.id}
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  void merge(session, other).then((merged) => {
+                    onMoved(merged);
+                    setMessage('Merged.');
+                  });
+                }}
+              >
+                <RotateCw size={14} /> Merge in {describeSession(other, typeName)}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <p className="text-xs text-ink-soft mt-3 leading-relaxed">
+        Correcting a session drops its start and finish times — they were true on the day they were
+        recorded. The duration you trained for is kept.
+      </p>
+      {message && <p className="text-sm text-positive mt-2">{message}</p>}
     </Card>
   );
 }
