@@ -4,6 +4,8 @@ import { useHashLocation } from 'wouter/use-hash-location';
 import { HomePage } from '@/features/home/HomePage';
 import { PlaceholderPage } from '@/features/placeholder/PlaceholderPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
+import { ProgramDetailPage } from '@/features/train/ProgramDetailPage';
+import { TrainPage } from '@/features/train/TrainPage';
 import { applyTheme, hydrateSettings, useSettings } from '@/store/settings';
 import { AppShell } from '@/ui/AppShell';
 
@@ -23,13 +25,8 @@ export function App() {
       <AppShell>
         <Switch>
           <Route path="/" component={HomePage} />
-          <Route path="/train">
-            <PlaceholderPage
-              title="Train"
-              subtitle="Programs, finder, and logging"
-              body="The full program catalog lands in M1; the finder, weekly planning, and session logging in M2."
-            />
-          </Route>
+          <Route path="/train" component={TrainPage} />
+          <Route path="/train/:id" component={ProgramDetailPage} />
           <Route path="/progress">
             <PlaceholderPage
               title="Progress"
