@@ -3,6 +3,7 @@ import { APP_VERSION } from '@/version';
 import { exportAll, hasRealData, importAll, parseExportFile, SCHEMA_VERSION } from '@/db';
 import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
+import { hydrateAll } from '@/store';
 import { useProfile } from '@/store/profile';
 import { applyTheme, useSettings, type ThemePreference } from '@/store/settings';
 import { Button } from '@/ui/Button';
@@ -104,6 +105,7 @@ export function SettingsPage() {
         setMessage(null);
       } else {
         await importAll(parseExportFile(text), 'replace');
+        await hydrateAll();
         setMessage('Backup imported.');
         void refreshStorage();
       }
@@ -118,6 +120,7 @@ export function SettingsPage() {
     if (!pendingImport) return;
     try {
       await importAll(parseExportFile(pendingImport.text), mode);
+      await hydrateAll();
       setMessage(mode === 'replace' ? 'Backup imported — previous data replaced.' : 'Backup merged into existing data.');
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Import failed.');

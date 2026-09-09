@@ -1,0 +1,240 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation } from 'wouter';
+import { ArrowLeft, Check, Plus, Trash2 } from 'lucide-react';
+import type { Project } from '@/db/projects';
+import { OUTCOME_LABEL, highPointOf, summariseProject } from '@/engine/projects';
+import { fromKey, today } from '@/engine/dates';
+import { useProjects } from '@/store/projects';
+import { useSessions } from '@/store/sessions';
+import { Button } from '@/ui/Button';
+import { Card } from '@/ui/Card';
+import { ProgressionLine } from '@/ui/charts/Charts';
+
+export function ProjectDetailPage({ params }: { params: { id: string } }) {
+  const [, navigate] = useLocation();
+  const projects = useProjects((s) => s.projects);
+  const hydrated = useProjects((s) => s.hydrated);
+  const load = useProjects((s) => s.load);
+  const update = useProjects((s) => s.update);
+  const remove = useProjects((s) => s.remove);
+  const byDate = useSessions((s) => s.byDate);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    if (!hydrated) void load();
+  }, [hydrated, load]);
+
+  const project = projects.find((p) => p.id === params.id);
+  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const summary = useMemo(
+    () => (project ? summariseProject(project.id, sessions) : null),
+    [project, sessions],
+  );
+
+  if (!hydrated) return null;
+  if (!project || !summary) {
+    return (
+      <Card>
+        <p className="text-sm text-ink-soft mb-3">That project is gone.</p>
+        <Link href="/projects" className="text-sm font-semibold text-accent">
+          Back to projects
+        </Link>
+      </Card>
+    );
+  }
+
+  const points = summary.highPointByDay.map((d) => ({
+    week: d.date,
+    value: d.value,
+    display: `${d.value}%`,
+  }));
+
+  return (
+    <>
+      <Link href="/projects" className="inline-flex items-center gap-1 text-sm text-ink-soft mb-3">
+        <ArrowLeft size={15} /> Projects
+      </Link>
+
+      <header className="mb-4">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <h1 className="text-2xl font-black tracking-tight">{project.name}</h1>
+          <span className="text-lg font-black text-accent">{project.grade}</span>
+        </div>
+        <p className="text-sm text-ink-soft mt-0.5">
+          {project.setting === 'outdoor' ? 'Outdoor' : 'Indoor'}
+          {project.location ? ` · ${project.location}` : ''}
+          {project.status === 'sent' && project.sentDate ? ` · sent ${shortDate(project.sentDate)}` : ''}
+          {project.status === 'shelved' ? ' · shelved' : ''}
+        </p>
+      </header>
+
+      <div className="grid gap-3">
+        <Card>
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <Stat label="Burns" value={String(summary.burns)} />
+            <Stat label="Days" value={String(summary.days)} />
+            <Stat label="High point" value={summary.highPoint === null ? '—' : `${summary.highPoint}%`} />
+            <Stat
+              label="Last burn"
+              value={summary.daysSinceLast === null ? '—' : summary.daysSinceLast === 0 ? 'today' : `${summary.daysSinceLast}d`}
+            />
+          </div>
+          {summary.daysSinceLast !== null && summary.daysSinceLast >= 14 && project.status === 'active' && (
+            <p className="text-sm text-warn mt-3">
+              Nothing for {summary.daysSinceLast} days. Get back on it, or shelve it honestly.
+            </p>
+          )}
+        </Card>
+
+        {points.length >= 2 && (
+          <Card title="High point">
+            <ProgressionLine points={points} label="High point per day" formatValue={(v) => `${v}%`} />
+            <p className="text-xs text-ink-soft mt-2">
+              One point per day you tried it, in order — not to scale in time. Rehearsal days are
+              left out, since working moves is not a high point.
+            </p>
+          </Card>
+        )}
+
+        <Card title="Burns">
+          {summary.attempts.length === 0 ? (
+            <>
+              <p className="text-sm text-ink-soft mb-3">
+                Nothing logged yet. Attempts are recorded on the session, so log a session and add
+                your burns there.
+              </p>
+              <Link
+                href={`/log/${today()}`}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent"
+              >
+                <Plus size={15} /> Open today
+              </Link>
+            </>
+          ) : (
+            <ol className="grid gap-2">
+              {[...summary.attempts].reverse().map((a) => (
+                <li key={a.id} className="flex items-baseline gap-2 bg-sunken rounded-xl px-3 py-2">
+                  <span className="text-xs text-ink-soft w-16 shrink-0">{shortDate(a.date)}</span>
+                  <span className={`text-sm font-semibold flex-1 ${a.outcome === 'send' ? 'text-positive' : ''}`}>
+                    {OUTCOME_LABEL[a.outcome]}
+                    {a.count > 1 ? ` ×${a.count}` : ''}
+                  </span>
+                  <span className="text-xs font-bold tabular-nums text-ink-soft">
+                    {highPointOf(a) === null ? '' : `${highPointOf(a)}%`}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Card>
+
+        <BetaCard project={project} onChange={(p) => void update(p)} />
+
+        <Card title="Status">
+          <div className="flex flex-wrap gap-2">
+            {project.status !== 'active' && (
+              <Button size="sm" variant="outline" onClick={() => void update({ ...project, status: 'active' })}>
+                Back on it
+              </Button>
+            )}
+            {project.status === 'active' && (
+              <Button size="sm" variant="outline" onClick={() => void update({ ...project, status: 'shelved' })}>
+                Shelve it
+              </Button>
+            )}
+            {confirmDelete ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="danger"
+                  onClick={() => {
+                    void remove(project.id);
+                    navigate('/projects');
+                  }}
+                >
+                  <Trash2 size={14} /> Delete for good
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(false)}>
+                  Keep it
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)}>
+                Delete
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-ink-soft mt-3">
+            Shelving keeps the history. Deleting removes the project — the burns stay on the
+            sessions that recorded them.
+          </p>
+        </Card>
+      </div>
+    </>
+  );
+}
+
+function shortDate(key: string): string {
+  return fromKey(key).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xl font-black tabular-nums leading-none">{value}</div>
+      <div className="text-[11px] text-ink-soft mt-1">{label}</div>
+    </div>
+  );
+}
+
+function BetaCard({ project, onChange }: { project: Project; onChange: (p: Project) => void }) {
+  const [text, setText] = useState('');
+
+  function add() {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    onChange({
+      ...project,
+      beta: [
+        { id: `b-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, date: today(), text: trimmed },
+        ...project.beta,
+      ],
+    });
+    setText('');
+  }
+
+  return (
+    <Card title="Beta">
+      {project.beta.length > 0 && (
+        <ul className="grid gap-2 mb-3">
+          {project.beta.map((note) => (
+            <li key={note.id} className="bg-sunken rounded-xl px-3 py-2.5">
+              <div className="flex items-start gap-2">
+                <p className="text-sm leading-relaxed flex-1 whitespace-pre-wrap">{note.text}</p>
+                <button
+                  onClick={() => onChange({ ...project, beta: project.beta.filter((b) => b.id !== note.id) })}
+                  className="text-ink-soft shrink-0 p-0.5 -m-0.5"
+                  aria-label="Delete note"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              <p className="text-[11px] text-ink-soft mt-1">{shortDate(note.date)}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={2}
+        placeholder="Left heel by the arête, then drop knee before the throw."
+        aria-label="New beta note"
+        className="w-full bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm resize-y mb-2"
+      />
+      <Button size="sm" variant="outline" disabled={text.trim() === ''} onClick={add}>
+        <Check size={14} /> Save beta
+      </Button>
+    </Card>
+  );
+}

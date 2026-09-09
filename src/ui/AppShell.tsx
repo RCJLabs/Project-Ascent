@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { CalendarDays, Dumbbell, Mountain, Settings, TrendingUp } from 'lucide-react';
+import { CalendarDays, Dumbbell, Mountain, Target, TrendingUp } from 'lucide-react';
 
 const TABS = [
   { href: '/', label: 'Home', icon: Mountain },
   { href: '/train', label: 'Train', icon: Dumbbell },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays },
+  { href: '/projects', label: 'Projects', icon: Target },
   { href: '/progress', label: 'Progress', icon: TrendingUp },
-  { href: '/settings', label: 'Settings', icon: Settings },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         <div className="max-w-2xl mx-auto grid grid-cols-5">
           {TABS.map(({ href, label, icon: Icon }) => {
-            const active = location === href;
+            const active = href === '/' ? location === '/' : location.startsWith(href);
             return (
               <Link
                 key={href}

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link } from 'wouter';
-import { CalendarDays, Check, Clock, Sparkles } from 'lucide-react';
+import { CalendarDays, Check, Clock, Settings, Sparkles } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { today } from '@/engine/dates';
 import { plannedDay } from '@/engine/plan';
@@ -31,7 +31,15 @@ export function HomePage() {
 
   return (
     <>
-      <PageHeader title="Project Ascent" subtitle="Train. Understand. Grow." />
+      <PageHeader
+        title="Project Ascent"
+        subtitle="Train. Understand. Grow."
+        action={
+          <Link href="/settings" className="text-ink-soft p-1 -m-1" aria-label="Settings">
+            <Settings size={20} />
+          </Link>
+        }
+      />
 
       <div className="grid gap-3">
         {!program && (

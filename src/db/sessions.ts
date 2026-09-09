@@ -8,6 +8,7 @@
  */
 
 import type { GradeScale } from '@/engine/grades';
+import type { AttemptOutcome } from './projects';
 import { getDb } from './db';
 
 export type SessionMode = 'indoor' | 'outdoor';
@@ -22,6 +23,25 @@ export interface Climb {
   result: ClimbResult;
   style?: AscentStyle;
   name?: string;
+}
+
+/**
+ * A burn on a tracked project, recorded on the session that produced it.
+ *
+ * The session is the source of truth: the project's totals, high point and
+ * timeline are all derived from these (engine/projects.ts). Nothing about a
+ * project's history is stored twice.
+ */
+export interface ProjectAttempt {
+  id: string;
+  projectId: string;
+  outcome: AttemptOutcome;
+  /** Percentage of the climb reached. Absent for `worked`, which is
+   *  rehearsal rather than a redpoint burn. */
+  highPoint?: number;
+  /** Burns of this kind in this session. */
+  count: number;
+  note?: string;
 }
 
 export interface RestChecklist {
@@ -51,6 +71,7 @@ export interface Session {
   /** Exercise names marked done, e.g. by finishing their protocol timer. */
   completedExercises?: string[];
   climbs: Climb[];
+  projectAttempts?: ProjectAttempt[];
   restChecklist?: RestChecklist;
   notes?: string;
   /** A planned deload week — excluded from training-load maths. */

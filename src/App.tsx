@@ -8,21 +8,20 @@ import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { FinderPage } from '@/features/finder/FinderPage';
 import { LogPage, TodayRedirect } from '@/features/log/LogPage';
 import { ProgressPage } from '@/features/progress/ProgressPage';
+import { ProjectDetailPage } from '@/features/projects/ProjectDetailPage';
+import { ProjectsPage } from '@/features/projects/ProjectsPage';
 import { StartProgramPage } from '@/features/plan/StartProgramPage';
 import { ProgramDetailPage } from '@/features/train/ProgramDetailPage';
 import { TrainPage } from '@/features/train/TrainPage';
-import { hydrateProfile } from '@/store/profile';
-import { useSessions } from '@/store/sessions';
-import { applyTheme, hydrateSettings, useSettings } from '@/store/settings';
+import { hydrateAll } from '@/store';
+import { applyTheme, useSettings } from '@/store/settings';
 import { AppShell } from '@/ui/AppShell';
 
 export function App() {
   const theme = useSettings((s) => s.theme);
 
   useEffect(() => {
-    void hydrateSettings();
-    void hydrateProfile();
-    void useSessions.getState().load();
+    void hydrateAll();
   }, []);
 
   useEffect(() => {
@@ -42,6 +41,8 @@ export function App() {
           <Route path="/log/:date" component={LogPage} />
           <Route path="/today" component={TodayRedirect} />
           <Route path="/progress" component={ProgressPage} />
+          <Route path="/projects/:id" component={ProjectDetailPage} />
+          <Route path="/projects" component={ProjectsPage} />
           <Route path="/settings" component={SettingsPage} />
           <Route>
             <PlaceholderPage title="Not found" subtitle="" body="That page does not exist." />

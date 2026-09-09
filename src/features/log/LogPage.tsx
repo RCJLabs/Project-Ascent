@@ -7,7 +7,10 @@ import { addDays, fromKey, today } from '@/engine/dates';
 import { plannedDay, prescriptionFor } from '@/engine/plan';
 import { focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
-import type { Climb, Session } from '@/db/sessions';
+import type { Climb, ProjectAttempt, Session } from '@/db/sessions';
+import type { AttemptOutcome } from '@/db/projects';
+import { OUTCOME_HIGH_POINT } from '@/engine/projects';
+import { useProjects } from '@/store/projects';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { parseCount } from '@/content/types';
@@ -283,6 +286,7 @@ function SessionEditor({
   const [scale, setScale] = useState<GradeScale>('V');
   const [grade, setGrade] = useState('V3');
   const [result, setResult] = useState<'send' | 'attempt'>('send');
+  const [climbName, setClimbName] = useState('');
   const [timer, setTimer] = useState<{
     protocolId: string;
     name: string;
@@ -299,13 +303,17 @@ function SessionEditor({
     });
 
   function addClimb() {
+    const name = climbName.trim();
+    // A named climb never merges into an unnamed tally — the name is what
+    // makes project auto-suggest possible.
     const existing = session.climbs.find(
-      (c) => c.grade === grade && c.scale === scale && c.result === result,
+      (c) => c.grade === grade && c.scale === scale && c.result === result && (c.name ?? '') === name,
     );
     const climbs = existing
       ? session.climbs.map((c) => (c === existing ? { ...c, count: c.count + 1 } : c))
-      : [...session.climbs, { id: rid(), grade, scale, count: 1, result } as Climb];
+      : [...session.climbs, { id: rid(), grade, scale, count: 1, result, ...(name ? { name } : {}) } as Climb];
     patch({ climbs });
+    setClimbName('');
   }
 
   function bump(climb: Climb, by: number) {
@@ -419,6 +427,14 @@ function SessionEditor({
               </Button>
             </div>
 
+            <input
+              value={climbName}
+              onChange={(e) => setClimbName(e.target.value)}
+              placeholder="Name it (optional) — named climbs can become projects"
+              aria-label="Climb name"
+              className="w-full bg-sunken border border-line rounded-xl px-3 py-2 text-sm mb-3"
+            />
+
             {session.climbs.length === 0 ? (
               <p className="text-sm text-ink-soft">Nothing logged yet.</p>
             ) : (
@@ -426,7 +442,8 @@ function SessionEditor({
                 {session.climbs.map((c) => (
                   <li key={c.id} className="flex items-center gap-2 bg-sunken rounded-xl px-3 py-2">
                     <span className="font-bold text-sm w-14">{c.grade}</span>
-                    <span className="text-xs text-ink-soft flex-1">
+                    <span className="text-xs text-ink-soft flex-1 truncate">
+                      {c.name ? `${c.name} · ` : ''}
                       {c.result === 'send' ? 'sent' : 'tried'}
                     </span>
                     <button onClick={() => bump(c, -1)} className="w-7 h-7 rounded-lg bg-surface border border-line">
@@ -441,6 +458,8 @@ function SessionEditor({
               </ul>
             )}
           </Card>
+
+          <ProjectBurnsCard session={session} onChange={onChange} />
 
           {blocks.length > 0 && (
             <Card title="Today's prescription">
@@ -627,4 +646,121 @@ export function TodayRedirect() {
     navigate(`/log/${today()}`, { replace: true });
   }, [navigate]);
   return null;
+}
+
+const OUTCOMES: { value: AttemptOutcome; label: string }[] = [
+  { value: 'worked', label: 'Worked' },
+  { value: 'fell-low', label: 'Low' },
+  { value: 'fell-mid', label: 'Mid' },
+  { value: 'fell-high', label: 'High' },
+  { value: 'fell-crux', label: 'Crux' },
+  { value: 'send', label: 'Sent' },
+];
+
+/**
+ * Burns on your active projects, logged where they happened.
+ *
+ * The session owns the attempt; the project's totals, high point and status
+ * are all derived from it (engine/projects.ts). Logging a send here is what
+ * flips the project to sent — via reconciliation, once, on the next write.
+ */
+function ProjectBurnsCard({
+  session,
+  onChange,
+}: {
+  session: Session;
+  onChange: (s: Session) => void;
+}) {
+  const projects = useProjects((s) => s.projects);
+  const hydrated = useProjects((s) => s.hydrated);
+  const load = useProjects((s) => s.load);
+
+  useEffect(() => {
+    if (!hydrated) void load();
+  }, [hydrated, load]);
+
+  const attempts = session.projectAttempts ?? [];
+  const shown = projects.filter(
+    (p) => p.status === 'active' || attempts.some((a) => a.projectId === p.id),
+  );
+  if (shown.length === 0) return null;
+
+  function bump(projectId: string, outcome: AttemptOutcome, by: number) {
+    const existing = attempts.find((a) => a.projectId === projectId && a.outcome === outcome);
+    if (!existing) {
+      if (by < 0) return;
+      const attempt: ProjectAttempt = { id: rid(), projectId, outcome, count: 1 };
+      const implied = OUTCOME_HIGH_POINT[outcome];
+      onChange({
+        ...session,
+        projectAttempts: [...attempts, implied === null ? attempt : { ...attempt, highPoint: implied }],
+      });
+      return;
+    }
+    const count = existing.count + by;
+    onChange({
+      ...session,
+      projectAttempts:
+        count <= 0
+          ? attempts.filter((a) => a !== existing)
+          : attempts.map((a) => (a === existing ? { ...a, count } : a)),
+    });
+  }
+
+  return (
+    <Card title="Projects">
+      <div className="grid gap-3">
+        {shown.map((project) => {
+          const mine = attempts.filter((a) => a.projectId === project.id);
+          return (
+            <div key={project.id}>
+              <div className="flex items-baseline gap-2 mb-2">
+                <Link href={`/projects/${project.id}`} className="font-semibold text-sm truncate">
+                  {project.name}
+                </Link>
+                <span className="text-xs font-bold text-accent shrink-0">{project.grade}</span>
+                {project.status === 'sent' && (
+                  <span className="text-xs font-bold text-positive shrink-0">sent</span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {OUTCOMES.map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => bump(project.id, o.value, 1)}
+                    className={`rounded-lg px-2.5 py-1.5 border text-xs font-semibold ${
+                      o.value === 'send'
+                        ? 'border-positive/50 text-positive'
+                        : 'border-line bg-sunken text-ink-soft'
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+              {mine.length > 0 && (
+                <ul className="flex flex-wrap gap-1.5 mt-2">
+                  {mine.map((a) => (
+                    <li
+                      key={a.id}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 border border-accent/40 pl-2.5 pr-1 py-1 text-xs font-semibold"
+                    >
+                      {OUTCOMES.find((o) => o.value === a.outcome)?.label} ×{a.count}
+                      <button
+                        onClick={() => bump(project.id, a.outcome, -1)}
+                        className="w-5 h-5 rounded flex items-center justify-center text-ink-soft"
+                        aria-label={`Remove one ${a.outcome} burn`}
+                      >
+                        −
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
 }
