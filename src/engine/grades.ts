@@ -97,3 +97,80 @@ export function vEquivalent(scale: GradeScale, grade: string): number {
   if (canon === null) return -1;
   return scale === 'V' ? V_GRADES.indexOf(canon as (typeof V_GRADES)[number]) : YDS_TO_V[canon] ?? -1;
 }
+
+// ── Display scales (PLAN.md §9.8) ─────────────────────────────────────────
+//
+// Grades are *stored* on the V and YDS ladders and nothing below changes
+// that. What follows converts a stored grade into the notation the climber
+// reads, so a French or Fontainebleau climber sees their own numbers without
+// the log meaning something different on their phone than on anyone else's.
+//
+// The tables are one-to-one by rung, which is a simplification. Real
+// conversion charts hedge — V3 is usually written "6A/6A+" — and pretending
+// otherwise would be false precision. A single rung per grade is chosen
+// because a log needs one label per entry, and the UI says out loud that
+// the conversion is approximate rather than implying it is exact.
+
+/** Notation for boulder grades. */
+export type BoulderDisplay = 'V' | 'Font';
+/** Notation for route grades. */
+export type RouteDisplay = 'YDS' | 'French';
+
+/** Fontainebleau, by V-scale rung. */
+const V_TO_FONT: Record<string, string> = {
+  V0: '4', V1: '5', V2: '5+', V3: '6A', V4: '6B', V5: '6C',
+  V6: '7A', V7: '7A+', V8: '7B', V9: '7C', V10: '7C+', V11: '8A',
+  V12: '8A+', V13: '8B', V14: '8B+', V15: '8C', V16: '8C+', V17: '9A',
+};
+
+/** French sport grades, by YDS rung. */
+const YDS_TO_FRENCH: Record<string, string> = {
+  '5.4': '4a', '5.5': '4b', '5.6': '4c', '5.7': '5a', '5.8': '5b', '5.9': '5c',
+  '5.10a': '6a', '5.10b': '6a+', '5.10c': '6b', '5.10d': '6b+',
+  '5.11a': '6c', '5.11b': '6c+', '5.11c': '7a', '5.11d': '7a+',
+  '5.12a': '7b', '5.12b': '7b+', '5.12c': '7c', '5.12d': '7c+',
+  '5.13a': '8a', '5.13b': '8a+', '5.13c': '8b', '5.13d': '8b+',
+  '5.14a': '8c', '5.14b': '8c+', '5.14c': '9a', '5.14d': '9a+',
+  '5.15a': '9b', '5.15b': '9b+', '5.15c': '9c', '5.15d': '9c+',
+};
+
+export interface GradeDisplay {
+  boulder: BoulderDisplay;
+  route: RouteDisplay;
+}
+
+export const DEFAULT_DISPLAY: GradeDisplay = { boulder: 'V', route: 'YDS' };
+
+/**
+ * The stored grade as the climber has asked to read it. An unknown grade is
+ * returned untouched rather than blanked: a log entry from an import is
+ * still worth showing even when it is off the ladder.
+ */
+export function displayGrade(scale: GradeScale, grade: string, display: GradeDisplay): string {
+  const canon = canonicalGrade(scale, grade);
+  if (canon === null) return grade;
+  if (scale === 'V') return display.boulder === 'Font' ? V_TO_FONT[canon] ?? canon : canon;
+  return display.route === 'French' ? YDS_TO_FRENCH[canon] ?? canon : canon;
+}
+
+/** Which notation a ladder is currently being read in. */
+export function displayNameFor(scale: GradeScale, display: GradeDisplay): string {
+  return scale === 'V' ? display.boulder : display.route;
+}
+
+/**
+ * Parse either notation back to the stored ladder, so a climber reading in
+ * Font can also type in Font. Canonical input keeps working regardless of
+ * the preference — the two notations do not collide.
+ */
+export function parseGrade(scale: GradeScale, input: string): string | null {
+  const direct = canonicalGrade(scale, input);
+  if (direct !== null) return direct;
+
+  const needle = input.trim().toLowerCase();
+  const table = scale === 'V' ? V_TO_FONT : YDS_TO_FRENCH;
+  for (const [stored, alternate] of Object.entries(table)) {
+    if (alternate.toLowerCase() === needle) return stored;
+  }
+  return null;
+}

@@ -19,7 +19,12 @@ const TODAY = '2026-09-09';
 let counter = 0;
 
 function session(date: string, patch: Partial<Session> = {}): Session {
-  return newSession(date, counter++, { completed: true, rpe: 7, durationMin: 60, ...patch });
+  // newSession stamps createdAt from the real clock, which made the bounty
+  // tests pass before 18:00 UTC and fail after: the fixture's sessions drifted
+  // past a hardcoded acceptedAt. Stamp it from the session's own date instead.
+  return newSession(date, counter++, {
+    completed: true, rpe: 7, durationMin: 60, createdAt: `${date}T12:00:00.000Z`, ...patch,
+  });
 }
 function climb(grade: string, patch: Record<string, unknown> = {}) {
   return {

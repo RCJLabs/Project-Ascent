@@ -36,7 +36,7 @@ import {
   type SessionReward,
 } from './economy';
 import { buildLoadIndex, loadStateAt } from './derive';
-import { gradeOrdinal, type GradeScale } from './grades';
+import { gradeOrdinal, type GradeDisplay, type GradeScale } from './grades';
 
 export interface XpLine {
   label: string;
@@ -85,6 +85,8 @@ export interface XpSources {
   projects?: Project[];
   /** Game-lane awards and challenge claims. */
   ledger?: LedgerEntry[];
+  /** Notation to write grades in. Defaults to the stored ladders. */
+  display?: GradeDisplay;
 }
 
 export function deriveXp(sources: XpSources): XpState {
@@ -198,6 +200,7 @@ export function deriveXp(sources: XpSources): XpState {
       zone: loadStateAt(loadIndex, session.date).zone,
       drillStreak,
       records,
+      ...(sources.display ? { display: sources.display } : {}),
     });
 
     const lines: XpLine[] = reward.awards.map((award) => ({

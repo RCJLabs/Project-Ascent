@@ -9,6 +9,7 @@ import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
+import { useSettings } from '@/store/settings';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
@@ -29,6 +30,7 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
   const activeProgramId = useProfile((s) => s.activeProgramId);
   const lastExportAt = useProfile((s) => s.lastExportAt);
   const dismissed = useProfile((s) => s.dismissedTips);
+  const display = useSettings((s) => s.display);
 
   return useMemo(() => {
     const sessions = Object.values(byDate).flat();
@@ -41,6 +43,7 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
       metrics,
       lastExportAt,
       diagnosis: diagnose({
+        display,
         state,
         sessions,
         injuries: injuries.map((i) => i.part),
@@ -51,7 +54,7 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
     });
     const visible = visibleTips(all, dismissed);
     return { all, visible, hidden: all.length - visible.length };
-  }, [byDate, projects, metrics, injuries, equipment, activeProgramId, lastExportAt, dismissed]);
+  }, [byDate, projects, metrics, injuries, equipment, activeProgramId, lastExportAt, dismissed, display]);
 }
 
 export function CoachPage() {

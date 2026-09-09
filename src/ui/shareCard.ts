@@ -12,6 +12,7 @@
  */
 
 import type { Project } from '@/db/projects';
+import { DEFAULT_DISPLAY, displayGrade, type GradeDisplay } from '@/engine/grades';
 import type { AltimeterState } from '@/engine/altimeter';
 import type { AvatarConfig } from '@/engine/avatar';
 import { shortLabel } from '@/engine/dates';
@@ -188,10 +189,11 @@ export function recordCard(
   date: string,
   avatar?: AvatarConfig,
   scale: 'V' | 'YDS' = 'V',
+  display: GradeDisplay = DEFAULT_DISPLAY,
 ): CardContent {
   return {
     eyebrow: 'Personal record',
-    headline: grade,
+    headline: displayGrade(scale, grade, display),
     subhead: `First ${scale === 'V' ? 'boulder' : 'route'} at this grade · ${shortLabel(date)}`,
     stats: [],
     ...(avatar ? { avatar } : {}),
@@ -203,11 +205,12 @@ export function projectCard(
   project: Project,
   summary: ProjectSummary,
   avatar?: AvatarConfig,
+  display: GradeDisplay = DEFAULT_DISPLAY,
 ): CardContent {
   return {
     eyebrow: 'Project sent',
     headline: project.name,
-    subhead: `${project.grade} · ${project.setting === 'outdoor' ? 'outdoors' : 'indoors'}${project.location ? ` · ${project.location}` : ''}`,
+    subhead: `${displayGrade(project.scale, project.grade, display)} · ${project.setting === 'outdoor' ? 'outdoors' : 'indoors'}${project.location ? ` · ${project.location}` : ''}`,
     stats: [
       { label: 'Burns', value: String(summary.burns) },
       { label: 'Days', value: String(summary.days) },

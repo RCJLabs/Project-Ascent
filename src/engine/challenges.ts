@@ -19,7 +19,7 @@ import type { DrillCategory } from '@/content/types';
 import type { Session } from '@/db/sessions';
 import { addDays, daysBetween, startOfWeek, today as todayKey } from './dates';
 import type { ClimberState } from './derive';
-import { V_GRADES, YDS_GRADES, gradeOrdinal, type GradeScale } from './grades';
+import { DEFAULT_DISPLAY, V_GRADES, YDS_GRADES, displayGrade, gradeOrdinal, type GradeDisplay, type GradeScale } from './grades';
 
 export type ChallengeKind = 'daily' | 'weekly' | 'bounty';
 
@@ -175,6 +175,7 @@ export function weeklyChallenges(
   state: ClimberState,
   today: string,
   weeklyTarget = 3,
+  display: GradeDisplay = DEFAULT_DISPLAY,
 ): Challenge[] {
   const from = startOfWeek(today);
   const to = addDays(from, 6);
@@ -191,7 +192,7 @@ export function weeklyChallenges(
 
   const volume: Spec = {
     key: `volume-${grade}`,
-    title: `${weeklySends} sends at ${grade} or harder`,
+    title: `${weeklySends} sends at ${displayGrade(scale, grade, display)} or harder`,
     detail: 'Scaled to your recent weeks, nudged up a little.',
     unit: 'sends',
     target: weeklySends,
@@ -370,6 +371,8 @@ export interface BoardInput {
   today?: string;
   /** Ids already claimed, so the board can stop offering them. */
   claimed?: readonly string[];
+  /** Notation to write grades in. Defaults to the stored ladders. */
+  display?: GradeDisplay;
 }
 
 export function deriveBoard(input: BoardInput): Board {
@@ -378,7 +381,9 @@ export function deriveBoard(input: BoardInput): Board {
   const claimed = new Set(input.claimed ?? []);
 
   const daily = dailyChallenge(input.sessions, input.state, today);
-  const weekly = weeklyChallenges(input.sessions, input.state, today, input.weeklyTarget);
+  const weekly = weeklyChallenges(
+    input.sessions, input.state, today, input.weeklyTarget, input.display ?? DEFAULT_DISPLAY,
+  );
   const bounties = accepted.map((b) => resolveBounty(b, input.sessions, today));
 
   const acceptedKeys = new Set(accepted.map((b) => b.spec.key));

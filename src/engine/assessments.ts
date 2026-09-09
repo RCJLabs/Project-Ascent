@@ -13,7 +13,15 @@ import { getMetric, METRICS } from '@/content/metrics';
 import { phaseForWeek, type Metric, type MetricId, type Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import { addDays, daysBetween, programWeek, today as todayKey } from './dates';
-import { canonicalGrade, gradeOrdinal } from './grades';
+import {
+  DEFAULT_DISPLAY,
+  V_GRADES,
+  YDS_GRADES,
+  canonicalGrade,
+  displayGrade,
+  gradeOrdinal,
+  type GradeDisplay,
+} from './grades';
 
 /** How long a result stands before it is worth retesting off-program. */
 export const STALE_DAYS = 56;
@@ -49,7 +57,17 @@ export function parseMetricInput(metric: Metric, raw: string): ParseResult {
   }
 }
 
-export function formatEntry(metric: Metric, entry: MetricEntry): string {
+export function formatEntry(
+  metric: Metric,
+  entry: MetricEntry,
+  display: GradeDisplay = DEFAULT_DISPLAY,
+): string {
+  // A grade metric stores its canonical ladder string; the climber may read
+  // a different notation, and this is the one place that knows both.
+  if (metric.kind === 'grade') {
+    const grade = entry.display ?? (metric.scale === 'YDS' ? YDS_GRADES : V_GRADES)[entry.value];
+    return grade === undefined ? trim(entry.value) : displayGrade(metric.scale ?? 'V', grade, display);
+  }
   if (entry.display !== undefined) return entry.display;
   return metric.unit ? `${trim(entry.value)} ${metric.unit}` : trim(entry.value);
 }

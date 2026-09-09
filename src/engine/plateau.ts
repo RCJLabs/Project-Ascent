@@ -25,7 +25,7 @@ import { getMetric } from '@/content/metrics';
 import { seriesFor } from './assessments';
 import { addDays, daysBetween, shortLabel, today as todayKey } from './dates';
 import type { ClimberState } from './derive';
-import { V_GRADES, YDS_GRADES, type GradeScale } from './grades';
+import { DEFAULT_DISPLAY, V_GRADES, YDS_GRADES, displayGrade, type GradeDisplay, type GradeScale } from './grades';
 import { pyramid } from './progress';
 
 export type Verdict =
@@ -84,6 +84,8 @@ export interface DiagnosisInput {
   program?: Program | undefined;
   /** Which ladder to judge the ceiling on. */
   scale?: GradeScale;
+  /** Notation to write grades in. Defaults to the stored ladders. */
+  display?: GradeDisplay;
   today?: string;
 }
 
@@ -99,6 +101,7 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
     .sort((a, b) => (a.date < b.date ? -1 : 1))
     .at(-1);
   const daysSincePr = latestPr ? Math.max(0, daysBetween(latestPr.date, today)) : null;
+  const label = (grade: string) => displayGrade(scale, grade, input.display ?? DEFAULT_DISPLAY);
 
   // ── 1. Recovery override, first and unconditionally ────────────────────
   const overloaded = state.load.zone === 'danger';
@@ -145,7 +148,7 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
     {
       label: 'Last personal record',
       value: latestPr
-        ? `${latestPr.grade}, ${daysAgo(daysSincePr!)}`
+        ? `${label(latestPr.grade)}, ${daysAgo(daysSincePr!)}`
         : 'none logged',
     },
     { label: 'Sessions in 30 days', value: String(state.recentSessions) },
@@ -159,7 +162,7 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
     return {
       verdict: 'breakthrough',
       headline: 'Breaking through',
-      explanation: `You sent ${latestPr!.grade} ${daysAgo(daysSincePr)} — your hardest on this ladder. Whatever the last block was doing, it worked. Hold the pattern rather than adding to it.`,
+      explanation: `You sent ${label(latestPr!.grade)} ${daysAgo(daysSincePr)} — your hardest on this ladder. Whatever the last block was doing, it worked. Hold the pattern rather than adding to it.`,
       evidence: baseEvidence,
     };
   }
@@ -178,7 +181,10 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
       evidence: [
         ...baseEvidence,
         ...(wall
-          ? [{ label: `${wall.grade} conversion`, value: `${wall.sends} sent from ${wall.attempts} tries` }]
+          ? [{
+              label: `${label(wall.grade)} conversion`,
+              value: `${wall.sends} sent from ${wall.attempts} tries`,
+            }]
           : []),
       ],
       reset: buildReset(input, today, wall?.grade ?? null, scale),

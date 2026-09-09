@@ -18,7 +18,7 @@ import { weeklyChallenges, type Challenge } from './challenges';
 import { addDays, daysBetween, startOfWeek, today as todayKey } from './dates';
 import { buildLoadIndex, deriveClimberState, loadStateAt, sessionLoad, type AcwrZone } from './derive';
 import { sessionHeight } from './altimeter';
-import { maxGrade, type GradeScale } from './grades';
+import { DEFAULT_DISPLAY, displayGrade, maxGrade, type GradeDisplay, type GradeScale } from './grades';
 import { plannedDay } from './plan';
 import type { WeekPlan } from './scheduler';
 import type { XpState } from './xp';
@@ -94,6 +94,8 @@ export interface ReviewInput {
   projects?: Project[];
   xp?: XpState;
   injuries?: string[];
+  /** Notation to write grades in. Defaults to the stored ladders. */
+  display?: GradeDisplay;
   today?: string;
 }
 
@@ -147,7 +149,7 @@ export function buildReview(input: ReviewInput): WeekReview {
   }
 
   const records = state.personalRecords.filter((r) => r.date >= from && r.date <= to);
-  const challengeList = weeklyChallenges(all, state, from, target);
+  const challengeList = weeklyChallenges(all, state, from, target, input.display ?? DEFAULT_DISPLAY);
   const xpThisWeek = (input.xp?.events ?? [])
     .filter((e) => e.date >= from && e.date <= to)
     .reduce((sum, e) => sum + e.xp, 0);
@@ -253,7 +255,7 @@ function coachNote(
     return {
       id: 'record',
       tone: 'good',
-      headline: `First ${record.grade}`,
+      headline: `First ${displayGrade(record.scale, record.grade, input.display ?? DEFAULT_DISPLAY)}`,
       body: 'Hold the pattern rather than adding to it. The block that produced this is the one worth repeating, not escalating.',
     };
   }

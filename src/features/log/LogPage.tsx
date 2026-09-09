@@ -27,6 +27,7 @@ import { parseCount } from '@/content/types';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { TimerSheet } from '@/ui/TimerSheet';
+import { useGradeLabel, useGradeOptions } from '@/ui/useGrade';
 
 const REST_ITEMS = [
   { key: 'hydration', label: 'Hydration' },
@@ -301,6 +302,8 @@ function SessionEditor({
   onDelete: () => void;
 }) {
   const type = program?.sessionTypes.find((t) => t.id === session.sessionTypeId);
+  const gradeLabel = useGradeLabel();
+  const gradeOptions = useGradeOptions();
   const isRest = type?.isRest === true;
   const patch = (p: Partial<Session>) => onChange({ ...session, ...p });
 
@@ -405,7 +408,7 @@ function SessionEditor({
     });
   }
 
-  const grades = scale === 'V' ? V_GRADES : YDS_GRADES;
+  const grades = gradeOptions(scale, scale === 'V' ? V_GRADES : YDS_GRADES);
   const blocks = type && day?.phase ? prescriptionFor(type, day.phase, trackId) : [];
 
   return (
@@ -526,8 +529,8 @@ function SessionEditor({
                 className="flex-1 min-w-16 bg-sunken border border-line rounded-xl px-2.5 py-2 text-sm"
               >
                 {grades.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
+                  <option key={g.value} value={g.value}>
+                    {g.label}
                   </option>
                 ))}
               </select>
@@ -561,7 +564,7 @@ function SessionEditor({
               <ul className="grid grid-cols-1 gap-2">
                 {session.climbs.map((c) => (
                   <li key={c.id} className="flex items-center gap-2 bg-sunken rounded-xl px-3 py-2">
-                    <span className="font-bold text-sm w-14">{c.grade}</span>
+                    <span className="font-bold text-sm w-14">{gradeLabel(c.scale, c.grade)}</span>
                     <span className="text-xs text-ink-soft flex-1 truncate">
                       {c.name ? `${c.name} · ` : ''}
                       {c.result === 'attempt'
@@ -808,6 +811,7 @@ function ProjectBurnsCard({
   session: Session;
   onChange: (s: Session) => void;
 }) {
+  const gradeLabel = useGradeLabel();
   const projects = useProjects((s) => s.projects);
   const hydrated = useProjects((s) => s.hydrated);
   const load = useProjects((s) => s.load);
@@ -866,7 +870,9 @@ function ProjectBurnsCard({
                 <Link href={`/projects/${project.id}`} className="font-semibold text-sm truncate">
                   {project.name}
                 </Link>
-                <span className="text-xs font-bold text-accent shrink-0">{project.grade}</span>
+                <span className="text-xs font-bold text-accent shrink-0">
+                  {gradeLabel(project.scale, project.grade)}
+                </span>
                 {project.status === 'sent' && (
                   <span className="text-xs font-bold text-positive shrink-0">sent</span>
                 )}

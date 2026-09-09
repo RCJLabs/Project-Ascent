@@ -6,11 +6,13 @@ import type { MetricId } from '@/content/types';
 import { changeOf, formatEntry, isChartable, seriesFor } from '@/engine/assessments';
 import { shortLabel } from '@/engine/dates';
 import { useMetrics } from '@/store/metrics';
+import { useSettings } from '@/store/settings';
 import { Card } from '@/ui/Card';
 import { ProgressionLine } from '@/ui/charts/Charts';
 import { ResultForm } from './AssessmentsPage';
 
 export function MetricDetailPage({ params }: { params: { id: string } }) {
+  const display = useSettings((s) => s.display);
   const entries = useMetrics((s) => s.entries);
   const hydrated = useMetrics((s) => s.hydrated);
   const load = useMetrics((s) => s.load);
@@ -44,7 +46,7 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
   const points = series.map((e) => ({
     week: e.date,
     value: e.value,
-    display: formatEntry(metric, e),
+    display: formatEntry(metric, e, display),
   }));
 
   return (
@@ -73,13 +75,13 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
             <ProgressionLine
               points={points}
               label={`${metric.label} over time`}
-              formatValue={(v) => formatEntry(metric, { metricId: metric.id, date: '', value: v })}
+              formatValue={(v) => formatEntry(metric, { metricId: metric.id, date: '', value: v }, display)}
             />
             {overall !== null && (
               <p className="text-xs text-ink-soft mt-2">
                 {overall === 0
                   ? `Level with your first result on ${shortLabel(first!.date)}.`
-                  : `${metric.higherIsBetter === overall > 0 ? 'Improved' : 'Down'} from ${formatEntry(metric, first!)} on ${shortLabel(first!.date)}.`}
+                  : `${metric.higherIsBetter === overall > 0 ? 'Improved' : 'Down'} from ${formatEntry(metric, first!, display)} on ${shortLabel(first!.date)}.`}
               </p>
             )}
           </Card>
@@ -98,7 +100,7 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
                 <li key={entry.date} className="flex items-start gap-2 bg-sunken rounded-xl px-3 py-2.5">
                   <span className="text-xs text-ink-soft w-16 shrink-0 mt-0.5">{shortLabel(entry.date)}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-sm">{formatEntry(metric, entry)}</div>
+                    <div className="font-bold text-sm">{formatEntry(metric, entry, display)}</div>
                     {entry.note && <p className="text-xs text-ink-soft mt-0.5 leading-relaxed">{entry.note}</p>}
                   </div>
                   {i === 0 && change && (

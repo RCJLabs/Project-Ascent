@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getDb } from '@/db';
+import { DEFAULT_DISPLAY, type BoulderDisplay, type GradeDisplay, type RouteDisplay } from '@/engine/grades';
 import { setCuesEnabled } from '@/lib/cues';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
@@ -7,12 +8,14 @@ export type ThemePreference = 'system' | 'light' | 'dark';
 export interface SettingsState {
   hydrated: boolean;
   theme: ThemePreference;
-  boulderScale: 'V'; // Font display conversion is a later feature
-  routeScale: 'YDS'; // French display conversion is a later feature
+  /** How grades are read. Storage stays canonical V/YDS either way. */
+  display: GradeDisplay;
   /** Timer beeps, game sounds and haptics. */
   cues: boolean;
   setTheme: (theme: ThemePreference) => void;
   setCues: (value: boolean) => void;
+  setBoulderDisplay: (value: BoulderDisplay) => void;
+  setRouteDisplay: (value: RouteDisplay) => void;
 }
 
 const SETTINGS_KEY = 'settings';
@@ -20,17 +23,17 @@ const SETTINGS_KEY = 'settings';
 interface PersistedSettings {
   theme: ThemePreference;
   cues: boolean;
+  display: GradeDisplay;
 }
 
 function persisted(state: SettingsState): PersistedSettings {
-  return { theme: state.theme, cues: state.cues };
+  return { theme: state.theme, cues: state.cues, display: state.display };
 }
 
 export const useSettings = create<SettingsState>((set, get) => ({
   hydrated: false,
   theme: 'system',
-  boulderScale: 'V',
-  routeScale: 'YDS',
+  display: DEFAULT_DISPLAY,
   cues: true,
   setTheme: (theme) => {
     set({ theme });
@@ -39,6 +42,14 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setCues: (value) => {
     set({ cues: value });
     setCuesEnabled(value);
+    void saveSettings(persisted(get()));
+  },
+  setBoulderDisplay: (value) => {
+    set({ display: { ...get().display, boulder: value } });
+    void saveSettings(persisted(get()));
+  },
+  setRouteDisplay: (value) => {
+    set({ display: { ...get().display, route: value } });
     void saveSettings(persisted(get()));
   },
 }));
@@ -57,6 +68,7 @@ export async function hydrateSettings(): Promise<void> {
     useSettings.setState({
       hydrated: true,
       cues,
+      display: { ...DEFAULT_DISPLAY, ...value.display },
       ...(value.theme === 'light' || value.theme === 'dark' || value.theme === 'system'
         ? { theme: value.theme }
         : {}),

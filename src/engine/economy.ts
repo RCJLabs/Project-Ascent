@@ -13,7 +13,7 @@
 
 import type { Session } from '@/db/sessions';
 import type { AcwrZone } from './derive';
-import { vEquivalent, type GradeScale } from './grades';
+import { DEFAULT_DISPLAY, displayGrade, vEquivalent, type GradeDisplay, type GradeScale } from './grades';
 
 // ── Levels ────────────────────────────────────────────────────────────────
 
@@ -192,6 +192,8 @@ export interface SessionContext {
   drillStreak: number;
   /** Grades that are a personal record on their ladder, first time only. */
   records?: { scale: GradeScale; grade: string }[];
+  /** Notation to write grades in. Defaults to the stored ladders. */
+  display?: GradeDisplay;
 }
 
 export interface SessionReward {
@@ -214,6 +216,8 @@ export interface SessionReward {
  */
 export function sessionReward(session: Session, context: SessionContext): SessionReward {
   const awards: Award[] = [];
+  const label = (scale: GradeScale, grade: string) =>
+    displayGrade(scale, grade, context.display ?? DEFAULT_DISPLAY);
 
   if (session.restChecklist !== undefined && session.climbs.length === 0) {
     awards.push({ id: 'rest', label: 'Rest day logged', units: AWARDS.restDay, source: 'real' });
@@ -238,7 +242,7 @@ export function sessionReward(session: Session, context: SessionContext): Sessio
       awards.push({
         id: `send-${climb.id}`,
         label:
-          `${climb.count}× ${climb.grade}` +
+          `${climb.count}× ${label(climb.scale, climb.grade)}` +
           (climb.style === 'onsight' ? ' on-sight' : climb.style === 'flash' ? ' flashed' : ''),
         units: (AWARDS.sendBase + AWARDS.sendPerGrade * v) * climb.count,
         source: 'real',
@@ -250,7 +254,7 @@ export function sessionReward(session: Session, context: SessionContext): Sessio
   for (const record of context.records ?? []) {
     awards.push({
       id: `pr-${record.scale}-${record.grade}`,
-      label: `First ${record.grade}`,
+      label: `First ${label(record.scale, record.grade)}`,
       units: AWARDS.personalRecord,
       source: 'real',
     });

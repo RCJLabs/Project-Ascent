@@ -18,7 +18,7 @@ import type { MetricEntry } from '@/db/metrics';
 import type { Project } from '@/db/projects';
 import { seriesFor } from './assessments';
 import type { ClimberState } from './derive';
-import { gradeOrdinal, type GradeScale } from './grades';
+import { DEFAULT_DISPLAY, displayGrade, gradeOrdinal, type GradeDisplay, type GradeScale } from './grades';
 import type { Stat, StatId } from './stats';
 
 export type TreeId = 'power' | 'tension' | 'endurance' | 'technique' | 'grit';
@@ -80,6 +80,8 @@ export interface SkillInput {
   projects?: Project[];
   level?: number;
   feet?: number;
+  /** Notation to write grades in. Defaults to the stored ladders. */
+  display?: GradeDisplay;
 }
 
 export interface Measurement {
@@ -105,6 +107,7 @@ function plural(count: number, one: string, many = `${one}s`): string {
 
 export function measure(requirement: SkillRequirement, input: SkillInput): Measurement {
   const s = input.state;
+  const display = input.display ?? DEFAULT_DISPLAY;
   const done = (current: number, target: number, detail: string): Measurement => ({
     current,
     target,
@@ -125,7 +128,11 @@ export function measure(requirement: SkillRequirement, input: SkillInput): Measu
       const current = Object.entries(tally.sends)
         .filter(([grade]) => gradeOrdinal(requirement.scale, grade) >= floor)
         .reduce((sum, [, n]) => sum + n, 0);
-      return done(current, requirement.count, `Send ${requirement.count} at ${requirement.grade} or harder`);
+      return done(
+        current,
+        requirement.count,
+        `Send ${requirement.count} at ${displayGrade(requirement.scale, requirement.grade, display)} or harder`,
+      );
     }
     case 'style-sends': {
       const current = s.styleSends[requirement.style];

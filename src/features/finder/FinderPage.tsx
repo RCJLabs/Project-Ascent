@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { AlertTriangle, ArrowLeft, Check, Lock, Sparkles } from 'lucide-react';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
+import { useGradeOptions } from '@/ui/useGrade';
 import { findProgram, type Experience, type FinderInput, type FinderResult, type Goal, type Recommendation } from '@/engine/finder';
 import { finderInputFrom, type BaselineAnswers } from '@/engine/onboarding';
 import type { Discipline, Equipment } from '@/content/types';
@@ -129,6 +130,7 @@ export function FinderPage() {
 }
 
 function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
+  const gradeOptions = useGradeOptions();
   // Seeded from the first-run baseline where there is one: these are the same
   // five questions, and asking them twice is how a finder gets abandoned.
   const [experience, setExperience] = useState<Experience>(baseline?.experience ?? 'intermediate');
@@ -274,9 +276,9 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
                 className="w-full bg-sunken border border-line rounded-xl px-3 py-2.5"
               >
                 <option value="">—</option>
-                {V_GRADES.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
+                {gradeOptions('V', V_GRADES).map((g) => (
+                  <option key={g.value} value={g.value}>
+                    {g.label}
                   </option>
                 ))}
               </select>
@@ -289,9 +291,9 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
                 className="w-full bg-sunken border border-line rounded-xl px-3 py-2.5"
               >
                 <option value="">—</option>
-                {YDS_GRADES.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
+                {gradeOptions('YDS', YDS_GRADES).map((g) => (
+                  <option key={g.value} value={g.value}>
+                    {g.label}
                   </option>
                 ))}
               </select>

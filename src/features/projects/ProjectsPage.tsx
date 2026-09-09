@@ -4,6 +4,7 @@ import { Check, Lightbulb, Plus, X } from 'lucide-react';
 import { ACTIVE_CAP, type Project } from '@/db/projects';
 import type { Session } from '@/db/sessions';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
+import { useGradeLabel, useGradeOptions } from '@/ui/useGrade';
 import { suggestProjects, summariseProject, type ProjectSuggestion } from '@/engine/projects';
 import { useProjects } from '@/store/projects';
 import { useSkillEffects } from '@/store/skills';
@@ -163,6 +164,7 @@ function SuggestionRow({
 }
 
 function ProjectRow({ project, sessions }: { project: Project; sessions: Session[] }) {
+  const gradeLabel = useGradeLabel();
   const summary = summariseProject(project.id, sessions);
   const stale = summary.daysSinceLast !== null && summary.daysSinceLast >= 14 && project.status === 'active';
 
@@ -175,7 +177,9 @@ function ProjectRow({ project, sessions }: { project: Project; sessions: Session
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2">
             <span className="font-semibold text-sm truncate">{project.name}</span>
-            <span className="text-xs font-bold text-accent shrink-0">{project.grade}</span>
+            <span className="text-xs font-bold text-accent shrink-0">
+              {gradeLabel(project.scale, project.grade)}
+            </span>
           </div>
           <p className="text-xs text-ink-soft mt-0.5">
             {summary.burns === 0
@@ -214,13 +218,14 @@ export function ProjectForm({
   onCancel: () => void;
   onSaved: (project: Project) => void;
 }) {
+  const gradeOptions = useGradeOptions();
   const create = useProjects((s) => s.create);
   const [name, setName] = useState(initial.name ?? '');
   const [scale, setScale] = useState<GradeScale>(initial.scale ?? 'V');
   const [grade, setGrade] = useState(initial.grade ?? 'V5');
   const [setting, setSetting] = useState<'indoor' | 'outdoor'>(initial.setting ?? 'indoor');
   const [location, setLocation] = useState(initial.location ?? '');
-  const grades = scale === 'V' ? V_GRADES : YDS_GRADES;
+  const grades = gradeOptions(scale, scale === 'V' ? V_GRADES : YDS_GRADES);
 
   async function save() {
     const project = await create({
@@ -271,8 +276,8 @@ export function ProjectForm({
           className="flex-1 bg-sunken border border-line rounded-xl px-2.5 py-2.5 text-sm"
         >
           {grades.map((g) => (
-            <option key={g} value={g}>
-              {g}
+            <option key={g.value} value={g.value}>
+              {g.label}
             </option>
           ))}
         </select>

@@ -6,6 +6,7 @@ import type { BodyPart } from '@/content/warmups';
 import type { Discipline, Equipment } from '@/content/types';
 import { today } from '@/engine/dates';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
+import { useGradeOptions } from '@/ui/useGrade';
 import type { Experience, Goal } from '@/engine/finder';
 import {
   EMPTY_BASELINE,
@@ -70,6 +71,7 @@ export function WelcomePage() {
   const completeOnboarding = useProfile((s) => s.completeOnboarding);
   const recordEntry = useMetrics((s) => s.record);
 
+  const gradeOptions = useGradeOptions();
   const set = (patch: Partial<BaselineAnswers>) => setAnswers((a) => ({ ...a, ...patch }));
   const setBenchmark = (id: string, value: string) =>
     setAnswers((a) => ({ ...a, benchmarks: { ...a.benchmarks, [id]: value } }));
@@ -169,13 +171,13 @@ export function WelcomePage() {
               <div className="grid grid-cols-2 gap-2">
                 <GradeSelect
                   label="Boulder"
-                  grades={V_GRADES}
+                  grades={gradeOptions('V', V_GRADES)}
                   value={answers.boulderGrade}
                   onChange={(boulderGrade) => set({ boulderGrade })}
                 />
                 <GradeSelect
                   label="Route"
-                  grades={YDS_GRADES}
+                  grades={gradeOptions('YDS', YDS_GRADES)}
                   value={answers.sportGrade}
                   onChange={(sportGrade) => set({ sportGrade })}
                 />
@@ -398,7 +400,7 @@ function GradeSelect({
   onChange,
 }: {
   label: string;
-  grades: readonly string[];
+  grades: readonly { value: string; label: string }[];
   value: string;
   onChange: (v: string) => void;
 }) {
@@ -412,8 +414,8 @@ function GradeSelect({
       >
         <option value="">—</option>
         {grades.map((g) => (
-          <option key={g} value={g}>
-            {g}
+          <option key={g.value} value={g.value}>
+            {g.label}
           </option>
         ))}
       </select>

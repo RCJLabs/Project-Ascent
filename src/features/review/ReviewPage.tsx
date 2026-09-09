@@ -15,11 +15,13 @@ import { buildReview, type NoteTone, type WeekReview } from '@/engine/review';
 import { weekCard } from '@/ui/shareCard';
 import { useXp } from '@/store/game';
 import { useProfile } from '@/store/profile';
+import { useSettings } from '@/store/settings';
 import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
+import { useGradeLabel } from '@/ui/useGrade';
 
 /** The review for a week containing `date`, assembled from every store. */
 export function useReview(date: string): WeekReview {
@@ -30,6 +32,7 @@ export function useReview(date: string): WeekReview {
   const plans = useProfile((s) => s.plans);
   const injuries = useProfile((s) => s.injuries);
   const xp = useXp();
+  const display = useSettings((s) => s.display);
 
   return useMemo(() => {
     const program = activeProgramId ? getProgram(activeProgramId) : undefined;
@@ -42,8 +45,9 @@ export function useReview(date: string): WeekReview {
       projects,
       xp,
       injuries: injuries.map((i) => i.part),
+      display,
     });
-  }, [byDate, date, activeProgramId, startDates, plans, projects, xp, injuries]);
+  }, [byDate, date, activeProgramId, startDates, plans, projects, xp, injuries, display]);
 }
 
 const TONE: Record<NoteTone, { color: string; Icon: typeof Info }> = {
@@ -53,6 +57,7 @@ const TONE: Record<NoteTone, { color: string; Icon: typeof Info }> = {
 };
 
 export function ReviewPage() {
+  const gradeLabel = useGradeLabel();
   const hydrated = useSessions((s) => s.hydrated);
   const load = useSessions((s) => s.load);
   const [anchor, setAnchor] = useState(() => startOfWeek(todayKey()));
@@ -135,7 +140,12 @@ export function ReviewPage() {
           <Card title="Best of the week">
             <ul className="grid grid-cols-1 gap-2">
               {review.records.map((r) => (
-                <Moment key={`pr-${r.grade}`} label={`First ${r.grade}`} detail={shortLabel(r.date)} highlight />
+                <Moment
+                  key={`pr-${r.grade}`}
+                  label={`First ${gradeLabel(r.scale, r.grade)}`}
+                  detail={shortLabel(r.date)}
+                  highlight
+                />
               ))}
               {review.projectSends.map((name) => (
                 <Moment key={`proj-${name}`} label={`Sent ${name}`} detail="project" highlight />
@@ -143,7 +153,7 @@ export function ReviewPage() {
               {review.best.map((b) => (
                 <Moment
                   key={`best-${b.scale}`}
-                  label={`${b.grade} ×${b.count}`}
+                  label={`${gradeLabel(b.scale, b.grade)} ×${b.count}`}
                   detail={b.scale === 'V' ? 'hardest boulder' : 'hardest route'}
                 />
               ))}

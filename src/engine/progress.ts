@@ -7,7 +7,15 @@
  */
 
 import type { Session } from '@/db/sessions';
-import { gradeOrdinal, V_GRADES, YDS_GRADES, type GradeScale } from './grades';
+import {
+  DEFAULT_DISPLAY,
+  V_GRADES,
+  YDS_GRADES,
+  displayGrade,
+  gradeOrdinal,
+  type GradeDisplay,
+  type GradeScale,
+} from './grades';
 import { addDays, startOfWeek, today as todayKey } from './dates';
 import type { GradeTally } from './derive';
 
@@ -114,8 +122,13 @@ export interface Projection {
  * extrapolated into a date. A projection that promises V7 in 400 weeks is
  * worse than no projection.
  */
-export function projectGrade(points: WeekPoint[], scale: GradeScale): Projection {
+export function projectGrade(
+  points: WeekPoint[],
+  scale: GradeScale,
+  display: GradeDisplay = DEFAULT_DISPLAY,
+): Projection {
   const ladder = scale === 'V' ? V_GRADES : YDS_GRADES;
+  const label = (grade: string) => displayGrade(scale, grade, display);
   const known = points
     .map((p, i) => ({ x: i, y: p.ordinal }))
     .filter((p): p is { x: number; y: number } => p.y !== null);
@@ -159,14 +172,14 @@ export function projectGrade(points: WeekPoint[], scale: GradeScale): Projection
   const weeks = Math.ceil((nextOrdinal - projectedNow) / slope);
 
   if (weeks <= 0) {
-    return { slope, nextGrade, weeksToNext: 0, summary: `${nextGrade} looks within reach now.`, confident: true };
+    return { slope, nextGrade, weeksToNext: 0, summary: `${label(nextGrade)} looks within reach now.`, confident: true };
   }
   if (weeks > 26) {
     return {
       slope,
       nextGrade,
       weeksToNext: null,
-      summary: `Trending up slowly. ${nextGrade} is a long-term target at this pace.`,
+      summary: `Trending up slowly. ${label(nextGrade)} is a long-term target at this pace.`,
       confident: true,
     };
   }
@@ -174,7 +187,7 @@ export function projectGrade(points: WeekPoint[], scale: GradeScale): Projection
     slope,
     nextGrade,
     weeksToNext: weeks,
-    summary: `At this pace, ${nextGrade} in about ${weeks} ${weeks === 1 ? 'week' : 'weeks'}.`,
+    summary: `At this pace, ${label(nextGrade)} in about ${weeks} ${weeks === 1 ? 'week' : 'weeks'}.`,
     confident: true,
   };
 }

@@ -23,6 +23,7 @@ import { GAME_ACTION_CAP } from '@/engine/economy';
 import { deriveXp, type XpState } from '@/engine/xp';
 import { useProjects } from './projects';
 import { useSessions } from './sessions';
+import { useSettings } from './settings';
 
 export interface GameState {
   hydrated: boolean;
@@ -164,11 +165,12 @@ export function useXp(): XpState {
   const byDate = useSessions((s) => s.byDate);
   const projects = useProjects((s) => s.projects);
   const ledger = useGame((s) => s.ledger);
+  const display = useSettings((s) => s.display);
 
   return useMemo(() => {
     const sessions = Object.values(byDate).flat();
-    return deriveXp({ sessions, projects, ledger });
-  }, [byDate, projects, ledger]);
+    return deriveXp({ sessions, projects, ledger, display });
+  }, [byDate, projects, ledger, display]);
 }
 
 /** Spendable soft currency: earned over all time, minus what is spent. */

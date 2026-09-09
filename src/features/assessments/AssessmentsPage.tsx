@@ -13,7 +13,9 @@ import {
 } from '@/engine/assessments';
 import { shortLabel, today } from '@/engine/dates';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
+import { useGradeOptions } from '@/ui/useGrade';
 import { useMetrics } from '@/store/metrics';
+import { useSettings } from '@/store/settings';
 import { useProfile } from '@/store/profile';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -145,6 +147,7 @@ function MetricRow({
   open: boolean;
   onToggle: () => void;
 }) {
+  const display = useSettings((s) => s.display);
   const { metric, latest, change } = status;
   return (
     <li className="bg-sunken rounded-xl">
@@ -157,7 +160,7 @@ function MetricRow({
           </p>
         </div>
         <div className="text-right shrink-0">
-          <div className="font-bold text-sm tabular-nums">{latest ? formatEntry(metric, latest) : '—'}</div>
+          <div className="font-bold text-sm tabular-nums">{latest ? formatEntry(metric, latest, display) : '—'}</div>
           {change && (
             <div
               className={`text-xs font-semibold ${
@@ -190,6 +193,7 @@ function MetricRow({
 }
 
 export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => void }) {
+  const gradeOptions = useGradeOptions();
   const record = useMetrics((s) => s.record);
   const [raw, setRaw] = useState('');
   const [date, setDate] = useState(today());
@@ -236,9 +240,9 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
               className="flex-1 bg-surface border border-line rounded-xl px-2.5 py-2.5 text-sm"
             >
               <option value="">Pick a grade</option>
-              {(metric.scale === 'YDS' ? YDS_GRADES : V_GRADES).map((g) => (
-                <option key={g} value={g}>
-                  {g}
+              {gradeOptions(metric.scale ?? 'V', metric.scale === 'YDS' ? YDS_GRADES : V_GRADES).map((g) => (
+                <option key={g.value} value={g.value}>
+                  {g.label}
                 </option>
               ))}
             </select>

@@ -12,6 +12,7 @@ import { deriveClimberState } from '@/engine/derive';
 import { unitsToXp } from '@/engine/economy';
 import { BOUNTY_CAP, useGame } from '@/store/game';
 import { useProfile } from '@/store/profile';
+import { useSettings } from '@/store/settings';
 import { useSessions } from '@/store/sessions';
 import { useSkillEffects } from '@/store/skills';
 import { Button } from '@/ui/Button';
@@ -25,6 +26,7 @@ export function useBoard() {
   const ledger = useGame((s) => s.ledger);
   const activeProgramId = useProfile((s) => s.activeProgramId);
 
+  const display = useSettings((s) => s.display);
   const claimed = useMemo(
     () => ledger.filter((e) => e.id.startsWith('claim:')).map((e) => e.id.slice(6)),
     [ledger],
@@ -37,10 +39,10 @@ export function useBoard() {
     const rule = program?.constraints.find((c) => c.kind === 'sessions-per-week');
     const weeklyTarget = rule && rule.kind === 'sessions-per-week' ? rule.min : 3;
     return {
-      board: deriveBoard({ sessions, state, accepted: bounties, weeklyTarget, claimed }),
+      board: deriveBoard({ sessions, state, accepted: bounties, weeklyTarget, claimed, display }),
       claimed: new Set(claimed),
     };
-  }, [byDate, bounties, activeProgramId, claimed]);
+  }, [byDate, bounties, activeProgramId, claimed, display]);
 }
 
 export function BoardPage() {

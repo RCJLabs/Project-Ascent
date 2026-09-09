@@ -5,14 +5,18 @@ import type { Project } from '@/db/projects';
 import { OUTCOME_LABEL, highPointOf, summariseProject } from '@/engine/projects';
 import { fromKey, today } from '@/engine/dates';
 import { useProjects } from '@/store/projects';
+import { useSettings } from '@/store/settings';
 import { projectCard } from '@/ui/shareCard';
 import { useSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { Card } from '@/ui/Card';
+import { useGradeLabel } from '@/ui/useGrade';
 import { ProgressionLine } from '@/ui/charts/Charts';
 
 export function ProjectDetailPage({ params }: { params: { id: string } }) {
+  const gradeLabel = useGradeLabel();
+  const display = useSettings((s) => s.display);
   const [, navigate] = useLocation();
   const projects = useProjects((s) => s.projects);
   const hydrated = useProjects((s) => s.hydrated);
@@ -60,7 +64,7 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
       <header className="mb-4">
         <div className="flex items-baseline gap-2 flex-wrap">
           <h1 className="text-2xl font-black tracking-tight">{project.name}</h1>
-          <span className="text-lg font-black text-accent">{project.grade}</span>
+          <span className="text-lg font-black text-accent">{gradeLabel(project.scale, project.grade)}</span>
         </div>
         <p className="text-sm text-ink-soft mt-0.5">
           {project.setting === 'outdoor' ? 'Outdoor' : 'Indoor'}
@@ -84,7 +88,7 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
           {project.status === 'sent' && (
             <div className="mt-3 pt-3 border-t border-line">
               <ShareButton
-                content={projectCard(project, summary)}
+                content={projectCard(project, summary, undefined, display)}
                 label="Share the send"
                 filename={`ascent-${project.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`}
               />

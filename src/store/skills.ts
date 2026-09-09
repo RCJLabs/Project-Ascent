@@ -8,6 +8,7 @@ import { useXp } from './game';
 import { useMetrics } from './metrics';
 import { useProjects } from './projects';
 import { useSessions } from './sessions';
+import { useSettings } from './settings';
 
 /**
  * The trees, evaluated against the log.
@@ -21,6 +22,7 @@ export function useSkills(): SkillState {
   const metrics = useMetrics((s) => s.entries);
   const projects = useProjects((s) => s.projects);
   const xp = useXp();
+  const display = useSettings((s) => s.display);
 
   return useMemo(() => {
     const sessions = Object.values(byDate).flat();
@@ -32,8 +34,9 @@ export function useSkills(): SkillState {
       projects,
       level: xp.progress.level,
       feet: deriveAltimeter(sessions).feet,
+      display,
     });
-  }, [byDate, metrics, projects, xp.progress.level]);
+  }, [byDate, metrics, projects, xp.progress.level, display]);
 }
 
 /** Just the perks, for the systems that only need those. */

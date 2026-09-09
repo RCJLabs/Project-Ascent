@@ -3,6 +3,7 @@ import { APP_VERSION } from '@/version';
 import { exportAll, hasRealData, importAll, parseExportFile, SCHEMA_VERSION } from '@/db';
 import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
+import { displayGrade, type BoulderDisplay, type RouteDisplay } from '@/engine/grades';
 import { unlock } from '@/lib/cues';
 import { hydrateAll } from '@/store';
 import { useProfile } from '@/store/profile';
@@ -30,6 +31,10 @@ const PARTS: { value: BodyPart; label: string }[] = [
   { value: 'ankle', label: 'Ankle' },
 ];
 
+/** Enough rungs to tell the two notations apart at a glance. */
+const V_SAMPLE = ['V2', 'V5', 'V9'] as const;
+const YDS_SAMPLE = ['5.9', '5.11c', '5.13a'] as const;
+
 const THEMES: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
@@ -53,6 +58,9 @@ export function SettingsPage() {
   const setTheme = useSettings((s) => s.setTheme);
   const cues = useSettings((s) => s.cues);
   const setCues = useSettings((s) => s.setCues);
+  const display = useSettings((s) => s.display);
+  const setBoulderDisplay = useSettings((s) => s.setBoulderDisplay);
+  const setRouteDisplay = useSettings((s) => s.setRouteDisplay);
   const [storage, setStorage] = useState<StorageStatus>({ persisted: null });
   const [message, setMessage] = useState<string | null>(null);
   const equipment = useProfile((s) => s.equipment);
@@ -155,6 +163,38 @@ export function SettingsPage() {
               </Button>
             ))}
           </div>
+        </Card>
+
+        <Card title="Grades">
+          <p className="text-sm text-ink-soft mb-3">
+            Which notation you read. Grades are always stored on the V and YDS ladders, so switching
+            re-labels your whole history rather than changing it — and you can type either notation
+            wherever a grade is entered.
+          </p>
+          <div className="grid grid-cols-1 gap-3">
+            <ScalePicker
+              label="Boulders"
+              options={[
+                { value: 'V', sample: V_SAMPLE.map((g) => displayGrade('V', g, { ...display, boulder: 'V' })) },
+                { value: 'Font', sample: V_SAMPLE.map((g) => displayGrade('V', g, { ...display, boulder: 'Font' })) },
+              ]}
+              value={display.boulder}
+              onChange={setBoulderDisplay}
+            />
+            <ScalePicker
+              label="Routes"
+              options={[
+                { value: 'YDS', sample: YDS_SAMPLE.map((g) => displayGrade('YDS', g, { ...display, route: 'YDS' })) },
+                { value: 'French', sample: YDS_SAMPLE.map((g) => displayGrade('YDS', g, { ...display, route: 'French' })) },
+              ]}
+              value={display.route}
+              onChange={setRouteDisplay}
+            />
+          </div>
+          <p className="text-xs text-ink-soft mt-3 leading-relaxed">
+            Conversions between systems are approximate — the grades were never designed to line up,
+            and any chart that says otherwise is rounding. One rung each way is normal.
+          </p>
         </Card>
 
         <Card title="Sound & haptics">
@@ -311,5 +351,38 @@ export function SettingsPage() {
         {message && <p className="text-sm text-ink-soft px-1">{message}</p>}
       </div>
     </>
+  );
+}
+
+/** One ladder's notation, shown by example rather than by name alone. */
+function ScalePicker<T extends BoulderDisplay | RouteDisplay>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: { value: T; sample: string[] }[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div>
+      <div className="text-xs font-semibold text-ink-soft mb-1.5">{label}</div>
+      <div className="grid grid-cols-1 gap-2">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            onClick={() => onChange(o.value)}
+            className={`flex items-baseline gap-2 rounded-xl px-3 py-2.5 border text-left ${
+              value === o.value ? 'border-accent bg-accent/10' : 'border-line bg-sunken'
+            }`}
+          >
+            <span className="font-semibold text-sm">{o.value}</span>
+            <span className="text-sm text-ink-soft tabular-nums ml-auto">{o.sample.join(' · ')}</span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }

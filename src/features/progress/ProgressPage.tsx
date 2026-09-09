@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { Activity, AlertTriangle, BookOpen, CheckCircle2, ChevronRight, Info, Ruler, TrendingDown } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
+import { useGradeLabel } from '@/ui/useGrade';
 import { assessmentBattery } from '@/engine/assessments';
 import { buildJournal } from '@/engine/journal';
 import { deriveClimberState, type AcwrZone } from '@/engine/derive';
@@ -10,6 +11,7 @@ import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
 import { useMetrics } from '@/store/metrics';
 import { useProjects } from '@/store/projects';
 import { useProfile } from '@/store/profile';
+import { useSettings } from '@/store/settings';
 import { useSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
@@ -143,6 +145,8 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
 }
 
 export function ProgressPage() {
+  const gradeLabel = useGradeLabel();
+  const display = useSettings((s) => s.display);
   const byDate = useSessions((s) => s.byDate);
   const hydrated = useSessions((s) => s.hydrated);
   const load = useSessions((s) => s.load);
@@ -165,7 +169,7 @@ export function ProgressPage() {
     [sessions, weeklyTarget],
   );
   const points = useMemo(() => weeklyProgression(sessions, scale, 12), [sessions, scale]);
-  const projection = useMemo(() => projectGrade(points, scale), [points, scale]);
+  const projection = useMemo(() => projectGrade(points, scale, display), [points, scale, display]);
   const tally = scale === 'V' ? state.boulder : state.sport;
   const rows = useMemo(() => pyramid(tally, scale), [tally, scale]);
   const ladder = scale === 'V' ? V_GRADES : YDS_GRADES;
@@ -255,9 +259,13 @@ export function ProgressPage() {
           {points.some((p) => p.ordinal !== null) ? (
             <>
               <ProgressionLine
-                points={points.map((p) => ({ week: p.week, value: p.ordinal, display: p.grade }))}
+                points={points.map((p) => ({
+                  week: p.week,
+                  value: p.ordinal,
+                  display: p.grade === null ? null : gradeLabel(scale, p.grade),
+                }))}
                 label="Hardest grade sent per week over the last twelve weeks"
-                formatValue={(v) => ladder[v] ?? String(v)}
+                formatValue={(v) => (ladder[v] ? gradeLabel(scale, ladder[v]) : String(v))}
               />
               <p className="text-sm text-ink-soft mt-2 flex items-start gap-2">
                 <Activity size={15} className="shrink-0 mt-0.5" />
@@ -274,7 +282,7 @@ export function ProgressPage() {
         <Card title="Grade pyramid">
           {rows.length > 0 ? (
             <>
-              <PyramidBars rows={rows} />
+              <PyramidBars rows={rows.map((r) => ({ ...r, grade: gradeLabel(scale, r.grade) }))} />
               <p className="text-xs text-ink-soft mt-3">
                 Every grade you have touched, hardest first. A row that is mostly orange is a grade you
                 keep trying without sending — usually where the next gain is.
@@ -296,7 +304,7 @@ export function ProgressPage() {
                 .slice(0, 6)
                 .map((pr) => (
                   <li key={`${pr.scale}-${pr.grade}`} className="flex items-baseline justify-between gap-3 text-sm">
-                    <span className="font-bold">{pr.grade}</span>
+                    <span className="font-bold">{gradeLabel(pr.scale, pr.grade)}</span>
                     <span className="text-ink-soft">
                       first sent {new Date(`${pr.date}T00:00`).toLocaleDateString(undefined, {
                         month: 'short',

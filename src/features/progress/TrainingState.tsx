@@ -15,6 +15,7 @@ import type { GradeScale } from '@/engine/grades';
 import { diagnose, resetDates, type Verdict } from '@/engine/plateau';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
+import { useSettings } from '@/store/settings';
 import { Card } from '@/ui/Card';
 
 /** Every verdict ships with an icon and a sentence, so the colour is never
@@ -42,11 +43,13 @@ export function TrainingState({
   const injuries = useProfile((s) => s.injuries);
   const equipment = useProfile((s) => s.equipment);
   const metrics = useMetrics((s) => s.entries);
+  const display = useSettings((s) => s.display);
   const [showReset, setShowReset] = useState(false);
 
   const diagnosis = useMemo(
     () =>
       diagnose({
+        display,
         state,
         sessions,
         injuries: injuries.map((i) => i.part),
