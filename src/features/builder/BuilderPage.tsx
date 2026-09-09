@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ArrowLeft, CircleCheck, Info, Plus, Trash2, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CircleCheck, Info, Plus, Trash2, TriangleAlert } from 'lucide-react';
 import type { Constraint, DayOfWeek, Equipment, Phase, Program, SessionType } from '@/content/types';
+import { allMetrics } from '@/engine/assessments';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
 import { DAY_SHORT } from '@/engine/scheduler';
 import {
@@ -15,6 +16,7 @@ import {
   validateProgram,
   type Issue,
 } from '@/engine/customProgram';
+import { contentIssues, reconcileProgramPhases, trimDrills } from '@/engine/prescription';
 import { useCustomPrograms } from '@/store/programs';
 import { useGradeOptions } from '@/ui/useGrade';
 import { Button } from '@/ui/Button';
@@ -38,7 +40,10 @@ export function BuilderPage({ params }: { params: { id: string } }) {
   }, [hydrated, load]);
 
   const program = custom.find((p) => p.id === params.id);
-  const issues = useMemo(() => (program ? validateProgram(program) : []), [program]);
+  const issues = useMemo(
+    () => (program ? [...validateProgram(program), ...contentIssues(program)] : []),
+    [program],
+  );
 
   if (!hydrated) return null;
   if (!program) {
@@ -52,8 +57,21 @@ export function BuilderPage({ params }: { params: { id: string } }) {
     );
   }
 
-  /** Every edit writes through: a builder that can lose work is not one. */
-  const edit = (patch: Partial<Program>) => void save({ ...program, ...patch });
+  /**
+   * Every edit writes through: a builder that can lose work is not one.
+   *
+   * Phases and length are reconciled on the way past — adding a block of
+   * weeks or shortening the program would otherwise leave prescriptions
+   * keyed to phases that no longer exist, and drills stranded past the end.
+   */
+  const edit = (patch: Partial<Program>) => {
+    const next = { ...program, ...patch };
+    const settled = reconcileProgramPhases({
+      ...next,
+      sessionTypes: next.sessionTypes.map((t) => trimDrills(t, next.weeks)),
+    });
+    void save(settled);
+  };
 
   const ladder = program.gradeRange.scale === 'V' ? V_GRADES : YDS_GRADES;
 
@@ -288,6 +306,8 @@ export function BuilderPage({ params }: { params: { id: string } }) {
         <LayoutCard program={program} onChange={edit} />
         <RulesCard program={program} onChange={edit} />
 
+        <AssessmentsCard program={program} onChange={edit} />
+
         <Card title="Danger zone">
           <Button
             variant="danger"
@@ -386,6 +406,17 @@ function IssuePanel({ issues, runnable }: { issues: Issue[]; runnable: boolean }
   );
 }
 
+/** What the contents link should say, so it is worth tapping. */
+function summarise(type: SessionType): string {
+  const blocks = type.blocks?.length ?? 0;
+  const drills = Object.keys(type.drillsByWeek ?? {}).length;
+  if (blocks === 0 && drills === 0) return 'Write what it asks for';
+  const parts = [];
+  if (blocks > 0) parts.push(`${blocks} block${blocks === 1 ? '' : 's'}`);
+  if (drills > 0) parts.push(`${drills} drill${drills === 1 ? '' : 's'}`);
+  return parts.join(' · ');
+}
+
 function SessionTypesCard({ program, onChange }: { program: Program; onChange: (p: Partial<Program>) => void }) {
   const [name, setName] = useState('');
 
@@ -446,12 +477,22 @@ function SessionTypesCard({ program, onChange }: { program: Program; onChange: (
               aria-label={`${type.name} description`}
               className={`${input} mb-2`}
             />
-            <button
-              onClick={() => onChange({ sessionTypes: replace(program.sessionTypes, i, { isRest: !type.isRest }) })}
-              className={chip(Boolean(type.isRest))}
-            >
-              {type.isRest ? '✓ Rest day' : 'Mark as a rest day'}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => onChange({ sessionTypes: replace(program.sessionTypes, i, { isRest: !type.isRest }) })}
+                className={chip(Boolean(type.isRest))}
+              >
+                {type.isRest ? '✓ Rest day' : 'Mark as a rest day'}
+              </button>
+              {!type.isRest && (
+                <Link
+                  href={`/build/${program.id}/session/${type.id}`}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent"
+                >
+                  {summarise(type)} <ArrowRight size={14} />
+                </Link>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -710,4 +751,61 @@ function RuleFields({
       // new ones, so it is shown and removable rather than editable.
       return <p className="text-xs text-ink-soft">Carried over from the program this was copied from.</p>;
   }
+}
+
+/**
+ * Which benchmarks this program tries to move.
+ *
+ * They drive the assessment battery's phase-boundary prompts, so a program
+ * that names none simply never asks the climber to retest — which is a
+ * choice, not a fault.
+ */
+function AssessmentsCard({ program, onChange }: { program: Program; onChange: (p: Partial<Program>) => void }) {
+  const [open, setOpen] = useState(false);
+  const chosen = new Set(program.assessments);
+  const metrics = allMetrics();
+
+  return (
+    <Card title="Benchmarks">
+      <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+        Numbers this program is trying to move. The app asks for a retest at each block boundary, so
+        the strength curve has something to draw.
+      </p>
+      {program.assessments.length > 0 && (
+        <ul className="grid grid-cols-1 gap-1 mb-3 text-sm">
+          {program.assessments.map((id) => (
+            <li key={id} className="text-ink-soft">
+              · {metrics.find((m) => m.id === id)?.label ?? id}
+            </li>
+          ))}
+        </ul>
+      )}
+      {open ? (
+        <div className="flex flex-wrap gap-1.5">
+          {metrics.map((metric) => {
+            const on = chosen.has(metric.id);
+            return (
+              <button
+                key={metric.id}
+                onClick={() =>
+                  onChange({
+                    assessments: on
+                      ? program.assessments.filter((a) => a !== metric.id)
+                      : [...program.assessments, metric.id],
+                  })
+                }
+                className={chip(on)}
+              >
+                {metric.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+          {program.assessments.length > 0 ? 'Change' : 'Pick benchmarks'}
+        </Button>
+      )}
+    </Card>
+  );
 }
