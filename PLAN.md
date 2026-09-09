@@ -601,24 +601,34 @@ Milestones are sequential; each ends runnable and useful.
   rewriting the program's plan. Splitting one session into two was deliberately not
   built: without a way to say which climbs belong to which half it is guesswork, and
   the case it would serve is already covered by stale-session recovery.
-- **M8 — Injury depth.** §9.7 is half-built: warmups filter, the finder steers away,
-  vitality takes a hit. Missing is everything that makes it a system — severity, side
-  and status on an injury, drills and exercises flagged across *all* programs rather
-  than just warmups, calendar annotation, bounties paused while the part is loaded,
-  and a return-to-climbing checklist per body part. *Done when: marking a pulley
-  changes what the app asks of you everywhere, not just in the warmup.*
+- **M8 — Injury depth.** *Done.* Severity, side and status on an injury; drills and
+  exercises flagged across all programs rather than just warmups; the calendar and log
+  annotated; bounties chosen from what does not load the part rather than filtered
+  after the fact; and a return-to-climbing checklist per body part. The checklist is
+  written under three hard rules recorded in `content/returnToClimbing.ts` — no
+  treatment, no timelines, observations rather than permissions — and ticking one
+  earns nothing, because an app that paid for boxes ticked about your own body would
+  be teaching climbers to lie to it. `engine/bodyLoad.ts` is a keyword scan, not a
+  taxonomy, and says so.
 - **M9 — Content.** The part only a coach can write. First: the hole the finder
   already exposes — there is no finger-strength program for a climber above V5
   without a campus board, so Iron Grip blocks and a V7 boulderer gets recommended
   maintenance. Then the glossary with inline term definitions, the app/injury/outdoor
   guides, and deeper phase notes on the existing eleven programs. *Done when: the
   finder has an honest answer for every equipment set.*
-- **M10 — The long arc.** Twelve-week programs end; the reason to open the app in
-  year three is not a program. Expedition-style sieges of named objectives (AUDIT.md
-  §7 calls this the one cut system worth reconsidering — real sessions advancing a
-  named climb was the old app's best long-arc hook), a season/year in review, and
-  milestones that outlast the altimeter. *Done when: there is something to work
-  toward that a single block cannot finish.*
+- **M10 — The long arc.** *Done, minus one deferred fork.* Three pieces shipped:
+  **objectives** (a named climb or outcome at a scale a single block cannot finish,
+  tracked by what has to be true first rather than by attempts — its requirements
+  *are* skill-tree requirements, and readiness is the mean of each one's fraction
+  rather than met ÷ total); **career milestones** (an unbounded second axis, because
+  the altimeter's ladder is finite and wraps — grades, a 1 · 2.5 · 5 counter ladder,
+  years, and the height ladder per lap, each dated from the log); and **the year in
+  review** (compared against the same slice of the previous year, so a part-finished
+  year is not measured against a full one, and a quiet year reads as a quiet year).
+  Nothing in any of the three pays out: the sessions underneath were paid for when
+  they were logged. Deferred by decision, not by oversight: expedition-style sieges
+  of famous climbs (AUDIT.md §7's one cut system worth reconsidering), which would be
+  offline and deterministic rather than the prototype's d20-plus-AI-text.
 - **M11 — Hardening.** Before anyone else's data is in it. `deriveXp` is superlinear
   and measured: 8ms at one year of logs, 42ms at five, 107ms at ten — and it runs on
   every session write, with `useSkills` depending on it. Also: a service-worker
