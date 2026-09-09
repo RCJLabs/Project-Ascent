@@ -629,14 +629,80 @@ Milestones are sequential; each ends runnable and useful.
   they were logged. Deferred by decision, not by oversight: expedition-style sieges
   of famous climbs (AUDIT.md §7's one cut system worth reconsidering), which would be
   offline and deterministic rather than the prototype's d20-plus-AI-text.
-- **M11 — Hardening.** Before anyone else's data is in it. `deriveXp` is superlinear
-  and measured: 8ms at one year of logs, 42ms at five, 107ms at ten — and it runs on
-  every session write, with `useSkills` depending on it. Also: a service-worker
-  update prompt (an offline app can otherwise sit on a stale build indefinitely), a
-  keyboard and screen-reader pass to match the 320px pass already done, virtualised
-  lists for a decade-long journal, and import/export that handles media, partial
-  imports and conflicts. *Done when: ten years of logs is indistinguishable from one.*
+- **M11 — Hardening.** *Split and retired.* It was five unrelated projects sharing a
+  milestone — `deriveXp` performance, a service-worker prompt, a screen-reader pass,
+  virtualised lists and import conflicts. Each now sits in the phase it belongs to:
+  perf and virtualisation in M18, the update prompt in M19, accessibility in M14, and
+  import conflicts in M20.
+
+### Phases M13–M22: the app itself
+
+Ten phases about the app rather than its content, from a survey of the code on
+2026-09-09. Two findings set the order. First, **light mode has two WCAG AA
+failures already shipped**: `--c-accent` on `--c-bg` measures 4.31:1 against the 4.5
+requirement and is used as text throughout, and `--c-warn` on surface measures
+3.82:1 and is the colour of every injury flag and load warning. Dark mode is fine
+(5.7–7.0). Second, the accessibility instrumentation is at **zero** — no `aria-live`
+anywhere, no `focus-visible` anywhere, no `prefers-reduced-motion` anywhere, one
+`aria-current` — while there are **95 raw `<button>` elements against 20 files
+importing the `Button` component**, and `Button` itself defines no focus style.
+
+M13 comes first because the design system is what turns the accessibility pass into
+a small diff instead of ninety-five separate edits.
+
+- **M13 — Design system.** The 95-vs-20 split is the root cause: no consistent focus
+  ring, hit target or disabled state, and the same class string
+  (`w-full bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm`) copied into
+  ten feature files, with the selected-chip pattern (`border-accent bg-accent/10`)
+  written out thirty times across sixteen. Extract the primitives already in use —
+  Button, IconButton, Chip, Field/Input/Select/TextArea, EmptyState, Stat — give each
+  one a focus ring and a real hit target, and convert the raw ones. *Done when: no
+  feature file styles a bare button or repeats the input class string.*
+- **M14 — Accessibility.** Live regions for what changes without a navigation (XP
+  awards, timer state, saves, board completion). A visible focus ring on everything
+  interactive. `aria-current` on the nav. Heading levels that do not skip. Reduced
+  motion honoured by the progress bars, the transitions and the Ascent's rAF loop.
+  Labels on the hand-built SVG charts. *Done when: a full session can be logged with
+  a keyboard and a screen reader.*
+- **M15 — Themes worth having.** Fix the two AA failures first. Then real theme
+  variants rather than accent swaps (Alpine, high-contrast Slate, warm Sandstone,
+  true-black OLED for phones), a text-size setting, and `prefers-contrast` honoured.
+  *Done when: every theme × mode passes the contrast and colour-vision checks
+  `validate_palette.js` already runs.*
+- **M16 — Navigation.** Five tabs and fourteen features reachable only by drilling. A
+  command palette and global search over sessions, projects, programs, glossary terms
+  and guides — offline, over derived indexes — and one consistent back affordance to
+  replace the hand-rolled per-page "← Parent" links. *Done when: any feature is two
+  taps from anywhere.*
+- **M17 — Beyond the phone.** `max-w-2xl` plus `grid-cols-1` everywhere (a legacy of
+  the 320px pass) shows a desktop browser a narrow ribbon between two margins.
+  Breakpoint layouts, a sidebar instead of a bottom bar at ≥1024px, and grids that
+  gain columns at width. *Done when: 1280px does not feel like a stretched phone.*
+- **M18 — Speed and size.** One 1.05MB JS chunk with no code splitting, and
+  `deriveXp` measured at 8/42/107ms for one, five and ten years of logs — running on
+  every session write. Route-level splitting (the Ascent's canvas game and the
+  844-line builder first), incremental derivation, virtualised journal and career
+  timeline, and a measured budget. *Done when: ten years of logs is indistinguishable
+  from one, and first load is under 300KB.*
+- **M19 — The offline contract.** `registerSW({ immediate: true })` swaps the app
+  under the climber mid-session with no prompt. An update prompt, an offline
+  indicator, storage-pressure warnings, and an export reminder on a real cadence.
+  *Done when: an update never interrupts a live session.*
+- **M20 — Data safety.** Import is all-or-nothing with no preview. Per-store merge
+  versus replace, a dry-run summary before it writes, an automatic snapshot before any
+  import, and undo for destructive deletes. *Done when: no single tap can lose a year
+  of logs.*
+- **M21 — Entry speed.** Logging is the most repeated action in the app and
+  `LogPage.tsx` is 1,297 lines. Quick-log from the last session, grade steppers
+  instead of selects, numeric keypads, swipe-to-delete on climb rows. *Done when: a
+  typical bouldering session logs in under thirty seconds.* Open question the code
+  cannot answer: where logging actually annoys the climber using it.
+- **M22 — Polish and motion.** Skeletons instead of blank flashes during hydration,
+  consistent empty states in place of ad-hoc prose per page, route transitions that
+  respect reduced motion, and a typography scale pass. *Done when: nothing renders a
+  blank card while it thinks.*
 - **M12 — Ship.** TWA packaging + assetlinks, Play internal testing, store listing.
+  Last, after M13–M22.
 
 **Known limitations carried forward:** program metadata grade ranges
 (`gradeRange.label`, e.g. "V5-V8") are authored strings and do not follow the Font
