@@ -16,6 +16,7 @@ import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';
 import { useSessions } from '@/store/sessions';
 import { useSkillEffects } from '@/store/skills';
+import { PageGrid } from '@/ui/PageGrid';
 import { Button } from '@/ui/Button';
 import { announce } from '@/ui/Announce';
 import { Card } from '@/ui/Card';
@@ -72,7 +73,7 @@ export function BoardPage() {
         subtitle={open > 0 ? `${open} ready to claim` : 'Everything here resolves from your log'}
       />
 
-      <div className="grid grid-cols-1 gap-3">
+      <PageGrid>
         <Card title="Today">
           <ChallengeRow challenge={board.daily} claimed={claimed.has(board.daily.id)} />
         </Card>
@@ -96,7 +97,7 @@ export function BoardPage() {
             accepted it. A perfect week here is worth under three sessions of real training.
           </p>
         </Card>
-      </div>
+      </PageGrid>
     </>
   );
 }

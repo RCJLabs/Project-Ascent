@@ -24,6 +24,7 @@ import { useObjectives } from '@/store/objectives';
 import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
+import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -90,7 +91,7 @@ export function ObjectivesPage() {
         subtitle="Something to work toward that a single block of training cannot finish."
       />
 
-      <div className="grid grid-cols-1 gap-3">
+      <PageGrid>
         {objectives.length === 0 && (
           <Card>
             <p className="text-sm leading-relaxed">
@@ -141,7 +142,7 @@ export function ObjectivesPage() {
             </p>
           </Card>
         )}
-      </div>
+      </PageGrid>
     </>
   );
 }

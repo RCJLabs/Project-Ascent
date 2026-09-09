@@ -11,6 +11,7 @@ import {
 import { getProgram } from '@/content/programs';
 import { addDays, fromKey, shortLabel, startOfWeek, today as todayKey } from '@/engine/dates';
 import { buildReview, type NoteTone, type WeekReview } from '@/engine/review';
+import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { weekCard } from '@/ui/shareCard';
 import { useXp } from '@/store/game';
@@ -92,7 +93,7 @@ export function ReviewPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3">
+      <PageGrid>
         <Card>
           <div className="flex items-start gap-2.5">
             <Icon size={18} style={{ color }} className="shrink-0 mt-0.5" />
@@ -201,7 +202,7 @@ export function ReviewPage() {
             </ul>
           </Card>
         )}
-      </div>
+      </PageGrid>
     </>
   );
 }

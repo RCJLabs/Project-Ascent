@@ -5,6 +5,7 @@ import { PROGRAMS } from '@/content/programs';
 import { blankProgram, forkProgram, validateProgram } from '@/engine/customProgram';
 import { ProgramFileError, parseProgramFile } from '@/engine/programFile';
 import { useCustomPrograms } from '@/store/programs';
+import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -58,7 +59,7 @@ export function BuilderList() {
         subtitle="Write one from scratch, or take a copy of one that already works and change it."
       />
 
-      <div className="grid grid-cols-1 gap-3">
+      <PageGrid>
         {notice && (
           <Card>
             <ul className="grid grid-cols-1 gap-1">
@@ -131,7 +132,7 @@ export function BuilderList() {
             onChange={(e) => void importFile(e.target.files)}
           />
         </Card>
-      </div>
+      </PageGrid>
     </>
   );
 }

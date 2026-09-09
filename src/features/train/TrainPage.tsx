@@ -44,7 +44,7 @@ export function TrainPage() {
         <section>
           <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft">Yours</h2>
           <p className="text-sm text-ink-soft mb-2">Programs you wrote, and copies you have changed.</p>
-          <div className="grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
             {custom.map((program) => (
               <Link
                 key={program.id}
@@ -90,7 +90,7 @@ export function TrainPage() {
             <section key={stage}>
               <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft">{meta.label}</h2>
               <p className="text-sm text-ink-soft mb-2">{meta.blurb}</p>
-              <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                 {inStage.map((program) => (
                   <Link
                     key={program.id}

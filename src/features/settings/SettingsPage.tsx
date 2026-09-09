@@ -18,6 +18,7 @@ import {
 import { rankTemplates } from '@/engine/templates';
 import { useTemplates } from '@/store/templates';
 import { TEXT_SCALE, useSettings, type TextSize, type ThemePreference } from '@/store/settings';
+import { PageGrid } from '@/ui/PageGrid';
 import { Button } from '@/ui/Button';
 import { announce } from '@/ui/Announce';
 import { Card } from '@/ui/Card';
@@ -190,7 +191,7 @@ export function SettingsPage() {
   return (
     <>
       <PageHeader title="Settings" />
-      <div className="grid grid-cols-1 gap-3">
+      <PageGrid>
         <Card title="Appearance">
           <div className="text-xs font-semibold text-ink-soft mb-1.5">Light or dark</div>
           {/* wrap: three chips do not fit 320px at the largest text size. */}
@@ -495,7 +496,7 @@ export function SettingsPage() {
         </Card>
 
         {message && <p className="text-sm text-ink-soft px-1">{message}</p>}
-      </div>
+      </PageGrid>
     </>
   );
 }

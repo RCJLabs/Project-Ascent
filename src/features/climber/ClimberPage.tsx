@@ -29,6 +29,7 @@ import { useProjects } from '@/store/projects';
 import { useSkills } from '@/store/skills';
 import { useSessions } from '@/store/sessions';
 import { ShareButton } from '@/features/share/ShareSheet';
+import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
 import { SelectableCard, Swatch } from '@/ui/Chip';
@@ -110,7 +111,7 @@ export function ClimberPage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-3">
+      <PageGrid>
         <Card>
           <LevelBar progress={xp.progress} rank={xp.rank} next={xp.next} />
         </Card>
@@ -211,7 +212,7 @@ export function ClimberPage() {
             </ul>
           )}
         </Card>
-      </div>
+      </PageGrid>
     </>
   );
 }

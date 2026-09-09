@@ -13,6 +13,7 @@ import {
 } from '@/engine/assessments';
 import { shortLabel, today } from '@/engine/dates';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
+import { PageGrid } from '@/ui/PageGrid';
 import { useGradeOptions } from '@/ui/useGrade';
 import { useMetrics } from '@/store/metrics';
 import { useSettings } from '@/store/settings';
@@ -61,7 +62,7 @@ export function AssessmentsPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-3">
+      <PageGrid>
         {battery.length === 0 && (
           <Card>
             <p className="text-sm leading-relaxed text-ink-soft">
@@ -127,7 +128,7 @@ export function AssessmentsPage() {
         {open !== null && !listed.has(open) && (
           <NewBenchmarkCard metricId={open} onDone={() => setOpen(null)} />
         )}
-      </div>
+      </PageGrid>
     </>
   );
 }

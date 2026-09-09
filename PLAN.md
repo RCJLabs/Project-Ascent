@@ -691,10 +691,34 @@ a small diff instead of ninety-five separate edits.
   two pages whose parent carries an id. Tests hold the table against `App.tsx` in
   both directions, forbid cycles, cap depth at three, and check that nothing is
   listed in search that cannot be linked to blind.
-- **M17 — Beyond the phone.** `max-w-2xl` plus `grid-cols-1` everywhere (a legacy of
-  the 320px pass) shows a desktop browser a narrow ribbon between two margins.
-  Breakpoint layouts, a sidebar instead of a bottom bar at ≥1024px, and grids that
-  gain columns at width. *Done when: 1280px does not feel like a stretched phone.*
+- **M17 — Beyond the phone.** *Done.* Measured first: at 1280px `main` was 672px
+  wide with **608px of dead space — 48% of the viewport** — under a bottom bar
+  stretched the full width with six small icons huddled in the middle. Now the nav
+  becomes a sidebar at ≥1024px and the content grows to **976px at 1280px**, 1024px
+  at 1600px. **One `<nav>` element carries both shapes**, not two with one hidden:
+  rendering both would announce the app's navigation twice and put every tab in the
+  tab order twice. The content keeps a maximum regardless — a 1,200px paragraph is
+  unreadable whatever the window is doing.
+  Columns are a decision per page, not a sweep. `PageGrid` splits in two at `lg` on
+  the **17 browsing pages** where the cards are independent readings, and `Wide`
+  spans a child the split would ruin: a control that governs the cards below it
+  (a Boulder/Routes toggle stranded in the right column while its charts sit in the
+  left reads as belonging to nothing) and a row of figures laid out horizontally.
+  Forms, editors and reading flows stay one column — the logger's sections feed each
+  other, the finder is a sequence of questions, the program page walks phases in
+  order — because splitting those turns "next" into "look right, then back left and
+  down". `layout.test.ts` records that decision for every page **with a written
+  reason**, and holds the shell to one nav.
+  **Two mistakes worth keeping.** The conversion script replaced the *first*
+  `grid grid-cols-1` in each file, which on the progress page is the branch shown
+  when nothing is logged yet — so the page a climber with 90 sessions actually sees
+  stayed one column while the file still said `PageGrid`. Screenshots with real data
+  caught it; a source check for the string would not have. Then the first version of
+  the test that was meant to prevent it asserted exactly that string and passed on
+  the mutated file. It now requires a `PageGrid` in every branch that renders a page
+  header and more than one card, and was checked by breaking three pages to confirm
+  it fails. Verified across 22 routes at 320/390/768/1024/1280/1600px: **zero
+  horizontal overflow at every width**, no page errors.
 - **M18 — Speed and size.** *Done.* `deriveXp` at ten years of logs: **106.9ms →
   6.1ms**, and flat rather than superlinear. The cost was `loadStateAt` walking 28
   days per session with date arithmetic — 43,680 `Date` constructions per derivation,

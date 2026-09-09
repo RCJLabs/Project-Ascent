@@ -10,6 +10,7 @@ import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
+import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -73,7 +74,7 @@ export function CoachPage() {
         subtitle="Standing observations about your training, from rules over your own numbers."
       />
 
-      <div className="grid grid-cols-1 gap-3">
+      <PageGrid>
         {visible.length === 0 ? (
           <Card>
             <p className="text-sm leading-relaxed">
@@ -104,7 +105,7 @@ export function CoachPage() {
             </Button>
           )}
         </Card>
-      </div>
+      </PageGrid>
     </>
   );
 }

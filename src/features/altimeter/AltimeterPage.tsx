@@ -11,6 +11,7 @@ import {
 } from '@/engine/altimeter';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { useSessions } from '@/store/sessions';
+import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
 import { Meter } from '@/ui/Meter';
@@ -45,7 +46,7 @@ export function AltimeterPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-3">
+      <PageGrid>
         <Card>
           <div className="text-center mb-3">
             <div className="text-4xl font-black tabular-nums leading-none">
@@ -162,7 +163,7 @@ export function AltimeterPage() {
             Career milestones <ArrowRight size={14} />
           </Link>
         </Card>
-      </div>
+      </PageGrid>
     </>
   );
 }

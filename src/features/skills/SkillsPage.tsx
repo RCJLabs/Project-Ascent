@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Check, Lock, Sparkles } from 'lucide-react';
 import { describeEffect, type SkillProgress, type SkillTreeState, type TreeId } from '@/engine/skills';
 import { useSkills } from '@/store/skills';
+import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
 import { DisclosureButton } from '@/ui/Disclosure';
@@ -26,7 +27,7 @@ export function SkillsPage() {
 
       <PageHeader title="Skills" subtitle={`${skills.unlocked} of ${skills.total} unlocked`} />
 
-      <div className="grid grid-cols-1 gap-3">
+      <PageGrid>
         <Card>
           <p className="text-sm text-ink-soft leading-relaxed">
             There are no points to spend. Every node here unlocks because the log says you did the
@@ -73,7 +74,7 @@ export function SkillsPage() {
             onToggle={() => setOpen(open === tree.id ? null : tree.id)}
           />
         ))}
-      </div>
+      </PageGrid>
     </>
   );
 }

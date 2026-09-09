@@ -14,6 +14,7 @@ import {
 } from '@/engine/yearReview';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
+import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
 import { Select } from '@/ui/Field';
@@ -57,7 +58,7 @@ export function YearPage({ params }: { params: { year?: string } }) {
         subtitle={review.complete ? 'The year in review' : 'The year so far'}
       />
 
-      <div className="grid grid-cols-1 gap-3">
+      <PageGrid>
         {years.length > 1 && (
           <div className="flex items-center gap-2">
             <IconButton
@@ -216,7 +217,7 @@ export function YearPage({ params }: { params: { year?: string } }) {
             )}
           </>
         )}
-      </div>
+      </PageGrid>
     </>
   );
 }

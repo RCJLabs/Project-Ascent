@@ -15,6 +15,7 @@ import { useXp } from '@/store/game';
 import { useProfile } from '@/store/profile';
 import { useSkillEffects } from '@/store/skills';
 import { useSessions } from '@/store/sessions';
+import { PageGrid, Wide } from '@/ui/PageGrid';
 import { Card } from '@/ui/Card';
 import { Avatar } from '@/ui/Avatar';
 import { LevelBar } from '@/ui/LevelBar';
@@ -56,8 +57,10 @@ export function HomePage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-3">
-        <ClimberStrip />
+      <PageGrid>
+        <Wide>
+          <ClimberStrip />
+        </Wide>
         <CoachCard />
         <AltimeterCard />
         <Link href="/board" className="block bg-surface border border-line rounded-2xl p-4">
@@ -136,7 +139,7 @@ export function HomePage() {
             </div>
           </Card>
         )}
-      </div>
+      </PageGrid>
     </>
   );
 }

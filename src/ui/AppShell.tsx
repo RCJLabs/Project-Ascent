@@ -22,14 +22,32 @@ const TABS = [
   { href: '/search', label: 'Search', icon: Search },
 ] as const;
 
+function isActive(href: string, location: string): boolean {
+  return href === '/' ? location === '/' : location.startsWith(href);
+}
+
+/**
+ * The shell, in two shapes (PLAN.md M17).
+ *
+ * On a phone the nav is a bottom bar, because that is where a thumb is. On
+ * anything wide it is a sidebar, because a bar stretched across 1280px with
+ * six small icons huddled in the middle is what "a phone app in a desktop
+ * window" looks like — measured before this change: 608px of the viewport,
+ * 48% of it, was empty margin either side of a 672px column.
+ *
+ * One nav element, not two. Rendering both and hiding one would announce
+ * the app's navigation twice to a screen reader, and put every tab in the
+ * tab order twice.
+ */
 export function AppShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const banner = useLiveBanner();
+
   return (
-    <div className="min-h-dvh flex flex-col max-w-2xl mx-auto">
+    <div className="min-h-dvh lg:flex">
       {/* Visible only when tabbed to. Without it, every page starts a
           keyboard user at the top of the nav and makes them walk through
-          five tabs to reach the content they navigated to.
+          six tabs to reach the content they navigated to.
 
           It stays an anchor with a real href — that is what assistive
           technology expects a skip link to be, and it still works with
@@ -48,30 +66,39 @@ export function AppShell({ children }: { children: ReactNode }) {
         Skip to content
       </a>
       <Announcer />
-      {/* `tabIndex={-1}` so the skip link can actually move focus here —
-          a heading or a div is not focusable by default, and skipping to
-          something unfocusable moves the scroll and leaves focus behind. */}
-      <main id="main" tabIndex={-1} className={`flex-1 px-4 pt-6 outline-none ${banner ? 'pb-36' : 'pb-24'}`}>
-        {children}
-      </main>
+
       <nav
         aria-label="Main"
-        className="fixed bottom-0 inset-x-0 bg-surface/95 backdrop-blur border-t border-line"
+        className={
+          // Phone: a bar pinned to the bottom. Desktop: a column pinned to
+          // the left, which is why the same element carries both sets of
+          // positioning rather than there being two of them.
+          'fixed bottom-0 inset-x-0 z-30 bg-surface/95 backdrop-blur border-t border-line ' +
+          'lg:static lg:inset-auto lg:w-60 lg:shrink-0 lg:border-t-0 lg:border-r lg:h-dvh lg:sticky lg:top-0 lg:backdrop-blur-none'
+        }
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto lg:hidden">
           <LiveBar banner={banner} />
         </div>
-        <div className="max-w-2xl mx-auto grid grid-cols-6">
+
+        <div className="hidden lg:block px-5 pt-6 pb-4">
+          <div className="font-black tracking-tight text-lg leading-none">Project Ascent</div>
+          <p className="text-xs text-ink-soft mt-1">Train. Understand. Grow.</p>
+        </div>
+
+        <div className="max-w-2xl mx-auto grid grid-cols-6 lg:flex lg:flex-col lg:gap-0.5 lg:px-3 lg:max-w-none">
           {TABS.map(({ href, label, icon: Icon }) => {
-            const active = href === '/' ? location === '/' : location.startsWith(href);
+            const active = isActive(href, location);
             return (
               <Link
                 key={href}
                 href={href}
                 aria-current={active ? 'page' : undefined}
-                className={`focus-ring flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold transition-colors ${
-                  active ? 'text-accent' : 'text-ink-soft hover:text-ink'
+                className={`focus-ring flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold transition-colors lg:flex-row lg:gap-3 lg:px-3 lg:py-2.5 lg:rounded-xl lg:text-sm ${
+                  active
+                    ? 'text-accent lg:bg-accent/10'
+                    : 'text-ink-soft hover:text-ink lg:hover:bg-sunken'
                 }`}
               >
                 <Icon size={19} strokeWidth={active ? 2.5 : 2} aria-hidden />
@@ -80,7 +107,27 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </div>
+
+        <div className="hidden lg:block px-3 mt-3">
+          <LiveBar banner={banner} />
+        </div>
       </nav>
+
+      {/* `tabIndex={-1}` so the skip link can actually move focus here —
+          a heading or a div is not focusable by default, and skipping to
+          something unfocusable moves the scroll and leaves focus behind. */}
+      <main
+        id="main"
+        tabIndex={-1}
+        className={`flex-1 min-w-0 px-4 pt-6 outline-none lg:px-8 lg:pb-12 ${
+          banner ? 'pb-36' : 'pb-24'
+        }`}
+      >
+        {/* The content still has a maximum: a paragraph 1,200px wide is
+            unreadable whatever the window is doing. Wide enough for two
+            columns of cards, and no wider. */}
+        <div className="max-w-2xl mx-auto lg:max-w-5xl">{children}</div>
+      </main>
     </div>
   );
 }

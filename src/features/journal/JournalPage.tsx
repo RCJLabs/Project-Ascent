@@ -13,6 +13,7 @@ import { fromKey, shortLabel } from '@/engine/dates';
 import { useMetrics } from '@/store/metrics';
 import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
+import { PageGrid } from '@/ui/PageGrid';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
@@ -83,7 +84,7 @@ export function JournalPage() {
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-3">
+        <PageGrid>
           <Card>
             <div className="relative mb-3">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft" />
@@ -161,7 +162,7 @@ export function JournalPage() {
               </section>
             ))
           )}
-        </div>
+        </PageGrid>
       )}
     </>
   );

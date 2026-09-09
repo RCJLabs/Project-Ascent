@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { Activity, AlertTriangle, BookOpen, CalendarRange, CheckCircle2, ChevronRight, Info, Ruler, Trophy, TrendingDown } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
+import { PageGrid, Wide } from '@/ui/PageGrid';
 import { useGradeLabel } from '@/ui/useGrade';
 import { assessmentBattery } from '@/engine/assessments';
 import { buildJournal } from '@/engine/journal';
@@ -249,7 +250,7 @@ export function ProgressPage() {
     return (
       <>
         <PageHeader title="Progress" />
-        <div className="grid grid-cols-1 gap-3">
+        <PageGrid>
           <Card>
             <p className="text-sm text-ink-soft">
               Nothing logged yet. Once you have a few sessions in, this is where your grades, training
@@ -260,7 +261,7 @@ export function ProgressPage() {
               you start training is the point of them. */}
           <AssessmentsCard />
           <JournalCard />
-        </div>
+        </PageGrid>
       </>
     );
   }
@@ -272,17 +273,19 @@ export function ProgressPage() {
     <>
       <PageHeader title="Progress" subtitle={`${state.completedSessions} sessions logged`} />
 
-      <div className="grid grid-cols-1 gap-3">
-        <TrainingState state={state} sessions={sessions} program={program} scale={scale} />
+      <PageGrid>
+        <Wide>
+          <Card>
+            <div className="flex gap-5 flex-wrap">
+              <Stat label="Sessions" value={String(state.completedSessions)} sub={`${state.recentSessions} in 30 days`} />
+              <Stat label="Streak" value={`${state.streakWeeks}w`} sub={`${weeklyTarget}+ per week`} />
+              <Stat label="Sends" value={String(state.boulder.totalSends + state.sport.totalSends)} />
+              <Stat label="Hours" value={String(Math.round(state.totalMinutes / 60))} />
+            </div>
+          </Card>
+        </Wide>
 
-        <Card>
-          <div className="flex gap-5 flex-wrap">
-            <Stat label="Sessions" value={String(state.completedSessions)} sub={`${state.recentSessions} in 30 days`} />
-            <Stat label="Streak" value={`${state.streakWeeks}w`} sub={`${weeklyTarget}+ per week`} />
-            <Stat label="Sends" value={String(state.boulder.totalSends + state.sport.totalSends)} />
-            <Stat label="Hours" value={String(Math.round(state.totalMinutes / 60))} />
-          </div>
-        </Card>
+        <TrainingState state={state} sessions={sessions} program={program} scale={scale} />
 
         <Card title="Training load">
           <div className="flex items-start gap-3 mb-3">
@@ -312,13 +315,13 @@ export function ProgressPage() {
           </p>
         </Card>
 
-        <div className="flex gap-2">
+        <Wide className="flex gap-2">
           {(['V', 'YDS'] as GradeScale[]).map((s) => (
             <Chip key={s} active={scale === s} onClick={() => setScale(s)}>
               {s === 'V' ? 'Boulder' : 'Routes'}
             </Chip>
           ))}
-        </div>
+        </Wide>
 
         <Card title="Grade progression">
           {points.some((p) => p.ordinal !== null) ? (
@@ -383,7 +386,7 @@ export function ProgressPage() {
             </ul>
           </Card>
         )}
-      </div>
+      </PageGrid>
     </>
   );
 }

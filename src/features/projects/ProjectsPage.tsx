@@ -4,6 +4,7 @@ import { Check, Lightbulb, Plus, X } from 'lucide-react';
 import { ACTIVE_CAP, type Project } from '@/db/projects';
 import type { Session } from '@/db/sessions';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
+import { PageGrid } from '@/ui/PageGrid';
 import { useGradeLabel, useGradeOptions } from '@/ui/useGrade';
 import { suggestProjects, summariseProject, type ProjectSuggestion } from '@/engine/projects';
 import { useProjects } from '@/store/projects';
@@ -54,7 +55,7 @@ export function ProjectsPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-3">
+      <PageGrid>
         {adding && (
           <ProjectForm
             initial={adding}
@@ -127,7 +128,7 @@ export function ProjectsPage() {
             </ul>
           </Card>
         )}
-      </div>
+      </PageGrid>
     </>
   );
 }

@@ -6,6 +6,7 @@ import { fromKey } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
+import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
@@ -65,7 +66,7 @@ export function CareerPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-3">
+      <PageGrid>
         {career.next.length > 0 && (
           <Card title="Coming up">
             <ul className="grid grid-cols-1 gap-2.5">
@@ -171,7 +172,7 @@ export function CareerPage() {
           </div>
           <ArrowRight size={16} className="text-ink-soft shrink-0" />
         </Link>
-      </div>
+      </PageGrid>
     </>
   );
 }

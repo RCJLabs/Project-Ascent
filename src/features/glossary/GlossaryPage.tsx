@@ -8,6 +8,7 @@ import {
   searchGlossary,
   type GlossaryCategory,
 } from '@/content/glossary';
+import { PageGrid, Wide } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { Chip as UiChip } from '@/ui/Chip';
 import { Input } from '@/ui/Field';
@@ -39,8 +40,8 @@ export function GlossaryPage() {
         subtitle={`${GLOSSARY.length} terms — the lingo, the techniques, and the exercises the programs ask for by name.`}
       />
 
-      <div className="grid grid-cols-1 gap-3">
-        <div className="relative">
+      <PageGrid>
+        <Wide className="relative">
           <Search
             size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft pointer-events-none"
@@ -63,9 +64,9 @@ export function GlossaryPage() {
               <X size={16} />
             </IconButton>
           )}
-        </div>
+        </Wide>
 
-        <div className="flex flex-wrap gap-1.5">
+        <Wide className="flex flex-wrap gap-1.5">
           <Chip active={category === null} onClick={() => setCategory(null)} label="All" />
           {CATEGORY_ORDER.map((option) => (
             <Chip
@@ -75,7 +76,7 @@ export function GlossaryPage() {
               label={option}
             />
           ))}
-        </div>
+        </Wide>
 
         {found === 0 ? (
           <p className="text-sm text-ink-soft py-6 text-center">
@@ -99,7 +100,7 @@ export function GlossaryPage() {
             </section>
           ))
         )}
-      </div>
+      </PageGrid>
     </>
   );
 }
