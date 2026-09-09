@@ -56,7 +56,7 @@ export function AssessmentsPage() {
         }
       />
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {battery.length === 0 && (
           <Card>
             <p className="text-sm leading-relaxed text-ink-soft">
@@ -68,7 +68,7 @@ export function AssessmentsPage() {
 
         {battery.length > 0 && (
           <Card title={program ? program.name : 'Your benchmarks'}>
-            <ul className="grid gap-2">
+            <ul className="grid grid-cols-1 gap-2">
               {battery.map((status) => (
                 <MetricRow
                   key={status.metric.id}
@@ -92,7 +92,7 @@ export function AssessmentsPage() {
             </Button>
           ) : (
             <>
-              <ul className="grid gap-2 max-h-96 overflow-y-auto">
+              <ul className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto">
                 {rest.map((metric) => (
                   <li key={metric.id}>
                     <button

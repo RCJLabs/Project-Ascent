@@ -63,13 +63,13 @@ export function BoardPage() {
         subtitle={open > 0 ? `${open} ready to claim` : 'Everything here resolves from your log'}
       />
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <Card title="Today">
           <ChallengeRow challenge={board.daily} claimed={claimed.has(board.daily.id)} />
         </Card>
 
         <Card title="This week">
-          <ul className="grid gap-3">
+          <ul className="grid grid-cols-1 gap-3">
             {board.weekly.map((c) => (
               <li key={c.id}>
                 <ChallengeRow challenge={c} claimed={claimed.has(c.id)} />
@@ -107,7 +107,7 @@ function BountiesCard({
   return (
     <Card title={`Bounties · ${board.bounties.length} of ${cap}`}>
       {board.bounties.length > 0 && (
-        <ul className="grid gap-3 mb-3">
+        <ul className="grid grid-cols-1 gap-3 mb-3">
           {board.bounties.map((c) => (
             <li key={c.id}>
               <ChallengeRow
@@ -128,7 +128,7 @@ function BountiesCard({
       )}
 
       {!full && board.offers.length > 0 && (
-        <ul className="grid gap-2">
+        <ul className="grid grid-cols-1 gap-2">
           {board.offers.map((spec) => (
             <OfferRow key={spec.key} spec={spec} onAccept={() => void accept(spec, cap)} />
           ))}

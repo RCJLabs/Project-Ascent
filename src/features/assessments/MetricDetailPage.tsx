@@ -49,7 +49,7 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
 
   return (
     <>
-      <Link href="/assessments" className="inline-flex items-center gap-1 text-sm text-ink-soft mb-3">
+      <Link href="/assessments" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
         <ArrowLeft size={15} /> Assessments
       </Link>
 
@@ -61,7 +61,7 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
         </p>
       </header>
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {metric.description && (
           <Card>
             <p className="text-sm leading-relaxed">{metric.description}</p>
@@ -93,7 +93,7 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
           {series.length === 0 ? (
             <p className="text-sm text-ink-soft">Nothing recorded yet.</p>
           ) : (
-            <ul className="grid gap-2">
+            <ul className="grid grid-cols-1 gap-2">
               {[...series].reverse().map((entry, i) => (
                 <li key={entry.date} className="flex items-start gap-2 bg-sunken rounded-xl px-3 py-2.5">
                   <span className="text-xs text-ink-soft w-16 shrink-0 mt-0.5">{shortLabel(entry.date)}</span>

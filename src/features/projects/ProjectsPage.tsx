@@ -52,7 +52,7 @@ export function ProjectsPage() {
         }
       />
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {adding && (
           <ProjectForm
             initial={adding}
@@ -65,7 +65,7 @@ export function ProjectsPage() {
 
         {suggestions.length > 0 && !adding && (
           <Card title="Spotted in your logs">
-            <ul className="grid gap-2">
+            <ul className="grid grid-cols-1 gap-2">
               {suggestions.slice(0, 3).map((s) => (
                 <SuggestionRow
                   key={s.key}
@@ -91,7 +91,7 @@ export function ProjectsPage() {
 
         {active.length > 0 && (
           <Card title="Active">
-            <ul className="grid gap-2">
+            <ul className="grid grid-cols-1 gap-2">
               {active.map((p) => (
                 <ProjectRow key={p.id} project={p} sessions={sessions} />
               ))}
@@ -108,7 +108,7 @@ export function ProjectsPage() {
 
         {sent.length > 0 && (
           <Card title="Sent">
-            <ul className="grid gap-2">
+            <ul className="grid grid-cols-1 gap-2">
               {sent.map((p) => (
                 <ProjectRow key={p.id} project={p} sessions={sessions} />
               ))}
@@ -118,7 +118,7 @@ export function ProjectsPage() {
 
         {shelved.length > 0 && (
           <Card title="Shelved">
-            <ul className="grid gap-2">
+            <ul className="grid grid-cols-1 gap-2">
               {shelved.map((p) => (
                 <ProjectRow key={p.id} project={p} sessions={sessions} />
               ))}

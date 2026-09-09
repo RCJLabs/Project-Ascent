@@ -53,7 +53,7 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
 
   return (
     <>
-      <Link href="/projects" className="inline-flex items-center gap-1 text-sm text-ink-soft mb-3">
+      <Link href="/projects" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
         <ArrowLeft size={15} /> Projects
       </Link>
 
@@ -70,7 +70,7 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
         </p>
       </header>
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <Card>
           <div className="grid grid-cols-4 gap-2 text-center">
             <Stat label="Burns" value={String(summary.burns)} />
@@ -122,7 +122,7 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
               </Link>
             </>
           ) : (
-            <ol className="grid gap-2">
+            <ol className="grid grid-cols-1 gap-2">
               {[...summary.attempts].reverse().map((a) => (
                 <li key={a.id} className="flex items-baseline gap-2 bg-sunken rounded-xl px-3 py-2">
                   <span className="text-xs text-ink-soft w-16 shrink-0">{shortDate(a.date)}</span>
@@ -217,7 +217,7 @@ function BetaCard({ project, onChange }: { project: Project; onChange: (p: Proje
   return (
     <Card title="Beta">
       {project.beta.length > 0 && (
-        <ul className="grid gap-2 mb-3">
+        <ul className="grid grid-cols-1 gap-2 mb-3">
           {project.beta.map((note) => (
             <li key={note.id} className="bg-sunken rounded-xl px-3 py-2.5">
               <div className="flex items-start gap-2">

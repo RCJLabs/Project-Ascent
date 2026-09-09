@@ -174,7 +174,7 @@ export function ProgressPage() {
     return (
       <>
         <PageHeader title="Progress" />
-        <div className="grid gap-3">
+        <div className="grid grid-cols-1 gap-3">
           <Card>
             <p className="text-sm text-ink-soft">
               Nothing logged yet. Once you have a few sessions in, this is where your grades, training
@@ -197,7 +197,7 @@ export function ProgressPage() {
     <>
       <PageHeader title="Progress" subtitle={`${state.completedSessions} sessions logged`} />
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <TrainingState state={state} sessions={sessions} program={program} scale={scale} />
 
         <Card>
@@ -290,7 +290,7 @@ export function ProgressPage() {
 
         {state.personalRecords.length > 0 && (
           <Card title="Personal records">
-            <ul className="grid gap-2">
+            <ul className="grid grid-cols-1 gap-2">
               {[...state.personalRecords]
                 .reverse()
                 .slice(0, 6)

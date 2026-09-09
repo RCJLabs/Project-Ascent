@@ -49,15 +49,15 @@ export function StartProgramPage({ params }: { params: { id: string } }) {
 
   return (
     <>
-      <Link href={`/train/${program.id}`} className="inline-flex items-center gap-1 text-sm text-ink-soft mb-3">
+      <Link href={`/train/${program.id}`} className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
         <ArrowLeft size={15} /> {program.name}
       </Link>
       <PageHeader title="Plan your week" subtitle={program.name} />
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {program.tracks && (
           <Card title="Track">
-            <div className="grid gap-2">
+            <div className="grid grid-cols-1 gap-2">
               {program.tracks.map((t) => (
                 <button
                   key={t.id}
@@ -112,7 +112,7 @@ export function StartProgramPage({ params }: { params: { id: string } }) {
               them. Showing the prescribed week instead.
             </p>
           )}
-          <div className="grid gap-2">
+          <div className="grid grid-cols-1 gap-2">
             {layouts.map((l, i) => {
               const selected = l === layout;
               const preview = planFromLayout(l);
@@ -133,7 +133,7 @@ export function StartProgramPage({ params }: { params: { id: string } }) {
                       return (
                         <div
                           key={d}
-                          className={`rounded-lg py-1.5 text-center text-[10px] ${
+                          className={`rounded-lg px-0.5 py-1.5 text-center text-[10px] overflow-hidden ${
                             type && !type.isRest ? 'bg-accent/20' : 'bg-surface'
                           }`}
                         >
@@ -149,7 +149,7 @@ export function StartProgramPage({ params }: { params: { id: string } }) {
           </div>
 
           {violations.length > 0 && (
-            <div className="mt-3 grid gap-1.5">
+            <div className="mt-3 grid grid-cols-1 gap-1.5">
               {violations.map((v, i) => (
                 <p key={i} className="text-sm flex gap-2 items-start">
                   <AlertTriangle

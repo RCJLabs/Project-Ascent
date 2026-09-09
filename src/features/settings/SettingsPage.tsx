@@ -138,7 +138,7 @@ export function SettingsPage() {
   return (
     <>
       <PageHeader title="Settings" />
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <Card title="Appearance">
           <div className="flex gap-2">
             {THEMES.map((t) => (
@@ -211,7 +211,7 @@ export function SettingsPage() {
             programs that load it.
           </p>
           {injuries.length > 0 && (
-            <ul className="grid gap-2 mb-3">
+            <ul className="grid grid-cols-1 gap-2 mb-3">
               {injuries.map((injury) => (
                 <li
                   key={injury.id}

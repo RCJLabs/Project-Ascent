@@ -458,9 +458,20 @@ Ordered roughly by value-to-effort.
    as content).
 8. **Grade scale preference** — Font and French display conversion (stored canonical
    V/YDS). Cheap, widens the audience.
-9. **Multi-profile / coach mode (idea, decide later).** Local profiles on one device.
-   As a coach you could keep athlete profiles, or demo the app clean. Costs schema
-   care (profile-scoped stores) — decide before M1 because it's painful to retrofit.
+9. ~~**Multi-profile / coach mode (idea, decide later).**~~ — **DECIDED: not in v1.**
+   Local profiles on one device. Two things changed the answer. First, the retrofit
+   is cheap and stays cheap: `DB_NAME` has exactly one functional use, in `getDb()`,
+   so "one database per profile" is a single line plus a profile registry, and
+   `hydrateAll()` — which already runs at boot and after import — is the switch.
+   Second, the use case it is named for is not served by it: athletes log on their
+   own phones, so coach mode is a *view someone else's data* problem (import/share),
+   not a local-profiles problem. Building this would ship a profile switcher and
+   leave coach mode unbuilt. Demoing the app clean is real but better served by a
+   sample-data mode than by a second identity.
+   The two things to know if it is ever revived: `hydrateProfile()`'s catch path
+   leaves the previous profile's data on screen, which is a leak between athletes;
+   and theme/sound live in the `profile` record but are device-level, which is the
+   only piece that is a data migration rather than a code change.
 10. **Backup nudges.** Monthly "export your data" reminder + one-tap export;
     File System Access API on desktop for direct save-to-file. An offline app's data
     story must be loud about this.

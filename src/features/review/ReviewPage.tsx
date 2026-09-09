@@ -67,7 +67,7 @@ export function ReviewPage() {
 
   return (
     <>
-      <Link href="/" className="inline-flex items-center gap-1 text-sm text-ink-soft mb-3">
+      <Link href="/" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
         <ArrowLeft size={15} /> Home
       </Link>
 
@@ -94,7 +94,7 @@ export function ReviewPage() {
         )}
       </div>
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <Card>
           <div className="flex items-start gap-2.5">
             <Icon size={18} style={{ color }} className="shrink-0 mt-0.5" />
@@ -133,7 +133,7 @@ export function ReviewPage() {
 
         {(review.best.length > 0 || review.records.length > 0 || review.projectSends.length > 0) && (
           <Card title="Best of the week">
-            <ul className="grid gap-2">
+            <ul className="grid grid-cols-1 gap-2">
               {review.records.map((r) => (
                 <Moment key={`pr-${r.grade}`} label={`First ${r.grade}`} detail={shortLabel(r.date)} highlight />
               ))}
@@ -152,7 +152,7 @@ export function ReviewPage() {
         )}
 
         <Card title="The board">
-          <ul className="grid gap-2">
+          <ul className="grid grid-cols-1 gap-2">
             {review.challenges.list.map((c) => (
               <li key={c.id} className="flex items-baseline gap-2 text-sm">
                 {c.done ? (
@@ -174,7 +174,7 @@ export function ReviewPage() {
         </Card>
 
         <Card title="Habits">
-          <dl className="grid gap-1.5 text-sm">
+          <dl className="grid grid-cols-1 gap-1.5 text-sm">
             <Row label="Warmed up" value={`${review.warmups} of ${review.sessions}`} />
             <Row label="Drills done" value={String(review.drills)} />
             <Row label="Rest days logged" value={String(review.restDays)} />
@@ -185,7 +185,7 @@ export function ReviewPage() {
 
         {review.nextWeek.length > 0 && (
           <Card title="Next week">
-            <ul className="grid gap-1.5">
+            <ul className="grid grid-cols-1 gap-1.5">
               {review.nextWeek.map((slot) => (
                 <li key={slot.date} className="flex items-baseline gap-2.5 text-sm">
                   <span className="text-xs text-ink-soft w-10 shrink-0">

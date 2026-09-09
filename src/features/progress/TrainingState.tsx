@@ -71,7 +71,7 @@ export function TrainingState({
         </div>
       </div>
 
-      <dl className="grid gap-1.5 mt-3 pt-3 border-t border-line">
+      <dl className="grid grid-cols-1 gap-1.5 mt-3 pt-3 border-t border-line">
         {diagnosis.evidence.map((item) => (
           <div key={item.label} className="flex items-baseline justify-between gap-3 text-sm">
             <dt className="text-ink-soft">{item.label}</dt>
@@ -94,7 +94,7 @@ export function TrainingState({
           {showReset && (
             <div className="mt-3">
               <p className="text-sm text-ink-soft leading-relaxed mb-3">{diagnosis.reset.rationale}</p>
-              <ol className="grid gap-2">
+              <ol className="grid grid-cols-1 gap-2">
                 {diagnosis.reset.steps.map((step, i) => (
                   <li key={step.days} className="bg-sunken rounded-xl px-3 py-2.5">
                     <div className="flex items-baseline gap-2 mb-1">

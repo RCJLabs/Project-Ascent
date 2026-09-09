@@ -84,7 +84,7 @@ export function ClimberPage() {
 
   return (
     <>
-      <Link href="/" className="inline-flex items-center gap-1 text-sm text-ink-soft mb-3">
+      <Link href="/" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
         <ArrowLeft size={15} /> Home
       </Link>
 
@@ -109,7 +109,7 @@ export function ClimberPage() {
         </div>
       </header>
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <Card>
           <LevelBar progress={xp.progress} rank={xp.rank} next={xp.next} />
         </Card>
@@ -136,7 +136,7 @@ export function ClimberPage() {
         </Card>
 
         <Card title="Stats">
-          <ul className="grid gap-2.5">
+          <ul className="grid grid-cols-1 gap-2.5">
             {(Object.keys(stats) as StatId[]).map((id) => (
               <StatRow key={id} stat={stats[id]} />
             ))}
@@ -147,7 +147,7 @@ export function ClimberPage() {
         </Card>
 
         <Card title="Where it came from">
-          <div className="grid gap-2">
+          <div className="grid grid-cols-1 gap-2">
             <Split label="Climbing" value={xp.real} total={xp.total} />
             <Split label="The game lane" value={xp.game} total={xp.total} />
           </div>
@@ -173,7 +173,7 @@ export function ClimberPage() {
         </Card>
 
         <Card title="Ranks">
-          <ol className="grid gap-1.5">
+          <ol className="grid grid-cols-1 gap-1.5">
             {reached.slice(-3).map((rank) => (
               <li key={rank.title} className="flex items-baseline gap-2 text-sm">
                 <span className="w-8 text-xs text-ink-soft tabular-nums">{rank.level}</span>
@@ -203,7 +203,7 @@ export function ClimberPage() {
               Nothing earned yet. Log a session and it starts here.
             </p>
           ) : (
-            <ul className="grid gap-2">
+            <ul className="grid grid-cols-1 gap-2">
               {xp.events.slice(0, 12).map((event) => (
                 <EventRow key={event.key} event={event} />
               ))}
@@ -288,7 +288,7 @@ function VitalityCard({ vitality }: { vitality: Vitality }) {
           grinding is visible before you feel it.
         </p>
       ) : (
-        <ul className="grid gap-1.5 mt-2.5">
+        <ul className="grid grid-cols-1 gap-1.5 mt-2.5">
           {vitality.penalties.map((p) => (
             <li key={p.label} className="text-sm">
               <div className="flex items-baseline justify-between gap-3">
@@ -339,7 +339,7 @@ function StatRow({ stat }: { stat: Stat }) {
       {open && (
         <div className="mt-2 bg-sunken rounded-xl p-3">
           <p className="text-xs text-ink-soft mb-2.5 leading-relaxed">{stat.blurb}</p>
-          <dl className="grid gap-1 text-sm">
+          <dl className="grid grid-cols-1 gap-1 text-sm">
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-ink-soft">Base</dt>
               <dd className="font-semibold tabular-nums">10</dd>

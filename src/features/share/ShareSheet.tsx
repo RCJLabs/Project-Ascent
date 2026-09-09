@@ -80,7 +80,7 @@ export function ShareSheet({
       >
         <div className="flex items-center justify-between gap-2 mb-3">
           <h2 className="font-bold">Share card</h2>
-          <button onClick={onClose} className="text-ink-soft p-1 -m-1" aria-label="Close">
+          <button onClick={onClose} className="text-ink-soft p-2.5 -m-1.5" aria-label="Close">
             <X size={18} />
           </button>
         </div>

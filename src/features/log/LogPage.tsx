@@ -94,12 +94,16 @@ export function LogPage({ params }: { params: { date: string } }) {
 
   return (
     <>
-      <Link href="/calendar" className="inline-flex items-center gap-1 text-sm text-ink-soft mb-3">
+      <Link href="/calendar" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
         <ArrowLeft size={15} /> Calendar
       </Link>
 
       <div className="flex items-center justify-between mb-4">
-        <button onClick={() => navigate(`/log/${addDays(date, -1)}`)} className="p-2 -m-2 text-ink-soft">
+        <button
+          onClick={() => navigate(`/log/${addDays(date, -1)}`)}
+          className="p-2.5 -m-1 text-ink-soft"
+          aria-label="Previous day"
+        >
           <ArrowLeft size={18} />
         </button>
         <div className="text-center">
@@ -114,13 +118,14 @@ export function LogPage({ params }: { params: { date: string } }) {
         </div>
         <button
           onClick={() => navigate(`/log/${addDays(date, 1)}`)}
-          className="p-2 -m-2 text-ink-soft rotate-180"
+          className="p-2.5 -m-1 text-ink-soft rotate-180"
+          aria-label="Next day"
         >
           <ArrowLeft size={18} />
         </button>
       </div>
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {!session && (
           <>
             {day?.sessionType && !day.isRest ? (
@@ -247,7 +252,7 @@ function WarmupCard({
             </p>
           )}
 
-          <ol className="grid gap-2 mb-3">
+          <ol className="grid grid-cols-1 gap-2 mb-3">
             {plan.exercises.map((e, i) => (
               <li key={e.id} className="bg-sunken rounded-xl p-3">
                 <div className="flex items-baseline gap-2">
@@ -411,7 +416,7 @@ function SessionEditor({
             <span className="text-lg leading-none">{type?.icon ?? '🧗'}</span>
             <h2 className="font-bold">{type?.name ?? 'Session'}</h2>
           </div>
-          <button onClick={onDelete} className="text-ink-soft p-1 -m-1" aria-label="Delete session">
+          <button onClick={onDelete} className="text-ink-soft p-2.5 -m-1.5" aria-label="Delete session">
             <Trash2 size={16} />
           </button>
         </div>
@@ -461,7 +466,7 @@ function SessionEditor({
 
       {isRest ? (
         <Card title="Recovery checklist">
-          <div className="grid gap-2">
+          <div className="grid grid-cols-1 gap-2">
             {REST_ITEMS.map((item) => {
               const checked = session.restChecklist?.[item.key] ?? false;
               return (
@@ -499,7 +504,10 @@ function SessionEditor({
       ) : (
         <>
           <Card title="Climbs">
-            <div className="flex gap-2 mb-3">
+            {/* Four controls will not fit a 320px phone in one row, and flex
+                items refuse to shrink below their longest option, so without
+                wrapping the Add button lands outside the card. */}
+            <div className="flex flex-wrap gap-2 mb-3">
               <select
                 value={scale}
                 onChange={(e) => {
@@ -507,7 +515,7 @@ function SessionEditor({
                   setScale(next);
                   setGrade(next === 'V' ? 'V3' : '5.10a');
                 }}
-                className="bg-sunken border border-line rounded-xl px-2.5 py-2 text-sm"
+                className="min-w-0 bg-sunken border border-line rounded-xl px-2.5 py-2 text-sm"
               >
                 <option value="V">Boulder</option>
                 <option value="YDS">Route</option>
@@ -515,7 +523,7 @@ function SessionEditor({
               <select
                 value={grade}
                 onChange={(e) => setGrade(e.target.value)}
-                className="flex-1 bg-sunken border border-line rounded-xl px-2.5 py-2 text-sm"
+                className="flex-1 min-w-16 bg-sunken border border-line rounded-xl px-2.5 py-2 text-sm"
               >
                 {grades.map((g) => (
                   <option key={g} value={g}>
@@ -527,7 +535,7 @@ function SessionEditor({
                 value={outcome}
                 onChange={(e) => setOutcome(e.target.value as typeof outcome)}
                 aria-label="How it went"
-                className="bg-sunken border border-line rounded-xl px-2.5 py-2 text-sm"
+                className="min-w-0 bg-sunken border border-line rounded-xl px-2.5 py-2 text-sm"
               >
                 <option value="onsight">On-sight</option>
                 <option value="flash">Flash</option>
@@ -550,7 +558,7 @@ function SessionEditor({
             {session.climbs.length === 0 ? (
               <p className="text-sm text-ink-soft">Nothing logged yet.</p>
             ) : (
-              <ul className="grid gap-2">
+              <ul className="grid grid-cols-1 gap-2">
                 {session.climbs.map((c) => (
                   <li key={c.id} className="flex items-center gap-2 bg-sunken rounded-xl px-3 py-2">
                     <span className="font-bold text-sm w-14">{c.grade}</span>
@@ -584,7 +592,7 @@ function SessionEditor({
               {blocks.map((b) => (
                 <div key={b.blockId} className="mb-3 last:mb-0">
                   <h4 className="text-xs font-bold uppercase tracking-widest text-accent mb-1.5">{b.name}</h4>
-                  <ul className="grid gap-2">
+                  <ul className="grid grid-cols-1 gap-2">
                     {b.entry.exercises.map((ex, i) => {
                       const protocol = ex.protocolId ? getProtocol(ex.protocolId) : undefined;
                       const isDone = doneExercises.includes(ex.name);
@@ -849,7 +857,7 @@ function ProjectBurnsCard({
 
   return (
     <Card title="Projects">
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {shown.map((project) => {
           const mine = attempts.filter((a) => a.projectId === project.id);
           return (
@@ -879,7 +887,7 @@ function ProjectBurnsCard({
                 ))}
               </div>
               {mine.length > 0 && (
-                <ul className="grid gap-1.5 mt-2">
+                <ul className="grid grid-cols-1 gap-1.5 mt-2">
                   {mine.map((a) => (
                     <li key={a.id} className="flex flex-wrap items-center gap-1.5">
                       <span className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 border border-accent/40 pl-2.5 pr-1 py-1 text-xs font-semibold">
@@ -951,7 +959,7 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
         </p>
       )}
 
-      <ul className="grid gap-1 mb-3">
+      <ul className="grid grid-cols-1 gap-1 mb-3">
         {detail.lines.map((line, i) => (
           <li key={`${line.label}-${i}`} className="flex items-baseline justify-between gap-3 text-sm">
             <span className="text-ink-soft truncate">{line.label}</span>

@@ -86,7 +86,7 @@ function RecCard({ rec, headline }: { rec: Recommendation; headline?: boolean })
       </div>
       <p className="text-sm text-ink-soft mb-3">{rec.program.subtitle}</p>
 
-      <ul className="grid gap-1.5 mb-3">
+      <ul className="grid grid-cols-1 gap-1.5 mb-3">
         {rec.reasons.map((r) => (
           <li key={r} className="text-sm flex gap-2">
             <Check size={15} className="text-positive shrink-0 mt-0.5" />
@@ -96,7 +96,7 @@ function RecCard({ rec, headline }: { rec: Recommendation; headline?: boolean })
       </ul>
 
       {rec.cautions.length > 0 && (
-        <ul className="grid gap-1.5 mb-3">
+        <ul className="grid grid-cols-1 gap-1.5 mb-3">
           {rec.cautions.map((c) => (
             <li key={c} className="text-sm flex gap-2 text-ink-soft">
               <AlertTriangle size={15} className="text-warn shrink-0 mt-0.5" />
@@ -186,7 +186,7 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
       <>
         <button
           onClick={() => setResult(null)}
-          className="inline-flex items-center gap-1 text-sm text-ink-soft mb-3"
+          className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5"
         >
           <ArrowLeft size={15} /> Change my answers
         </button>
@@ -199,7 +199,7 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
           }
         />
 
-        <div className="grid gap-3">
+        <div className="grid grid-cols-1 gap-3">
           <RecCard rec={result.top} headline />
 
           {result.alternatives.length > 0 && (
@@ -215,7 +215,7 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
 
           {result.blocked.length > 0 && (
             <Card title="Out of reach for now">
-              <ul className="grid gap-2.5">
+              <ul className="grid grid-cols-1 gap-2.5">
                 {result.blocked.map((b) => (
                   <li key={b.program.id} className="text-sm">
                     <div className="flex items-center gap-1.5 font-semibold">
@@ -241,9 +241,9 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
     <>
       <PageHeader title="Find your program" subtitle="Seven questions. No account, nothing sent anywhere." />
 
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <Card title="How long have you been climbing?">
-          <div className="grid gap-2">
+          <div className="grid grid-cols-1 gap-2">
             {EXPERIENCE.map((e) => (
               <Chip key={e.value} selected={experience === e.value} onClick={() => setExperience(e.value)}>
                 <div className="font-semibold">{e.label}</div>
@@ -300,7 +300,7 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
         </Card>
 
         <Card title="What do you want most right now?">
-          <div className="grid gap-2">
+          <div className="grid grid-cols-1 gap-2">
             {GOALS.map((g) => (
               <Chip key={g.value} selected={goal === g.value} onClick={() => setGoal(g.value)}>
                 <div className="font-semibold">{g.label}</div>
@@ -321,7 +321,7 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
         </Card>
 
         <Card title="What can you train on?">
-          <div className="grid gap-2">
+          <div className="grid grid-cols-1 gap-2">
             {EQUIPMENT.map((e) => (
               <Chip
                 key={e.value}

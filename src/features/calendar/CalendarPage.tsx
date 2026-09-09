@@ -13,7 +13,7 @@ const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 function JournalLink() {
   return (
-    <Link href="/journal" className="text-ink-soft p-1 -m-1" aria-label="Journal">
+    <Link href="/journal" className="text-ink-soft p-2.5 -m-1.5" aria-label="Journal">
       <BookOpen size={20} />
     </Link>
   );

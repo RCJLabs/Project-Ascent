@@ -106,7 +106,7 @@ export function WelcomePage() {
         ))}
       </ol>
 
-      <div className="flex-1 grid gap-3 content-start">
+      <div className="flex-1 grid grid-cols-1 gap-3 content-start">
         {step === 0 && (
           <>
             <h1 className="text-3xl font-black tracking-tight leading-tight">
@@ -147,7 +147,7 @@ export function WelcomePage() {
               />
             </Card>
             <Card title="How long have you been at it?">
-              <div className="grid gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 {EXPERIENCE.map((e) => (
                   <button
                     key={e.value}
@@ -208,7 +208,7 @@ export function WelcomePage() {
               title="What can you train on?"
               sub="This decides which programs are even possible, and what your warmups can use."
             />
-            <div className="grid gap-2">
+            <div className="grid grid-cols-1 gap-2">
               {GEAR.map((g) => {
                 const on = equipment.includes(g.value);
                 return (
@@ -295,9 +295,9 @@ export function WelcomePage() {
               sub={`${answeredCount(answers, equipment)} of ${battery.length + 2} questions answered.`}
             />
             <Card>
-              <dl className="grid gap-2.5">
+              <dl className="grid grid-cols-1 gap-2.5">
                 {(Object.keys(STAT_LABELS) as StatId[]).map((id) => (
-                  <div key={id} className="grid gap-1">
+                  <div key={id} className="grid grid-cols-1 gap-1">
                     <div className="flex items-baseline justify-between gap-3 text-sm">
                       <dt className="font-semibold">{STAT_LABELS[id].name}</dt>
                       <dd className="font-bold tabular-nums">{preview[id].value}</dd>

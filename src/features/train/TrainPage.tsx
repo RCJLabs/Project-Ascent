@@ -18,7 +18,7 @@ export function TrainPage() {
         </div>
         <ChevronRight size={18} className="shrink-0" />
       </Link>
-      <div className="grid gap-5">
+      <div className="grid grid-cols-1 gap-5">
         {STAGE_ORDER.map((stage) => {
           const inStage = PROGRAMS.filter((p) => p.stage === stage);
           if (inStage.length === 0) return null;
@@ -27,7 +27,7 @@ export function TrainPage() {
             <section key={stage}>
               <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft">{meta.label}</h2>
               <p className="text-sm text-ink-soft mb-2">{meta.blurb}</p>
-              <div className="grid gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 {inStage.map((program) => (
                   <Link
                     key={program.id}

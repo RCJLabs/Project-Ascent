@@ -104,7 +104,7 @@ function SessionTypeCard({
                     {formatLine(entry.selection, entry.circuit, entry.exercises.length)}
                   </p>
                 )}
-                <ul className="grid gap-2.5">
+                <ul className="grid grid-cols-1 gap-2.5">
                   {shown.map((ex, i) => (
                     <ExerciseRow key={`${ex.name}-${i}`} ex={ex} />
                   ))}
@@ -120,7 +120,7 @@ function SessionTypeCard({
           <h4 className="text-xs font-bold uppercase tracking-widest text-accent mb-2">
             Weekly drills · weeks {phase.weekStart}-{phase.weekEnd}
           </h4>
-          <div className="grid gap-2">
+          <div className="grid grid-cols-1 gap-2">
             {Array.from({ length: phase.weekEnd - phase.weekStart + 1 }, (_, i) => phase.weekStart + i).map(
               (week) => {
                 const drill = getDrill(type.drillsByWeek![week] ?? '');
@@ -187,12 +187,12 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
 
   return (
     <>
-      <Link href="/train" className="inline-flex items-center gap-1 text-sm text-ink-soft mb-3">
+      <Link href="/train" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
         <ArrowLeft size={15} /> Train
       </Link>
       <PageHeader title={program.name} subtitle={program.subtitle} />
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <Card>
           <div className="flex gap-4 mb-3">
             <div>
@@ -220,7 +220,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
         </Card>
 
         <Card title="How it runs">
-          <ul className="grid gap-2 mb-3">
+          <ul className="grid grid-cols-1 gap-2 mb-3">
             {program.intro.rhythm.map((line, i) => (
               <li key={i} className="text-sm text-ink-soft leading-relaxed flex gap-2">
                 <span className="text-accent font-bold shrink-0">{i + 1}</span>
@@ -228,7 +228,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
               </li>
             ))}
           </ul>
-          <div className="bg-sunken rounded-xl p-3 grid gap-1.5">
+          <div className="bg-sunken rounded-xl p-3 grid grid-cols-1 gap-1.5">
             {program.constraints.map((c, i) => (
               <p key={i} className="text-sm flex gap-2 items-start">
                 <AlertTriangle size={14} className="text-warn shrink-0 mt-0.5" />
@@ -254,9 +254,12 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
                 return (
                   <div
                     key={day}
-                    className={`rounded-lg p-2 text-center ${type ? 'bg-accent/10 border border-accent/30' : 'bg-sunken'}`}
+                    // Seven columns on a 320px phone leaves ~29px of text
+                    // room per cell. Side padding and letter-spacing are what
+                    // pushed "WED" out of it.
+                    className={`rounded-lg px-0.5 py-2 text-center overflow-hidden ${type ? 'bg-accent/10 border border-accent/30' : 'bg-sunken'}`}
                   >
-                    <div className="text-[10px] font-bold uppercase tracking-wide text-ink-soft">{label}</div>
+                    <div className="text-[10px] font-bold uppercase text-ink-soft">{label}</div>
                     <div className="text-lg leading-tight mt-1">{type ? type.icon : '·'}</div>
                   </div>
                 );
@@ -267,7 +270,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
 
         {program.tracks && (
           <Card title="Choose your track">
-            <div className="grid gap-2">
+            <div className="grid grid-cols-1 gap-2">
               {program.tracks.map((t) => (
                 <button
                   key={t.id}
@@ -310,7 +313,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
           <Card className="mb-3">
             <p className="text-sm leading-relaxed mb-3">{phase.description}</p>
             <h4 className="text-xs font-bold uppercase tracking-widest text-ink-soft mb-1.5">Goals</h4>
-            <ul className="grid gap-1">
+            <ul className="grid grid-cols-1 gap-1">
               {phase.goals.map((goal) => (
                 <li key={goal} className="text-sm text-ink-soft flex gap-2">
                   <span className="text-accent">•</span>
@@ -320,7 +323,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
             </ul>
           </Card>
 
-          <div className="grid gap-3">
+          <div className="grid grid-cols-1 gap-3">
             {program.sessionTypes
               .filter((t) => !t.isRest)
               .map((type) => (
@@ -337,7 +340,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
         </div>
 
         <Card title="Benchmarks tested">
-          <ul className="grid gap-1.5">
+          <ul className="grid grid-cols-1 gap-1.5">
             {program.assessments.map((id) => {
               const metric = getMetric(id);
               if (!metric) return null;
@@ -353,7 +356,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
 
         <Card title="What comes next">
           <p className="text-sm leading-relaxed mb-3">{program.intro.graduation}</p>
-          <ul className="grid gap-2">
+          <ul className="grid grid-cols-1 gap-2">
             {program.nextPrograms.map((next) => {
               const target = getProgram(next.id);
               return (

@@ -20,13 +20,13 @@ export function SkillsPage() {
 
   return (
     <>
-      <Link href="/climber" className="inline-flex items-center gap-1 text-sm text-ink-soft mb-3">
+      <Link href="/climber" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
         <ArrowLeft size={15} /> Climber
       </Link>
 
       <PageHeader title="Skills" subtitle={`${skills.unlocked} of ${skills.total} unlocked`} />
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <Card>
           <p className="text-sm text-ink-soft leading-relaxed">
             There are no points to spend. Every node here unlocks because the log says you did the
@@ -37,7 +37,7 @@ export function SkillsPage() {
 
         {perks.length > 0 && (
           <Card title="Active perks">
-            <ul className="grid gap-1.5">
+            <ul className="grid grid-cols-1 gap-1.5">
               {perks.map((perk) => (
                 <li key={perk} className="flex items-baseline gap-2 text-sm">
                   <Sparkles size={13} className="text-accent shrink-0 translate-y-0.5" />
@@ -55,7 +55,7 @@ export function SkillsPage() {
 
         {skills.next.length > 0 && (
           <Card title="Closest to unlocking">
-            <ul className="grid gap-2.5">
+            <ul className="grid grid-cols-1 gap-2.5">
               {skills.next.map((entry) => (
                 <li key={entry.node.id}>
                   <NodeRow entry={entry} />
@@ -109,13 +109,13 @@ function TreeCard({
       </button>
 
       {open && (
-        <div className="grid gap-4 mt-4">
+        <div className="grid grid-cols-1 gap-4 mt-4">
           {[...branches.entries()].map(([name, entries]) => (
             <div key={name}>
               <h3 className="text-[11px] font-bold uppercase tracking-widest text-ink-soft mb-2">
                 {name}
               </h3>
-              <ol className="grid gap-2">
+              <ol className="grid grid-cols-1 gap-2">
                 {entries
                   .sort((a, b) => a.node.tier - b.node.tier)
                   .map((entry) => (

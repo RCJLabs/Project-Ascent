@@ -61,7 +61,7 @@ export function CoachPage() {
 
   return (
     <>
-      <Link href="/" className="inline-flex items-center gap-1 text-sm text-ink-soft mb-3">
+      <Link href="/" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
         <ArrowLeft size={15} /> Home
       </Link>
 
@@ -70,7 +70,7 @@ export function CoachPage() {
         subtitle="Standing observations about your training, from rules over your own numbers."
       />
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {visible.length === 0 ? (
           <Card>
             <p className="text-sm leading-relaxed">
@@ -115,7 +115,7 @@ function TipCard({ tip, onDismiss }: { tip: Tip; onDismiss: () => void }) {
         <h2 className="font-bold leading-snug flex-1">{tip.headline}</h2>
         <button
           onClick={onDismiss}
-          className="text-ink-soft p-1 -m-1 shrink-0"
+          className="text-ink-soft p-2.5 -m-1.5 shrink-0"
           aria-label={`Set aside: ${tip.headline}`}
         >
           <X size={16} />

@@ -80,7 +80,7 @@ export function JournalPage() {
           </p>
         </Card>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid grid-cols-1 gap-3">
           <Card>
             <div className="relative mb-3">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft" />
@@ -150,7 +150,7 @@ export function JournalPage() {
                 <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft mb-2 px-1">
                   {monthTitle(group.month)}
                 </h2>
-                <ul className="grid gap-2">
+                <ul className="grid grid-cols-1 gap-2">
                   {group.entries.map((entry) => (
                     <EntryCard key={entry.id} entry={entry} />
                   ))}

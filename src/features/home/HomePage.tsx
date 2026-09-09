@@ -48,13 +48,13 @@ export function HomePage() {
         title="Project Ascent"
         subtitle="Train. Understand. Grow."
         action={
-          <Link href="/settings" className="text-ink-soft p-1 -m-1" aria-label="Settings">
+          <Link href="/settings" className="text-ink-soft p-2.5 -m-1.5" aria-label="Settings">
             <Settings size={20} />
           </Link>
         }
       />
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <ClimberStrip />
         <CoachCard />
         <AltimeterCard />

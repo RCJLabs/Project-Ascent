@@ -33,7 +33,7 @@ export function AltimeterPage() {
 
   return (
     <>
-      <Link href="/" className="inline-flex items-center gap-1 text-sm text-ink-soft mb-3">
+      <Link href="/" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
         <ArrowLeft size={15} /> Home
       </Link>
 
@@ -45,7 +45,7 @@ export function AltimeterPage() {
         }
       />
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <Card>
           <div className="text-center mb-3">
             <div className="text-4xl font-black tabular-nums leading-none">
@@ -121,7 +121,7 @@ export function AltimeterPage() {
         )}
 
         <Card title="The ladder">
-          <ol className="grid gap-1.5">
+          <ol className="grid grid-cols-1 gap-1.5">
             {MILESTONES.map((m) => {
               const done = alt.reached.includes(m);
               const isNext = alt.next === m;

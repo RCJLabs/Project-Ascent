@@ -274,7 +274,7 @@ export function AscentPage() {
 
   return (
     <>
-      <Link href="/" className="inline-flex items-center gap-1 text-sm text-ink-soft mb-3">
+      <Link href="/" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
         <ArrowLeft size={15} /> Home
       </Link>
 
@@ -283,7 +283,7 @@ export function AscentPage() {
         subtitle={`Daily Wall #${wallNumber(todayKey())}${derived.restedToday ? ' · recovery skies' : ''}`}
       />
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {phase !== 'menu' && (
           <div className="flex items-center gap-3 text-sm">
             <span className="font-black text-xl tabular-nums">{hud.metres.toLocaleString()} m</span>
@@ -348,7 +348,7 @@ export function AscentPage() {
             </Card>
 
             <Card title="Your records">
-              <dl className="grid gap-1.5 text-sm">
+              <dl className="grid grid-cols-1 gap-1.5 text-sm">
                 <Row label="Best climb" value={`${records.best.ascent.toLocaleString()} m`} />
                 <Row label="Best Free Solo" value={`${records.best.freesolo.toLocaleString()} m`} />
                 <Row label="Best pure run" value={`${records.pureBest.toLocaleString()} m`} />
@@ -364,7 +364,7 @@ export function AscentPage() {
             </Card>
 
             <Card title="Walls">
-              <ul className="grid gap-1.5 text-sm">
+              <ul className="grid grid-cols-1 gap-1.5 text-sm">
                 {THEME_UNLOCKS.map((wall) => {
                   const on = derived.feet >= wall.feet;
                   return (
@@ -387,7 +387,7 @@ export function AscentPage() {
             </Card>
 
             <Card title="What your training does here">
-              <ul className="grid gap-1.5 text-sm text-ink-soft">
+              <ul className="grid grid-cols-1 gap-1.5 text-sm text-ink-soft">
                 <Hook on={modifiers.rampReduction > 0} text={`Endurance slows the speed ramp by ${Math.round(modifiers.rampReduction * 100)}%`} />
                 <Hook on={modifiers.hitboxTrim > 0} text={`Mobility trims your hitbox by ${Math.round(modifiers.hitboxTrim * 100)}%`} />
                 <Hook on={modifiers.chalkSaves > 0} text={`${modifiers.chalkSaves} chalk save${modifiers.chalkSaves === 1 ? '' : 's'} — one free near-miss each`} />
@@ -424,7 +424,7 @@ export function AscentPage() {
                   <span className="text-sm font-semibold">Today's payout</span>
                   <span className="font-bold tabular-nums">+{payout.xp} XP</span>
                 </div>
-                <ul className="grid gap-1 text-xs text-ink-soft">
+                <ul className="grid grid-cols-1 gap-1 text-xs text-ink-soft">
                   {payout.lines.map((line) => (
                     <li key={line.label} className="flex items-baseline justify-between gap-3">
                       <span>{line.label}</span>
