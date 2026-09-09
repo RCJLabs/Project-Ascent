@@ -519,9 +519,15 @@ avatar pipeline for a solo dev.
 
 ## 9. Open decisions (yours)
 
-1. **Avatar art pipeline**: pixel sprite layers (recommended — cheap, charming,
-   layerable), flat SVG layers, or commissioned art per stage.
-2. **Visual direction**: A / B / C / B+C hybrid (recommended).
+1. ~~**Avatar art pipeline**~~ — **DECIDED: layered SVG.** One geometry of nine
+   joints painted in five passes (skin, top, shorts, shoes, gear), each a stored
+   colour. Gear comes from level, ground from the altimeter, posture from
+   vitality; only the palette is stored. Chosen over a single-fill silhouette
+   because skill-tree capstones grant cosmetics, and on a silhouette a capstone
+   can award roughly one gear notch. See `src/engine/avatar.ts` and
+   `src/ui/Avatar.tsx`.
+2. **Visual direction**: A / B / C / B+C hybrid (recommended). *(The app is
+   built on direction B, Modern Alpine Minimal, and the avatar matches it.)*
 3. **Multi-profile/coach mode**: in or out (decide before schema freeze).
 4. **Name/branding**: keep Project Ascent or rename (new package id either way —
    the old TWA package is tied to the old origin/keys).

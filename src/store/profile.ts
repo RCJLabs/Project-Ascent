@@ -4,6 +4,7 @@ import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
 import { today } from '@/engine/dates';
 import type { WeekPlan } from '@/engine/scheduler';
+import { DEFAULT_PALETTE, type AvatarPalette } from '@/engine/avatar';
 
 export interface Injury {
   id: string;
@@ -32,6 +33,8 @@ export interface ProfileState {
   injuries: Injury[];
   /** Warmup ids used recently, freshest first, so warmups stay varied. */
   recentWarmups: string[];
+  /** The avatar's colours — the only part of the figure that is stored. */
+  avatarPalette: AvatarPalette;
   startProgram: (programId: string, plan: WeekPlan, trackId?: string, restart?: boolean) => void;
   setPlan: (programId: string, plan: WeekPlan) => void;
   stopProgram: () => void;
@@ -39,6 +42,7 @@ export interface ProfileState {
   addInjury: (part: BodyPart, note?: string) => void;
   removeInjury: (id: string) => void;
   rememberWarmup: (ids: string[]) => void;
+  setAvatarPalette: (patch: Partial<AvatarPalette>) => void;
 }
 
 const KEY = 'active-plan';
@@ -51,6 +55,7 @@ interface Persisted {
   equipment: Equipment[];
   injuries: Injury[];
   recentWarmups: string[];
+  avatarPalette: AvatarPalette;
 }
 
 function snapshot(s: ProfileState): Persisted {
@@ -62,6 +67,7 @@ function snapshot(s: ProfileState): Persisted {
     equipment: s.equipment,
     injuries: s.injuries,
     recentWarmups: s.recentWarmups,
+    avatarPalette: s.avatarPalette,
   };
 }
 
@@ -79,6 +85,7 @@ export const useProfile = create<ProfileState>((set, get) => ({
   equipment: ['wall', 'gym'],
   injuries: [],
   recentWarmups: [],
+  avatarPalette: DEFAULT_PALETTE,
 
   startProgram: (programId, plan, trackId, restart = false) => {
     const s = get();
@@ -128,6 +135,11 @@ export const useProfile = create<ProfileState>((set, get) => ({
     set({ recentWarmups: [...ids, ...get().recentWarmups].slice(0, 16) });
     void save(snapshot(get()));
   },
+
+  setAvatarPalette: (patch) => {
+    set({ avatarPalette: { ...get().avatarPalette, ...patch } });
+    void save(snapshot(get()));
+  },
 }));
 
 export async function hydrateProfile(): Promise<void> {
@@ -144,6 +156,7 @@ export async function hydrateProfile(): Promise<void> {
       equipment: value.equipment ?? ['wall', 'gym'],
       injuries: value.injuries ?? [],
       recentWarmups: value.recentWarmups ?? [],
+      avatarPalette: { ...DEFAULT_PALETTE, ...value.avatarPalette },
     });
   } catch {
     useProfile.setState({ hydrated: true });

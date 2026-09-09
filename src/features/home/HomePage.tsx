@@ -3,6 +3,10 @@ import { Link } from 'wouter';
 import { CalendarDays, Check, Clock, Settings, Sparkles } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { deriveAltimeter } from '@/engine/altimeter';
+import { deriveAvatar } from '@/engine/avatar';
+import { deriveClimberState } from '@/engine/derive';
+import { deriveStats } from '@/engine/stats';
+import { deriveVitality } from '@/engine/vitality';
 import { BoardCard } from '@/features/challenges/BoardPage';
 import { today } from '@/engine/dates';
 import { plannedDay } from '@/engine/plan';
@@ -10,6 +14,7 @@ import { useXp } from '@/store/game';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
+import { Avatar } from '@/ui/Avatar';
 import { LevelBar } from '@/ui/LevelBar';
 import { MountainMeter } from '@/ui/MountainMeter';
 import { PageHeader } from '@/ui/PageHeader';
@@ -128,9 +133,34 @@ export function HomePage() {
 
 function ClimberStrip() {
   const xp = useXp();
+  const byDate = useSessions((s) => s.byDate);
+  const injuries = useProfile((s) => s.injuries);
+  const palette = useProfile((s) => s.avatarPalette);
+
+  const avatar = useMemo(() => {
+    const sessions = Object.values(byDate).flat();
+    const state = deriveClimberState(sessions);
+    const vitality = deriveVitality({
+      state,
+      endurance: deriveStats({ state }).END,
+      injuries,
+    });
+    return deriveAvatar({
+      level: xp.progress.level,
+      vitality: vitality.state,
+      feet: deriveAltimeter(sessions).feet,
+      palette,
+    });
+  }, [byDate, injuries, palette, xp.progress.level]);
+
   return (
-    <Link href="/climber" className="block bg-surface border border-line rounded-2xl p-4">
-      <LevelBar progress={xp.progress} rank={xp.rank} compact />
+    <Link href="/climber" className="flex items-center gap-3 bg-surface border border-line rounded-2xl p-4">
+      <div className="w-12 shrink-0">
+        <Avatar config={avatar} className="w-full h-auto block" showGround={false} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <LevelBar progress={xp.progress} rank={xp.rank} compact />
+      </div>
     </Link>
   );
 }

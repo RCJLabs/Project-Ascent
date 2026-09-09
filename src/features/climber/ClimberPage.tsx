@@ -14,6 +14,8 @@ import {
   Sparkles,
   Target,
 } from 'lucide-react';
+import { deriveAltimeter } from '@/engine/altimeter';
+import { OUTFITS, SKIN_TONES, deriveAvatar, type AvatarPalette } from '@/engine/avatar';
 import { RANKS } from '@/engine/economy';
 import { shortLabel } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
@@ -26,6 +28,7 @@ import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
+import { Avatar } from '@/ui/Avatar';
 import { LevelBar } from '@/ui/LevelBar';
 
 const KIND_ICON: Record<XpEvent['kind'], typeof Mountain> = {
@@ -55,6 +58,15 @@ export function ClimberPage() {
     () => deriveVitality({ state, endurance: stats.END, injuries }),
     [state, stats, injuries],
   );
+  const palette = useProfile((s) => s.avatarPalette);
+  const feet = useMemo(
+    () => deriveAltimeter(Object.values(byDate).flat()).feet,
+    [byDate],
+  );
+  const avatar = useMemo(
+    () => deriveAvatar({ level: xp.progress.level, vitality: vitality.state, feet, palette }),
+    [xp.progress.level, vitality.state, feet, palette],
+  );
 
   const reached = RANKS.filter((r) => r.level <= xp.progress.level);
   const upcoming = RANKS.filter((r) => r.level > xp.progress.level).slice(0, 3);
@@ -65,11 +77,20 @@ export function ClimberPage() {
         <ArrowLeft size={15} /> Home
       </Link>
 
-      <header className="mb-4">
-        <h1 className="text-2xl font-black tracking-tight">{xp.rank.title}</h1>
-        <p className="text-sm text-ink-soft mt-0.5">
-          Level {xp.progress.level} · {xp.total.toLocaleString()} XP earned
-        </p>
+      <header className="flex items-center gap-4 mb-4">
+        <div className="w-24 shrink-0">
+          <Avatar config={avatar} className="w-full h-auto block" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-black tracking-tight">{xp.rank.title}</h1>
+          <p className="text-sm text-ink-soft mt-0.5">
+            Level {xp.progress.level} · {xp.total.toLocaleString()} XP earned
+          </p>
+          <p className="text-xs text-ink-soft mt-1">
+            {avatar.stage.unlock}
+            {avatar.next && ` · ${avatar.next.unlock.toLowerCase()} at ${avatar.next.level}`}
+          </p>
+        </div>
       </header>
 
       <div className="grid gap-3">
@@ -78,6 +99,8 @@ export function ClimberPage() {
         </Card>
 
         <VitalityCard vitality={vitality} />
+
+        <AppearanceCard palette={palette} />
 
         <Card title="Stats">
           <ul className="grid gap-2.5">
@@ -315,5 +338,79 @@ function StatRow({ stat }: { stat: Stat }) {
         </div>
       )}
     </li>
+  );
+}
+
+/**
+ * The only stored part of the avatar. Everything else — gear, ground,
+ * posture — is derived, so this card is short by design.
+ */
+function AppearanceCard({ palette }: { palette: AvatarPalette }) {
+  const setPalette = useProfile((s) => s.setAvatarPalette);
+  const activeOutfit = OUTFITS.find(
+    (o) => o.top === palette.top && o.shorts === palette.shorts && o.shoes === palette.shoes,
+  );
+
+  return (
+    <Card title="Appearance">
+      <p className="text-xs text-ink-soft mb-3 leading-relaxed">
+        Gear, ground and posture come from your training. These are yours to pick.
+      </p>
+
+      <div className="mb-3">
+        <div className="text-[11px] font-bold uppercase tracking-widest text-ink-soft mb-1.5">Skin</div>
+        <div className="flex flex-wrap gap-2">
+          {SKIN_TONES.map((tone) => (
+            <button
+              key={tone}
+              onClick={() => setPalette({ skin: tone })}
+              aria-label={`Skin tone ${tone}`}
+              aria-pressed={palette.skin === tone}
+              className={`w-9 h-9 rounded-lg border-2 ${
+                palette.skin === tone ? 'border-accent' : 'border-line'
+              }`}
+              style={{ background: tone }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-[11px] font-bold uppercase tracking-widest text-ink-soft mb-1.5">Kit</div>
+        <div className="grid grid-cols-3 gap-2">
+          {OUTFITS.map((outfit) => {
+            const on = activeOutfit?.name === outfit.name;
+            return (
+              <button
+                key={outfit.name}
+                onClick={() =>
+                  setPalette({
+                    top: outfit.top,
+                    shorts: outfit.shorts,
+                    shoes: outfit.shoes,
+                    gear: outfit.gear,
+                  })
+                }
+                aria-pressed={on}
+                className={`rounded-xl border px-2 py-2 text-left ${
+                  on ? 'border-accent bg-accent/10' : 'border-line bg-sunken'
+                }`}
+              >
+                <div className="flex gap-1 mb-1.5">
+                  {[outfit.top, outfit.shorts, outfit.shoes].map((color) => (
+                    <span
+                      key={color}
+                      className="w-4 h-4 rounded border border-line"
+                      style={{ background: color }}
+                    />
+                  ))}
+                </div>
+                <span className="text-xs font-semibold">{outfit.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </Card>
   );
 }
