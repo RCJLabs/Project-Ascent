@@ -6,6 +6,7 @@ import {
   BatteryLow,
   BatteryWarning,
   ChevronDown,
+  ClipboardCheck,
   Coins,
   Gamepad2,
   HeartPulse,
@@ -27,11 +28,12 @@ import { useSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
 import { LevelBar } from '@/ui/LevelBar';
 
-const KIND_ICON = {
+const KIND_ICON: Record<XpEvent['kind'], typeof Mountain> = {
   session: Mountain,
   project: Target,
   game: Gamepad2,
-} as const;
+  challenge: ClipboardCheck,
+};
 
 export function ClimberPage() {
   const xp = useXp();

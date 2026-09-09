@@ -185,19 +185,19 @@ describe('the game lane', () => {
   });
 
   it('is counted separately from real climbing', () => {
-    const state = deriveXp({ sessions: [session(TODAY)], gameXp: [entry()] });
+    const state = deriveXp({ sessions: [session(TODAY)], ledger: [entry()] });
     expect(state.game).toBe(unitsToXp(0.05));
     expect(state.real).toBe(state.total - state.game);
     expect(state.events.some((e) => e.source === 'game')).toBe(true);
   });
 
   it('clamps an over-generous entry to the cap rather than trusting the writer', () => {
-    const state = deriveXp({ gameXp: [entry({ units: 5 })] });
+    const state = deriveXp({ ledger: [entry({ units: 5 })] });
     expect(state.game).toBe(unitsToXp(GAME_ACTION_CAP));
   });
 
   it('can never out-earn a plain session', () => {
-    const gamed = deriveXp({ gameXp: [entry({ units: 99 })] }).total;
+    const gamed = deriveXp({ ledger: [entry({ units: 99 })] }).total;
     const climbed = deriveXp({ sessions: [session(TODAY)] }).total;
     expect(gamed).toBeLessThan(climbed);
   });
@@ -256,7 +256,7 @@ describe('the event log', () => {
       projects: [
         newProject({ name: 'p', grade: 'V5', scale: 'V', status: 'sent', sentDate: addDays(TODAY, -4) }),
       ],
-      gameXp: [{ id: 'g', date: addDays(TODAY, -1), label: 'Run', units: 0.02, origin: 'ascent' }],
+      ledger: [{ id: 'g', date: addDays(TODAY, -1), label: 'Run', units: 0.02, origin: 'ascent' }],
     });
     expect(state.events.map((e) => e.kind)).toEqual(['game', 'project', 'session']);
     expect(state.events.map((e) => e.date)).toEqual([

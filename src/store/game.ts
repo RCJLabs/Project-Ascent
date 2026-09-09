@@ -1,13 +1,17 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import {
-  appendGameXp,
+  appendLedger,
   getWallet,
-  listGameXp,
+  listBounties,
+  listLedger,
+  putBounties,
   putWallet,
-  type GameXpEntry,
+  type LedgerEntry,
   type Wallet,
 } from '@/db/game';
+import type { BountySpec, Challenge, AcceptedBounty } from '@/engine/challenges';
+import { today } from '@/engine/dates';
 import { GAME_ACTION_CAP } from '@/engine/economy';
 import { deriveXp, type XpState } from '@/engine/xp';
 import { useProjects } from './projects';
@@ -15,32 +19,75 @@ import { useSessions } from './sessions';
 
 export interface GameState {
   hydrated: boolean;
-  ledger: GameXpEntry[];
+  ledger: LedgerEntry[];
+  bounties: AcceptedBounty[];
   wallet: Wallet;
   load: () => Promise<void>;
   /** Append a game-lane award. The id is the idempotency guard, and the
    *  cap is applied on write so a bad caller cannot inflate the economy. */
-  award: (entry: GameXpEntry) => Promise<void>;
+  award: (entry: LedgerEntry) => Promise<void>;
+  /** Bank a finished challenge. Ids are the challenge's own, so claiming
+   *  twice is a no-op even across a reload. */
+  claim: (challenge: Challenge) => Promise<void>;
+  acceptBounty: (spec: BountySpec) => Promise<void>;
+  abandonBounty: (id: string) => Promise<void>;
   spend: (amount: number) => Promise<void>;
 }
+
+/** Focus mechanic, same shape as the project cap. */
+export const BOUNTY_CAP = 3;
 
 export const useGame = create<GameState>((set, get) => ({
   hydrated: false,
   ledger: [],
+  bounties: [],
   wallet: { spent: 0 },
 
   load: async () => {
     try {
-      const [ledger, wallet] = await Promise.all([listGameXp(), getWallet()]);
-      set({ ledger, wallet, hydrated: true });
+      const [ledger, wallet, bounties] = await Promise.all([listLedger(), getWallet(), listBounties()]);
+      set({ ledger, wallet, bounties, hydrated: true });
     } catch {
       set({ hydrated: true });
     }
   },
 
   award: async (entry) => {
-    const capped = { ...entry, units: Math.min(entry.units, GAME_ACTION_CAP) };
-    set({ ledger: await appendGameXp(capped) });
+    const capped = { ...entry, units: Math.min(entry.units, GAME_ACTION_CAP), source: 'game' as const };
+    set({ ledger: await appendLedger(capped) });
+  },
+
+  claim: async (challenge) => {
+    set({
+      ledger: await appendLedger({
+        id: `claim:${challenge.id}`,
+        date: today(),
+        label: challenge.title,
+        units: challenge.reward,
+        origin: `challenge:${challenge.kind}`,
+        source: 'real',
+      }),
+    });
+    // A finished bounty makes room for the next one.
+    if (challenge.kind === 'bounty') {
+      set({ bounties: await putBounties(get().bounties.filter((b) => b.id !== challenge.id)) });
+    }
+  },
+
+  acceptBounty: async (spec) => {
+    const current = get().bounties;
+    if (current.length >= BOUNTY_CAP || current.some((b) => b.spec.key === spec.key)) return;
+    const bounty: AcceptedBounty = {
+      id: `bounty-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      spec,
+      // A timestamp, not a date: work already logged today must not count.
+      acceptedAt: new Date().toISOString(),
+    };
+    set({ bounties: await putBounties([...current, bounty]) });
+  },
+
+  abandonBounty: async (id) => {
+    set({ bounties: await putBounties(get().bounties.filter((b) => b.id !== id)) });
   },
 
   spend: async (amount) => {
@@ -64,7 +111,7 @@ export function useXp(): XpState {
 
   return useMemo(() => {
     const sessions = Object.values(byDate).flat();
-    return deriveXp({ sessions, projects, gameXp: ledger });
+    return deriveXp({ sessions, projects, ledger });
   }, [byDate, projects, ledger]);
 }
 

@@ -6,6 +6,7 @@ import { ClimberPage } from '@/features/climber/ClimberPage';
 import { HomePage } from '@/features/home/HomePage';
 import { PlaceholderPage } from '@/features/placeholder/PlaceholderPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
+import { BoardPage } from '@/features/challenges/BoardPage';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { FinderPage } from '@/features/finder/FinderPage';
 import { LogPage, TodayRedirect } from '@/features/log/LogPage';
@@ -44,6 +45,7 @@ export function App() {
           <Route path="/find" component={FinderPage} />
           <Route path="/train/:id/start" component={StartProgramPage} />
           <Route path="/train/:id" component={ProgramDetailPage} />
+          <Route path="/board" component={BoardPage} />
           <Route path="/calendar" component={CalendarPage} />
           <Route path="/log/:date" component={LogPage} />
           <Route path="/today" component={TodayRedirect} />

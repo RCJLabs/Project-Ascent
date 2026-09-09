@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { CalendarDays, Check, Clock, Settings, Sparkles } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { deriveAltimeter } from '@/engine/altimeter';
+import { BoardCard } from '@/features/challenges/BoardPage';
 import { today } from '@/engine/dates';
 import { plannedDay } from '@/engine/plan';
 import { useXp } from '@/store/game';
@@ -48,6 +49,9 @@ export function HomePage() {
       <div className="grid gap-3">
         <ClimberStrip />
         <AltimeterCard />
+        <Link href="/board" className="block bg-surface border border-line rounded-2xl p-4">
+          <BoardCard />
+        </Link>
 
         {!program && (
           <Card>

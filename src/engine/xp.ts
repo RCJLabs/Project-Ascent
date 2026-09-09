@@ -16,7 +16,7 @@
  * Pure: records in, state out.
  */
 
-import type { GameXpEntry } from '@/db/game';
+import type { LedgerEntry } from '@/db/game';
 import type { Project } from '@/db/projects';
 import type { Session } from '@/db/sessions';
 import {
@@ -56,7 +56,7 @@ export interface SessionXp {
 export interface XpEvent {
   key: string;
   date: string;
-  kind: 'session' | 'project' | 'game';
+  kind: 'session' | 'project' | 'game' | 'challenge';
   label: string;
   xp: number;
   source: AwardSource;
@@ -83,7 +83,8 @@ export const CURRENCY_RATE = 0.25;
 export interface XpSources {
   sessions?: Session[];
   projects?: Project[];
-  gameXp?: GameXpEntry[];
+  /** Game-lane awards and challenge claims. */
+  ledger?: LedgerEntry[];
 }
 
 export function deriveXp(sources: XpSources): XpState {
@@ -95,7 +96,7 @@ export function deriveXp(sources: XpSources): XpState {
   type Moment =
     | { date: string; order: number; key: string; kind: 'session'; session: Session }
     | { date: string; order: number; key: string; kind: 'project'; project: Project }
-    | { date: string; order: number; key: string; kind: 'game'; entry: GameXpEntry };
+    | { date: string; order: number; key: string; kind: 'ledger'; entry: LedgerEntry };
 
   const moments: Moment[] = [
     ...sessions.map((session, i) => ({
@@ -114,11 +115,11 @@ export function deriveXp(sources: XpSources): XpState {
         kind: 'project' as const,
         project,
       })),
-    ...(sources.gameXp ?? []).map((entry) => ({
+    ...(sources.ledger ?? []).map((entry) => ({
       date: entry.date,
       order: 0,
-      key: `game:${entry.id}`,
-      kind: 'game' as const,
+      key: `ledger:${entry.id}`,
+      kind: 'ledger' as const,
       entry,
     })),
   ].sort((a, b) => (a.date === b.date ? a.key.localeCompare(b.key) : a.date < b.date ? -1 : 1));
@@ -135,18 +136,23 @@ export function deriveXp(sources: XpSources): XpState {
     const levelBefore = levelFor(total);
     const toXp = unitsToXp;
 
-    if (moment.kind === 'game') {
-      const units = Math.min(moment.entry.units, GAME_ACTION_CAP);
+    if (moment.kind === 'ledger') {
+      // A challenge resolves from the log, so it counts as real climbing and
+      // is not capped. Anything else is game-lane and is, whatever the
+      // writer claimed.
+      const source: AwardSource = moment.entry.source ?? 'game';
+      const units = source === 'game' ? Math.min(moment.entry.units, GAME_ACTION_CAP) : moment.entry.units;
       const xp = toXp(units);
       total += xp;
-      game += xp;
+      if (source === 'game') game += xp;
+      else real += xp;
       events.push({
         key: moment.key,
         date: moment.date,
-        kind: 'game',
+        kind: source === 'game' ? 'game' : 'challenge',
         label: moment.entry.label,
         xp,
-        source: 'game',
+        source,
         ...levelUp(levelBefore, total),
       });
       continue;
