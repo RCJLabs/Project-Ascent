@@ -1,17 +1,19 @@
 import type { DBSchema } from 'idb';
 
 /**
- * IndexedDB schema v1 (PLAN.md §3). Split stores, never one blob.
+ * IndexedDB schema (PLAN.md §3). Split stores, never one blob.
  *
  * The database name is a single constant so a future multi-profile/coach
  * mode (open decision, PLAN.md §9.3) can become one database per profile
  * without touching call sites.
  */
 export const DB_NAME = 'project-ascent';
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
-/** Stores included in export/import. `media` is deliberately excluded
- *  from the JSON export (blobs ship separately, if ever). */
+/** Stores included in the plain JSON export. `media` holds Blobs, which do
+ *  not survive JSON.stringify, so it is exported separately as data URLs —
+ *  see exportImport.ts. An offline app whose backup silently omits your
+ *  photos is worse than one that has no photos. */
 export const EXPORTABLE_STORES = [
   'meta',
   'sessions',
@@ -67,7 +69,15 @@ export interface MetricRecord {
 
 export interface MediaRecord {
   id: string;
+  /** What this belongs to, e.g. `project:abc123`. Indexed so deleting the
+   *  owner can find its blobs rather than leaving them orphaned forever. */
+  ownerId: string;
   blob: Blob;
+  /** Mime type, kept alongside the blob so a restored record is complete. */
+  type: string;
+  width: number;
+  height: number;
+  caption?: string;
   createdAt: string;
 }
 
@@ -87,5 +97,9 @@ export interface AscentDB extends DBSchema {
     indexes: { 'by-metric': string };
   };
   game: { key: string; value: GameRecord };
-  media: { key: string; value: MediaRecord };
+  media: {
+    key: string;
+    value: MediaRecord;
+    indexes: { 'by-owner': string };
+  };
 }

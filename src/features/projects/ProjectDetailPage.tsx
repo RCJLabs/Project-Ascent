@@ -11,6 +11,7 @@ import { useSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { Card } from '@/ui/Card';
+import { MediaCard } from './MediaCard';
 import { useGradeLabel } from '@/ui/useGrade';
 import { ProgressionLine } from '@/ui/charts/Charts';
 
@@ -142,6 +143,8 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
             </ol>
           )}
         </Card>
+
+        <MediaCard projectId={project.id} />
 
         <BetaCard project={project} onChange={(p) => void update(p)} />
 

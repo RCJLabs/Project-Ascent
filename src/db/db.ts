@@ -1,4 +1,4 @@
-import { openDB, type IDBPDatabase } from 'idb';
+import { openDB, type IDBPDatabase, type IDBPTransaction, type StoreNames } from 'idb';
 import { APP_VERSION } from '@/version';
 import { DB_NAME, SCHEMA_VERSION, type AscentDB } from './schema';
 
@@ -7,7 +7,7 @@ import { DB_NAME, SCHEMA_VERSION, type AscentDB } from './schema';
  * upgrading from v0 (fresh) runs every step; upgrading from vN runs the
  * steps above N. Each step owns exactly one schema version.
  */
-type Migration = (db: IDBPDatabase<AscentDB>) => void;
+type Migration = (db: IDBPDatabase<AscentDB>, tx: IDBPTransaction<AscentDB, StoreNames<AscentDB>[], 'versionchange'>) => void;
 
 const MIGRATIONS: Record<number, Migration> = {
   1: (db) => {
@@ -22,17 +22,26 @@ const MIGRATIONS: Record<number, Migration> = {
     db.createObjectStore('game', { keyPath: 'key' });
     db.createObjectStore('media', { keyPath: 'id' });
   },
+
+  // Media gained an owner so a deleted project can take its photos with it.
+  // The store was created in v1 and never written to, so there is nothing to
+  // backfill — but the step still has to exist, or an install sitting on v1
+  // would open a database without the index and fail on first query.
+  2: (_db, tx) => {
+    const media = tx.objectStore('media');
+    if (!media.indexNames.contains('by-owner')) media.createIndex('by-owner', 'ownerId');
+  },
 };
 
 let dbPromise: Promise<IDBPDatabase<AscentDB>> | null = null;
 
 export function getDb(): Promise<IDBPDatabase<AscentDB>> {
   dbPromise ??= openDB<AscentDB>(DB_NAME, SCHEMA_VERSION, {
-    upgrade(db, oldVersion) {
+    upgrade(db, oldVersion, _newVersion, tx) {
       for (let v = oldVersion + 1; v <= SCHEMA_VERSION; v++) {
         const step = MIGRATIONS[v];
         if (!step) throw new Error(`Missing migration for schema v${v}`);
-        step(db);
+        step(db, tx);
       }
     },
   }).then(async (db) => {

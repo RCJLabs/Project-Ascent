@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getDb } from '@/db';
+import { deleteMediaFor, projectOwner } from '@/db/media';
 import {
   deleteProject,
   listProjects,
@@ -61,6 +62,9 @@ export const useProjects = create<ProjectsState>((set, get) => ({
 
   remove: async (id) => {
     await deleteProject(id);
+    // Photos are keyed by owner precisely so they can go with it. Orphaned
+    // blobs would sit in the quota with nothing left to display them.
+    await deleteMediaFor(projectOwner(id));
     set({ projects: get().projects.filter((p) => p.id !== id) });
   },
 

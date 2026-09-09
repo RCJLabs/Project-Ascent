@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { APP_VERSION } from '@/version';
 import { exportAll, hasRealData, importAll, parseExportFile, SCHEMA_VERSION } from '@/db';
+import { mediaBytes } from '@/db/media';
 import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
 import { displayGrade, type BoulderDisplay, type RouteDisplay } from '@/engine/grades';
@@ -64,6 +65,7 @@ export function SettingsPage() {
   const setBoulderDisplay = useSettings((s) => s.setBoulderDisplay);
   const setRouteDisplay = useSettings((s) => s.setRouteDisplay);
   const [storage, setStorage] = useState<StorageStatus>({ persisted: null });
+  const [photoBytes, setPhotoBytes] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const equipment = useProfile((s) => s.equipment);
   const setEquipment = useProfile((s) => s.setEquipment);
@@ -76,6 +78,7 @@ export function SettingsPage() {
 
   useEffect(() => {
     void refreshStorage();
+    void mediaBytes().then(setPhotoBytes);
   }, []);
 
   async function refreshStorage() {
@@ -95,8 +98,8 @@ export function SettingsPage() {
     void refreshStorage();
   }
 
-  async function handleExport() {
-    const file = await exportAll();
+  async function handleExport(withMedia = true) {
+    const file = await exportAll({ media: withMedia });
     const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -105,7 +108,11 @@ export function SettingsPage() {
     a.click();
     URL.revokeObjectURL(url);
     markExported();
-    setMessage('Backup exported.');
+    setMessage(
+      withMedia && file.media?.length
+        ? `Backup exported, including ${file.media.length} photo${file.media.length === 1 ? '' : 's'}.`
+        : 'Backup exported.',
+    );
   }
 
   async function handleFilePicked(files: FileList | null) {
@@ -292,9 +299,20 @@ export function SettingsPage() {
           <p className="text-sm text-ink-soft mb-3">
             Everything lives on this device. Export a backup regularly — an offline app has no
             cloud copy to fall back on.
+            {photoBytes > 0 && (
+              <>
+                {' '}Photos are included, which adds roughly {formatBytes(Math.round(photoBytes * 1.34))}
+                {' '}— they are stored as text in the file, so they take about a third more room.
+              </>
+            )}
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => void handleExport()}>Export backup</Button>
+            <Button onClick={() => void handleExport(true)}>Export backup</Button>
+            {photoBytes > 0 && (
+              <Button variant="ghost" onClick={() => void handleExport(false)}>
+                Without photos
+              </Button>
+            )}
             <Button variant="outline" onClick={() => fileRef.current?.click()}>
               Import backup
             </Button>
