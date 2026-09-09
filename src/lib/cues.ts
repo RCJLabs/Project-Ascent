@@ -101,3 +101,50 @@ export function cueDone(): void {
   tone(1320, 320, 0.3, 360);
   buzz([0, 150, 100, 150, 100, 300]);
 }
+
+// ── The Ascent ────────────────────────────────────────────────────────────
+//
+// The game fires cues from its event stream, which can produce several coins
+// in one frame when the magnet sweeps. These are shaped to stack without
+// turning into noise: short, quiet, and pitched apart.
+
+/** A coin. `index` walks the pitch up when several land together. */
+export function cueCoin(index = 0): void {
+  tone(1180 + Math.min(index, 4) * 110, 70, 0.12, Math.min(index, 4) * 45);
+}
+
+/** Any power-up: a rising pair, so it reads as a gain without a word. */
+export function cuePowerup(): void {
+  tone(740, 90, 0.2);
+  tone(1110, 140, 0.2, 90);
+  buzz(40);
+}
+
+/** A chalk save absorbed the hit — relief, not celebration. */
+export function cueSave(): void {
+  tone(520, 120, 0.24);
+  tone(780, 200, 0.2, 110);
+  buzz([0, 60, 60, 60]);
+}
+
+/** A hit that cost a life, with the run still going. */
+export function cueHit(): void {
+  tone(180, 200, 0.3);
+  buzz([0, 140]);
+}
+
+/** The run is over. */
+export function cueGameOver(): void {
+  tone(340, 200, 0.28);
+  tone(260, 240, 0.26, 180);
+  tone(180, 420, 0.24, 400);
+  buzz([0, 200, 90, 300]);
+}
+
+/** A new personal best, on the game-over screen. */
+export function cueNewBest(): void {
+  tone(880, 130, 0.24);
+  tone(1100, 130, 0.24, 130);
+  tone(1480, 300, 0.26, 260);
+  buzz([0, 90, 70, 90, 70, 200]);
+}

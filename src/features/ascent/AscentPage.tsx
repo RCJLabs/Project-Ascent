@@ -19,6 +19,15 @@ import { today as todayKey } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { deriveStats } from '@/engine/stats';
 import { deriveVitality } from '@/engine/vitality';
+import {
+  cueCoin,
+  cueGameOver,
+  cueHit,
+  cueNewBest,
+  cuePowerup,
+  cueSave,
+  unlock,
+} from '@/lib/cues';
 import { useGame, useXp } from '@/store/game';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
@@ -35,6 +44,9 @@ import { THEME_UNLOCKS, buildWall, render, themeForHeight } from './render';
 
 /** Free Solo is the hard mode, and it has to be earned. */
 export const FREE_SOLO_UNLOCK = 2000;
+
+/** How many coins in one frame get their own note. */
+const COIN_CUES = 5;
 
 type Phase = 'menu' | 'playing' | 'over';
 
@@ -64,7 +76,10 @@ export function AscentPage() {
   const [mode, setMode] = useState<Mode>('ascent');
   const [hud, setHud] = useState<Hud>({ metres: 0, coins: 0, lives: 1, saves: 0, slowmo: false, pure: true });
   const [payout, setPayout] = useState<AscentPayout | null>(null);
+  const [newBest, setNewBest] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  /** The record to beat, read before the run so recordRun cannot move it. */
+  const beatRef = useRef(0);
   const runRef = useRef<RunState | null>(null);
   const frameRef = useRef<number>(0);
   const inputRef = useRef<Input>(0);
@@ -123,10 +138,18 @@ export function AscentPage() {
 
   const finish = useCallback(
     (run: RunState) => {
+      const climbed = metres(run);
+      // One closing sound, not two: a record run rises instead of falling,
+      // and the fatal hit is left silent so it does not tread on either.
+      const beat = climbed > beatRef.current;
+      setNewBest(beat);
+      if (beat) cueNewBest();
+      else cueGameOver();
+
       setPhase('over');
       void recordRun({
         mode: run.mode,
-        metres: metres(run),
+        metres: climbed,
         coins: run.coins,
         pure: run.pure,
         date: todayKey(),
@@ -138,13 +161,17 @@ export function AscentPage() {
 
   const start = useCallback(
     (chosen: Mode) => {
+      // Browsers refuse to start audio outside a gesture, and this is one.
+      unlock();
       setMode(chosen);
+      beatRef.current = records.best[chosen];
       runRef.current = createRun({ mode: chosen, seed, modifiers });
       inputRef.current = 0;
       setPayout(null);
+      setNewBest(false);
       setPhase('playing');
     },
-    [seed, modifiers],
+    [seed, modifiers, records.best],
   );
 
   // The loop. React never re-renders per frame — the HUD is refreshed on a
@@ -173,6 +200,22 @@ export function AscentPage() {
       step(run, dt, inputRef.current);
       inputRef.current = 0;
       render(ctx, run, { palette: theme, wall, avatar, scale });
+
+      // Events accumulate across every tick this frame simulated, so a magnet
+      // can hand back a dozen coins at once. Only the first few sound, as an
+      // arpeggio; past that they would stack into one loud click.
+      let coins = 0;
+      for (const event of run.events) {
+        if (event.kind === 'coin') {
+          if (coins < COIN_CUES) cueCoin(coins);
+          coins++;
+        } else if (event.kind === 'powerup') {
+          cuePowerup();
+        } else if (event.kind === 'hit') {
+          if (event.absorbed === 'save') cueSave();
+          else if (!run.over) cueHit();
+        }
+      }
 
       if (now - hudAt > 100) {
         hudAt = now;
@@ -366,7 +409,7 @@ export function AscentPage() {
                 <span className="text-lg text-ink-soft ml-1.5">m</span>
               </div>
               <p className="text-sm text-ink-soft mt-1.5">
-                {hud.metres >= best ? 'A new best.' : `Best is ${best.toLocaleString()} m.`}
+                {newBest ? 'A new best.' : `Best is ${best.toLocaleString()} m.`}
                 {hud.pure && ' No power-ups touched.'}
               </p>
             </div>

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getDb } from '@/db';
+import { setCuesEnabled } from '@/lib/cues';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
@@ -8,17 +9,21 @@ export interface SettingsState {
   theme: ThemePreference;
   boulderScale: 'V'; // Font display conversion is a later feature
   routeScale: 'YDS'; // French display conversion is a later feature
+  /** Timer beeps, game sounds and haptics. */
+  cues: boolean;
   setTheme: (theme: ThemePreference) => void;
+  setCues: (value: boolean) => void;
 }
 
 const SETTINGS_KEY = 'settings';
 
 interface PersistedSettings {
   theme: ThemePreference;
+  cues: boolean;
 }
 
 function persisted(state: SettingsState): PersistedSettings {
-  return { theme: state.theme };
+  return { theme: state.theme, cues: state.cues };
 }
 
 export const useSettings = create<SettingsState>((set, get) => ({
@@ -26,8 +31,14 @@ export const useSettings = create<SettingsState>((set, get) => ({
   theme: 'system',
   boulderScale: 'V',
   routeScale: 'YDS',
+  cues: true,
   setTheme: (theme) => {
     set({ theme });
+    void saveSettings(persisted(get()));
+  },
+  setCues: (value) => {
+    set({ cues: value });
+    setCuesEnabled(value);
     void saveSettings(persisted(get()));
   },
 }));
@@ -42,12 +53,15 @@ export async function hydrateSettings(): Promise<void> {
     const db = await getDb();
     const record = await db.get('profile', SETTINGS_KEY);
     const value = (record?.value ?? {}) as Partial<PersistedSettings>;
+    const cues = value.cues !== false;
     useSettings.setState({
       hydrated: true,
+      cues,
       ...(value.theme === 'light' || value.theme === 'dark' || value.theme === 'system'
         ? { theme: value.theme }
         : {}),
     });
+    setCuesEnabled(cues);
   } catch {
     // Storage unavailable (private window, blocked) — run on defaults.
     useSettings.setState({ hydrated: true });

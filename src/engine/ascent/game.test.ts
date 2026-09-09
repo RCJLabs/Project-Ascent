@@ -488,3 +488,84 @@ describe('training hooks', () => {
     expect(modifiersFrom({ boons: ['boon-doublejump'] }).coinMultiplier).toBe(1.5);
   });
 });
+
+describe('the event stream the cues read', () => {
+  function withPickups(kinds: readonly ('coin' | 'slowmo' | 'magnet' | 'heart')[]): RunState {
+    const state = createRun({ seed: 4 });
+    state.entities = kinds.map((kind, i) => ({
+      id: 500 + i,
+      kind,
+      lane: 1,
+      lanes: 1,
+      worldY: state.distance,
+      width: 24,
+      height: 24,
+      fallRate: 0,
+      collected: false,
+    }));
+    return state;
+  }
+
+  it('reports a coin with the value it was worth', () => {
+    const state = withPickups(['coin']);
+    step(state, 16);
+    expect(state.events).toContainEqual({ kind: 'coin', value: 1 });
+  });
+
+  it('scales the reported coin value with the multiplier', () => {
+    const state = createRun({ seed: 4, modifiers: { coinMultiplier: 1.5 } });
+    state.entities = [{
+      id: 500, kind: 'coin', lane: 1, lanes: 1, worldY: state.distance,
+      width: 24, height: 24, fallRate: 0, collected: false,
+    }];
+    step(state, 16);
+    expect(state.events).toContainEqual({ kind: 'coin', value: 1.5 });
+  });
+
+  it('names the power-up that was taken', () => {
+    const state = withPickups(['slowmo']);
+    step(state, 16);
+    expect(state.events).toContainEqual({ kind: 'powerup', type: 'slowmo' });
+  });
+
+  // The sound wants the power-up first and the swept coins after it, so a
+  // magnet reads as one event with an arpeggio behind it rather than a pile.
+  it('puts the magnet ahead of the coins it sweeps', () => {
+    const state = createRun({ seed: 4 });
+    state.entities = [
+      { id: 1, kind: 'magnet', lane: 1, lanes: 1, worldY: state.distance,
+        width: 24, height: 24, fallRate: 0, collected: false },
+      ...Array.from({ length: 8 }, (_, i) => ({
+        id: 10 + i, kind: 'coin' as const, lane: 0, lanes: 1,
+        worldY: state.distance + 20 + i * 30,
+        width: 24, height: 24, fallRate: 0, collected: false,
+      })),
+    ];
+    step(state, 16);
+    const kinds = state.events.map((e) => e.kind);
+    expect(kinds[0]).toBe('powerup');
+    expect(kinds.filter((k) => k === 'coin').length).toBeGreaterThan(4);
+    expect(kinds.indexOf('coin')).toBeGreaterThan(0);
+  });
+
+  // A fatal hit is left silent by the page, which plays the closing sound
+  // instead — so the two must be distinguishable, and arrive together.
+  it('marks the fatal hit and the end of the run in one step', () => {
+    const state = createRun({ seed: 4 });
+    state.entities = [{
+      id: 1, kind: 'rock', lane: 1, lanes: 1, worldY: state.distance,
+      width: 40, height: 34, fallRate: 0, collected: false,
+    }];
+    step(state, 16);
+    expect(state.events).toContainEqual({ kind: 'hit', absorbed: 'life' });
+    expect(state.events).toContainEqual({ kind: 'over' });
+  });
+
+  it('clears the events at the start of every step', () => {
+    const state = withPickups(['coin']);
+    step(state, 16);
+    expect(state.events.length).toBeGreaterThan(0);
+    step(state, 16);
+    expect(state.events.filter((e) => e.kind === 'coin')).toEqual([]);
+  });
+});

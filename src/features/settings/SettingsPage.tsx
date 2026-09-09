@@ -3,6 +3,7 @@ import { APP_VERSION } from '@/version';
 import { exportAll, hasRealData, importAll, parseExportFile, SCHEMA_VERSION } from '@/db';
 import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
+import { unlock } from '@/lib/cues';
 import { hydrateAll } from '@/store';
 import { useProfile } from '@/store/profile';
 import { applyTheme, useSettings, type ThemePreference } from '@/store/settings';
@@ -50,6 +51,8 @@ function formatBytes(n?: number): string {
 export function SettingsPage() {
   const theme = useSettings((s) => s.theme);
   const setTheme = useSettings((s) => s.setTheme);
+  const cues = useSettings((s) => s.cues);
+  const setCues = useSettings((s) => s.setCues);
   const [storage, setStorage] = useState<StorageStatus>({ persisted: null });
   const [message, setMessage] = useState<string | null>(null);
   const equipment = useProfile((s) => s.equipment);
@@ -149,6 +152,30 @@ export function SettingsPage() {
                 {t.label}
               </Button>
             ))}
+          </div>
+        </Card>
+
+        <Card title="Sound & haptics">
+          <p className="text-sm text-ink-soft mb-3">
+            Timer beeps, game sounds and vibration. Tones are generated on the fly, so nothing is
+            downloaded and nothing plays until you tap something.
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant={cues ? 'primary' : 'outline'}
+              size="sm"
+              onClick={() => {
+                // Turning it on is a gesture; use it to unlock audio now
+                // rather than leaving the first cue silent.
+                unlock();
+                setCues(true);
+              }}
+            >
+              On
+            </Button>
+            <Button variant={cues ? 'outline' : 'primary'} size="sm" onClick={() => setCues(false)}>
+              Off
+            </Button>
           </div>
         </Card>
 
