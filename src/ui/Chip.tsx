@@ -80,6 +80,40 @@ export function OptionCard({
 }
 
 /**
+ * A selectable region with arbitrary content inside it — a weekly layout
+ * preview, a photo thumbnail, anything where the choice *is* the picture.
+ *
+ * `label` is required for the same reason it is on IconButton: whatever is
+ * inside may be a grid of coloured squares or an `<img>`, and neither gives
+ * a screen reader a name to read.
+ */
+export function SelectableCard({
+  selected,
+  onClick,
+  label,
+  children,
+  className = '',
+}: {
+  selected: boolean;
+  onClick: () => void;
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      aria-label={label}
+      className={`${BASE} ${selected ? ON : `${OFF} text-ink`} rounded-xl p-3 ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
  * A colour swatch that can be selected — the avatar's skin tones and kit.
  *
  * Its own component because the visible label *is* the colour, so `label`

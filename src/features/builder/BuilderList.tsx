@@ -7,6 +7,7 @@ import { ProgramFileError, parseProgramFile } from '@/engine/programFile';
 import { useCustomPrograms } from '@/store/programs';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { Input } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 import { useLocation } from 'wouter';
 
@@ -123,7 +124,7 @@ export function BuilderList() {
           <Button variant="outline" onClick={() => fileRef.current?.click()}>
             <Upload size={15} /> Open a program file
           </Button>
-          <input
+          <Input
             ref={fileRef}
             type="file"
             accept="application/json,.json"

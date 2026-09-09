@@ -14,9 +14,10 @@ import {
 } from '@/store/profile';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { OptionCard } from '@/ui/Chip';
+import { IconButton } from '@/ui/IconButton';
+import { Checkbox, Input, TextArea } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
-
-const input = 'w-full bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm';
 
 /**
  * One injury, and the climber's own record of coming back from it.
@@ -68,34 +69,24 @@ export function InjuryPage({ params }: { params: { id: string } }) {
         <Card title="How it is">
           <div className="flex flex-wrap gap-1.5 mb-2">
             {(Object.keys(SEVERITY_LABEL) as InjurySeverity[]).map((level) => (
-              <button
+              <OptionCard
                 key={level}
+                active={injury.severity === level}
                 onClick={() => updateInjury(injury.id, { severity: level })}
-                className={`rounded-lg px-3 py-2 border text-left text-sm ${
-                  injury.severity === level
-                    ? 'border-accent bg-accent/10 font-semibold'
-                    : 'border-line bg-sunken text-ink-soft'
-                }`}
-              >
-                {SEVERITY_LABEL[level].label}
-                <span className="block text-xs font-normal opacity-70">{SEVERITY_LABEL[level].blurb}</span>
-              </button>
+                label={SEVERITY_LABEL[level].label}
+                blurb={SEVERITY_LABEL[level].blurb}
+              />
             ))}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {(Object.keys(STATUS_LABEL) as InjuryStatus[]).map((state) => (
-              <button
+              <OptionCard
                 key={state}
+                active={injury.status === state}
                 onClick={() => updateInjury(injury.id, { status: state })}
-                className={`rounded-lg px-3 py-2 border text-left text-sm ${
-                  injury.status === state
-                    ? 'border-accent bg-accent/10 font-semibold'
-                    : 'border-line bg-sunken text-ink-soft'
-                }`}
-              >
-                {STATUS_LABEL[state].label}
-                <span className="block text-xs font-normal opacity-70">{STATUS_LABEL[state].blurb}</span>
-              </button>
+                label={STATUS_LABEL[state].label}
+                blurb={STATUS_LABEL[state].blurb}
+              />
             ))}
           </div>
         </Card>
@@ -105,13 +96,13 @@ export function InjuryPage({ params }: { params: { id: string } }) {
             If someone qualified has seen it, write down what they actually said. Their words are
             worth more than anything here, and this is a place they will not get lost.
           </p>
-          <textarea
+          <TextArea
             value={injury.clinicalNote ?? ''}
             onChange={(e) => updateInjury(injury.id, { clinicalNote: e.target.value || undefined })}
             rows={3}
             placeholder="What they said, and anything they asked you to watch for"
             aria-label="What a clinician said"
-            className={`${input} resize-y`}
+            className="resize-y"
           />
         </Card>
 
@@ -125,31 +116,24 @@ export function InjuryPage({ params }: { params: { id: string } }) {
           <ul className="grid grid-cols-1 gap-2 mb-3">
             {steps.map((step) => (
               <li key={step.id} className="flex items-start gap-2.5 bg-sunken rounded-xl px-3 py-2.5">
-                <button
-                  onClick={() => updateInjury(injury.id, toggleStep(injury, step.id))}
-                  aria-label={`${step.done ? 'Untick' : 'Tick'}: ${step.text}`}
-                  className={`w-5 h-5 shrink-0 mt-0.5 rounded border flex items-center justify-center ${
-                    step.done ? 'bg-accent border-accent' : 'border-line'
-                  }`}
-                >
-                  {step.done && <span className="text-accent-ink text-xs leading-none">✓</span>}
-                </button>
-                <span className={`flex-1 text-sm leading-relaxed ${step.done ? 'opacity-60' : ''}`}>
-                  {step.text}
-                </span>
-                <button
+                <Checkbox
+                  checked={step.done}
+                  onChange={() => updateInjury(injury.id, toggleStep(injury, step.id))}
+                  label={step.text}
+                  className="flex-1"
+                />
+                <IconButton
                   onClick={() => updateInjury(injury.id, removeStep(injury, step.id))}
-                  className="text-ink-soft p-2.5 -m-1.5 shrink-0"
-                  aria-label={`Remove: ${step.text}`}
+                  label={`Remove: ${step.text}`}
                 >
                   <Trash2 size={14} />
-                </button>
+                </IconButton>
               </li>
             ))}
           </ul>
 
           <div className="flex flex-wrap gap-2">
-            <input
+            <Input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -160,7 +144,7 @@ export function InjuryPage({ params }: { params: { id: string } }) {
               }}
               placeholder="Add your own, or your physio's"
               aria-label="New checklist item"
-              className={`${input} flex-1 min-w-0`}
+              className="flex-1 min-w-0"
             />
             <Button
               size="sm"

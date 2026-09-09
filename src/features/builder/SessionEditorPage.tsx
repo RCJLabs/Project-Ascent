@@ -17,9 +17,11 @@ import {
 import { useCustomPrograms } from '@/store/programs';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { OptionCard } from '@/ui/Chip';
+import { IconButton } from '@/ui/IconButton';
+import { Input, Select, TextArea } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 
-const input = 'w-full bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm';
 const small = 'bg-surface border border-line rounded-lg px-2 py-1.5 text-sm min-w-0';
 
 export function SessionEditorPage({ params }: { params: { id: string; typeId: string } }) {
@@ -78,20 +80,13 @@ export function SessionEditorPage({ params }: { params: { id: string; typeId: st
           <Card title="Which block of weeks">
             <div className="flex flex-wrap gap-2">
               {ordered.map((p) => (
-                <button
+                <OptionCard
                   key={p.id}
+                  active={p.id === phase.id}
                   onClick={() => setPhaseId(p.id)}
-                  className={`rounded-lg px-3 py-2 border text-sm text-left ${
-                    p.id === phase.id
-                      ? 'border-accent bg-accent/10 font-semibold'
-                      : 'border-line bg-sunken text-ink-soft'
-                  }`}
-                >
-                  {p.name || p.id}
-                  <span className="block text-xs font-normal opacity-70">
-                    weeks {p.weekStart}–{p.weekEnd}
-                  </span>
-                </button>
+                  label={p.name || p.id}
+                  blurb={`weeks ${p.weekStart}–${p.weekEnd}`}
+                />
               ))}
             </div>
             <p className="text-xs text-ink-soft mt-3 leading-relaxed">
@@ -134,7 +129,7 @@ function AddBlock({ onAdd }: { onAdd: (name: string) => void }) {
         its own prescription per block of weeks.
       </p>
       <div className="flex flex-wrap gap-2">
-        <input
+        <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
@@ -145,7 +140,7 @@ function AddBlock({ onAdd }: { onAdd: (name: string) => void }) {
           }}
           placeholder="Hangboard"
           aria-label="New block name"
-          className={`${input} flex-1 min-w-0`}
+          className="flex-1 min-w-0"
         />
         <Button
           size="sm"
@@ -185,45 +180,45 @@ function BlockCard({
   return (
     <Card>
       <div className="flex items-start gap-2 mb-1">
-        <input
+        <Input
           value={block.name}
           onChange={(e) => onChange({ ...block, name: e.target.value })}
           aria-label="Block name"
           className="flex-1 min-w-0 bg-transparent font-bold text-base border-0 p-0 focus:outline-none"
         />
-        <button onClick={onRemove} className="text-danger p-2.5 -m-1" aria-label={`Remove ${block.name}`}>
+        <IconButton tone="danger" onClick={onRemove} label={`Remove ${block.name}`}>
           <Trash2 size={15} />
-        </button>
+        </IconButton>
       </div>
       <p className="text-xs text-ink-soft mb-3">{describeBlock(block, phaseId)}</p>
 
-      <textarea
+      <TextArea
         value={p.rationale}
         onChange={(e) => set({ rationale: e.target.value })}
         rows={2}
         placeholder="Why this, in these weeks"
         aria-label="Rationale"
-        className={`${input} resize-y mb-3`}
+        className="resize-y mb-3"
       />
 
       <div className="grid grid-cols-1 gap-2 mb-3">
         {p.exercises.map((exercise, i) => (
           <div key={i} className="bg-sunken rounded-xl p-2.5">
             <div className="flex gap-2 mb-2">
-              <input
+              <Input
                 value={exercise.name}
                 onChange={(e) => setExercise(i, { name: e.target.value })}
                 placeholder="Max Hangs"
                 aria-label={`Exercise ${i + 1} name`}
                 className={`${small} flex-1`}
               />
-              <button
+              <IconButton
+                tone="danger"
                 onClick={() => set({ exercises: p.exercises.filter((_, j) => j !== i) })}
-                className="text-danger p-2.5 -m-1"
-                aria-label={`Remove exercise ${i + 1}`}
+                label={`Remove exercise ${i + 1}`}
               >
                 <Trash2 size={14} />
-              </button>
+              </IconButton>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {(
@@ -235,7 +230,7 @@ function BlockCard({
                   ['rest', 'Rest', '2-3 min'],
                 ] as const
               ).map(([key, label, placeholder]) => (
-                <input
+                <Input
                   key={key}
                   value={exercise[key] ?? ''}
                   onChange={(e) => setExercise(i, { [key]: e.target.value || undefined })}
@@ -244,7 +239,7 @@ function BlockCard({
                   className={small}
                 />
               ))}
-              <select
+              <Select
                 value={exercise.protocolId ?? ''}
                 onChange={(e) => setExercise(i, { protocolId: e.target.value || undefined })}
                 aria-label={`Exercise ${i + 1} timer`}
@@ -256,9 +251,9 @@ function BlockCard({
                     {protocol.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
-            <input
+            <Input
               value={exercise.notes ?? ''}
               onChange={(e) => setExercise(i, { notes: e.target.value || undefined })}
               placeholder="Form cue — never dosage"
@@ -287,7 +282,7 @@ function BlockCard({
       {p.selection && (
         <div className="flex items-center gap-2 text-sm mb-3">
           <span className="text-ink-soft">Pick</span>
-          <input
+          <Input
             type="number"
             min={1}
             value={p.selection.pick}
@@ -365,7 +360,7 @@ function DrillsCard({
           {Array.from({ length: program.weeks }, (_, i) => i + 1).map((week) => (
             <div key={week} className="flex items-center gap-2">
               <span className="w-12 text-xs font-semibold text-ink-soft">Wk {week}</span>
-              <select
+              <Select
                 value={byWeek[week] ?? ''}
                 onChange={(e) => {
                   const next = { ...byWeek };
@@ -374,7 +369,7 @@ function DrillsCard({
                   onChange({ drillsByWeek: next });
                 }}
                 aria-label={`Week ${week} drill`}
-                className={`${input} flex-1 min-w-0`}
+                className="flex-1 min-w-0"
               >
                 <option value="">None</option>
                 {suitable.map((drill) => (
@@ -382,7 +377,7 @@ function DrillsCard({
                     {drill.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           ))}
           <p className="text-xs text-ink-soft mt-1">

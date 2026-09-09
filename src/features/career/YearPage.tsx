@@ -15,6 +15,8 @@ import {
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { Card } from '@/ui/Card';
+import { Select } from '@/ui/Field';
+import { IconButton } from '@/ui/IconButton';
 import { PageHeader } from '@/ui/PageHeader';
 
 /**
@@ -59,34 +61,36 @@ export function YearPage({ params }: { params: { year?: string } }) {
       <div className="grid grid-cols-1 gap-3">
         {years.length > 1 && (
           <div className="flex items-center gap-2">
-            <button
+            <IconButton
+              inline={false}
               onClick={() => older !== undefined && navigate(`/year/${older}`)}
               disabled={older === undefined}
-              aria-label="Previous year"
-              className="rounded-xl border border-line bg-sunken px-3 py-2 disabled:opacity-40"
+              label="Previous year"
+              className="border border-line bg-sunken"
             >
               <ChevronLeft size={16} />
-            </button>
-            <select
+            </IconButton>
+            <Select
               value={year}
               onChange={(e) => navigate(`/year/${e.target.value}`)}
               aria-label="Year"
-              className="flex-1 min-w-0 bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm"
+              className="flex-1 min-w-0"
             >
               {years.map((y) => (
                 <option key={y} value={y}>
                   {y}
                 </option>
               ))}
-            </select>
-            <button
+            </Select>
+            <IconButton
+              inline={false}
               onClick={() => newer !== undefined && navigate(`/year/${newer}`)}
               disabled={newer === undefined}
-              aria-label="Next year"
-              className="rounded-xl border border-line bg-sunken px-3 py-2 disabled:opacity-40"
+              label="Next year"
+              className="border border-line bg-sunken"
             >
               <ChevronRight size={16} />
-            </button>
+            </IconButton>
           </div>
         )}
 

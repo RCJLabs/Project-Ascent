@@ -18,6 +18,7 @@ export function Meter({
   valueText,
   size = 'md',
   tone = 'accent',
+  color,
   className = '',
 }: {
   /** 0..1. Clamped, because a derived fraction can exceed 1 on a completed goal. */
@@ -28,6 +29,9 @@ export function Meter({
   valueText?: string;
   size?: 'sm' | 'md' | 'lg';
   tone?: 'accent' | 'positive' | 'warn';
+  /** An explicit fill colour, for the one case where the colour is data —
+   *  vitality, whose state has its own colour on the same scale as the bar. */
+  color?: string;
   className?: string;
 }) {
   const fraction = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
@@ -45,7 +49,10 @@ export function Meter({
       aria-valuetext={valueText ?? `${percent}%`}
       className={`${height} rounded-full bg-sunken overflow-hidden ${className}`}
     >
-      <div className={`h-full rounded-full ${fill}`} style={{ width: `${percent}%` }} />
+      <div
+        className={`h-full rounded-full ${color === undefined ? fill : ''}`}
+        style={color === undefined ? { width: `${percent}%` } : { width: `${percent}%`, background: color }}
+      />
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { IconButton } from '@/ui/IconButton';
 import { PageHeader } from '@/ui/PageHeader';
 
 const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -139,9 +140,9 @@ export function CalendarPage() {
                 Pick a day in the same week. Green is clear, amber is untidy, red breaks a rule.
               </p>
             </div>
-            <button onClick={() => setMoving(null)} className="text-ink-soft p-2.5 -m-1.5" aria-label="Cancel move">
+            <IconButton onClick={() => setMoving(null)} label="Cancel move">
               <X size={16} />
-            </button>
+            </IconButton>
           </div>
         </Card>
       )}
@@ -191,13 +192,13 @@ export function CalendarPage() {
       )}
 
       <div className="flex items-center justify-between mb-3">
-        <button onClick={() => shift(-1)} className="p-2 -m-2 text-ink-soft" aria-label="Previous month">
+        <IconButton onClick={() => shift(-1)} label="Previous month">
           <ChevronLeft size={20} />
-        </button>
+        </IconButton>
         <span className="font-bold">{monthLabel(year, month)}</span>
-        <button onClick={() => shift(1)} className="p-2 -m-2 text-ink-soft" aria-label="Next month">
+        <IconButton onClick={() => shift(1)} label="Next month">
           <ChevronRight size={20} />
-        </button>
+        </IconButton>
       </div>
 
       <div className="flex justify-end mb-2">
@@ -272,7 +273,7 @@ export function CalendarPage() {
             </>
           );
 
-          const shell = `aspect-square rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-colors ${tone} ${
+          const shell = `focus-ring aspect-square rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-colors ${tone} ${
             inMonth ? 'bg-surface' : 'bg-transparent opacity-40'
           } ${done && !landing && !isSource ? 'bg-accent/15' : ''}`;
 

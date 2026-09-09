@@ -18,6 +18,7 @@ import { useSessions } from '@/store/sessions';
 import { useSkillEffects } from '@/store/skills';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { Meter } from '@/ui/Meter';
 import { PageHeader } from '@/ui/PageHeader';
 
 /** Everything the board shows comes from the log, so this hook is the board. */
@@ -192,19 +193,13 @@ function ChallengeRow({
         </span>
       </div>
 
-      <div
-        className="h-1.5 rounded-full bg-sunken overflow-hidden mb-1.5"
-        role="progressbar"
-        aria-valuenow={pct}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={challenge.title}
-      >
-        <div
-          className={`h-full rounded-full ${challenge.done ? 'bg-positive' : 'bg-accent'}`}
-          style={{ width: `${Math.max(2, pct)}%` }}
-        />
-      </div>
+      <Meter
+        value={pct / 100}
+        tone={challenge.done ? 'positive' : 'accent'}
+        label={challenge.title}
+        valueText={`${challenge.progress} of ${challenge.target} ${challenge.unit}`}
+        className="mb-1.5"
+      />
 
       <p className="text-xs text-ink-soft leading-relaxed">{challenge.detail}</p>
 

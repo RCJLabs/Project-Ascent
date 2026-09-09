@@ -9,6 +9,9 @@ import {
   searchGlossary,
   type GlossaryCategory,
 } from '@/content/glossary';
+import { Chip as UiChip } from '@/ui/Chip';
+import { Input } from '@/ui/Field';
+import { IconButton } from '@/ui/IconButton';
 import { PageHeader } from '@/ui/PageHeader';
 
 /**
@@ -45,21 +48,22 @@ export function GlossaryPage() {
             className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft pointer-events-none"
             aria-hidden
           />
-          <input
+          <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search terms and definitions"
             aria-label="Search the glossary"
-            className="w-full bg-sunken border border-line rounded-xl pl-9 pr-10 py-2.5 text-sm"
+            className="pl-9 pr-12"
           />
           {query !== '' && (
-            <button
+            <IconButton
+              inline={false}
               onClick={() => setQuery('')}
-              aria-label="Clear search"
-              className="absolute right-1 top-1/2 -translate-y-1/2 text-ink-soft p-2.5"
+              label="Clear search"
+              className="absolute right-0.5 top-1/2 -translate-y-1/2"
             >
               <X size={16} />
-            </button>
+            </IconButton>
           )}
         </div>
 
@@ -112,14 +116,8 @@ function Chip({
   label: string;
 }) {
   return (
-    <button
-      onClick={onClick}
-      aria-pressed={active}
-      className={`rounded-lg px-3 py-1.5 border text-sm ${
-        active ? 'border-accent bg-accent/10 font-semibold' : 'border-line bg-sunken text-ink-soft'
-      }`}
-    >
+    <UiChip active={active} onClick={onClick}>
       {label}
-    </button>
+    </UiChip>
   );
 }

@@ -19,6 +19,9 @@ import { useSettings } from '@/store/settings';
 import { useProfile } from '@/store/profile';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { SelectableCard } from '@/ui/Chip';
+import { DisclosureButton } from '@/ui/Disclosure';
+import { Input, Select } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 
 export function AssessmentsPage() {
@@ -97,18 +100,20 @@ export function AssessmentsPage() {
               <ul className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto">
                 {rest.map((metric) => (
                   <li key={metric.id}>
-                    <button
+                    <SelectableCard
+                      selected={false}
                       onClick={() => {
                         setOpen(metric.id);
                         setPicking(false);
                       }}
-                      className="w-full text-left bg-sunken rounded-xl px-3 py-2.5"
+                      label={metric.label}
+                      className="w-full bg-sunken border-transparent px-3 py-2.5"
                     >
                       <div className="font-semibold text-sm">{metric.label}</div>
                       {metric.description && (
                         <p className="text-xs text-ink-soft mt-0.5 leading-relaxed">{metric.description}</p>
                       )}
-                    </button>
+                    </SelectableCard>
                   </li>
                 ))}
               </ul>
@@ -151,7 +156,7 @@ function MetricRow({
   const { metric, latest, change } = status;
   return (
     <li className="bg-sunken rounded-xl">
-      <button onClick={onToggle} className="w-full flex items-center gap-3 px-3 py-2.5 text-left">
+      <DisclosureButton open={open} onToggle={onToggle} className="flex items-center gap-3 px-3 py-2.5">
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-sm truncate">{metric.label}</div>
           <p className="text-xs text-ink-soft mt-0.5">
@@ -174,7 +179,7 @@ function MetricRow({
         {status.due !== null && (
           <span className="w-2 h-2 rounded-full bg-accent shrink-0" aria-label="Due" />
         )}
-      </button>
+      </DisclosureButton>
       {open && (
         <div className="px-3 pb-3">
           <ResultForm metric={metric} onDone={onToggle} />
@@ -233,11 +238,11 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
       ) : (
         <div className="flex gap-2 mb-2">
           {metric.kind === 'grade' ? (
-            <select
+            <Select
               value={raw}
               onChange={(e) => setRaw(e.target.value)}
               aria-label={`${metric.label} result`}
-              className="flex-1 bg-surface border border-line rounded-xl px-2.5 py-2.5 text-sm"
+              className="flex-1 bg-surface" size="compact"
             >
               <option value="">Pick a grade</option>
               {gradeOptions(metric.scale ?? 'V', metric.scale === 'YDS' ? YDS_GRADES : V_GRADES).map((g) => (
@@ -245,15 +250,15 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
                   {g.label}
                 </option>
               ))}
-            </select>
+            </Select>
           ) : (
-            <input
+            <Input
               value={raw}
               onChange={(e) => setRaw(e.target.value)}
               inputMode={metric.kind === 'number' ? 'decimal' : 'text'}
               placeholder={metric.unit || 'Result'}
               aria-label={`${metric.label} result`}
-              className="flex-1 bg-surface border border-line rounded-xl px-3 py-2.5 text-sm"
+              className="flex-1 bg-surface"
             />
           )}
           <Button size="sm" onClick={() => void save()}>
@@ -263,20 +268,20 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
       )}
 
       <div className="flex gap-2">
-        <input
+        <Input
           type="date"
           value={date}
           max={today()}
           onChange={(e) => setDate(e.target.value)}
           aria-label="Date tested"
-          className="bg-surface border border-line rounded-xl px-2.5 py-2 text-sm"
+          className="bg-surface" size="compact"
         />
-        <input
+        <Input
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Note (optional)"
           aria-label="Result note"
-          className="flex-1 bg-surface border border-line rounded-xl px-3 py-2 text-sm"
+          className="flex-1 bg-surface" size="compact"
         />
       </div>
       {error && <p className="text-sm text-danger mt-2">{error}</p>}

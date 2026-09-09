@@ -22,6 +22,8 @@ import { useTemplates } from '@/store/templates';
 import { applyTheme, useSettings, type ThemePreference } from '@/store/settings';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { Chip, SelectableCard } from '@/ui/Chip';
+import { Input } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 
 const GEAR: { value: Equipment; label: string }[] = [
@@ -247,17 +249,15 @@ export function SettingsPage() {
             {GEAR.map((g) => {
               const on = equipment.includes(g.value);
               return (
-                <button
+                <Chip
                   key={g.value}
+                  active={on}
                   onClick={() =>
                     setEquipment(on ? equipment.filter((e) => e !== g.value) : [...equipment, g.value])
                   }
-                  className={`rounded-xl px-3 py-2.5 border text-sm text-left ${
-                    on ? 'border-accent bg-accent/10' : 'border-line bg-sunken text-ink-soft'
-                  }`}
                 >
                   {g.label}
-                </button>
+                </Chip>
               );
             })}
           </div>
@@ -288,51 +288,40 @@ export function SettingsPage() {
 
                   <div className="flex flex-wrap gap-1.5 mb-1.5">
                     {(Object.keys(SEVERITY_LABEL) as InjurySeverity[]).map((level) => (
-                      <button
+                      <Chip
                         key={level}
+                        active={injury.severity === level}
                         onClick={() => updateInjury(injury.id, { severity: level })}
-                        title={SEVERITY_LABEL[level].blurb}
-                        className={`rounded-lg px-2.5 py-1.5 border text-xs ${
-                          injury.severity === level
-                            ? 'border-accent bg-accent/10 font-semibold'
-                            : 'border-line text-ink-soft'
-                        }`}
+                        className="text-xs"
                       >
                         {SEVERITY_LABEL[level].label}
-                      </button>
+                      </Chip>
                     ))}
                   </div>
 
                   <div className="flex flex-wrap gap-1.5">
                     {(Object.keys(STATUS_LABEL) as InjuryStatus[]).map((state) => (
-                      <button
+                      <Chip
                         key={state}
+                        active={injury.status === state}
                         onClick={() => updateInjury(injury.id, { status: state })}
-                        title={STATUS_LABEL[state].blurb}
-                        className={`rounded-lg px-2.5 py-1.5 border text-xs ${
-                          injury.status === state
-                            ? 'border-accent bg-accent/10 font-semibold'
-                            : 'border-line text-ink-soft'
-                        }`}
+                        className="text-xs"
                       >
                         {STATUS_LABEL[state].label}
-                      </button>
+                      </Chip>
                     ))}
                     {injury.part !== 'back' &&
                       (['left', 'right', 'both'] as const).map((side) => (
-                        <button
+                        <Chip
                           key={side}
+                          active={injury.side === side}
                           onClick={() =>
                             updateInjury(injury.id, { side: injury.side === side ? undefined : side })
                           }
-                          className={`rounded-lg px-2.5 py-1.5 border text-xs capitalize ${
-                            injury.side === side
-                              ? 'border-accent bg-accent/10 font-semibold'
-                              : 'border-line text-ink-soft'
-                          }`}
+                          className="text-xs capitalize"
                         >
                           {side}
-                        </button>
+                        </Chip>
                       ))}
                   </div>
                 </li>
@@ -341,13 +330,9 @@ export function SettingsPage() {
           )}
           <div className="flex flex-wrap gap-2">
             {PARTS.filter((p) => !injuries.some((i) => i.part === p.value)).map((p) => (
-              <button
-                key={p.value}
-                onClick={() => addInjury(p.value)}
-                className="rounded-lg px-2.5 py-1.5 border border-line bg-sunken text-sm text-ink-soft"
-              >
+              <Chip key={p.value} active={false} onClick={() => addInjury(p.value)}>
                 + {p.label}
-              </button>
+              </Chip>
             ))}
           </div>
         </Card>
@@ -375,7 +360,7 @@ export function SettingsPage() {
             <Button variant="outline" onClick={() => fileRef.current?.click()}>
               Import backup
             </Button>
-            <input
+            <Input
               ref={fileRef}
               type="file"
               accept="application/json,.json"
@@ -479,16 +464,16 @@ function ScalePicker<T extends BoulderDisplay | RouteDisplay>({
       <div className="text-xs font-semibold text-ink-soft mb-1.5">{label}</div>
       <div className="grid grid-cols-1 gap-2">
         {options.map((o) => (
-          <button
+          <SelectableCard
             key={o.value}
+            selected={value === o.value}
             onClick={() => onChange(o.value)}
-            className={`flex items-baseline gap-2 rounded-xl px-3 py-2.5 border text-left ${
-              value === o.value ? 'border-accent bg-accent/10' : 'border-line bg-sunken'
-            }`}
+            label={`${o.value}: ${o.sample.join(', ')}`}
+            className="flex items-baseline gap-2 bg-sunken px-3 py-2.5"
           >
             <span className="font-semibold text-sm">{o.value}</span>
             <span className="text-sm text-ink-soft tabular-nums ml-auto">{o.sample.join(' · ')}</span>
-          </button>
+          </SelectableCard>
         ))}
       </div>
     </div>
@@ -521,22 +506,25 @@ function TemplatesCard() {
             <li key={t.id} className="flex items-center gap-2 bg-sunken rounded-xl px-3 py-2.5">
               {editing === t.id ? (
                 <>
-                  <input
+                  <Input
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     aria-label={`Rename ${t.name}`}
                     autoFocus
-                    className="flex-1 min-w-0 bg-surface border border-line rounded-lg px-2.5 py-1.5 text-sm"
+                    size="compact"
+                    className="flex-1 min-w-0 bg-surface"
                   />
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       void rename(t.id, draft);
                       setEditing(null);
                     }}
-                    className="text-sm font-semibold text-accent px-1"
+                    className="text-accent"
                   >
                     Done
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <>
@@ -546,18 +534,19 @@ function TemplatesCard() {
                       {t.uses === 0 ? 'Never used' : `Used ${t.uses}×`}
                     </div>
                   </div>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setEditing(t.id);
                       setDraft(t.name);
                     }}
-                    className="text-sm text-ink-soft px-1"
                   >
                     Rename
-                  </button>
-                  <button onClick={() => void remove(t.id)} className="text-sm text-danger px-1">
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => void remove(t.id)} className="text-danger">
                     Delete
-                  </button>
+                  </Button>
                 </>
               )}
             </li>

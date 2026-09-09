@@ -17,11 +17,13 @@ import { useObjectives } from '@/store/objectives';
 import { useProjects } from '@/store/projects';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { Chip } from '@/ui/Chip';
+import { IconButton } from '@/ui/IconButton';
+import { Meter } from '@/ui/Meter';
+import { Input, Select, TextArea } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 import { useGradeOptions } from '@/ui/useGrade';
 import { useSkillInput } from './ObjectivesPage';
-
-const input = 'w-full bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm';
 
 const STATUSES: { value: ObjectiveStatus; label: string }[] = [
   { value: 'planning', label: 'Planning' },
@@ -94,12 +96,13 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
               {progress.met} of {progress.total} met
             </span>
           </div>
-          <div className="h-2 rounded-full bg-sunken overflow-hidden mb-2">
-            <div
-              className="h-full rounded-full bg-accent transition-[width]"
-              style={{ width: `${Math.round(progress.readiness * 100)}%` }}
-            />
-          </div>
+          <Meter
+            value={progress.readiness}
+            size="lg"
+            label="Readiness"
+            valueText={`${progress.met} of ${progress.total} requirements met`}
+            className="mb-2"
+          />
           <p className="text-sm text-ink-soft leading-relaxed">{describeProgress(progress)}</p>
         </Card>
 
@@ -148,20 +151,23 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
                       {m.measurement.current} / {m.measurement.target}
                     </div>
                     {!m.measurement.met && (
-                      <div className="h-1 rounded-full bg-surface overflow-hidden mt-1.5">
-                        <div className="h-full rounded-full bg-accent" style={{ width: `${m.fraction * 100}%` }} />
-                      </div>
+                      <Meter
+                        value={m.fraction}
+                        size="sm"
+                        label={m.measurement.detail}
+                        valueText={`${m.measurement.current} of ${m.measurement.target}`}
+                        className="mt-1.5"
+                      />
                     )}
                   </div>
-                  <button
+                  <IconButton
                     onClick={() =>
                       edit({ requirements: objective.requirements.filter((r) => r.id !== m.id) })
                     }
-                    className="text-ink-soft p-2.5 -m-1.5 shrink-0"
-                    aria-label={`Remove: ${m.measurement.detail}`}
+                    label={`Remove: ${m.measurement.detail}`}
                   >
                     <Trash2 size={14} />
-                  </button>
+                  </IconButton>
                 </div>
                 <RequirementFields
                   requirement={m.requirement}
@@ -208,17 +214,13 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
         <Card title="Where it stands">
           <div className="flex flex-wrap gap-2 mb-3">
             {STATUSES.map((s) => (
-              <button
+              <Chip
                 key={s.value}
+                active={objective.status === s.value}
                 onClick={() => edit({ status: s.value })}
-                className={`rounded-lg px-3 py-2 border text-sm ${
-                  objective.status === s.value
-                    ? 'border-accent bg-accent/10 font-semibold'
-                    : 'border-line bg-sunken text-ink-soft'
-                }`}
               >
                 {s.label}
-              </button>
+              </Chip>
             ))}
           </div>
           <p className="text-xs text-ink-soft leading-relaxed">
@@ -230,33 +232,31 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
         <Card title="Details">
           <label className="text-sm block mb-3">
             <span className="block text-ink-soft mb-1">Where is it?</span>
-            <input
+            <Input
               value={objective.location ?? ''}
               onChange={(e) => edit({ location: e.target.value || undefined })}
               placeholder="Yosemite, the cave at the back, anywhere"
               aria-label="Location"
-              className={input}
             />
           </label>
           <label className="text-sm block mb-3">
             <span className="block text-ink-soft mb-1">Notes</span>
-            <textarea
+            <TextArea
               value={objective.notes ?? ''}
               onChange={(e) => edit({ notes: e.target.value || undefined })}
               rows={3}
               placeholder="Beta, conditions, who you are going with"
               aria-label="Notes"
-              className={`${input} resize-y`}
+              className="resize-y"
             />
           </label>
           {projects.length > 0 && (
             <label className="text-sm block">
               <span className="block text-ink-soft mb-1">Is this a project you are already on?</span>
-              <select
+              <Select
                 value={objective.projectId ?? ''}
                 onChange={(e) => edit({ projectId: e.target.value || undefined })}
                 aria-label="Linked project"
-                className={input}
               >
                 <option value="">Not yet</option>
                 {projects.map((p) => (
@@ -264,7 +264,7 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
                     {p.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           )}
         </Card>
@@ -293,15 +293,16 @@ function RequirementFields({
   onChange: (patch: Partial<SkillRequirement>) => void;
 }) {
   const gradeOptions = useGradeOptions();
-  const small = 'bg-surface border border-line rounded-lg px-2 py-1 text-sm w-20';
-  const wide = 'bg-surface border border-line rounded-lg px-2 py-1 text-sm flex-1 min-w-0';
+  const small = 'bg-surface w-20';
+  const wide = 'bg-surface flex-1 min-w-0';
   const number = (value: number, label: string, key: string) => (
-    <input
+    <Input
       type="number"
       min={1}
       value={value}
       aria-label={label}
       onChange={(e) => onChange({ [key]: Math.max(1, Number(e.target.value) || 1) } as Partial<SkillRequirement>)}
+      size="compact"
       className={small}
     />
   );
@@ -313,10 +314,11 @@ function RequirementFields({
         <div className="flex flex-wrap items-center gap-2 mt-2 pl-6">
           {number(requirement.count, 'How many sends', 'count')}
           <span className="text-xs text-ink-soft">at</span>
-          <select
+          <Select
             value={requirement.grade}
             aria-label="Grade"
             onChange={(e) => onChange({ grade: e.target.value } as Partial<SkillRequirement>)}
+            size="compact"
             className={wide}
           >
             {gradeOptions(requirement.scale, ladder).map((g) => (
@@ -324,7 +326,7 @@ function RequirementFields({
                 {g.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       );
     }
@@ -332,10 +334,11 @@ function RequirementFields({
       return (
         <div className="flex flex-wrap items-center gap-2 mt-2 pl-6">
           {number(requirement.count, 'How many drills', 'count')}
-          <select
+          <Select
             value={requirement.category}
             aria-label="Drill category"
             onChange={(e) => onChange({ category: e.target.value } as Partial<SkillRequirement>)}
+            size="compact"
             className={wide}
           >
             {Object.entries(DRILL_CATEGORIES).map(([id, meta]) => (
@@ -343,7 +346,7 @@ function RequirementFields({
                 {meta.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       );
     case 'hours':

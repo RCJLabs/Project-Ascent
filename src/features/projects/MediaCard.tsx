@@ -11,6 +11,9 @@ import {
 import type { MediaRecord } from '@/db/schema';
 import { ACCEPTED, ImageError, formatBytes, prepareImage } from '@/lib/image';
 import { Button } from '@/ui/Button';
+import { SelectableCard } from '@/ui/Chip';
+import { Input } from '@/ui/Field';
+import { IconButton } from '@/ui/IconButton';
 import { Card } from '@/ui/Card';
 
 /**
@@ -87,16 +90,17 @@ export function MediaCard({ projectId }: { projectId: string }) {
       ) : (
         <div className="grid grid-cols-3 gap-2 mb-3">
           {items.map((item) => (
-            <button
+            <SelectableCard
               key={item.id}
+              selected={false}
               onClick={() => setViewing(item.id)}
-              className="aspect-square rounded-xl overflow-hidden bg-sunken border border-line"
-              aria-label={item.caption || 'Open photo'}
+              label={item.caption || 'Open photo'}
+              className="aspect-square rounded-xl overflow-hidden bg-sunken border border-line p-0"
             >
               {urls[item.id] && (
                 <img src={urls[item.id]} alt={item.caption ?? ''} className="w-full h-full object-cover" />
               )}
-            </button>
+            </SelectableCard>
           ))}
         </div>
       )}
@@ -110,7 +114,7 @@ export function MediaCard({ projectId }: { projectId: string }) {
             {items.length} of {MAX_PER_OWNER} · {formatBytes(bytes)}
           </span>
         )}
-        <input
+        <Input
           ref={fileRef}
           type="file"
           accept={ACCEPTED}
@@ -132,25 +136,26 @@ export function MediaCard({ projectId }: { projectId: string }) {
           role="dialog"
           aria-label="Photo"
         >
-          <button
+          <IconButton
+            inline={false}
             onClick={() => setViewing(null)}
-            className="self-end text-white p-2.5 -m-1"
-            aria-label="Close photo"
+            label="Close photo"
+            className="self-end text-white"
           >
             <X size={22} />
-          </button>
+          </IconButton>
           <div className="flex-1 flex items-center justify-center min-h-0">
             {urls[open.id] && (
               <img src={urls[open.id]} alt={open.caption ?? ''} className="max-w-full max-h-full object-contain rounded-xl" />
             )}
           </div>
           <div className="flex gap-2 mt-3">
-            <input
+            <Input
               defaultValue={open.caption ?? ''}
               placeholder="Add a note about this photo"
               aria-label="Photo caption"
               onBlur={(e) => void caption(open, e.target.value)}
-              className="flex-1 min-w-0 bg-surface border border-line rounded-xl px-3 py-2.5 text-sm"
+              className="flex-1 min-w-0 bg-surface"
             />
             <Button size="sm" variant="danger" onClick={() => void remove(open.id)}>
               <Trash2 size={15} />

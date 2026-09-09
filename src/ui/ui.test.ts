@@ -48,10 +48,40 @@ function findAll(
   );
 }
 
+/**
+ * Files allowed a bare `<button>`, with the reason.
+ *
+ * Kept as an explicit list rather than a blanket exemption, because "this
+ * one is special" is exactly how ninety-five of them happened. Everything
+ * here still has to carry `focus-ring`; the exemption is from the
+ * primitive, never from the ring.
+ */
+const BESPOKE: Record<string, string> = {
+  'src/features/calendar/CalendarPage.tsx':
+    'a calendar day is a grid cell with its own state shell — a Button would be a worse abstraction, not a better one',
+  'src/features/ascent/AscentPage.tsx':
+    'the game canvas and its overlay controls are their own visual language',
+};
+
 describe('feature files use the primitives', () => {
-  it('styles no bare buttons', () => {
+  it('styles no bare buttons outside the listed exceptions', () => {
     // `ui/` owns the element; features compose Button, IconButton or Chip.
-    expect(findAll(FEATURE_FILES, (l) => l.includes('<button'))).toEqual([]);
+    const offences = findAll(FEATURE_FILES, (l) => l.includes('<button')).filter(
+      (hit) => !Object.keys(BESPOKE).some((allowed) => hit.startsWith(allowed)),
+    );
+    expect(offences).toEqual([]);
+  });
+
+  it('gives the exceptions a focus ring anyway', () => {
+    const offences: string[] = [];
+    for (const [path, reason] of Object.entries(BESPOKE)) {
+      const file = FEATURE_FILES.find((f) => f.path === path);
+      expect(file, `listed exception no longer exists: ${path} (${reason})`).toBeDefined();
+      const buttons = (file?.source.match(/<button/g) ?? []).length;
+      const rings = (file?.source.match(/focus-ring/g) ?? []).length;
+      if (buttons > rings) offences.push(`${path}: ${buttons} buttons, ${rings} rings`);
+    }
+    expect(offences).toEqual([]);
   });
 
   it('styles no bare form controls', () => {

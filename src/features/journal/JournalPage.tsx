@@ -13,7 +13,10 @@ import { fromKey, shortLabel } from '@/engine/dates';
 import { useMetrics } from '@/store/metrics';
 import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
+import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { Chip } from '@/ui/Chip';
+import { Input } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 
 const KINDS: { value: JournalKind; label: string; Icon: typeof BookOpen }[] = [
@@ -84,12 +87,12 @@ export function JournalPage() {
           <Card>
             <div className="relative mb-3">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft" />
-              <input
+              <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search your notes"
                 aria-label="Search the journal"
-                className="w-full bg-sunken border border-line rounded-xl pl-9 pr-3 py-2.5 text-sm"
+                className="pl-9"
               />
             </div>
 
@@ -97,15 +100,14 @@ export function JournalPage() {
               {KINDS.map(({ value, label, Icon }) => {
                 const on = kinds.includes(value);
                 return (
-                  <button
+                  <Chip
                     key={value}
+                    active={on}
                     onClick={() => setKinds(on ? kinds.filter((k) => k !== value) : [...kinds, value])}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border text-xs font-semibold ${
-                      on ? 'border-accent bg-accent/10 text-ink' : 'border-line bg-sunken text-ink-soft'
-                    }`}
+                    className="inline-flex items-center gap-1.5 text-xs"
                   >
                     <Icon size={13} /> {label}
-                  </button>
+                  </Chip>
                 );
               })}
             </div>
@@ -113,30 +115,31 @@ export function JournalPage() {
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {tags.slice(0, 10).map((t) => (
-                  <button
+                  <Chip
                     key={t.tag}
+                    active={tag === t.tag}
                     onClick={() => setTag(tag === t.tag ? null : t.tag)}
-                    className={`rounded-lg px-2.5 py-1.5 border text-xs font-semibold ${
-                      tag === t.tag ? 'border-accent bg-accent/10 text-ink' : 'border-line bg-sunken text-ink-soft'
-                    }`}
+                    className="text-xs"
                   >
                     #{t.tag} <span className="opacity-60">{t.count}</span>
-                  </button>
+                  </Chip>
                 ))}
               </div>
             )}
 
             {filtering && (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setQuery('');
                   setKinds([]);
                   setTag(null);
                 }}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-accent mt-3"
+                className="text-accent mt-3 text-xs"
               >
                 <X size={13} /> Clear filters
-              </button>
+              </Button>
             )}
           </Card>
 

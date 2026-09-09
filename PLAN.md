@@ -690,8 +690,13 @@ a small diff instead of ninety-five separate edits.
   *Done when: an update never interrupts a live session.*
 - **M20 — Data safety.** Import is all-or-nothing with no preview. Per-store merge
   versus replace, a dry-run summary before it writes, an automatic snapshot before any
-  import, and undo for destructive deletes. *Done when: no single tap can lose a year
-  of logs.*
+  import, and undo for destructive deletes. Also: **there is no error boundary
+  anywhere**, and one malformed stored record white-screens a route — found during
+  M13 by writing a `baseline` of the wrong shape, which crashed `/find` in
+  `finderInputFrom` and left the page blank. A backup from an older schema would do
+  the same. Normalise on read (the injury store already does) and catch what gets
+  through. *Done when: no single tap can lose a year of logs, and a bad record costs
+  one card rather than the page.*
 - **M21 — Entry speed.** Logging is the most repeated action in the app and
   `LogPage.tsx` is 1,297 lines. Quick-log from the last session, grade steppers
   instead of selects, numeric keypads, swipe-to-delete on climb rows. *Done when: a

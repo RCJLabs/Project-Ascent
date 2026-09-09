@@ -21,6 +21,9 @@ import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { Chip, OptionCard, SelectableCard } from '@/ui/Chip';
+import { Meter } from '@/ui/Meter';
+import { Input, Select } from '@/ui/Field';
 
 const GEAR: { value: Equipment; label: string; note: string }[] = [
   { value: 'wall', label: 'Climbing wall', note: 'A gym or a home wall' },
@@ -151,16 +154,13 @@ export function WelcomePage() {
             <Card title="How long have you been at it?">
               <div className="grid grid-cols-1 gap-2">
                 {EXPERIENCE.map((e) => (
-                  <button
+                  <OptionCard
                     key={e.value}
+                    active={answers.experience === e.value}
                     onClick={() => set({ experience: e.value })}
-                    className={`rounded-xl px-3 py-2.5 border text-left ${
-                      answers.experience === e.value ? 'border-accent bg-accent/10' : 'border-line bg-sunken'
-                    }`}
-                  >
-                    <div className="font-semibold text-sm">{e.label}</div>
-                    <div className="text-xs text-ink-soft">{e.note}</div>
-                  </button>
+                    label={e.label}
+                    blurb={e.note}
+                  />
                 ))}
               </div>
             </Card>
@@ -189,15 +189,14 @@ export function WelcomePage() {
             <Card title="Days a week you can train">
               <div className="flex gap-2">
                 {[2, 3, 4, 5, 6].map((n) => (
-                  <button
+                  <Chip
                     key={n}
+                    active={answers.daysPerWeek === n}
                     onClick={() => set({ daysPerWeek: n })}
-                    className={`flex-1 py-2.5 rounded-xl border font-semibold ${
-                      answers.daysPerWeek === n ? 'border-accent bg-accent/10' : 'border-line bg-sunken text-ink-soft'
-                    }`}
+                    className="flex-1 justify-center text-center"
                   >
                     {n}
-                  </button>
+                  </Chip>
                 ))}
               </div>
             </Card>
@@ -214,21 +213,21 @@ export function WelcomePage() {
               {GEAR.map((g) => {
                 const on = equipment.includes(g.value);
                 return (
-                  <button
+                  <SelectableCard
                     key={g.value}
+                    selected={on}
                     onClick={() =>
                       setEquipment(on ? equipment.filter((e) => e !== g.value) : [...equipment, g.value])
                     }
-                    className={`rounded-xl px-3 py-3 border text-left ${
-                      on ? 'border-accent bg-accent/10' : 'border-line bg-sunken'
-                    }`}
+                    label={g.label}
+                    className="bg-sunken py-3"
                   >
                     <div className="font-semibold text-sm flex items-center gap-2">
                       {on && <Check size={14} className="text-accent" />}
                       {g.label}
                     </div>
                     <div className="text-xs text-ink-soft">{g.note}</div>
-                  </button>
+                  </SelectableCard>
                 );
               })}
             </div>
@@ -245,15 +244,14 @@ export function WelcomePage() {
               {PARTS.map((part) => {
                 const existing = injuries.find((i) => i.part === part);
                 return (
-                  <button
+                  <Chip
                     key={part}
+                    active={existing !== undefined}
                     onClick={() => (existing ? removeInjury(existing.id) : addInjury(part))}
-                    className={`rounded-lg px-3 py-2 border text-sm capitalize ${
-                      existing ? 'border-warn bg-warn/10 font-semibold' : 'border-line bg-sunken text-ink-soft'
-                    }`}
+                    className="capitalize"
                   >
                     {part}
-                  </button>
+                  </Chip>
                 );
               })}
             </div>
@@ -274,13 +272,13 @@ export function WelcomePage() {
                 <Card key={b.metricId} title={metric.label}>
                   <p className="text-sm text-ink-soft mb-3 leading-relaxed">{b.how}</p>
                   <div className="flex items-center gap-2">
-                    <input
+                    <Input
                       value={answers.benchmarks[b.metricId] ?? ''}
                       onChange={(e) => setBenchmark(b.metricId, e.target.value)}
                       placeholder={b.hint}
                       inputMode={metric.kind === 'number' ? 'decimal' : 'text'}
                       aria-label={metric.label}
-                      className="flex-1 bg-sunken border border-line rounded-xl px-3 py-2.5 placeholder:text-ink-soft/50"
+                      className="flex-1"
                     />
                     {metric.unit && <span className="text-sm text-ink-soft w-16">{metric.unit}</span>}
                   </div>
@@ -304,12 +302,11 @@ export function WelcomePage() {
                       <dt className="font-semibold">{STAT_LABELS[id].name}</dt>
                       <dd className="font-bold tabular-nums">{preview[id].value}</dd>
                     </div>
-                    <div className="h-1.5 rounded-full bg-sunken overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-accent"
-                        style={{ width: `${preview[id].value}%` }}
-                      />
-                    </div>
+                    <Meter
+                      value={preview[id].value / 100}
+                      label={STAT_LABELS[id].name}
+                      valueText={`${preview[id].value} of 100`}
+                    />
                   </div>
                 ))}
               </dl>
@@ -379,15 +376,9 @@ function Choices<T extends string>({
   return (
     <div className="flex flex-wrap gap-2">
       {options.map((o) => (
-        <button
-          key={o.value}
-          onClick={() => onChange(o.value)}
-          className={`rounded-lg px-3 py-2 border text-sm ${
-            value === o.value ? 'border-accent bg-accent/10 font-semibold' : 'border-line bg-sunken text-ink-soft'
-          }`}
-        >
+        <Chip key={o.value} active={value === o.value} onClick={() => onChange(o.value)}>
           {o.label}
-        </button>
+        </Chip>
       ))}
     </div>
   );
@@ -407,10 +398,10 @@ function GradeSelect({
   return (
     <label className="text-sm">
       <span className="block text-ink-soft mb-1">{label}</span>
-      <select
+      <Select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-sunken border border-line rounded-xl px-3 py-2.5"
+        
       >
         <option value="">—</option>
         {grades.map((g) => (
@@ -418,7 +409,7 @@ function GradeSelect({
             {g.label}
           </option>
         ))}
-      </select>
+      </Select>
     </label>
   );
 }

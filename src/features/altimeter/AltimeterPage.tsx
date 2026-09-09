@@ -12,6 +12,7 @@ import {
 import { ShareButton } from '@/features/share/ShareSheet';
 import { useSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
+import { Meter } from '@/ui/Meter';
 import { LoadBars } from '@/ui/charts/Charts';
 import { MountainMeter } from '@/ui/MountainMeter';
 import { PageHeader } from '@/ui/PageHeader';
@@ -85,12 +86,12 @@ export function AltimeterPage() {
                 {alt.everest.toGo.toLocaleString()} ft to go
               </span>
             </div>
-            <div className="h-2 rounded-full bg-sunken overflow-hidden">
-              <div
-                className="h-full bg-accent rounded-full"
-                style={{ width: `${Math.max(1, alt.everest.fraction * 100)}%` }}
-              />
-            </div>
+            <Meter
+              value={alt.everest.fraction}
+              size="lg"
+              label="Progress to Everest"
+              valueText={`${alt.feet.toLocaleString()} of ${EVEREST.feet.toLocaleString()} feet`}
+            />
             <p className="text-sm text-ink-soft mt-2.5 leading-relaxed">
               {alt.everest.etaLabel
                 ? `At ${alt.pace.toLocaleString()} ft a week, that is ${alt.everest.etaLabel}.`

@@ -1,4 +1,5 @@
 import type { LevelProgress, Rank } from '@/engine/economy';
+import { Meter } from './Meter';
 
 /**
  * Level, rank and progress in one strip.
@@ -17,7 +18,6 @@ export function LevelBar({
   next?: Rank | null;
   compact?: boolean;
 }) {
-  const pct = Math.round(progress.fraction * 100);
   return (
     <div>
       <div className="flex items-baseline gap-2 mb-1.5">
@@ -28,16 +28,12 @@ export function LevelBar({
           {progress.into.toLocaleString()} / {progress.width.toLocaleString()}
         </span>
       </div>
-      <div
-        className="h-2 rounded-full bg-sunken overflow-hidden"
-        role="progressbar"
-        aria-valuenow={pct}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={`Level ${progress.level}, ${pct}% to level ${progress.level + 1}`}
-      >
-        <div className="h-full bg-accent rounded-full" style={{ width: `${Math.max(2, pct)}%` }} />
-      </div>
+      <Meter
+        value={progress.fraction}
+        size="lg"
+        label={`Level ${progress.level}: progress to level ${progress.level + 1}`}
+        valueText={`${progress.into.toLocaleString()} of ${progress.width.toLocaleString()} XP`}
+      />
       {!compact && (
         <p className="text-xs text-ink-soft mt-1.5">
           {progress.toNext.toLocaleString()} XP to level {progress.level + 1}

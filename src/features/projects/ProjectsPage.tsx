@@ -11,6 +11,7 @@ import { useSkillEffects } from '@/store/skills';
 import { useSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { Input, Select } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 
 export function ProjectsPage() {
@@ -248,15 +249,15 @@ export function ProjectForm({
       )}
       <label className="text-sm block mb-3">
         <span className="block text-ink-soft mb-1">Name</span>
-        <input
+        <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Midnight Lightning"
-          className="w-full bg-sunken border border-line rounded-xl px-3 py-2.5"
+          
         />
       </label>
       <div className="flex gap-2 mb-3">
-        <select
+        <Select
           value={scale}
           onChange={(e) => {
             const next = e.target.value as GradeScale;
@@ -264,40 +265,40 @@ export function ProjectForm({
             setGrade(next === 'V' ? 'V5' : '5.11a');
           }}
           aria-label="Discipline"
-          className="bg-sunken border border-line rounded-xl px-2.5 py-2.5 text-sm"
+          size="compact"
         >
           <option value="V">Boulder</option>
           <option value="YDS">Route</option>
-        </select>
-        <select
+        </Select>
+        <Select
           value={grade}
           onChange={(e) => setGrade(e.target.value)}
           aria-label="Grade"
-          className="flex-1 bg-sunken border border-line rounded-xl px-2.5 py-2.5 text-sm"
+          className="flex-1" size="compact"
         >
           {grades.map((g) => (
             <option key={g.value} value={g.value}>
               {g.label}
             </option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
           value={setting}
           onChange={(e) => setSetting(e.target.value as 'indoor' | 'outdoor')}
           aria-label="Setting"
-          className="bg-sunken border border-line rounded-xl px-2.5 py-2.5 text-sm"
+          size="compact"
         >
           <option value="indoor">Indoor</option>
           <option value="outdoor">Outdoor</option>
-        </select>
+        </Select>
       </div>
       <label className="text-sm block mb-3">
         <span className="block text-ink-soft mb-1">Where (optional)</span>
-        <input
+        <Input
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           placeholder="Camp 4, or the cave"
-          className="w-full bg-sunken border border-line rounded-xl px-3 py-2.5"
+          
         />
       </label>
       <div className="flex gap-2">

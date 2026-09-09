@@ -6,6 +6,7 @@ import { DAY_SHORT, layoutsFor, planFromLayout, validateWeek, type WeekPlan } fr
 import { useProfile } from '@/store/profile';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { Chip, OptionCard, SelectableCard } from '@/ui/Chip';
 import { PageHeader } from '@/ui/PageHeader';
 
 const DAYS = [0, 1, 2, 3, 4, 5, 6] as const;
@@ -59,16 +60,13 @@ export function StartProgramPage({ params }: { params: { id: string } }) {
           <Card title="Track">
             <div className="grid grid-cols-1 gap-2">
               {program.tracks.map((t) => (
-                <button
+                <OptionCard
                   key={t.id}
+                  active={track === t.id}
                   onClick={() => setTrack(t.id)}
-                  className={`text-left rounded-xl p-3 border transition-colors ${
-                    track === t.id ? 'border-accent bg-accent/10' : 'border-line bg-sunken'
-                  }`}
-                >
-                  <div className="font-semibold text-sm">{t.name}</div>
-                  <p className="text-sm text-ink-soft mt-0.5">{t.description}</p>
-                </button>
+                  label={t.name}
+                  blurb={t.description}
+                />
               ))}
             </div>
           </Card>
@@ -76,30 +74,27 @@ export function StartProgramPage({ params }: { params: { id: string } }) {
 
         <Card title="Days per week">
           <div className="flex gap-2 flex-wrap">
-            <button
+            <Chip
+              active={daysPerWeek === undefined}
               onClick={() => {
                 setDaysPerWeek(undefined);
                 setLayoutIndex(0);
               }}
-              className={`rounded-xl px-3 py-2 border text-sm font-semibold ${
-                daysPerWeek === undefined ? 'border-accent bg-accent/10' : 'border-line bg-surface text-ink-soft'
-              }`}
             >
               As written
-            </button>
+            </Chip>
             {[2, 3, 4, 5, 6].map((n) => (
-              <button
+              <Chip
                 key={n}
+                active={daysPerWeek === n}
                 onClick={() => {
                   setDaysPerWeek(n);
                   setLayoutIndex(0);
                 }}
-                className={`rounded-xl px-3.5 py-2 border text-sm font-semibold ${
-                  daysPerWeek === n ? 'border-accent bg-accent/10' : 'border-line bg-surface text-ink-soft'
-                }`}
+                className="min-w-11 justify-center"
               >
                 {n}
-              </button>
+              </Chip>
             ))}
           </div>
         </Card>
@@ -117,12 +112,12 @@ export function StartProgramPage({ params }: { params: { id: string } }) {
               const selected = l === layout;
               const preview = planFromLayout(l);
               return (
-                <button
+                <SelectableCard
                   key={`${l.name}-${i}`}
+                  selected={selected}
                   onClick={() => setLayoutIndex(i)}
-                  className={`text-left rounded-xl p-3 border transition-colors ${
-                    selected ? 'border-accent bg-accent/10' : 'border-line bg-sunken'
-                  }`}
+                  label={`${l.name}: ${l.description}`}
+                  className="bg-sunken"
                 >
                   <div className="font-semibold text-sm">{l.name}</div>
                   <p className="text-sm text-ink-soft mt-0.5 mb-2">{l.description}</p>
@@ -143,7 +138,7 @@ export function StartProgramPage({ params }: { params: { id: string } }) {
                       );
                     })}
                   </div>
-                </button>
+                </SelectableCard>
               );
             })}
           </div>

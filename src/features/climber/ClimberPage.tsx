@@ -31,7 +31,7 @@ import { useSkills } from '@/store/skills';
 import { useSessions } from '@/store/sessions';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { Card } from '@/ui/Card';
-import { Swatch } from '@/ui/Chip';
+import { SelectableCard, Swatch } from '@/ui/Chip';
 import { Meter } from '@/ui/Meter';
 import { DisclosureButton } from '@/ui/Disclosure';
 import { Avatar } from '@/ui/Avatar';
@@ -228,9 +228,7 @@ function Split({ label, value, total }: { label: string; value: number; total: n
           {value.toLocaleString()} <span className="text-ink-soft font-normal">({pct}%)</span>
         </span>
       </div>
-      <div className="h-1.5 rounded-full bg-sunken overflow-hidden">
-        <div className="h-full bg-accent rounded-full" style={{ width: `${pct}%` }} />
-      </div>
+      <Meter value={pct / 100} label={label} valueText={`${value.toLocaleString()} of ${total.toLocaleString()}`} />
     </div>
   );
 }
@@ -274,16 +272,13 @@ function VitalityCard({ vitality }: { vitality: Vitality }) {
           {vitality.current} / {vitality.max}
         </span>
       </div>
-      <div
-        className="h-2 rounded-full bg-sunken overflow-hidden"
-        role="progressbar"
-        aria-valuenow={pct}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={`Vitality ${vitality.headline}, ${pct}%`}
-      >
-        <div className="h-full rounded-full" style={{ width: `${Math.max(2, pct)}%`, background: color }} />
-      </div>
+      <Meter
+        value={pct / 100}
+        size="lg"
+        color={color}
+        label={`Vitality: ${vitality.headline}`}
+        valueText={`${vitality.current} of ${vitality.max}`}
+      />
 
       {vitality.penalties.length === 0 ? (
         <p className="text-sm text-ink-soft mt-2.5 leading-relaxed">
@@ -408,8 +403,9 @@ function AppearanceCard({ palette }: { palette: AvatarPalette }) {
           {OUTFITS.map((outfit) => {
             const on = activeOutfit?.name === outfit.name;
             return (
-              <button
+              <SelectableCard
                 key={outfit.name}
+                selected={on}
                 onClick={() =>
                   setPalette({
                     top: outfit.top,
@@ -418,10 +414,8 @@ function AppearanceCard({ palette }: { palette: AvatarPalette }) {
                     gear: outfit.gear,
                   })
                 }
-                aria-pressed={on}
-                className={`rounded-xl border px-2 py-2 text-left ${
-                  on ? 'border-accent bg-accent/10' : 'border-line bg-sunken'
-                }`}
+                label={`Kit: ${outfit.name}`}
+                className="bg-sunken px-2 py-2"
               >
                 <div className="flex gap-1 mb-1.5">
                   {[outfit.top, outfit.shorts, outfit.shoes].map((color) => (
@@ -433,7 +427,7 @@ function AppearanceCard({ palette }: { palette: AvatarPalette }) {
                   ))}
                 </div>
                 <span className="text-xs font-semibold">{outfit.name}</span>
-              </button>
+              </SelectableCard>
             );
           })}
         </div>

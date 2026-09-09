@@ -11,6 +11,8 @@ import type { BodyPart } from '@/content/warmups';
 import { useProfile } from '@/store/profile';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { OptionCard } from '@/ui/Chip';
+import { Select } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 
 const EXPERIENCE: { value: Experience; label: string; hint: string }[] = [
@@ -65,15 +67,7 @@ function Chip({
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`text-left rounded-xl px-3 py-2.5 border text-sm transition-colors ${
-        selected ? 'border-accent bg-accent/10 text-ink' : 'border-line bg-surface text-ink-soft hover:text-ink'
-      }`}
-    >
-      {children}
-    </button>
+    <OptionCard active={selected} onClick={onClick} label={children} />
   );
 }
 
@@ -191,12 +185,9 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
   if (result) {
     return (
       <>
-        <button
-          onClick={() => setResult(null)}
-          className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5"
-        >
+        <Button variant="ghost" size="sm" onClick={() => setResult(null)} className="mb-1.5 -ml-3">
           <ArrowLeft size={15} /> Change my answers
-        </button>
+        </Button>
         <PageHeader
           title={result.fallback ? 'Start here for now' : 'Your program'}
           subtitle={
@@ -275,33 +266,25 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm">
               <span className="block text-ink-soft mb-1">Boulder</span>
-              <select
-                value={boulderGrade}
-                onChange={(e) => setBoulderGrade(e.target.value)}
-                className="w-full bg-sunken border border-line rounded-xl px-3 py-2.5"
-              >
+              <Select value={boulderGrade} onChange={(e) => setBoulderGrade(e.target.value)}>
                 <option value="">—</option>
                 {gradeOptions('V', V_GRADES).map((g) => (
                   <option key={g.value} value={g.value}>
                     {g.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="text-sm">
               <span className="block text-ink-soft mb-1">Route</span>
-              <select
-                value={sportGrade}
-                onChange={(e) => setSportGrade(e.target.value)}
-                className="w-full bg-sunken border border-line rounded-xl px-3 py-2.5"
-              >
+              <Select value={sportGrade} onChange={(e) => setSportGrade(e.target.value)}>
                 <option value="">—</option>
                 {gradeOptions('YDS', YDS_GRADES).map((g) => (
                   <option key={g.value} value={g.value}>
                     {g.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           </div>
         </Card>

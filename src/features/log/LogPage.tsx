@@ -27,6 +27,9 @@ import { useTemplates } from '@/store/templates';
 import { parseCount } from '@/content/types';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { Checkbox, Input, Select, TextArea } from '@/ui/Field';
+import { Chip } from '@/ui/Chip';
+import { IconButton } from '@/ui/IconButton';
 import { Term } from '@/ui/Term';
 import { TimerSheet } from '@/ui/TimerSheet';
 import { useGradeLabel, useGradeOptions } from '@/ui/useGrade';
@@ -112,13 +115,9 @@ export function LogPage({ params }: { params: { date: string } }) {
       </Link>
 
       <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={() => navigate(`/log/${addDays(date, -1)}`)}
-          className="p-2.5 -m-1 text-ink-soft"
-          aria-label="Previous day"
-        >
+        <IconButton onClick={() => navigate(`/log/${addDays(date, -1)}`)} label="Previous day">
           <ArrowLeft size={18} />
-        </button>
+        </IconButton>
         <div className="text-center">
           <h1 className="text-xl font-black tracking-tight">{heading}</h1>
           {day?.week && (
@@ -129,13 +128,9 @@ export function LogPage({ params }: { params: { date: string } }) {
             </p>
           )}
         </div>
-        <button
-          onClick={() => navigate(`/log/${addDays(date, 1)}`)}
-          className="p-2.5 -m-1 text-ink-soft rotate-180"
-          aria-label="Next day"
-        >
-          <ArrowLeft size={18} />
-        </button>
+        <IconButton onClick={() => navigate(`/log/${addDays(date, 1)}`)} label="Next day">
+          <ArrowLeft size={18} className="rotate-180" />
+        </IconButton>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
@@ -275,12 +270,9 @@ function WarmupCard({
             <span className="text-sm text-ink-soft">
               {Math.round(plan.totalSeconds / 60)} min · {plan.exercises.length} exercises
             </span>
-            <button
-              onClick={() => build(Math.floor(Math.random() * 1_000_000))}
-              className="text-sm font-semibold text-accent inline-flex items-center gap-1"
-            >
+            <Button variant="ghost" size="sm" onClick={() => build(Math.floor(Math.random() * 1_000_000))} className="text-accent">
               <RotateCw size={14} /> Swap
-            </button>
+            </Button>
           </div>
 
           {plan.injuryFilterRelaxed && (
@@ -467,9 +459,9 @@ function SessionEditor({
             <span className="text-lg leading-none">{type?.icon ?? '🧗'}</span>
             <h2 className="font-bold">{type?.name ?? 'Session'}</h2>
           </div>
-          <button onClick={onDelete} className="text-ink-soft p-2.5 -m-1.5" aria-label="Delete session">
+          <IconButton onClick={onDelete} label="Delete session">
             <Trash2 size={16} />
-          </button>
+          </IconButton>
         </div>
         {session.completed ? (
           <p className="text-sm text-positive flex items-center gap-1.5">
@@ -521,9 +513,10 @@ function SessionEditor({
             {REST_ITEMS.map((item) => {
               const checked = session.restChecklist?.[item.key] ?? false;
               return (
-                <button
+                <Checkbox
                   key={item.key}
-                  onClick={() =>
+                  checked={checked}
+                  onChange={() =>
                     patch({
                       restChecklist: {
                         hydration: false,
@@ -535,19 +528,9 @@ function SessionEditor({
                       },
                     })
                   }
-                  className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 border text-sm text-left ${
-                    checked ? 'border-accent bg-accent/10' : 'border-line bg-sunken text-ink-soft'
-                  }`}
-                >
-                  <span
-                    className={`w-4 h-4 rounded border flex items-center justify-center ${
-                      checked ? 'bg-accent border-accent' : 'border-line'
-                    }`}
-                  >
-                    {checked && <Check size={12} className="text-accent-ink" />}
-                  </span>
-                  {item.label}
-                </button>
+                  label={item.label}
+                  className="rounded-xl px-3 py-2.5 border border-line bg-sunken items-center"
+                />
               );
             })}
           </div>
@@ -559,51 +542,51 @@ function SessionEditor({
                 items refuse to shrink below their longest option, so without
                 wrapping the Add button lands outside the card. */}
             <div className="flex flex-wrap gap-2 mb-3">
-              <select
+              <Select
                 value={scale}
                 onChange={(e) => {
                   const next = e.target.value as GradeScale;
                   setScale(next);
                   setGrade(next === 'V' ? 'V3' : '5.10a');
                 }}
-                className="min-w-0 bg-sunken border border-line rounded-xl px-2.5 py-2 text-sm"
+                className="min-w-0" size="compact"
               >
                 <option value="V">Boulder</option>
                 <option value="YDS">Route</option>
-              </select>
-              <select
+              </Select>
+              <Select
                 value={grade}
                 onChange={(e) => setGrade(e.target.value)}
-                className="flex-1 min-w-16 bg-sunken border border-line rounded-xl px-2.5 py-2 text-sm"
+                className="flex-1 min-w-16" size="compact"
               >
                 {grades.map((g) => (
                   <option key={g.value} value={g.value}>
                     {g.label}
                   </option>
                 ))}
-              </select>
-              <select
+              </Select>
+              <Select
                 value={outcome}
                 onChange={(e) => setOutcome(e.target.value as typeof outcome)}
                 aria-label="How it went"
-                className="min-w-0 bg-sunken border border-line rounded-xl px-2.5 py-2 text-sm"
+                className="min-w-0" size="compact"
               >
                 <option value="onsight">On-sight</option>
                 <option value="flash">Flash</option>
                 <option value="send">Sent</option>
                 <option value="attempt">Tried</option>
-              </select>
+              </Select>
               <Button size="sm" onClick={addClimb} aria-label="Add climb">
                 <Plus size={16} />
               </Button>
             </div>
 
-            <input
+            <Input
               value={climbName}
               onChange={(e) => setClimbName(e.target.value)}
               placeholder="Name it (optional) — named climbs can become projects"
               aria-label="Climb name"
-              className="w-full bg-sunken border border-line rounded-xl px-3 py-2 text-sm mb-3"
+              className="mb-3"
             />
 
             {session.climbs.length === 0 ? (
@@ -623,13 +606,13 @@ function SessionEditor({
                             ? 'flashed'
                             : 'sent'}
                     </span>
-                    <button onClick={() => bump(c, -1)} className="w-7 h-7 rounded-lg bg-surface border border-line">
+                    <IconButton onClick={() => bump(c, -1)} label={`One fewer ${c.grade}`} className="border border-line bg-surface" inline={false}>
                       −
-                    </button>
+                    </IconButton>
                     <span className="w-6 text-center font-semibold text-sm">{c.count}</span>
-                    <button onClick={() => bump(c, 1)} className="w-7 h-7 rounded-lg bg-surface border border-line">
+                    <IconButton onClick={() => bump(c, 1)} label={`One more ${c.grade}`} className="border border-line bg-surface" inline={false}>
                       +
-                    </button>
+                    </IconButton>
                   </li>
                 ))}
               </ul>
@@ -652,15 +635,12 @@ function SessionEditor({
                           key={`${ex.name}-${i}`}
                           className="flex items-start gap-2 bg-sunken rounded-xl px-3 py-2.5"
                         >
-                          <button
-                            onClick={() => markExerciseDone(ex.name)}
-                            className={`w-5 h-5 rounded border shrink-0 mt-0.5 flex items-center justify-center ${
-                              isDone ? 'bg-accent border-accent' : 'border-line'
-                            }`}
-                            aria-label={`Mark ${ex.name} done`}
-                          >
-                            {isDone && <Check size={13} className="text-accent-ink" />}
-                          </button>
+                          <Checkbox
+                            checked={isDone}
+                            onChange={() => markExerciseDone(ex.name)}
+                            label={<span className="sr-only">Mark {ex.name} done</span>}
+                            className="shrink-0"
+                          />
                           <div className="flex-1 min-w-0">
                             <div className={`font-semibold text-sm ${isDone ? 'line-through opacity-60' : ''}`}>
                               <Term name={ex.name} />
@@ -685,7 +665,9 @@ function SessionEditor({
                             })()}
                           </div>
                           {protocol?.timer && (
-                            <button
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() =>
                                 setTimer({
                                   protocolId: protocol.id,
@@ -693,11 +675,11 @@ function SessionEditor({
                                   sets: parseCount(ex.sets) ?? 1,
                                 })
                               }
-                              className="shrink-0 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-accent border border-accent/40 rounded-lg px-2 py-1.5"
+                              className="shrink-0 text-xs font-bold uppercase tracking-wide text-accent border-accent/40"
                             >
                               <Timer size={13} />
                               Timer
-                            </button>
+                            </Button>
                           )}
                         </li>
                       );
@@ -717,14 +699,13 @@ function SessionEditor({
                     {day.drill.duration} · {day.drill.focus}
                   </p>
                 </div>
-                <button
+                <Chip
+                  active={Boolean(session.drillDone)}
                   onClick={() => patch({ drillDone: !session.drillDone })}
-                  className={`shrink-0 text-xs font-bold uppercase tracking-wide rounded-lg px-2.5 py-1.5 border ${
-                    session.drillDone ? 'border-accent bg-accent/10 text-ink' : 'border-line text-ink-soft'
-                  }`}
+                  className="shrink-0 text-xs font-bold uppercase tracking-wide"
                 >
                   {session.drillDone ? 'Done' : 'Mark done'}
-                </button>
+                </Chip>
               </div>
               <p className="text-sm text-ink-soft leading-relaxed">{day.drill.description}</p>
               {(() => {
@@ -742,7 +723,9 @@ function SessionEditor({
                 const protocol = day.drill.protocolId ? getProtocol(day.drill.protocolId) : undefined;
                 if (!protocol?.timer) return null;
                 return (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() =>
                       setTimer({
                         protocolId: protocol.id,
@@ -751,10 +734,10 @@ function SessionEditor({
                         ...(day.drill!.timerOverride ? { override: day.drill!.timerOverride } : {}),
                       })
                     }
-                    className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-accent"
+                    className="mt-3 text-accent"
                   >
                     <Timer size={15} /> Open the {protocol.name} timer
-                  </button>
+                  </Button>
                 );
               })()}
             </Card>
@@ -770,48 +753,46 @@ function SessionEditor({
               </div>
               <div className="grid grid-cols-10 gap-1">
                 {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                  <button
+                  <Chip
                     key={n}
+                    active={session.rpe === n}
                     onClick={() => patch({ rpe: n })}
-                    className={`py-2 rounded-lg text-xs font-semibold border ${
-                      session.rpe === n ? 'border-accent bg-accent/15' : 'border-line bg-sunken text-ink-soft'
-                    }`}
+                    className="justify-center text-center px-0 text-xs"
                   >
                     {n}
-                  </button>
+                  </Chip>
                 ))}
               </div>
             </div>
             <label className="text-sm block mb-3">
               <span className="block text-ink-soft mb-1">Duration (minutes)</span>
-              <input
+              <Input
                 type="number"
                 inputMode="numeric"
                 value={session.durationMin ?? ''}
                 placeholder={live && !stale ? 'From the clock when you finish' : ''}
                 onChange={(e) => patch({ durationMin: e.target.value ? Number(e.target.value) : undefined })}
-                className="w-full bg-sunken border border-line rounded-xl px-3 py-2.5 placeholder:text-ink-soft/60"
+                
               />
             </label>
-            <button
+            <Chip
+              active={Boolean(session.warmup)}
               onClick={() => patch({ warmup: !session.warmup })}
-              className={`text-sm rounded-xl px-3 py-2.5 border w-full text-left ${
-                session.warmup ? 'border-accent bg-accent/10' : 'border-line bg-sunken text-ink-soft'
-              }`}
+              className="w-full"
             >
               {session.warmup ? '✓ Warmed up' : 'Did you warm up?'}
-            </button>
+            </Chip>
           </Card>
         </>
       )}
 
       <Card title="Notes">
-        <textarea
+        <TextArea
           value={session.notes ?? ''}
           onChange={(e) => patch({ notes: e.target.value })}
           rows={3}
           placeholder="How did it feel? What worked?"
-          className="w-full bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm resize-y"
+          className="resize-y"
         />
       </Card>
 
@@ -954,17 +935,15 @@ function ProjectBurnsCard({
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {OUTCOMES.map((o) => (
-                  <button
+                  <Button
                     key={o.value}
+                    variant="outline"
+                    size="sm"
                     onClick={() => bump(project.id, o.value, 1)}
-                    className={`rounded-lg px-2.5 py-1.5 border text-xs font-semibold ${
-                      o.value === 'send'
-                        ? 'border-positive/50 text-positive'
-                        : 'border-line bg-sunken text-ink-soft'
-                    }`}
+                    className={`text-xs ${o.value === 'send' ? 'border-positive/50 text-positive' : 'bg-sunken text-ink-soft'}`}
                   >
                     {o.label}
-                  </button>
+                  </Button>
                 ))}
               </div>
               {mine.length > 0 && (
@@ -973,20 +952,20 @@ function ProjectBurnsCard({
                     <li key={a.id} className="flex flex-wrap items-center gap-1.5">
                       <span className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 border border-accent/40 pl-2.5 pr-1 py-1 text-xs font-semibold">
                         {OUTCOMES.find((o) => o.value === a.outcome)?.label} ×{a.count}
-                        <button
+                        <IconButton
                           onClick={() => bump(project.id, a.outcome, -1)}
-                          className="w-5 h-5 rounded flex items-center justify-center text-ink-soft"
-                          aria-label={`Remove one ${a.outcome} burn`}
+                          label={`Remove one ${a.outcome} burn`}
+                          className="w-8 h-8"
                         >
                           −
-                        </button>
+                        </IconButton>
                       </span>
-                      <input
+                      <Input
                         value={a.note ?? ''}
                         onChange={(e) => note(a, e.target.value)}
                         placeholder="What happened?"
                         aria-label={`Note about the ${a.outcome} burns`}
-                        className="flex-1 min-w-32 bg-sunken border border-line rounded-lg px-2.5 py-1.5 text-xs"
+                        className="flex-1 min-w-32" size="compact"
                       />
                     </li>
                   ))}
@@ -1146,12 +1125,12 @@ function SaveTemplateCard({ session, typeName }: { session: Session; typeName?: 
         The climbs are not saved.
       </p>
       <div className="flex flex-wrap gap-2">
-        <input
+        <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={suggestName(session, typeName)}
           aria-label="Template name"
-          className="flex-1 min-w-0 bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm"
+          className="flex-1 min-w-0"
         />
         <Button
           size="sm"
@@ -1184,16 +1163,10 @@ function SessionSwitcher({
       {sessions.map((s, i) => {
         const typeName = program?.sessionTypes.find((t) => t.id === s.sessionTypeId)?.name;
         return (
-          <button
-            key={s.id}
-            onClick={() => onSelect(s.id)}
-            className={`rounded-xl px-3 py-2 border text-left text-sm ${
-              s.id === current.id ? 'border-accent bg-accent/10' : 'border-line bg-sunken text-ink-soft'
-            }`}
-          >
+          <Chip key={s.id} active={s.id === current.id} onClick={() => onSelect(s.id)}>
             <span className="font-semibold">#{i + 1}</span>{' '}
             <span className="text-xs">{describeSession(s, typeName)}</span>
-          </button>
+          </Chip>
         );
       })}
     </div>
@@ -1228,9 +1201,9 @@ function CorrectionCard({
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="text-sm text-ink-soft underline self-center py-1.5">
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)} className="underline self-center">
         Logged on the wrong day?
-      </button>
+      </Button>
     );
   }
 
@@ -1239,12 +1212,12 @@ function CorrectionCard({
       <label className="text-sm block mb-3">
         <span className="block text-ink-soft mb-1">Move to a different day</span>
         <div className="flex flex-wrap gap-2">
-          <input
+          <Input
             type="date"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             aria-label="New date"
-            className="flex-1 min-w-0 bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm"
+            className="flex-1 min-w-0"
           />
           <Button
             size="sm"

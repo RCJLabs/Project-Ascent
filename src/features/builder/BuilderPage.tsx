@@ -22,6 +22,9 @@ import { useCustomPrograms } from '@/store/programs';
 import { useGradeOptions } from '@/ui/useGrade';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { Chip } from '@/ui/Chip';
+import { IconButton } from '@/ui/IconButton';
+import { Input, Select, TextArea } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 
 const ICONS = ['🧗', '✋', '⚡', '🔁', '🏋️', '🧘', '😴', '🪨', '🎯', '🔥', '🌀', '🦶'];
@@ -88,38 +91,35 @@ export function BuilderPage({ params }: { params: { id: string } }) {
 
         <Card title="What it is">
           <Field label="Name">
-            <input
+            <Input
               value={program.name}
               onChange={(e) => edit({ name: e.target.value })}
-              className={input}
               aria-label="Program name"
             />
           </Field>
           <Field label="Your name (optional)">
-            <input
+            <Input
               value={program.author ?? ''}
               onChange={(e) => edit({ author: e.target.value || undefined })}
               placeholder="Shown on the program if you share it"
-              className={input}
               aria-label="Author"
             />
           </Field>
           <Field label="One-line subtitle">
-            <input
+            <Input
               value={program.subtitle}
               onChange={(e) => edit({ subtitle: e.target.value })}
               placeholder="12-Week Finger Strength"
-              className={input}
               aria-label="Subtitle"
             />
           </Field>
           <Field label="What is it for?">
-            <textarea
+            <TextArea
               value={program.intro.pitch}
               onChange={(e) => edit({ intro: { ...program.intro, pitch: e.target.value } })}
               rows={3}
               placeholder="Who this suits, and what it should do for them."
-              className={`${input} resize-y`}
+              className="resize-y"
               aria-label="Description"
             />
           </Field>
@@ -139,8 +139,9 @@ export function BuilderPage({ params }: { params: { id: string } }) {
               {EQUIPMENT.map((e) => {
                 const on = program.equipment.includes(e);
                 return (
-                  <button
+                  <Chip
                     key={e}
+                    active={on}
                     onClick={() =>
                       edit({
                         equipment: on
@@ -148,17 +149,16 @@ export function BuilderPage({ params }: { params: { id: string } }) {
                           : [...program.equipment, e],
                       })
                     }
-                    className={chip(on)}
                   >
                     {EQUIPMENT_LABELS[e]}
-                  </button>
+                  </Chip>
                 );
               })}
             </div>
           </Field>
           <Field label="Grades it suits">
             <div className="flex flex-wrap gap-2">
-              <select
+              <Select
                 value={program.gradeRange.scale}
                 onChange={(e) => {
                   const scale = e.target.value as 'V' | 'YDS';
@@ -167,21 +167,21 @@ export function BuilderPage({ params }: { params: { id: string } }) {
                     gradeRange: { scale, min: list[0]!, max: list.at(-1)!, label: `${list[0]}–${list.at(-1)}` },
                   });
                 }}
-                className={`${input} flex-1 min-w-0`}
+                className="flex-1 min-w-0"
                 aria-label="Grade scale"
               >
                 <option value="V">Boulder</option>
                 <option value="YDS">Routes</option>
-              </select>
+              </Select>
               {(['min', 'max'] as const).map((end) => (
-                <select
+                <Select
                   key={end}
                   value={program.gradeRange[end]}
                   onChange={(e) => {
                     const next = { ...program.gradeRange, [end]: e.target.value };
                     edit({ gradeRange: { ...next, label: `${next.min}–${next.max}` } });
                   }}
-                  className={`${input} flex-1 min-w-0`}
+                  className="flex-1 min-w-0"
                   aria-label={end === 'min' ? 'Easiest grade' : 'Hardest grade'}
                 >
                   {gradeOptions(program.gradeRange.scale, ladder).map((g) => (
@@ -189,7 +189,7 @@ export function BuilderPage({ params }: { params: { id: string } }) {
                       {g.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               ))}
             </div>
           </Field>
@@ -197,7 +197,7 @@ export function BuilderPage({ params }: { params: { id: string } }) {
 
         <Card title="Length and blocks">
           <Field label="Weeks">
-            <input
+            <Input
               type="number"
               min={1}
               max={MAX_WEEKS}
@@ -214,7 +214,6 @@ export function BuilderPage({ params }: { params: { id: string } }) {
                     : {}),
                 });
               }}
-              className={input}
               aria-label="Weeks"
             />
           </Field>
@@ -223,23 +222,23 @@ export function BuilderPage({ params }: { params: { id: string } }) {
             {program.phases.map((phase, i) => (
               <div key={phase.id} className="bg-sunken rounded-xl p-3">
                 <div className="flex gap-2 mb-2">
-                  <input
+                  <Input
                     value={phase.name}
                     onChange={(e) => edit({ phases: replace(program.phases, i, { name: e.target.value }) })}
                     placeholder={`Block ${i + 1}`}
                     aria-label={`Block ${i + 1} name`}
-                    className={`${input} flex-1 min-w-0`}
+                    className="flex-1 min-w-0"
                   />
                   {program.phases.length > 1 && (
-                    <button
+                    <IconButton
                       onClick={() =>
                         edit({ phases: retile(program.phases.filter((_, j) => j !== i), program.weeks) })
                       }
-                      className="text-danger p-2.5 -m-1"
-                      aria-label={`Remove ${phase.name || `block ${i + 1}`}`}
+                      tone="danger"
+                      label={`Remove ${phase.name || `block ${i + 1}`}`}
                     >
                       <Trash2 size={15} />
-                    </button>
+                    </IconButton>
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-sm">
@@ -286,8 +285,9 @@ export function BuilderPage({ params }: { params: { id: string } }) {
               {Array.from({ length: program.weeks }, (_, i) => i + 1).map((week) => {
                 const on = (program.deloadWeeks ?? []).includes(week);
                 return (
-                  <button
+                  <Chip
                     key={week}
+                    active={on}
                     onClick={() =>
                       edit({
                         deloadWeeks: on
@@ -295,13 +295,10 @@ export function BuilderPage({ params }: { params: { id: string } }) {
                           : [...(program.deloadWeeks ?? []), week].sort((a, b) => a - b),
                       })
                     }
-                    className={`w-9 h-9 rounded-lg border text-xs font-semibold ${
-                      on ? 'border-warn bg-warn/15 text-warn' : 'border-line bg-sunken text-ink-soft'
-                    }`}
-                    aria-label={`Week ${week}${on ? ', a deload' : ''}`}
+                    className="w-11 justify-center text-center px-0 text-xs"
                   >
                     {week}
-                  </button>
+                  </Chip>
                 );
               })}
             </div>
@@ -358,10 +355,6 @@ function shareProgram(program: Program): void {
   URL.revokeObjectURL(url);
 }
 
-const input = 'w-full bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm';
-const chip = (on: boolean) =>
-  `rounded-lg px-3 py-2 border text-sm ${on ? 'border-accent bg-accent/10 font-semibold' : 'border-line bg-sunken text-ink-soft'}`;
-
 function replace<T>(list: T[], index: number, patch: Partial<T>): T[] {
   return list.map((item, i) => (i === index ? { ...item, ...patch } : item));
 }
@@ -387,9 +380,9 @@ function Row<T extends string>({
   return (
     <div className="flex flex-wrap gap-2">
       {options.map((o) => (
-        <button key={o.value} onClick={() => onChange(o.value)} className={chip(value === o.value)}>
+        <Chip key={o.value} active={value === o.value} onClick={() => onChange(o.value)}>
           {o.label}
-        </button>
+        </Chip>
       ))}
     </div>
   );
@@ -397,7 +390,7 @@ function Row<T extends string>({
 
 function NumberBox({ value, label, onChange }: { value: number; label: string; onChange: (n: number) => void }) {
   return (
-    <input
+    <Input
       type="number"
       min={1}
       value={value}
@@ -475,7 +468,7 @@ function SessionTypesCard({ program, onChange }: { program: Program; onChange: (
         {program.sessionTypes.map((type, i) => (
           <div key={type.id} className="bg-sunken rounded-xl p-3">
             <div className="flex gap-2 mb-2">
-              <select
+              <Select
                 value={type.icon}
                 onChange={(e) => onChange({ sessionTypes: replace(program.sessionTypes, i, { icon: e.target.value }) })}
                 aria-label={`${type.name} icon`}
@@ -486,37 +479,37 @@ function SessionTypesCard({ program, onChange }: { program: Program; onChange: (
                     {icon}
                   </option>
                 ))}
-              </select>
-              <input
+              </Select>
+              <Input
                 value={type.name}
                 onChange={(e) => onChange({ sessionTypes: replace(program.sessionTypes, i, { name: e.target.value }) })}
                 aria-label={`Session type ${i + 1} name`}
-                className={`${input} flex-1 min-w-0`}
+                className="flex-1 min-w-0"
               />
-              <button
+              <IconButton
+                tone="danger"
                 onClick={() => onChange(removeSessionType(program, type.id))}
-                className="text-danger p-2.5 -m-1"
-                aria-label={`Remove ${type.name}`}
+                label={`Remove ${type.name}`}
               >
                 <Trash2 size={15} />
-              </button>
+              </IconButton>
             </div>
-            <input
+            <Input
               value={type.description}
               onChange={(e) =>
                 onChange({ sessionTypes: replace(program.sessionTypes, i, { description: e.target.value }) })
               }
               placeholder="What happens in this session"
               aria-label={`${type.name} description`}
-              className={`${input} mb-2`}
+              className="mb-2"
             />
             <div className="flex flex-wrap items-center gap-2">
-              <button
+              <Chip
+                active={Boolean(type.isRest)}
                 onClick={() => onChange({ sessionTypes: replace(program.sessionTypes, i, { isRest: !type.isRest }) })}
-                className={chip(Boolean(type.isRest))}
               >
                 {type.isRest ? '✓ Rest day' : 'Mark as a rest day'}
-              </button>
+              </Chip>
               {!type.isRest && (
                 <Link
                   href={`/build/${program.id}/session/${type.id}`}
@@ -530,13 +523,13 @@ function SessionTypesCard({ program, onChange }: { program: Program; onChange: (
         ))}
       </div>
       <div className="flex flex-wrap gap-2">
-        <input
+        <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && add()}
           placeholder="Finger power"
           aria-label="New session type"
-          className={`${input} flex-1 min-w-0`}
+          className="flex-1 min-w-0"
         />
         <Button size="sm" onClick={add}>
           <Plus size={14} /> Add
@@ -572,11 +565,11 @@ function LayoutCard({ program, onChange }: { program: Program; onChange: (p: Par
         {DAY_SHORT.map((label, day) => (
           <div key={label} className="flex items-center gap-2">
             <span className="w-10 text-sm font-semibold text-ink-soft">{label}</span>
-            <select
+            <Select
               value={slots[day as DayOfWeek] ?? ''}
               onChange={(e) => set(day as DayOfWeek, e.target.value)}
               aria-label={`${label} session`}
-              className={`${input} flex-1 min-w-0`}
+              className="flex-1 min-w-0"
             >
               <option value="">Rest</option>
               {program.sessionTypes.map((t) => (
@@ -584,7 +577,7 @@ function LayoutCard({ program, onChange }: { program: Program; onChange: (p: Par
                   {t.icon} {t.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         ))}
       </div>
@@ -630,43 +623,43 @@ function RulesCard({ program, onChange }: { program: Program; onChange: (p: Part
           <div key={i} className="bg-sunken rounded-xl p-3">
             <div className="flex items-start gap-2 mb-2">
               <span className="text-sm font-semibold flex-1">{ruleTitle(c, program)}</span>
-              <button
+              <IconButton
+                tone="danger"
                 onClick={() => onChange({ constraints: program.constraints.filter((_, j) => j !== i) })}
-                className="text-danger p-2.5 -m-1"
-                aria-label={`Remove rule ${i + 1}`}
+                label={`Remove rule ${i + 1}`}
               >
                 <Trash2 size={15} />
-              </button>
+              </IconButton>
             </div>
             <RuleFields
               constraint={c}
               types={types}
               onChange={(next) => onChange({ constraints: replace(program.constraints, i, next) })}
             />
-            <input
+            <Input
               value={c.note}
               onChange={(e) => onChange({ constraints: replace(program.constraints, i, { note: e.target.value }) })}
               placeholder="Why — shown when the rule fires"
               aria-label={`Rule ${i + 1} note`}
-              className={`${input} mt-2`}
+              className="mt-2"
             />
           </div>
         ))}
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <select
+        <Select
           value={kind}
           onChange={(e) => setKind(e.target.value as typeof kind)}
           aria-label="Rule type"
-          className={`${input} flex-1 min-w-0`}
+          className="flex-1 min-w-0"
         >
           {RULE_KINDS.map((r) => (
             <option key={r.kind} value={r.kind}>
               {r.label}
             </option>
           ))}
-        </select>
+        </Select>
         <Button size="sm" onClick={add} disabled={types.length === 0 && kind !== 'sessions-per-week'}>
           <Plus size={14} /> Add
         </Button>
@@ -707,13 +700,13 @@ function RuleFields({
     case 'sessions-per-week':
       return (
         <div className="flex items-center gap-2 text-sm">
-          <input
+          <Input
             type="number" min={0} value={constraint.min} aria-label="Fewest sessions"
             onChange={(e) => onChange({ min: Number(e.target.value) || 0 } as Partial<Constraint>)}
             className={small}
           />
           <span className="text-ink-soft">to</span>
-          <input
+          <Input
             type="number" min={0} value={constraint.max} aria-label="Most sessions"
             onChange={(e) => onChange({ max: Number(e.target.value) || 0 } as Partial<Constraint>)}
             className={small}
@@ -723,7 +716,7 @@ function RuleFields({
     case 'min-gap-hours':
       return (
         <div className="flex items-center gap-2 text-sm">
-          <select
+          <Select
             value={constraint.between[0] ?? ''} aria-label="Which sessions"
             onChange={(e) => onChange({ between: [e.target.value] } as Partial<Constraint>)}
             className={picker}
@@ -731,8 +724,8 @@ function RuleFields({
             {types.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
-          </select>
-          <input
+          </Select>
+          <Input
             type="number" min={0} value={constraint.hours} aria-label="Hours"
             onChange={(e) => onChange({ hours: Number(e.target.value) || 0 } as Partial<Constraint>)}
             className={small}
@@ -743,7 +736,7 @@ function RuleFields({
     case 'max-per-week':
       return (
         <div className="flex items-center gap-2 text-sm">
-          <select
+          <Select
             value={constraint.sessionTypeId} aria-label="Which session"
             onChange={(e) => onChange({ sessionTypeId: e.target.value } as Partial<Constraint>)}
             className={picker}
@@ -751,8 +744,8 @@ function RuleFields({
             {types.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
-          </select>
-          <input
+          </Select>
+          <Input
             type="number" min={1} value={constraint.count} aria-label="How many"
             onChange={(e) => onChange({ count: Number(e.target.value) || 1 } as Partial<Constraint>)}
             className={small}
@@ -762,21 +755,21 @@ function RuleFields({
     case 'not-day-before':
       return (
         <div className="flex items-center gap-2 text-sm">
-          <select
+          <Select
             value={constraint.sessionTypeId} aria-label="Which session"
             onChange={(e) => onChange({ sessionTypeId: e.target.value } as Partial<Constraint>)}
             className={picker}
           >
             {types.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
-          </select>
+          </Select>
           <span className="text-ink-soft shrink-0">before</span>
-          <select
+          <Select
             value={constraint.before} aria-label="Before which session"
             onChange={(e) => onChange({ before: e.target.value } as Partial<Constraint>)}
             className={picker}
           >
             {types.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
-          </select>
+          </Select>
         </div>
       );
     case 'order-in-week':
@@ -818,8 +811,9 @@ function AssessmentsCard({ program, onChange }: { program: Program; onChange: (p
           {metrics.map((metric) => {
             const on = chosen.has(metric.id);
             return (
-              <button
+              <Chip
                 key={metric.id}
+                active={on}
                 onClick={() =>
                   onChange({
                     assessments: on
@@ -827,10 +821,9 @@ function AssessmentsCard({ program, onChange }: { program: Program; onChange: (p
                       : [...program.assessments, metric.id],
                   })
                 }
-                className={chip(on)}
               >
                 {metric.label}
-              </button>
+              </Chip>
             );
           })}
         </div>

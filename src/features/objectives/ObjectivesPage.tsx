@@ -26,10 +26,11 @@ import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { OptionCard } from '@/ui/Chip';
+import { Meter } from '@/ui/Meter';
+import { Input, Select } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 import { useGradeOptions } from '@/ui/useGrade';
-
-const input = 'w-full bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm';
 
 const KINDS: { value: ObjectiveKind; label: string; blurb: string }[] = [
   { value: 'boulder', label: 'A boulder', blurb: 'A named line' },
@@ -114,12 +115,12 @@ export function ObjectivesPage() {
                 {objective.grade && <span className="text-xs font-semibold text-accent">{objective.grade}</span>}
                 <ArrowRight size={15} className="text-ink-soft shrink-0" />
               </div>
-              <div className="h-1.5 rounded-full bg-sunken overflow-hidden mb-1.5">
-                <div
-                  className="h-full rounded-full bg-accent"
-                  style={{ width: `${Math.round(progress.readiness * 100)}%` }}
-                />
-              </div>
+              <Meter
+                value={progress.readiness}
+                label={`${objective.name} readiness`}
+                valueText={`${progress.met} of ${progress.total} requirements met`}
+                className="mb-1.5"
+              />
               <p className="text-xs text-ink-soft">
                 {objective.status === 'sent'
                   ? 'Done.'
@@ -189,49 +190,46 @@ function NewObjective() {
 
   return (
     <Card title="What are you training for?">
-      <input
+      <Input
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="The Nose, first V8, Font in October"
         aria-label="Objective name"
-        className={`${input} mb-3`}
+        className="mb-3"
         autoFocus
       />
 
       <div className="grid grid-cols-2 gap-2 mb-3">
         {KINDS.map((k) => (
-          <button
+          <OptionCard
             key={k.value}
+            active={kind === k.value}
             onClick={() => setKind(k.value)}
-            className={`rounded-xl px-3 py-2.5 border text-left ${
-              kind === k.value ? 'border-accent bg-accent/10' : 'border-line bg-sunken'
-            }`}
-          >
-            <div className="font-semibold text-sm">{k.label}</div>
-            <div className="text-xs text-ink-soft">{k.blurb}</div>
-          </button>
+            label={k.label}
+            blurb={k.blurb}
+          />
         ))}
       </div>
 
       {(kind === 'boulder' || kind === 'route' || kind === 'other') && (
         <div className="flex flex-wrap gap-2 mb-3">
-          <select
+          <Select
             value={scale}
             onChange={(e) => {
               setScale(e.target.value as GradeScale);
               setGrade('');
             }}
             aria-label="Grade scale"
-            className={`${input} flex-1 min-w-0`}
+            className="flex-1 min-w-0"
           >
             <option value="V">Boulder</option>
             <option value="YDS">Route</option>
-          </select>
-          <select
+          </Select>
+          <Select
             value={grade}
             onChange={(e) => setGrade(e.target.value)}
             aria-label="Grade"
-            className={`${input} flex-1 min-w-0`}
+            className="flex-1 min-w-0"
           >
             <option value="">No grade</option>
             {gradeOptions(scale, ladder).map((g) => (
@@ -239,19 +237,18 @@ function NewObjective() {
                 {g.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
       <label className="text-sm block mb-3">
         <span className="block text-ink-soft mb-1">When do you want to be on it? (optional)</span>
-        <input
+        <Input
           type="date"
           min={today()}
           value={targetDate}
           onChange={(e) => setTargetDate(e.target.value)}
           aria-label="Target date"
-          className={input}
         />
       </label>
 
