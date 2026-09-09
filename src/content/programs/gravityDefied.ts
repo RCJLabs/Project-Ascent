@@ -271,6 +271,8 @@ export const GRAVITY_DEFIED: Program = {
     },
   ],
 
+  deloadWeeks: [4, 8],
+
   frequency: '3+1 per week. Three committed days + one optional volume day.',
   ordering:
     'Technical Flight first. Engine Room next day. Performance after a rest day. The 3+1 is intentional — dynamic climbing needs more recovery.',

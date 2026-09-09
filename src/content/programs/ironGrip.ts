@@ -327,6 +327,8 @@ export const IRON_GRIP: Program = {
     },
   ],
 
+  deloadWeeks: [4, 8],
+
   frequency: '4-5 sessions/week. 48 hours between finger sessions.',
   ordering:
     'Finger Protocol days need full recovery before climbing. Never do finger work the day before a hard climbing day.',

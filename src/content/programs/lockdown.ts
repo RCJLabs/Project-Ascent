@@ -413,6 +413,8 @@ export const LOCKDOWN: Program = {
     },
   ],
 
+  deloadWeeks: [8],
+
   frequency: '4-5 sessions/week. Session A and B should not be on consecutive days.',
   ordering:
     'Session A (heavy pulling/hangs) needs 48hrs before next A. Session B (core/tension) is lighter and can follow A after one day.',

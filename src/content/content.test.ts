@@ -269,6 +269,10 @@ describe('library coverage', () => {
             for (const ex of entry.exercises) if (ex.protocolId) referenced.add(ex.protocolId);
           }
         }
+        for (const id of Object.values(type.drillsByWeek ?? {})) {
+          const protocolId = getDrill(id)?.protocolId;
+          if (protocolId) referenced.add(protocolId);
+        }
       }
     }
     expect(Object.keys(PROTOCOLS).filter((id) => !referenced.has(id))).toEqual([]);

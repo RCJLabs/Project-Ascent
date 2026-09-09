@@ -97,8 +97,11 @@ export function validateProgram(program: Program): string[] {
           where(`session type '${type.id}' has no drill for week ${week}`);
           continue;
         }
-        if (!getDrill(drillId)) {
+        const drill = getDrill(drillId);
+        if (!drill) {
           where(`session type '${type.id}' week ${week} references unknown drill '${drillId}'`);
+        } else if (drill.protocolId && !getProtocol(drill.protocolId)) {
+          where(`drill '${drill.id}' references unknown protocol '${drill.protocolId}'`);
         }
       }
       for (const key of Object.keys(type.drillsByWeek)) {
@@ -128,6 +131,15 @@ export function validateProgram(program: Program): string[] {
       if (!typeIds.has(ref)) where(`constraint '${c.kind}' references unknown session type '${ref}'`);
     }
     if (!c.note.trim()) where(`constraint '${c.kind}' has no display note`);
+  }
+
+  for (const week of program.deloadWeeks ?? []) {
+    if (!Number.isInteger(week) || week < 1 || week > program.weeks) {
+      where(`deload week ${week} is outside weeks 1-${program.weeks}`);
+    }
+  }
+  if (new Set(program.deloadWeeks ?? []).size !== (program.deloadWeeks ?? []).length) {
+    where('has duplicate deload weeks');
   }
 
   // Recommended layout.

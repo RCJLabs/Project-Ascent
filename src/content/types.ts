@@ -94,6 +94,9 @@ export interface Drill {
   duration: string;
   /** One-line "what this trains", e.g. 'Crimp Strength Application'. */
   focus: string;
+  /** Links to a Protocol when the drill *is* a named method, so the logger
+   *  can open its timer and cues (an ARC drill is the ARC protocol, timed). */
+  protocolId?: ProtocolId;
   category: DrillCategory;
   discipline: Discipline;
   /** Grade band the drill suits, e.g. 'V5-V8'. */
@@ -218,8 +221,7 @@ export type Constraint =
   | { kind: 'sessions-per-week'; min: number; max: number; note: string }
   | { kind: 'min-gap-hours'; between: SessionTypeId[]; hours: number; note: string }
   | { kind: 'max-per-week'; sessionTypeId: SessionTypeId; count: number; note: string }
-  | { kind: 'not-before'; sessionTypeId: SessionTypeId; before: SessionTypeId; note: string }
-  | { kind: 'deload-week'; everyWeeks: number; volumeScale: number; rpeCap: number; note: string };
+  | { kind: 'not-before'; sessionTypeId: SessionTypeId; before: SessionTypeId; note: string };
 
 // ── Weekly layout ─────────────────────────────────────────────────────────
 
@@ -267,6 +269,16 @@ export interface Program {
   tracks?: Track[];
   sessionTypes: SessionType[];
   constraints: Constraint[];
+  /**
+   * Weeks that are deliberate deloads. Enumerated rather than expressed as
+   * a period: real programs place them where the athlete needs them, not on
+   * a fixed cycle (Peak Performance runs one at week 4, another at 8, and a
+   * second taper at 9 because tendons adapt slower than muscle).
+   *
+   * Sessions in these weeks are excluded from training-load math, so a
+   * planned deload never reads as detraining.
+   */
+  deloadWeeks?: number[];
   /** Human-readable scheduling prose, kept verbatim alongside `constraints`. */
   frequency: string;
   ordering: string;

@@ -63,6 +63,20 @@ export const PROTOCOLS: Record<ProtocolId, Protocol> = {
     ],
   },
 
+  arcing: {
+    id: 'arcing',
+    name: 'ARCing',
+    description:
+      'Aerobic Restoration and Capillarization: continuous easy climbing for 10-30 minutes at RPE 3-4, holding a mild pump that never builds. Trains capillary density in the forearms. The adaptation is vascular, not muscular — which is why it deliberately does not feel like hard training.',
+    timer: { workSec: 600, restSec: 300, repsPerSet: 1, setRestSec: 300 },
+    cues: [
+      'RPE 3-4 — easy breathing, sustained mild pump, never pumping out.',
+      'Terrain 3-4 grades below your on-sight.',
+      'Straight arms, exhale on every move, shake out every 5-8 moves even when fresh.',
+    ],
+    safety: ['If you pump out, you went too hard — drop a grade rather than pushing through.'],
+  },
+
   front_lever: {
     id: 'front_lever',
     name: 'Front Lever Progression',

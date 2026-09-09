@@ -154,6 +154,14 @@ export const METRICS: Record<MetricId, Metric> = {
     higherIsBetter: true,
     description: 'Hollow body hold with the lower back pressed into the floor.',
   },
+  front_lever_hold: {
+    id: 'front_lever_hold',
+    label: 'Front Lever',
+    unit: 'sec',
+    kind: 'number',
+    higherIsBetter: true,
+    description: 'Best front lever hold at your current progression.',
+  },
   core_lever: {
     id: 'core_lever',
     label: 'Core Lever',
@@ -190,6 +198,16 @@ export const METRICS: Record<MetricId, Metric> = {
     description: 'Self-scored mobility check used by the derived AGI stat.',
   },
 
+  // Endurance
+  arc_duration: {
+    id: 'arc_duration',
+    label: 'ARC Duration',
+    unit: 'min',
+    kind: 'number',
+    higherIsBetter: true,
+    description: 'Longest continuous ARC round held at RPE 3-4 without pumping out.',
+  },
+
   // Performance ceilings
   max_boulder_grade: {
     id: 'max_boulder_grade',
@@ -224,6 +242,24 @@ export const METRICS: Record<MetricId, Metric> = {
     scale: 'V',
     higherIsBetter: true,
     description: 'Hardest boulder sent with no dynamic moves.',
+  },
+  onsight_grade: {
+    id: 'onsight_grade',
+    label: 'On-Sight Grade',
+    unit: '',
+    kind: 'grade',
+    scale: 'YDS',
+    higherIsBetter: true,
+    description: 'Hardest route climbed first try with no prior beta.',
+  },
+  redpoint_grade: {
+    id: 'redpoint_grade',
+    label: 'Redpoint Grade',
+    unit: '',
+    kind: 'grade',
+    scale: 'YDS',
+    higherIsBetter: true,
+    description: 'Hardest route sent clean after working the moves.',
   },
   flash_grade: {
     id: 'flash_grade',
