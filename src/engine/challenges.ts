@@ -265,7 +265,7 @@ function measureOf(spec: BountySpec): Measure {
  * whichever category their logs show least. Nothing here is a fixed list.
  */
 export function offeredBounties(
-  sessions: Session[],
+  _sessions: Session[],
   state: ClimberState,
   today: string,
   count = 3,
@@ -294,17 +294,11 @@ export function offeredBounties(
   });
 
   // The drill category the logs show least, which is the useful one.
-  const counts = new Map<DrillCategory, number>();
-  for (const category of Object.keys(DRILL_CATEGORIES) as DrillCategory[]) counts.set(category, 0);
-  for (const session of sessions) {
-    if (!session.drillDone || !session.drillId) continue;
-    const drill = getDrill(session.drillId);
-    if (drill) counts.set(drill.category, (counts.get(drill.category) ?? 0) + 1);
-  }
+  const counts = state.drillsByCategory;
   const candidates = (Object.keys(DRILL_CATEGORIES) as DrillCategory[]).filter(
     (c) => c !== 'recovery' && c !== 'assessment',
   );
-  const weakest = candidates.sort((a, b) => (counts.get(a) ?? 0) - (counts.get(b) ?? 0))[0]!;
+  const weakest = candidates.sort((a, b) => (counts[a] ?? 0) - (counts[b] ?? 0))[0]!;
   out.push({
     key: `drill-${weakest}`,
     title: `Two ${DRILL_CATEGORIES[weakest].label.toLowerCase()} drills`,

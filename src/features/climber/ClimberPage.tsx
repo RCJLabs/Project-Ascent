@@ -6,6 +6,7 @@ import {
   BatteryLow,
   BatteryWarning,
   ChevronDown,
+  ChevronRight,
   ClipboardCheck,
   Coins,
   Gamepad2,
@@ -26,6 +27,7 @@ import { useCurrency, useXp } from '@/store/game';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
+import { useSkills } from '@/store/skills';
 import { useSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
 import { Avatar } from '@/ui/Avatar';
@@ -54,9 +56,16 @@ export function ClimberPage() {
     () => deriveStats({ state, metrics, projects }),
     [state, metrics, projects],
   );
+  const skills = useSkills();
   const vitality = useMemo(
-    () => deriveVitality({ state, endurance: stats.END, injuries }),
-    [state, stats, injuries],
+    () =>
+      deriveVitality({
+        state,
+        endurance: stats.END,
+        injuries,
+        restBonus: skills.effects.restRecovery,
+      }),
+    [state, stats, injuries, skills.effects.restRecovery],
   );
   const palette = useProfile((s) => s.avatarPalette);
   const feet = useMemo(
@@ -101,6 +110,23 @@ export function ClimberPage() {
         <VitalityCard vitality={vitality} />
 
         <AppearanceCard palette={palette} />
+
+        <Card title="Skills">
+          <Link href="/skills" className="flex items-center gap-3">
+            <Sparkles size={18} className="text-accent shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">
+                {skills.unlocked} of {skills.total} unlocked
+              </p>
+              <p className="text-xs text-ink-soft mt-0.5 truncate">
+                {skills.next[0]
+                  ? `Closest: ${skills.next[0].node.name} — ${skills.next[0].measurement.detail}`
+                  : 'Five trees, every requirement real training.'}
+              </p>
+            </div>
+            <ChevronRight size={18} className="text-ink-soft shrink-0" />
+          </Link>
+        </Card>
 
         <Card title="Stats">
           <ul className="grid gap-2.5">

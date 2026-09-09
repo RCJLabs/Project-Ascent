@@ -13,6 +13,7 @@ import { unitsToXp } from '@/engine/economy';
 import { BOUNTY_CAP, useGame } from '@/store/game';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
+import { useSkillEffects } from '@/store/skills';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
@@ -100,10 +101,11 @@ function BountiesCard({
 }) {
   const accept = useGame((s) => s.acceptBounty);
   const abandon = useGame((s) => s.abandonBounty);
-  const full = board.bounties.length >= BOUNTY_CAP;
+  const cap = BOUNTY_CAP + useSkillEffects().bountySlots;
+  const full = board.bounties.length >= cap;
 
   return (
-    <Card title={`Bounties · ${board.bounties.length} of ${BOUNTY_CAP}`}>
+    <Card title={`Bounties · ${board.bounties.length} of ${cap}`}>
       {board.bounties.length > 0 && (
         <ul className="grid gap-3 mb-3">
           {board.bounties.map((c) => (
@@ -128,14 +130,14 @@ function BountiesCard({
       {!full && board.offers.length > 0 && (
         <ul className="grid gap-2">
           {board.offers.map((spec) => (
-            <OfferRow key={spec.key} spec={spec} onAccept={() => void accept(spec)} />
+            <OfferRow key={spec.key} spec={spec} onAccept={() => void accept(spec, cap)} />
           ))}
         </ul>
       )}
 
       {full && (
         <p className="text-xs text-ink-soft">
-          Three at a time. Finish one or drop it before taking another.
+          {cap} at a time. Finish one or drop it before taking another.
         </p>
       )}
     </Card>

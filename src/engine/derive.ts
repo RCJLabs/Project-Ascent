@@ -11,6 +11,7 @@
  * `today` argument, so every number is reproducible in a test.
  */
 
+import { getDrill } from '@/content/drills';
 import type { Session } from '@/db/sessions';
 import { gradeOrdinal, maxGrade, type GradeScale } from './grades';
 import { addDays, daysBetween, startOfWeek, today as todayKey } from './dates';
@@ -79,6 +80,9 @@ export interface ClimberState {
   styleSends: { onsight: number; flash: number };
   /** The longest run of target-meeting weeks ever, not just the current one. */
   longestStreakWeeks: number;
+  /** Completed drills by category — the skill trees and bounties both read
+   *  this, and neither should walk the log itself to get it. */
+  drillsByCategory: Record<string, number>;
   /** Training sessions in the last week that skipped the warmup. */
   recentSkippedWarmups: number;
   /** A rest day logged today or yesterday. */
@@ -129,6 +133,7 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
   let recentSkippedWarmups = 0;
   let restedWithin24h = false;
   const outdoorDates = new Set<string>();
+  const drillsByCategory: Record<string, number> = {};
 
   const loadByDate = new Map<string, { load: number; deload: boolean }>();
 
@@ -140,7 +145,11 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
     if (session.sessionTypeId) {
       sessionsByType[session.sessionTypeId] = (sessionsByType[session.sessionTypeId] ?? 0) + 1;
     }
-    if (session.drillDone) drillsCompleted++;
+    if (session.drillDone) {
+      drillsCompleted++;
+      const category = session.drillId ? getDrill(session.drillId)?.category : undefined;
+      if (category) drillsByCategory[category] = (drillsByCategory[category] ?? 0) + 1;
+    }
     if (session.warmup) warmups++;
     if (session.mode === 'outdoor' && !isRest) outdoorDates.add(session.date);
 
@@ -212,6 +221,7 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
     streakWeeks: deriveStreak(completed, today, weeklyTarget),
     longestStreakWeeks: deriveLongestStreak(completed, weeklyTarget),
     outdoorDays: outdoorDates.size,
+    drillsByCategory,
     recentSkippedWarmups,
     restedWithin24h,
     styleSends: { onsight, flash },

@@ -6,6 +6,7 @@ import type { Session } from '@/db/sessions';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
 import { suggestProjects, summariseProject, type ProjectSuggestion } from '@/engine/projects';
 import { useProjects } from '@/store/projects';
+import { useSkillEffects } from '@/store/skills';
 import { useSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -30,16 +31,18 @@ export function ProjectsPage() {
     [sessions, projects, dismissed],
   );
 
+  const extraSlots = useSkillEffects().projectSlots;
+  const cap = ACTIVE_CAP + extraSlots;
   const active = projects.filter((p) => p.status === 'active');
   const sent = projects.filter((p) => p.status === 'sent');
   const shelved = projects.filter((p) => p.status === 'shelved');
-  const full = active.length >= ACTIVE_CAP;
+  const full = active.length >= cap;
 
   return (
     <>
       <PageHeader
         title="Projects"
-        subtitle={active.length > 0 ? `${active.length} of ${ACTIVE_CAP} active` : 'The climbs you are working'}
+        subtitle={active.length > 0 ? `${active.length} of ${cap} active` : 'The climbs you are working'}
         action={
           !adding && (
             <Button size="sm" onClick={() => setAdding({})}>
@@ -54,6 +57,7 @@ export function ProjectsPage() {
           <ProjectForm
             initial={adding}
             capped={full}
+            cap={cap}
             onCancel={() => setAdding(null)}
             onSaved={() => setAdding(null)}
           />
@@ -94,8 +98,9 @@ export function ProjectsPage() {
             </ul>
             {full && (
               <p className="text-xs text-ink-soft mt-3">
-                {ACTIVE_CAP} is the cap. Send one or shelve one before starting another — a project
-                you are not actually trying is a to-do list, not a project.
+                {cap} is the cap{extraSlots > 0 ? ' with your skill-tree slots' : ''}. Send one or
+                shelve one before starting another — a project you are not actually trying is a
+                to-do list, not a project.
               </p>
             )}
           </Card>
@@ -199,11 +204,13 @@ function ProjectRow({ project, sessions }: { project: Project; sessions: Session
 export function ProjectForm({
   initial,
   capped,
+  cap = ACTIVE_CAP,
   onCancel,
   onSaved,
 }: {
   initial: Partial<Project>;
   capped: boolean;
+  cap?: number;
   onCancel: () => void;
   onSaved: (project: Project) => void;
 }) {
@@ -230,8 +237,8 @@ export function ProjectForm({
     <Card title="New project">
       {capped && (
         <p className="text-sm text-warn mb-3">
-          You already have {ACTIVE_CAP} active. This one will be added anyway — but consider shelving
-          one you have not touched.
+          You already have {cap} active. This one will be added anyway — but consider shelving one
+          you have not touched.
         </p>
       )}
       <label className="text-sm block mb-3">

@@ -5,13 +5,14 @@ import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
 import { addDays, fromKey, today } from '@/engine/dates';
 import { plannedDay, prescriptionFor } from '@/engine/plan';
-import { focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
+import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
 import type { Climb, ProjectAttempt, Session } from '@/db/sessions';
 import type { AttemptOutcome } from '@/db/projects';
 import { OUTCOME_HIGH_POINT } from '@/engine/projects';
 import { useXp } from '@/store/game';
 import { useProjects } from '@/store/projects';
+import { useSkillEffects } from '@/store/skills';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { parseCount } from '@/content/types';
@@ -182,6 +183,7 @@ function WarmupCard({
   const injuries = useProfile((s) => s.injuries);
   const recentWarmups = useProfile((s) => s.recentWarmups);
   const rememberWarmup = useProfile((s) => s.rememberWarmup);
+  const variety = useSkillEffects().warmupVariety;
   const [plan, setPlan] = useState<WarmupPlan | null>(null);
 
   function build(seed?: number) {
@@ -191,6 +193,8 @@ function WarmupCard({
       recent: recentWarmups,
       ...(focusFor(day?.sessionType, day?.phase?.name) ? { focus: focusFor(day?.sessionType, day?.phase?.name)! } : {}),
       climbing: Boolean(day?.sessionType && !day.isRest),
+      // Skill-tree variety perks buy a longer, richer warmup.
+      targetSeconds: DEFAULT_TARGET_SECONDS + variety * 60,
       ...(seed !== undefined ? { seed } : {}),
     });
     setPlan(next);

@@ -55,6 +55,8 @@ export interface VitalityInput {
   /** The END stat, which sets the ceiling. */
   endurance: Stat | number;
   injuries?: unknown[];
+  /** Extra relief from skill-tree recovery perks, added to REST_RELIEF. */
+  restBonus?: number;
 }
 
 export function deriveVitality(input: VitalityInput): Vitality {
@@ -95,7 +97,8 @@ export function deriveVitality(input: VitalityInput): Vitality {
 
   const raw = penalties.reduce((sum, p) => sum + p.points, 0);
   const buff = state.restedWithin24h && raw > 0;
-  const damage = buff ? raw / REST_RELIEF : raw;
+  const relief = REST_RELIEF + (input.restBonus ?? 0);
+  const damage = buff ? raw / relief : raw;
   const current = Math.max(0, Math.min(max, Math.round(max - damage)));
   const fraction = max === 0 ? 0 : current / max;
 
@@ -110,8 +113,11 @@ export function deriveVitality(input: VitalityInput): Vitality {
       ? {
           buff: {
             label: 'Rested in the last 24 hours',
-            factor: REST_RELIEF,
-            note: `Logging a rest day cuts the damage by a third while it lasts.`,
+            factor: relief,
+            note:
+              relief > REST_RELIEF
+                ? `Logging a rest day cuts the damage, and your recovery perks deepen it.`
+                : 'Logging a rest day cuts the damage by a third while it lasts.',
           },
         }
       : {}),

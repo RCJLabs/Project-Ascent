@@ -12,6 +12,7 @@ import { today } from '@/engine/dates';
 import { plannedDay } from '@/engine/plan';
 import { useXp } from '@/store/game';
 import { useProfile } from '@/store/profile';
+import { useSkillEffects } from '@/store/skills';
 import { useSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
 import { Avatar } from '@/ui/Avatar';
@@ -136,6 +137,7 @@ function ClimberStrip() {
   const byDate = useSessions((s) => s.byDate);
   const injuries = useProfile((s) => s.injuries);
   const palette = useProfile((s) => s.avatarPalette);
+  const restBonus = useSkillEffects().restRecovery;
 
   const avatar = useMemo(() => {
     const sessions = Object.values(byDate).flat();
@@ -144,6 +146,7 @@ function ClimberStrip() {
       state,
       endurance: deriveStats({ state }).END,
       injuries,
+      restBonus,
     });
     return deriveAvatar({
       level: xp.progress.level,
@@ -151,7 +154,7 @@ function ClimberStrip() {
       feet: deriveAltimeter(sessions).feet,
       palette,
     });
-  }, [byDate, injuries, palette, xp.progress.level]);
+  }, [byDate, injuries, palette, restBonus, xp.progress.level]);
 
   return (
     <Link href="/climber" className="flex items-center gap-3 bg-surface border border-line rounded-2xl p-4">

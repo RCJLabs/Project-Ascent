@@ -29,7 +29,7 @@ export interface GameState {
   /** Bank a finished challenge. Ids are the challenge's own, so claiming
    *  twice is a no-op even across a reload. */
   claim: (challenge: Challenge) => Promise<void>;
-  acceptBounty: (spec: BountySpec) => Promise<void>;
+  acceptBounty: (spec: BountySpec, cap?: number) => Promise<void>;
   abandonBounty: (id: string) => Promise<void>;
   spend: (amount: number) => Promise<void>;
 }
@@ -74,9 +74,9 @@ export const useGame = create<GameState>((set, get) => ({
     }
   },
 
-  acceptBounty: async (spec) => {
+  acceptBounty: async (spec, cap = BOUNTY_CAP) => {
     const current = get().bounties;
-    if (current.length >= BOUNTY_CAP || current.some((b) => b.spec.key === spec.key)) return;
+    if (current.length >= cap || current.some((b) => b.spec.key === spec.key)) return;
     const bounty: AcceptedBounty = {
       id: `bounty-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       spec,
