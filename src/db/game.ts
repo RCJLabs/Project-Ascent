@@ -36,6 +36,24 @@ export interface Wallet {
   spent: number;
 }
 
+export interface AscentRecords {
+  /** Best height in metres, per mode. */
+  best: { ascent: number; freesolo: number };
+  /** Best run with no power-up touched. */
+  pureBest: number;
+  runs: number;
+  /** Best height on today's daily wall, and the day it belongs to. */
+  daily: { date: string; metres: number } | null;
+}
+
+export const EMPTY_ASCENT: AscentRecords = {
+  best: { ascent: 0, freesolo: 0 },
+  pureBest: 0,
+  runs: 0,
+  daily: null,
+};
+
+const ASCENT_KEY = 'ascent';
 const LEDGER_KEY = 'game-xp';
 const WALLET_KEY = 'wallet';
 const BOUNTY_KEY = 'bounties';
@@ -68,6 +86,18 @@ export async function putBounties(bounties: AcceptedBounty[]): Promise<AcceptedB
   const db = await getDb();
   await db.put('game', { key: BOUNTY_KEY, value: bounties });
   return bounties;
+}
+
+export async function getAscent(): Promise<AscentRecords> {
+  const db = await getDb();
+  const record = await db.get('game', ASCENT_KEY);
+  return { ...EMPTY_ASCENT, ...((record?.value as Partial<AscentRecords> | undefined) ?? {}) };
+}
+
+export async function putAscent(records: AscentRecords): Promise<AscentRecords> {
+  const db = await getDb();
+  await db.put('game', { key: ASCENT_KEY, value: records });
+  return records;
 }
 
 export async function getWallet(): Promise<Wallet> {

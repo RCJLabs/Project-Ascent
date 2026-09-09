@@ -1,12 +1,16 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import {
+  EMPTY_ASCENT,
   appendLedger,
+  getAscent,
   getWallet,
   listBounties,
   listLedger,
+  putAscent,
   putBounties,
   putWallet,
+  type AscentRecords,
   type LedgerEntry,
   type Wallet,
 } from '@/db/game';
@@ -22,7 +26,10 @@ export interface GameState {
   ledger: LedgerEntry[];
   bounties: AcceptedBounty[];
   wallet: Wallet;
+  ascent: AscentRecords;
   load: () => Promise<void>;
+  /** Record a finished Ascent run. Bests only ever move up. */
+  recordRun: (run: { mode: 'ascent' | 'freesolo'; metres: number; pure: boolean; date: string }) => Promise<void>;
   /** Append a game-lane award. The id is the idempotency guard, and the
    *  cap is applied on write so a bad caller cannot inflate the economy. */
   award: (entry: LedgerEntry) => Promise<void>;
@@ -42,11 +49,17 @@ export const useGame = create<GameState>((set, get) => ({
   ledger: [],
   bounties: [],
   wallet: { spent: 0 },
+  ascent: EMPTY_ASCENT,
 
   load: async () => {
     try {
-      const [ledger, wallet, bounties] = await Promise.all([listLedger(), getWallet(), listBounties()]);
-      set({ ledger, wallet, bounties, hydrated: true });
+      const [ledger, wallet, bounties, ascent] = await Promise.all([
+        listLedger(),
+        getWallet(),
+        listBounties(),
+        getAscent(),
+      ]);
+      set({ ledger, wallet, bounties, ascent, hydrated: true });
     } catch {
       set({ hydrated: true });
     }
@@ -55,6 +68,22 @@ export const useGame = create<GameState>((set, get) => ({
   award: async (entry) => {
     const capped = { ...entry, units: Math.min(entry.units, GAME_ACTION_CAP), source: 'game' as const };
     set({ ledger: await appendLedger(capped) });
+  },
+
+  recordRun: async ({ mode, metres, pure, date }) => {
+    const current = get().ascent;
+    const daily =
+      current.daily?.date === date
+        ? { date, metres: Math.max(current.daily.metres, metres) }
+        : { date, metres };
+    set({
+      ascent: await putAscent({
+        best: { ...current.best, [mode]: Math.max(current.best[mode], metres) },
+        pureBest: pure ? Math.max(current.pureBest, metres) : current.pureBest,
+        runs: current.runs + 1,
+        daily,
+      }),
+    });
   },
 
   claim: async (challenge) => {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Link } from 'wouter';
-import { CalendarDays, Check, Clock, Settings, Sparkles } from 'lucide-react';
+import { CalendarDays, Check, Clock, Gamepad2, Settings, Sparkles } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveAvatar } from '@/engine/avatar';
@@ -62,6 +62,7 @@ export function HomePage() {
         <Link href="/review" className="block bg-surface border border-line rounded-2xl p-4">
           <ReviewCard />
         </Link>
+        <AscentCard />
 
         {!program && (
           <Card>
@@ -201,6 +202,29 @@ function AltimeterCard() {
           At this pace, {alt.next.name} in {alt.etaLabel.replace(/^about /, '')}.
         </p>
       )}
+    </Link>
+  );
+}
+
+/** The rest-day activity, framed as one. */
+function AscentCard() {
+  const byDate = useSessions((s) => s.byDate);
+  const rested = useMemo(
+    () => deriveClimberState(Object.values(byDate).flat()).restedWithin24h,
+    [byDate],
+  );
+
+  return (
+    <Link href="/ascent" className="flex items-center gap-3 bg-surface border border-line rounded-2xl p-4">
+      <Gamepad2 size={18} className="text-accent shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold">The Ascent</p>
+        <p className="text-xs text-ink-soft mt-0.5">
+          {rested
+            ? 'Recovery skies today — best run pays ×1.5.'
+            : 'Endless wall. Play any time; the good paydays are on rest days.'}
+        </p>
+      </div>
     </Link>
   );
 }
