@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ArrowLeft, ArrowRight, Flag, Plus } from 'lucide-react';
+import { ArrowRight, Flag, Plus } from 'lucide-react';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
 import { today } from '@/engine/dates';
 import { deriveAltimeter } from '@/engine/altimeter';
@@ -24,6 +24,7 @@ import { useObjectives } from '@/store/objectives';
 import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
+import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { OptionCard } from '@/ui/Chip';
@@ -83,9 +84,7 @@ export function ObjectivesPage() {
 
   return (
     <>
-      <Link href="/train" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Train
-      </Link>
+      <BackLink />
       <PageHeader
         title="Objectives"
         subtitle="Something to work toward that a single block of training cannot finish."

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ArrowLeft, ArrowRight, BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowRight, BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
 import { GUIDES, getGuide, guideLength } from '@/content/guides';
 import { getProgram } from '@/content/programs';
+import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
 import { DisclosureButton } from '@/ui/Disclosure';
 import { PageHeader } from '@/ui/PageHeader';
@@ -12,9 +13,7 @@ import { Block } from './GuideBody';
 export function GuideList() {
   return (
     <>
-      <Link href="/settings" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Settings
-      </Link>
+      <BackLink />
       <PageHeader
         title="Guides"
         subtitle="How the app works, how to start climbing, and the writing behind every program."
@@ -81,9 +80,7 @@ export function GuidePage({ params }: { params: { id: string } }) {
 
   return (
     <>
-      <Link href="/guides" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Guides
-      </Link>
+      <BackLink />
       <PageHeader title={guide.name} subtitle={guide.subtitle} />
 
       <div className="grid grid-cols-1 gap-2">

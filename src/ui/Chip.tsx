@@ -16,6 +16,15 @@ const BASE = 'focus-ring border transition-colors text-left disabled:opacity-40 
 const ON = 'border-accent bg-accent/10 font-semibold text-ink';
 const OFF = 'border-line bg-sunken text-ink-soft hover:text-ink';
 
+/**
+ * The chip's look, for something that navigates rather than toggles.
+ *
+ * A `Chip` inside a `Link` would be a button inside an anchor: invalid, and
+ * announced as two overlapping controls. A link that looks like a chip is
+ * the honest version.
+ */
+export const CHIP_LINK = `${BASE} ${OFF} rounded-lg px-3 py-2 text-sm min-h-11 inline-flex items-center`;
+
 /** A single word or two: a filter, a scale, a status. */
 export function Chip({
   active,

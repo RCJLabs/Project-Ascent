@@ -25,6 +25,7 @@ import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { useTemplates } from '@/store/templates';
 import { parseCount } from '@/content/types';
+import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Checkbox, Input, Select, TextArea } from '@/ui/Field';
@@ -111,9 +112,7 @@ export function LogPage({ params }: { params: { date: string } }) {
 
   return (
     <>
-      <Link href="/calendar" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Calendar
-      </Link>
+      <BackLink />
 
       <div className="flex items-center justify-between mb-4">
         <IconButton onClick={() => navigate(`/log/${addDays(date, -1)}`)} label="Previous day">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ArrowLeft, ArrowRight, CircleCheck, Plus, Target, Trash2 } from 'lucide-react';
+import { ArrowRight, CircleCheck, Plus, Target, Trash2 } from 'lucide-react';
 import { DRILL_CATEGORIES } from '@/content/drills';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
 import { fromKey } from '@/engine/dates';
@@ -15,6 +15,7 @@ import {
 import type { SkillRequirement } from '@/engine/skills';
 import { useObjectives } from '@/store/objectives';
 import { useProjects } from '@/store/projects';
+import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
@@ -73,9 +74,7 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
 
   return (
     <>
-      <Link href="/objectives" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Objectives
-      </Link>
+      <BackLink />
       <PageHeader
         title={objective.name}
         subtitle={[

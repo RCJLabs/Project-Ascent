@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { Link, useLocation } from 'wouter';
-import { ArrowLeft, ChevronLeft, ChevronRight, Minus, TrendingDown, TrendingUp } from 'lucide-react';
+import { useLocation } from 'wouter';
+import { ChevronLeft, ChevronRight, Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import { fromKey, today as todayKey } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { displayGrade } from '@/engine/grades';
@@ -14,6 +14,7 @@ import {
 } from '@/engine/yearReview';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
+import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
 import { Select } from '@/ui/Field';
 import { IconButton } from '@/ui/IconButton';
@@ -50,9 +51,7 @@ export function YearPage({ params }: { params: { year?: string } }) {
 
   return (
     <>
-      <Link href="/career" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Career
-      </Link>
+      <BackLink />
       <PageHeader
         title={String(year)}
         subtitle={review.complete ? 'The year in review' : 'The year so far'}

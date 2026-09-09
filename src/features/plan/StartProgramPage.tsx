@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { AlertTriangle, ArrowLeft, Check } from 'lucide-react';
+import { AlertTriangle, Check } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { DAY_SHORT, layoutsFor, planFromLayout, validateWeek, type WeekPlan } from '@/engine/scheduler';
 import { useProfile } from '@/store/profile';
+import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Chip, OptionCard, SelectableCard } from '@/ui/Chip';
@@ -50,9 +51,7 @@ export function StartProgramPage({ params }: { params: { id: string } }) {
 
   return (
     <>
-      <Link href={`/train/${program.id}`} className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> {program.name}
-      </Link>
+      <BackLink href={`/train/${program.id}`} title={program.name} />
       <PageHeader title="Plan your week" subtitle={program.name} />
 
       <div className="grid grid-cols-1 gap-3">

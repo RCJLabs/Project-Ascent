@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'wouter';
-import { ArrowLeft, Plus, ShieldAlert, Trash2 } from 'lucide-react';
+import { useLocation } from 'wouter';
+import { Plus, ShieldAlert, Trash2 } from 'lucide-react';
 import { RETURN_DISCLAIMER } from '@/content/returnToClimbing';
 import { fromKey } from '@/engine/dates';
 import { describeInjury } from '@/engine/injury';
@@ -12,6 +12,7 @@ import {
   type InjurySeverity,
   type InjuryStatus,
 } from '@/store/profile';
+import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { OptionCard } from '@/ui/Chip';
@@ -47,9 +48,7 @@ export function InjuryPage({ params }: { params: { id: string } }) {
 
   return (
     <>
-      <Link href="/settings" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Settings
-      </Link>
+      <BackLink />
       <PageHeader
         title={injury.part.charAt(0).toUpperCase() + injury.part.slice(1)}
         subtitle={`${describeInjury(injury)} · since ${fromKey(injury.since).toLocaleDateString(undefined, {

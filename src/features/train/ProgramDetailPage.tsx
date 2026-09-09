@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
-import { AlertTriangle, ArrowLeft, BookOpen, ChevronRight, Clock, Layers, Play, Timer } from 'lucide-react';
+import { AlertTriangle, BookOpen, ChevronRight, Clock, Layers, Play, Timer } from 'lucide-react';
 import { getDrill } from '@/content/drills';
 import { guideFor } from '@/content/guides';
 import { getMetric } from '@/content/metrics';
 import { getProtocol } from '@/content/protocols';
 import { getProgram } from '@/content/programs';
 import type { CircuitFormat, Exercise, Phase, SelectionRule, SessionType, TrackId } from '@/content/types';
+import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { OptionCard } from '@/ui/Chip';
@@ -192,9 +193,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
 
   return (
     <>
-      <Link href="/train" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Train
-      </Link>
+      <BackLink />
       <PageHeader
         title={program.name}
         subtitle={program.author ? `${program.subtitle} · by ${program.author}` : program.subtitle}

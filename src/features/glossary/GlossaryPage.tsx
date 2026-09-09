@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'wouter';
-import { ArrowLeft, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import {
   CATEGORY_BLURB,
   CATEGORY_ORDER,
@@ -9,6 +8,7 @@ import {
   searchGlossary,
   type GlossaryCategory,
 } from '@/content/glossary';
+import { BackLink } from '@/ui/BackLink';
 import { Chip as UiChip } from '@/ui/Chip';
 import { Input } from '@/ui/Field';
 import { IconButton } from '@/ui/IconButton';
@@ -33,9 +33,7 @@ export function GlossaryPage() {
 
   return (
     <>
-      <Link href="/settings" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Settings
-      </Link>
+      <BackLink />
       <PageHeader
         title="Glossary"
         subtitle={`${GLOSSARY.length} terms — the lingo, the techniques, and the exercises the programs ask for by name.`}

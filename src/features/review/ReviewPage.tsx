@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'wouter';
 import {
   ArrowLeft,
   Check,
@@ -12,6 +11,7 @@ import {
 import { getProgram } from '@/content/programs';
 import { addDays, fromKey, shortLabel, startOfWeek, today as todayKey } from '@/engine/dates';
 import { buildReview, type NoteTone, type WeekReview } from '@/engine/review';
+import { BackLink } from '@/ui/BackLink';
 import { weekCard } from '@/ui/shareCard';
 import { useXp } from '@/store/game';
 import { useProfile } from '@/store/profile';
@@ -73,9 +73,7 @@ export function ReviewPage() {
 
   return (
     <>
-      <Link href="/" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Home
-      </Link>
+      <BackLink />
 
       <PageHeader
         title="Weekly review"

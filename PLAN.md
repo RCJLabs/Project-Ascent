@@ -679,11 +679,18 @@ a small diff instead of ninety-five separate edits.
   `/climber` scrolls 13px horizontally. Nothing is cut off and no element exceeds the
   viewport — a clipped descendant contributes to the root scroll width — and M17 is
   where sizing gets revisited.
-- **M16 — Navigation.** Five tabs and fourteen features reachable only by drilling. A
-  command palette and global search over sessions, projects, programs, glossary terms
-  and guides — offline, over derived indexes — and one consistent back affordance to
-  replace the hand-rolled per-page "← Parent" links. *Done when: any feature is two
-  taps from anywhere.*
+- **M16 — Navigation.** *Done.* The app's shape is one table now (`ui/routes.ts`),
+  and both halves derive from it. Search is a sixth tab, so it is one tap from
+  anywhere and the result is the second — which is the whole "done when". The index
+  is built on the page from stores already in memory (431 items on an empty install,
+  more as a log grows): pages, programs, objectives, projects, glossary, guides,
+  assessments, drills, sessions with their notes and climbs. Matching is exact rather
+  than fuzzy, for the same reason the glossary lookup is: offering "Deadlift" for
+  "deadhang" is worse than offering nothing. The 21 hand-rolled back links are one
+  `BackLink` deriving its parent from the table, with an explicit override for the
+  two pages whose parent carries an id. Tests hold the table against `App.tsx` in
+  both directions, forbid cycles, cap depth at three, and check that nothing is
+  listed in search that cannot be linked to blind.
 - **M17 — Beyond the phone.** `max-w-2xl` plus `grid-cols-1` everywhere (a legacy of
   the 320px pass) shows a desktop browser a narrow ribbon between two margins.
   Breakpoint layouts, a sidebar instead of a bottom bar at ≥1024px, and grids that

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Link } from 'wouter';
-import { ArrowLeft, Check, Lock, Sparkles } from 'lucide-react';
+import { Check, Lock, Sparkles } from 'lucide-react';
 import { describeEffect, type SkillProgress, type SkillTreeState, type TreeId } from '@/engine/skills';
 import { useSkills } from '@/store/skills';
+import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
 import { DisclosureButton } from '@/ui/Disclosure';
 import { Meter } from '@/ui/Meter';
@@ -22,9 +22,7 @@ export function SkillsPage() {
 
   return (
     <>
-      <Link href="/climber" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Climber
-      </Link>
+      <BackLink />
 
       <PageHeader title="Skills" subtitle={`${skills.unlocked} of ${skills.total} unlocked`} />
 

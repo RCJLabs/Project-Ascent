@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ArrowLeft, ArrowRight, CircleCheck, Info, Plus, Share2, Trash2, TriangleAlert } from 'lucide-react';
+import { ArrowRight, CircleCheck, Info, Plus, Share2, Trash2, TriangleAlert } from 'lucide-react';
 import type { Constraint, DayOfWeek, Equipment, Phase, Program, SessionType } from '@/content/types';
 import { allMetrics } from '@/engine/assessments';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
@@ -19,6 +19,7 @@ import {
 import { contentIssues, reconcileProgramPhases, trimDrills } from '@/engine/prescription';
 import { buildProgramFile, fileName } from '@/engine/programFile';
 import { useCustomPrograms } from '@/store/programs';
+import { BackLink } from '@/ui/BackLink';
 import { useGradeOptions } from '@/ui/useGrade';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -81,9 +82,7 @@ export function BuilderPage({ params }: { params: { id: string } }) {
 
   return (
     <>
-      <Link href="/build" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Your programs
-      </Link>
+      <BackLink />
       <PageHeader title={program.name || 'Untitled'} subtitle={`${program.weeks} weeks`} />
 
       <div className="grid grid-cols-1 gap-3">

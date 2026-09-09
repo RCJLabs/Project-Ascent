@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, ArrowRight, Check, Flag, Mountain } from 'lucide-react';
+import { ArrowRight, Check, Flag, Mountain } from 'lucide-react';
 import {
   EVEREST,
   HEIGHT,
@@ -11,6 +11,7 @@ import {
 } from '@/engine/altimeter';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { useSessions } from '@/store/sessions';
+import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
 import { Meter } from '@/ui/Meter';
 import { LoadBars } from '@/ui/charts/Charts';
@@ -34,9 +35,7 @@ export function AltimeterPage() {
 
   return (
     <>
-      <Link href="/" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Home
-      </Link>
+      <BackLink />
 
       <PageHeader
         title="Altimeter"

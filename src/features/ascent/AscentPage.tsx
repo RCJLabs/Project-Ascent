@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'wouter';
-import { ArrowLeft, Heart, Play, Shield, Sparkles } from 'lucide-react';
+import { Heart, Play, Shield, Sparkles } from 'lucide-react';
 import { VIEW } from '@/engine/ascent/config';
 import {
   createRun,
@@ -35,6 +34,7 @@ import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
 import { useSkills } from '@/store/skills';
 import { unitsToXp } from '@/engine/economy';
+import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
@@ -274,9 +274,7 @@ export function AscentPage() {
 
   return (
     <>
-      <Link href="/" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Home
-      </Link>
+      <BackLink />
 
       <PageHeader
         title="The Ascent"

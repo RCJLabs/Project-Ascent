@@ -1,12 +1,13 @@
 import { useEffect, useMemo } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { getMetric } from '@/content/metrics';
 import type { MetricId } from '@/content/types';
 import { changeOf, formatEntry, isChartable, seriesFor } from '@/engine/assessments';
 import { shortLabel } from '@/engine/dates';
 import { useMetrics } from '@/store/metrics';
 import { useSettings } from '@/store/settings';
+import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
 import { IconButton } from '@/ui/IconButton';
 import { ProgressionLine } from '@/ui/charts/Charts';
@@ -52,9 +53,7 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
 
   return (
     <>
-      <Link href="/assessments" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Assessments
-      </Link>
+      <BackLink />
 
       <header className="mb-4">
         <h1 className="text-2xl font-black tracking-tight">{metric.label}</h1>

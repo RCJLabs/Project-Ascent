@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, ArrowRight, Mountain } from 'lucide-react';
+import { ArrowRight, Mountain } from 'lucide-react';
 import { CATEGORY_LABEL, byYear, deriveCareer, type CareerCategory } from '@/engine/career';
 import { fromKey } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
+import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
 import { Meter } from '@/ui/Meter';
@@ -54,9 +55,7 @@ export function CareerPage() {
 
   return (
     <>
-      <Link href="/progress" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Progress
-      </Link>
+      <BackLink />
       <PageHeader
         title="Career"
         subtitle={

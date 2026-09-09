@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ArrowLeft, Check, Plus, Trash2 } from 'lucide-react';
+import { Check, Plus, Trash2 } from 'lucide-react';
 import type { Project } from '@/db/projects';
 import { OUTCOME_LABEL, highPointOf, summariseProject } from '@/engine/projects';
 import { fromKey, today } from '@/engine/dates';
 import { useProjects } from '@/store/projects';
 import { useSettings } from '@/store/settings';
+import { BackLink } from '@/ui/BackLink';
 import { projectCard } from '@/ui/shareCard';
 import { useSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';
@@ -60,9 +61,7 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
 
   return (
     <>
-      <Link href="/projects" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Projects
-      </Link>
+      <BackLink />
 
       <header className="mb-4">
         <div className="flex items-baseline gap-2 flex-wrap">

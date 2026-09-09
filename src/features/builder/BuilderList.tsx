@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, ArrowRight, Copy, Plus, Upload, TriangleAlert } from 'lucide-react';
+import { ArrowRight, Copy, Plus, Upload, TriangleAlert } from 'lucide-react';
 import { PROGRAMS } from '@/content/programs';
 import { blankProgram, forkProgram, validateProgram } from '@/engine/customProgram';
 import { ProgramFileError, parseProgramFile } from '@/engine/programFile';
 import { useCustomPrograms } from '@/store/programs';
+import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Input } from '@/ui/Field';
@@ -51,9 +52,7 @@ export function BuilderList() {
 
   return (
     <>
-      <Link href="/train" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Train
-      </Link>
+      <BackLink />
       <PageHeader
         title="Your programs"
         subtitle="Write one from scratch, or take a copy of one that already works and change it."

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, ArrowRight, CircleCheck, Info, RotateCcw, TriangleAlert, X } from 'lucide-react';
+import { ArrowRight, CircleCheck, Info, RotateCcw, TriangleAlert, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { buildTips, visibleTips, type Tip, type TipTone } from '@/engine/coach';
 import { deriveClimberState } from '@/engine/derive';
@@ -10,6 +10,7 @@ import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
+import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { IconButton } from '@/ui/IconButton';
@@ -65,9 +66,7 @@ export function CoachPage() {
 
   return (
     <>
-      <Link href="/" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Home
-      </Link>
+      <BackLink />
 
       <PageHeader
         title="Coach's Corner"

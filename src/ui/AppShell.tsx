@@ -1,15 +1,25 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { CalendarDays, Dumbbell, Mountain, Target, TrendingUp } from 'lucide-react';
+import { CalendarDays, Dumbbell, Mountain, Search, Target, TrendingUp } from 'lucide-react';
 import { Announcer } from './Announce';
 import { LiveBar, useLiveBanner } from './LiveBar';
 
+/**
+ * Six, not five.
+ *
+ * Search earns a permanent slot because that is what makes the rest of the
+ * app reachable: twenty-six routes behind five tabs meant the glossary, the
+ * guides, the career timeline, objectives, the coach, the board and the
+ * altimeter were each findable only by knowing which page hid them. One tap
+ * to search, one to the result — which is the whole of M16's "done when".
+ */
 const TABS = [
   { href: '/', label: 'Home', icon: Mountain },
   { href: '/train', label: 'Train', icon: Dumbbell },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays },
   { href: '/projects', label: 'Projects', icon: Target },
   { href: '/progress', label: 'Progress', icon: TrendingUp },
+  { href: '/search', label: 'Search', icon: Search },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -52,7 +62,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="max-w-2xl mx-auto">
           <LiveBar banner={banner} />
         </div>
-        <div className="max-w-2xl mx-auto grid grid-cols-5">
+        <div className="max-w-2xl mx-auto grid grid-cols-6">
           {TABS.map(({ href, label, icon: Icon }) => {
             const active = href === '/' ? location === '/' : location.startsWith(href);
             return (
@@ -60,11 +70,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 key={href}
                 href={href}
                 aria-current={active ? 'page' : undefined}
-                className={`focus-ring flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold transition-colors ${
+                className={`focus-ring flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold transition-colors ${
                   active ? 'text-accent' : 'text-ink-soft hover:text-ink'
                 }`}
               >
-                <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+                <Icon size={19} strokeWidth={active ? 2.5 : 2} aria-hidden />
                 {label}
               </Link>
             );

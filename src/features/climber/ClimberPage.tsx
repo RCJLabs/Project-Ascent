@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import {
-  ArrowLeft,
   BatteryCharging,
   BatteryLow,
   BatteryWarning,
@@ -30,6 +29,7 @@ import { useProjects } from '@/store/projects';
 import { useSkills } from '@/store/skills';
 import { useSessions } from '@/store/sessions';
 import { ShareButton } from '@/features/share/ShareSheet';
+import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
 import { SelectableCard, Swatch } from '@/ui/Chip';
 import { Meter } from '@/ui/Meter';
@@ -87,9 +87,7 @@ export function ClimberPage() {
 
   return (
     <>
-      <Link href="/" className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5">
-        <ArrowLeft size={15} /> Home
-      </Link>
+      <BackLink />
 
       <header className="flex items-center gap-4 mb-4">
         <div className="w-24 shrink-0">

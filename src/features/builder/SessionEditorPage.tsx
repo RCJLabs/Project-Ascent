@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'wouter';
-import { ArrowLeft, Copy, Plus, Trash2 } from 'lucide-react';
+import { Copy, Plus, Trash2 } from 'lucide-react';
 import { DRILLS, getDrill } from '@/content/drills';
 import { PROTOCOLS } from '@/content/protocols';
 import type { Exercise, ExerciseBlock, Program, SessionType } from '@/content/types';
@@ -15,6 +14,7 @@ import {
   setPrescription,
 } from '@/engine/prescription';
 import { useCustomPrograms } from '@/store/programs';
+import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { OptionCard } from '@/ui/Chip';
@@ -67,12 +67,9 @@ export function SessionEditorPage({ params }: { params: { id: string; typeId: st
 
   return (
     <>
-      <Link
-        href={`/build/${program.id}`}
-        className="inline-flex items-center gap-1 text-sm text-ink-soft py-1.5 mb-1.5"
-      >
-        <ArrowLeft size={15} /> {program.name || 'Program'}
-      </Link>
+      {/* Explicit, because the parent is *this* program rather than the
+          list of them, and the route table cannot know the id. */}
+      <BackLink href={`/build/${program.id}`} title={program.name || 'Program'} />
       <PageHeader title={`${type.icon} ${type.name}`} subtitle="What this session asks for" />
 
       <div className="grid grid-cols-1 gap-3">
