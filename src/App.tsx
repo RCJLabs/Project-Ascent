@@ -27,6 +27,8 @@ import { TrainPage } from '@/features/train/TrainPage';
 import { BuilderList } from '@/features/builder/BuilderList';
 import { BuilderPage } from '@/features/builder/BuilderPage';
 import { SessionEditorPage } from '@/features/builder/SessionEditorPage';
+import { ObjectiveDetailPage } from '@/features/objectives/ObjectiveDetailPage';
+import { ObjectivesPage } from '@/features/objectives/ObjectivesPage';
 import { WelcomePage } from '@/features/onboarding/WelcomePage';
 import { hydrateAll } from '@/store';
 import { useProfile } from '@/store/profile';
@@ -98,6 +100,8 @@ function Shell() {
           <Route path="/build" component={BuilderList} />
           <Route path="/train/:id/start" component={StartProgramPage} />
           <Route path="/train/:id" component={ProgramDetailPage} />
+          <Route path="/objectives/:id" component={ObjectiveDetailPage} />
+          <Route path="/objectives" component={ObjectivesPage} />
           <Route path="/board" component={BoardPage} />
           <Route path="/calendar" component={CalendarPage} />
           <Route path="/log/:date" component={LogPage} />

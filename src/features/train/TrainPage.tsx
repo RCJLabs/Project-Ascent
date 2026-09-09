@@ -1,12 +1,16 @@
 import { Link } from 'wouter';
-import { ChevronRight, PenLine, Sparkles, TriangleAlert } from 'lucide-react';
+import { ChevronRight, Flag, PenLine, Sparkles, TriangleAlert } from 'lucide-react';
 import { PROGRAMS, STAGE_META, STAGE_ORDER } from '@/content/programs';
 import { canRun } from '@/engine/customProgram';
+import { activeObjectives } from '@/engine/objectives';
+import { useObjectives } from '@/store/objectives';
 import { useCustomPrograms } from '@/store/programs';
 import { PageHeader } from '@/ui/PageHeader';
 
 export function TrainPage() {
   const custom = useCustomPrograms((s) => s.custom);
+  const objectives = useObjectives((s) => s.objectives);
+  const active = activeObjectives(objectives);
   return (
     <>
       <PageHeader title="Train" subtitle="Structured climbing programs" />
@@ -20,6 +24,21 @@ export function TrainPage() {
           <div className="text-sm opacity-90">Answer seven questions and get a pick with its reasoning</div>
         </div>
         <ChevronRight size={18} className="shrink-0" />
+      </Link>
+      <Link
+        href="/objectives"
+        className="bg-surface border border-line rounded-2xl p-4 flex items-center gap-3 mb-5 hover:border-accent transition-colors"
+      >
+        <Flag size={18} className="shrink-0 text-accent" />
+        <div className="flex-1 min-w-0">
+          <div className="font-bold">Objectives</div>
+          <p className="text-sm text-ink-soft truncate">
+            {active.length === 0
+              ? 'The thing a program is for. Name what you are training toward.'
+              : active.map((o) => o.name).join(' · ')}
+          </p>
+        </div>
+        <ChevronRight size={18} className="text-ink-soft shrink-0" />
       </Link>
       <div className="grid grid-cols-1 gap-5">
         <section>
