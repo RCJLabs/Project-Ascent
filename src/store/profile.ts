@@ -31,8 +31,14 @@ export interface Injury {
   status: InjuryStatus;
   /** Meaningless for a back; kept optional rather than faked. */
   side?: InjurySide;
-  /** Return-to-climbing step id → done. */
+  /** Return-to-climbing step id → ticked. Ticking earns nothing, by design. */
   checklist?: Record<string, boolean>;
+  /** Steps the climber wrote, kept alongside the defaults. */
+  ownSteps?: { id: string; text: string }[];
+  /** Default step ids the climber removed, so they stay removed. */
+  hiddenSteps?: string[];
+  /** What a clinician actually said, in their words rather than ours. */
+  clinicalNote?: string;
   note?: string;
 }
 

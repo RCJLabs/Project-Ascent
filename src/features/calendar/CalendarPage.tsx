@@ -5,6 +5,7 @@ import { getProgram } from '@/content/programs';
 import type { DayOfWeek } from '@/content/types';
 import { addDays, dayOfWeek, fromKey, monthGrid, monthLabel, shortLabel, startOfWeek, today } from '@/engine/dates';
 import { plannedDay } from '@/engine/plan';
+import { summarise } from '@/engine/injury';
 import { effectivePlan, previewMove, type MovePreview } from '@/engine/reschedule';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
@@ -42,6 +43,7 @@ export function CalendarPage() {
   const startDate = activeProgramId ? startDates[activeProgramId] : undefined;
   const plan = activeProgramId ? plans[activeProgramId] : undefined;
   const weekOverrides = useProfile((s) => s.weekOverrides);
+  const injuries = useProfile((s) => s.injuries);
   const setWeekPlan = useProfile((s) => s.setWeekPlan);
   const setPlan = useProfile((s) => s.setPlan);
   const overrides = activeProgramId ? weekOverrides[activeProgramId] : undefined;
@@ -110,7 +112,11 @@ export function CalendarPage() {
 
   return (
     <>
-      <PageHeader title="Calendar" subtitle={program.name} action={<JournalLink />} />
+      <PageHeader
+        title="Calendar"
+        subtitle={[program.name, summarise(injuries)].filter(Boolean).join(' · ')}
+        action={<JournalLink />}
+      />
 
       {rearranging && !moving && !pending && (
         <Card className="mb-3">

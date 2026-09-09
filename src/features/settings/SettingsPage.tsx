@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'wouter';
 import { APP_VERSION } from '@/version';
 import { exportAll, hasRealData, importAll, parseExportFile, SCHEMA_VERSION } from '@/db';
 import { mediaBytes } from '@/db/media';
@@ -77,7 +78,6 @@ export function SettingsPage() {
   const setEquipment = useProfile((s) => s.setEquipment);
   const injuries = useProfile((s) => s.injuries);
   const addInjury = useProfile((s) => s.addInjury);
-  const removeInjury = useProfile((s) => s.removeInjury);
   const updateInjury = useProfile((s) => s.updateInjury);
   const markExported = useProfile((s) => s.markExported);
   const [pendingImport, setPendingImport] = useState<{ text: string; hasData: boolean } | null>(null);
@@ -276,12 +276,12 @@ export function SettingsPage() {
                       <span className="font-semibold text-sm capitalize">{injury.part}</span>
                       <span className="text-xs text-ink-soft ml-2">since {injury.since}</span>
                     </div>
-                    <button
-                      onClick={() => removeInjury(injury.id)}
-                      className="text-sm font-semibold text-accent shrink-0"
+                    <Link
+                      href={`/injury/${injury.id}`}
+                      className="text-sm font-semibold text-accent shrink-0 py-1.5"
                     >
-                      Healed
-                    </button>
+                      Open
+                    </Link>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5 mb-1.5">

@@ -12,6 +12,7 @@ import {
   offeredBounties,
   resolveBounty,
   weeklyChallenges,
+  bountyLoads,
   type AcceptedBounty,
 } from './challenges';
 
@@ -246,5 +247,40 @@ describe('the board', () => {
     expect(empty.weekly).toHaveLength(3);
     expect(empty.claimable).toBe(0);
     expect(empty.offers.length).toBeGreaterThan(0);
+  });
+});
+
+describe('bounties and injuries', () => {
+  const state = stateOf(history());
+
+  it('does not ask a healing pulley to send at its limit', () => {
+    const offers = offeredBounties(history(), state, TODAY, 3, ['pulley']);
+    for (const offer of offers) {
+      expect(bountyLoads(offer)).not.toContain('pulley');
+    }
+  });
+
+  it('still offers what the injury does not touch', () => {
+    const offers = offeredBounties(history(), state, TODAY, 3, ['pulley', 'elbow', 'fingers', 'shoulder']);
+    expect(offers.length).toBeGreaterThan(0);
+    expect(offers.every((o) => bountyLoads(o).length === 0)).toBe(true);
+  });
+
+  it('offers the full board when nothing is hurt', () => {
+    const all = offeredBounties(history(), state, TODAY, 3, []);
+    const hurt = offeredBounties(history(), state, TODAY, 3, ['pulley']);
+    expect(all.length).toBeGreaterThanOrEqual(hurt.length);
+  });
+
+  it('knows a send bounty loads the pulling chain and a day outside does not', () => {
+    expect(bountyLoads({ key: 'k', title: '', detail: '', unit: '', target: 1,
+      measure: { kind: 'sends', scale: 'V', grade: 'V4' } })).toContain('pulley');
+    expect(bountyLoads({ key: 'k', title: '', detail: '', unit: '', target: 1,
+      measure: { kind: 'outdoor-days' } })).toEqual([]);
+  });
+
+  it('reaches the board itself', () => {
+    const board = deriveBoard({ sessions: history(), state, today: TODAY, injured: ['pulley'] });
+    for (const offer of board.offers) expect(bountyLoads(offer)).not.toContain('pulley');
   });
 });

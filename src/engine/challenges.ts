@@ -14,12 +14,14 @@
  * date, so the same day always produces the same board.
  */
 
-import { DRILL_CATEGORIES, getDrill } from '@/content/drills';
+import { DRILL_CATEGORIES, drillsByCategory, getDrill } from '@/content/drills';
 import type { DrillCategory } from '@/content/types';
 import type { Session } from '@/db/sessions';
 import { addDays, daysBetween, startOfWeek, today as todayKey } from './dates';
 import type { ClimberState } from './derive';
 import { DEFAULT_DISPLAY, V_GRADES, YDS_GRADES, displayGrade, gradeOrdinal, type GradeDisplay, type GradeScale } from './grades';
+import type { BodyPart } from '@/content/warmups';
+import { partsInText } from './bodyLoad';
 
 export type ChallengeKind = 'daily' | 'weekly' | 'bounty';
 
@@ -265,11 +267,45 @@ function measureOf(spec: BountySpec): Measure {
  * boulder/rope split follows their history, and the drill bounty targets
  * whichever category their logs show least. Nothing here is a fixed list.
  */
+/**
+ * What a bounty would ask you to load.
+ *
+ * Sending at your limit and burning on a project both put force through
+ * fingers and the pulling chain; a drill bounty loads whatever its category's
+ * drills load; days outside load nothing in particular. Used to stop the
+ * board asking a climber to do the one thing they have told it not to.
+ */
+export function bountyLoads(spec: BountySpec): BodyPart[] {
+  switch (spec.measure.kind) {
+    case 'sends':
+    case 'burns':
+      return ['fingers', 'pulley', 'elbow', 'shoulder'];
+    case 'drill-category':
+      return categoryLoads(spec.measure.category);
+    default:
+      return [];
+  }
+}
+
+function clashes(spec: BountySpec, injured: readonly BodyPart[]): boolean {
+  return bountyLoads(spec).some((part) => injured.includes(part));
+}
+
+/** What a drill category's drills load, across the whole catalog. */
+function categoryLoads(category: DrillCategory): BodyPart[] {
+  const parts = drillsByCategory(category).flatMap((d) =>
+    partsInText(`${d.name} ${d.focus} ${d.description}`),
+  );
+  return [...new Set(parts)];
+}
+
 export function offeredBounties(
   _sessions: Session[],
   state: ClimberState,
   today: string,
   count = 3,
+  /** Parts load should stay off. A bounty that asks for them is not offered. */
+  injured: readonly BodyPart[] = [],
 ): BountySpec[] {
   const out: BountySpec[] = [];
 
@@ -294,20 +330,24 @@ export function offeredBounties(
     measure: { kind: 'sends', scale, grade: stretch },
   });
 
-  // The drill category the logs show least, which is the useful one.
+  // The drill category the logs show least, which is the useful one — but
+  // chosen from the ones that do not load something that is healing, rather
+  // than picked first and discarded after.
   const counts = state.drillsByCategory;
-  const candidates = (Object.keys(DRILL_CATEGORIES) as DrillCategory[]).filter(
-    (c) => c !== 'recovery' && c !== 'assessment',
-  );
-  const weakest = candidates.sort((a, b) => (counts[a] ?? 0) - (counts[b] ?? 0))[0]!;
-  out.push({
-    key: `drill-${weakest}`,
-    title: `Two ${DRILL_CATEGORIES[weakest].label.toLowerCase()} drills`,
-    detail: `${DRILL_CATEGORIES[weakest].description} Your least-trained category.`,
-    unit: 'sessions',
-    target: 2,
-    measure: { kind: 'drill-category', category: weakest },
-  });
+  const candidates = (Object.keys(DRILL_CATEGORIES) as DrillCategory[])
+    .filter((c) => c !== 'recovery' && c !== 'assessment')
+    .filter((c) => !categoryLoads(c).some((part) => injured.includes(part)));
+  const weakest = candidates.sort((a, b) => (counts[a] ?? 0) - (counts[b] ?? 0))[0];
+  if (weakest) {
+    out.push({
+      key: `drill-${weakest}`,
+      title: `Two ${DRILL_CATEGORIES[weakest].label.toLowerCase()} drills`,
+      detail: `${DRILL_CATEGORIES[weakest].description} Your least-trained category.`,
+      unit: 'sessions',
+      target: 2,
+      measure: { kind: 'drill-category', category: weakest },
+    });
+  }
 
   const extras: BountySpec[] = [
     {
@@ -327,9 +367,14 @@ export function offeredBounties(
       measure: { kind: 'outdoor-days' },
     },
   ];
-  out.push(pick(extras, `bounty:${today}`));
+  // Pick from the extras that are safe, rather than picking then discarding:
+  // a climber with several injuries should still be offered something.
+  const safeExtras = extras.filter((spec) => !clashes(spec, injured));
+  if (safeExtras.length > 0) out.push(pick(safeExtras, `bounty:${today}`));
 
-  return out.slice(0, count);
+  // A board that asks a climber to send at their limit on a healing pulley
+  // is worse than a board with one fewer bounty on it.
+  return out.filter((spec) => !clashes(spec, injured)).slice(0, count);
 }
 
 export function resolveBounty(bounty: AcceptedBounty, sessions: Session[], today: string): Challenge {
@@ -373,6 +418,8 @@ export interface BoardInput {
   claimed?: readonly string[];
   /** Notation to write grades in. Defaults to the stored ladders. */
   display?: GradeDisplay;
+  /** Parts load should stay off, so the board stops asking for them. */
+  injured?: readonly BodyPart[];
 }
 
 export function deriveBoard(input: BoardInput): Board {
@@ -387,9 +434,9 @@ export function deriveBoard(input: BoardInput): Board {
   const bounties = accepted.map((b) => resolveBounty(b, input.sessions, today));
 
   const acceptedKeys = new Set(accepted.map((b) => b.spec.key));
-  const offers = offeredBounties(input.sessions, input.state, today).filter(
-    (o) => !acceptedKeys.has(o.key),
-  );
+  const offers = offeredBounties(
+    input.sessions, input.state, today, undefined, input.injured ?? [],
+  ).filter((o) => !acceptedKeys.has(o.key));
 
   const claimable = [daily, ...weekly, ...bounties]
     .filter((c) => c.done && !claimed.has(c.id))

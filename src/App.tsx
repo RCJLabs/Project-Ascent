@@ -8,6 +8,7 @@ import { CoachPage } from '@/features/coach/CoachPage';
 import { HomePage } from '@/features/home/HomePage';
 import { PlaceholderPage } from '@/features/placeholder/PlaceholderPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
+import { InjuryPage } from '@/features/injury/InjuryPage';
 import { BoardPage } from '@/features/challenges/BoardPage';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { FinderPage } from '@/features/finder/FinderPage';
@@ -107,6 +108,7 @@ function Shell() {
           <Route path="/assessments" component={AssessmentsPage} />
           <Route path="/projects/:id" component={ProjectDetailPage} />
           <Route path="/projects" component={ProjectsPage} />
+          <Route path="/injury/:id" component={InjuryPage} />
           <Route path="/settings" component={SettingsPage} />
           <Route>
             <PlaceholderPage title="Not found" subtitle="" body="That page does not exist." />

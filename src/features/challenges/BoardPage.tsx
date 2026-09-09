@@ -11,6 +11,7 @@ import { today } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { unitsToXp } from '@/engine/economy';
 import { BOUNTY_CAP, useGame } from '@/store/game';
+import { injuryPolicy } from '@/engine/injury';
 import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';
 import { useSessions } from '@/store/sessions';
@@ -27,6 +28,7 @@ export function useBoard() {
   const activeProgramId = useProfile((s) => s.activeProgramId);
 
   const display = useSettings((s) => s.display);
+  const injuries = useProfile((s) => s.injuries);
   const claimed = useMemo(
     () => ledger.filter((e) => e.id.startsWith('claim:')).map((e) => e.id.slice(6)),
     [ledger],
@@ -39,10 +41,13 @@ export function useBoard() {
     const rule = program?.constraints.find((c) => c.kind === 'sessions-per-week');
     const weeklyTarget = rule && rule.kind === 'sessions-per-week' ? rule.min : 3;
     return {
-      board: deriveBoard({ sessions, state, accepted: bounties, weeklyTarget, claimed, display }),
+      board: deriveBoard({
+        sessions, state, accepted: bounties, weeklyTarget, claimed, display,
+        injured: injuryPolicy(injuries).excluded,
+      }),
       claimed: new Set(claimed),
     };
-  }, [byDate, bounties, activeProgramId, claimed, display]);
+  }, [byDate, bounties, activeProgramId, claimed, display, injuries]);
 }
 
 export function BoardPage() {
