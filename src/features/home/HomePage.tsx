@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Link } from 'wouter';
-import { CalendarDays, Check, Clock, Gamepad2, Settings, Sparkles } from 'lucide-react';
+import { CalendarDays, Check, Clock, Gamepad2, MessageSquare, Settings, Sparkles } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveAvatar } from '@/engine/avatar';
@@ -20,6 +20,7 @@ import { Avatar } from '@/ui/Avatar';
 import { LevelBar } from '@/ui/LevelBar';
 import { MountainMeter } from '@/ui/MountainMeter';
 import { PageHeader } from '@/ui/PageHeader';
+import { useTips } from '@/features/coach/CoachPage';
 
 export function HomePage() {
   const activeProgramId = useProfile((s) => s.activeProgramId);
@@ -55,6 +56,7 @@ export function HomePage() {
 
       <div className="grid gap-3">
         <ClimberStrip />
+        <CoachCard />
         <AltimeterCard />
         <Link href="/board" className="block bg-surface border border-line rounded-2xl p-4">
           <BoardCard />
@@ -134,6 +136,33 @@ export function HomePage() {
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * The loudest standing observation, or nothing. Home is not the board — it
+ * carries one card so the board is worth opening, and stays silent when
+ * there is genuinely nothing to say.
+ */
+function CoachCard() {
+  const { visible } = useTips();
+  const top = visible[0];
+  if (!top) return null;
+  const rest = visible.length - 1;
+  const tone =
+    top.tone === 'caution' ? 'text-warn' : top.tone === 'good' ? 'text-positive' : 'text-accent';
+  return (
+    <Link href="/coach" className="block bg-surface border border-line rounded-2xl p-4">
+      <div className="flex items-center gap-2 mb-1.5">
+        <MessageSquare size={15} className={tone} />
+        <span className="text-xs font-bold uppercase tracking-widest text-ink-soft">
+          Coach's Corner
+        </span>
+        {rest > 0 && <span className="text-xs text-ink-soft ml-auto">+{rest} more</span>}
+      </div>
+      <div className="font-bold leading-snug mb-1">{top.headline}</div>
+      <p className="text-sm text-ink-soft leading-relaxed line-clamp-2">{top.body}</p>
+    </Link>
   );
 }
 

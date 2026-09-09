@@ -41,6 +41,13 @@ export interface ProfileState {
   /** What the climber told us on day one, so the finder never asks twice. */
   baseline: BaselineAnswers | null;
   completeOnboarding: (baseline: BaselineAnswers | null) => void;
+  /** Coach tip id → the triggering fact that was waved away. */
+  dismissedTips: Record<string, string>;
+  dismissTip: (id: string, signature: string) => void;
+  restoreTips: () => void;
+  /** ISO date of the last backup export, for the coach's nudge. */
+  lastExportAt: string | null;
+  markExported: () => void;
   startProgram: (programId: string, plan: WeekPlan, trackId?: string, restart?: boolean) => void;
   setPlan: (programId: string, plan: WeekPlan) => void;
   stopProgram: () => void;
@@ -64,6 +71,8 @@ interface Persisted {
   avatarPalette: AvatarPalette;
   onboardedAt: string | null;
   baseline: BaselineAnswers | null;
+  dismissedTips: Record<string, string>;
+  lastExportAt: string | null;
 }
 
 function snapshot(s: ProfileState): Persisted {
@@ -78,6 +87,8 @@ function snapshot(s: ProfileState): Persisted {
     avatarPalette: s.avatarPalette,
     onboardedAt: s.onboardedAt,
     baseline: s.baseline,
+    dismissedTips: s.dismissedTips,
+    lastExportAt: s.lastExportAt,
   };
 }
 
@@ -98,9 +109,26 @@ export const useProfile = create<ProfileState>((set, get) => ({
   avatarPalette: DEFAULT_PALETTE,
   onboardedAt: null,
   baseline: null,
+  dismissedTips: {},
+  lastExportAt: null,
 
   completeOnboarding: (baseline) => {
     set({ baseline, onboardedAt: new Date().toISOString() });
+    void save(snapshot(get()));
+  },
+
+  dismissTip: (id, signature) => {
+    set({ dismissedTips: { ...get().dismissedTips, [id]: signature } });
+    void save(snapshot(get()));
+  },
+
+  restoreTips: () => {
+    set({ dismissedTips: {} });
+    void save(snapshot(get()));
+  },
+
+  markExported: () => {
+    set({ lastExportAt: today() });
     void save(snapshot(get()));
   },
 
@@ -176,6 +204,8 @@ export async function hydrateProfile(): Promise<void> {
       avatarPalette: { ...DEFAULT_PALETTE, ...value.avatarPalette },
       onboardedAt: value.onboardedAt ?? null,
       baseline: value.baseline ?? null,
+      dismissedTips: value.dismissedTips ?? {},
+      lastExportAt: value.lastExportAt ?? null,
     });
   } catch {
     useProfile.setState({ hydrated: true });

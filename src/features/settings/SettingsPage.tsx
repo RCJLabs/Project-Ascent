@@ -60,6 +60,7 @@ export function SettingsPage() {
   const injuries = useProfile((s) => s.injuries);
   const addInjury = useProfile((s) => s.addInjury);
   const removeInjury = useProfile((s) => s.removeInjury);
+  const markExported = useProfile((s) => s.markExported);
   const [pendingImport, setPendingImport] = useState<{ text: string; hasData: boolean } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -93,6 +94,7 @@ export function SettingsPage() {
     a.download = `project-ascent-backup-${file.exportedAt.slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    markExported();
     setMessage('Backup exported.');
   }
 

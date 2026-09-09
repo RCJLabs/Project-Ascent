@@ -4,6 +4,7 @@ import { useHashLocation } from 'wouter/use-hash-location';
 import { AltimeterPage } from '@/features/altimeter/AltimeterPage';
 import { AscentPage } from '@/features/ascent/AscentPage';
 import { ClimberPage } from '@/features/climber/ClimberPage';
+import { CoachPage } from '@/features/coach/CoachPage';
 import { HomePage } from '@/features/home/HomePage';
 import { PlaceholderPage } from '@/features/placeholder/PlaceholderPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
@@ -82,6 +83,7 @@ function Shell() {
           <Route path="/" component={HomePage} />
           <Route path="/climber" component={ClimberPage} />
           <Route path="/skills" component={SkillsPage} />
+          <Route path="/coach" component={CoachPage} />
           <Route path="/review" component={ReviewPage} />
           <Route path="/altimeter" component={AltimeterPage} />
           <Route path="/ascent" component={AscentPage} />
