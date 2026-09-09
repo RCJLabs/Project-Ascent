@@ -68,3 +68,32 @@ export function maxGrade(scale: GradeScale, grades: readonly string[]): string |
   }
   return best;
 }
+
+/**
+ * Rough V-equivalent of a route grade, for reward scaling only.
+ *
+ * Bouldering and route grades measure different things, and no honest table
+ * makes them the same. This one exists so a 5.13a send is not worth the same
+ * XP as a 5.7, and it is used nowhere else — pyramids, records and
+ * projections stay strictly per-ladder (AUDIT.md: a boulderer's first 5.12a
+ * is a real record on its own ladder).
+ *
+ * The mapping is a coach's judgment call, not a standard. It is one table
+ * so it can be argued with and changed in one place.
+ */
+const YDS_TO_V: Record<string, number> = {
+  '5.4': 0, '5.5': 0, '5.6': 0, '5.7': 0, '5.8': 0, '5.9': 0,
+  '5.10a': 0, '5.10b': 0, '5.10c': 1, '5.10d': 1,
+  '5.11a': 1, '5.11b': 2, '5.11c': 2, '5.11d': 2,
+  '5.12a': 3, '5.12b': 3, '5.12c': 4, '5.12d': 4,
+  '5.13a': 5, '5.13b': 6, '5.13c': 7, '5.13d': 8,
+  '5.14a': 9, '5.14b': 10, '5.14c': 11, '5.14d': 12,
+  '5.15a': 13, '5.15b': 14, '5.15c': 15, '5.15d': 16,
+};
+
+/** V-scale difficulty used for reward scaling; -1 when the grade is unknown. */
+export function vEquivalent(scale: GradeScale, grade: string): number {
+  const canon = canonicalGrade(scale, grade);
+  if (canon === null) return -1;
+  return scale === 'V' ? V_GRADES.indexOf(canon as (typeof V_GRADES)[number]) : YDS_TO_V[canon] ?? -1;
+}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { AlertTriangle, ArrowLeft, Check, Clock, Flame, Plus, RotateCw, Timer, Trash2, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Check, Clock, Flame, Plus, RotateCw, Sparkles, Timer, Trash2, TrendingUp, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
 import { addDays, fromKey, today } from '@/engine/dates';
@@ -10,6 +10,7 @@ import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
 import type { Climb, ProjectAttempt, Session } from '@/db/sessions';
 import type { AttemptOutcome } from '@/db/projects';
 import { OUTCOME_HIGH_POINT } from '@/engine/projects';
+import { useXp } from '@/store/game';
 import { useProjects } from '@/store/projects';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
@@ -285,7 +286,9 @@ function SessionEditor({
 
   const [scale, setScale] = useState<GradeScale>('V');
   const [grade, setGrade] = useState('V3');
-  const [result, setResult] = useState<'send' | 'attempt'>('send');
+  // One control instead of two: style is part of how a climb went, and a
+  // separate selector for it would not survive a phone-width row.
+  const [outcome, setOutcome] = useState<'onsight' | 'flash' | 'send' | 'attempt'>('send');
   const [climbName, setClimbName] = useState('');
   const [timer, setTimer] = useState<{
     protocolId: string;
@@ -304,14 +307,32 @@ function SessionEditor({
 
   function addClimb() {
     const name = climbName.trim();
+    const result: Climb['result'] = outcome === 'attempt' ? 'attempt' : 'send';
+    const style = outcome === 'onsight' || outcome === 'flash' ? outcome : undefined;
     // A named climb never merges into an unnamed tally — the name is what
-    // makes project auto-suggest possible.
+    // makes project auto-suggest possible — and nor do two different styles.
     const existing = session.climbs.find(
-      (c) => c.grade === grade && c.scale === scale && c.result === result && (c.name ?? '') === name,
+      (c) =>
+        c.grade === grade &&
+        c.scale === scale &&
+        c.result === result &&
+        c.style === style &&
+        (c.name ?? '') === name,
     );
     const climbs = existing
       ? session.climbs.map((c) => (c === existing ? { ...c, count: c.count + 1 } : c))
-      : [...session.climbs, { id: rid(), grade, scale, count: 1, result, ...(name ? { name } : {}) } as Climb];
+      : [
+          ...session.climbs,
+          {
+            id: rid(),
+            grade,
+            scale,
+            count: 1,
+            result,
+            ...(style ? { style } : {}),
+            ...(name ? { name } : {}),
+          } as Climb,
+        ];
     patch({ climbs });
     setClimbName('');
   }
@@ -415,10 +436,13 @@ function SessionEditor({
                 ))}
               </select>
               <select
-                value={result}
-                onChange={(e) => setResult(e.target.value as 'send' | 'attempt')}
+                value={outcome}
+                onChange={(e) => setOutcome(e.target.value as typeof outcome)}
+                aria-label="How it went"
                 className="bg-sunken border border-line rounded-xl px-2.5 py-2 text-sm"
               >
+                <option value="onsight">On-sight</option>
+                <option value="flash">Flash</option>
                 <option value="send">Sent</option>
                 <option value="attempt">Tried</option>
               </select>
@@ -444,7 +468,13 @@ function SessionEditor({
                     <span className="font-bold text-sm w-14">{c.grade}</span>
                     <span className="text-xs text-ink-soft flex-1 truncate">
                       {c.name ? `${c.name} · ` : ''}
-                      {c.result === 'send' ? 'sent' : 'tried'}
+                      {c.result === 'attempt'
+                        ? 'tried'
+                        : c.style === 'onsight'
+                          ? 'on-sight'
+                          : c.style === 'flash'
+                            ? 'flashed'
+                            : 'sent'}
                     </span>
                     <button onClick={() => bump(c, -1)} className="w-7 h-7 rounded-lg bg-surface border border-line">
                       −
@@ -627,8 +657,18 @@ function SessionEditor({
         />
       )}
 
+      {session.completed && (
+        <RewardCard session={session} onAcknowledge={() => patch({ rewarded: true })} />
+      )}
+
       {session.completed ? (
-        <Button variant="outline" className="w-full" onClick={() => patch({ completed: false })}>
+        <Button
+          variant="outline"
+          className="w-full"
+          // Reopening clears the acknowledgement: if the session changes, the
+          // climber should see the new total rather than the old one.
+          onClick={() => patch({ completed: false, rewarded: false })}
+        >
           <X size={16} /> Reopen session
         </Button>
       ) : (
@@ -778,6 +818,82 @@ function ProjectBurnsCard({
           );
         })}
       </div>
+    </Card>
+  );
+}
+
+/**
+ * What the session earned, itemised.
+ *
+ * XP is derived rather than banked, so `rewarded` no longer means "paid" —
+ * it means "you have seen this". Reopening the session clears it, because
+ * an edited session is worth a different number and hiding that would be
+ * the same dishonesty the derived total exists to avoid.
+ */
+function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledge: () => void }) {
+  const xp = useXp();
+  const detail = xp.bySession[session.id];
+  if (!detail) return null;
+
+  const levelled = detail.levelAfter > detail.levelBefore;
+
+  if (session.rewarded) {
+    return (
+      <p className="text-sm text-ink-soft text-center">
+        Earned <span className="font-bold text-ink tabular-nums">+{detail.xp.toLocaleString()}</span> XP
+      </p>
+    );
+  }
+
+  return (
+    <Card>
+      <div className="text-center mb-3">
+        <div className="text-3xl font-black tabular-nums leading-none">
+          +{detail.xp.toLocaleString()}
+        </div>
+        <div className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mt-1.5">
+          XP earned
+        </div>
+      </div>
+
+      {levelled && (
+        <p className="flex items-center justify-center gap-1.5 text-sm font-semibold text-accent mb-3">
+          <TrendingUp size={15} /> Level {detail.levelAfter} — {xp.rank.title}
+        </p>
+      )}
+
+      <ul className="grid gap-1 mb-3">
+        {detail.lines.map((line, i) => (
+          <li key={`${line.label}-${i}`} className="flex items-baseline justify-between gap-3 text-sm">
+            <span className="text-ink-soft truncate">{line.label}</span>
+            <span className="font-semibold tabular-nums shrink-0">+{line.xp.toLocaleString()}</span>
+          </li>
+        ))}
+      </ul>
+
+      {detail.reward.multiplier !== 1 && (
+        <p className="text-xs text-ink-soft mb-3">
+          {[
+            detail.reward.effort !== 1 && `effort ×${detail.reward.effort}`,
+            detail.reward.drill !== 1 && `drill streak ×${detail.reward.drill}`,
+            detail.reward.outdoor !== 1 && `outdoor ×${detail.reward.outdoor}`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}{' '}
+          already applied.
+        </p>
+      )}
+
+      {detail.reward.effortBraked && (
+        <p className="text-sm flex gap-2 items-start mb-3">
+          <AlertTriangle size={14} className="text-warn shrink-0 mt-0.5" />
+          High load week — the effort bonus was withheld. Recover.
+        </p>
+      )}
+
+      <Button className="w-full" onClick={onAcknowledge}>
+        <Sparkles size={16} /> Nice
+      </Button>
     </Card>
   );
 }

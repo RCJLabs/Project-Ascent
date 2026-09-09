@@ -4,9 +4,11 @@ import { CalendarDays, Check, Clock, Settings, Sparkles } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { today } from '@/engine/dates';
 import { plannedDay } from '@/engine/plan';
+import { useXp } from '@/store/game';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
+import { LevelBar } from '@/ui/LevelBar';
 import { PageHeader } from '@/ui/PageHeader';
 
 export function HomePage() {
@@ -42,6 +44,8 @@ export function HomePage() {
       />
 
       <div className="grid gap-3">
+        <ClimberStrip />
+
         {!program && (
           <Card>
             <p className="text-sm leading-relaxed mb-3">
@@ -112,5 +116,14 @@ export function HomePage() {
         )}
       </div>
     </>
+  );
+}
+
+function ClimberStrip() {
+  const xp = useXp();
+  return (
+    <Link href="/climber" className="block bg-surface border border-line rounded-2xl p-4">
+      <LevelBar progress={xp.progress} rank={xp.rank} compact />
+    </Link>
   );
 }

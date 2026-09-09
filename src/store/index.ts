@@ -1,3 +1,4 @@
+import { useGame } from './game';
 import { useMetrics } from './metrics';
 import { hydrateProfile } from './profile';
 import { useProjects } from './projects';
@@ -19,6 +20,7 @@ export async function hydrateAll(): Promise<void> {
     hydrateProfile(),
     useSessions.getState().load(),
     useMetrics.getState().load(),
+    useGame.getState().load(),
     useProjects.getState().load(),
   ]);
 }

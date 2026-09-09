@@ -200,6 +200,43 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
  *  anything — roughly a session and a half a week. */
 const MIN_CHRONIC_DAYS = 6;
 
+/** sRPE for one session: RPE × hours. Zero when either is missing. */
+export function sessionLoad(session: Session): number {
+  return (session.rpe ?? 0) * ((session.durationMin ?? 0) / 60);
+}
+
+export type LoadIndex = Map<string, { load: number; deload: boolean }>;
+
+/**
+ * Daily training load, keyed by date.
+ *
+ * Exported so a caller can ask for the load state *as of* an arbitrary date
+ * — the economy prices a session against the load you were carrying when
+ * you did it, not the load you are carrying today.
+ */
+export function buildLoadIndex(sessions: Session[]): LoadIndex {
+  const index: LoadIndex = new Map();
+  for (const session of sessions) {
+    if (!session.completed) continue;
+    const load = sessionLoad(session);
+    if (load <= 0) continue;
+    const existing = index.get(session.date);
+    index.set(session.date, {
+      load: (existing?.load ?? 0) + load,
+      deload: existing?.deload || session.deload === true,
+    });
+  }
+  return index;
+}
+
+export function loadStateAt(
+  index: LoadIndex,
+  date: string,
+  deloadDates: Set<string> = new Set(),
+): LoadState {
+  return deriveLoad(index, date, deloadDates);
+}
+
 function deriveLoad(
   loadByDate: Map<string, { load: number; deload: boolean }>,
   today: string,
@@ -220,7 +257,7 @@ function deriveLoad(
   const chronicTotal = daily.reduce((sum, d) => sum + d.load, 0);
   const chronic = chronicTotal / 4;
 
-  const dates = [...loadByDate.keys()].sort();
+  const dates = [...loadByDate.keys()].filter((d) => d <= today).sort();
   const daysOfHistory = dates.length === 0 ? 0 : daysBetween(dates[0]!, today) + 1;
   const chronicDays = daily.filter((d) => d.load > 0).length;
 

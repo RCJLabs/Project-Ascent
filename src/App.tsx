@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Route, Router, Switch } from 'wouter';
 import { useHashLocation } from 'wouter/use-hash-location';
+import { ClimberPage } from '@/features/climber/ClimberPage';
 import { HomePage } from '@/features/home/HomePage';
 import { PlaceholderPage } from '@/features/placeholder/PlaceholderPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
@@ -36,6 +37,7 @@ export function App() {
       <AppShell>
         <Switch>
           <Route path="/" component={HomePage} />
+          <Route path="/climber" component={ClimberPage} />
           <Route path="/train" component={TrainPage} />
           <Route path="/find" component={FinderPage} />
           <Route path="/train/:id/start" component={StartProgramPage} />
