@@ -20,6 +20,7 @@ export const GROUND_ZERO: Program = {
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V0', max: 'V0', label: 'Pre-Climbing' },
   weeks: 12,
+  equipment: ['gym'],
 
   intro: {
     pitch:

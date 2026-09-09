@@ -22,6 +22,7 @@ export const PEAK_PERFORMANCE: Program = {
   discipline: 'boulder',
   gradeRange: { scale: 'V', min: 'V8', max: 'V11', label: 'V8-V11' },
   weeks: 12,
+  equipment: ['wall', 'hangboard', 'gym'],
 
   intro: {
     pitch:

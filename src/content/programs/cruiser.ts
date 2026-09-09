@@ -73,6 +73,7 @@ export const THE_CRUISER: Program = {
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V0', max: 'V17', label: 'All Levels' },
   weeks: 12,
+  equipment: ['wall', 'gym'],
 
   intro: {
     pitch:

@@ -22,6 +22,7 @@ export const THE_SIEGE: Program = {
   discipline: 'sport',
   gradeRange: { scale: 'YDS', min: '5.12d', max: '5.13d', label: '5.12d-5.13d' },
   weeks: 12,
+  equipment: ['wall', 'hangboard', 'gym'],
 
   intro: {
     pitch:
@@ -322,9 +323,9 @@ export const THE_SIEGE: Program = {
       note: 'Power-Endurance lands 48 hours after the Project session — never two hard climbing days back to back.',
     },
     {
-      kind: 'not-before',
-      sessionTypeId: 'proj',
-      before: 'pe',
+      kind: 'order-in-week',
+      first: 'proj',
+      then: 'pe',
       note: 'Project Session goes first in the week, when you are fresh.',
     },
   ],

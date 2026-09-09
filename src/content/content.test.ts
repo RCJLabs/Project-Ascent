@@ -97,7 +97,7 @@ describe('Iron Grip', () => {
   it('carries the scheduling rules as data, not only prose', () => {
     const kinds = IRON_GRIP.constraints.map((c) => c.kind);
     expect(kinds).toContain('min-gap-hours');
-    expect(kinds).toContain('not-before');
+    expect(kinds).toContain('not-day-before');
     const gap = IRON_GRIP.constraints.find((c) => c.kind === 'min-gap-hours')!;
     expect(gap).toMatchObject({ between: ['fp'], hours: 48 });
   });
@@ -292,6 +292,42 @@ describe('library coverage', () => {
       }
     }
     expect(Object.keys(PROTOCOLS).filter((id) => !referenced.has(id))).toEqual([]);
+  });
+});
+
+describe('scheduling constraint semantics', () => {
+  it('distinguishes week ordering from day adjacency', () => {
+    // Iron Grip's rule is about adjacency: fingers must not sit the day
+    // before a hard climb. Base Camp's is about order within the week.
+    const ig = IRON_GRIP.constraints.find((c) => c.kind === 'not-day-before')!;
+    expect(ig).toMatchObject({ sessionTypeId: 'fp', before: 'perf' });
+    const bc = BASE_CAMP.constraints.find((c) => c.kind === 'order-in-week')!;
+    expect(bc).toMatchObject({ first: 'tech', then: 'perf' });
+  });
+
+  it('has a recommended layout that satisfies its own ordering rules', () => {
+    // Data against data: this is the check that catches an inverted rule.
+    for (const program of PROGRAMS) {
+      const slots = program.recommendedLayout?.slots;
+      if (!slots) continue;
+      const dayOf = (typeId: string) =>
+        Object.entries(slots)
+          .filter(([, t]) => t === typeId)
+          .map(([d]) => Number(d));
+      for (const c of program.constraints) {
+        if (c.kind !== 'order-in-week') continue;
+        const firstDays = dayOf(c.first);
+        const thenDays = dayOf(c.then);
+        if (firstDays.length === 0 || thenDays.length === 0) continue;
+        expect(Math.min(...firstDays), `${program.id}: ${c.note}`).toBeLessThan(Math.min(...thenDays));
+      }
+      for (const c of program.constraints) {
+        if (c.kind !== 'not-day-before') continue;
+        for (const day of dayOf(c.sessionTypeId)) {
+          expect(dayOf(c.before), `${program.id}: ${c.note}`).not.toContain(day + 1);
+        }
+      }
+    }
   });
 });
 

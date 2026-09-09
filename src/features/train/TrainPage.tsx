@@ -1,13 +1,23 @@
 import { Link } from 'wouter';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Sparkles } from 'lucide-react';
 import { PROGRAMS, STAGE_META, STAGE_ORDER } from '@/content/programs';
-import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
 
 export function TrainPage() {
   return (
     <>
       <PageHeader title="Train" subtitle="Structured climbing programs" />
+      <Link
+        href="/find"
+        className="bg-accent text-accent-ink rounded-2xl p-4 flex items-center gap-3 mb-5 hover:bg-accent-strong transition-colors"
+      >
+        <Sparkles size={20} className="shrink-0" />
+        <div className="flex-1">
+          <div className="font-bold">Find my program</div>
+          <div className="text-sm opacity-90">Answer seven questions and get a pick with its reasoning</div>
+        </div>
+        <ChevronRight size={18} className="shrink-0" />
+      </Link>
       <div className="grid gap-5">
         {STAGE_ORDER.map((stage) => {
           const inStage = PROGRAMS.filter((p) => p.stage === stage);
@@ -47,12 +57,6 @@ export function TrainPage() {
           );
         })}
 
-        <Card>
-          <p className="text-sm text-ink-soft">
-            All eleven programs are here. The finder that picks the right one for you — from your
-            grade, goals, equipment, available days, and injuries — arrives with the next milestone.
-          </p>
-        </Card>
       </div>
     </>
   );

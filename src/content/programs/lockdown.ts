@@ -48,6 +48,7 @@ export const LOCKDOWN: Program = {
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V3', max: 'V5', label: 'V3-V5' },
   weeks: 12,
+  equipment: ['wall', 'hangboard', 'gym'],
 
   intro: {
     pitch:

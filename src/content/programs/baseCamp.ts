@@ -40,6 +40,7 @@ export const BASE_CAMP: Program = {
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V0', max: 'V2', label: 'V0-V2' },
   weeks: 12,
+  equipment: ['wall', 'gym'],
 
   intro: {
     pitch:
@@ -337,9 +338,9 @@ export const BASE_CAMP: Program = {
   constraints: [
     { kind: 'sessions-per-week', min: 4, max: 5, note: '4-5 sessions per week. Consistency beats intensity.' },
     {
-      kind: 'not-before',
-      sessionTypeId: 'perf',
-      before: 'tech',
+      kind: 'order-in-week',
+      first: 'tech',
+      then: 'perf',
       note: 'Technique sessions come before Performance sessions in the week.',
     },
     {

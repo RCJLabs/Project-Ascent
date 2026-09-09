@@ -40,6 +40,7 @@ export const GENERAL_TRAINING: Program = {
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V0', max: 'V17', label: 'All Levels' },
   weeks: 52,
+  equipment: ['none'],
 
   intro: {
     pitch:

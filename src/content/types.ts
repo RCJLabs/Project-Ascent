@@ -237,7 +237,10 @@ export type Constraint =
   | { kind: 'sessions-per-week'; min: number; max: number; note: string }
   | { kind: 'min-gap-hours'; between: SessionTypeId[]; hours: number; note: string }
   | { kind: 'max-per-week'; sessionTypeId: SessionTypeId; count: number; note: string }
-  | { kind: 'not-before'; sessionTypeId: SessionTypeId; before: SessionTypeId; note: string };
+  /** `first` should be scheduled earlier in the week than `then`. */
+  | { kind: 'order-in-week'; first: SessionTypeId; then: SessionTypeId; note: string }
+  /** `sessionTypeId` must not fall on the day immediately before `before`. */
+  | { kind: 'not-day-before'; sessionTypeId: SessionTypeId; before: SessionTypeId; note: string };
 
 // ── Weekly layout ─────────────────────────────────────────────────────────
 
@@ -288,6 +291,9 @@ export interface Program {
   discipline: Discipline;
   gradeRange: { scale: GradeScale; min: string; max: string; label: string };
   weeks: number;
+  /** What the program needs to run. The finder uses this to rule out
+   *  programs a climber has no way to train. */
+  equipment: Equipment[];
   intro: ProgramIntro;
   phases: Phase[];
   /** Parallel difficulty paths. Exercises tagged with a `track` are shown

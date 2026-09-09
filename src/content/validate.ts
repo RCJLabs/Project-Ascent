@@ -127,9 +127,11 @@ export function validateProgram(program: Program): string[] {
         ? c.between
         : c.kind === 'max-per-week'
           ? [c.sessionTypeId]
-          : c.kind === 'not-before'
+          : c.kind === 'not-day-before'
             ? [c.sessionTypeId, c.before]
-            : [];
+            : c.kind === 'order-in-week'
+              ? [c.first, c.then]
+              : [];
     for (const ref of refs) {
       if (!typeIds.has(ref)) where(`constraint '${c.kind}' references unknown session type '${ref}'`);
     }

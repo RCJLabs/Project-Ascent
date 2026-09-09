@@ -35,6 +35,7 @@ export const THE_LONG_GAME: Program = {
   discipline: 'sport',
   gradeRange: { scale: 'YDS', min: '5.9', max: '5.12a', label: '5.9-5.12' },
   weeks: 12,
+  equipment: ['wall', 'gym'],
 
   intro: {
     pitch:
@@ -263,9 +264,9 @@ export const THE_LONG_GAME: Program = {
       note: 'Endurance and Performance should not be on consecutive days.',
     },
     {
-      kind: 'not-before',
-      sessionTypeId: 'end',
-      before: 'perf',
+      kind: 'order-in-week',
+      first: 'end',
+      then: 'perf',
       note: 'Endurance goes first in the week, while you are fresh.',
     },
   ],

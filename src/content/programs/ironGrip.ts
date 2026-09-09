@@ -25,6 +25,7 @@ export const IRON_GRIP: Program = {
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V5', max: 'V8', label: 'V5-V8' },
   weeks: 12,
+  equipment: ['wall', 'hangboard', 'campus'],
 
   intro: {
     pitch:
@@ -348,7 +349,7 @@ export const IRON_GRIP: Program = {
       note: 'Leave at least 48 hours between finger sessions.',
     },
     {
-      kind: 'not-before',
+      kind: 'not-day-before',
       sessionTypeId: 'fp',
       before: 'perf',
       note: 'Never schedule finger work the day before a hard climbing day.',

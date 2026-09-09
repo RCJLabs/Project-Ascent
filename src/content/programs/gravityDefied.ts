@@ -30,6 +30,7 @@ export const GRAVITY_DEFIED: Program = {
   discipline: 'boulder',
   gradeRange: { scale: 'V', min: 'V2', max: 'V5', label: 'V2-V5' },
   weeks: 12,
+  equipment: ['wall', 'gym', 'hangboard'],
 
   intro: {
     pitch:
@@ -286,9 +287,9 @@ export const GRAVITY_DEFIED: Program = {
       note: 'Three committed days plus one optional volume day.',
     },
     {
-      kind: 'not-before',
-      sessionTypeId: 'perf',
-      before: 'tech',
+      kind: 'order-in-week',
+      first: 'tech',
+      then: 'perf',
       note: 'Technical Flight comes before Performance in the week.',
     },
     {
