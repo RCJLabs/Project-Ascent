@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Route, Router, Switch } from 'wouter';
+import { Route, Router, Switch, useLocation } from 'wouter';
 import { useHashLocation } from 'wouter/use-hash-location';
 import { AltimeterPage } from '@/features/altimeter/AltimeterPage';
 import { AscentPage } from '@/features/ascent/AscentPage';
@@ -22,7 +22,10 @@ import { ProjectsPage } from '@/features/projects/ProjectsPage';
 import { StartProgramPage } from '@/features/plan/StartProgramPage';
 import { ProgramDetailPage } from '@/features/train/ProgramDetailPage';
 import { TrainPage } from '@/features/train/TrainPage';
+import { WelcomePage } from '@/features/onboarding/WelcomePage';
 import { hydrateAll } from '@/store';
+import { useProfile } from '@/store/profile';
+import { useSessions } from '@/store/sessions';
 import { applyTheme, useSettings } from '@/store/settings';
 import { AppShell } from '@/ui/AppShell';
 
@@ -39,6 +42,41 @@ export function App() {
 
   return (
     <Router hook={useHashLocation}>
+      <Switch>
+        <Route path="/welcome" component={WelcomePage} />
+        <Route>
+          <Shell />
+        </Route>
+      </Switch>
+    </Router>
+  );
+}
+
+/**
+ * Send a genuinely new install to the baseline flow, once. Anyone with data
+ * — including a backup imported from before onboarding existed — is left
+ * alone; `onboardedAt` being null is not by itself evidence of a fresh start.
+ */
+function useFirstRunRedirect(): void {
+  const [location, navigate] = useLocation();
+  const profileReady = useProfile((s) => s.hydrated);
+  const onboardedAt = useProfile((s) => s.onboardedAt);
+  const activeProgramId = useProfile((s) => s.activeProgramId);
+  const sessionsReady = useSessions((s) => s.hydrated);
+  const byDate = useSessions((s) => s.byDate);
+
+  useEffect(() => {
+    if (!profileReady || !sessionsReady) return;
+    if (onboardedAt !== null || activeProgramId !== null) return;
+    if (Object.keys(byDate).length > 0) return;
+    if (location === '/welcome') return;
+    navigate('/welcome', { replace: true });
+  }, [profileReady, sessionsReady, onboardedAt, activeProgramId, byDate, location, navigate]);
+}
+
+function Shell() {
+  useFirstRunRedirect();
+  return (
       <AppShell>
         <Switch>
           <Route path="/" component={HomePage} />
@@ -67,6 +105,5 @@ export function App() {
           </Route>
         </Switch>
       </AppShell>
-    </Router>
   );
 }

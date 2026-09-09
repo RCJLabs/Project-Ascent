@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { AlertTriangle, ArrowLeft, Check, Lock, Sparkles } from 'lucide-react';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
 import { findProgram, type Experience, type FinderInput, type FinderResult, type Goal, type Recommendation } from '@/engine/finder';
+import { finderInputFrom, type BaselineAnswers } from '@/engine/onboarding';
 import type { Discipline, Equipment } from '@/content/types';
 import type { BodyPart } from '@/content/warmups';
 import { useProfile } from '@/store/profile';
@@ -115,13 +116,27 @@ function RecCard({ rec, headline }: { rec: Recommendation; headline?: boolean })
   );
 }
 
+/**
+ * The store hydrates a moment after mount, so the form waits for it rather
+ * than seeding itself from an empty profile — the same trap the equipment
+ * fields below are written to avoid.
+ */
 export function FinderPage() {
-  const [experience, setExperience] = useState<Experience>('intermediate');
-  const [discipline, setDiscipline] = useState<Discipline>('both');
-  const [boulderGrade, setBoulderGrade] = useState('');
-  const [sportGrade, setSportGrade] = useState('');
-  const [goal, setGoal] = useState<Goal>('technique');
-  const [daysPerWeek, setDaysPerWeek] = useState(4);
+  const hydrated = useProfile((s) => s.hydrated);
+  const baseline = useProfile((s) => s.baseline);
+  if (!hydrated) return null;
+  return <FinderForm baseline={baseline} />;
+}
+
+function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
+  // Seeded from the first-run baseline where there is one: these are the same
+  // five questions, and asking them twice is how a finder gets abandoned.
+  const [experience, setExperience] = useState<Experience>(baseline?.experience ?? 'intermediate');
+  const [discipline, setDiscipline] = useState<Discipline>(baseline?.discipline ?? 'both');
+  const [boulderGrade, setBoulderGrade] = useState(baseline?.boulderGrade ?? '');
+  const [sportGrade, setSportGrade] = useState(baseline?.sportGrade ?? '');
+  const [goal, setGoal] = useState<Goal>(baseline?.goal ?? 'technique');
+  const [daysPerWeek, setDaysPerWeek] = useState(baseline?.daysPerWeek ?? 4);
   // Read and write the profile directly rather than copying into local
   // state: what you tell the finder about your gear and injuries *is* your
   // profile, and a local copy seeded at mount goes stale when the store
@@ -139,6 +154,16 @@ export function FinderPage() {
     else addInjury(part);
   };
   const [result, setResult] = useState<FinderResult | null>(null);
+
+  // Arriving from the baseline flow means the seven questions were just
+  // answered; showing the form again would be asking them twice. Runs once,
+  // so "Change my answers" is not bounced straight back to the result.
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (autoRan.current || !baseline) return;
+    autoRan.current = true;
+    setResult(findProgram(finderInputFrom(baseline, equipment, injuries)));
+  }, [baseline, equipment, injuries]);
 
   function run() {
     const input: FinderInput = {

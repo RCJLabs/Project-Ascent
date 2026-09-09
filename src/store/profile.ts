@@ -3,6 +3,7 @@ import { getDb } from '@/db';
 import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
 import { today } from '@/engine/dates';
+import type { BaselineAnswers } from '@/engine/onboarding';
 import type { WeekPlan } from '@/engine/scheduler';
 import { DEFAULT_PALETTE, type AvatarPalette } from '@/engine/avatar';
 
@@ -35,6 +36,11 @@ export interface ProfileState {
   recentWarmups: string[];
   /** The avatar's colours — the only part of the figure that is stored. */
   avatarPalette: AvatarPalette;
+  /** When the first-run baseline was finished. Null until it has been. */
+  onboardedAt: string | null;
+  /** What the climber told us on day one, so the finder never asks twice. */
+  baseline: BaselineAnswers | null;
+  completeOnboarding: (baseline: BaselineAnswers | null) => void;
   startProgram: (programId: string, plan: WeekPlan, trackId?: string, restart?: boolean) => void;
   setPlan: (programId: string, plan: WeekPlan) => void;
   stopProgram: () => void;
@@ -56,6 +62,8 @@ interface Persisted {
   injuries: Injury[];
   recentWarmups: string[];
   avatarPalette: AvatarPalette;
+  onboardedAt: string | null;
+  baseline: BaselineAnswers | null;
 }
 
 function snapshot(s: ProfileState): Persisted {
@@ -68,6 +76,8 @@ function snapshot(s: ProfileState): Persisted {
     injuries: s.injuries,
     recentWarmups: s.recentWarmups,
     avatarPalette: s.avatarPalette,
+    onboardedAt: s.onboardedAt,
+    baseline: s.baseline,
   };
 }
 
@@ -86,6 +96,13 @@ export const useProfile = create<ProfileState>((set, get) => ({
   injuries: [],
   recentWarmups: [],
   avatarPalette: DEFAULT_PALETTE,
+  onboardedAt: null,
+  baseline: null,
+
+  completeOnboarding: (baseline) => {
+    set({ baseline, onboardedAt: new Date().toISOString() });
+    void save(snapshot(get()));
+  },
 
   startProgram: (programId, plan, trackId, restart = false) => {
     const s = get();
@@ -157,6 +174,8 @@ export async function hydrateProfile(): Promise<void> {
       injuries: value.injuries ?? [],
       recentWarmups: value.recentWarmups ?? [],
       avatarPalette: { ...DEFAULT_PALETTE, ...value.avatarPalette },
+      onboardedAt: value.onboardedAt ?? null,
+      baseline: value.baseline ?? null,
     });
   } catch {
     useProfile.setState({ hydrated: true });

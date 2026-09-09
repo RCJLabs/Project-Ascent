@@ -67,7 +67,16 @@ export const CONTRIBUTORS: Record<StatId, Contributor[]> = {
     { label: 'Max hang', read: (r) => r.metric('max_hang_20mm_7s'), per: 0.5, cap: 30, unit: 'lbs added' },
     { label: 'Weighted pull-up', read: (r) => r.metric('weighted_pullup_3rm'), per: 0.4, cap: 20, unit: 'lbs added' },
     { label: 'Max pull-ups', read: (r) => r.metric('max_pullups'), per: 0.8, cap: 15, unit: 'reps' },
-    { label: 'Hardest boulder', read: (r) => nonNegative(r.state.boulder.bestOrdinal), per: 1.6, cap: 25, unit: 'V-grades' },
+    {
+      // Either the app watched you send it or you told it in an assessment.
+      // Reading only the log meant a recorded max boulder grade moved no
+      // stat at all, which made the metric look decorative.
+      label: 'Hardest boulder',
+      read: (r) => Math.max(nonNegative(r.state.boulder.bestOrdinal), r.metric('max_boulder_grade') ?? 0),
+      per: 1.6,
+      cap: 25,
+      unit: 'V-grades',
+    },
   ],
   END: [
     { label: 'Sessions logged', read: (r) => r.state.completedSessions, per: 0.125, cap: 25, unit: 'sessions' },
