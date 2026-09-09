@@ -25,6 +25,45 @@ function niceCeil(value: number): number {
 }
 
 /** Vertical bars over time. One series, so no legend — the title names it. */
+/**
+ * The numbers behind a chart, for anyone who cannot see it.
+ *
+ * `role="img"` with an `aria-label` gives a screen reader the chart's
+ * *title* and nothing else — "Daily training load over the last 28 days"
+ * and then silence. The picture is the affordance for sighted readers; this
+ * table is the same information for everyone else, and PyramidBars was
+ * already built this way, which is what made the gap obvious.
+ */
+function DataTable({
+  caption,
+  head,
+  rows,
+}: {
+  caption: string;
+  head: [string, string];
+  rows: [string, string][];
+}) {
+  return (
+    <table className="sr-only">
+      <caption>{caption}</caption>
+      <thead>
+        <tr>
+          <th scope="col">{head[0]}</th>
+          <th scope="col">{head[1]}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(([key, value]) => (
+          <tr key={key}>
+            <th scope="row">{key}</th>
+            <td>{value}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 export function LoadBars({
   data,
   label,
@@ -51,7 +90,7 @@ export function LoadBars({
         </span>
         <span className="text-xs font-semibold tabular-nums">{shown ? formatValue(shown.value) : ''}</span>
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label={label}>
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="presentation" aria-hidden>
         {[0.5, 1].map((f) => (
           <line
             key={f}
@@ -94,6 +133,14 @@ export function LoadBars({
           );
         })}
       </svg>
+      <DataTable
+        caption={label}
+        head={['Day', 'Load']}
+        rows={data.map((d) => [
+          new Date(`${d.date}T00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+          d.muted ? `${formatValue(d.value)} (deload)` : formatValue(d.value),
+        ])}
+      />
     </figure>
   );
 }
@@ -173,7 +220,7 @@ export function ProgressionLine({
         </span>
         <span className="text-xs font-semibold">{shown?.display ?? ''}</span>
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label={label}>
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="presentation" aria-hidden>
         <line x1={0} x2={width} y1={height - pad} y2={height - pad} className="stroke-viz-grid" strokeWidth={1} />
         {segments.map((d, i) => (
           <path key={i} d={d} fill="none" className="stroke-viz-1" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -233,6 +280,14 @@ export function ProgressionLine({
           Latest: <span className="font-semibold text-ink">{formatValue(lastKnown.value!)}</span>
         </p>
       )}
+      <DataTable
+        caption={label}
+        head={['Week', 'Hardest grade']}
+        rows={points.map((p) => [
+          new Date(`${p.week}T00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+          p.display ?? 'nothing logged',
+        ])}
+      />
     </figure>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { APP_VERSION } from '@/version';
 import { exportAll, hasRealData, importAll, parseExportFile, SCHEMA_VERSION } from '@/db';
@@ -21,6 +21,7 @@ import { rankTemplates } from '@/engine/templates';
 import { useTemplates } from '@/store/templates';
 import { applyTheme, useSettings, type ThemePreference } from '@/store/settings';
 import { Button } from '@/ui/Button';
+import { announce } from '@/ui/Announce';
 import { Card } from '@/ui/Card';
 import { Chip, SelectableCard } from '@/ui/Chip';
 import { Input } from '@/ui/Field';
@@ -77,7 +78,20 @@ export function SettingsPage() {
   const setRouteDisplay = useSettings((s) => s.setRouteDisplay);
   const [storage, setStorage] = useState<StorageStatus>({ persisted: null });
   const [photoBytes, setPhotoBytes] = useState(0);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessageState] = useState<string | null>(null);
+
+  /**
+   * Show a result and say it.
+   *
+   * Import and export report through here and nowhere else: the message
+   * used to render as a paragraph at the foot of a long page, which a
+   * screen reader had no reason to revisit and no way to know had changed.
+   * Failures interrupt; successes wait their turn.
+   */
+  const setMessage = useCallback((text: string | null, failed = false) => {
+    setMessageState(text);
+    if (text !== null) announce(text, failed ? 'assertive' : 'polite');
+  }, []);
   const equipment = useProfile((s) => s.equipment);
   const setEquipment = useProfile((s) => s.setEquipment);
   const injuries = useProfile((s) => s.injuries);
@@ -143,7 +157,7 @@ export function SettingsPage() {
         void refreshStorage();
       }
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'Import failed.');
+      setMessage(e instanceof Error ? e.message : 'Import failed.', true);
     } finally {
       if (fileRef.current) fileRef.current.value = '';
     }
@@ -156,7 +170,7 @@ export function SettingsPage() {
       await hydrateAll();
       setMessage(mode === 'replace' ? 'Backup imported — previous data replaced.' : 'Backup merged into existing data.');
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'Import failed.');
+      setMessage(e instanceof Error ? e.message : 'Import failed.', true);
     } finally {
       setPendingImport(null);
       void refreshStorage();

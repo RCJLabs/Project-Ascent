@@ -106,21 +106,26 @@ export function GuidePage({ params }: { params: { id: string } }) {
           const isOpen = open.includes(index);
           return (
             <section key={section.title} className="bg-surface border border-line rounded-2xl">
-              <DisclosureButton
-                open={isOpen}
-                onToggle={() => toggle(index)}
-                className="flex items-center gap-2.5 p-4"
-              >
-                <span className="text-xs font-bold text-ink-soft tabular-nums shrink-0 w-5">
-                  {index + 1}
-                </span>
-                <span className="flex-1 min-w-0 font-bold">{section.title}</span>
-                {isOpen ? (
-                  <ChevronDown size={16} className="text-ink-soft shrink-0" />
-                ) : (
-                  <ChevronRight size={16} className="text-ink-soft shrink-0" />
-                )}
-              </DisclosureButton>
+              {/* The heading wraps the control, which is the accordion
+                  pattern a screen reader can navigate by heading. A span
+                  inside a button is neither. */}
+              <h2>
+                <DisclosureButton
+                  open={isOpen}
+                  onToggle={() => toggle(index)}
+                  className="flex items-center gap-2.5 p-4"
+                >
+                  <span className="text-xs font-bold text-ink-soft tabular-nums shrink-0 w-5">
+                    {index + 1}
+                  </span>
+                  <span className="flex-1 min-w-0 font-bold">{section.title}</span>
+                  {isOpen ? (
+                    <ChevronDown size={16} className="text-ink-soft shrink-0" />
+                  ) : (
+                    <ChevronRight size={16} className="text-ink-soft shrink-0" />
+                  )}
+                </DisclosureButton>
+              </h2>
               {isOpen && (
                 <div className="px-4 pb-4 border-t border-line pt-3">
                   {section.content.map((block, i) => (

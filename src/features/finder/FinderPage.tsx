@@ -75,7 +75,7 @@ function RecCard({ rec, headline }: { rec: Recommendation; headline?: boolean })
   return (
     <Card className={headline ? 'border-accent' : undefined}>
       <div className="flex items-baseline justify-between gap-2 flex-wrap mb-1">
-        <h3 className="font-bold text-lg">{rec.program.name}</h3>
+        <h2 className="font-bold text-lg">{rec.program.name}</h2>
         {rec.program.kind === 'program' && (
           <span className="text-xs font-semibold text-accent">{rec.program.gradeRange.label}</span>
         )}

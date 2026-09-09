@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pause, Play, RotateCcw, SkipForward, Volume2, VolumeX, X } from 'lucide-react';
+import { announce } from './Announce';
 import { IconButton } from './IconButton';
 import type { Protocol, ProtocolTimer } from '@/content/types';
 import {
@@ -83,6 +84,9 @@ export function TimerSheet({
         finished.current = true;
         cueDone();
         setRunning(false);
+        // Assertive: a cue you hear and a cue you are told are the same
+        // information, and both are useless if they arrive after the set.
+        announce(`${protocol.name} complete. ${plan.sets} sets done.`, 'assertive');
         onComplete?.();
       }
       return;
@@ -91,9 +95,15 @@ export function TimerSheet({
       lastIndex.current = pos.index;
       lastCountdown.current = -1;
       const kind = pos.segment?.kind;
+      const seconds = pos.segment?.seconds;
       if (kind === 'work') cueWork();
       else if (kind === 'rest') cueRest();
       else if (kind === 'setRest') cueSetRest();
+      if (kind !== undefined) {
+        const said =
+          kind === 'work' ? 'Work' : kind === 'rest' ? 'Rest' : kind === 'setRest' ? 'Set rest' : 'Get ready';
+        announce(seconds === undefined ? said : `${said}, ${seconds} seconds`, 'assertive');
+      }
     }
     // Three ticks leading into the next work phase.
     const next = plan.segments[pos.index + 1];
@@ -105,7 +115,7 @@ export function TimerSheet({
         cueCountdown();
       }
     }
-  }, [pos.index, pos.remainingMs, pos.done, running, plan, onComplete, pos.segment?.kind]);
+  }, [pos.index, pos.remainingMs, pos.done, running, plan, onComplete, protocol.name, pos.segment?.kind, pos.segment?.seconds]);
 
   const start = useCallback(() => {
     unlock();

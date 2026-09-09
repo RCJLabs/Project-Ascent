@@ -17,6 +17,7 @@ import { useSettings } from '@/store/settings';
 import { useSessions } from '@/store/sessions';
 import { useSkillEffects } from '@/store/skills';
 import { Button } from '@/ui/Button';
+import { announce } from '@/ui/Announce';
 import { Card } from '@/ui/Card';
 import { Meter } from '@/ui/Meter';
 import { PageHeader } from '@/ui/PageHeader';
@@ -209,7 +210,13 @@ function ChallengeRow({
             <Check size={13} /> Claimed
           </span>
         ) : challenge.done ? (
-          <Button size="sm" onClick={() => void claim(challenge)}>
+          <Button
+            size="sm"
+            onClick={() => {
+              void claim(challenge);
+              announce(`${challenge.title} claimed. ${unitsToXp(challenge.reward)} XP.`);
+            }}
+          >
             <Sparkles size={14} /> Claim {unitsToXp(challenge.reward)} XP
           </Button>
         ) : (

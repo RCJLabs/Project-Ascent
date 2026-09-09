@@ -30,6 +30,7 @@ import { Card } from '@/ui/Card';
 import { Checkbox, Input, Select, TextArea } from '@/ui/Field';
 import { Chip } from '@/ui/Chip';
 import { IconButton } from '@/ui/IconButton';
+import { announce } from '@/ui/Announce';
 import { Term } from '@/ui/Term';
 import { TimerSheet } from '@/ui/TimerSheet';
 import { useGradeLabel, useGradeOptions } from '@/ui/useGrade';
@@ -990,9 +991,21 @@ function ProjectBurnsCard({
 function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledge: () => void }) {
   const xp = useXp();
   const detail = xp.bySession[session.id];
-  if (!detail) return null;
+  const levelled = detail !== undefined && detail.levelAfter > detail.levelBefore;
 
-  const levelled = detail.levelAfter > detail.levelBefore;
+  // The card appearing is the whole feedback for logging a session, and it
+  // arrives without a navigation — so on screen it is unmissable and to a
+  // screen reader it was, until this, completely silent.
+  useEffect(() => {
+    if (detail === undefined || session.rewarded) return;
+    announce(
+      levelled
+        ? `Session logged. ${detail.xp.toLocaleString()} XP earned, and you reached level ${detail.levelAfter}.`
+        : `Session logged. ${detail.xp.toLocaleString()} XP earned.`,
+    );
+  }, [detail?.xp, detail?.levelAfter, levelled, session.rewarded, detail, session.id]);
+
+  if (!detail) return null;
 
   if (session.rewarded) {
     return (

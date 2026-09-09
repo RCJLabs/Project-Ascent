@@ -117,6 +117,26 @@
   outline-width: 2px;
 }
 
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   Honoured globally rather than component by component, because the failure
+   mode is a transition nobody remembered to guard.
+
+   The Ascent is deliberately exempt: it is a game whose whole content is
+   movement, and someone who opens it has asked for that. Suppressing its
+   animation would leave a blank canvas, which is worse than not offering it.
+   Everything decorative — bars filling, colours crossfading, chevrons
+   rotating — stops. */
+@media (prefers-reduced-motion: reduce) {
+  *:not([data-motion='essential']),
+  *:not([data-motion='essential'])::before,
+  *:not([data-motion='essential'])::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 html,
 body {
   height: 100%;

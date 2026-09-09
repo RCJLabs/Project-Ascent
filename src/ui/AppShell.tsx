@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { CalendarDays, Dumbbell, Mountain, Target, TrendingUp } from 'lucide-react';
+import { Announcer } from './Announce';
 import { LiveBar, useLiveBanner } from './LiveBar';
 
 const TABS = [
@@ -16,8 +17,35 @@ export function AppShell({ children }: { children: ReactNode }) {
   const banner = useLiveBanner();
   return (
     <div className="min-h-dvh flex flex-col max-w-2xl mx-auto">
-      <main className={`flex-1 px-4 pt-6 ${banner ? 'pb-36' : 'pb-24'}`}>{children}</main>
+      {/* Visible only when tabbed to. Without it, every page starts a
+          keyboard user at the top of the nav and makes them walk through
+          five tabs to reach the content they navigated to.
+
+          It stays an anchor with a real href — that is what assistive
+          technology expects a skip link to be, and it still works with
+          scripting off — but the default is prevented, because routing
+          here is hash-based and letting the browser follow `#main` would
+          replace the route. Measured: activating it moved the app from
+          /progress to /. Focus is moved by hand instead. */}
+      <a
+        href="#main"
+        onClick={(e) => {
+          e.preventDefault();
+          document.getElementById('main')?.focus();
+        }}
+        className="focus-ring sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:bg-surface focus:border focus:border-line focus:rounded-xl focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold"
+      >
+        Skip to content
+      </a>
+      <Announcer />
+      {/* `tabIndex={-1}` so the skip link can actually move focus here —
+          a heading or a div is not focusable by default, and skipping to
+          something unfocusable moves the scroll and leaves focus behind. */}
+      <main id="main" tabIndex={-1} className={`flex-1 px-4 pt-6 outline-none ${banner ? 'pb-36' : 'pb-24'}`}>
+        {children}
+      </main>
       <nav
+        aria-label="Main"
         className="fixed bottom-0 inset-x-0 bg-surface/95 backdrop-blur border-t border-line"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
@@ -31,7 +59,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={href}
                 href={href}
-                className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold transition-colors ${
+                aria-current={active ? 'page' : undefined}
+                className={`focus-ring flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold transition-colors ${
                   active ? 'text-accent' : 'text-ink-soft hover:text-ink'
                 }`}
               >
