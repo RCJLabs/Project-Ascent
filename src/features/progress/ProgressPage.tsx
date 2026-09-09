@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, AlertTriangle, CheckCircle2, Info, TrendingDown } from 'lucide-react';
+import { Link } from 'wouter';
+import { Activity, AlertTriangle, CheckCircle2, ChevronRight, Info, Ruler, TrendingDown } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
+import { assessmentBattery } from '@/engine/assessments';
 import { deriveClimberState, type AcwrZone } from '@/engine/derive';
 import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
+import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
@@ -44,6 +47,55 @@ const ZONE: Record<AcwrZone, { label: string; note: string; color: string; Icon:
     Icon: AlertTriangle,
   },
 };
+
+/** Name a few, then count the rest — a ten-item list reads as noise. */
+function dueSummary(due: { metric: { label: string } }[]): string {
+  const named = due.slice(0, 3).map((s) => s.metric.label).join(', ');
+  const rest = due.length - 3;
+  return rest > 0 ? `${named}, and ${rest} more` : named;
+}
+
+/** Entry point into the assessment battery, showing only what is due. */
+function AssessmentsCard() {
+  const entries = useMetrics((s) => s.entries);
+  const hydrated = useMetrics((s) => s.hydrated);
+  const load = useMetrics((s) => s.load);
+  const activeProgramId = useProfile((s) => s.activeProgramId);
+  const startDates = useProfile((s) => s.startDates);
+
+  useEffect(() => {
+    if (!hydrated) void load();
+  }, [hydrated, load]);
+
+  const program = activeProgramId ? getProgram(activeProgramId) : undefined;
+  const startDate = activeProgramId ? startDates[activeProgramId] : undefined;
+  const battery = useMemo(
+    () => assessmentBattery(entries, { program, startDate }),
+    [entries, program, startDate],
+  );
+  const due = battery.filter((s) => s.due !== null);
+
+  return (
+    <Card title="Assessments">
+      <Link href="/assessments" className="flex items-center gap-3">
+        <Ruler size={18} className="text-accent shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold">
+            {battery.length === 0
+              ? 'Take a baseline'
+              : due.length === 0
+                ? `${battery.length} benchmark${battery.length === 1 ? '' : 's'}, all current`
+                : `${due.length} due to test`}
+          </p>
+          <p className="text-xs text-ink-soft mt-0.5 truncate">
+            {due.length > 0 ? dueSummary(due) : 'Numbers your program is trying to move.'}
+          </p>
+        </div>
+        <ChevronRight size={18} className="text-ink-soft shrink-0" />
+      </Link>
+    </Card>
+  );
+}
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
@@ -87,12 +139,17 @@ export function ProgressPage() {
     return (
       <>
         <PageHeader title="Progress" />
-        <Card>
-          <p className="text-sm text-ink-soft">
-            Nothing logged yet. Once you have a few sessions in, this is where your grades, training
-            load, and trends show up.
-          </p>
-        </Card>
+        <div className="grid gap-3">
+          <Card>
+            <p className="text-sm text-ink-soft">
+              Nothing logged yet. Once you have a few sessions in, this is where your grades, training
+              load, and trends show up.
+            </p>
+          </Card>
+          {/* Assessments need no session history, and taking a baseline before
+              you start training is the point of them. */}
+          <AssessmentsCard />
+        </div>
       </>
     );
   }
@@ -189,6 +246,8 @@ export function ProgressPage() {
             <p className="text-sm text-ink-soft">Nothing logged on this scale yet.</p>
           )}
         </Card>
+
+        <AssessmentsCard />
 
         {state.personalRecords.length > 0 && (
           <Card title="Personal records">

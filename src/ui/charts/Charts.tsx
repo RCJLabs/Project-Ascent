@@ -15,6 +15,8 @@ import { useState } from 'react';
 
 const BAR_MAX_THICKNESS = 24;
 const SURFACE_GAP = 2;
+/** Vertical room reserved inside the plot for direct labels. */
+const LABEL_ROOM = 14;
 
 function niceCeil(value: number): number {
   if (value <= 0) return 1;
@@ -96,6 +98,24 @@ export function LoadBars({
   );
 }
 
+type LinePoint = { value: number | null };
+
+function nextKnown(points: LinePoint[], from: number): number | null {
+  for (let i = from + 1; i < points.length; i++) {
+    const v = points[i]?.value;
+    if (v !== null && v !== undefined) return v;
+  }
+  return null;
+}
+
+function prevKnown(points: LinePoint[], from: number): number | null {
+  for (let i = from - 1; i >= 0; i--) {
+    const v = points[i]?.value;
+    if (v !== null && v !== undefined) return v;
+  }
+  return null;
+}
+
 /** A single line over time with gaps where nothing was logged. */
 export function ProgressionLine({
   points,
@@ -117,7 +137,12 @@ export function ProgressionLine({
   const max = Math.max(...known.map((p) => p.value));
   const span = Math.max(1, max - min);
   const x = (i: number) => pad + (i / Math.max(1, points.length - 1)) * (width - pad * 2);
-  const y = (v: number) => height - pad - ((v - min) / span) * (height - pad * 2);
+  // Keep the extremes off the frame edges so their direct labels have a side
+  // to sit on. Without this the highest and lowest points are flush against
+  // the top and bottom, and every label lands on the stroke.
+  const top = pad + LABEL_ROOM;
+  const bottom = height - pad - LABEL_ROOM;
+  const y = (v: number) => bottom - ((v - min) / span) * (bottom - top);
 
   // Break the path wherever a week has no data rather than bridging it.
   const segments: string[] = [];
@@ -166,12 +191,17 @@ export function ProgressionLine({
           ),
         )}
         {/* Label the first and last known points only — enough to read the
-            chart without hovering, without a number on every dot. */}
+            chart without hovering, without a number on every dot. Each label
+            goes on the side the line is *not* heading, so it never sits on
+            the stroke, then flips back if that would leave the frame. */}
         {[firstIndex, lastIndex].map((i, n) => {
           const p = i >= 0 ? points[i] : undefined;
           if (!p || p.value === null || p.display === null) return null;
           if (n === 1 && firstIndex === lastIndex) return null;
-          const above = y(p.value) > pad + 18;
+          const neighbour = n === 0 ? nextKnown(points, i) : prevKnown(points, i);
+          let above = neighbour === null || p.value >= neighbour;
+          if (above && y(p.value) < pad + 14) above = false;
+          else if (!above && y(p.value) > height - pad - 14) above = true;
           return (
             <text
               key={`label-${i}`}
