@@ -12,6 +12,8 @@
  */
 
 import type { ClimberState } from './derive';
+import type { Injury } from '@/store/profile';
+import { summarise, vitalityCost } from './injury';
 import type { Stat } from './stats';
 
 /** END scales the ceiling from 100 to 500, as the prototype had it. */
@@ -21,7 +23,7 @@ export const VITALITY_CEILING = 500;
 /** Consecutive training days → points drained. */
 export const GRIND_COST: Record<number, number> = { 3: 10, 4: 30, 5: 50, 6: 70 };
 export const SKIPPED_WARMUP_COST = 10;
-export const INJURY_COST = 20;
+
 /** A rest day inside 24 hours divides the day's damage by this. */
 export const REST_RELIEF = 1.5;
 
@@ -54,7 +56,7 @@ export interface VitalityInput {
   state: ClimberState;
   /** The END stat, which sets the ceiling. */
   endurance: Stat | number;
-  injuries?: unknown[];
+  injuries?: readonly Injury[];
   /** Extra relief from skill-tree recovery perks, added to REST_RELIEF. */
   restBonus?: number;
 }
@@ -86,12 +88,15 @@ export function deriveVitality(input: VitalityInput): Vitality {
     });
   }
 
-  const injuries = input.injuries?.length ?? 0;
-  if (injuries > 0) {
+  const injuries = input.injuries ?? [];
+  if (injuries.length > 0) {
     penalties.push({
-      label: `${injuries} active injur${injuries === 1 ? 'y' : 'ies'}`,
-      points: injuries * INJURY_COST,
-      note: 'Marking an injury healed in Settings clears this.',
+      label: summarise(injuries) ?? `${injuries.length} injuries`,
+      // Scaled by severity, and halved for a part being loaded again on
+      // purpose. A flat cost made a niggle and a rupture the same number,
+      // which punished the honest act of recording the small one.
+      points: vitalityCost(injuries),
+      note: 'Lower the severity, or mark it coming back, as it improves.',
     });
   }
 

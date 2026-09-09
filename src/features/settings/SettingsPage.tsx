@@ -7,7 +7,13 @@ import type { Equipment } from '@/content/types';
 import { displayGrade, type BoulderDisplay, type RouteDisplay } from '@/engine/grades';
 import { unlock } from '@/lib/cues';
 import { hydrateAll } from '@/store';
-import { useProfile } from '@/store/profile';
+import {
+  SEVERITY_LABEL,
+  STATUS_LABEL,
+  useProfile,
+  type InjurySeverity,
+  type InjuryStatus,
+} from '@/store/profile';
 import { rankTemplates } from '@/engine/templates';
 import { useTemplates } from '@/store/templates';
 import { applyTheme, useSettings, type ThemePreference } from '@/store/settings';
@@ -72,6 +78,7 @@ export function SettingsPage() {
   const injuries = useProfile((s) => s.injuries);
   const addInjury = useProfile((s) => s.addInjury);
   const removeInjury = useProfile((s) => s.removeInjury);
+  const updateInjury = useProfile((s) => s.updateInjury);
   const markExported = useProfile((s) => s.markExported);
   const [pendingImport, setPendingImport] = useState<{ text: string; hasData: boolean } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -255,27 +262,77 @@ export function SettingsPage() {
         </Card>
 
         <Card title="Injuries">
-          <p className="text-sm text-ink-soft mb-3">
-            Anything listed here is kept out of your warmups, and the finder will steer you away from
-            programs that load it.
+          <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+            How bad it is decides what happens: something you are healing is kept out of your
+            warmups and blocked in the finder, while a niggle — or a part you are deliberately
+            loading again — is flagged beside the exercises that load it, and left to you.
           </p>
           {injuries.length > 0 && (
             <ul className="grid grid-cols-1 gap-2 mb-3">
               {injuries.map((injury) => (
-                <li
-                  key={injury.id}
-                  className="flex items-center justify-between gap-2 bg-sunken rounded-xl px-3 py-2.5"
-                >
-                  <div>
-                    <span className="font-semibold text-sm capitalize">{injury.part}</span>
-                    <span className="text-xs text-ink-soft ml-2">since {injury.since}</span>
+                <li key={injury.id} className="bg-sunken rounded-xl px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="min-w-0">
+                      <span className="font-semibold text-sm capitalize">{injury.part}</span>
+                      <span className="text-xs text-ink-soft ml-2">since {injury.since}</span>
+                    </div>
+                    <button
+                      onClick={() => removeInjury(injury.id)}
+                      className="text-sm font-semibold text-accent shrink-0"
+                    >
+                      Healed
+                    </button>
                   </div>
-                  <button
-                    onClick={() => removeInjury(injury.id)}
-                    className="text-sm font-semibold text-accent"
-                  >
-                    Healed
-                  </button>
+
+                  <div className="flex flex-wrap gap-1.5 mb-1.5">
+                    {(Object.keys(SEVERITY_LABEL) as InjurySeverity[]).map((level) => (
+                      <button
+                        key={level}
+                        onClick={() => updateInjury(injury.id, { severity: level })}
+                        title={SEVERITY_LABEL[level].blurb}
+                        className={`rounded-lg px-2.5 py-1.5 border text-xs ${
+                          injury.severity === level
+                            ? 'border-accent bg-accent/10 font-semibold'
+                            : 'border-line text-ink-soft'
+                        }`}
+                      >
+                        {SEVERITY_LABEL[level].label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {(Object.keys(STATUS_LABEL) as InjuryStatus[]).map((state) => (
+                      <button
+                        key={state}
+                        onClick={() => updateInjury(injury.id, { status: state })}
+                        title={STATUS_LABEL[state].blurb}
+                        className={`rounded-lg px-2.5 py-1.5 border text-xs ${
+                          injury.status === state
+                            ? 'border-accent bg-accent/10 font-semibold'
+                            : 'border-line text-ink-soft'
+                        }`}
+                      >
+                        {STATUS_LABEL[state].label}
+                      </button>
+                    ))}
+                    {injury.part !== 'back' &&
+                      (['left', 'right', 'both'] as const).map((side) => (
+                        <button
+                          key={side}
+                          onClick={() =>
+                            updateInjury(injury.id, { side: injury.side === side ? undefined : side })
+                          }
+                          className={`rounded-lg px-2.5 py-1.5 border text-xs capitalize ${
+                            injury.side === side
+                              ? 'border-accent bg-accent/10 font-semibold'
+                              : 'border-line text-ink-soft'
+                          }`}
+                        >
+                          {side}
+                        </button>
+                      ))}
+                  </div>
                 </li>
               ))}
             </ul>

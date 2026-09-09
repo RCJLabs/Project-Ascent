@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { AlertTriangle, ArrowLeft, Check, Lock, Sparkles } from 'lucide-react';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
 import { useGradeOptions } from '@/ui/useGrade';
 import { findProgram, type Experience, type FinderInput, type FinderResult, type Goal, type Recommendation } from '@/engine/finder';
 import { finderInputFrom, type BaselineAnswers } from '@/engine/onboarding';
+import { injuryPolicy } from '@/engine/injury';
 import type { Discipline, Equipment } from '@/content/types';
 import type { BodyPart } from '@/content/warmups';
 import { useProfile } from '@/store/profile';
@@ -148,7 +149,11 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
   const storedInjuries = useProfile((s) => s.injuries);
   const addInjury = useProfile((s) => s.addInjury);
   const removeInjury = useProfile((s) => s.removeInjury);
+  // Two different lists, deliberately. The chips show everything recorded;
+  // the finder only blocks on what load should stay off, or a niggle would
+  // rule out the program it barely affects.
   const injuries = storedInjuries.map((i) => i.part);
+  const blocking = useMemo(() => injuryPolicy(storedInjuries).excluded, [storedInjuries]);
 
   const toggleInjury = (part: BodyPart) => {
     const existing = storedInjuries.find((i) => i.part === part);
@@ -164,8 +169,8 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
   useEffect(() => {
     if (autoRan.current || !baseline) return;
     autoRan.current = true;
-    setResult(findProgram(finderInputFrom(baseline, equipment, injuries)));
-  }, [baseline, equipment, injuries]);
+    setResult(findProgram(finderInputFrom(baseline, equipment, blocking)));
+  }, [baseline, equipment, blocking]);
 
   function run() {
     const input: FinderInput = {
@@ -176,7 +181,7 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
       goal,
       daysPerWeek,
       equipment,
-      injuries,
+      injuries: blocking,
       comingOffBreak: experience === 'returning',
     };
     setResult(findProgram(input));

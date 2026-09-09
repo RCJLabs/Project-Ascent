@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { MetricEntry } from '@/db/metrics';
 import { newProject } from '@/db/projects';
 import { newSession, type Session } from '@/db/sessions';
+import type { BodyPart } from '@/content/warmups';
+import type { Injury, InjurySeverity } from '@/store/profile';
+import { SEVERITY_COST } from './injury';
 import { addDays, startOfWeek } from './dates';
 import { deriveClimberState } from './derive';
 import {
@@ -14,7 +17,6 @@ import {
 } from './stats';
 import {
   GRIND_COST,
-  INJURY_COST,
   REST_RELIEF,
   SKIPPED_WARMUP_COST,
   VITALITY_CEILING,
@@ -162,6 +164,11 @@ function roundedPoints(contributions: { points: number }[]): number {
   return Math.round(contributions.reduce((sum, c) => sum + c.points, 0));
 }
 
+/** An injury of a given severity, for the vitality tests. */
+function hurt(part: BodyPart, severity: InjurySeverity = 'managing'): Injury {
+  return { id: `${part}-1`, part, since: '2026-01-01', severity, status: 'active' };
+}
+
 describe('vitality', () => {
   const fresh = stateOf([session(addDays(TODAY, -10))]);
 
@@ -201,23 +208,33 @@ describe('vitality', () => {
     expect(deriveVitality({ state: old, endurance: 100 }).penalties).toEqual([]);
   });
 
-  it('charges for each active injury', () => {
-    const v = deriveVitality({ state: fresh, endurance: 100, injuries: ['shoulder', 'pulley'] });
-    expect(v.penalties[0]!.points).toBe(2 * INJURY_COST);
+  it('charges for each active injury, by how bad it is', () => {
+    const v = deriveVitality({ state: fresh, endurance: 100, injuries: [hurt('shoulder'), hurt('pulley')] });
+    expect(v.penalties[0]!.points).toBe(2 * SEVERITY_COST.managing);
+  });
+
+  // A flat cost made a niggle and a rupture the same number, which punished
+  // the honest act of recording the small one.
+  it('charges less for a niggle than for something serious', () => {
+    const small = deriveVitality({ state: fresh, endurance: 100, injuries: [hurt('elbow', 'niggle')] });
+    const big = deriveVitality({ state: fresh, endurance: 100, injuries: [hurt('elbow', 'serious')] });
+    expect(small.penalties[0]!.points).toBeLessThan(big.penalties[0]!.points);
   });
 
   it('softens the damage after a logged rest day', () => {
     const rest = session(TODAY, {
       restChecklist: { hydration: true, mobility: true, zone1: true, sleep: true },
     });
-    const hurt = { state: fresh, endurance: 100, injuries: ['shoulder'] };
-    const rested = { state: stateOf([session(addDays(TODAY, -10)), rest]), endurance: 100, injuries: ['shoulder'] };
-    const a = deriveVitality(hurt);
+    const injured = { state: fresh, endurance: 100, injuries: [hurt('shoulder')] };
+    const rested = {
+      state: stateOf([session(addDays(TODAY, -10)), rest]), endurance: 100, injuries: [hurt('shoulder')],
+    };
+    const a = deriveVitality(injured);
     const b = deriveVitality(rested);
     expect(b.buff).toMatchObject({ factor: REST_RELIEF });
     expect(b.current).toBeGreaterThan(a.current);
-    expect(a.max - a.current).toBe(INJURY_COST);
-    expect(b.max - b.current).toBe(Math.round(INJURY_COST / REST_RELIEF));
+    expect(a.max - a.current).toBe(SEVERITY_COST.managing);
+    expect(b.max - b.current).toBe(Math.round(SEVERITY_COST.managing / REST_RELIEF));
   });
 
   it('offers no buff when there is no damage to soften', () => {
@@ -231,7 +248,7 @@ describe('vitality', () => {
     const grinding = stateOf(
       Array.from({ length: 9 }, (_, i) => session(addDays(TODAY, -i), { warmup: false })),
     );
-    const v = deriveVitality({ state: grinding, endurance: 10, injuries: ['a', 'b', 'c', 'd'] });
+    const v = deriveVitality({ state: grinding, endurance: 10, injuries: (['elbow', 'knee', 'wrist', 'hip'] as BodyPart[]).map((p) => hurt(p, 'serious')) });
     expect(v.current).toBe(0);
     expect(v.state).toBe('cooked');
     expect(v.fraction).toBe(0);
@@ -241,12 +258,12 @@ describe('vitality', () => {
     const v = deriveVitality({
       state: stateOf(Array.from({ length: 4 }, (_, i) => session(addDays(TODAY, -i), { warmup: false }))),
       endurance: 100,
-      injuries: ['elbow'],
+      injuries: [hurt('elbow')],
     });
     expect(v.penalties.map((p) => p.label)).toEqual([
       '4 training days in a row',
       '4 warmups skipped this week',
-      '1 active injury',
+      'Training around an elbow',
     ]);
     expect(v.max - v.current).toBe(v.penalties.reduce((sum, p) => sum + p.points, 0));
   });

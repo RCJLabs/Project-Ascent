@@ -8,12 +8,44 @@ import { pruneOverrides, withOverride, type WeekOverrides } from '@/engine/resch
 import type { WeekPlan } from '@/engine/scheduler';
 import { DEFAULT_PALETTE, type AvatarPalette } from '@/engine/avatar';
 
+/** How much it changes what you can do, not how much it hurts. */
+export type InjurySeverity = 'niggle' | 'managing' | 'serious';
+
+/**
+ * Where a healing part sits in its return.
+ *
+ * 'returning' is the state the prototype had no word for, and it is the one
+ * that matters most: still healing, back to training, and needing the app to
+ * warn rather than exclude. Everything downstream reads this rather than
+ * inferring it from a date.
+ */
+export type InjuryStatus = 'active' | 'returning';
+
+export type InjurySide = 'left' | 'right' | 'both';
+
 export interface Injury {
   id: string;
   part: BodyPart;
   since: string;
+  severity: InjurySeverity;
+  status: InjuryStatus;
+  /** Meaningless for a back; kept optional rather than faked. */
+  side?: InjurySide;
+  /** Return-to-climbing step id → done. */
+  checklist?: Record<string, boolean>;
   note?: string;
 }
+
+export const SEVERITY_LABEL: Record<InjurySeverity, { label: string; blurb: string }> = {
+  niggle: { label: 'A niggle', blurb: 'Noticeable, not stopping you' },
+  managing: { label: 'Managing it', blurb: 'Training around it deliberately' },
+  serious: { label: 'Serious', blurb: 'Off it entirely for now' },
+};
+
+export const STATUS_LABEL: Record<InjuryStatus, { label: string; blurb: string }> = {
+  active: { label: 'Healing', blurb: 'Keep load off it' },
+  returning: { label: 'Coming back', blurb: 'Loading it again, carefully' },
+};
 
 /**
  * The climber's active plan. Start dates are kept per program so switching
@@ -59,6 +91,7 @@ export interface ProfileState {
   stopProgram: () => void;
   setEquipment: (equipment: Equipment[]) => void;
   addInjury: (part: BodyPart, note?: string) => void;
+  updateInjury: (id: string, patch: Partial<Injury>) => void;
   removeInjury: (id: string) => void;
   rememberWarmup: (ids: string[]) => void;
   setAvatarPalette: (patch: Partial<AvatarPalette>) => void;
@@ -183,9 +216,18 @@ export const useProfile = create<ProfileState>((set, get) => ({
       id: `${part}-${Date.now()}`,
       part,
       since: today(),
+      // The middle of the three: someone marking an injury is usually
+      // training around it, and the two extremes are one tap away.
+      severity: 'managing',
+      status: 'active',
       ...(note ? { note } : {}),
     };
     set({ injuries: [...get().injuries, injury] });
+    void save(snapshot(get()));
+  },
+
+  updateInjury: (id, patch) => {
+    set({ injuries: get().injuries.map((i) => (i.id === id ? { ...i, ...patch } : i)) });
     void save(snapshot(get()));
   },
 
@@ -206,6 +248,19 @@ export const useProfile = create<ProfileState>((set, get) => ({
   },
 }));
 
+/**
+ * Injuries recorded before severity and status existed are read as what they
+ * meant at the time: something being trained around, still healing.
+ */
+function readInjury(injury: Injury): Injury {
+  const legacy = injury as Partial<Injury>;
+  return {
+    ...injury,
+    severity: legacy.severity ?? 'managing',
+    status: legacy.status ?? 'active',
+  };
+}
+
 export async function hydrateProfile(): Promise<void> {
   try {
     const db = await getDb();
@@ -219,7 +274,7 @@ export async function hydrateProfile(): Promise<void> {
       plans: value.plans ?? {},
       weekOverrides: value.weekOverrides ?? {},
       equipment: value.equipment ?? ['wall', 'gym'],
-      injuries: value.injuries ?? [],
+      injuries: (value.injuries ?? []).map(readInjury),
       recentWarmups: value.recentWarmups ?? [],
       avatarPalette: { ...DEFAULT_PALETTE, ...value.avatarPalette },
       onboardedAt: value.onboardedAt ?? null,

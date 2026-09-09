@@ -31,6 +31,8 @@ import { TimerSheet } from '@/ui/TimerSheet';
 import { useGradeLabel, useGradeOptions } from '@/ui/useGrade';
 import { alreadySaved, applyTemplate, rankTemplates, suggestName } from '@/engine/templates';
 import { canMerge, describeSession } from '@/engine/sessionEdit';
+import { concerning, injuryPolicy } from '@/engine/injury';
+import { describeParts, drillConflict, exerciseConflict } from '@/engine/bodyLoad';
 
 const REST_ITEMS = [
   { key: 'hydration', label: 'Hydration' },
@@ -239,7 +241,9 @@ function WarmupCard({
   function build(seed?: number) {
     const next = generateWarmup({
       equipment,
-      injuries: injuries.map((i) => i.part),
+      // Only what load should stay off; a niggle or a part in its return
+      // is flagged elsewhere rather than stripped out of the warmup.
+      injuries: injuryPolicy(injuries).excluded,
       recent: recentWarmups,
       ...(focusFor(day?.sessionType, day?.phase?.name) ? { focus: focusFor(day?.sessionType, day?.phase?.name)! } : {}),
       climbing: Boolean(day?.sessionType && !day.isRest),
@@ -256,8 +260,8 @@ function WarmupCard({
       {!plan ? (
         <>
           <p className="text-sm text-ink-soft mb-3">
-            {injuries.length > 0
-              ? `Built around your ${injuries.map((i) => i.part).join(' and ')} — nothing that loads it.`
+            {injuryPolicy(injuries).excluded.length > 0
+              ? `Built around your ${injuryPolicy(injuries).excluded.join(' and ')} — nothing that loads it.`
               : 'A warmup built for today\u2019s session, varied from your recent ones.'}
           </p>
           <Button variant="outline" className="w-full" onClick={() => build()}>
@@ -344,6 +348,11 @@ function SessionEditor({
   const gradeOptions = useGradeOptions();
   const isRest = type?.isRest === true;
   const patch = (p: Partial<Session>) => onChange({ ...session, ...p });
+
+  // Everything worth marking: what load should stay off, plus what is being
+  // loaded again on purpose and wants watching.
+  const editorInjuries = useProfile((s) => s.injuries);
+  const hurtParts = useMemo(() => concerning(injuryPolicy(editorInjuries)), [editorInjuries]);
 
   const [now, setNow] = useState(() => Date.now());
   const live = isLive(session);
@@ -661,6 +670,18 @@ function SessionEditor({
                                 .join(' · ')}
                             </div>
                             {ex.notes && <div className="text-ink-soft/80 text-xs italic mt-0.5">{ex.notes}</div>}
+                            {(() => {
+                              // Advisory, never a refusal to show the program.
+                              const clash = exerciseConflict(ex, hurtParts);
+                              return clash ? (
+                                <div className="text-warn text-xs mt-1 flex items-start gap-1.5">
+                                  <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                                  <span>
+                                    Loads {describeParts(clash.parts)} — {clash.because}.
+                                  </span>
+                                </div>
+                              ) : null;
+                            })()}
                           </div>
                           {protocol?.timer && (
                             <button
@@ -705,6 +726,17 @@ function SessionEditor({
                 </button>
               </div>
               <p className="text-sm text-ink-soft leading-relaxed">{day.drill.description}</p>
+              {(() => {
+                const clash = drillConflict(day.drill!, hurtParts);
+                return clash ? (
+                  <p className="text-warn text-xs mt-2 flex items-start gap-1.5">
+                    <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                    <span>
+                      Loads {describeParts(clash.parts)} — {clash.because}.
+                    </span>
+                  </p>
+                ) : null;
+              })()}
               {(() => {
                 const protocol = day.drill.protocolId ? getProtocol(day.drill.protocolId) : undefined;
                 if (!protocol?.timer) return null;
