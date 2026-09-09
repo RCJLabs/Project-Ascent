@@ -14,6 +14,7 @@ import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { CareerPage } from '@/features/career/CareerPage';
 import { YearPage } from '@/features/career/YearPage';
 import { FinderPage } from '@/features/finder/FinderPage';
+import { GlossaryPage } from '@/features/glossary/GlossaryPage';
 import { LogPage, TodayRedirect } from '@/features/log/LogPage';
 import { AssessmentsPage } from '@/features/assessments/AssessmentsPage';
 import { MetricDetailPage } from '@/features/assessments/MetricDetailPage';
@@ -118,6 +119,7 @@ function Shell() {
           <Route path="/projects/:id" component={ProjectDetailPage} />
           <Route path="/projects" component={ProjectsPage} />
           <Route path="/injury/:id" component={InjuryPage} />
+          <Route path="/glossary" component={GlossaryPage} />
           <Route path="/settings" component={SettingsPage} />
           <Route>
             <PlaceholderPage title="Not found" subtitle="" body="That page does not exist." />

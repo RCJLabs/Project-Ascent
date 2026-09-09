@@ -27,6 +27,7 @@ import { useTemplates } from '@/store/templates';
 import { parseCount } from '@/content/types';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { Term } from '@/ui/Term';
 import { TimerSheet } from '@/ui/TimerSheet';
 import { useGradeLabel, useGradeOptions } from '@/ui/useGrade';
 import { alreadySaved, applyTemplate, rankTemplates, suggestName } from '@/engine/templates';
@@ -662,7 +663,7 @@ function SessionEditor({
                           </button>
                           <div className="flex-1 min-w-0">
                             <div className={`font-semibold text-sm ${isDone ? 'line-through opacity-60' : ''}`}>
-                              {ex.name}
+                              <Term name={ex.name} />
                             </div>
                             <div className="text-ink-soft text-xs">
                               {[ex.sets && `${ex.sets} sets`, ex.reps, ex.hold, ex.load, ex.rest && `${ex.rest} rest`]

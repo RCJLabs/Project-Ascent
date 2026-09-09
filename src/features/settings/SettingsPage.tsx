@@ -4,6 +4,7 @@ import { APP_VERSION } from '@/version';
 import { exportAll, hasRealData, importAll, parseExportFile, SCHEMA_VERSION } from '@/db';
 import { mediaBytes } from '@/db/media';
 import type { BodyPart } from '@/content/warmups';
+import { GLOSSARY } from '@/content/glossary';
 import type { Equipment } from '@/content/types';
 import { displayGrade, type BoulderDisplay, type RouteDisplay } from '@/engine/grades';
 import { unlock } from '@/lib/cues';
@@ -418,6 +419,21 @@ export function SettingsPage() {
               Request persistent storage
             </Button>
           )}
+        </Card>
+
+        <Card title="Reference">
+          <Link href="/glossary" className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">Glossary</p>
+              <p className="text-xs text-ink-soft mt-0.5">
+                {GLOSSARY.length} terms — grades, gear, grip types, technique, and every exercise
+                the programs name.
+              </p>
+            </div>
+            <span className="text-ink-soft shrink-0" aria-hidden>
+              →
+            </span>
+          </Link>
         </Card>
 
         <Card title="About">

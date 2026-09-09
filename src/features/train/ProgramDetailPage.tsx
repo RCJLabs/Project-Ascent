@@ -7,6 +7,7 @@ import { getProtocol } from '@/content/protocols';
 import { getProgram } from '@/content/programs';
 import type { CircuitFormat, Exercise, Phase, SelectionRule, SessionType, TrackId } from '@/content/types';
 import { Card } from '@/ui/Card';
+import { Term } from '@/ui/Term';
 import { PageHeader } from '@/ui/PageHeader';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -29,7 +30,7 @@ function ExerciseRow({ ex }: { ex: Exercise }) {
       <div className="flex items-start gap-2">
         <div className="flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="font-semibold text-sm">{ex.name}</span>
+            <Term name={ex.name} className="font-semibold text-sm" />
             {protocol?.timer && (
               <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-accent border border-accent/40 rounded px-1.5 py-0.5">
                 <Timer size={10} />
