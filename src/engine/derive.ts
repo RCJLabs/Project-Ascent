@@ -73,6 +73,16 @@ export interface ClimberState {
   warmupRate: number;
   totalMinutes: number;
   personalRecords: PersonalRecord[];
+  /** Distinct days logged outdoors. */
+  outdoorDays: number;
+  /** Sends by ascent style, for technique credit. */
+  styleSends: { onsight: number; flash: number };
+  /** The longest run of target-meeting weeks ever, not just the current one. */
+  longestStreakWeeks: number;
+  /** Training sessions in the last week that skipped the warmup. */
+  recentSkippedWarmups: number;
+  /** A rest day logged today or yesterday. */
+  restedWithin24h: boolean;
 }
 
 const EMPTY_TALLY = (): GradeTally => ({
@@ -114,6 +124,11 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
   let nonRest = 0;
   let totalMinutes = 0;
   let recentSessions = 0;
+  let onsight = 0;
+  let flash = 0;
+  let recentSkippedWarmups = 0;
+  let restedWithin24h = false;
+  const outdoorDates = new Set<string>();
 
   const loadByDate = new Map<string, { load: number; deload: boolean }>();
 
@@ -127,6 +142,11 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
     }
     if (session.drillDone) drillsCompleted++;
     if (session.warmup) warmups++;
+    if (session.mode === 'outdoor' && !isRest) outdoorDates.add(session.date);
+
+    const daysAgo = daysBetween(session.date, today);
+    if (isRest && daysAgo >= 0 && daysAgo <= 1) restedWithin24h = true;
+    if (!isRest && !session.warmup && daysAgo >= 0 && daysAgo <= 7) recentSkippedWarmups++;
     totalMinutes += session.durationMin ?? 0;
     if (daysBetween(session.date, today) <= 30 && daysBetween(session.date, today) >= 0) {
       recentSessions++;
@@ -151,6 +171,8 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
       bucket[climb.grade] = (bucket[climb.grade] ?? 0) + climb.count;
       if (climb.result === 'send') {
         tally.totalSends += climb.count;
+        if (climb.style === 'onsight') onsight += climb.count;
+        else if (climb.style === 'flash') flash += climb.count;
         // First send of a grade on its own ladder is a personal record.
         const seen = climb.scale === 'V' ? seenBoulder : seenSport;
         if (!seen.has(climb.grade)) {
@@ -188,6 +210,11 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
     sport,
     load: deriveLoad(loadByDate, today, options.deloadDates ?? new Set()),
     streakWeeks: deriveStreak(completed, today, weeklyTarget),
+    longestStreakWeeks: deriveLongestStreak(completed, weeklyTarget),
+    outdoorDays: outdoorDates.size,
+    recentSkippedWarmups,
+    restedWithin24h,
+    styleSends: { onsight, flash },
     consecutiveTrainingDays: deriveConsecutiveDays(completed, today),
     drillsCompleted,
     warmupRate: nonRest === 0 ? 0 : warmups / nonRest,
@@ -278,6 +305,29 @@ function deriveLoad(
   }
 
   return { daily, acute, chronic, acwr, zone, inPlannedDeload, daysOfHistory };
+}
+
+/** The longest run of target-meeting weeks anywhere in the history. */
+function deriveLongestStreak(completed: Session[], target: number): number {
+  const byWeek = new Map<string, number>();
+  for (const session of completed) {
+    const week = startOfWeek(session.date);
+    byWeek.set(week, (byWeek.get(week) ?? 0) + 1);
+  }
+  const weeks = [...byWeek.entries()]
+    .filter(([, count]) => count >= target)
+    .map(([week]) => week)
+    .sort();
+
+  let best = 0;
+  let run = 0;
+  let previous: string | null = null;
+  for (const week of weeks) {
+    run = previous !== null && addDays(previous, 7) === week ? run + 1 : 1;
+    previous = week;
+    if (run > best) best = run;
+  }
+  return best;
 }
 
 /** Consecutive Sunday-aligned weeks that met the target, counting back. */
