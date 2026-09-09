@@ -592,12 +592,15 @@ Milestones are sequential; each ends runnable and useful.
 - **M6 — Round out.** Live session mode, onboarding baseline, Coach's Corner, settings
   (scales, theme, backup), disclaimer, polish pass. *Done: all of it.* Packaging and
   release moved to M12 — shipping is the last phase, not the sixth.
-- **M7 — Depth in the log.** The things a real training log needs that the first pass
-  skipped: session templates (§5.2), calendar drag-to-move with live constraint
-  validation (§5.3), editing a logged session's date and splitting or merging days,
-  media on projects (the `media` store exists and has never been written to), and the
-  custom program builder the content model was built for. *Done when: a season can be
-  planned, re-planned and corrected without touching a text field twice.*
+- **M7 — Depth in the log.** *Done.* Session templates, calendar move with live
+  constraint validation, re-dating and merging logged sessions, photos on projects,
+  and the authoring builder in three slices — structure, contents, and sharing a
+  program as a file. Two departures from the plan are recorded in the code: moving a
+  session is pick-then-place rather than drag (a 40px cell is not a drag target on a
+  phone, and drag is unreachable by keyboard), and it defaults to one week rather than
+  rewriting the program's plan. Splitting one session into two was deliberately not
+  built: without a way to say which climbs belong to which half it is guesswork, and
+  the case it would serve is already covered by stale-session recovery.
 - **M8 — Injury depth.** §9.7 is half-built: warmups filter, the finder steers away,
   vitality takes a hit. Missing is everything that makes it a system — severity, side
   and status on an injury, drills and exercises flagged across *all* programs rather
