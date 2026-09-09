@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link } from 'wouter';
 import { CalendarDays, Check, Clock, Settings, Sparkles } from 'lucide-react';
 import { getProgram } from '@/content/programs';
+import { deriveAltimeter } from '@/engine/altimeter';
 import { today } from '@/engine/dates';
 import { plannedDay } from '@/engine/plan';
 import { useXp } from '@/store/game';
@@ -9,6 +10,7 @@ import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
 import { LevelBar } from '@/ui/LevelBar';
+import { MountainMeter } from '@/ui/MountainMeter';
 import { PageHeader } from '@/ui/PageHeader';
 
 export function HomePage() {
@@ -45,6 +47,7 @@ export function HomePage() {
 
       <div className="grid gap-3">
         <ClimberStrip />
+        <AltimeterCard />
 
         {!program && (
           <Card>
@@ -124,6 +127,39 @@ function ClimberStrip() {
   return (
     <Link href="/climber" className="block bg-surface border border-line rounded-2xl p-4">
       <LevelBar progress={xp.progress} rank={xp.rank} compact />
+    </Link>
+  );
+}
+
+/** The mountain filling toward the next milestone — the plan's home-screen
+ *  silhouette, and the only meter here that no game action can move. */
+function AltimeterCard() {
+  const byDate = useSessions((s) => s.byDate);
+  const alt = useMemo(() => deriveAltimeter(Object.values(byDate).flat()), [byDate]);
+
+  return (
+    <Link href="/altimeter" className="block bg-surface border border-line rounded-2xl p-4">
+      <div className="flex items-baseline gap-2 mb-2">
+        <span className="font-black text-lg tabular-nums leading-none">
+          {alt.feet.toLocaleString()}
+        </span>
+        <span className="text-xs font-bold uppercase tracking-widest text-ink-soft">ft climbed</span>
+        {alt.next && (
+          <span className="text-xs text-ink-soft ml-auto truncate">
+            {alt.next.name} · {alt.toNext.toLocaleString()} ft
+          </span>
+        )}
+      </div>
+      <MountainMeter
+        height={72}
+        fraction={alt.fraction}
+        caption={alt.next ? `On the way to ${alt.next.name}` : 'The whole ladder is behind you'}
+      />
+      {alt.etaLabel && alt.next && (
+        <p className="text-xs text-ink-soft mt-2">
+          At this pace, {alt.next.name} in {alt.etaLabel.replace(/^about /, '')}.
+        </p>
+      )}
     </Link>
   );
 }
