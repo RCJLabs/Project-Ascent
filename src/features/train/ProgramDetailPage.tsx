@@ -5,7 +5,7 @@ import { getDrill } from '@/content/drills';
 import { getMetric } from '@/content/metrics';
 import { getProtocol } from '@/content/protocols';
 import { getProgram } from '@/content/programs';
-import type { CircuitFormat, Exercise, Phase, SessionType, TrackId } from '@/content/types';
+import type { CircuitFormat, Exercise, Phase, SelectionRule, SessionType, TrackId } from '@/content/types';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
 
@@ -45,9 +45,14 @@ function ExerciseRow({ ex }: { ex: Exercise }) {
   );
 }
 
-function circuitLine(circuit: CircuitFormat, poolSize: number): string {
+function formatLine(
+  selection: SelectionRule | undefined,
+  circuit: CircuitFormat | undefined,
+  poolSize: number,
+): string {
   const parts: string[] = [];
-  if (circuit.pick !== undefined) parts.push(`Pick ${circuit.pick} of ${poolSize}`);
+  if (selection) parts.push(`Pick ${selection.pick} of ${poolSize}`);
+  if (!circuit) return parts.join(' · ');
   if (circuit.work) parts.push(`${circuit.work} each`);
   if (circuit.restBetween) parts.push(`${circuit.restBetween} rest`);
   parts.push(`${circuit.rounds} ${circuit.rounds === '1' ? 'round' : 'rounds'}`);
@@ -60,11 +65,13 @@ function SessionTypeCard({
   phase,
   blockName,
   track,
+  deloadWeeks,
 }: {
   type: SessionType;
   phase: Phase;
   blockName: (blockId: string) => string;
   track: TrackId | null;
+  deloadWeeks: Set<number>;
 }) {
   return (
     <Card>
@@ -92,9 +99,9 @@ function SessionTypeCard({
               </p>
             ) : (
               <div className="bg-sunken rounded-xl p-3">
-                {entry.circuit && (
+                {(entry.selection || entry.circuit) && (
                   <p className="text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-2.5 pb-2.5 border-b border-line">
-                    {circuitLine(entry.circuit, entry.exercises.length)}
+                    {formatLine(entry.selection, entry.circuit, entry.exercises.length)}
                   </p>
                 )}
                 <ul className="grid gap-2.5">
@@ -124,6 +131,11 @@ function SessionTypeCard({
                       <span className="text-[10px] font-bold uppercase tracking-wide text-ink-soft">
                         Week {week}
                       </span>
+                      {deloadWeeks.has(week) && (
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-warn">
+                          Deload
+                        </span>
+                      )}
                       <span className="font-semibold text-sm">{drill.name}</span>
                     </div>
                     <p className="text-sm text-ink-soft mt-1 leading-relaxed">{drill.description}</p>
@@ -169,6 +181,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
 
   const phase = program.phases[phaseIndex]!;
   const activeTrack = track ?? program.tracks?.[0]?.id ?? null;
+  const deloadWeeks = new Set(program.deloadWeeks ?? []);
   const blockName = (blockId: string) =>
     program.sessionTypes.flatMap((t) => t.blocks ?? []).find((b) => b.id === blockId)?.name ?? blockId;
 
@@ -216,6 +229,12 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
             ))}
           </div>
         </Card>
+
+        {program.prerequisites && (
+          <Card title="Before you start">
+            <p className="text-sm leading-relaxed">{program.prerequisites.note}</p>
+          </Card>
+        )}
 
         {program.recommendedLayout && (
           <Card title={`Recommended week · ${program.recommendedLayout.name}`}>
@@ -303,6 +322,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
                   phase={phase}
                   blockName={blockName}
                   track={activeTrack}
+                  deloadWeeks={deloadWeeks}
                 />
               ))}
           </div>

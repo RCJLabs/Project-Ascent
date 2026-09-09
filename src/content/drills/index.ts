@@ -16,6 +16,7 @@ import { IRON_GRIP_DRILLS } from './ironGrip';
 import { LOCKDOWN_DRILLS } from './lockdown';
 import { LONG_GAME_DRILLS } from './longGame';
 import { PEAK_PERFORMANCE_DRILLS } from './peakPerformance';
+import { SIEGE_DRILLS } from './siege';
 
 export const DRILL_CATEGORIES: Record<DrillCategory, { label: string; description: string }> = {
   technique: { label: 'Technique', description: 'Movement quality, footwork, body position.' },
@@ -40,6 +41,7 @@ export const DRILLS: Drill[] = [
   ...LOCKDOWN_DRILLS,
   ...LONG_GAME_DRILLS,
   ...PEAK_PERFORMANCE_DRILLS,
+  ...SIEGE_DRILLS,
 ];
 
 const BY_ID = new Map<DrillId, Drill>(DRILLS.map((d) => [d.id, d]));

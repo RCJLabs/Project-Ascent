@@ -35,6 +35,7 @@ export const BASE_CAMP: Program = {
   id: 'base_camp',
   name: 'Base Camp',
   subtitle: '12-Week Climbing Foundations',
+  kind: 'program',
   stage: 'foundations',
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V0', max: 'V2', label: 'V0-V2' },
@@ -260,19 +261,22 @@ export const BASE_CAMP: Program = {
             [PHASE.foundation]: {
               rationale:
                 'Pick 5 exercises. 40-60s each, 20s rest between, 2 rounds. Core tension is what keeps your feet stuck to the wall — no tension = cutting feet on overhangs. Variety across the pool means you’re training anti-extension (plank, dead bugs), anti-rotation (bird dogs, penguins), and flexion (knee raise, v-ups).',
-              circuit: { pick: 5, work: '40-60s', restBetween: '20s', rounds: '2' },
+              selection: { pick: 5 },
+              circuit: { work: '40-60s', restBetween: '20s', rounds: '2' },
               exercises: CORE_POOL,
             },
             [PHASE.engine]: {
               rationale:
                 'Pick 5. 40-60s each, 2-3 rounds (up from 2). Longer session means higher work capacity. If you finished Phase 1 with form still crisp, add the third round.',
-              circuit: { pick: 5, work: '40-60s', restBetween: '20s', rounds: '2-3' },
+              selection: { pick: 5 },
+              circuit: { work: '40-60s', restBetween: '20s', rounds: '2-3' },
               exercises: CORE_POOL,
             },
             [PHASE.headspace]: {
               rationale:
                 'Pick 3. 1 min each, 2 rounds. Shorter and sharper — compensates for the Pull+Push superset volume in the Push and Pull blocks. Pick your 3 weakest patterns from the pool.',
-              circuit: { pick: 3, work: '1 min', restBetween: '20s', rounds: '2' },
+              selection: { pick: 3 },
+              circuit: { work: '1 min', restBetween: '20s', rounds: '2' },
               exercises: CORE_POOL,
             },
           },
@@ -293,19 +297,22 @@ export const BASE_CAMP: Program = {
             [PHASE.foundation]: {
               rationale:
                 'Performance + Engine Room = 2x/week Core Circuit. Pick 3 exercises, 40-60s each, 20s rest, 1 round. Short and sharp — don’t blow your recovery after hard climbing. Skip entirely if you’re already cooked.',
-              circuit: { pick: 3, work: '40-60s', restBetween: '20s', rounds: '1' },
+              selection: { pick: 3 },
+              circuit: { work: '40-60s', restBetween: '20s', rounds: '1' },
               exercises: CORE_POOL,
             },
             [PHASE.engine]: {
               rationale:
                 'Same setup. Pick 3, 40-60s, 1 round. Mid-program fatigue is real — if you’re behind on sleep, skip this and prioritize the next session.',
-              circuit: { pick: 3, work: '40-60s', restBetween: '20s', rounds: '1' },
+              selection: { pick: 3 },
+              circuit: { work: '40-60s', restBetween: '20s', rounds: '1' },
               exercises: CORE_POOL,
             },
             [PHASE.headspace]: {
               rationale:
                 'Pick 3, 1 min each, 1 round. Keep the circuit SHORTER than Engine Room’s version — this is maintenance, not capacity building.',
-              circuit: { pick: 3, work: '1 min', restBetween: '20s', rounds: '1' },
+              selection: { pick: 3 },
+              circuit: { work: '1 min', restBetween: '20s', rounds: '1' },
               exercises: CORE_POOL,
             },
           },

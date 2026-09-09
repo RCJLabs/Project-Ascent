@@ -132,14 +132,23 @@ export interface Exercise {
 }
 
 /**
- * Circuit structure, when a block runs as timed rounds rather than straight
- * sets. `pick` marks the exercise list as a *pool* to choose from — the
- * prototype listed all nine core exercises as if all nine were prescribed,
- * while the coaching text said "pick 5".
+ * Marks the exercise list as a *menu* rather than a prescription: choose
+ * `pick` of them for this session. The prototype rendered every option as
+ * if all were prescribed, with the real instruction ("pick 5", "pick ONE
+ * focus and drill it") buried in the coaching prose.
+ */
+export interface SelectionRule {
+  pick: number;
+  /** How to choose, when it matters — e.g. 'Rotate the focus across sessions.' */
+  note?: string;
+}
+
+/**
+ * Timed-round structure, for blocks run as a circuit rather than straight
+ * sets. Independent of `selection`: a block can be a menu you pick from
+ * *and* a circuit you run in rounds, or either one alone.
  */
 export interface CircuitFormat {
-  /** Choose this many from the pool. Omitted means do all of them. */
-  pick?: number;
   rounds: string;
   /** Work time per exercise, when they share one. */
   work?: string;
@@ -152,6 +161,7 @@ export interface CircuitFormat {
 export interface PhasePrescription {
   rationale: string;
   exercises: Exercise[];
+  selection?: SelectionRule;
   circuit?: CircuitFormat;
   /** This block is folded into another block for this phase (e.g. Pull
    *  supersetted into Push). Exercises may be empty when set. */
@@ -178,8 +188,14 @@ export type FieldId =
   | 'attemptsToday'
   | 'highPoint'
   | 'projectName'
+  | 'routeName'
   | 'pumpLevel'
-  | 'location';
+  | 'location'
+  | 'sessionNumber'
+  | 'clipStyle'
+  | 'waterDepth'
+  | 'gearNotes'
+  | 'sessionDuration';
 
 export interface SessionType {
   id: SessionTypeId;
@@ -258,6 +274,16 @@ export interface Program {
   id: ProgramId;
   name: string;
   subtitle: string;
+  /**
+   * 'program' is a structured, periodized block with a finish line.
+   * 'mode' is open-ended logging — no progression to complete, no
+   * adherence to measure, and not something the finder should recommend
+   * as training. The prototype modelled both as 52-week programs with one
+   * phase, which made every completion and adherence calculation lie.
+   */
+  kind: 'program' | 'mode';
+  /** Real rock rather than plastic. */
+  outdoor?: boolean;
   stage: ProgramStage;
   discipline: Discipline;
   gradeRange: { scale: GradeScale; min: string; max: string; label: string };

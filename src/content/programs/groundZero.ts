@@ -15,6 +15,7 @@ export const GROUND_ZERO: Program = {
   id: 'ground_zero',
   name: 'Ground Zero',
   subtitle: '12-Week Body Preparation',
+  kind: 'program',
   stage: 'start',
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V0', max: 'V0', label: 'Pre-Climbing' },

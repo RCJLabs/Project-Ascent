@@ -43,6 +43,7 @@ export const LOCKDOWN: Program = {
   id: 'lockdown',
   name: 'Lockdown',
   subtitle: '12-Week Static Power',
+  kind: 'program',
   stage: 'style',
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V3', max: 'V5', label: 'V3-V5' },

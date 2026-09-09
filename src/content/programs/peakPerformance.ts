@@ -17,6 +17,7 @@ export const PEAK_PERFORMANCE: Program = {
   id: 'peak_performance',
   name: 'Peak Performance',
   subtitle: '12-Week Advanced Boulder',
+  kind: 'program',
   stage: 'advanced',
   discipline: 'boulder',
   gradeRange: { scale: 'V', min: 'V8', max: 'V11', label: 'V8-V11' },

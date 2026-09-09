@@ -5,6 +5,10 @@ import { GROUND_ZERO } from './groundZero';
 import { IRON_GRIP } from './ironGrip';
 import { LOCKDOWN } from './lockdown';
 import { THE_LONG_GAME } from './longGame';
+import { GENERAL_TRAINING } from './generalTraining';
+import { OUTDOOR_CLIMBING } from './outdoorClimbing';
+import { THE_CRUISER } from './cruiser';
+import { THE_SIEGE } from './siege';
 import { PEAK_PERFORMANCE } from './peakPerformance';
 
 /**
@@ -27,7 +31,7 @@ export const PLANNED_PROGRAM_IDS: readonly ProgramId[] = [
 ];
 
 /** Programs converted to the new schema so far, in catalog order. */
-export const PROGRAMS: Program[] = [GROUND_ZERO, BASE_CAMP, GRAVITY_DEFIED, LOCKDOWN, IRON_GRIP, THE_LONG_GAME, PEAK_PERFORMANCE];
+export const PROGRAMS: Program[] = [GROUND_ZERO, BASE_CAMP, GRAVITY_DEFIED, LOCKDOWN, IRON_GRIP, THE_LONG_GAME, PEAK_PERFORMANCE, THE_SIEGE, THE_CRUISER, GENERAL_TRAINING, OUTDOOR_CLIMBING];
 
 const BY_ID = new Map<ProgramId, Program>(PROGRAMS.map((p) => [p.id, p]));
 
@@ -45,4 +49,4 @@ export const STAGE_META: Record<ProgramStage, { label: string; blurb: string }> 
 
 export const STAGE_ORDER: ProgramStage[] = ['start', 'foundations', 'style', 'advanced', 'ongoing'];
 
-export { BASE_CAMP, GRAVITY_DEFIED, GROUND_ZERO, IRON_GRIP, LOCKDOWN, PEAK_PERFORMANCE, THE_LONG_GAME };
+export { BASE_CAMP, GRAVITY_DEFIED, GROUND_ZERO, IRON_GRIP, LOCKDOWN, GENERAL_TRAINING, OUTDOOR_CLIMBING, PEAK_PERFORMANCE, THE_CRUISER, THE_LONG_GAME, THE_SIEGE };

@@ -45,6 +45,20 @@ export const PROTOCOLS: Record<ProtocolId, Protocol> = {
     safety: ['Warm up thoroughly: never load near-max fingers cold.'],
   },
 
+  min_edge_hangs: {
+    id: 'min_edge_hangs',
+    name: 'Min-Edge Hangs',
+    description:
+      'Seven-second hangs at bodyweight on the smallest edge you can hold with good form. Load stays constant; the *edge* gets smaller. Trains the specific finger strength small crimps demand, rather than heavy loads on big edges.',
+    timer: { workSec: 7, restSec: 0, repsPerSet: 1, setRestSec: 180 },
+    grip: 'Half crimp, smallest edge holdable with clean form',
+    cues: [
+      'Bodyweight only — progress by shrinking the edge, never by adding load.',
+      'Start around 15mm. Hold 7s with clean form, then drop a millimetre next session.',
+      'If the position collapses or the shoulders shrug, the edge is too small.',
+    ],
+  },
+
   campus_ladder: {
     id: 'campus_ladder',
     name: 'Campus Laddering',

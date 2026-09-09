@@ -30,6 +30,7 @@ export const THE_LONG_GAME: Program = {
   id: 'the_long_game',
   name: 'The Long Game',
   subtitle: '12-Week Route & Endurance',
+  kind: 'program',
   stage: 'style',
   discipline: 'sport',
   gradeRange: { scale: 'YDS', min: '5.9', max: '5.12a', label: '5.9-5.12' },
@@ -174,19 +175,22 @@ export const THE_LONG_GAME: Program = {
             [PHASE.base]: {
               rationale:
                 'Pick 4 exercises. 45-60s (or 8-12 reps) each, 2 rounds, minimal rest. Core endurance matters more than core max on long pitches — you need the core to fire on the 20th move as well as the 1st. Choose variety across rounds; don’t pick only anti-extension or only rotation work.',
-              circuit: { pick: 4, rounds: '2', restBetween: 'Minimal' },
+              selection: { pick: 4 },
+              circuit: { rounds: '2', restBetween: 'Minimal' },
               exercises: CORE_POOL,
             },
             [PHASE.engine]: {
               rationale:
                 'Same 4-exercise pick, 2 rounds. Engine phase’s power-endurance intervals already tax the core via sustained tension on the wall — this is reinforcing that adaptation, not replacing it.',
-              circuit: { pick: 4, rounds: '2', restBetween: 'Minimal' },
+              selection: { pick: 4 },
+              circuit: { rounds: '2', restBetween: 'Minimal' },
               exercises: CORE_POOL,
             },
             [PHASE.send]: {
               rationale:
                 'Maintenance: 2 or 3 exercises, 1-2 rounds is enough. No need to hit failure. Your project’s crux already trains your core at max demand.',
-              circuit: { pick: 3, rounds: '1-2', restBetween: 'Minimal' },
+              selection: { pick: 3 },
+              circuit: { rounds: '1-2', restBetween: 'Minimal' },
               exercises: CORE_POOL,
             },
           },

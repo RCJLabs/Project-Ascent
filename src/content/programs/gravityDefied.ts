@@ -25,6 +25,7 @@ export const GRAVITY_DEFIED: Program = {
   id: 'gravity_defied',
   name: 'Gravity Defied',
   subtitle: '12-Week Dynamic Climbing',
+  kind: 'program',
   stage: 'style',
   discipline: 'boulder',
   gradeRange: { scale: 'V', min: 'V2', max: 'V5', label: 'V2-V5' },

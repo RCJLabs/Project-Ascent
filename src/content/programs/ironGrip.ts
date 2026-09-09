@@ -20,6 +20,7 @@ export const IRON_GRIP: Program = {
   id: 'iron_grip',
   name: 'Iron Grip',
   subtitle: '12-Week Finger Strength',
+  kind: 'program',
   stage: 'style',
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V5', max: 'V8', label: 'V5-V8' },

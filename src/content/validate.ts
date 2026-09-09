@@ -74,10 +74,13 @@ export function validateProgram(program: Program): string[] {
             where(`block '${block.id}' phase '${phaseId}' merges into itself`);
           }
         }
-        if (entry.circuit?.pick !== undefined && entry.circuit.pick > entry.exercises.length) {
+        if (entry.selection && entry.selection.pick > entry.exercises.length) {
           where(
-            `block '${block.id}' phase '${phaseId}' asks for ${entry.circuit.pick} of ${entry.exercises.length} exercises`,
+            `block '${block.id}' phase '${phaseId}' asks for ${entry.selection.pick} of ${entry.exercises.length} exercises`,
           );
+        }
+        if (entry.selection && entry.selection.pick < 1) {
+          where(`block '${block.id}' phase '${phaseId}' has a selection of fewer than one exercise`);
         }
         for (const ex of entry.exercises) {
           if (ex.protocolId && !getProtocol(ex.protocolId)) {

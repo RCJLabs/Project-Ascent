@@ -208,6 +208,23 @@ export const METRICS: Record<MetricId, Metric> = {
     description: 'Longest continuous ARC round held at RPE 3-4 without pumping out.',
   },
 
+  project_high_point: {
+    id: 'project_high_point',
+    label: 'Project High Point',
+    unit: '% of route',
+    kind: 'number',
+    higherIsBetter: true,
+    description: 'How far up the project you reached, as a percentage of its full length.',
+  },
+  linked_laps_continuous: {
+    id: 'linked_laps_continuous',
+    label: 'Linked Laps Continuous',
+    unit: 'laps',
+    kind: 'number',
+    higherIsBetter: true,
+    description: 'Routes climbed back to back with no ground rest.',
+  },
+
   // Performance ceilings
   max_boulder_grade: {
     id: 'max_boulder_grade',
@@ -260,6 +277,39 @@ export const METRICS: Record<MetricId, Metric> = {
     scale: 'YDS',
     higherIsBetter: true,
     description: 'Hardest route sent clean after working the moves.',
+  },
+  max_trad_grade: {
+    id: 'max_trad_grade',
+    label: 'Max Trad Grade',
+    unit: '',
+    kind: 'grade',
+    scale: 'YDS',
+    higherIsBetter: true,
+  },
+  max_alpine_grade: {
+    id: 'max_alpine_grade',
+    label: 'Max Alpine Grade',
+    unit: '',
+    kind: 'grade',
+    scale: 'YDS',
+    higherIsBetter: true,
+    description: 'Route-level grade of the hardest alpine or multipitch route climbed.',
+  },
+  total_outdoor_days: {
+    id: 'total_outdoor_days',
+    label: 'Total Outdoor Days',
+    unit: 'days',
+    kind: 'number',
+    higherIsBetter: true,
+    description: 'Distinct days logged on real rock. Derived from your logs.',
+  },
+  capacity_4x4_quality: {
+    id: 'capacity_4x4_quality',
+    label: '4x4 Completion',
+    unit: 'quality 0-10',
+    kind: 'number',
+    higherIsBetter: true,
+    description: 'Self-rated quality of a completed 4x4 interval session.',
   },
   flash_grade: {
     id: 'flash_grade',

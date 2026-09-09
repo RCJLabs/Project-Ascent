@@ -2,13 +2,28 @@ import { describe, expect, it } from 'vitest';
 import { DRILLS, filterDrills, getDrill } from './drills';
 import { getMetric, METRICS } from './metrics';
 import { PROTOCOLS } from './protocols';
-import { BASE_CAMP, GRAVITY_DEFIED, GROUND_ZERO, IRON_GRIP, LOCKDOWN, PROGRAMS } from './programs';
+import {
+  BASE_CAMP,
+  GRAVITY_DEFIED,
+  GROUND_ZERO,
+  IRON_GRIP,
+  LOCKDOWN,
+  OUTDOOR_CLIMBING,
+  PLANNED_PROGRAM_IDS,
+  PROGRAMS,
+  THE_CRUISER,
+  THE_SIEGE,
+} from './programs';
 import { parseCount, phaseForWeek } from './types';
 import { validateCatalog, validateProgram } from './validate';
 
 describe('catalog integrity', () => {
   it('every ported program validates', () => {
     expect(validateCatalog(PROGRAMS)).toEqual([]);
+  });
+
+  it('the whole planned catalog is converted', () => {
+    expect(PROGRAMS.map((p) => p.id).sort()).toEqual([...PLANNED_PROGRAM_IDS].sort());
   });
 
   it('drill ids are unique', () => {
@@ -135,7 +150,7 @@ describe('Ground Zero', () => {
       .blocks!.find((b) => b.id === 'core_pillar')!;
     expect(core.perPhase['alignment']!.circuit).toMatchObject({ rounds: '3', restBetweenRounds: '60s' });
     // All exercises prescribed — not a pick-from-pool circuit.
-    expect(core.perPhase['alignment']!.circuit!.pick).toBeUndefined();
+    expect(core.perPhase['alignment']!.selection).toBeUndefined();
   });
 
   it('tracks a metric where lower is better', () => {
@@ -163,9 +178,10 @@ describe('Base Camp', () => {
       .find((t) => t.id === 'eng')!
       .blocks!.find((b) => b.id === 'core_circuit')!;
     expect(core.perPhase['foundation']!.exercises).toHaveLength(9);
-    expect(core.perPhase['foundation']!.circuit).toMatchObject({ pick: 5, rounds: '2' });
+    expect(core.perPhase['foundation']!.selection).toMatchObject({ pick: 5 });
+    expect(core.perPhase['foundation']!.circuit).toMatchObject({ rounds: '2' });
     // Phase 3 trims the selection, not the pool.
-    expect(core.perPhase['headspace']!.circuit!.pick).toBe(3);
+    expect(core.perPhase['headspace']!.selection!.pick).toBe(3);
     expect(core.perPhase['headspace']!.exercises).toHaveLength(9);
   });
 
@@ -188,7 +204,7 @@ describe('Base Camp', () => {
   it('rejects a circuit asking for more exercises than the pool holds', () => {
     const broken = structuredClone(BASE_CAMP);
     const core = broken.sessionTypes.find((t) => t.id === 'eng')!.blocks!.find((b) => b.id === 'core_circuit')!;
-    core.perPhase['foundation']!.circuit!.pick = 99;
+    core.perPhase['foundation']!.selection!.pick = 99;
     expect(validateProgram(broken).join(' ')).toMatch(/asks for 99 of 9 exercises/);
   });
 
@@ -276,6 +292,73 @@ describe('library coverage', () => {
       }
     }
     expect(Object.keys(PROTOCOLS).filter((id) => !referenced.has(id))).toEqual([]);
+  });
+});
+
+describe('modes versus programs', () => {
+  it('separates open-ended logging modes from structured programs', () => {
+    const modes = PROGRAMS.filter((p) => p.kind === 'mode').map((p) => p.id);
+    expect(modes).toEqual(['general_training', 'outdoor_climbing']);
+    // Modes have no finish line, so no deloads and no scheduling constraints.
+    for (const id of modes) {
+      const mode = PROGRAMS.find((p) => p.id === id)!;
+      expect(mode.constraints).toEqual([]);
+      expect(mode.deloadWeeks).toBeUndefined();
+      expect(mode.recommendedLayout).toBeUndefined();
+      expect(mode.phases).toHaveLength(1);
+    }
+  });
+
+  it('marks the outdoor mode and gives every discipline its own fields', () => {
+    expect(OUTDOOR_CLIMBING.outdoor).toBe(true);
+    const climbing = OUTDOOR_CLIMBING.sessionTypes.filter((t) => !t.isRest);
+    expect(climbing).toHaveLength(5);
+    for (const type of climbing) {
+      expect(type.fields, type.id).toContain('location');
+      expect(type.blocks).toBeUndefined();
+      expect(type.drillsByWeek).toBeUndefined();
+    }
+    expect(OUTDOOR_CLIMBING.sessionTypes.find((t) => t.id === 'outdoor_dws')!.fields).toContain('waterDepth');
+    expect(OUTDOOR_CLIMBING.sessionTypes.find((t) => t.id === 'outdoor_trad')!.fields).toContain('pitches');
+  });
+});
+
+describe('The Cruiser', () => {
+  it('builds its climbing sessions from pick-one menus', () => {
+    for (const typeId of ['vol', 'perf', 'end']) {
+      const block = THE_CRUISER.sessionTypes.find((t) => t.id === typeId)!.blocks![0]!;
+      for (const [phaseId, entry] of Object.entries(block.perPhase)) {
+        expect(entry.selection?.pick, `${typeId}/${phaseId}`).toBe(1);
+        expect(entry.exercises.length).toBeGreaterThan(1);
+      }
+    }
+  });
+
+  it('deloads every fourth week', () => {
+    expect(THE_CRUISER.deloadWeeks).toEqual([4, 8, 12]);
+  });
+
+  it('keeps a menu and a circuit as separate ideas on the core block', () => {
+    const core = THE_CRUISER.sessionTypes.find((t) => t.id === 'str')!.blocks!.find((b) => b.id === 'core_circuit')!;
+    const entry = core.perPhase['block1']!;
+    expect(entry.selection!.pick).toBe(4);
+    expect(entry.circuit).toMatchObject({ rounds: '2-3' });
+  });
+});
+
+describe('The Siege', () => {
+  it('turns its prose prerequisite into a checkable metric', () => {
+    expect(THE_SIEGE.prerequisites!.metrics).toEqual([{ metricId: 'redpoint_grade', atLeast: 17 }]);
+    expect(getMetric('redpoint_grade')!.scale).toBe('YDS');
+  });
+
+  it('progresses the finger protocol from max hangs to min edge to maintenance', () => {
+    const fp = THE_SIEGE.sessionTypes.find((t) => t.id === 'fp')!.blocks!.find((b) => b.id === 'finger_protocol')!;
+    expect(Object.values(fp.perPhase).map((p) => p.exercises[0]!.protocolId)).toEqual([
+      'max_hangs_10s',
+      'min_edge_hangs',
+      'max_hangs_10s',
+    ]);
   });
 });
 
