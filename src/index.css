@@ -19,9 +19,24 @@
   --c-positive: #2e8b57;
   --c-warn: #b3752a;
   --c-danger: #b3403a;
+
+  /* Data-visualisation slots. Separate from the UI accent on purpose: these
+     are validated for colour-vision deficiency against the chart surface
+     (validate_palette.js, all checks pass in both modes). Status colours are
+     fixed and never themed — they must never impersonate a series. */
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-grid: #e6eaee;
+  --viz-good: #0ca30c;
+  --viz-warning: #fab219;
+  --viz-serious: #ec835a;
+  --viz-critical: #d03b3b;
 }
 
 [data-theme='dark'] {
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-grid: #24313d;
   --c-bg: #10181f;
   --c-surface: #182430;
   --c-sunken: #0c1319;
@@ -38,6 +53,9 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
+  --viz-1: #3987e5;
+    --viz-2: #d95926;
+    --viz-grid: #24313d;
     --c-bg: #10181f;
     --c-surface: #182430;
     --c-sunken: #0c1319;
@@ -64,6 +82,9 @@
   --color-accent-strong: var(--c-accent-strong);
   --color-accent-ink: var(--c-accent-ink);
   --color-positive: var(--c-positive);
+  --color-viz-1: var(--viz-1);
+  --color-viz-2: var(--viz-2);
+  --color-viz-grid: var(--viz-grid);
   --color-warn: var(--c-warn);
   --color-danger: var(--c-danger);
 }

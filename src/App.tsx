@@ -7,6 +7,7 @@ import { SettingsPage } from '@/features/settings/SettingsPage';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { FinderPage } from '@/features/finder/FinderPage';
 import { LogPage, TodayRedirect } from '@/features/log/LogPage';
+import { ProgressPage } from '@/features/progress/ProgressPage';
 import { StartProgramPage } from '@/features/plan/StartProgramPage';
 import { ProgramDetailPage } from '@/features/train/ProgramDetailPage';
 import { TrainPage } from '@/features/train/TrainPage';
@@ -40,13 +41,7 @@ export function App() {
           <Route path="/calendar" component={CalendarPage} />
           <Route path="/log/:date" component={LogPage} />
           <Route path="/today" component={TodayRedirect} />
-          <Route path="/progress">
-            <PlaceholderPage
-              title="Progress"
-              subtitle="Graphs, load, and projects"
-              body="Grade progression, ACWR load management, pyramids, and project tracking land in M3."
-            />
-          </Route>
+          <Route path="/progress" component={ProgressPage} />
           <Route path="/settings" component={SettingsPage} />
           <Route>
             <PlaceholderPage title="Not found" subtitle="" body="That page does not exist." />
