@@ -42,8 +42,8 @@ export interface AscentRecords {
   /** Best run with no power-up touched. */
   pureBest: number;
   runs: number;
-  /** Best height on today's daily wall, and the day it belongs to. */
-  daily: { date: string; metres: number } | null;
+  /** The best run on today's wall — the one the day's payout is priced on. */
+  daily: { date: string; metres: number; coins: number; mode: 'ascent' | 'freesolo' } | null;
 }
 
 export const EMPTY_ASCENT: AscentRecords = {
@@ -63,6 +63,21 @@ export async function listLedger(): Promise<LedgerEntry[]> {
   const record = await db.get('game', LEDGER_KEY);
   const rows = (record?.value as LedgerEntry[] | undefined) ?? [];
   return [...rows].sort((a, b) => (a.date === b.date ? a.id.localeCompare(b.id) : a.date < b.date ? -1 : 1));
+}
+
+/**
+ * Write an entry, replacing any with the same id.
+ *
+ * The one place the append-only rule bends, and deliberately: the Ascent
+ * pays for your *best* run of the day, so a better run later has to revise
+ * the day's entry rather than add a second one. The day still pays once.
+ */
+export async function upsertLedger(entry: LedgerEntry): Promise<LedgerEntry[]> {
+  const db = await getDb();
+  const rows = await listLedger();
+  const next = [...rows.filter((r) => r.id !== entry.id), entry];
+  await db.put('game', { key: LEDGER_KEY, value: next });
+  return next;
 }
 
 export async function appendLedger(entry: LedgerEntry): Promise<LedgerEntry[]> {

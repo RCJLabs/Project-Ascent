@@ -40,6 +40,11 @@ export const WALL_THEMES: Record<string, Palette> = {
     lane: 'rgba(255,255,255,0.05)', rock: '#c98b5f', boulder: '#a86f47', debris: '#e8c9a8',
     coin: '#ffd166', slowmo: '#6fb3d9', magnet: '#c48fd6', heart: '#e2574c', ink: '#f6ece3',
   },
+  alpine: {
+    sky: '#101c28', rockNear: '#22323f', rockFar: '#1a2733', strata: '#2c4050',
+    lane: 'rgba(255,255,255,0.06)', rock: '#b9c9d6', boulder: '#94a8b8', debris: '#e9f2f8',
+    coin: '#ffd166', slowmo: '#7dc3e8', magnet: '#c8a4e0', heart: '#e2574c', ink: '#eef6fb',
+  },
   /** Rest-day weather: lighter, calmer, unmistakably different. */
   recovery: {
     sky: '#22384a', rockNear: '#365065', rockFar: '#2b4155', strata: '#436a85',
@@ -49,6 +54,21 @@ export const WALL_THEMES: Record<string, Palette> = {
 };
 
 /** Repeating jagged edge, generated once per run from its seed. */
+/** Cosmetic walls, unlocked by height on the altimeter. */
+export const THEME_UNLOCKS: { id: string; name: string; feet: number }[] = [
+  { id: 'granite', name: 'Granite', feet: 0 },
+  { id: 'sandstone', name: 'Sandstone', feet: 2_900 },
+  { id: 'alpine', name: 'Alpine', feet: 29_032 },
+];
+
+/** The best wall the climber has earned. Rest days override it. */
+export function themeForHeight(feet: number, rested: boolean): Palette {
+  if (rested) return WALL_THEMES.recovery!;
+  let chosen = THEME_UNLOCKS[0]!;
+  for (const theme of THEME_UNLOCKS) if (feet >= theme.feet) chosen = theme;
+  return WALL_THEMES[chosen.id]!;
+}
+
 export interface WallPattern {
   left: number[];
   right: number[];

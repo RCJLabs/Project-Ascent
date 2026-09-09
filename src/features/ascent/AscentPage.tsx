@@ -11,6 +11,7 @@ import {
   type Mode,
   type RunState,
 } from '@/engine/ascent/game';
+import { payoutFor, wallNumber, type AscentPayout } from '@/engine/ascent/rewards';
 import { dailySeed } from '@/engine/ascent/rng';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveAvatar } from '@/engine/avatar';
@@ -24,10 +25,13 @@ import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
 import { useSkills } from '@/store/skills';
+import { unitsToXp } from '@/engine/economy';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
-import { WALL_THEMES, buildWall, render } from './render';
+import { ShareButton } from '@/features/share/ShareSheet';
+import { dailyWallCard } from '@/ui/shareCard';
+import { THEME_UNLOCKS, buildWall, render, themeForHeight } from './render';
 
 /** Free Solo is the hard mode, and it has to be earned. */
 export const FREE_SOLO_UNLOCK = 2000;
@@ -59,6 +63,7 @@ export function AscentPage() {
   const [phase, setPhase] = useState<Phase>('menu');
   const [mode, setMode] = useState<Mode>('ascent');
   const [hud, setHud] = useState<Hud>({ metres: 0, coins: 0, lives: 1, saves: 0, slowmo: false, pure: true });
+  const [payout, setPayout] = useState<AscentPayout | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const runRef = useRef<RunState | null>(null);
   const frameRef = useRef<number>(0);
@@ -109,12 +114,8 @@ export function AscentPage() {
     [derived.stats, skills.effects.ascentBoons],
   );
 
-  // Rest days get their own sky. Wall themes otherwise follow the altimeter.
-  const theme = derived.restedToday
-    ? WALL_THEMES.recovery!
-    : derived.feet >= 29_032
-      ? WALL_THEMES.sandstone!
-      : WALL_THEMES.granite!;
+  // Rest days get their own sky. Otherwise the wall follows the altimeter.
+  const theme = themeForHeight(derived.feet, derived.restedToday);
 
   const seed = useMemo(() => dailySeed(todayKey()), []);
   const wall = useMemo(() => buildWall(seed), [seed]);
@@ -126,11 +127,13 @@ export function AscentPage() {
       void recordRun({
         mode: run.mode,
         metres: metres(run),
+        coins: run.coins,
         pure: run.pure,
         date: todayKey(),
-      });
+        rested: derived.restedToday,
+      }).then(setPayout);
     },
-    [recordRun],
+    [recordRun, derived.restedToday],
   );
 
   const start = useCallback(
@@ -138,6 +141,7 @@ export function AscentPage() {
       setMode(chosen);
       runRef.current = createRun({ mode: chosen, seed, modifiers });
       inputRef.current = 0;
+      setPayout(null);
       setPhase('playing');
     },
     [seed, modifiers],
@@ -233,7 +237,7 @@ export function AscentPage() {
 
       <PageHeader
         title="The Ascent"
-        subtitle={derived.restedToday ? 'Recovery skies · rest day' : `Daily wall · ${todayKey()}`}
+        subtitle={`Daily Wall #${wallNumber(todayKey())}${derived.restedToday ? ' · recovery skies' : ''}`}
       />
 
       <div className="grid gap-3">
@@ -293,6 +297,13 @@ export function AscentPage() {
               </Button>
             </Card>
 
+            <Card title={`Today's payout`}>
+              <TodayPayout
+                daily={records.daily?.date === todayKey() ? records.daily : null}
+                rested={derived.restedToday}
+              />
+            </Card>
+
             <Card title="Your records">
               <dl className="grid gap-1.5 text-sm">
                 <Row label="Best climb" value={`${records.best.ascent.toLocaleString()} m`} />
@@ -307,6 +318,29 @@ export function AscentPage() {
                 Everyone gets the same wall each day — the pattern comes from the date, so a score is
                 comparable without anything leaving your phone.
               </p>
+            </Card>
+
+            <Card title="Walls">
+              <ul className="grid gap-1.5 text-sm">
+                {THEME_UNLOCKS.map((wall) => {
+                  const on = derived.feet >= wall.feet;
+                  return (
+                    <li key={wall.id} className={on ? '' : 'opacity-50'}>
+                      {on ? '✓ ' : '· '}
+                      {wall.name}
+                      {wall.feet > 0 && (
+                        <span className="text-ink-soft">
+                          {' '}· {wall.feet.toLocaleString()} ft on the altimeter
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+                <li className={derived.restedToday ? '' : 'opacity-50'}>
+                  {derived.restedToday ? '✓ ' : '· '}Recovery skies
+                  <span className="text-ink-soft"> · on a logged rest day</span>
+                </li>
+              </ul>
             </Card>
 
             <Card title="What your training does here">
@@ -341,13 +375,52 @@ export function AscentPage() {
                 <Sparkles size={15} /> Free Solo unlocked
               </p>
             )}
-            <div className="flex gap-2">
+            {payout && payout.units > 0 && (
+              <div className="border-t border-line pt-3 mb-3">
+                <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                  <span className="text-sm font-semibold">Today's payout</span>
+                  <span className="font-bold tabular-nums">+{payout.xp} XP</span>
+                </div>
+                <ul className="grid gap-1 text-xs text-ink-soft">
+                  {payout.lines.map((line) => (
+                    <li key={line.label} className="flex items-baseline justify-between gap-3">
+                      <span>{line.label}</span>
+                      <span className="tabular-nums">+{unitsToXp(line.units)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-ink-soft mt-2 leading-relaxed">
+                  {payout.capped
+                    ? 'Capped — a day of play can never approach a session.'
+                    : payout.restBoost
+                      ? 'Rest day, so it pays half again as much.'
+                      : 'Paid on your best run of the day. A rest day pays ×1.5.'}
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-2 mb-3">
               <Button className="flex-1" onClick={() => start(mode)}>
                 <Play size={16} /> Again
               </Button>
               <Button variant="outline" onClick={() => setPhase('menu')}>
                 Done
               </Button>
+            </div>
+
+            <div className="flex justify-center">
+              <ShareButton
+                label={`Share Daily Wall #${wallNumber(todayKey())}`}
+                filename={`ascent-wall-${wallNumber(todayKey())}.png`}
+                content={dailyWallCard({
+                  wall: wallNumber(todayKey()),
+                  metres: hud.metres,
+                  mode,
+                  pure: hud.pure,
+                  coins: hud.coins,
+                  avatar,
+                })}
+              />
             </div>
           </Card>
         )}
@@ -371,5 +444,39 @@ function Hook({ on, text }: { on: boolean; text: string }) {
       {on ? '✓ ' : '· '}
       {text}
     </li>
+  );
+}
+
+/** What today has banked so far, and what it would take to beat it. */
+function TodayPayout({
+  daily,
+  rested,
+}: {
+  daily: { metres: number; coins: number; mode: Mode } | null;
+  rested: boolean;
+}) {
+  if (!daily) {
+    return (
+      <p className="text-sm text-ink-soft leading-relaxed">
+        Play as much as you like — the payout comes from your best run of the day, once.
+        {rested ? ' Today is a rest day, so it pays half again as much.' : ' A logged rest day pays ×1.5.'}
+      </p>
+    );
+  }
+  const payout = payoutFor({ date: '', ...daily }, rested);
+  return (
+    <>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-sm">
+          Best today · <span className="font-semibold">{daily.metres.toLocaleString()} m</span>
+        </span>
+        <span className="font-bold tabular-nums">+{payout.xp} XP</span>
+      </div>
+      <p className="text-xs text-ink-soft mt-2 leading-relaxed">
+        {rested
+          ? 'Recovery skies — today pays half again as much.'
+          : 'Beat it and the payout is re-priced. A logged rest day pays ×1.5.'}
+      </p>
+    </>
   );
 }

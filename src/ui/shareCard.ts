@@ -257,6 +257,27 @@ export function altimeterCard(alt: AltimeterState): CardContent {
   };
 }
 
+export function dailyWallCard(input: {
+  wall: number;
+  metres: number;
+  mode: 'ascent' | 'freesolo';
+  pure: boolean;
+  coins: number;
+  avatar?: AvatarConfig;
+}): CardContent {
+  return {
+    eyebrow: `Daily Wall #${input.wall}`,
+    headline: `${input.metres.toLocaleString()} m`,
+    subhead: input.mode === 'freesolo' ? 'Free Solo · one life' : 'The Ascent',
+    stats: [
+      { label: 'Coins', value: String(Math.round(input.coins)) },
+      ...(input.pure ? [{ label: 'Run', value: 'Pure' }] : []),
+    ],
+    ...(input.avatar ? { avatar: input.avatar } : {}),
+    footnote: 'Same wall for everyone today — the pattern comes from the date.',
+  };
+}
+
 export function rankCard(xp: XpState, avatar?: AvatarConfig): CardContent {
   return {
     eyebrow: 'Rank',

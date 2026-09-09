@@ -9,11 +9,14 @@ import {
   listLedger,
   putAscent,
   putBounties,
+  upsertLedger,
   putWallet,
   type AscentRecords,
   type LedgerEntry,
   type Wallet,
 } from '@/db/game';
+import type { Mode } from '@/engine/ascent/game';
+import { payoutFor, type AscentPayout } from '@/engine/ascent/rewards';
 import type { BountySpec, Challenge, AcceptedBounty } from '@/engine/challenges';
 import { today } from '@/engine/dates';
 import { GAME_ACTION_CAP } from '@/engine/economy';
@@ -28,8 +31,18 @@ export interface GameState {
   wallet: Wallet;
   ascent: AscentRecords;
   load: () => Promise<void>;
-  /** Record a finished Ascent run. Bests only ever move up. */
-  recordRun: (run: { mode: 'ascent' | 'freesolo'; metres: number; pure: boolean; date: string }) => Promise<void>;
+  /**
+   * Record a finished Ascent run. Bests only ever move up, and the day's
+   * payout is re-priced on the best run rather than added to per run.
+   */
+  recordRun: (run: {
+    mode: Mode;
+    metres: number;
+    coins: number;
+    pure: boolean;
+    date: string;
+    rested: boolean;
+  }) => Promise<AscentPayout | null>;
   /** Append a game-lane award. The id is the idempotency guard, and the
    *  cap is applied on write so a bad caller cannot inflate the economy. */
   award: (entry: LedgerEntry) => Promise<void>;
@@ -70,12 +83,13 @@ export const useGame = create<GameState>((set, get) => ({
     set({ ledger: await appendLedger(capped) });
   },
 
-  recordRun: async ({ mode, metres, pure, date }) => {
+  recordRun: async ({ mode, metres, coins, pure, date, rested }) => {
     const current = get().ascent;
+    const today = current.daily?.date === date ? current.daily : null;
+    // The day is priced on its best run, so a worse one changes nothing.
     const daily =
-      current.daily?.date === date
-        ? { date, metres: Math.max(current.daily.metres, metres) }
-        : { date, metres };
+      today === null || metres > today.metres ? { date, metres, coins, mode } : today;
+
     set({
       ascent: await putAscent({
         best: { ...current.best, [mode]: Math.max(current.best[mode], metres) },
@@ -84,6 +98,19 @@ export const useGame = create<GameState>((set, get) => ({
         daily,
       }),
     });
+
+    const payout = payoutFor(daily, rested);
+    set({
+      ledger: await upsertLedger({
+        id: `ascent:${date}`,
+        date,
+        label: `The Ascent · ${daily.metres.toLocaleString()} m`,
+        units: payout.units,
+        origin: 'ascent',
+        source: 'game',
+      }),
+    });
+    return payout;
   },
 
   claim: async (challenge) => {
