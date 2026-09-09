@@ -12,10 +12,12 @@ import {
 import { getProgram } from '@/content/programs';
 import { addDays, fromKey, shortLabel, startOfWeek, today as todayKey } from '@/engine/dates';
 import { buildReview, type NoteTone, type WeekReview } from '@/engine/review';
+import { weekCard } from '@/ui/shareCard';
 import { useXp } from '@/store/game';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
+import { ShareButton } from '@/features/share/ShareSheet';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
 
@@ -72,6 +74,7 @@ export function ReviewPage() {
       <PageHeader
         title="Weekly review"
         subtitle={`${shortLabel(review.from)} – ${shortLabel(review.to)}${review.inProgress ? ' · still running' : ''}`}
+        action={<ShareButton content={weekCard(review)} filename={`ascent-week-${review.from}.png`} />}
       />
 
       <div className="flex items-center justify-between gap-2 mb-3">

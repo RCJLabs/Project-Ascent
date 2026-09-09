@@ -29,9 +29,11 @@ import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
 import { useSkills } from '@/store/skills';
 import { useSessions } from '@/store/sessions';
+import { ShareButton } from '@/features/share/ShareSheet';
 import { Card } from '@/ui/Card';
 import { Avatar } from '@/ui/Avatar';
 import { LevelBar } from '@/ui/LevelBar';
+import { rankCard } from '@/ui/shareCard';
 
 const KIND_ICON: Record<XpEvent['kind'], typeof Mountain> = {
   session: Mountain,
@@ -99,6 +101,11 @@ export function ClimberPage() {
             {avatar.stage.unlock}
             {avatar.next && ` · ${avatar.next.unlock.toLowerCase()} at ${avatar.next.level}`}
           </p>
+          <ShareButton
+            className="mt-2"
+            content={rankCard(xp, avatar)}
+            filename={`ascent-${xp.rank.title.toLowerCase().replace(/\s+/g, '-')}.png`}
+          />
         </div>
       </header>
 

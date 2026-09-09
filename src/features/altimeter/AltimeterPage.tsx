@@ -9,11 +9,13 @@ import {
   weeklyHeight,
   type AltimeterState,
 } from '@/engine/altimeter';
+import { ShareButton } from '@/features/share/ShareSheet';
 import { useSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
 import { LoadBars } from '@/ui/charts/Charts';
 import { MountainMeter } from '@/ui/MountainMeter';
 import { PageHeader } from '@/ui/PageHeader';
+import { altimeterCard } from '@/ui/shareCard';
 
 export function AltimeterPage() {
   const byDate = useSessions((s) => s.byDate);
@@ -38,6 +40,9 @@ export function AltimeterPage() {
       <PageHeader
         title="Altimeter"
         subtitle={alt.laps > 0 ? `Lap ${alt.laps + 1} of the ladder` : 'Every send, added up'}
+        action={
+          hasHeight ? <ShareButton content={altimeterCard(alt)} filename="ascent-altimeter.png" /> : undefined
+        }
       />
 
       <div className="grid gap-3">

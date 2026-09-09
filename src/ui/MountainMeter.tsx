@@ -6,7 +6,8 @@
  * volume feel like a journey and this can.
  */
 
-const RIDGE =
+/** The ridgeline, shared with the share-card builder. */
+export const RIDGE =
   'M 0 160 L 38 98 L 60 120 L 94 58 L 128 106 L 156 86 L 196 24 L 234 94 L 258 72 L 290 120 L 320 160 Z';
 
 export function MountainMeter({

@@ -5,8 +5,10 @@ import type { Project } from '@/db/projects';
 import { OUTCOME_LABEL, highPointOf, summariseProject } from '@/engine/projects';
 import { fromKey, today } from '@/engine/dates';
 import { useProjects } from '@/store/projects';
+import { projectCard } from '@/ui/shareCard';
 import { useSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';
+import { ShareButton } from '@/features/share/ShareSheet';
 import { Card } from '@/ui/Card';
 import { ProgressionLine } from '@/ui/charts/Charts';
 
@@ -79,6 +81,15 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
               value={summary.daysSinceLast === null ? '—' : summary.daysSinceLast === 0 ? 'today' : `${summary.daysSinceLast}d`}
             />
           </div>
+          {project.status === 'sent' && (
+            <div className="mt-3 pt-3 border-t border-line">
+              <ShareButton
+                content={projectCard(project, summary)}
+                label="Share the send"
+                filename={`ascent-${project.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`}
+              />
+            </div>
+          )}
           {summary.daysSinceLast !== null && summary.daysSinceLast >= 14 && project.status === 'active' && (
             <p className="text-sm text-warn mt-3">
               Nothing for {summary.daysSinceLast} days. Get back on it, or shelve it honestly.
