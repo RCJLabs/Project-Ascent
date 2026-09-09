@@ -707,6 +707,17 @@ function ProjectBurnsCard({
     });
   }
 
+  // Burn notes are the fourth thing the journal reads, so they have to be
+  // writable somewhere — here, beside the burn they describe.
+  function note(attempt: ProjectAttempt, text: string) {
+    onChange({
+      ...session,
+      projectAttempts: attempts.map((a) =>
+        a === attempt ? { ...a, ...(text.trim() ? { note: text } : { note: undefined }) } : a,
+      ),
+    });
+  }
+
   return (
     <Card title="Projects">
       <div className="grid gap-3">
@@ -739,20 +750,26 @@ function ProjectBurnsCard({
                 ))}
               </div>
               {mine.length > 0 && (
-                <ul className="flex flex-wrap gap-1.5 mt-2">
+                <ul className="grid gap-1.5 mt-2">
                   {mine.map((a) => (
-                    <li
-                      key={a.id}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 border border-accent/40 pl-2.5 pr-1 py-1 text-xs font-semibold"
-                    >
-                      {OUTCOMES.find((o) => o.value === a.outcome)?.label} ×{a.count}
-                      <button
-                        onClick={() => bump(project.id, a.outcome, -1)}
-                        className="w-5 h-5 rounded flex items-center justify-center text-ink-soft"
-                        aria-label={`Remove one ${a.outcome} burn`}
-                      >
-                        −
-                      </button>
+                    <li key={a.id} className="flex flex-wrap items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 border border-accent/40 pl-2.5 pr-1 py-1 text-xs font-semibold">
+                        {OUTCOMES.find((o) => o.value === a.outcome)?.label} ×{a.count}
+                        <button
+                          onClick={() => bump(project.id, a.outcome, -1)}
+                          className="w-5 h-5 rounded flex items-center justify-center text-ink-soft"
+                          aria-label={`Remove one ${a.outcome} burn`}
+                        >
+                          −
+                        </button>
+                      </span>
+                      <input
+                        value={a.note ?? ''}
+                        onChange={(e) => note(a, e.target.value)}
+                        placeholder="What happened?"
+                        aria-label={`Note about the ${a.outcome} burns`}
+                        className="flex-1 min-w-32 bg-sunken border border-line rounded-lg px-2.5 py-1.5 text-xs"
+                      />
                     </li>
                   ))}
                 </ul>

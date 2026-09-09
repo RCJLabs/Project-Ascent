@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { fromKey, monthGrid, monthLabel, today } from '@/engine/dates';
 import { plannedDay } from '@/engine/plan';
@@ -10,6 +10,14 @@ import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
 
 const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+function JournalLink() {
+  return (
+    <Link href="/journal" className="text-ink-soft p-1 -m-1" aria-label="Journal">
+      <BookOpen size={20} />
+    </Link>
+  );
+}
 
 export function CalendarPage() {
   const now = fromKey(today());
@@ -42,7 +50,7 @@ export function CalendarPage() {
   if (!program || !startDate || !plan) {
     return (
       <>
-        <PageHeader title="Calendar" />
+        <PageHeader title="Calendar" action={<JournalLink />} />
         <Card>
           <p className="text-sm text-ink-soft mb-3">
             No active program yet. Pick one and plan your week, and your sessions will appear here.
@@ -57,7 +65,7 @@ export function CalendarPage() {
 
   return (
     <>
-      <PageHeader title="Calendar" subtitle={program.name} />
+      <PageHeader title="Calendar" subtitle={program.name} action={<JournalLink />} />
 
       <div className="flex items-center justify-between mb-3">
         <button onClick={() => shift(-1)} className="p-2 -m-2 text-ink-soft" aria-label="Previous month">

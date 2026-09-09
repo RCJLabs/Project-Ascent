@@ -9,6 +9,7 @@ import { FinderPage } from '@/features/finder/FinderPage';
 import { LogPage, TodayRedirect } from '@/features/log/LogPage';
 import { AssessmentsPage } from '@/features/assessments/AssessmentsPage';
 import { MetricDetailPage } from '@/features/assessments/MetricDetailPage';
+import { JournalPage } from '@/features/journal/JournalPage';
 import { ProgressPage } from '@/features/progress/ProgressPage';
 import { ProjectDetailPage } from '@/features/projects/ProjectDetailPage';
 import { ProjectsPage } from '@/features/projects/ProjectsPage';
@@ -43,6 +44,7 @@ export function App() {
           <Route path="/log/:date" component={LogPage} />
           <Route path="/today" component={TodayRedirect} />
           <Route path="/progress" component={ProgressPage} />
+          <Route path="/journal" component={JournalPage} />
           <Route path="/assessments/:id" component={MetricDetailPage} />
           <Route path="/assessments" component={AssessmentsPage} />
           <Route path="/projects/:id" component={ProjectDetailPage} />

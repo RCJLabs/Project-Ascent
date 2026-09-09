@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { Activity, AlertTriangle, CheckCircle2, ChevronRight, Info, Ruler, TrendingDown } from 'lucide-react';
+import { Activity, AlertTriangle, BookOpen, CheckCircle2, ChevronRight, Info, Ruler, TrendingDown } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
 import { assessmentBattery } from '@/engine/assessments';
+import { buildJournal } from '@/engine/journal';
 import { deriveClimberState, type AcwrZone } from '@/engine/derive';
 import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
 import { useMetrics } from '@/store/metrics';
+import { useProjects } from '@/store/projects';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
@@ -47,6 +49,38 @@ const ZONE: Record<AcwrZone, { label: string; note: string; color: string; Icon:
     Icon: AlertTriangle,
   },
 };
+
+/** Entry point into the journal, counting what there is to read. */
+function JournalCard() {
+  const byDate = useSessions((s) => s.byDate);
+  const projects = useProjects((s) => s.projects);
+  const metrics = useMetrics((s) => s.entries);
+
+  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const journal = useMemo(
+    () => buildJournal({ sessions, projects, metrics }),
+    [sessions, projects, metrics],
+  );
+
+  return (
+    <Card title="Journal">
+      <Link href="/journal" className="flex items-center gap-3">
+        <BookOpen size={18} className="text-accent shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold">
+            {journal.length === 0
+              ? 'Nothing written yet'
+              : `${journal.length} entr${journal.length === 1 ? 'y' : 'ies'}`}
+          </p>
+          <p className="text-xs text-ink-soft mt-0.5 truncate">
+            {journal[0] ? journal[0].text : 'Session notes, beta and test notes, searchable.'}
+          </p>
+        </div>
+        <ChevronRight size={18} className="text-ink-soft shrink-0" />
+      </Link>
+    </Card>
+  );
+}
 
 /** Name a few, then count the rest — a ten-item list reads as noise. */
 function dueSummary(due: { metric: { label: string } }[]): string {
@@ -149,6 +183,7 @@ export function ProgressPage() {
           {/* Assessments need no session history, and taking a baseline before
               you start training is the point of them. */}
           <AssessmentsCard />
+          <JournalCard />
         </div>
       </>
     );
@@ -248,6 +283,7 @@ export function ProgressPage() {
         </Card>
 
         <AssessmentsCard />
+        <JournalCard />
 
         {state.personalRecords.length > 0 && (
           <Card title="Personal records">
