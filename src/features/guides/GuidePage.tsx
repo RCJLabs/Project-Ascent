@@ -16,7 +16,7 @@ export function GuideList() {
       </Link>
       <PageHeader
         title="Guides"
-        subtitle="The writing behind the programs, plus what to know outdoors and when something hurts."
+        subtitle="How the app works, how to start climbing, and the writing behind every program."
       />
 
       <div className="grid grid-cols-1 gap-2">

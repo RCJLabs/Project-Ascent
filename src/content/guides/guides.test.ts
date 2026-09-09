@@ -1,5 +1,12 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { HEIGHT } from '@/engine/altimeter';
+import { CHALLENGE_REWARD } from '@/engine/challenges';
 import { ACWR_BOUNDS } from '@/engine/derive';
+import { AWARDS, GAME_ACTION_CAP, MULTIPLIERS } from '@/engine/economy';
+import { MAX_ACTIVE } from '@/engine/objectives';
+import { STAT_LABELS } from '@/engine/stats';
+import { SKILL_TREES } from '../skills';
 import { PROGRAMS, getProgram } from '../programs';
 import { GUIDES, getGuide, guideFor, guideLength } from './index';
 import type { Guide, GuideBlock } from './types';
@@ -191,5 +198,152 @@ describe('the injury guide agrees with the load engine', () => {
       ACWR_BOUNDS.cautionTo,
     ];
     expect(quoted).toEqual(bounds);
+  });
+});
+
+/**
+ * Every number the app guide quotes, checked against the code it describes.
+ *
+ * The prototype's app guide rotted because nothing connected its prose to
+ * the app. These are the connection: retune the economy and the guide fails
+ * until someone rewrites it.
+ */
+describe('the app guide quotes real numbers', () => {
+  const guide = getGuide('app_guide');
+
+  const tableAfter = (head: string): Extract<GuideBlock, { kind: 'table' }> | undefined =>
+    guide?.sections
+      .flatMap((s) => s.content)
+      .find(
+        (b): b is Extract<GuideBlock, { kind: 'table' }> =>
+          b.kind === 'table' && b.head[0] === head,
+      );
+
+  /** The percentages in a cell, as fractions of a level. */
+  const percents = (cell: string): number[] =>
+    [...cell.matchAll(/(\d+(?:\.\d+)?)%/g)].map((m) => Number(m[1]) / 100);
+
+  const allText = (guide?.sections.flatMap((s) => s.content) ?? []).flatMap(strings).join(' ');
+
+  it('exists and is not a stub', () => {
+    expect(guide).toBeDefined();
+    expect(guide?.sections.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it('prices every award as the economy does', () => {
+    const table = tableAfter('Action');
+    expect(table).toBeDefined();
+    const byLabel = new Map((table?.rows ?? []).map((r) => [r[0] ?? '', r[1] ?? '']));
+    expect(percents(byLabel.get('Logging a session') ?? '')[0]).toBe(AWARDS.session);
+    expect(percents(byLabel.get('Warming up') ?? '')[0]).toBe(AWARDS.warmup);
+    expect(percents(byLabel.get("Finishing the session's drill") ?? '')[0]).toBe(AWARDS.drillDone);
+    expect(percents(byLabel.get('A logged rest day') ?? '')[0]).toBe(AWARDS.restDay);
+    expect(percents(byLabel.get('A send') ?? '')).toEqual([AWARDS.sendBase, AWARDS.sendPerGrade]);
+    expect(percents(byLabel.get('A new personal record') ?? '')[0]).toBe(AWARDS.personalRecord);
+    expect(percents(byLabel.get('Sending a project') ?? '')[0]).toBe(AWARDS.projectSend);
+  });
+
+  it('prices the board as the board does', () => {
+    const table = tableAfter('Shape');
+    expect(table).toBeDefined();
+    const byLabel = new Map((table?.rows ?? []).map((r) => [r[0] ?? '', r[1] ?? '']));
+    expect(percents(byLabel.get('Daily') ?? '')[0]).toBe(CHALLENGE_REWARD.daily);
+    expect(percents(byLabel.get('Weekly') ?? '')[0]).toBe(CHALLENGE_REWARD.weekly);
+    expect(percents(byLabel.get('Bounty') ?? '')[0]).toBe(CHALLENGE_REWARD.bounty);
+  });
+
+  it('states the game cap the code enforces', () => {
+    expect(allText).toContain(`${GAME_ACTION_CAP * 100}%`);
+    // And states it as half of a session, which is what makes it the rule.
+    expect(GAME_ACTION_CAP).toBe(AWARDS.session / 2);
+  });
+
+  it('states the altimeter’s real height per send', () => {
+    expect(allText).toContain(`${HEIGHT.boulder} feet for a boulder`);
+    expect(allText).toContain(`${HEIGHT.route} for a route`);
+    expect(HEIGHT.outdoor).toBe(1.25); // 'a quarter more outdoors'
+  });
+
+  it('states the style multipliers as the economy has them', () => {
+    expect(MULTIPLIERS.flash).toBe(1.5); // 'half again'
+    expect(MULTIPLIERS.onsight).toBe(2); // 'double'
+  });
+
+  it('states the objective cap', () => {
+    expect(MAX_ACTIVE).toBe(3);
+    expect(allText).toContain('Three active at a time');
+  });
+
+  it('describes the stats in the app’s own words', () => {
+    const table = tableAfter('Stat');
+    expect(table).toBeDefined();
+    const byName = new Map((table?.rows ?? []).map((r) => [r[0] ?? '', r[1] ?? '']));
+    for (const label of Object.values(STAT_LABELS)) {
+      expect(byName.get(label.name), `stat row missing: ${label.name}`).toBe(label.blurb);
+    }
+  });
+
+  it('names only tabs that exist', () => {
+    const table = tableAfter('Tab');
+    expect(table?.rows.map((r) => r[0])).toEqual([
+      'Home',
+      'Train',
+      'Calendar',
+      'Projects',
+      'Progress',
+    ]);
+  });
+});
+
+describe('the app guide counts what the app has', () => {
+  const guide = getGuide('app_guide');
+  const allText = (guide?.sections.flatMap((s) => s.content) ?? []).flatMap(strings).join(' ');
+
+  it('counts the programs correctly, blocks and modes apart', () => {
+    const modes = PROGRAMS.filter((p) => p.kind === 'mode');
+    expect(PROGRAMS).toHaveLength(11);
+    expect(modes).toHaveLength(2);
+    expect(allText).toContain('Eleven of them: nine structured blocks');
+    expect(allText).toContain('two log-only modes');
+  });
+
+  it('counts the finder’s questions', () => {
+    // discipline, experience, grade, goal, days, equipment, injuries.
+    expect(allText).toContain('seven questions');
+    expect(allText.match(/seven questions — ([^—]+)—/)?.[1]?.split(',').length).toBe(7);
+  });
+});
+
+describe('the app guide names the systems that exist', () => {
+  const guide = getGuide('app_guide');
+  const allText = (guide?.sections.flatMap((s) => s.content) ?? []).flatMap(strings).join(' ');
+
+  it('names every skill tree, and no others', () => {
+    expect(SKILL_TREES).toHaveLength(5);
+    expect(allText).toContain('Five trees');
+    for (const tree of SKILL_TREES) {
+      expect(allText, `tree not named in the guide: ${tree.name}`).toContain(tree.name);
+    }
+  });
+
+  it('names every stat the climber page shows', () => {
+    for (const label of Object.values(STAT_LABELS)) {
+      expect(allText).toContain(label.name);
+    }
+  });
+});
+
+describe('the app guide names the training-state verdicts', () => {
+  const guide = getGuide('app_guide');
+  const allText = (guide?.sections.flatMap((s) => s.content) ?? []).flatMap(strings).join(' ');
+
+  it('quotes the headlines the diagnosis actually produces', () => {
+    // Read out of the engine's source so a renamed verdict fails here.
+    const source = readFileSync(new URL('../../engine/plateau.ts', import.meta.url), 'utf8');
+    const headlines = [...source.matchAll(/headline: '([^']+)'/g)].map((m) => m[1]!);
+    expect(headlines.length).toBeGreaterThanOrEqual(4);
+    for (const headline of headlines) {
+      expect(allText, `verdict not named in the guide: ${headline}`).toContain(headline);
+    }
   });
 });

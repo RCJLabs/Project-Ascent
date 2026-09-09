@@ -1,3 +1,4 @@
+import { APP } from './app';
 import { BASE_CAMP } from './baseCamp';
 import { THE_CRUISER } from './cruiser';
 import { GRAVITY_DEFIED } from './gravityDefied';
@@ -8,13 +9,19 @@ import { LOCKDOWN } from './lockdown';
 import { THE_LONG_GAME } from './longGame';
 import { OUTDOOR } from './outdoor';
 import { PEAK_PERFORMANCE } from './peakPerformance';
+import { NEW_TO_CLIMBING } from './starting';
 import { THE_SIEGE } from './siege';
 import type { Guide } from './types';
 
 export type { Guide, GuideBlock, GuideSection } from './types';
 
-/** Reading order: the ladder of programs, then the standalone guides. */
+/**
+ * Reading order: the two anyone can start with, then the ladder of
+ * programs, then the standalone guides.
+ */
 export const GUIDES: Guide[] = [
+  NEW_TO_CLIMBING,
+  APP,
   GROUND_ZERO,
   BASE_CAMP,
   GRAVITY_DEFIED,
