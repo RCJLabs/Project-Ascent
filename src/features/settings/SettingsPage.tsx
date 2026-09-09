@@ -7,6 +7,8 @@ import { displayGrade, type BoulderDisplay, type RouteDisplay } from '@/engine/g
 import { unlock } from '@/lib/cues';
 import { hydrateAll } from '@/store';
 import { useProfile } from '@/store/profile';
+import { rankTemplates } from '@/engine/templates';
+import { useTemplates } from '@/store/templates';
 import { applyTheme, useSettings, type ThemePreference } from '@/store/settings';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -284,6 +286,8 @@ export function SettingsPage() {
           </div>
         </Card>
 
+        <TemplatesCard />
+
         <Card title="Your data">
           <p className="text-sm text-ink-soft mb-3">
             Everything lives on this device. Export a backup regularly — an offline app has no
@@ -384,5 +388,78 @@ function ScalePicker<T extends BoulderDisplay | RouteDisplay>({
         ))}
       </div>
     </div>
+  );
+}
+
+/** Rename or delete saved session shapes. Creating one happens in the log. */
+function TemplatesCard() {
+  const templates = useTemplates((s) => s.templates);
+  const hydrated = useTemplates((s) => s.hydrated);
+  const load = useTemplates((s) => s.load);
+  const rename = useTemplates((s) => s.rename);
+  const remove = useTemplates((s) => s.remove);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draft, setDraft] = useState('');
+
+  useEffect(() => {
+    if (!hydrated) void load();
+  }, [hydrated, load]);
+
+  return (
+    <Card title="Session templates">
+      {templates.length === 0 ? (
+        <p className="text-sm text-ink-soft leading-relaxed">
+          None yet. Finish a session and save it as a template to set the next one up in one tap.
+        </p>
+      ) : (
+        <ul className="grid grid-cols-1 gap-2">
+          {rankTemplates(templates).map((t) => (
+            <li key={t.id} className="flex items-center gap-2 bg-sunken rounded-xl px-3 py-2.5">
+              {editing === t.id ? (
+                <>
+                  <input
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    aria-label={`Rename ${t.name}`}
+                    autoFocus
+                    className="flex-1 min-w-0 bg-surface border border-line rounded-lg px-2.5 py-1.5 text-sm"
+                  />
+                  <button
+                    onClick={() => {
+                      void rename(t.id, draft);
+                      setEditing(null);
+                    }}
+                    className="text-sm font-semibold text-accent px-1"
+                  >
+                    Done
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm truncate">{t.name}</div>
+                    <div className="text-xs text-ink-soft">
+                      {t.uses === 0 ? 'Never used' : `Used ${t.uses}×`}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setEditing(t.id);
+                      setDraft(t.name);
+                    }}
+                    className="text-sm text-ink-soft px-1"
+                  >
+                    Rename
+                  </button>
+                  <button onClick={() => void remove(t.id)} className="text-sm text-danger px-1">
+                    Delete
+                  </button>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }

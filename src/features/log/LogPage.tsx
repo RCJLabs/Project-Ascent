@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { AlertTriangle, ArrowLeft, Check, Clock, Flame, Plus, RotateCw, Sparkles, Timer, Trash2, TrendingUp, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Check, Clock, Copy, Flame, Plus, RotateCw, Sparkles, Timer, Trash2, TrendingUp, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
 import { addDays, fromKey, today } from '@/engine/dates';
@@ -23,11 +23,13 @@ import { useProjects } from '@/store/projects';
 import { useSkillEffects } from '@/store/skills';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
+import { useTemplates } from '@/store/templates';
 import { parseCount } from '@/content/types';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { TimerSheet } from '@/ui/TimerSheet';
 import { useGradeLabel, useGradeOptions } from '@/ui/useGrade';
+import { alreadySaved, applyTemplate, rankTemplates, suggestName } from '@/engine/templates';
 
 const REST_ITEMS = [
   { key: 'hydration', label: 'Hydration' },
@@ -159,6 +161,8 @@ export function LogPage({ params }: { params: { date: string } }) {
                 </div>
               </Card>
             )}
+
+            <TemplatePicker date={date} onApplied={() => undefined} />
 
             {day?.drill && (
               <Card title="Drill this week">
@@ -761,6 +765,8 @@ function SessionEditor({
         <RewardCard session={session} onAcknowledge={() => patch({ rewarded: true })} />
       )}
 
+      {session.completed && <SaveTemplateCard session={session} typeName={type?.name} />}
+
       {session.completed ? (
         <Button
           variant="outline"
@@ -997,6 +1003,97 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
       <Button className="w-full" onClick={onAcknowledge}>
         <Sparkles size={16} /> Nice
       </Button>
+    </Card>
+  );
+}
+
+/**
+ * The climber's own saved shapes, offered alongside the program's session
+ * types on a day with nothing logged.
+ */
+function TemplatePicker({ date, onApplied }: { date: string; onApplied: () => void }) {
+  const templates = useTemplates((s) => s.templates);
+  const hydrated = useTemplates((s) => s.hydrated);
+  const load = useTemplates((s) => s.load);
+  const use = useTemplates((s) => s.use);
+  const create = useSessions((s) => s.create);
+  const byDate = useSessions((s) => s.byDate);
+
+  useEffect(() => {
+    if (!hydrated) void load();
+  }, [hydrated, load]);
+
+  if (templates.length === 0) return null;
+
+  async function apply(id: string) {
+    const template = templates.find((t) => t.id === id);
+    if (!template) return;
+    const index = (byDate[date] ?? []).length;
+    const planned = applyTemplate(template, date, index, date === today());
+    // create() assigns the id and timestamps; the template supplies the rest.
+    const { id: _id, date: _date, createdAt: _c, updatedAt: _u, ...body } = planned;
+    await create(date, body);
+    await use(id);
+    onApplied();
+  }
+
+  return (
+    <Card title="Your templates">
+      <div className="flex flex-wrap gap-2">
+        {rankTemplates(templates).map((t) => (
+          <Button key={t.id} size="sm" variant="outline" onClick={() => void apply(t.id)}>
+            <Copy size={14} /> {t.name}
+          </Button>
+        ))}
+      </div>
+      <p className="text-xs text-ink-soft mt-3 leading-relaxed">
+        A template sets up the session — type, length, warmup, drill. It never fills in climbs,
+        because those are what happened rather than what you planned.
+      </p>
+    </Card>
+  );
+}
+
+/** Turn a finished session into a template, once. */
+function SaveTemplateCard({ session, typeName }: { session: Session; typeName?: string }) {
+  const templates = useTemplates((s) => s.templates);
+  const save = useTemplates((s) => s.save);
+  const [name, setName] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  const covered = alreadySaved(templates, session);
+  if (covered || saved) {
+    return (
+      <p className="text-xs text-ink-soft text-center px-4">
+        {saved ? 'Saved as a template.' : 'You already have a template for this kind of session.'}
+      </p>
+    );
+  }
+
+  return (
+    <Card title="Save as a template">
+      <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+        Keeps the shape of this session — type, length, warmup, drill — so the next one is one tap.
+        The climbs are not saved.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={suggestName(session, typeName)}
+          aria-label="Template name"
+          className="flex-1 min-w-0 bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm"
+        />
+        <Button
+          size="sm"
+          onClick={() => {
+            void save(session, name, typeName);
+            setSaved(true);
+          }}
+        >
+          <Copy size={15} /> Save
+        </Button>
+      </div>
     </Card>
   );
 }

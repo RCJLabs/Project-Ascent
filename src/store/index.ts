@@ -2,6 +2,7 @@ import { useGame } from './game';
 import { useMetrics } from './metrics';
 import { hydrateProfile } from './profile';
 import { useProjects } from './projects';
+import { useTemplates } from './templates';
 import { useSessions } from './sessions';
 import { hydrateSettings } from './settings';
 
@@ -22,5 +23,6 @@ export async function hydrateAll(): Promise<void> {
     useMetrics.getState().load(),
     useGame.getState().load(),
     useProjects.getState().load(),
+    useTemplates.getState().load(),
   ]);
 }
