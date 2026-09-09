@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Download, Share2, X } from 'lucide-react';
 import { useSettings } from '@/store/settings';
 import { Button } from '@/ui/Button';
+import { IconButton } from '@/ui/IconButton';
 import { CARD, DARK_CARD, LIGHT_CARD, buildCardSvg, type CardContent } from '@/ui/shareCard';
 import { shareImage, svgToPng, type ShareOutcome } from '@/ui/shareImage';
 
@@ -80,9 +81,9 @@ export function ShareSheet({
       >
         <div className="flex items-center justify-between gap-2 mb-3">
           <h2 className="font-bold">Share card</h2>
-          <button onClick={onClose} className="text-ink-soft p-2.5 -m-1.5" aria-label="Close">
+          <IconButton onClick={onClose} label="Close">
             <X size={18} />
-          </button>
+          </IconButton>
         </div>
 
         <div
@@ -129,12 +130,9 @@ export function ShareButton({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className={`inline-flex items-center gap-1.5 text-sm font-semibold text-accent ${className}`}
-      >
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)} className={`text-accent ${className}`}>
         <Share2 size={15} /> {label}
-      </button>
+      </Button>
       {open && <ShareSheet content={content} filename={filename} onClose={() => setOpen(false)} />}
     </>
   );

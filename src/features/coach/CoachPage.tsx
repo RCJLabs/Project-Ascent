@@ -12,6 +12,7 @@ import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { IconButton } from '@/ui/IconButton';
 import { PageHeader } from '@/ui/PageHeader';
 
 const TONE: Record<TipTone, { icon: typeof Info; className: string }> = {
@@ -116,13 +117,9 @@ function TipCard({ tip, onDismiss }: { tip: Tip; onDismiss: () => void }) {
       <div className="flex items-start gap-2.5 mb-2">
         <Icon size={17} className={`${className} shrink-0 translate-y-0.5`} />
         <h2 className="font-bold leading-snug flex-1">{tip.headline}</h2>
-        <button
-          onClick={onDismiss}
-          className="text-ink-soft p-2.5 -m-1.5 shrink-0"
-          aria-label={`Set aside: ${tip.headline}`}
-        >
+        <IconButton onClick={onDismiss} label={`Set aside: ${tip.headline}`}>
           <X size={16} />
-        </button>
+        </IconButton>
       </div>
       <p className="text-sm text-ink-soft leading-relaxed">{tip.body}</p>
       {tip.action && (

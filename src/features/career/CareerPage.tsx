@@ -7,6 +7,8 @@ import { deriveClimberState } from '@/engine/derive';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { Card } from '@/ui/Card';
+import { Chip } from '@/ui/Chip';
+import { Meter } from '@/ui/Meter';
 import { PageHeader } from '@/ui/PageHeader';
 
 const DOT: Record<CareerCategory, string> = {
@@ -78,12 +80,16 @@ export function CareerPage() {
                         : `${next.toGo.toLocaleString()} to go`}
                     </span>
                   </div>
-                  <div className="h-1 rounded-full bg-sunken overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-accent"
-                      style={{ width: `${Math.round(next.fraction * 100)}%` }}
-                    />
-                  </div>
+                  <Meter
+                    value={next.fraction}
+                    size="sm"
+                    label={next.label}
+                    valueText={
+                      next.category === 'years'
+                        ? `${next.toGo} days to go`
+                        : `${next.current.toLocaleString()} of ${next.target.toLocaleString()}`
+                    }
+                  />
                 </li>
               ))}
             </ul>
@@ -181,14 +187,8 @@ function FilterChip({
   label: string;
 }) {
   return (
-    <button
-      onClick={onClick}
-      aria-pressed={active}
-      className={`rounded-lg px-3 py-1.5 border text-sm ${
-        active ? 'border-accent bg-accent/10 font-semibold' : 'border-line bg-sunken text-ink-soft'
-      }`}
-    >
+    <Chip active={active} onClick={onClick}>
       {label}
-    </button>
+    </Chip>
   );
 }

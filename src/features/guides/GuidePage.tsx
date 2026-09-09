@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, BookOpen, ChevronDown, ChevronRight } from 'luci
 import { GUIDES, getGuide, guideLength } from '@/content/guides';
 import { getProgram } from '@/content/programs';
 import { Card } from '@/ui/Card';
+import { DisclosureButton } from '@/ui/Disclosure';
 import { PageHeader } from '@/ui/PageHeader';
 import { Block } from './GuideBody';
 
@@ -105,10 +106,10 @@ export function GuidePage({ params }: { params: { id: string } }) {
           const isOpen = open.includes(index);
           return (
             <section key={section.title} className="bg-surface border border-line rounded-2xl">
-              <button
-                onClick={() => toggle(index)}
-                aria-expanded={isOpen}
-                className="w-full flex items-center gap-2.5 p-4 text-left"
+              <DisclosureButton
+                open={isOpen}
+                onToggle={() => toggle(index)}
+                className="flex items-center gap-2.5 p-4"
               >
                 <span className="text-xs font-bold text-ink-soft tabular-nums shrink-0 w-5">
                   {index + 1}
@@ -119,7 +120,7 @@ export function GuidePage({ params }: { params: { id: string } }) {
                 ) : (
                   <ChevronRight size={16} className="text-ink-soft shrink-0" />
                 )}
-              </button>
+              </DisclosureButton>
               {isOpen && (
                 <div className="px-4 pb-4 border-t border-line pt-3">
                   {section.content.map((block, i) => (

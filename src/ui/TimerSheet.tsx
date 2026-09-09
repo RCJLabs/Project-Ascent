@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pause, Play, RotateCcw, SkipForward, Volume2, VolumeX, X } from 'lucide-react';
+import { IconButton } from './IconButton';
 import type { Protocol, ProtocolTimer } from '@/content/types';
 import {
   buildTimer,
@@ -154,21 +155,21 @@ export function TimerSheet({
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button
+          <IconButton
+            inline={false}
             onClick={() => {
               const next = !sound;
               setSound(next);
               setCuesEnabled(next);
               if (next) unlock();
             }}
-            className="p-2 text-ink-soft"
-            aria-label={sound ? 'Mute cues' : 'Unmute cues'}
+            label={sound ? 'Mute cues' : 'Unmute cues'}
           >
             {sound ? <Volume2 size={20} /> : <VolumeX size={20} />}
-          </button>
-          <button onClick={onClose} className="p-2 text-ink-soft" aria-label="Close timer">
+          </IconButton>
+          <IconButton inline={false} onClick={onClose} label="Close timer">
             <X size={22} />
-          </button>
+          </IconButton>
         </div>
       </div>
 
@@ -230,7 +231,7 @@ export function TimerSheet({
       <div className="px-4 pb-8 pt-2 flex items-center justify-center gap-3" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
         <button
           onClick={reset}
-          className="w-14 h-14 rounded-full border border-line flex items-center justify-center text-ink-soft"
+          className="focus-ring w-14 h-14 rounded-full border border-line flex items-center justify-center text-ink-soft"
           aria-label="Restart"
         >
           <RotateCcw size={20} />
@@ -238,7 +239,7 @@ export function TimerSheet({
         <button
           onClick={running ? pause : start}
           disabled={pos.done}
-          className="w-20 h-20 rounded-full bg-accent text-accent-ink flex items-center justify-center disabled:opacity-40"
+          className="focus-ring w-20 h-20 rounded-full bg-accent text-accent-ink flex items-center justify-center disabled:opacity-40"
           aria-label={running ? 'Pause' : 'Start'}
         >
           {running ? <Pause size={30} /> : <Play size={30} className="ml-1" />}
@@ -246,7 +247,7 @@ export function TimerSheet({
         <button
           onClick={skip}
           disabled={pos.done}
-          className="w-14 h-14 rounded-full border border-line flex items-center justify-center text-ink-soft disabled:opacity-40"
+          className="focus-ring w-14 h-14 rounded-full border border-line flex items-center justify-center text-ink-soft disabled:opacity-40"
           aria-label="Skip segment"
         >
           <SkipForward size={20} />

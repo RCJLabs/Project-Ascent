@@ -19,6 +19,7 @@ import { useSettings } from '@/store/settings';
 import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
 import { ShareButton } from '@/features/share/ShareSheet';
+import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
 import { useGradeLabel } from '@/ui/useGrade';
@@ -83,19 +84,13 @@ export function ReviewPage() {
       />
 
       <div className="flex items-center justify-between gap-2 mb-3">
-        <button
-          onClick={() => setAnchor(addDays(anchor, -7))}
-          className="inline-flex items-center gap-1 text-sm font-semibold text-accent"
-        >
+        <Button variant="ghost" size="sm" onClick={() => setAnchor(addDays(anchor, -7))} className="text-accent">
           <ArrowLeft size={15} /> Earlier
-        </button>
+        </Button>
         {!atCurrentWeek && (
-          <button
-            onClick={() => setAnchor(addDays(anchor, 7))}
-            className="inline-flex items-center gap-1 text-sm font-semibold text-accent"
-          >
+          <Button variant="ghost" size="sm" onClick={() => setAnchor(addDays(anchor, 7))} className="text-accent">
             Later <ChevronRight size={15} />
-          </button>
+          </Button>
         )}
       </div>
 

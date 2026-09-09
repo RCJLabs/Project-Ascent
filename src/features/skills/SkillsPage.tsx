@@ -4,6 +4,8 @@ import { ArrowLeft, Check, Lock, Sparkles } from 'lucide-react';
 import { describeEffect, type SkillProgress, type SkillTreeState, type TreeId } from '@/engine/skills';
 import { useSkills } from '@/store/skills';
 import { Card } from '@/ui/Card';
+import { DisclosureButton } from '@/ui/Disclosure';
+import { Meter } from '@/ui/Meter';
 import { PageHeader } from '@/ui/PageHeader';
 
 export function SkillsPage() {
@@ -87,7 +89,6 @@ function TreeCard({
   open: boolean;
   onToggle: () => void;
 }) {
-  const pct = Math.round((tree.unlocked / tree.total) * 100);
   const branches = new Map<string, SkillProgress[]>();
   for (const entry of tree.nodes) {
     branches.set(entry.node.branch, [...(branches.get(entry.node.branch) ?? []), entry]);
@@ -95,7 +96,7 @@ function TreeCard({
 
   return (
     <Card>
-      <button onClick={onToggle} aria-expanded={open} className="w-full text-left">
+      <DisclosureButton open={open} onToggle={onToggle}>
         <div className="flex items-baseline gap-2 mb-1">
           <h2 className="font-bold">{tree.name}</h2>
           <span className="text-sm font-semibold tabular-nums ml-auto shrink-0">
@@ -103,10 +104,12 @@ function TreeCard({
           </span>
         </div>
         <p className="text-xs text-ink-soft mb-2 leading-relaxed">{tree.blurb}</p>
-        <div className="h-1.5 rounded-full bg-sunken overflow-hidden">
-          <div className="h-full bg-accent rounded-full" style={{ width: `${Math.max(2, pct)}%` }} />
-        </div>
-      </button>
+        <Meter
+          value={tree.unlocked / Math.max(1, tree.total)}
+          label={`${tree.name} progress`}
+          valueText={`${tree.unlocked} of ${tree.total} unlocked`}
+        />
+      </DisclosureButton>
 
       {open && (
         <div className="grid grid-cols-1 gap-4 mt-4">

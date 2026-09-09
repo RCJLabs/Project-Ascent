@@ -8,6 +8,7 @@ import { shortLabel } from '@/engine/dates';
 import { useMetrics } from '@/store/metrics';
 import { useSettings } from '@/store/settings';
 import { Card } from '@/ui/Card';
+import { IconButton } from '@/ui/IconButton';
 import { ProgressionLine } from '@/ui/charts/Charts';
 import { ResultForm } from './AssessmentsPage';
 
@@ -116,13 +117,12 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
                       {change.label}
                     </span>
                   )}
-                  <button
+                  <IconButton
                     onClick={() => void remove(metric.id, entry.date)}
-                    className="text-ink-soft shrink-0 p-0.5 -m-0.5 mt-0.5"
-                    aria-label={`Delete the ${shortLabel(entry.date)} result`}
+                    label={`Delete the ${shortLabel(entry.date)} result`}
                   >
                     <Trash2 size={14} />
-                  </button>
+                  </IconButton>
                 </li>
               ))}
             </ul>

@@ -31,6 +31,9 @@ import { useSkills } from '@/store/skills';
 import { useSessions } from '@/store/sessions';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { Card } from '@/ui/Card';
+import { Swatch } from '@/ui/Chip';
+import { Meter } from '@/ui/Meter';
+import { DisclosureButton } from '@/ui/Disclosure';
 import { Avatar } from '@/ui/Avatar';
 import { LevelBar } from '@/ui/LevelBar';
 import { rankCard } from '@/ui/shareCard';
@@ -315,11 +318,7 @@ function StatRow({ stat }: { stat: Stat }) {
   const pct = stat.value;
   return (
     <li>
-      <button
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        className="w-full text-left"
-      >
+      <DisclosureButton open={open} onToggle={() => setOpen(!open)}>
         <div className="flex items-baseline gap-2 mb-1">
           <span className="text-[10px] font-bold uppercase tracking-widest text-ink-soft w-8">
             {stat.id}
@@ -331,10 +330,8 @@ function StatRow({ stat }: { stat: Stat }) {
             className={`text-ink-soft shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
           />
         </div>
-        <div className="h-1.5 rounded-full bg-sunken overflow-hidden">
-          <div className="h-full bg-accent rounded-full" style={{ width: `${Math.max(2, pct)}%` }} />
-        </div>
-      </button>
+        <Meter value={pct / 100} label={`${stat.name} progress`} valueText={`${stat.value} of 100`} />
+      </DisclosureButton>
 
       {open && (
         <div className="mt-2 bg-sunken rounded-xl p-3">
@@ -394,15 +391,12 @@ function AppearanceCard({ palette }: { palette: AvatarPalette }) {
         <div className="text-[11px] font-bold uppercase tracking-widest text-ink-soft mb-1.5">Skin</div>
         <div className="flex flex-wrap gap-2">
           {SKIN_TONES.map((tone) => (
-            <button
+            <Swatch
               key={tone}
+              active={palette.skin === tone}
               onClick={() => setPalette({ skin: tone })}
-              aria-label={`Skin tone ${tone}`}
-              aria-pressed={palette.skin === tone}
-              className={`w-9 h-9 rounded-lg border-2 ${
-                palette.skin === tone ? 'border-accent' : 'border-line'
-              }`}
-              style={{ background: tone }}
+              label={`Skin tone ${tone}`}
+              color={tone}
             />
           ))}
         </div>

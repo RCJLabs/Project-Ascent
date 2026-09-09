@@ -224,9 +224,9 @@ function ChallengeRow({
           </span>
         )}
         {onAbandon && !challenge.done && (
-          <button onClick={onAbandon} className="text-xs text-ink-soft ml-auto inline-flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={onAbandon} className="ml-auto text-xs">
             <X size={12} /> Drop
-          </button>
+          </Button>
         )}
       </div>
     </div>

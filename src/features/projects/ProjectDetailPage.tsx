@@ -9,6 +9,8 @@ import { useSettings } from '@/store/settings';
 import { projectCard } from '@/ui/shareCard';
 import { useSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';
+import { TextArea } from '@/ui/Field';
+import { IconButton } from '@/ui/IconButton';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { Card } from '@/ui/Card';
 import { MediaCard } from './MediaCard';
@@ -229,26 +231,25 @@ function BetaCard({ project, onChange }: { project: Project; onChange: (p: Proje
             <li key={note.id} className="bg-sunken rounded-xl px-3 py-2.5">
               <div className="flex items-start gap-2">
                 <p className="text-sm leading-relaxed flex-1 whitespace-pre-wrap">{note.text}</p>
-                <button
+                <IconButton
                   onClick={() => onChange({ ...project, beta: project.beta.filter((b) => b.id !== note.id) })}
-                  className="text-ink-soft shrink-0 p-0.5 -m-0.5"
-                  aria-label="Delete note"
+                  label="Delete note"
                 >
                   <Trash2 size={14} />
-                </button>
+                </IconButton>
               </div>
               <p className="text-[11px] text-ink-soft mt-1">{shortDate(note.date)}</p>
             </li>
           ))}
         </ul>
       )}
-      <textarea
+      <TextArea
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={2}
         placeholder="Left heel by the arête, then drop knee before the throw."
         aria-label="New beta note"
-        className="w-full bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm resize-y mb-2"
+        className="mb-2"
       />
       <Button size="sm" variant="outline" disabled={text.trim() === ''} onClick={add}>
         <Check size={14} /> Save beta

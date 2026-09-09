@@ -28,7 +28,7 @@ export function Term({ name, className = '' }: { name: string; className?: strin
       <button
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        className={`text-left underline decoration-dotted decoration-ink-soft underline-offset-4 ${className}`}
+        className={`focus-ring text-left underline decoration-dotted decoration-ink-soft underline-offset-4 ${className}`}
       >
         {name}
       </button>

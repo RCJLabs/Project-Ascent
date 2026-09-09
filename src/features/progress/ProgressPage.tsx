@@ -16,6 +16,7 @@ import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';
 import { useSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
+import { Chip } from '@/ui/Chip';
 import { PageHeader } from '@/ui/PageHeader';
 import { TrainingState } from './TrainingState';
 import { LoadBars, ProgressionLine, PyramidBars } from '@/ui/charts/Charts';
@@ -313,15 +314,9 @@ export function ProgressPage() {
 
         <div className="flex gap-2">
           {(['V', 'YDS'] as GradeScale[]).map((s) => (
-            <button
-              key={s}
-              onClick={() => setScale(s)}
-              className={`rounded-xl px-3.5 py-2 border text-sm font-semibold ${
-                scale === s ? 'border-accent bg-accent/10' : 'border-line bg-surface text-ink-soft'
-              }`}
-            >
+            <Chip key={s} active={scale === s} onClick={() => setScale(s)}>
               {s === 'V' ? 'Boulder' : 'Routes'}
-            </button>
+            </Chip>
           ))}
         </div>
 

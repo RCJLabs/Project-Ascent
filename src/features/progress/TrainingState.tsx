@@ -17,6 +17,7 @@ import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';
 import { Card } from '@/ui/Card';
+import { DisclosureButton } from '@/ui/Disclosure';
 
 /** Every verdict ships with an icon and a sentence, so the colour is never
  *  the only thing carrying the meaning. Status colours are fixed and never
@@ -85,14 +86,14 @@ export function TrainingState({
 
       {diagnosis.reset && (
         <>
-          <button
-            onClick={() => setShowReset(!showReset)}
-            aria-expanded={showReset}
-            className="w-full flex items-center justify-between gap-2 mt-3 pt-3 border-t border-line text-sm font-semibold text-accent"
+          <DisclosureButton
+            open={showReset}
+            onToggle={() => setShowReset(!showReset)}
+            className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-line text-sm font-semibold text-accent"
           >
             The seven-day reset
             <ChevronDown size={16} className={showReset ? 'rotate-180 transition-transform' : 'transition-transform'} />
-          </button>
+          </DisclosureButton>
 
           {showReset && (
             <div className="mt-3">

@@ -7,7 +7,9 @@ import { getMetric } from '@/content/metrics';
 import { getProtocol } from '@/content/protocols';
 import { getProgram } from '@/content/programs';
 import type { CircuitFormat, Exercise, Phase, SelectionRule, SessionType, TrackId } from '@/content/types';
+import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { OptionCard } from '@/ui/Chip';
 import { Term } from '@/ui/Term';
 import { PageHeader } from '@/ui/PageHeader';
 
@@ -294,16 +296,13 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
           <Card title="Choose your track">
             <div className="grid grid-cols-1 gap-2">
               {program.tracks.map((t) => (
-                <button
+                <OptionCard
                   key={t.id}
+                  active={activeTrack === t.id}
                   onClick={() => setTrack(t.id)}
-                  className={`text-left rounded-xl p-3 border transition-colors ${
-                    activeTrack === t.id ? 'border-accent bg-accent/10' : 'border-line bg-sunken'
-                  }`}
-                >
-                  <div className="font-semibold text-sm">{t.name}</div>
-                  <p className="text-sm text-ink-soft mt-0.5">{t.description}</p>
-                </button>
+                  label={t.name}
+                  blurb={t.description}
+                />
               ))}
             </div>
             <p className="text-xs text-ink-soft mt-2">
@@ -315,20 +314,18 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
         <div>
           <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
             {program.phases.map((p, i) => (
-              <button
+              <Button
                 key={p.id}
+                variant={i === phaseIndex ? 'primary' : 'outline'}
                 onClick={() => setPhaseIndex(i)}
-                className={`shrink-0 px-3 py-2 rounded-xl text-sm font-semibold border transition-colors ${
-                  i === phaseIndex
-                    ? 'bg-accent text-accent-ink border-transparent'
-                    : 'bg-surface text-ink-soft border-line'
-                }`}
+                aria-pressed={i === phaseIndex}
+                className="shrink-0 flex-col gap-0 items-start"
               >
                 <span className="block text-[10px] uppercase tracking-wide opacity-80">
                   Weeks {p.weekStart}-{p.weekEnd}
                 </span>
                 {p.name}
-              </button>
+              </Button>
             ))}
           </div>
 

@@ -89,6 +89,23 @@
   --color-danger: var(--c-danger);
 }
 
+/* ── Focus ───────────────────────────────────────────────────────────────────
+   One ring, on every interactive element, applied by the ui/ primitives.
+
+   `accent-strong` rather than `accent`: measured against every surface in
+   both themes it lands between 5.86:1 and 8.73:1, comfortably past the 3:1
+   WCAG asks of a non-text indicator, and it does not depend on M15's fix to
+   the accent itself. The 2px offset is what keeps it legible on a primary
+   button, where ring and background would otherwise touch.
+
+   `:focus-visible`, not `:focus`, so a mouse click does not leave a ring
+   behind — but a keyboard tab always does. */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--c-accent-strong);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
 html,
 body {
   height: 100%;
