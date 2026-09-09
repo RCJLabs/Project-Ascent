@@ -695,12 +695,23 @@ a small diff instead of ninety-five separate edits.
   the 320px pass) shows a desktop browser a narrow ribbon between two margins.
   Breakpoint layouts, a sidebar instead of a bottom bar at ≥1024px, and grids that
   gain columns at width. *Done when: 1280px does not feel like a stretched phone.*
-- **M18 — Speed and size.** One 1.05MB JS chunk with no code splitting, and
-  `deriveXp` measured at 8/42/107ms for one, five and ten years of logs — running on
-  every session write. Route-level splitting (the Ascent's canvas game and the
-  844-line builder first), incremental derivation, virtualised journal and career
-  timeline, and a measured budget. *Done when: ten years of logs is indistinguishable
-  from one, and first load is under 300KB.*
+- **M18 — Speed and size.** *Done.* `deriveXp` at ten years of logs: **106.9ms →
+  6.1ms**, and flat rather than superlinear. The cost was `loadStateAt` walking 28
+  days per session with date arithmetic — 43,680 `Date` constructions per derivation,
+  46.6ms of a 59.5ms total, on every session write. Replaced with one sliding pass
+  over integer day numbers (`zonesFor`), with parity tests against the per-date
+  version across a range of log shapes. Two smaller wins alongside: the earliest
+  logged day is hoisted onto the load index instead of being found by sorting every
+  key on each call, and `deriveXp` is memoised on reference identity so the nine
+  `useXp()` callers cost one derivation instead of nine. First load: **326KB → 262KB
+  gzipped** (266KB measured over the wire against the production build), by splitting
+  the game, the builder, search and the guides out of the entry chunk — the guide
+  bodies alone were 146KB, dragged in by the program page needing one link, which now
+  reads a summary index instead. `perf.test.ts` holds both budgets. **Virtualisation
+  was not built:** with ten years of logs in the browser every page rendered in
+  78–144ms including navigation, so there was nothing to fix. If a decade of journal
+  entries with notes on every session turns out to be slow in real use, that is when
+  it earns its place.
 - **M19 — The offline contract.** `registerSW({ immediate: true })` swaps the app
   under the climber mid-session with no prompt. An update prompt, an offline
   indicator, storage-pressure warnings, and an export reminder on a real cadence.

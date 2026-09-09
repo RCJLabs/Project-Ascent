@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'wouter';
 import { AlertTriangle, BookOpen, ChevronRight, Clock, Layers, Play, Timer } from 'lucide-react';
 import { getDrill } from '@/content/drills';
-import { guideFor } from '@/content/guides';
+import { guideSummaryFor } from '@/content/guides/summary';
 import { getMetric } from '@/content/metrics';
 import { getProtocol } from '@/content/protocols';
 import { getProgram } from '@/content/programs';
@@ -165,7 +165,7 @@ function SessionTypeCard({
 
 export function ProgramDetailPage({ params }: { params: { id: string } }) {
   const program = getProgram(params.id);
-  const guide = guideFor(params.id);
+  const guide = guideSummaryFor(params.id);
   const [phaseIndex, setPhaseIndex] = useState(0);
   const [track, setTrack] = useState<TrackId | null>(null);
 
@@ -209,7 +209,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
             <div className="flex-1 min-w-0">
               <div className="font-bold text-sm">Read the guide</div>
               <p className="text-xs text-ink-soft truncate">
-                {guide.sections.length} sections on why this program is built the way it is
+                {guide.sections} sections on why this program is built the way it is
               </p>
             </div>
             <ChevronRight size={16} className="text-ink-soft shrink-0" />

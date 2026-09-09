@@ -9,6 +9,7 @@ import { STAT_LABELS } from '@/engine/stats';
 import { SKILL_TREES } from '../skills';
 import { PROGRAMS, getProgram } from '../programs';
 import { GUIDES, getGuide, guideFor, guideLength } from './index';
+import { GUIDE_SUMMARIES, guideSummaryFor } from './summary';
 import type { Guide, GuideBlock } from './types';
 
 const blocks = (guide: Guide): GuideBlock[] => guide.sections.flatMap((s) => s.content);
@@ -345,5 +346,18 @@ describe('the app guide names the training-state verdicts', () => {
     for (const headline of headlines) {
       expect(allText, `verdict not named in the guide: ${headline}`).toContain(headline);
     }
+  });
+});
+
+describe('the summary index matches the guides', () => {
+  it('lists every guide, with its real name and section count', () => {
+    expect(GUIDE_SUMMARIES.map((s) => ({ id: s.id, name: s.name, sections: s.sections }))).toEqual(
+      GUIDES.map((g) => ({ id: g.id, name: g.name, sections: g.sections.length })),
+    );
+  });
+
+  it('resolves a program to its guide without loading one', () => {
+    expect(guideSummaryFor('iron_grip')?.name).toBe('IRON GRIP');
+    expect(guideSummaryFor('general_training')).toBeUndefined();
   });
 });

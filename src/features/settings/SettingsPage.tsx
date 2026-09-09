@@ -4,8 +4,6 @@ import { APP_VERSION } from '@/version';
 import { exportAll, hasRealData, importAll, parseExportFile, SCHEMA_VERSION } from '@/db';
 import { mediaBytes } from '@/db/media';
 import type { BodyPart } from '@/content/warmups';
-import { GLOSSARY } from '@/content/glossary';
-import { GUIDES } from '@/content/guides';
 import type { Equipment } from '@/content/types';
 import { displayGrade, type BoulderDisplay, type RouteDisplay } from '@/engine/grades';
 import { unlock } from '@/lib/cues';
@@ -468,7 +466,7 @@ export function SettingsPage() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold">Guides</p>
               <p className="text-xs text-ink-soft mt-0.5">
-                {GUIDES.length} long-form guides — one per program, plus outdoor climbing and
+                One per program, plus how the app works, starting out, outdoor climbing and
                 managing an injury.
               </p>
             </div>
@@ -480,8 +478,7 @@ export function SettingsPage() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold">Glossary</p>
               <p className="text-xs text-ink-soft mt-0.5">
-                {GLOSSARY.length} terms — grades, gear, grip types, technique, and every exercise
-                the programs name.
+                Grades, gear, grip types, technique, and the exercises the programs name.
               </p>
             </div>
             <span className="text-ink-soft shrink-0" aria-hidden>

@@ -35,7 +35,7 @@ import {
   type Rank,
   type SessionReward,
 } from './economy';
-import { buildLoadIndex, loadStateAt } from './derive';
+import { buildLoadIndex, zonesFor, type AcwrZone } from './derive';
 import { gradeOrdinal, type GradeDisplay, type GradeScale } from './grades';
 
 export interface XpLine {
@@ -89,7 +89,40 @@ export interface XpSources {
   display?: GradeDisplay;
 }
 
+/**
+ * One result, reused while the inputs are identical.
+ *
+ * `useXp()` is called from nine places — the home page, the climber, the
+ * logger, the review, objectives, the game, and the skills store — and each
+ * had its own `useMemo`, so a single render of the home screen walked the
+ * whole log several times over. The stores replace their arrays rather than
+ * mutating them, so reference identity is a sound cache key here: if the
+ * same four objects come back, the answer cannot have changed.
+ *
+ * One entry, not a map. Two different logs are never live at once, and an
+ * unbounded cache of ten-year derivations is a memory leak wearing a
+ * performance costume.
+ */
+let cached: { key: readonly unknown[]; value: XpState } | null = null;
+
+function sameInputs(a: readonly unknown[], b: readonly unknown[]): boolean {
+  return a.length === b.length && a.every((item, i) => item === b[i]);
+}
+
 export function deriveXp(sources: XpSources): XpState {
+  const key = [sources.sessions, sources.projects, sources.ledger, sources.display] as const;
+  if (cached !== null && sameInputs(cached.key, key)) return cached.value;
+  const value = deriveXpUncached(sources);
+  cached = { key, value };
+  return value;
+}
+
+/** Exported for tests and benchmarks that need to measure the real work. */
+export function clearXpCache(): void {
+  cached = null;
+}
+
+function deriveXpUncached(sources: XpSources): XpState {
   const sessions = (sources.sessions ?? [])
     .filter((s) => s.completed)
     .sort((a, b) => (a.date === b.date ? a.id.localeCompare(b.id) : a.date < b.date ? -1 : 1));
@@ -125,6 +158,15 @@ export function deriveXp(sources: XpSources): XpState {
       entry,
     })),
   ].sort((a, b) => (a.date === b.date ? a.key.localeCompare(b.key) : a.date < b.date ? -1 : 1));
+
+  // Every session's zone in one sliding pass. Asking per session meant a
+  // 28-day walk each time, which was 46.6ms of a 59.5ms derivation at ten
+  // years of logs — the app's single most expensive operation, running on
+  // every session write.
+  const zoneByDate = new Map<string, AcwrZone>();
+  const sessionDates = [...new Set(sessions.map((session) => session.date))].sort();
+  const zones = zonesFor(loadIndex, sessionDates);
+  sessionDates.forEach((date, i) => zoneByDate.set(date, zones[i] ?? 'unknown'));
 
   const best: Record<GradeScale, number> = { V: -1, YDS: -1 };
   const events: XpEvent[] = [];
@@ -197,7 +239,7 @@ export function deriveXp(sources: XpSources): XpState {
     if (!isRest) drillStreak = session.drillDone ? drillStreak + 1 : 0;
 
     const reward = sessionReward(session, {
-      zone: loadStateAt(loadIndex, session.date).zone,
+      zone: zoneByDate.get(session.date) ?? 'unknown',
       drillStreak,
       records,
       ...(sources.display ? { display: sources.display } : {}),

@@ -167,10 +167,14 @@ export function useXp(): XpState {
   const ledger = useGame((s) => s.ledger);
   const display = useSettings((s) => s.display);
 
-  return useMemo(() => {
-    const sessions = Object.values(byDate).flat();
-    return deriveXp({ sessions, projects, ledger, display });
-  }, [byDate, projects, ledger, display]);
+  // `flat()` builds a new array every call, which would miss the cache in
+  // engine/xp.ts on identical input — so the flattening is memoised on the
+  // store's own object identity and the cache sees the same reference.
+  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  return useMemo(
+    () => deriveXp({ sessions, projects, ledger, display }),
+    [sessions, projects, ledger, display],
+  );
 }
 
 /** Spendable soft currency: earned over all time, minus what is spent. */

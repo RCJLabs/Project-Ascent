@@ -1,0 +1,170 @@
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { gzipSync } from 'node:zlib';
+import { describe, expect, it } from 'vitest';
+import type { Session } from '@/db/sessions';
+import { deriveAltimeter } from '@/engine/altimeter';
+import { deriveCareer } from '@/engine/career';
+import { deriveClimberState } from '@/engine/derive';
+import { deriveStats } from '@/engine/stats';
+import { clearXpCache, deriveXp } from '@/engine/xp';
+
+/**
+ * The budget (PLAN.md M18).
+ *
+ * Both halves of "ten years of logs is indistinguishable from one, and
+ * first load is under 300KB" are measured here rather than remembered.
+ * These are ceilings with room in them, not targets to creep up to: a
+ * failure means something got materially slower or heavier, not that a
+ * number moved.
+ */
+
+/** Three sessions a week, two climbs each — a real climber's density. */
+function log(sessions: number): Session[] {
+  const out: Session[] = [];
+  const date = new Date('2016-01-01T00:00:00');
+  for (let i = 0; i < sessions; i += 1) {
+    const key = date.toISOString().slice(0, 10);
+    out.push({
+      id: `${key}#0`,
+      date: key,
+      planned: false,
+      completed: true,
+      rewarded: true,
+      mode: i % 4 === 0 ? 'outdoor' : 'indoor',
+      rpe: 5 + (i % 5),
+      durationMin: 90 + (i % 60),
+      warmup: i % 3 !== 0,
+      drillDone: i % 5 === 0,
+      climbs: [
+        { id: `a${i}`, grade: `V${3 + (i % 5)}`, scale: 'V', count: 2 + (i % 4), result: 'send', style: 'redpoint' },
+        { id: `b${i}`, grade: `V${5 + (i % 4)}`, scale: 'V', count: 1 + (i % 3), result: 'attempt' },
+      ],
+      createdAt: `${key}T18:00:00.000Z`,
+      updatedAt: `${key}T18:00:00.000Z`,
+    } as Session);
+    date.setDate(date.getDate() + 2 + (i % 2));
+  }
+  return out;
+}
+
+/** Median of five, so one unlucky GC pause does not fail a build. */
+function median(fn: () => void): number {
+  fn();
+  const runs: number[] = [];
+  for (let i = 0; i < 5; i += 1) {
+    const start = performance.now();
+    fn();
+    runs.push(performance.now() - start);
+  }
+  return runs.sort((a, b) => a - b)[2] as number;
+}
+
+const TEN_YEARS = 1560;
+
+describe('ten years of logs stays cheap', () => {
+  const sessions = log(TEN_YEARS);
+  const state = deriveClimberState(sessions);
+
+  it('derives XP in single-digit milliseconds', () => {
+    // Was 106.9ms before M18, and it runs on every session write. The cost
+    // was `loadStateAt` walking 28 days per session with Date arithmetic:
+    // 43,680 Date constructions per derivation. One sliding pass instead.
+    const ms = median(() => {
+      clearXpCache();
+      deriveXp({ sessions, projects: [], ledger: [] });
+    });
+    expect(ms, `deriveXp took ${ms.toFixed(1)}ms`).toBeLessThan(25);
+  });
+
+  it('scales linearly rather than superlinearly', () => {
+    const half = log(TEN_YEARS / 2);
+    const one = median(() => {
+      clearXpCache();
+      deriveXp({ sessions: half, projects: [], ledger: [] });
+    });
+    const two = median(() => {
+      clearXpCache();
+      deriveXp({ sessions, projects: [], ledger: [] });
+    });
+    // Twice the log should not cost more than three times the work.
+    expect(two / Math.max(one, 0.01), `${one.toFixed(1)}ms → ${two.toFixed(1)}ms`).toBeLessThan(3);
+  });
+
+  it('derives everything else in single-digit-to-low milliseconds', () => {
+    const budgets: [string, number, () => void][] = [
+      ['climberState', 60, () => deriveClimberState(sessions)],
+      ['altimeter', 20, () => deriveAltimeter(sessions)],
+      ['career', 20, () => deriveCareer({ sessions, records: state.personalRecords })],
+      ['stats', 10, () => deriveStats({ state, metrics: [], projects: [] })],
+    ];
+    const over = budgets
+      .map(([name, budget, fn]) => ({ name, budget, ms: median(fn) }))
+      .filter((r) => r.ms > r.budget)
+      .map((r) => `${r.name} ${r.ms.toFixed(1)}ms > ${r.budget}ms`);
+    expect(over).toEqual([]);
+  });
+
+  it('caches so nine callers cost one derivation', () => {
+    // The cache is keyed on reference identity, which is sound because the
+    // stores replace their arrays rather than mutating them — and which
+    // means a caller passing a fresh `[]` each time silently gets nothing.
+    // `useXp` memoises the flattened sessions for exactly this reason.
+    const projects: never[] = [];
+    const ledger: never[] = [];
+    const cold = median(() => {
+      clearXpCache();
+      deriveXp({ sessions, projects, ledger });
+    });
+    deriveXp({ sessions, projects, ledger });
+    const warm = median(() => deriveXp({ sessions, projects, ledger }));
+    expect(warm, `warm ${warm.toFixed(3)}ms vs cold ${cold.toFixed(1)}ms`).toBeLessThan(
+      Math.max(cold / 10, 0.5),
+    );
+  });
+
+  it('re-derives the moment anything actually changes', () => {
+    const projects: never[] = [];
+    const ledger: never[] = [];
+    const before = deriveXp({ sessions, projects, ledger });
+    const grown = [...sessions, { ...sessions[0]!, id: 'extra', date: '2027-01-01' }];
+    const after = deriveXp({ sessions: grown, projects, ledger });
+    expect(after.total).toBeGreaterThan(before.total);
+  });
+});
+
+describe('the bundle stays small', () => {
+  const dist = 'dist/assets';
+  const built = existsSync(dist);
+
+  it.runIf(built)('keeps the first load under 300KB gzipped', () => {
+    const html = readFileSync('dist/index.html', 'utf8');
+    const entry = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)?.[1];
+    expect(entry, 'no entry chunk in index.html').toBeDefined();
+
+    const js = gzipSync(readFileSync(`${dist}/${entry}`)).length;
+    const css = readdirSync(dist)
+      .filter((f) => f.endsWith('.css'))
+      .reduce((n, f) => n + gzipSync(readFileSync(`${dist}/${f}`)).length, 0);
+    const total = (js + css) / 1024;
+
+    expect(total, `first load is ${total.toFixed(0)}KB gzipped`).toBeLessThan(300);
+  });
+
+  it.runIf(built)('keeps the heavy routes out of the first load', () => {
+    const names = readdirSync(dist).filter((f) => f.endsWith('.js'));
+    // The game, the builder, the guides and search each carry weight and
+    // none is on the path from opening the app to logging a session.
+    for (const split of ['AscentPage', 'BuilderPage', 'GuidePage', 'SearchPage']) {
+      expect(names.some((f) => f.startsWith(split)), `${split} is not split out`).toBe(true);
+    }
+  });
+
+  it.runIf(built)('has no single chunk over 900KB', () => {
+    const big = readdirSync(dist)
+      .filter((f) => f.endsWith('.js'))
+      .map((f) => ({ f, kb: statSync(`${dist}/${f}`).size / 1024 }))
+      .filter((x) => x.kb > 900)
+      .map((x) => `${x.f} ${x.kb.toFixed(0)}KB`);
+    expect(big).toEqual([]);
+  });
+});

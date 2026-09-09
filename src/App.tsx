@@ -1,8 +1,7 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { Route, Router, Switch, useLocation } from 'wouter';
 import { useHashLocation } from 'wouter/use-hash-location';
 import { AltimeterPage } from '@/features/altimeter/AltimeterPage';
-import { AscentPage } from '@/features/ascent/AscentPage';
 import { ClimberPage } from '@/features/climber/ClimberPage';
 import { CoachPage } from '@/features/coach/CoachPage';
 import { HomePage } from '@/features/home/HomePage';
@@ -14,9 +13,6 @@ import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { CareerPage } from '@/features/career/CareerPage';
 import { YearPage } from '@/features/career/YearPage';
 import { FinderPage } from '@/features/finder/FinderPage';
-import { GlossaryPage } from '@/features/glossary/GlossaryPage';
-import { SearchPage } from '@/features/search/SearchPage';
-import { GuideList, GuidePage } from '@/features/guides/GuidePage';
 import { LogPage, TodayRedirect } from '@/features/log/LogPage';
 import { AssessmentsPage } from '@/features/assessments/AssessmentsPage';
 import { MetricDetailPage } from '@/features/assessments/MetricDetailPage';
@@ -30,11 +26,25 @@ import { StartProgramPage } from '@/features/plan/StartProgramPage';
 import { ProgramDetailPage } from '@/features/train/ProgramDetailPage';
 import { TrainPage } from '@/features/train/TrainPage';
 import { BuilderList } from '@/features/builder/BuilderList';
-import { BuilderPage } from '@/features/builder/BuilderPage';
-import { SessionEditorPage } from '@/features/builder/SessionEditorPage';
 import { ObjectiveDetailPage } from '@/features/objectives/ObjectiveDetailPage';
 import { ObjectivesPage } from '@/features/objectives/ObjectivesPage';
 import { WelcomePage } from '@/features/onboarding/WelcomePage';
+/**
+ * Split off the routes that carry weight and are not where anyone starts.
+ *
+ * The Ascent bundles a canvas game loop; the builder is 844 lines of
+ * editor; the glossary and guides carry a few hundred KB of prose. None of
+ * them is on the path from opening the app to logging a session, and all of
+ * them were in the single 1,038KB chunk every visitor downloaded first.
+ */
+const AscentPage = lazy(() => import('@/features/ascent/AscentPage').then((m) => ({ default: m.AscentPage })));
+const BuilderPage = lazy(() => import('@/features/builder/BuilderPage').then((m) => ({ default: m.BuilderPage })));
+const SessionEditorPage = lazy(() => import('@/features/builder/SessionEditorPage').then((m) => ({ default: m.SessionEditorPage })));
+const GuideList = lazy(() => import('@/features/guides/GuidePage').then((m) => ({ default: m.GuideList })));
+const GuidePage = lazy(() => import('@/features/guides/GuidePage').then((m) => ({ default: m.GuidePage })));
+const SearchPage = lazy(() => import('@/features/search/SearchPage').then((m) => ({ default: m.SearchPage })));
+const GlossaryPage = lazy(() => import('@/features/glossary/GlossaryPage').then((m) => ({ default: m.GlossaryPage })));
+
 import { hydrateAll } from '@/store';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
@@ -106,6 +116,10 @@ function Shell() {
   useFirstRunRedirect();
   return (
       <AppShell>
+        {/* A split route arrives a frame later. The fallback is deliberately
+            quiet rather than a spinner: on a warm cache it is never seen,
+            and a spinner that flashes for 20ms is worse than nothing. */}
+        <Suspense fallback={<div className="min-h-40" aria-busy="true" />}>
         <Switch>
           <Route path="/" component={HomePage} />
           <Route path="/climber" component={ClimberPage} />
@@ -146,6 +160,7 @@ function Shell() {
             <PlaceholderPage title="Not found" subtitle="" body="That page does not exist." />
           </Route>
         </Switch>
+        </Suspense>
       </AppShell>
   );
 }
