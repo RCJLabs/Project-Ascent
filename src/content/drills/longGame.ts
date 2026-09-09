@@ -5,6 +5,7 @@ export const LONG_GAME_DRILLS: Drill[] = [
   {
     id: 'tlg_arc_2x10',
     protocolId: 'arcing',
+    timerOverride: { workSec: 600, sets: 2 },
     name: 'ARC Pacing — 2x10 min',
     description:
       'Aerobic Restoration and Capillarization. Climb continuously for 10 minutes at RPE 3-4 — easy breathing, sustained MILD pump. No sends, no peak effort. Traverse or lap easy routes 3-4 grades below your on-sight. Rest 5 min. Climb 10 more minutes. ARC does not feel like training — that is the point. The adaptation is vascular. If you pump out, you went too hard.',
@@ -19,6 +20,7 @@ export const LONG_GAME_DRILLS: Drill[] = [
   {
     id: 'tlg_arc_2x15',
     protocolId: 'arcing',
+    timerOverride: { workSec: 900, sets: 2 },
     name: 'ARC Pacing — 2x15 min',
     description:
       'Same ARC protocol, extend continuous duration to 15 minutes per round. Skill focus this week: straight arms throughout, breathe out on every move. Practice shaking out every 5-8 moves EVEN WHEN FRESH — shaking is a skill you groove now, not a reaction.',
@@ -33,6 +35,7 @@ export const LONG_GAME_DRILLS: Drill[] = [
   {
     id: 'tlg_arc_2x20',
     protocolId: 'arcing',
+    timerOverride: { workSec: 1200, sets: 2 },
     name: 'ARC Pacing — 2x20 min',
     description:
       'Peak Phase 1 ARC duration. 20 minutes of continuous climbing, rest 5 min, 20 more. Terrain stays 3-4 grades below on-sight. Skill focus: clip practice from 3 different stances per round. Notice which stances feel stable and which force you to pump out — that is beta for your future projects.',
@@ -47,6 +50,7 @@ export const LONG_GAME_DRILLS: Drill[] = [
   {
     id: 'tlg_deload_arc_movement',
     protocolId: 'arcing',
+    timerOverride: { workSec: 720, sets: 2 },
     name: 'DELOAD: 2x12 min ARC + Movement Quality',
     description:
       'End of Base phase. Reduce ARC to 2x12 min at VERY easy intensity. Focus entirely on perfect movement — quiet feet, read two moves ahead, exhale on every reach. Recovery matters more than stimulus this week. Skip if you feel fresh and need to train; add extra sleep if you do not.',
@@ -100,6 +104,7 @@ export const LONG_GAME_DRILLS: Drill[] = [
   {
     id: 'tlg_deload_arc_2x10',
     protocolId: 'arcing',
+    timerOverride: { workSec: 600, sets: 2 },
     name: 'DELOAD: 2x10 min ARC',
     description:
       'End of Engine phase. Reduce all intervals to 2 sets maximum. Or just ARC 2x10 easy minutes. Sleep and nutrition are the training this week. Phase 3 needs you fresh — send attempts do not happen in fatigued forearms.',
@@ -140,6 +145,7 @@ export const LONG_GAME_DRILLS: Drill[] = [
   {
     id: 'tlg_arc_taper',
     protocolId: 'arcing',
+    timerOverride: { workSec: 900, sets: 1 },
     name: 'ARC 1x15 min (Taper Week)',
     description:
       'Massive taper. Single ARC round, 15 minutes, very easy. No intensity work. You are conserving everything for send day. Rest more than you think you need.',

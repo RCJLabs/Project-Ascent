@@ -160,6 +160,7 @@ export const SIEGE_DRILLS: Drill[] = [
   },
   {
     id: 'sg_capacity_laps_arc',
+    timerOverride: { workSec: 900, sets: 2 },
     name: 'Capacity Laps (ARC)',
     description:
       'Aerobic Restoration and Capillarization. Continuous climbing at RPE 3-4 (easy breathing, mild pump) on easy routes or long traverses. 15-20 min continuous, 2 rounds with 5 min rest between. Do not stop between routes — keep moving. This is boring and foundational; it grows the capillary network your forearms use to clear pump. Skip it and the linking weeks will hurt more.',
@@ -174,6 +175,7 @@ export const SIEGE_DRILLS: Drill[] = [
   },
   {
     id: 'sg_arc_volume_build',
+    timerOverride: { workSec: 1080, sets: 2 },
     name: 'ARC Volume Build',
     description:
       'Same aerobic intent, more time under tension. Extend to 18-22 min continuous, 2-3 rounds, 5 min rest between. Stay strictly at RPE 3-4 — if you get genuinely pumped you are climbing too hard and training the wrong system. Use easier terrain or bigger holds to keep moving the whole round.',
@@ -188,6 +190,7 @@ export const SIEGE_DRILLS: Drill[] = [
   },
   {
     id: 'sg_arc_light_intervals',
+    timerOverride: { workSec: 900, sets: 1 },
     name: 'ARC + Light Intervals',
     description:
       'Bridge toward links. One ARC round (15-20 min easy continuous), then 2-3 light interval laps: climb 2-3 minutes at RPE 5-6, rest an equal amount, repeat. This introduces a moderate pump-and-clear cycle without the intensity of true doubles. Keep form clean — sloppy intervals just teach bad movement under fatigue.',
@@ -202,6 +205,7 @@ export const SIEGE_DRILLS: Drill[] = [
   },
   {
     id: 'sg_capacity_consolidation',
+    timerOverride: { workSec: 1200, sets: 2 },
     name: 'Capacity Consolidation',
     description:
       'Your last pure-base week before the linking block. Peak the ARC volume: 2-3 long rounds (20+ min) at RPE 3-4, or one extended pyramid. Keep it easy and high-volume — you are banking aerobic capacity, not testing it. Next week the intensity steps up, so finish this session pump-free and recovered.',
@@ -307,6 +311,7 @@ export const SIEGE_DRILLS: Drill[] = [
   },
   {
     id: 'sg_send_support',
+    timerOverride: { workSec: 600, sets: 1 },
     name: 'Send Support',
     description:
       'Minimal volume — just enough to stay primed. A short ARC flush (10-15 min easy continuous) or one easy burst to keep the forearms awake without adding fatigue. Skip this session entirely if you are deep in send attempts on the project; recovery for the redpoint takes priority over any training stimulus this week.',

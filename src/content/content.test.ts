@@ -398,6 +398,35 @@ describe('The Siege', () => {
   });
 });
 
+describe('timer overrides', () => {
+  it('makes ARC drills time the dose the week prescribes', () => {
+    // The protocol defines the method once; the program progresses the dose.
+    const canonical = PROTOCOLS['arcing']!.timer!.workSec;
+    const week1 = getDrill('tlg_arc_2x10')!;
+    const week3 = getDrill('tlg_arc_2x20')!;
+    expect(week1.timerOverride).toMatchObject({ workSec: 600, sets: 2 });
+    expect(week3.timerOverride).toMatchObject({ workSec: 1200, sets: 2 });
+    expect(week3.timerOverride!.workSec).toBeGreaterThan(canonical);
+  });
+
+  it('only allows an override where a protocol is referenced', () => {
+    for (const drill of DRILLS) {
+      if (drill.timerOverride) expect(drill.protocolId, drill.id).toBeDefined();
+    }
+  });
+
+  it('keeps every override consistent with the drill it describes', () => {
+    // A drill claiming "2x15 min" must not open a 10-minute timer.
+    for (const drill of DRILLS) {
+      const mins = drill.timerOverride?.workSec;
+      if (!mins) continue;
+      const stated = /(\d+)\s*-?\s*(\d+)?\s*min/.exec(drill.name);
+      if (!stated) continue;
+      expect(mins / 60, drill.id).toBeGreaterThanOrEqual(Number(stated[1]));
+    }
+  });
+});
+
 describe('helpers', () => {
   it('parses the leading count out of a dosage string', () => {
     expect(parseCount('3')).toBe(3);

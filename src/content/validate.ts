@@ -105,6 +105,8 @@ export function validateProgram(program: Program): string[] {
           where(`session type '${type.id}' week ${week} references unknown drill '${drillId}'`);
         } else if (drill.protocolId && !getProtocol(drill.protocolId)) {
           where(`drill '${drill.id}' references unknown protocol '${drill.protocolId}'`);
+        } else if (drill.timerOverride && !drill.protocolId) {
+          where(`drill '${drill.id}' sets a timer override but references no protocol`);
         }
       }
       for (const key of Object.keys(type.drillsByWeek)) {

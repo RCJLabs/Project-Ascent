@@ -48,6 +48,8 @@ export interface Session {
   warmup?: boolean;
   drillId?: string;
   drillDone?: boolean;
+  /** Exercise names marked done, e.g. by finishing their protocol timer. */
+  completedExercises?: string[];
   climbs: Climb[];
   restChecklist?: RestChecklist;
   notes?: string;

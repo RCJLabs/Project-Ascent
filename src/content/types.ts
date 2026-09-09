@@ -97,6 +97,13 @@ export interface Drill {
   /** Links to a Protocol when the drill *is* a named method, so the logger
    *  can open its timer and cues (an ARC drill is the ARC protocol, timed). */
   protocolId?: ProtocolId;
+  /**
+   * Week-specific timing that overrides the protocol's canonical defaults.
+   * A protocol defines the method once; a program progresses its dose —
+   * ARC runs 2x10 in week 1 and 2x20 by week 3, and the timer has to
+   * follow the week, not the definition.
+   */
+  timerOverride?: Partial<ProtocolTimer> & { sets?: number };
   category: DrillCategory;
   discipline: Discipline;
   /** Grade band the drill suits, e.g. 'V5-V8'. */

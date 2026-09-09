@@ -9,8 +9,10 @@ import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
 import type { Climb, Session } from '@/db/sessions';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
+import { parseCount } from '@/content/types';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { TimerSheet } from '@/ui/TimerSheet';
 
 const REST_ITEMS = [
   { key: 'hydration', label: 'Hydration' },
@@ -184,6 +186,20 @@ function SessionEditor({
   const [scale, setScale] = useState<GradeScale>('V');
   const [grade, setGrade] = useState('V3');
   const [result, setResult] = useState<'send' | 'attempt'>('send');
+  const [timer, setTimer] = useState<{
+    protocolId: string;
+    name: string;
+    sets: number;
+    override?: Partial<import('@/content/types').ProtocolTimer>;
+  } | null>(null);
+
+  const doneExercises = session.completedExercises ?? [];
+  const markExerciseDone = (name: string) =>
+    patch({
+      completedExercises: doneExercises.includes(name)
+        ? doneExercises.filter((n) => n !== name)
+        : [...doneExercises, name],
+    });
 
   function addClimb() {
     const existing = session.climbs.find(
@@ -334,22 +350,49 @@ function SessionEditor({
               {blocks.map((b) => (
                 <div key={b.blockId} className="mb-3 last:mb-0">
                   <h4 className="text-xs font-bold uppercase tracking-widest text-accent mb-1.5">{b.name}</h4>
-                  <ul className="grid gap-1.5">
+                  <ul className="grid gap-2">
                     {b.entry.exercises.map((ex, i) => {
                       const protocol = ex.protocolId ? getProtocol(ex.protocolId) : undefined;
+                      const isDone = doneExercises.includes(ex.name);
                       return (
-                        <li key={`${ex.name}-${i}`} className="text-sm flex items-baseline gap-2">
-                          <span className="font-semibold">{ex.name}</span>
-                          <span className="text-ink-soft text-xs">
-                            {[ex.sets && `${ex.sets} sets`, ex.reps, ex.hold, ex.load]
-                              .filter(Boolean)
-                              .join(' · ')}
-                          </span>
+                        <li
+                          key={`${ex.name}-${i}`}
+                          className="flex items-start gap-2 bg-sunken rounded-xl px-3 py-2.5"
+                        >
+                          <button
+                            onClick={() => markExerciseDone(ex.name)}
+                            className={`w-5 h-5 rounded border shrink-0 mt-0.5 flex items-center justify-center ${
+                              isDone ? 'bg-accent border-accent' : 'border-line'
+                            }`}
+                            aria-label={`Mark ${ex.name} done`}
+                          >
+                            {isDone && <Check size={13} className="text-accent-ink" />}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <div className={`font-semibold text-sm ${isDone ? 'line-through opacity-60' : ''}`}>
+                              {ex.name}
+                            </div>
+                            <div className="text-ink-soft text-xs">
+                              {[ex.sets && `${ex.sets} sets`, ex.reps, ex.hold, ex.load, ex.rest && `${ex.rest} rest`]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </div>
+                            {ex.notes && <div className="text-ink-soft/80 text-xs italic mt-0.5">{ex.notes}</div>}
+                          </div>
                           {protocol?.timer && (
-                            <span className="inline-flex items-center gap-1 text-[10px] text-accent">
-                              <Timer size={10} />
-                              {protocol.timer.workSec}s
-                            </span>
+                            <button
+                              onClick={() =>
+                                setTimer({
+                                  protocolId: protocol.id,
+                                  name: ex.name,
+                                  sets: parseCount(ex.sets) ?? 1,
+                                })
+                              }
+                              className="shrink-0 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-accent border border-accent/40 rounded-lg px-2 py-1.5"
+                            >
+                              <Timer size={13} />
+                              Timer
+                            </button>
                           )}
                         </li>
                       );
@@ -362,17 +405,42 @@ function SessionEditor({
 
           {day?.drill && (
             <Card title="Drill">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-semibold text-sm">{day.drill.name}</span>
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="min-w-0">
+                  <div className="font-semibold text-sm">{day.drill.name}</div>
+                  <p className="text-xs text-ink-soft mt-0.5">
+                    {day.drill.duration} · {day.drill.focus}
+                  </p>
+                </div>
                 <button
                   onClick={() => patch({ drillDone: !session.drillDone })}
-                  className={`text-xs font-bold uppercase tracking-wide rounded-lg px-2.5 py-1.5 border ${
+                  className={`shrink-0 text-xs font-bold uppercase tracking-wide rounded-lg px-2.5 py-1.5 border ${
                     session.drillDone ? 'border-accent bg-accent/10 text-ink' : 'border-line text-ink-soft'
                   }`}
                 >
                   {session.drillDone ? 'Done' : 'Mark done'}
                 </button>
               </div>
+              <p className="text-sm text-ink-soft leading-relaxed">{day.drill.description}</p>
+              {(() => {
+                const protocol = day.drill.protocolId ? getProtocol(day.drill.protocolId) : undefined;
+                if (!protocol?.timer) return null;
+                return (
+                  <button
+                    onClick={() =>
+                      setTimer({
+                        protocolId: protocol.id,
+                        name: day.drill!.name,
+                        sets: day.drill!.timerOverride?.sets ?? 2,
+                        ...(day.drill!.timerOverride ? { override: day.drill!.timerOverride } : {}),
+                      })
+                    }
+                    className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-accent"
+                  >
+                    <Timer size={15} /> Open the {protocol.name} timer
+                  </button>
+                );
+              })()}
             </Card>
           )}
 
@@ -427,6 +495,19 @@ function SessionEditor({
           className="w-full bg-sunken border border-line rounded-xl px-3 py-2.5 text-sm resize-y"
         />
       </Card>
+
+      {timer && (
+        <TimerSheet
+          protocol={getProtocol(timer.protocolId)!}
+          sets={timer.sets}
+          {...(timer.override ? { override: timer.override } : {})}
+          exerciseName={timer.name}
+          onClose={() => setTimer(null)}
+          onComplete={() => {
+            if (!doneExercises.includes(timer.name)) markExerciseDone(timer.name);
+          }}
+        />
+      )}
 
       {session.completed ? (
         <Button variant="outline" className="w-full" onClick={() => patch({ completed: false })}>
