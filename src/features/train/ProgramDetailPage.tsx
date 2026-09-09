@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
-import { AlertTriangle, ArrowLeft, Clock, Layers, Play, Timer } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, BookOpen, ChevronRight, Clock, Layers, Play, Timer } from 'lucide-react';
 import { getDrill } from '@/content/drills';
+import { guideFor } from '@/content/guides';
 import { getMetric } from '@/content/metrics';
 import { getProtocol } from '@/content/protocols';
 import { getProgram } from '@/content/programs';
@@ -161,6 +162,7 @@ function SessionTypeCard({
 
 export function ProgramDetailPage({ params }: { params: { id: string } }) {
   const program = getProgram(params.id);
+  const guide = guideFor(params.id);
   const [phaseIndex, setPhaseIndex] = useState(0);
   const [track, setTrack] = useState<TrackId | null>(null);
 
@@ -197,6 +199,22 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
       />
 
       <div className="grid grid-cols-1 gap-3">
+        {guide && (
+          <Link
+            href={`/guides/${guide.id}`}
+            className="bg-surface border border-line rounded-2xl p-4 flex items-center gap-3 hover:border-accent transition-colors"
+          >
+            <BookOpen size={18} className="text-accent shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-sm">Read the guide</div>
+              <p className="text-xs text-ink-soft truncate">
+                {guide.sections.length} sections on why this program is built the way it is
+              </p>
+            </div>
+            <ChevronRight size={16} className="text-ink-soft shrink-0" />
+          </Link>
+        )}
+
         <Card>
           <div className="flex gap-4 mb-3">
             <div>

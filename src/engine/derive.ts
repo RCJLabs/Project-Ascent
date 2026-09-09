@@ -35,6 +35,19 @@ export interface DayLoad {
 
 export type AcwrZone = 'detraining' | 'optimal' | 'caution' | 'danger' | 'unknown';
 
+/**
+ * The zone boundaries, named once.
+ *
+ * Exported because the injury guide states them in prose and a test asserts
+ * the two agree. A guide that says 1.3 while the app draws the line at 1.4
+ * is worse than a guide that says nothing.
+ */
+export const ACWR_BOUNDS = {
+  optimalFrom: 0.8,
+  optimalTo: 1.3,
+  cautionTo: 1.5,
+} as const;
+
 export interface LoadState {
   daily: DayLoad[];
   /** Rolling 7-day load. */
@@ -308,9 +321,9 @@ function deriveLoad(
 
   let zone: AcwrZone = 'unknown';
   if (acwr !== null) {
-    if (acwr < 0.8) zone = inPlannedDeload ? 'optimal' : 'detraining';
-    else if (acwr <= 1.3) zone = 'optimal';
-    else if (acwr <= 1.5) zone = 'caution';
+    if (acwr < ACWR_BOUNDS.optimalFrom) zone = inPlannedDeload ? 'optimal' : 'detraining';
+    else if (acwr <= ACWR_BOUNDS.optimalTo) zone = 'optimal';
+    else if (acwr <= ACWR_BOUNDS.cautionTo) zone = 'caution';
     else zone = 'danger';
   }
 

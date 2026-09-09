@@ -15,6 +15,7 @@ import { CareerPage } from '@/features/career/CareerPage';
 import { YearPage } from '@/features/career/YearPage';
 import { FinderPage } from '@/features/finder/FinderPage';
 import { GlossaryPage } from '@/features/glossary/GlossaryPage';
+import { GuideList, GuidePage } from '@/features/guides/GuidePage';
 import { LogPage, TodayRedirect } from '@/features/log/LogPage';
 import { AssessmentsPage } from '@/features/assessments/AssessmentsPage';
 import { MetricDetailPage } from '@/features/assessments/MetricDetailPage';
@@ -119,6 +120,8 @@ function Shell() {
           <Route path="/projects/:id" component={ProjectDetailPage} />
           <Route path="/projects" component={ProjectsPage} />
           <Route path="/injury/:id" component={InjuryPage} />
+          <Route path="/guides/:id" component={GuidePage} />
+          <Route path="/guides" component={GuideList} />
           <Route path="/glossary" component={GlossaryPage} />
           <Route path="/settings" component={SettingsPage} />
           <Route>

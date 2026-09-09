@@ -5,6 +5,7 @@ import { exportAll, hasRealData, importAll, parseExportFile, SCHEMA_VERSION } fr
 import { mediaBytes } from '@/db/media';
 import type { BodyPart } from '@/content/warmups';
 import { GLOSSARY } from '@/content/glossary';
+import { GUIDES } from '@/content/guides';
 import type { Equipment } from '@/content/types';
 import { displayGrade, type BoulderDisplay, type RouteDisplay } from '@/engine/grades';
 import { unlock } from '@/lib/cues';
@@ -422,6 +423,18 @@ export function SettingsPage() {
         </Card>
 
         <Card title="Reference">
+          <Link href="/guides" className="flex items-center gap-3 mb-3 pb-3 border-b border-line">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">Guides</p>
+              <p className="text-xs text-ink-soft mt-0.5">
+                {GUIDES.length} long-form guides — one per program, plus outdoor climbing and
+                managing an injury.
+              </p>
+            </div>
+            <span className="text-ink-soft shrink-0" aria-hidden>
+              →
+            </span>
+          </Link>
           <Link href="/glossary" className="flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold">Glossary</p>
