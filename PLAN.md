@@ -277,7 +277,7 @@ practical upgrade over the old app — it makes the phone useful *at the wall*, 
 - **Vitality (HP)**: END-scaled max; consecutive training days drain it (3/4/5/6 days
   → −10/−30/−50/−70), skipped warmups −10 each, active injuries −20 each; a logged
   rest day grants a 24h ×1.5 recovery buff. Vitality gates nothing in real training —
-  it's the avatar's visible health and feeds The Ascent (§5.11).
+  it's the avatar's visible health, and it shows on The Ascent's climber sprite (§5.11).
 - **Deload awareness**: week-4 deload constraints surface as calendar guidance; the
   plateau engine can prescribe a reset week.
 
@@ -372,28 +372,54 @@ Every send adds real height to a lifetime altimeter:
 - Home screen shows the mountain silhouette filling toward the next milestone.
 - Pure real-climbing math — no game action adds height, ever.
 
-### 5.11 The Ascent — the rest-day game
+### 5.11 The Ascent — the rest-day arcade game
 
-Port of the turn-based infinite climb, retuned as the *recovery-day companion*:
+The old app had **two** endless-climbing games under confusing names. The one carrying
+forward is the **arcade lane-dodger** (`FreeSolo.tsx` in the old code: fast,
+reaction-based, dodge left and right up an endless wall), which takes the name
+**The Ascent** in the new app. The old turn-based card-climb sim (the old "Ascent")
+is cut.
 
-- **Core sim kept**: 4 cards/turn (≥1 rest), pump pool = f(END), altitude tax (+pump
-  cost, −rest recovery, +fall chance per 100m), diminishing rests, cruxes every 500m
-  as stat checks, hazards, checkpoints, classic mode with 3 respawns; Free Solo
-  variant (permadeath, 2× reward) as an unlockable mode.
-- **Rest-day framing (the design change)**: one free run per day; a **logged rest day
-  grants a second run plus the "Rested" state** (+20% max pump, +reward modifier).
-  Training days don't block play, but the good runs live on rest days — the game
-  gently pulls you toward actually resting.
-- **Stats matter**: your derived stats set pump, fall resistance, and crux odds — so
-  the rest-day game silently showcases what your training built.
-- **Skill-tree boons**: Ascent-specific capstones (extra checkpoint, cheaper dynos,
-  weather resist) give the trees a fun payoff without touching real progression.
-- **Daily seed** (new): everyone gets the same generated wall each day; your best
-  height is recorded locally. Shareable as an image card ("Daily Wall #214 — 1,850m")
-  — social bragging with zero backend.
-- Rewards stay in the `game` XP lane, capped per the constitution (a run pays a
-  fraction of a session; it can never substitute for training).
-- Static content pools (cruxes, hazards, weather, move cards) — no AI anywhere.
+**Core loop (ported from the old FreeSolo, tuning constants and all):**
+
+- Vertical auto-climber on a **3-lane wall** with parallax rock layers; the climber
+  ascends continuously while obstacles rain down; tap left/right screen halves (swipe
+  and arrow keys too) to switch lanes. Height in meters is the score
+  (1 px = 0.4 m in the old tuning).
+- **Speed ramp**: base 220 px/s, +8 px/s per second elapsed, capped at 480 — runs are
+  short (~60–90 s), death is sudden, "one more run" is the loop.
+- **Three obstacle archetypes tuned for distinct dodges**: rock (1 lane, common),
+  boulder (spans 2 lanes — a spatial dodge), debris (small and 1.5× fast — a timing
+  dodge). Spawn mix ≈ 47.5% obstacle / 47.5% coin / 5% power-up.
+- **Power-ups**: slow-mo (5 s, halves speed), chalk magnet (sweeps on-screen coins),
+  heart (extra life — relaxed mode only).
+- **Two modes**: *Ascent* (hearts can spawn) and *Free Solo* (one life, +30% speed,
+  no hearts, 2× rewards) as the unlockable hard mode.
+- Per-mode personal bests; **"pure" runs** (no power-ups touched) tracked separately
+  with a dedicated achievement (5,000 m clean was the old bar — keep it).
+
+**Rest-day framing (the design change).** An arcade game lives on instant retries, so
+don't ration *plays* — ration *rewards*: play unlimited, but XP/coins pay out from
+your **best run of the day**, and a **logged rest day boosts that payout ×1.5** and
+switches the wall to a "Recovery Skies" cosmetic weather. Training days don't block
+anything; the good paydays just live on rest days, which nudges you to actually rest.
+
+**Training hooks (light, legible, hard-capped so it stays a reflex game):**
+
+- END slows the speed ramp slightly (up to −10%).
+- AGI trims the climber's hitbox a touch.
+- High MEN grants one **"chalk save"** per run — a single near-miss forgiveness.
+- Skill-tree Ascent capstones grant boons: start with a slow-mo charge, +coin value,
+  a second chalk save.
+- Vitality shows in the climber sprite (fresh/tired) but never gates play.
+
+**Daily seed** (new): seeded spawn RNG gives everyone the same obstacle/coin pattern
+each day; local best + share card ("Daily Wall #214 — 1,850 m") — social bragging
+with zero backend. Cosmetic wall themes/weather unlock via altimeter milestones.
+
+Rewards stay in the `game` XP lane, capped per the constitution — a day of Ascent
+play pays a fraction of a real session and can never substitute for training. Pure
+canvas/rAF engine with seeded RNG, fully offline, no AI anywhere.
 
 ---
 
@@ -444,9 +470,11 @@ Ordered roughly by value-to-effort.
     Coach's Corner. Only if free.
 
 **Explicitly not returning** (see AUDIT.md §7): Gym Tycoon/Franchise, Pro Team, all
-card games, The Headwall, The Approach, Free Solo arcade, trips/garage/basecamp,
-sponsors, contracts, season pass, companions, activities (fake training), social
-graph, leaderboards, all AI calls, accounts, monetization tiers.
+card games, The Headwall, the old turn-based card-climb sim (the old app's "Ascent" —
+its arcade sibling carries the name forward instead, §5.11), The Approach,
+trips/garage/basecamp, sponsors, contracts, season pass, companions, activities
+(fake training), social graph, leaderboards, all AI calls, accounts, monetization
+tiers.
 
 ---
 
@@ -461,9 +489,9 @@ graph, leaderboards, all AI calls, accounts, monetization tiers.
 - Game lane: Ascent runs and cosmetic events pay small, capped amounts, source-flagged
   `game`; no game action > 7.5% of a level; challenge-board rewards count as real
   (they resolve from logs).
-- Currency: one soft currency (XP × 0.25) spent only on cosmetics and Ascent
-  convenience (e.g. a checkpoint token). No materials, no packs, no second/third/fourth
-  currencies.
+- Currency: one soft currency (XP × 0.25) spent only on cosmetics and small Ascent
+  perks (e.g. a starting slow-mo charge, wall themes). No materials, no packs, no
+  second/third/fourth currencies.
 
 ---
 
@@ -539,9 +567,11 @@ Milestones are sequential; each ends runnable and useful.
   + vitality states), altimeter + milestones, skill trees, challenge board, weekly
   review, share cards. *Done when: logging a session visibly moves XP, stats,
   altimeter, and board in one flow.*
-- **M5 — The Ascent.** Sim engine (pure, tested), run UI, rest-day energy rules,
-  daily seed, boon integration, PB tracking. *Done when: a full run works offline and
-  rest-day bonus applies.*
+- **M5 — The Ascent.** Arcade engine (rAF loop with seeded spawn RNG, collision and
+  speed-ramp constants ported from the old FreeSolo tuning), run UI with parallax
+  wall, best-of-day reward rules + rest-day boost, daily seed, stat/boon hooks, PB
+  and pure-run tracking. *Done when: 60 fps on a mid-range phone, fully offline, and
+  the rest-day ×1.5 payout applies.*
 - **M6 — Ship.** Live session mode, onboarding baseline, Coach's Corner, settings
   (scales, theme, backup), disclaimer, polish pass, TWA packaging + assetlinks, Play
   internal testing, store listing.
