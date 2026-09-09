@@ -1,9 +1,12 @@
 import { Link } from 'wouter';
-import { ChevronRight, Sparkles } from 'lucide-react';
+import { ChevronRight, PenLine, Sparkles, TriangleAlert } from 'lucide-react';
 import { PROGRAMS, STAGE_META, STAGE_ORDER } from '@/content/programs';
+import { canRun } from '@/engine/customProgram';
+import { useCustomPrograms } from '@/store/programs';
 import { PageHeader } from '@/ui/PageHeader';
 
 export function TrainPage() {
+  const custom = useCustomPrograms((s) => s.custom);
   return (
     <>
       <PageHeader title="Train" subtitle="Structured climbing programs" />
@@ -19,6 +22,47 @@ export function TrainPage() {
         <ChevronRight size={18} className="shrink-0" />
       </Link>
       <div className="grid grid-cols-1 gap-5">
+        <section>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft">Yours</h2>
+          <p className="text-sm text-ink-soft mb-2">Programs you wrote, and copies you have changed.</p>
+          <div className="grid grid-cols-1 gap-2">
+            {custom.map((program) => (
+              <Link
+                key={program.id}
+                href={canRun(program) ? `/train/${program.id}` : `/build/${program.id}`}
+                className="bg-surface border border-line rounded-2xl p-4 flex items-center gap-3 hover:border-accent transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="font-bold">{program.name || 'Untitled'}</span>
+                    <span className="text-xs font-semibold text-accent">{program.weeks} weeks</span>
+                  </div>
+                  <p className="text-sm text-ink-soft truncate">
+                    {canRun(program) ? (
+                      program.subtitle || 'Yours'
+                    ) : (
+                      <span className="text-warn inline-flex items-center gap-1">
+                        <TriangleAlert size={12} /> Not finished yet
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <ChevronRight size={18} className="text-ink-soft shrink-0" />
+              </Link>
+            ))}
+            <Link
+              href="/build"
+              className="bg-surface border border-line border-dashed rounded-2xl p-4 flex items-center gap-3 text-ink-soft"
+            >
+              <PenLine size={18} className="shrink-0" />
+              <span className="flex-1 text-sm font-semibold">
+                {custom.length === 0 ? 'Write your own program' : 'Write another'}
+              </span>
+              <ChevronRight size={18} className="shrink-0" />
+            </Link>
+          </div>
+        </section>
+
         {STAGE_ORDER.map((stage) => {
           const inStage = PROGRAMS.filter((p) => p.stage === stage);
           if (inStage.length === 0) return null;

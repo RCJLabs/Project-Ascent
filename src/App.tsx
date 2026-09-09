@@ -23,6 +23,8 @@ import { ProjectsPage } from '@/features/projects/ProjectsPage';
 import { StartProgramPage } from '@/features/plan/StartProgramPage';
 import { ProgramDetailPage } from '@/features/train/ProgramDetailPage';
 import { TrainPage } from '@/features/train/TrainPage';
+import { BuilderList } from '@/features/builder/BuilderList';
+import { BuilderPage } from '@/features/builder/BuilderPage';
 import { WelcomePage } from '@/features/onboarding/WelcomePage';
 import { hydrateAll } from '@/store';
 import { useProfile } from '@/store/profile';
@@ -89,6 +91,8 @@ function Shell() {
           <Route path="/ascent" component={AscentPage} />
           <Route path="/train" component={TrainPage} />
           <Route path="/find" component={FinderPage} />
+          <Route path="/build/:id" component={BuilderPage} />
+          <Route path="/build" component={BuilderList} />
           <Route path="/train/:id/start" component={StartProgramPage} />
           <Route path="/train/:id" component={ProgramDetailPage} />
           <Route path="/board" component={BoardPage} />

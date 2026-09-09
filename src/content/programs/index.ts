@@ -35,8 +35,37 @@ export const PROGRAMS: Program[] = [GROUND_ZERO, BASE_CAMP, GRAVITY_DEFIED, LOCK
 
 const BY_ID = new Map<ProgramId, Program>(PROGRAMS.map((p) => [p.id, p]));
 
+/**
+ * Programs the climber wrote, kept in the same lookup as the shipped ones.
+ *
+ * A custom program has to behave like any other everywhere — the logger, the
+ * calendar, the review, the scheduler, the journal all call getProgram and
+ * none of them should know or care where it came from. A registry populated
+ * at hydration keeps those thirteen call sites untouched, including the one
+ * inside a pure engine, which could not read a React store anyway.
+ *
+ * The store that owns these also holds them as state, so components
+ * re-render; this map is the lookup, not the source of truth.
+ */
+const CUSTOM = new Map<ProgramId, Program>();
+
+export function registerCustomPrograms(programs: readonly Program[]): void {
+  CUSTOM.clear();
+  for (const program of programs) CUSTOM.set(program.id, program);
+}
+
+/** Custom first: a fork keeps its own id, but this is the safe precedence. */
 export function getProgram(id: ProgramId): Program | undefined {
-  return BY_ID.get(id);
+  return CUSTOM.get(id) ?? BY_ID.get(id);
+}
+
+export function isCustomProgram(id: ProgramId): boolean {
+  return CUSTOM.has(id);
+}
+
+/** Everything runnable, shipped and written alike. */
+export function allPrograms(): Program[] {
+  return [...PROGRAMS, ...CUSTOM.values()];
 }
 
 export const STAGE_META: Record<ProgramStage, { label: string; blurb: string }> = {
