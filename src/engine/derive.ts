@@ -196,6 +196,10 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
   };
 }
 
+/** Training days inside the 28-day window before a chronic baseline means
+ *  anything — roughly a session and a half a week. */
+const MIN_CHRONIC_DAYS = 6;
+
 function deriveLoad(
   loadByDate: Map<string, { load: number; deload: boolean }>,
   today: string,
@@ -218,10 +222,13 @@ function deriveLoad(
 
   const dates = [...loadByDate.keys()].sort();
   const daysOfHistory = dates.length === 0 ? 0 : daysBetween(dates[0]!, today) + 1;
+  const chronicDays = daily.filter((d) => d.load > 0).length;
 
-  // ACWR needs a real chronic baseline. Below three weeks it says more about
-  // how recently you installed the app than about your training.
-  const ready = daysOfHistory >= 21 && chronic > 0;
+  // ACWR needs a real chronic baseline, which means both a long enough
+  // window and enough sessions inside it. Three weeks of calendar with two
+  // sessions in it produces arithmetic like 4.0 — true division, no
+  // meaning — so density is a condition, not just span.
+  const ready = daysOfHistory >= 21 && chronicDays >= MIN_CHRONIC_DAYS && chronic > 0;
   const acwr = ready ? acute / chronic : null;
   const inPlannedDeload = daily.slice(-7).some((d) => d.deload);
 

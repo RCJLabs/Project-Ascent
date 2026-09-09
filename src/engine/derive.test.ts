@@ -75,6 +75,21 @@ describe('training load', () => {
     expect(state.load.daily.at(-1)!.load).toBeCloseTo(12); // 8 × 1.5h
   });
 
+  it('withholds ACWR when the window is long but nearly empty', () => {
+    // Two sessions six weeks apart: the span passes, the density does not.
+    // Dividing one recent session by a quarter of itself yields 4.0, which
+    // is arithmetic rather than a training state.
+    const state = deriveClimberState(
+      [
+        session(addDays(TODAY, -40), { rpe: 7, durationMin: 75 }),
+        session(addDays(TODAY, -5), { rpe: 7, durationMin: 75 }),
+      ],
+      { today: TODAY },
+    );
+    expect(state.load.acwr).toBeNull();
+    expect(state.load.zone).toBe('unknown');
+  });
+
   it('withholds ACWR until there is enough history', () => {
     const state = deriveClimberState(fourWeeksOf(7, 60, [0, 2, 4]), { today: TODAY });
     expect(state.load.acwr).toBeNull();

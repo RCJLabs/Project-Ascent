@@ -13,6 +13,7 @@ import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
+import { TrainingState } from './TrainingState';
 import { LoadBars, ProgressionLine, PyramidBars } from '@/ui/charts/Charts';
 
 /** Status presentation for ACWR. Colour never carries the meaning alone —
@@ -197,6 +198,8 @@ export function ProgressPage() {
       <PageHeader title="Progress" subtitle={`${state.completedSessions} sessions logged`} />
 
       <div className="grid gap-3">
+        <TrainingState state={state} sessions={sessions} program={program} scale={scale} />
+
         <Card>
           <div className="flex gap-5 flex-wrap">
             <Stat label="Sessions" value={String(state.completedSessions)} sub={`${state.recentSessions} in 30 days`} />
