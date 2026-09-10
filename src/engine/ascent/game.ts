@@ -28,6 +28,7 @@ import {
   TICK_MS,
   VIEW,
 } from './config';
+import { applyBoons } from './boons';
 import { createRng, next, nextInt, pickWeighted, type Rng } from './rng';
 
 export type Mode = 'ascent' | 'freesolo';
@@ -59,6 +60,9 @@ export interface Modifiers {
   hitboxTrim: number;
   /** MEN and skill boons: near-miss forgiveness, once each. */
   chalkSaves: number;
+  /** TEC: shortens the lane change, so a committed move lands sooner. */
+  laneTrim: number;
+  /** STR and skill boons: what a coin is worth. */
   coinMultiplier: number;
   startWithSlowmo: boolean;
 }
@@ -67,6 +71,7 @@ export const NO_MODIFIERS: Modifiers = {
   rampReduction: 0,
   hitboxTrim: 0,
   chalkSaves: 0,
+  laneTrim: 0,
   coinMultiplier: 1,
   startWithSlowmo: false,
 };
@@ -152,25 +157,39 @@ export function createRun(options: RunOptions): RunState {
   };
 }
 
-/** Modifiers from the climber's own stats and skill boons. */
+/**
+ * Modifiers from the climber's own stats and skill boons.
+ *
+ * Every stat is scaled from its base of 10, so a climber who has logged
+ * nothing gets exactly nothing — the floor every stat starts on is not
+ * training anyone did, and paying out for it would make the hooks read as
+ * free rather than earned.
+ */
 export function modifiersFrom(input: {
   end?: number;
   agi?: number;
   men?: number;
+  tec?: number;
+  str?: number;
   boons?: readonly string[];
 }): Modifiers {
-  const boons = new Set(input.boons ?? []);
   const scale = (stat: number | undefined, cap: number) =>
     Math.max(0, Math.min(cap, ((stat ?? 10) - 10) / 90 * cap));
 
-  return {
+  const base: Modifiers = {
     rampReduction: scale(input.end, HOOKS.maxRampReduction),
     hitboxTrim: scale(input.agi, HOOKS.maxHitboxTrim),
-    chalkSaves:
-      ((input.men ?? 0) >= HOOKS.chalkSaveStat ? 1 : 0) + (boons.has('boon-reach') ? 1 : 0),
-    coinMultiplier: boons.has('boon-doublejump') ? 1.5 : 1,
-    startWithSlowmo: boons.has('boon-slowmo'),
+    chalkSaves: (input.men ?? 0) >= HOOKS.chalkSaveStat ? 1 : 0,
+    laneTrim: scale(input.tec, HOOKS.maxLaneTrim),
+    coinMultiplier: 1 + scale(input.str, HOOKS.maxCoinBonus),
+    startWithSlowmo: false,
   };
+  return applyBoons(base, input.boons ?? []);
+}
+
+/** How long a lane change takes for this run, with TEC's trim applied. */
+export function laneChangeDuration(modifiers: Modifiers): number {
+  return CLIMBER.laneChangeMs * (1 - modifiers.laneTrim);
 }
 
 export function laneCenter(lane: number, lanes = 1): number {
@@ -180,7 +199,7 @@ export function laneCenter(lane: number, lanes = 1): number {
 /** The climber's x, mid lane-change. */
 export function climberX(state: RunState): number {
   if (state.laneChangeMs <= 0) return laneCenter(state.lane);
-  const t = 1 - state.laneChangeMs / CLIMBER.laneChangeMs;
+  const t = 1 - state.laneChangeMs / laneChangeDuration(state.modifiers);
   return laneCenter(state.fromLane) + (laneCenter(state.lane) - laneCenter(state.fromLane)) * t;
 }
 
@@ -237,7 +256,7 @@ function tick(state: RunState, dt: number): void {
     if (target !== state.lane) {
       state.fromLane = state.lane;
       state.lane = target;
-      state.laneChangeMs = CLIMBER.laneChangeMs;
+      state.laneChangeMs = laneChangeDuration(state.modifiers);
     }
   }
 

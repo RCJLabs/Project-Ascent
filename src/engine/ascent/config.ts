@@ -128,7 +128,16 @@ export const INVULNERABLE_MS = 900;
 /** Fixed simulation tick. Everything advances in these, never in frame time. */
 export const TICK_MS = 1000 / 120;
 
-/** Training hooks, hard-capped so this stays a reflex game. */
+/**
+ * Training hooks, hard-capped so this stays a reflex game.
+ *
+ * All five stats reach the wall. Two of them did not until M31, which made
+ * "what your training does here" a list with holes in it — a climber whose
+ * training had gone into strength and technique saw the game acknowledge
+ * none of it. The caps are what make this safe: the largest possible
+ * advantage is small, and the payout on top of it is capped again by the
+ * economy's game lane.
+ */
 export const HOOKS = {
   /** END trims the ramp by up to this fraction. */
   maxRampReduction: 0.1,
@@ -136,4 +145,8 @@ export const HOOKS = {
   maxHitboxTrim: 0.12,
   /** MEN at or above this grants one chalk save. */
   chalkSaveStat: 55,
+  /** TEC shortens the lane change by up to this fraction. */
+  maxLaneTrim: 0.3,
+  /** STR raises what a coin is worth by up to this fraction. */
+  maxCoinBonus: 0.25,
 } as const;

@@ -52,9 +52,11 @@ export function SkillsPage() {
                 </li>
               ))}
             </ul>
+            {/* These were declared before the game existed and the copy
+                still said so long after it read them (PLAN.md M31). */}
             {effects.ascentBoons.length > 0 && (
               <p className="text-xs text-ink-soft mt-3">
-                Waiting on The Ascent: {effects.ascentBoons.map((b) => b.label).join('; ')}.
+                In The Ascent: {effects.ascentBoons.map((b) => b.label).join('; ')}.
               </p>
             )}
           </Card>

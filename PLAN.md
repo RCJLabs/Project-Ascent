@@ -1142,13 +1142,45 @@ about ten lines and would have caught all three; it belongs with the first of th
   deleted project's photo survives the delete, comes back with the undo, and is
   collected on the next launch when the undo is not taken.
 
-- **M31 — The Ascent, tied to the training.** The game currently connects to the app
-  through payouts, three wall themes unlocked by altimeter height, and a rest-day
-  palette. Deeper hooks that cost nothing on a server: seed the daily wall from your
-  own logged week so a hard week is a harder wall; draw the obstacle mix from the
-  drill categories your log shows least; let a skill node change something visible in
-  the run. The `GAME_ACTION_CAP` of 7.5% already guarantees none of this can outpay
-  real training, which is what makes it safe to make the game better.
+- **M31 — The Ascent, tied to the training.** *Done, and two of the three proposed
+  hooks were rejected rather than built.*
+  **Seeding the wall from your own logged week breaks a promise the app prints on
+  screen.** "Everyone gets the same wall each day — the pattern comes from the date,
+  so a score is comparable without anything leaving your phone" is on the records
+  card; `dailySeed` says the same in its own doc, `wallNumber` exists so "the number
+  means the same thing to two people comparing screenshots", and the share card leads
+  with *Daily Wall #253*. Personalising the seed — or the obstacle mix, which is drawn
+  from it — quietly makes all four false. Worse, the payout scales with distance, so
+  "a hard week is a harder wall" would mean **training costs you XP**: the one
+  incentive this app must never create. The shared wall stays shared.
+  **What can move is the climber, and that lane was already built.** `modifiersFrom`
+  applies capped, personal modifiers on top of an identical wall, which is exactly the
+  shape the plan wanted and none of it touches the seed.
+  **Two of the three skill boons described mechanics that had never been written.**
+  "Campus Fluent — start each run with a longer reach" granted a chalk save; "Airborne
+  — one extra lane jump per run" granted half again as many coins. Neither reach nor a
+  second jump exists in this game. The label lived in `content/skills.ts` and the
+  effect in `game.ts`, written months apart, and nothing checked one against the other
+  — so a climber who trained forty power drills was told they had earned something
+  imaginary. Both now come from one object in `ascent/boons.ts`, and the tree reads
+  the label from the same place the run reads the effect. The skills page also still
+  said "Waiting on The Ascent" long after the game had started reading them.
+  **Two of the five stats reached the wall; now all five do.** Technique shortens the
+  lane change by up to 30% — the one hook you feel on the first input — and Strength
+  raises what a coin is worth by up to 25%. Both capped, both on top of a payout the
+  economy caps again, and both scaled from the base of 10 every stat starts on so a
+  climber who has logged nothing gets exactly nothing.
+  **The hooks card now shows every stat with its number, earned or not.** Listing only
+  the active hooks hid the half that would give anyone a reason to train. It also
+  surfaced something the card had been concealing: **all five of AGI's inputs are
+  assessment metrics**, so a climber who logs sessions and never enters a benchmark
+  sits at the base of 10 and the hitbox hook has never once fired for them. STR is
+  nearly as metric-bound — 220 sessions of V7s and V8s reads as Strength 21. That is
+  the stats model, not the game, and it is out of M31's scope to change; the card at
+  least now says "Mobility 10 — would trim your hitbox" instead of leaving a blank.
+  Nine mutations, nine killed, including the one that would have made a shortened lane
+  change start partway across the gap. Verified in a browser: a real run with
+  twenty-four lane changes, and the card for an untrained and a trained climber.
 
 - **M32 — Named achievements.** `career.ts` is an unbounded counter axis — 250 sends,
   then 500 — which is good for a timeline and bad for a thing to aim at. A fixed,

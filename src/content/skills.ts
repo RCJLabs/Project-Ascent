@@ -11,6 +11,7 @@
  * really does mean the whole tree.
  */
 
+import { boonLabel } from '@/engine/ascent/boons';
 import type { SkillEffect, SkillNode, SkillRequirement, SkillTree, TreeId } from '@/engine/skills';
 
 type Rung = [name: string, threshold: number, effect?: SkillEffect];
@@ -94,7 +95,7 @@ const POWER: SkillTree = {
       ['Laddering', 5],
       ['Skip a Rung', 12],
       ['Double Dyno', 24],
-      ['Campus Fluent', 40, { kind: 'ascent-boon', id: 'boon-reach', label: 'start each run with a longer reach' }],
+      ['Campus Fluent', 40, { kind: 'ascent-boon', id: 'boon-reach', label: boonLabel('boon-reach') }],
     ], (v) => ({ kind: 'drills', category: 'power', count: v })),
 
     ...branch('power', 'Committing Moves', [
@@ -102,7 +103,7 @@ const POWER: SkillTree = {
       ['Deadpoint', 4],
       ['Big Throw', 6],
       ['Cut Loose', 8],
-      ['Airborne', 10, { kind: 'ascent-boon', id: 'boon-doublejump', label: 'one extra lane jump per run' }],
+      ['Airborne', 10, { kind: 'ascent-boon', id: 'boon-doublejump', label: boonLabel('boon-doublejump') }],
     ], (v) => ({ kind: 'metric', metricId: 'max_dynamic_grade', atLeast: v })),
 
     // A pyramid, not a ladder: the grade climbs as the count falls.
@@ -117,7 +118,7 @@ const POWER: SkillTree = {
     capstone('power', 'Explosive', 'STR', {
       kind: 'ascent-boon',
       id: 'boon-slowmo',
-      label: 'begin every run with a slow-mo charge',
+      label: boonLabel('boon-slowmo'),
     }),
   ],
 };

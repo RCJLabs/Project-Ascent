@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Heart, Play, Shield, Sparkles } from 'lucide-react';
-import { VIEW } from '@/engine/ascent/config';
+import { HOOKS, VIEW } from '@/engine/ascent/config';
 import {
   createRun,
   metres,
@@ -124,6 +124,8 @@ export function AscentPage() {
         end: derived.stats.END.value,
         agi: derived.stats.AGI.value,
         men: derived.stats.MEN.value,
+        tec: derived.stats.TEC.value,
+        str: derived.stats.STR.value,
         boons: skills.effects.ascentBoons.map((b) => b.id),
       }),
     [derived.stats, skills.effects.ascentBoons],
@@ -131,6 +133,18 @@ export function AscentPage() {
 
   // Rest days get their own sky. Otherwise the wall follows the altimeter.
   const theme = themeForHeight(derived.feet, derived.restedToday);
+
+  // Named on the hooks card next to what each one buys. Two of the five are
+  // fed almost entirely by assessment numbers, so a climber who only logs
+  // sessions sits at the base of 10 and the hook does nothing — which the
+  // card should say out loud rather than leave as a blank row.
+  const stat = {
+    STR: derived.stats.STR.value,
+    END: derived.stats.END.value,
+    TEC: derived.stats.TEC.value,
+    MEN: derived.stats.MEN.value,
+    AGI: derived.stats.AGI.value,
+  };
 
   const seed = useMemo(() => dailySeed(todayKey()), []);
   const wall = useMemo(() => buildWall(seed), [seed]);
@@ -384,16 +398,48 @@ export function AscentPage() {
               </ul>
             </Card>
 
+            {/* Every stat, with its number, whether it is doing anything
+                yet or not. A list
+                of only the active hooks made the ones you have not earned
+                invisible, which is the half that would give you a reason to
+                train (PLAN.md M31). */}
             <Card title="What your training does here">
               <ul className="grid grid-cols-1 gap-1.5 text-sm text-ink-soft">
-                <Hook on={modifiers.rampReduction > 0} text={`Endurance slows the speed ramp by ${Math.round(modifiers.rampReduction * 100)}%`} />
-                <Hook on={modifiers.hitboxTrim > 0} text={`Mobility trims your hitbox by ${Math.round(modifiers.hitboxTrim * 100)}%`} />
-                <Hook on={modifiers.chalkSaves > 0} text={`${modifiers.chalkSaves} chalk save${modifiers.chalkSaves === 1 ? '' : 's'} — one free near-miss each`} />
-                <Hook on={modifiers.startWithSlowmo} text="You start every run with a slow-mo charge" />
-                <Hook on={modifiers.coinMultiplier > 1} text="Coins are worth half again as much" />
+                <Hook
+                  on={modifiers.rampReduction > 0}
+                  text={`Endurance ${stat.END} slows the speed ramp by ${pct(modifiers.rampReduction)}`}
+                  off={`Endurance ${stat.END} — would slow the ramp, up to ${pct(HOOKS.maxRampReduction)}`}
+                />
+                <Hook
+                  on={modifiers.hitboxTrim > 0}
+                  text={`Mobility ${stat.AGI} trims your hitbox by ${pct(modifiers.hitboxTrim)}`}
+                  off={`Mobility ${stat.AGI} — would trim your hitbox, up to ${pct(HOOKS.maxHitboxTrim)}`}
+                />
+                <Hook
+                  on={modifiers.laneTrim > 0}
+                  text={`Technique ${stat.TEC} lands a lane change ${pct(modifiers.laneTrim)} sooner`}
+                  off={`Technique ${stat.TEC} — would quicken the lane change, up to ${pct(HOOKS.maxLaneTrim)}`}
+                />
+                <Hook
+                  on={modifiers.coinMultiplier > 1}
+                  text={`Strength ${stat.STR} makes a coin worth ${pct(modifiers.coinMultiplier - 1)} more`}
+                  off={`Strength ${stat.STR} — would raise coin value, up to ${pct(HOOKS.maxCoinBonus)}`}
+                />
+                <Hook
+                  on={modifiers.chalkSaves > 0}
+                  text={`${modifiers.chalkSaves} chalk save${modifiers.chalkSaves === 1 ? '' : 's'} — one free near-miss each`}
+                  off={`Mental ${stat.MEN} — a chalk save at ${HOOKS.chalkSaveStat}, one free near-miss`}
+                />
+                <Hook
+                  on={modifiers.startWithSlowmo}
+                  text="You start every run with a slow-mo charge"
+                  off="A skill node grants a slow-mo charge at the start of a run"
+                />
               </ul>
               <p className="text-xs text-ink-soft mt-3">
-                Capped on purpose. Training helps a little; it is still a reflex game.
+                Capped on purpose. Training helps a little; it is still a reflex game — and the
+                wall itself is the same one everyone gets today, so none of this changes what you
+                are climbing.
               </p>
             </Card>
           </>
@@ -479,11 +525,13 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Hook({ on, text }: { on: boolean; text: string }) {
+const pct = (fraction: number) => `${Math.round(fraction * 100)}%`;
+
+function Hook({ on, text, off }: { on: boolean; text: string; off: string }) {
   return (
     <li className={on ? 'text-ink' : 'opacity-50'}>
       {on ? '✓ ' : '· '}
-      {text}
+      {on ? text : off}
     </li>
   );
 }

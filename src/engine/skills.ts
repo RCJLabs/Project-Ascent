@@ -41,10 +41,13 @@ export type SkillRequirement =
   | { kind: 'stat'; stat: StatId; atLeast: number };
 
 /**
- * Effects, pruned to systems that exist. `ascent-boon` is the exception: the
- * arcade game is M5, so those nodes declare their effect and it stays inert
- * until the game reads it. Declaring them now beats renumbering the trees
- * later.
+ * Effects, pruned to systems that exist — `ascent-boon` included, since M31.
+ *
+ * These were declared while the arcade game was still unbuilt, on the
+ * reasoning that declaring them beat renumbering the trees later. That was
+ * right, and it left a label with nothing checking it: by the time the game
+ * read them, two of the three described mechanics that had never been
+ * written. The words now come from `ascent/boons.ts`, where the effect is.
  */
 export type SkillEffect =
   | { kind: 'project-slot'; extra: number }
