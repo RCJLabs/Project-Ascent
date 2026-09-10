@@ -810,15 +810,39 @@ a small diff instead of ninety-five separate edits.
   exists because running out of room is real), and deleting a project deletes its
   photos so they cannot sit orphaned in the quota, so undoing a project brings back
   everything but its pictures. Both are said in the UI rather than discovered later.
-- **M21 — Entry speed.** Logging is the most repeated action in the app and
-  `LogPage.tsx` is 1,297 lines. Quick-log from the last session, grade steppers
-  instead of selects, numeric keypads, swipe-to-delete on climb rows. **Also found
-  during M19: the protocol timer does not survive a reload at all.** It is
-  `useState` in `LogPage`, so a refresh, a crash, or a phone reclaiming the tab
-  mid-hangboard restarts the protocol from set one — the update prompt now avoids
-  causing it, but nothing else does. *Done when: a
-  typical bouldering session logs in under thirty seconds.* Open question the code
-  cannot answer: where logging actually annoys the climber using it.
+- **M21 — Entry speed.** *Done, with the caveats below.* Measured first, on a typical
+  bouldering session — V4×3, V5×2, V3×4 and one V6 attempt. Before: **20 interactions**,
+  because entry was three native `<select>`s and a select is open, scroll, choose
+  before it is a choice at all. After: **15**, and every one is now a direct tap on a
+  target already on screen. The count is the smaller half of that — a native picker on
+  a phone is about a second and a half, a chip tap a fraction of one — and putting it
+  the other way round would overstate what the arithmetic shows.
+  The grade row scrolls horizontally and scrolls *itself* to the chosen grade, because
+  seventeen grades wrapped is four lines tall on a phone and a climber logging V8
+  should not start every session looking at V0. **"Same as last time" is the real win**
+  for anyone running a program: the previous session's climbs and counts in one tap —
+  15 down to 1 — dropping names, because a named climb is a specific piece of rock and
+  carrying the name forward would have the app inventing an ascent.
+  Number fields now default to a decimal keypad **in the `Input` component**, so a call
+  site cannot forget; nine had no `inputMode` at all. Caveat left in the open in the
+  code: neither mobile keypad offers a minus sign, so a field taking negative added
+  weight still needs its own answer.
+  **The M19 finding is fixed:** the protocol timer was `useState` and nothing else, so a
+  refresh or a phone reclaiming the tab mid-hangboard restarted it from set one. It now
+  persists to `sessionStorage` — exactly the right lifetime: survives a reload, dies
+  with the tab, so nobody returns tomorrow to a timer claiming nineteen hours. A running
+  timer keeps running across the reload, because the rest interval did not pause when
+  the page did.
+  **Not built:** swipe-to-delete on climb rows. There is already a `−` that deletes at
+  zero, and a swipe with no confirmation on a touch device is how a climb disappears
+  without anyone tapping anything — the failure M20 just spent a milestone fixing.
+  **Two honest gaps.** The "under thirty seconds" bar is *not* claimed: I measured taps
+  and scripted time, not a human with chalky hands, and those are not the same
+  measurement. And the timer's reload-resume is covered by unit tests and by types, not
+  by driving a real hangboard timer through a refresh in a browser — seeding an active
+  program with a timed drill was more setup than the remaining budget allowed.
+  **Still open, and only the user can answer it:** where logging actually annoys the
+  climber using it. Everything above is inferred from tap counts.
 - **M22 — Polish and motion.** Skeletons instead of blank flashes during hydration,
   consistent empty states in place of ad-hoc prose per page, route transitions that
   respect reduced motion, and a typography scale pass. *Done when: nothing renders a
