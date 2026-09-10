@@ -67,48 +67,120 @@ export const POSES: Record<AvatarPose, Joints> = {
   },
 };
 
+/** Distance between two joints. */
+function span(a: Point, b: Point): number {
+  return Math.hypot(b[0] - a[0], b[1] - a[1]);
+}
+
 /**
- * The same figure, mid-move (PLAN.md — the Ascent).
+ * Where the middle joint sits, given both ends and the limb's length.
+ *
+ * Two-bone inverse kinematics with equal segments: the knee is wherever it
+ * has to be for a thigh and a shin of fixed length to reach from hip to
+ * foot. Pull the foot in and the knee swings out; push it away and the leg
+ * straightens.
+ *
+ * That is the whole reason this exists. The first version of the animation
+ * *translated* the limbs from a fixed pose, which meant a leg that started
+ * bent stayed bent for the entire cycle and one that started straight never
+ * folded — reported as "the right leg doesn't go straight and the left leg
+ * doesn't bend as much as the right", and that is exactly what it was.
+ *
+ * `side` is which way the joint breaks: knees and elbows bend away from the
+ * body, and a knee that hinges the other way is a horror film.
+ */
+export function bendJoint(anchor: Point, end: Point, length: number, side: number): Point {
+  const reach = span(anchor, end);
+  const half = length / 2;
+  const ux = (end[0] - anchor[0]) / (reach || 1);
+  const uy = (end[1] - anchor[1]) / (reach || 1);
+  // Straight when the limb is stretched to or past its length.
+  const along = Math.min(half, reach / 2);
+  const out = Math.sqrt(Math.max(0, half * half - along * along));
+  return [
+    anchor[0] + ux * along + -uy * out * side,
+    anchor[1] + uy * along + ux * out * side,
+  ];
+}
+
+/** Ease so a limb pauses at the top and bottom of its travel. */
+function wave(phase: number): number {
+  return (Math.sin(phase * Math.PI * 2) + 1) / 2;
+}
+
+/**
+ * The same figure, climbing (the Ascent).
  *
  * The game drew the avatar as a fixed silhouette sliding up a scrolling
  * wall, which reads as a sticker being dragged rather than a climber
- * climbing. This offsets the limbs around whatever pose the avatar is in,
- * so the identity — gear, colours, the posture that reads vitality — is
- * untouched and only the motion is added.
+ * climbing. This generates all four limbs from the torso, so each one moves
+ * through the same range as its opposite and actually bends and straightens.
  *
  * **Contralateral**, because that is how anyone climbs: left hand goes with
  * right foot. Moving the limbs on the same side together produces a gait
  * nobody has ever used, and it looks wrong before you can say why.
  *
- * `phase` is a turn, 0 to 1, and wraps — the caller drives it from distance
- * so the cadence rises with the climber's speed for free, and a paused game
- * holds a pose instead of running on the spot.
+ * The torso, head and gear come from whatever pose the avatar is in, so the
+ * identity is untouched. The limbs do not — a cycle generated from the hips
+ * and shoulders is the point, and the vitality posture still reads on the
+ * app's own portraits, which is where anyone looks for it.
+ *
+ * `phase` is a turn, 0 to 1, and wraps: the caller drives it from distance
+ * so cadence rises with speed and a paused game holds a pose rather than
+ * running on the spot.
  */
 export function climbingPose(base: Joints, phase: number): Joints {
-  const swing = Math.sin(phase * Math.PI * 2);
-  // Twice the frequency: the body rises once per limb, not once per cycle.
-  const bob = Math.cos(phase * Math.PI * 4) * 2.4;
+  const legLength = span(base.hipL, base.kneeL) + span(base.kneeL, base.footL);
+  const armLength = span(base.shoulderL, base.elbowL) + span(base.elbowL, base.handL);
 
-  const shift = (p: Point, dx: number, dy: number): Point => [p[0] + dx, p[1] + dy];
+  // One limb of each pair is up while the other is down.
+  const rightLift = wave(phase);
+  const leftLift = 1 - rightLift;
+  // Left hand with right foot.
+  const leftReach = rightLift;
+  const rightReach = leftLift;
+  // Twice the frequency: the body rises once per limb, not once per turn.
+  const bob = Math.cos(phase * Math.PI * 4) * 2.5;
+
+  /** A foot, from fully extended below the hip to stepped up and out. */
+  // More up than out: a foot that swings as far sideways as it does upward
+  // is a star jump, not a step.
+  const foot = (hip: Point, side: number, lift: number): Point => [
+    hip[0] + side * legLength * (0.07 + 0.21 * lift),
+    hip[1] + legLength * (0.97 - 0.55 * lift),
+  ];
+  /** A hand, from pulled in beside the shoulder to reaching overhead. */
+  const hand = (shoulder: Point, side: number, reach: number): Point => [
+    shoulder[0] + side * armLength * (0.46 - 0.28 * reach),
+    shoulder[1] - armLength * (0.42 + 0.5 * reach),
+  ];
+
+  const lift = (p: Point): Point => [p[0], p[1] + bob];
+  const hipL = lift(base.hipL);
+  const hipR = lift(base.hipR);
+  const shoulderL = lift(base.shoulderL);
+  const shoulderR = lift(base.shoulderR);
+
+  const footL = foot(hipL, -1, leftLift);
+  const footR = foot(hipR, 1, rightLift);
+  const handL = hand(shoulderL, -1, leftReach);
+  const handR = hand(shoulderR, 1, rightReach);
 
   return {
-    ...base,
-    head: shift(base.head, swing * 1.6, bob),
-    neck: shift(base.neck, swing * 1.2, bob),
-    shoulderL: shift(base.shoulderL, swing * 1.5, bob - swing * 2.5),
-    shoulderR: shift(base.shoulderR, swing * 1.5, bob + swing * 2.5),
-    elbowL: shift(base.elbowL, swing * 2, bob - swing * 8),
-    handL: shift(base.handL, swing * 2, -swing * 14),
-    elbowR: shift(base.elbowR, swing * 2, bob + swing * 8),
-    handR: shift(base.handR, swing * 2, swing * 14),
-    hipL: shift(base.hipL, swing * 1.2, bob),
-    hipR: shift(base.hipR, swing * 1.2, bob),
-    // Opposite the hands, and gentler: a foot swinging as far as a hand
-    // turns a climb into a march.
-    kneeL: shift(base.kneeL, swing * 2.5, swing * 6),
-    footL: shift(base.footL, swing * 2, swing * 10),
-    kneeR: shift(base.kneeR, swing * 2.5, -swing * 6),
-    footR: shift(base.footR, swing * 2, -swing * 10),
+    head: lift(base.head),
+    neck: lift(base.neck),
+    shoulderL,
+    shoulderR,
+    hipL,
+    hipR,
+    footL,
+    footR,
+    handL,
+    handR,
+    kneeL: bendJoint(hipL, footL, legLength, 1),
+    kneeR: bendJoint(hipR, footR, legLength, -1),
+    elbowL: bendJoint(shoulderL, handL, armLength, -1),
+    elbowR: bendJoint(shoulderR, handR, armLength, 1),
   };
 }
 

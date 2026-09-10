@@ -16,11 +16,12 @@ import { POSES, climberShapes, climbingPose, type Shape } from '@/ui/climberShap
 /**
  * World pixels per full climbing cycle.
  *
- * One reach per this much wall. Tuned by watching it: much shorter and the
- * limbs blur, much longer and the figure looks like it is being dragged
+ * One reach per this much wall. Tuned by watching it: at 110 the limbs
+ * cycled fast enough to blur into a flutter, which is what "make it a little
+ * slower" was about; much longer than this and the figure looks dragged
  * rather than moving itself.
  */
-const CLIMB_CYCLE_PX = 110;
+const CLIMB_CYCLE_PX = 190;
 
 export interface Palette {
   sky: string;
