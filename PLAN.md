@@ -1721,14 +1721,33 @@ and why.
   difference — which reads as the app ignoring its fixture. Every component test written
   so far was accidentally safe because their ids were deterministic; this one was not.
 
-- **M47 — Grade display has to reach the catalogue.** With Font selected, Projects and
-  Progress convert correctly; program cards, program detail and the guides still read
-  "Base Camp V0-V2", "V5-V8 GRADES", "Grade Range V5+ or 5.11+". `gradeRange.label` is
-  an authored string and guide prose has grades baked into text. **This is the
-  known limitation recorded at the foot of the guide-verification section, parked
-  against M9** — M9 is done and the limitation outlived it, so it needs a milestone of
-  its own rather than a note. The guides half is new: the note covered `gradeRange`
-  only.
+- **M47 — Grade display has to reach the catalogue.** *Done, the half that can be.*
+  With Font selected, Projects and Progress converted correctly and the catalogue did
+  not: "Base Camp V0-V2", "V5-V8 GRADES". This was the known limitation parked against
+  M9 at the foot of the guide-verification section; M9 finished and it outlived it.
+  **`gradeRange.label` is an override now, not the label.** `displayRange` derives the
+  words from `min` and `max` in the reader's own notation, and a label survives only
+  where the ladder is not the point — "All Levels" is not V0-V17, and Ground Zero's
+  "Pre-Climbing" is not V0. Seven authored ranges deleted; four editorial ones kept. A
+  test asserts no surviving label looks like a range, so a new program cannot ship a
+  hand-written "V3-V6".
+  **Deriving it broke the finder, and the whole suite stayed green.** Three of its
+  sentences read the label directly, so they became "undefined matches where you climb"
+  — with 1,713 tests passing, because nothing had ever asserted what those sentences
+  contain. `FinderInput` carries `display` now: the finder speaks to a climber, so it
+  says the range the way that climber reads grades. Tests for all three lines.
+  **The prose half is authoring, and a render-time transform would be wrong.** That is
+  the finding that settled it: **20 of the 61 grade tokens in the guides are the
+  notation being explained** — "V-scale (for bouldering) — runs from V0 (easiest)
+  upward", "Yosemite Decimal System … runs 5.0 to 5.15+". Rewriting those into Font
+  gives "runs from 4 (easiest) upward" in a passage whose subject is the V-scale. So
+  the remaining grades — **37 in program prose** (a pitch's "for V5-V8 climbers", a
+  graduation note, the reason given for what comes next) and **41 in the program
+  guides** — are pinned by count rather than hidden: they cannot grow without someone
+  editing the test, and the numbers are the size of the job whenever it is picked up.
+  Five mutations, five killed. Verified in a browser both ways: the program list goes
+  from four V-scale ranges to `6A-6C`, `6C-7B`, `7B-8A` with none left; the program
+  page header converts and its prose does not, which is exactly the pinned debt.
 
 - **M48 — Weight in kilograms.** 42 occurrences of "lbs" against 2 of "kg", and a
   benchmark unit'd `BW+lbs`. An app that offers V/Font and YDS/French and then

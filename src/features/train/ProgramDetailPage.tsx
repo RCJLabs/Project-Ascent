@@ -14,6 +14,8 @@ import { OptionCard } from '@/ui/Chip';
 import { Term } from '@/ui/Term';
 import { PageHeader } from '@/ui/PageHeader';
 import { RecordNotFound } from '@/ui/RecordNotFound';
+import { displayRange } from '@/engine/grades';
+import { useSettings } from '@/store/settings';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -165,6 +167,7 @@ function SessionTypeCard({
 }
 
 export function ProgramDetailPage({ params }: { params: { id: string } }) {
+  const display = useSettings((s) => s.display);
   const program = getProgram(params.id);
   const guide = guideSummaryFor(params.id);
   const [phaseIndex, setPhaseIndex] = useState(0);
@@ -218,7 +221,9 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
               <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mt-1">Weeks</div>
             </div>
             <div>
-              <div className="text-2xl font-black leading-none">{program.gradeRange.label}</div>
+              <div className="text-2xl font-black leading-none">
+                {displayRange(program.gradeRange, display)}
+              </div>
               <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mt-1">Grades</div>
             </div>
             <div>

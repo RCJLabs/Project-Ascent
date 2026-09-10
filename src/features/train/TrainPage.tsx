@@ -6,8 +6,11 @@ import { activeObjectives } from '@/engine/objectives';
 import { useObjectives } from '@/store/objectives';
 import { useCustomPrograms } from '@/store/programs';
 import { PageHeader } from '@/ui/PageHeader';
+import { displayRange } from '@/engine/grades';
+import { useSettings } from '@/store/settings';
 
 export function TrainPage() {
+  const display = useSettings((st) => st.display);
   const custom = useCustomPrograms((s) => s.custom);
   const objectives = useObjectives((s) => s.objectives);
   const active = activeObjectives(objectives);
@@ -106,7 +109,7 @@ export function TrainPage() {
                           </span>
                         ) : (
                           <span className="text-xs font-semibold text-accent">
-                            {program.gradeRange.label}
+                            {displayRange(program.gradeRange, display)}
                           </span>
                         )}
                       </div>

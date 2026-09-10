@@ -16,7 +16,7 @@
  *    top pick but still show, so the climber learns what to work toward.
  */
 
-import { gradeOrdinal, type GradeScale } from '@/engine/grades';
+import { DEFAULT_DISPLAY, displayRange, gradeOrdinal, type GradeDisplay, type GradeScale } from '@/engine/grades';
 import { GENERAL_TRAINING, PROGRAMS } from '@/content/programs';
 import { getMetric } from '@/content/metrics';
 import type { Discipline, Equipment, MetricId, Program } from '@/content/types';
@@ -54,6 +54,8 @@ export interface FinderInput {
   injuries?: string[];
   /** Coming back after time away — biases toward rebuilding safely. */
   comingOffBreak?: boolean;
+  /** How this climber reads grades, so the reasons say it their way. */
+  display?: GradeDisplay;
 }
 
 export interface Recommendation {
@@ -207,15 +209,18 @@ export function recommend(input: FinderInput): Recommendation[] {
     // ── Grade fit ──────────────────────────────────────────────────────
     const scale = program.gradeRange.scale;
     const fit = gradeIn(scale, scale === 'V' ? input.boulderGrade : input.sportGrade, program.gradeRange.min, program.gradeRange.max);
+    // The finder speaks to a climber, so it says the range the way that
+    // climber reads grades (PLAN.md M47).
+    const range = displayRange(program.gradeRange, input.display ?? DEFAULT_DISPLAY);
     if (fit === 'in') {
       score += 30;
-      reasons.push(`${program.gradeRange.label} matches where you climb`);
+      reasons.push(`${range} matches where you climb`);
     } else if (fit === 'below') {
       score -= 25;
-      cautions.push(`Written for ${program.gradeRange.label} — harder than your current grade`);
+      cautions.push(`Written for ${range} — harder than your current grade`);
     } else if (fit === 'above') {
       score -= 10;
-      cautions.push(`Written for ${program.gradeRange.label} — you may have outgrown it`);
+      cautions.push(`Written for ${range} — you may have outgrown it`);
     }
 
     // ── Discipline ─────────────────────────────────────────────────────

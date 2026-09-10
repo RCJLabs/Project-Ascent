@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { AlertTriangle, ArrowLeft, Check, Lock, Sparkles } from 'lucide-react';
-import { V_GRADES, YDS_GRADES } from '@/engine/grades';
+import { V_GRADES, YDS_GRADES, displayRange } from '@/engine/grades';
 import { useGradeOptions } from '@/ui/useGrade';
 import { PageSkeleton } from '@/ui/Skeleton';
 import { findProgram, type Experience, type FinderInput, type FinderResult, type Goal, type Recommendation } from '@/engine/finder';
@@ -16,6 +16,7 @@ import { Card } from '@/ui/Card';
 import { OptionCard } from '@/ui/Chip';
 import { Select } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
+import { useSettings } from '@/store/settings';
 
 const EXPERIENCE: { value: Experience; label: string; hint: string }[] = [
   { value: 'new', label: 'New to it', hint: 'Under a year, or never trained deliberately' },
@@ -75,12 +76,15 @@ function Chip({
 }
 
 function RecCard({ rec, headline }: { rec: Recommendation; headline?: boolean }) {
+  const display = useSettings((s) => s.display);
   return (
     <Card className={headline ? 'border-accent' : undefined}>
       <div className="flex items-baseline justify-between gap-2 flex-wrap mb-1">
         <h2 className="font-bold text-lg">{rec.program.name}</h2>
         {rec.program.kind === 'program' && (
-          <span className="text-xs font-semibold text-accent">{rec.program.gradeRange.label}</span>
+          <span className="text-xs font-semibold text-accent">
+            {displayRange(rec.program.gradeRange, display)}
+          </span>
         )}
       </div>
       <p className="text-sm text-ink-soft mb-3">{rec.program.subtitle}</p>
@@ -160,6 +164,7 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
   const injuries = storedInjuries.map((i) => i.part);
   const blocking = useMemo(() => injuryPolicy(storedInjuries).excluded, [storedInjuries]);
   const metrics = useMetrics((s) => s.entries);
+  const display = useSettings((s) => s.display);
 
   const toggleInjury = (part: BodyPart) => {
     const existing = storedInjuries.find((i) => i.part === part);
@@ -175,12 +180,13 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
   useEffect(() => {
     if (autoRan.current || !baseline) return;
     autoRan.current = true;
-    setResult(findProgram(finderInputFrom(baseline, equipment, blocking, metrics)));
-  }, [baseline, equipment, blocking, metrics]);
+    setResult(findProgram({ ...finderInputFrom(baseline, equipment, blocking, metrics), display }));
+  }, [baseline, equipment, blocking, metrics, display]);
 
   function run() {
     const input: FinderInput = {
       metrics,
+      display,
       discipline,
       experience,
       ...(boulderGrade ? { boulderGrade } : {}),

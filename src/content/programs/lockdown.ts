@@ -75,7 +75,7 @@ export const LOCKDOWN: Program = {
   kind: 'program',
   stage: 'style',
   discipline: 'both',
-  gradeRange: { scale: 'V', min: 'V3', max: 'V5', label: 'V3-V5' },
+  gradeRange: { scale: 'V', min: 'V3', max: 'V5' },
   weeks: 12,
   // Not one gym exercise in the program. All four loaded prescriptions —
   // density hangs, wide pull-ups, a weighted vest, ankle weights — want

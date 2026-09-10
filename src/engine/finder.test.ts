@@ -334,6 +334,40 @@ describe('finder', () => {
     });
   });
 
+  /**
+   * The reasons are read by a person, so they use that person's notation
+   * (PLAN.md M47).
+   *
+   * The range used to be an authored string on the program, and when that
+   * became derivable these three sentences read "undefined matches where you
+   * climb" — with the whole suite still green, because nothing had ever
+   * asserted what they contain.
+   */
+  describe('the grade range it names', () => {
+    const line = (over: Partial<FinderInput>) => {
+      const found = recommend(input({ boulderGrade: 'V6', goal: 'fingers', ...over })).find(
+        (r) => r.program.id === 'iron_grip',
+      )!;
+      return [...found.reasons, ...found.cautions].find((l) => /matches where|Written for/.test(l));
+    };
+
+    it('says the range, not a hole where one used to be', () => {
+      expect(line({})).toBe('V5-V8 matches where you climb');
+    });
+
+    it('says it the way this climber reads grades', () => {
+      expect(line({ display: { boulder: 'Font', route: 'French' } })).toBe('6C-7B matches where you climb');
+    });
+
+    it('keeps an editorial range as it was written', () => {
+      // "All Levels" is not V0-V17 in any notation.
+      const cruiser = recommend(
+        input({ goal: 'maintain', boulderGrade: 'V4', display: { boulder: 'Font', route: 'French' } }),
+      ).find((r) => r.program.id === 'the_cruiser')!;
+      expect(cruiser.reasons.join(' ')).toContain('All Levels');
+    });
+  });
+
   it('gives the same answer to the same question', () => {
     const ask = () => recommend(input({ goal: 'prep', experience: 'returning', daysPerWeek: 3 })).map((r) => r.program.id);
     expect(ask()).toEqual(ask());

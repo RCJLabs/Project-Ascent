@@ -321,7 +321,18 @@ export interface Program {
   outdoor?: boolean;
   stage: ProgramStage;
   discipline: Discipline;
-  gradeRange: { scale: GradeScale; min: string; max: string; label: string };
+  /**
+   * Who the program is written for.
+   *
+   * `label` is an **override**, not the label (PLAN.md M47). It used to be
+   * the only thing anything displayed, and being authored prose it could not
+   * follow the climber's Font/French preference — so someone reading their
+   * own climbing in Font still met "Base Camp V0-V2" in the catalogue.
+   * `displayRange` derives the words from `min` and `max` now, and this is
+   * for the ranges where the ladder is not the point: "All Levels" is not
+   * V0-V17, and Ground Zero's "Pre-Climbing" is not V0.
+   */
+  gradeRange: { scale: GradeScale; min: string; max: string; label?: string };
   weeks: number;
   /**
    * What the program cannot run without. The finder rules out a program

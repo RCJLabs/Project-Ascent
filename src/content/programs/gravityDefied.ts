@@ -39,7 +39,7 @@ export const GRAVITY_DEFIED: Program = {
   kind: 'program',
   stage: 'style',
   discipline: 'boulder',
-  gradeRange: { scale: 'V', min: 'V2', max: 'V5', label: 'V2-V5' },
+  gradeRange: { scale: 'V', min: 'V2', max: 'V5' },
   weeks: 12,
   // Two of thirty: Bulgarian split squats, which are a bodyweight exercise,
   // and box jumps that ask for a taller box rather than a barbell.

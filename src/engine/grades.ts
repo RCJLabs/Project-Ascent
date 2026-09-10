@@ -153,6 +153,23 @@ export function displayGrade(scale: GradeScale, grade: string, display: GradeDis
   return display.route === 'French' ? YDS_TO_FRENCH[canon] ?? canon : canon;
 }
 
+/**
+ * A program's grade range, in the notation the climber reads (PLAN.md M47).
+ *
+ * Derived rather than stored, because a stored string cannot follow a
+ * preference. An editorial `label` still wins where the ladder is not the
+ * point — "All Levels" says something V0-V17 does not.
+ */
+export function displayRange(
+  range: { scale: GradeScale; min: string; max: string; label?: string },
+  display: GradeDisplay,
+): string {
+  if (range.label !== undefined) return range.label;
+  const lo = displayGrade(range.scale, range.min, display);
+  const hi = displayGrade(range.scale, range.max, display);
+  return lo === hi ? lo : `${lo}-${hi}`;
+}
+
 /** Which notation a ladder is currently being read in. */
 export function displayNameFor(scale: GradeScale, display: GradeDisplay): string {
   return scale === 'V' ? display.boulder : display.route;

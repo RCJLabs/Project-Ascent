@@ -23,7 +23,7 @@ export const IRON_GRIP: Program = {
   kind: 'program',
   stage: 'style',
   discipline: 'both',
-  gradeRange: { scale: 'V', min: 'V5', max: 'V8', label: 'V5-V8' },
+  gradeRange: { scale: 'V', min: 'V5', max: 'V8' },
   weeks: 12,
   tracks: [
     {
