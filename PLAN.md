@@ -1014,14 +1014,36 @@ about ten lines and would have caught all three; it belongs with the first of th
   but only used inside `Skeleton.tsx`, which is the same pattern in miniature. They are
   internal now. That is three occurrences found (`validate_palette.js`, `EmptyState`,
   `recordCard`) and a fourth prevented.
-- **M27 — What you have been loading.** `bodyLoad.ts` is a real engine —
-  `LOAD_RULES`, `EQUIPMENT_LOADS`, `scanText`, `exerciseConflict`, `drillConflict` —
-  and it is used in exactly one place, the logger, to warn about an injury. The same
-  data answers "which parts of you have taken the most load this month", which is
-  what a climber with a niggle actually wants to know, and it is the honest input to
-  a deload decision. *Done when: a returning climber can see which tissue has been
-  quietest.*
-
+- **M27 — What you have been loading.** *Done.* `bodyLoad.ts` — `LOAD_RULES`,
+  `EQUIPMENT_LOADS`, `scanText`, `exerciseConflict`, `drillConflict` — was used in
+  exactly one place: a warning beside a line in the logger, and only when a climber
+  had already told the app something was hurt. The same table answers a question asked
+  far more often: *what have I actually been loading?*
+  Nine tissues, ordered heaviest first, with **days-since beside every one** — because
+  a quiet tissue is ambiguous. "Nothing for three weeks" and "never named in your log"
+  are different facts and a bar alone averages them into one grey answer. Every part
+  is listed even when nothing touched it: a missing row is indistinguishable from a
+  zero row, and what is *not* being loaded is half the reason to look.
+  **Load goes whole to each tissue a session touched, not divided between them.**
+  Dividing would say a session loads your fingers less because it also loaded your
+  shoulder, which is not how a body works. The consequence is deliberate: the parts do
+  not sum to the session total, so there is no total on this card at all and shares are
+  measured against the busiest tissue rather than against a sum that would mean nothing.
+  **Climbing counts even in silence.** Most logged sessions carry no prose, and without
+  a baseline attribution the card would report a climber who logs grades and nothing
+  else as having trained no tissue whatsoever.
+  **Two things the screenshots caught.** In dark mode the bold label plus its marker
+  pushed "shoulder" past the 64px label column and the bar overlapped it. And a
+  grades-only logger loads exactly the four climbing tissues, equally, every session —
+  so the "quietest" of them was whichever the sort happened to put last, and the card
+  named it. `TIE_SHARE` now suppresses that: a tie has no quietest, and inventing one
+  would be the scan pretending to be an assessment.
+  **The caveat is on the card, not only in the code.** `bodyLoad.ts` is blunt that it is
+  a keyword scan; presenting its output without saying so would let a relative picture
+  read as a measurement, and a climber deciding whether an elbow has had enough rest
+  deserves to know the app is reading their own words back. The card says it, and says
+  how many sessions it could not place. It prescribes nothing — the training-state card
+  is where advice belongs, and a keyword scan has not earned the right.
 - **M28 — Compare two periods.** `yearReview` compares like-for-like slices of two
   years and is careful about part-finished ones. The Progress page has no comparison
   at all — it shows current state. "This four weeks against the four before it",

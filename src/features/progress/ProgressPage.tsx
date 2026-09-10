@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { Activity, AlertTriangle, BookOpen, CalendarRange, CheckCircle2, ChevronRight, Info, Ruler, Trophy, TrendingDown } from 'lucide-react';
 import { getProgram } from '@/content/programs';
+import { getDrill } from '@/content/drills';
+import type { Session } from '@/db/sessions';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
 import { PageGrid, Wide } from '@/ui/PageGrid';
 import { useGradeLabel } from '@/ui/useGrade';
@@ -10,6 +12,7 @@ import { buildJournal } from '@/engine/journal';
 import { deriveCareer } from '@/engine/career';
 import { buildHeatGrid, describeConsistency } from '@/engine/consistency';
 import { describeTrend, loadTrend } from '@/engine/loadTrend';
+import { describeTissue, tissueLoad } from '@/engine/tissueLoad';
 import { today } from '@/engine/dates';
 import { availableYears } from '@/engine/yearReview';
 import { deriveClimberState, type AcwrZone } from '@/engine/derive';
@@ -26,6 +29,7 @@ import { TrainingState } from './TrainingState';
 import { LoadBars, ProgressionLine, PyramidBars } from '@/ui/charts/Charts';
 import { ConsistencyBody } from '@/ui/charts/ConsistencyGrid';
 import { LoadTrendLine } from '@/ui/charts/LoadTrendLine';
+import { TissueBars, TissueNote } from '@/ui/charts/TissueBars';
 
 /** Status presentation for ACWR. Colour never carries the meaning alone —
  *  every zone ships with an icon and a sentence. */
@@ -221,6 +225,30 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
   );
 }
 
+/**
+ * The words a session carries that are not on its own record.
+ *
+ * The drill it ran and the exercises its program prescribes live in the
+ * catalogue. Without them a program session contributes only what the
+ * climber happened to tick, which under-reports exactly the structured
+ * training this chart is most useful for.
+ */
+function catalogueWords(session: Session): string {
+  const words: string[] = [];
+  if (session.drillId) {
+    const drill = getDrill(session.drillId);
+    if (drill) words.push(drill.name, drill.focus, drill.description);
+  }
+  const type = session.programId
+    ? getProgram(session.programId)?.sessionTypes.find((t) => t.id === session.sessionTypeId)
+    : undefined;
+  if (type) {
+    words.push(type.name, type.description);
+    for (const block of type.blocks ?? []) words.push(block.name);
+  }
+  return words.join(' ');
+}
+
 export function ProgressPage() {
   const gradeLabel = useGradeLabel();
   const display = useSettings((s) => s.display);
@@ -248,6 +276,13 @@ export function ProgressPage() {
   const points = useMemo(() => weeklyProgression(sessions, scale, 12), [sessions, scale]);
   const heat = useMemo(() => buildHeatGrid({ sessions }), [sessions]);
   const trend = useMemo(() => loadTrend({ sessions, to: today() }), [sessions]);
+  // The scan reads the record; the drill a session ran and the exercises its
+  // program prescribed live in the catalogue, so they are fetched here and
+  // handed in. Without them a program session counts only what was ticked.
+  const tissue = useMemo(
+    () => tissueLoad({ sessions, to: today(), textFor: catalogueWords }),
+    [sessions],
+  );
   const projection = useMemo(() => projectGrade(points, scale, display), [points, scale, display]);
   const tally = scale === 'V' ? state.boulder : state.sport;
   const rows = useMemo(() => pyramid(tally, scale), [tally, scale]);
@@ -329,6 +364,12 @@ export function ProgressPage() {
           <p className="text-xs text-ink-soft mt-2">
             Last 28 days. Load is session RPE × hours. Deload days are shown in orange.
           </p>
+        </Card>
+
+        <Card title="What you have been loading">
+          <TissueBars load={tissue} />
+          <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeTissue(tissue)}</p>
+          <TissueNote load={tissue} />
         </Card>
 
         {/* The ratio the card above states as one number, as a trajectory.
