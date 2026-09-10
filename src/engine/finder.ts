@@ -19,6 +19,7 @@
 import { DEFAULT_DISPLAY, displayRange, gradeOrdinal, type GradeDisplay, type GradeScale } from '@/engine/grades';
 import { GENERAL_TRAINING, PROGRAMS } from '@/content/programs';
 import { getMetric } from '@/content/metrics';
+import { MIN_ADAPTED_WEEKS } from './adapt';
 import type { Discipline, Equipment, MetricId, Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import { seriesFor } from './assessments';
@@ -49,6 +50,14 @@ export interface FinderInput {
   sportGrade?: string;
   goal: Goal;
   daysPerWeek: number;
+  /**
+   * Weeks until the thing they are training for (PLAN.md M57).
+   *
+   * Undefined means no deadline, which is most of the time — it is a fact
+   * about a trip rather than about a climber, which is why the baseline does
+   * not ask and the finder screen does.
+   */
+  weeksAvailable?: number;
   equipment: Equipment[];
   /** Body parts currently injured, from the injury tracker's vocabulary. */
   injuries?: string[];
@@ -276,6 +285,33 @@ export function recommend(input: FinderInput): Recommendation[] {
       cautions.push(
         `Runs without ${helpfulMissing.map(equipmentWord).join(' or ')} — some of the loading work needs improvising`,
       );
+    }
+
+    // ── Weeks available ────────────────────────────────────────────────
+    //
+    // A twelve-week block is not out of reach for a climber with six weeks —
+    // it can be run over six (PLAN.md M56) — but it is not the same block,
+    // and something written to fit is a better answer where one exists.
+    // Logging modes never reach here — the loop skips them — so every
+    // program in hand has a written length to compare against.
+    if (input.weeksAvailable !== undefined) {
+      const weeks = input.weeksAvailable;
+      if (program.weeks <= weeks) {
+        score += 10;
+        reasons.push(
+          program.weeks === weeks
+            ? `Runs exactly your ${weeks} weeks`
+            : `Runs in ${program.weeks} of your ${weeks} weeks`,
+        );
+      } else if (weeks >= MIN_ADAPTED_WEEKS && weeks >= program.phases.length) {
+        score -= 8;
+        cautions.push(`Written as ${program.weeks} weeks — you would run it over ${weeks}`);
+      } else {
+        score -= 20;
+        cautions.push(
+          `Written as ${program.weeks} weeks, and ${weeks} is too few to run it over`,
+        );
+      }
     }
 
     // ── Days available ─────────────────────────────────────────────────

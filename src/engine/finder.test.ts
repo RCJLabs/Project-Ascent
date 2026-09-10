@@ -531,3 +531,67 @@ describe('finder', () => {
     expect(new Set(ids).size).toBe(3);
   });
 });
+
+/**
+ * How long the climber has (PLAN.md M57).
+ *
+ * The finder knew days a week and never asked how many weeks, so a block
+ * written to fit a trip could not be recommended for the reason it exists.
+ */
+describe('weeks available', () => {
+  it('changes nothing when there is no deadline', () => {
+    const open = recommend(input({ goal: 'fingers' }));
+    for (const rec of open) {
+      expect(rec.reasons.join(' '), rec.program.id).not.toMatch(/weeks/i);
+      expect(rec.cautions.join(' '), rec.program.id).not.toMatch(/Written as/);
+    }
+  });
+
+  it('says so when a program is written longer than the time there is', () => {
+    const rushed = recommend(input({ goal: 'fingers', weeksAvailable: 6 }));
+    for (const rec of rushed) {
+      expect(rec.cautions.join(' '), rec.program.id).toMatch(/Written as 12 weeks — you would run it over 6/);
+    }
+  });
+
+  // Twelve weeks is not out of reach for a climber with six — it can be run
+  // over six — so it is a caution, never a blocker.
+  it('never blocks a program for being longer than the time there is', () => {
+    // Entry standards still block; a length never does.
+    for (const rec of recommend(input({ weeksAvailable: 4 }))) {
+      expect(rec.blockers.join(' '), rec.program.id).not.toMatch(/week/i);
+    }
+  });
+
+  it('counts a program that fits as a reason to pick it', () => {
+    const roomy = recommend(input({ goal: 'fingers', weeksAvailable: 16 }));
+    for (const rec of roomy) {
+      expect(rec.reasons.join(' '), rec.program.id).toMatch(/Runs in 12 of your 16 weeks/);
+    }
+    expect(recommend(input({ weeksAvailable: 12 }))[0]!.reasons.join(' ')).toMatch(
+      /Runs exactly your 12 weeks/,
+    );
+  });
+
+  // Measured against the same program with no deadline at all, which is the
+  // only comparison that says whether the deadline helped or hurt.
+  it('scores a program up for fitting and down for being rushed', () => {
+    const scoreOf = (over: Partial<FinderInput>, id: string) =>
+      recommend(input({ goal: 'fingers', ...over })).find((r) => r.program.id === id)!.score;
+    const id = recommend(input({ goal: 'fingers' }))[0]!.program.id;
+    const open = scoreOf({}, id);
+
+    expect(scoreOf({ weeksAvailable: 12 }, id)).toBeGreaterThan(open);
+    expect(scoreOf({ weeksAvailable: 6 }, id)).toBeLessThan(open);
+    expect(scoreOf({ weeksAvailable: 3 }, id)).toBeLessThan(scoreOf({ weeksAvailable: 6 }, id));
+  });
+
+  // Four weeks is the floor an adaptation can reach. Below it the honest
+  // answer is that the catalogue has nothing written for that, which is
+  // exactly the hole M58 fills.
+  it('says a block cannot be run at all in too few weeks', () => {
+    for (const rec of recommend(input({ weeksAvailable: 3 }))) {
+      expect(rec.cautions.join(' '), rec.program.id).toMatch(/3 is too few to run it over/);
+    }
+  });
+});

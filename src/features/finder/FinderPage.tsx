@@ -149,6 +149,9 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
   const [sportGrade, setSportGrade] = useState(baseline?.sportGrade ?? '');
   const [goal, setGoal] = useState<Goal>(baseline?.goal ?? 'technique');
   const [daysPerWeek, setDaysPerWeek] = useState(baseline?.daysPerWeek ?? 4);
+  // Weeks until whatever they are training for. Not part of the baseline: a
+  // trip is a fact about this month, not about the climber (PLAN.md M57).
+  const [weeksAvailable, setWeeksAvailable] = useState<number | null>(null);
   // Read and write the profile directly rather than copying into local
   // state: what you tell the finder about your gear and injuries *is* your
   // profile, and a local copy seeded at mount goes stale when the store
@@ -193,6 +196,7 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
       ...(sportGrade ? { sportGrade } : {}),
       goal,
       daysPerWeek,
+      ...(weeksAvailable !== null ? { weeksAvailable } : {}),
       equipment,
       injuries: blocking,
       comingOffBreak: experience === 'returning',
@@ -337,9 +341,29 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
           </div>
         </Card>
 
-        <Card title="How many days a week can you train?">
+        <Card title="How long until you need it?">
+          <p className="text-sm text-ink-soft mb-3">
+            A trip, a project, a season. Leave it open if there is no date — most of the time
+            there is not.
+          </p>
           <div className="grid grid-cols-5 gap-2">
-            {[2, 3, 4, 5, 6].map((n) => (
+            <Chip selected={weeksAvailable === null} onClick={() => setWeeksAvailable(null)}>
+              <span className="font-semibold block text-center text-xs">Open</span>
+            </Chip>
+            {[4, 6, 8, 12].map((n) => (
+              <Chip key={n} selected={weeksAvailable === n} onClick={() => setWeeksAvailable(n)}>
+                {/* One string, not a number over a unit: "6" alone is also a
+                    days-per-week answer, and two chips reading 6 on one
+                    screen is a question a climber has to re-read. */}
+                <span className="font-semibold block text-center text-xs">{n} wk</span>
+              </Chip>
+            ))}
+          </div>
+        </Card>
+
+        <Card title="How many days a week can you train?">
+          <div className="grid grid-cols-6 gap-2">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
               <Chip key={n} selected={daysPerWeek === n} onClick={() => setDaysPerWeek(n)}>
                 <span className="font-semibold block text-center">{n}</span>
               </Chip>

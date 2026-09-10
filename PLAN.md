@@ -1966,10 +1966,23 @@ and why.
   and the profile stores `{gravity_defied: 6}` with the week plan; the program tile reads
   "6 of 12"; the guide says which block it is describing.
 
-- **M57 — The finder asks how long you have.** `FinderInput` knows days per week,
-  equipment, grades, goal and injuries — not how many weeks the climber has. A short
-  program is unreachable for the reason it exists until it does. One input, one
-  onboarding question, one scoring rule, and the reasons say it in the climber's words.
+- **M57 — The finder asks how long you have.** *Done.* `FinderInput` knew days a week,
+  equipment, grades, goal and injuries — not how many weeks the climber had, so a block
+  written to fit a trip could never be recommended for the reason it exists.
+  The question is on the finder screen and **not** in the baseline: a trip is a fact about
+  this month, not about a climber, and the seven questions are answered once. It defaults
+  to open, which is the honest default — most of the time there is no date.
+  A program longer than the time available is **cautioned, never blocked**: since M56 a
+  twelve-week block can be run over six, so "Written as 12 weeks — you would run it over 6"
+  is the true sentence, and it scores below the same program with no deadline. One that
+  fits scores above it. Below four weeks — the floor an adaptation can reach — the caution
+  becomes "12 weeks, and 3 is too few to run it over", which is the catalogue admitting the
+  hole M58 fills.
+  Five mutations, five killed, including two that only died once the test measured a
+  program against *itself with no deadline* rather than against another program.
+  Verified in a browser: asking for six weeks puts the sentence on every recommendation.
+  *Not done here: arriving at a program from a finder run with a deadline does not preselect
+  that length on the start screen. The climber picks it again, one card down.*
 
 - **M58 — Two programs the catalogue does not have.** A **two-day-a-week** block, which
   is the hole the app's own onboarding opens, and a **short block** of three or four

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { renderAt, reset } from '@/test/render';
 import { StartProgramPage } from '@/features/plan/StartProgramPage';
+import { FinderPage } from '@/features/finder/FinderPage';
 import { DAY_NAMES } from '@/engine/scheduler';
 
 /**
@@ -93,5 +94,42 @@ describe('planning a week', () => {
     fireEvent.click(screen.getByText('1'));
     const labelled = shapeCards().filter((c) => /Leaves out/.test(c.getAttribute('aria-label') ?? ''));
     expect(labelled.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * How long the climber has (PLAN.md M57).
+ *
+ * The question is on the finder screen and not in the baseline: a trip is a
+ * fact about this month, not about a climber.
+ */
+describe('the finder asks how long you have', () => {
+  it('asks, with an open answer as the default', async () => {
+    await reset();
+    renderAt('/find', <FinderPage />);
+    expect(screen.getByText('How long until you need it?')).toBeTruthy();
+    expect(screen.getByText('Open').closest('button')?.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('carries the answer into the recommendation it makes', async () => {
+    await reset();
+    renderAt('/find', <FinderPage />);
+    fireEvent.click(screen.getByText('6 wk').closest('button')!);
+    fireEvent.click(screen.getByText('Find my program'));
+    expect(screen.getAllByText(/you would run it over 6/).length).toBeGreaterThan(0);
+  });
+
+  it('says nothing about weeks when the answer is left open', async () => {
+    await reset();
+    renderAt('/find', <FinderPage />);
+    fireEvent.click(screen.getByText('Find my program'));
+    expect(screen.queryByText(/you would run it over/)).toBeNull();
+  });
+
+  it('offers a one-day week here too', async () => {
+    await reset();
+    renderAt('/find', <FinderPage />);
+    const days = screen.getByText('How many days a week can you train?').closest('div')!;
+    expect(within(days.parentElement!).getByText('1')).toBeTruthy();
   });
 });
