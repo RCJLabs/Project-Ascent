@@ -46,6 +46,7 @@ const GuidePage = lazy(() => import('@/features/guides/GuidePage').then((m) => (
 const SearchPage = lazy(() => import('@/features/search/SearchPage').then((m) => ({ default: m.SearchPage })));
 const GlossaryPage = lazy(() => import('@/features/glossary/GlossaryPage').then((m) => ({ default: m.GlossaryPage })));
 
+import { sweepOrphanMedia } from '@/db/media';
 import { hydrateAll } from '@/store';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
@@ -58,7 +59,14 @@ export function App() {
   const textSize = useSettings((s) => s.textSize);
 
   useEffect(() => {
-    void hydrateAll();
+    void hydrateAll().then(() => {
+      // Photos outlive a deleted owner so an undo can hand them back
+      // (PLAN.md M20, M30). Boot is the moment no undo can be pending, so
+      // it is where the leftovers are collected. Deliberately not inside
+      // `hydrateAll`: that also runs after an import, and a sweep there
+      // would judge freshly-restored blobs against a half-written database.
+      void sweepOrphanMedia().catch(() => {});
+    });
   }, []);
 
   useEffect(() => {

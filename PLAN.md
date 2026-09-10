@@ -1105,11 +1105,42 @@ about ten lines and would have caught all three; it belongs with the first of th
   that the blocked-node test was passing for the wrong reason. Verified at 390px light
   and dark, and at 320px at the largest text size: zero horizontal overflow.
 
-- **M30 — Photos on a session.** Media has exactly one owner shape, `projectOwner`,
-  so a session cannot carry a picture. A photo of the board you set, or the wall on
-  a trip, is the thing that makes a log worth re-reading a year later — and the
-  storage work in M19 plus the import preview in M20 already handle the cost
-  honestly. The `by-owner` index needs no schema change.
+- **M30 — Photos on a session.** *Done.* Media had exactly one owner shape,
+  `projectOwner`, so a session could not carry a picture. It can now: the photo card
+  sits under the notes on the session editor, because a photo is the other half of
+  what the notes are for. One card serves both owners rather than two copies of it.
+  **"The `by-owner` index needs no schema change" was true and it was the smaller
+  half of the problem.** A session's id *encodes its date* — `2026-09-01#0` — so
+  re-dating one is a write and a delete, and merging one into another destroys the
+  second id outright. Both are buttons on the session editor, and both would have
+  stranded the photos on an owner that no longer existed. `moveMediaOwner` carries
+  them across; the store calls it on each path and eight mutations confirm it.
+  **Deleting an owner no longer deletes its photos, and that fixes a bug that was
+  already shipped.** Deleting is undoable (M20), and `projects.remove` destroyed the
+  pictures first — so the undo handed back a project whose photos were silently gone,
+  while the bar said only "deleted, undo?". The code even carried a comment
+  rationalising it, which is what a rationalisation in a comment is for. Photos now
+  outlive the record and `sweepOrphanMedia` collects them at the next launch, when no
+  undo can want them. The cost is honest and small: a deleted owner's blobs hold their
+  space until then.
+  **The sweep reads index keys, not photos.** `getAll('media')` to find out who owns
+  what would pull every blob in the database into memory to decide which handful to
+  delete. A key cursor over `by-owner` never touches a value. It also refuses to judge
+  a namespace it cannot look up — an unknown prefix means it cannot tell a live owner
+  from a dead one, and guessing costs a climber their pictures.
+  **Two things found on the way that had nothing to do with sessions.** `listMedia`
+  sorted with a comparator that never returned 0, so two photos sharing a millisecond
+  came back in whichever order the sort produced — and not the same one twice;
+  `createdAt` is now monotonic per add and the id breaks any remaining tie. And the
+  thumbnail grid passed `p-0` to a card that sets `p-3`: both land in the same class
+  attribute and Tailwind's own ordering decides, so every thumbnail had been a quarter
+  smaller than the code said, on the projects page, for as long as it had existed.
+  Padding is a prop now, and `ui.test.ts` fails the next attempt to win that argument
+  through `className` — the first version of that test passed on the very code it was
+  written to catch, because `[^>]*` stops at the `>` in `onClick={() => …}`.
+  Verified in a browser end to end: add, caption, re-date, delete, undo, reload. A
+  deleted project's photo survives the delete, comes back with the undo, and is
+  collected on the next launch when the undo is not taken.
 
 - **M31 — The Ascent, tied to the training.** The game currently connects to the app
   through payouts, three wall themes unlocked by altimeter height, and a rest-day

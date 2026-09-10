@@ -133,6 +133,28 @@ describe('photos', () => {
     expect(await restored[0]!.blob.arrayBuffer()).toEqual(png.buffer);
   });
 
+  // The session card says photos "go into a backup with everything else".
+  // A promise printed on a screen is not a check (PLAN.md M30).
+  it('carries a session\u2019s photos too, not just a project\u2019s', async () => {
+    const db = await getDb();
+    await db.put('sessions', { id: '2026-03-01#0', date: '2026-03-01' } as never);
+    await seedPhoto('session:2026-03-01#0', 'the board I set');
+    const file = await exportAll();
+
+    const reloaded = parseExportFile(JSON.stringify(file));
+    globalThis.indexedDB = new IDBFactory();
+    resetDbForTests();
+    await importAll(reloaded, 'replace');
+
+    const { listMedia, sweepOrphanMedia } = await import('./media');
+    const restored = await listMedia('session:2026-03-01#0');
+    expect(restored).toHaveLength(1);
+    expect(restored[0]!.caption).toBe('the board I set');
+    // And the session came back with it, so the sweep does not eat them.
+    expect(await sweepOrphanMedia()).toBe(0);
+    expect(await listMedia('session:2026-03-01#0')).toHaveLength(1);
+  });
+
   it('leaves photos out when asked, without touching anything else', async () => {
     const db = await getDb();
     await db.put('sessions', { id: '2026-03-01#0', date: '2026-03-01' });

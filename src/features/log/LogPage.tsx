@@ -6,6 +6,8 @@ import { getProtocol } from '@/content/protocols';
 import { addDays, fromKey, shortLabel, today } from '@/engine/dates';
 import { clearTimerState, loadTimerState, saveTimerState } from '@/lib/timerState';
 import { ClimbEntry, RepeatLast, type Outcome } from './ClimbEntry';
+import { sessionOwner } from '@/db/media';
+import { MediaCard } from '@/features/media/MediaCard';
 import { offerUndo } from '@/store/undo';
 import { rankFor } from '@/engine/economy';
 import { useSettings } from '@/store/settings';
@@ -818,6 +820,16 @@ function SessionEditor({
           className="resize-y"
         />
       </Card>
+
+      {/* After the notes, because a photo is the other half of what the
+          notes are for (PLAN.md M30). Keyed on the session id, which the
+          date is part of — `sessions.move` and `sessions.merge` carry the
+          pictures across when that id changes. */}
+      <MediaCard
+        owner={sessionOwner(session.id)}
+        blurb="The board you set, the wall on a trip, the sequence you want to remember. Photos are resized on the way in and live on this device — they go into a backup with everything else."
+        fullNote="That is the limit for one session. Delete one to add another — storage here is finite and nothing is backed up anywhere but your own export."
+      />
 
       {timer && (
         <TimerSheet

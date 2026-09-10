@@ -16,7 +16,8 @@ import { TextArea } from '@/ui/Field';
 import { IconButton } from '@/ui/IconButton';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { Card } from '@/ui/Card';
-import { MediaCard } from './MediaCard';
+import { projectOwner } from '@/db/media';
+import { MediaCard } from '@/features/media/MediaCard';
 import { useGradeLabel } from '@/ui/useGrade';
 import { ProgressionLine } from '@/ui/charts/Charts';
 
@@ -151,7 +152,11 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
           )}
         </Card>
 
-        <MediaCard projectId={project.id} />
+        <MediaCard
+          owner={projectOwner(project.id)}
+          blurb="Shoot the line, the crux, the foot you keep missing. Photos are resized on the way in and live on this device — they go into a backup with everything else."
+          fullNote="That is the limit for one project. Delete one to add another — storage here is finite and nothing is backed up anywhere but your own export."
+        />
 
         <BetaCard project={project} onChange={(p) => void update(p)} />
 
@@ -174,11 +179,13 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
                   variant="danger"
                   onClick={() => {
                     const deleted = project;
+                    // The photos come back too. `remove` used to delete them
+                    // outright so nothing sat orphaned in the quota, which
+                    // made this offer hand back a project with its pictures
+                    // silently gone — and the bar said only "deleted, undo?".
+                    // They now outlive the record and are collected at the
+                    // next launch if the undo never comes (PLAN.md M30).
                     void remove(deleted.id).then(() =>
-                      // Photos are not offered back: `remove` deletes them so
-                      // they cannot sit orphaned in the quota, and undoing to
-                      // a project with its pictures missing would be a
-                      // quieter lie than saying so.
                       offerUndo(deleted.name || 'Project', () => restore(deleted)),
                     );
                     navigate('/projects');

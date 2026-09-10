@@ -7,6 +7,7 @@ import {
   putSession,
   type Session,
 } from '@/db/sessions';
+import { moveMediaOwner, sessionOwner } from '@/db/media';
 import { mergeSessions, moveSession } from '@/engine/sessionEdit';
 
 /**
@@ -67,6 +68,10 @@ export const useSessions = create<SessionsState>((set, get) => ({
 
   remove: async (session) => {
     await deleteSession(session.id);
+    // Photos are deliberately left behind rather than deleted with it: the
+    // delete is undoable and `restore` writes the session back under the
+    // same id, so the pictures are simply there again. `sweepOrphanMedia`
+    // collects them at the next launch if the undo never comes.
     const day = (get().byDate[session.date] ?? []).filter((s) => s.id !== session.id);
     set({ byDate: { ...get().byDate, [session.date]: day } });
   },
@@ -86,6 +91,9 @@ export const useSessions = create<SessionsState>((set, get) => ({
     // duplicate, which the climber can see and fix. The other order loses
     // the session outright.
     const moved = await putSession(moveSession(session, toDate, await nextIndex(toDate)));
+    // The id encodes the date, so the photos are filed under a key that is
+    // about to stop existing. Nothing else would ever reunite them.
+    await moveMediaOwner(sessionOwner(session.id), sessionOwner(moved.id));
     await deleteSession(session.id);
     const from = (get().byDate[session.date] ?? []).filter((s) => s.id !== session.id);
     const to = [...(get().byDate[toDate] ?? []), moved];
@@ -95,6 +103,8 @@ export const useSessions = create<SessionsState>((set, get) => ({
 
   merge: async (a, b) => {
     const merged = await putSession(mergeSessions(a, b));
+    // `b`'s id goes; its photos join `a`'s rather than going with it.
+    await moveMediaOwner(sessionOwner(b.id), sessionOwner(merged.id));
     await deleteSession(b.id);
     const day = (get().byDate[a.date] ?? [])
       .filter((s) => s.id !== b.id)

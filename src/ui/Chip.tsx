@@ -101,12 +101,22 @@ export function SelectableCard({
   onClick,
   label,
   children,
+  padded = true,
   className = '',
 }: {
   selected: boolean;
   onClick: () => void;
   label: string;
   children: ReactNode;
+  /**
+   * Off for a card whose child fills it — a photo thumbnail, say.
+   *
+   * A prop rather than a `p-0` in `className`: both land in the same class
+   * attribute, and which one wins is decided by Tailwind's own ordering of
+   * the stylesheet rather than by the order they are written in. The photo
+   * grid passed `p-0` and got `p-3`, losing a quarter of every thumbnail.
+   */
+  padded?: boolean;
   className?: string;
 }) {
   return (
@@ -115,7 +125,7 @@ export function SelectableCard({
       onClick={onClick}
       aria-pressed={selected}
       aria-label={label}
-      className={`${BASE} ${selected ? ON : `${OFF} text-ink`} rounded-xl p-3 ${className}`}
+      className={`${BASE} ${selected ? ON : `${OFF} text-ink`} rounded-xl ${padded ? 'p-3' : ''} ${className}`}
     >
       {children}
     </button>

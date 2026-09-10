@@ -164,3 +164,42 @@ describe('the primitives are safe to use', () => {
     }
   });
 });
+
+/**
+ * A `className` cannot override a class the component always sets.
+ *
+ * Both land in the same class attribute, and which one applies is decided by
+ * Tailwind's ordering of its own stylesheet, not by the order they appear in
+ * the markup. The photo grid passed `p-0` to a card that sets `p-3` and got
+ * `p-3` — every thumbnail a quarter smaller than the code said it was, on
+ * two screens, for as long as the card had existed.
+ *
+ * So where a component owns a property, the caller asks for it by prop.
+ */
+describe('overriding a component from the outside', () => {
+  const OWNED: { component: string; prop: string; pattern: RegExp }[] = [
+    { component: 'SelectableCard', prop: 'padded', pattern: /\bp-\d/ },
+  ];
+
+  it('does not try to win a padding argument through className', () => {
+    const offenders: string[] = [];
+    for (const { component, prop, pattern } of OWNED) {
+      for (const { path, source } of [...FEATURE_FILES, ...UI_FILES]) {
+        if (path.endsWith('Chip.tsx')) continue;
+        // Everything between `<Component` and the next opening tag. Matching
+        // the tag itself with `[^>]*` does not work: an `onClick={() => …}`
+        // attribute contains a `>` and ends the match early, which is how
+        // the first version of this test passed on the very code it was
+        // written to catch.
+        for (const chunk of source.split(`<${component}`).slice(1)) {
+          const tag = chunk.split(/<[A-Za-z]/)[0] ?? '';
+          const className = /className=\{?["`]([^"`]*)["`]/.exec(tag)?.[1] ?? '';
+          if (pattern.test(className)) {
+            offenders.push(`${path}: <${component} className="…${className}…"> — use ${prop}`);
+          }
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});

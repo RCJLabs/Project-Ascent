@@ -1,13 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Camera, Trash2, X } from 'lucide-react';
-import {
-  MAX_PER_OWNER,
-  addMedia,
-  deleteMedia,
-  listMedia,
-  projectOwner,
-  updateMedia,
-} from '@/db/media';
+import { MAX_PER_OWNER, addMedia, deleteMedia, listMedia, updateMedia } from '@/db/media';
 import type { MediaRecord } from '@/db/schema';
 import { formatBytes } from '@/engine/offline';
 import { ACCEPTED, ImageError, prepareImage } from '@/lib/image';
@@ -18,15 +11,31 @@ import { IconButton } from '@/ui/IconButton';
 import { Card } from '@/ui/Card';
 
 /**
- * Photos on a project: the line, the crux, the beta you keep forgetting.
+ * Photos on something. Projects have had them; sessions get them in M30.
+ *
+ * Takes an owner key rather than an id, because the two callers file their
+ * pictures under different namespaces and the copy differs — a project photo
+ * is beta you come back to, a session photo is the day itself. The mechanism
+ * is identical, so there is one of these rather than two.
  *
  * Object URLs are created per record and revoked when the list changes, so
- * scrolling a project with eight pictures does not leak eight handles a
+ * scrolling an owner with eight pictures does not leak eight handles a
  * render. Everything is re-encoded on the way in (lib/image.ts) — an offline
  * app cannot afford originals.
  */
-export function MediaCard({ projectId }: { projectId: string }) {
-  const owner = projectOwner(projectId);
+export function MediaCard({
+  owner,
+  title = 'Photos',
+  blurb,
+  fullNote,
+}: {
+  owner: string;
+  title?: string;
+  /** Shown instead of the grid while there are none. */
+  blurb: string;
+  /** Shown once the owner is at the cap. */
+  fullNote: string;
+}) {
   const [items, setItems] = useState<MediaRecord[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -82,12 +91,9 @@ export function MediaCard({ projectId }: { projectId: string }) {
   const open = viewing ? items.find((i) => i.id === viewing) : undefined;
 
   return (
-    <Card title="Photos">
+    <Card title={title}>
       {items.length === 0 ? (
-        <p className="text-sm text-ink-soft mb-3 leading-relaxed">
-          Shoot the line, the crux, the foot you keep missing. Photos are resized on the way in and
-          live on this device — they go into a backup with everything else.
-        </p>
+        <p className="text-sm text-ink-soft mb-3 leading-relaxed">{blurb}</p>
       ) : (
         <div className="grid grid-cols-3 gap-2 mb-3">
           {items.map((item) => (
@@ -96,7 +102,8 @@ export function MediaCard({ projectId }: { projectId: string }) {
               selected={false}
               onClick={() => setViewing(item.id)}
               label={item.caption || 'Open photo'}
-              className="aspect-square rounded-xl overflow-hidden bg-sunken border border-line p-0"
+              padded={false}
+              className="aspect-square rounded-xl overflow-hidden bg-sunken border border-line"
             >
               {urls[item.id] && (
                 <img src={urls[item.id]} alt={item.caption ?? ''} className="w-full h-full object-cover" />
@@ -123,12 +130,7 @@ export function MediaCard({ projectId }: { projectId: string }) {
           onChange={(e) => void onPicked(e.target.files)}
         />
       </div>
-      {full && (
-        <p className="text-xs text-ink-soft mt-2">
-          That is the limit for one project. Delete one to add another — storage here is finite and
-          nothing is backed up anywhere but your own export.
-        </p>
-      )}
+      {full && <p className="text-xs text-ink-soft mt-2">{fullNote}</p>}
       {error && <p className="text-sm text-danger mt-2">{error}</p>}
 
       {open && (
