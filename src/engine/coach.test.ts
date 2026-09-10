@@ -8,6 +8,7 @@ import {
   BURN_RUNGS,
   DETRAINING_ACWR,
   LAYOFF_DAYS,
+  STEEP_ACWR,
   OUTDOOR_GAP_DAYS,
   buildTips,
   visibleTips,
@@ -179,6 +180,75 @@ describe('load drifting down', () => {
       session(back(1), { climbs: [], restChecklist: { hydration: true, mobility: true, zone1: true, sleep: true } }),
     ];
     expect(ids(tips({ sessions: rested }))).toContain('detraining');
+  });
+
+  /**
+   * The direction that hurts people (PLAN.md M46).
+   *
+   * ACWR was computed, the bands were named, the chart painted optimal,
+   * caution and danger, and the XP brake withheld the effort bonus above
+   * 1.3. The coach — the app's only proactive voice, which speaks about
+   * plateaus, backups, stale benchmarks and losing fitness — said nothing at
+   * all when the ratio climbed.
+   */
+  describe('a load spike', () => {
+    /** Two steady months, then a week at several times the baseline. */
+    const ramp = (perDay: number): Session[] => {
+      const base = steady(10).filter((s) => s.date < back(7));
+      const spike: Session[] = [];
+      for (let d = 6; d >= 0; d--) {
+        for (let i = 0; i < perDay; i++) {
+          spike.push(session(back(d), { id: `${back(d)}#s${i}`, rpe: 9, durationMin: 150 }));
+        }
+      }
+      return [...base, ...spike];
+    };
+
+    it('says so, and names the number', () => {
+      const sessions = ramp(2);
+      const state = deriveClimberState(sessions, { today: TODAY });
+      expect(state.load.zone, 'the fixture is not actually a spike').toBe('danger');
+
+      const tip = tips({ sessions }).find((t) => t.id === 'load-spike');
+      expect(tip, 'the coach is silent on the one direction that injures people').toBeDefined();
+      expect(tip!.tone).toBe('caution');
+      expect(tip!.body).toContain(state.load.acwr!.toFixed(2));
+    });
+
+    it('separates ramping quickly from a spike, so a dismissal does not cover both', () => {
+      const spike = tips({ sessions: ramp(2) }).find((t) => t.id === 'load-spike');
+      expect(spike!.signature).toMatch(/^danger/);
+    });
+
+    it('speaks again when a dismissed spike keeps climbing', () => {
+      // A dismissal is "I have read this", not "I have handled it".
+      const steep = ramp(4);
+      const state = deriveClimberState(steep, { today: TODAY });
+      expect(state.load.acwr!, 'the fixture is not steep enough to test this').toBeGreaterThan(STEEP_ACWR);
+      const tip = tips({ sessions: steep }).find((t) => t.id === 'load-spike')!;
+      expect(tip.signature).toBe('danger-steep');
+      expect(visibleTips([tip], { 'load-spike': 'danger' })).toHaveLength(1);
+    });
+
+    it('outranks the tips that are only interesting', () => {
+      // A backup nudge and a streak compliment are not the thing to lead
+      // with in the week someone is most likely to get hurt.
+      const list = tips({ sessions: ramp(2) });
+      const spike = list.findIndex((t) => t.id === 'load-spike');
+      expect(spike).toBeGreaterThanOrEqual(0);
+      expect(spike, 'a spike should be near the top of the list').toBeLessThan(2);
+    });
+
+    it('stays quiet inside a planned deload', () => {
+      // A deload week is a deliberate change of load, and the ratio moving
+      // is the point of it.
+      const sessions = ramp(2).map((s) => ({ ...s, deload: true }));
+      expect(ids(tips({ sessions }))).not.toContain('load-spike');
+    });
+
+    it('stays quiet when the ratio is fine', () => {
+      expect(ids(tips({ sessions: steady(12) }))).not.toContain('load-spike');
+    });
   });
 
   it('stays quiet while the ratio is healthy', () => {

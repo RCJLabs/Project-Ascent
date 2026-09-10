@@ -72,6 +72,10 @@ export const BACKUP_INTERVAL_DAYS = 30;
 /** Below this ACWR the body is losing what it built, deload aside. */
 export const DETRAINING_ACWR = 0.8;
 
+/** Past this the spike tip changes its signature, so a dismissal does not
+ *  cover a ratio that has gone on climbing. */
+export const STEEP_ACWR = 1.8;
+
 /** A gap this long is not a rest week. */
 export const LAYOFF_DAYS = 10;
 
@@ -86,6 +90,7 @@ export function buildTips(input: CoachInput): Tip[] {
     ...projectBurns(input, today),
     outdoorReentry(input, today),
     detraining(input, today),
+    loadSpike(input),
     staleBenchmarks(input, today),
     ...missingDomains(input),
     lateSessions(input),
@@ -235,6 +240,57 @@ function detraining({ state, sessions }: CoachInput, today: string): Tip | null 
     };
   }
   return null;
+}
+
+/**
+ * The other direction, which is the one that hurts people (PLAN.md M46).
+ *
+ * Everything needed for this existed and none of it spoke. `derive.ts` names
+ * the bands, the load chart paints optimal, caution and danger, the XP brake
+ * withholds the effort bonus above 1.3, and Progress prints the ratio. The
+ * coach — the app's only proactive voice, which will tell you about a
+ * plateau, a stale benchmark, a missing backup and a streak worth keeping —
+ * had ten rules and not one of them fired when the ratio climbed. An app
+ * that carries an injury tracker and warns about losing fitness was silent
+ * about the pattern most associated with getting hurt.
+ *
+ * **Both zones speak, and a worsening spike speaks again.** Ramping quickly
+ * is a normal week for someone deliberately adding load, so it says so once
+ * and can be waved away; the signature is the zone, so dismissing that does
+ * not also dismiss the spike it may become. Above 1.8 the signature changes
+ * again, because a dismissal is "I have read this", not "I have handled it",
+ * and a ratio that keeps climbing after one has earned a second sentence.
+ * A spike outranks every tip that fires on real data: a plateau is a
+ * months-long problem and this is a this-week one.
+ */
+function loadSpike({ state }: CoachInput): Tip | null {
+  const { acwr, zone, inPlannedDeload } = state.load;
+  // A deload is a deliberate change of load in the other direction, and the
+  // ratio moving is the point of it rather than a surprise.
+  if (inPlannedDeload || acwr === null) return null;
+  if (zone !== 'caution' && zone !== 'danger') return null;
+
+  const ratio = acwr.toFixed(2);
+  if (zone === 'danger') {
+    return {
+      id: 'load-spike',
+      signature: acwr >= STEEP_ACWR ? 'danger-steep' : 'danger',
+      tone: 'caution',
+      weight: 93,
+      headline: 'Load spike',
+      body: `You are at ${ratio}× your own four-week baseline, and a jump this size is the pattern most associated with injury — not the training itself, the speed of the change. An easier week now costs a week. Fingers and tendons adapt slower than the muscles that made this feel possible.`,
+      action: { label: 'Plan the week', href: '/calendar' },
+    };
+  }
+  return {
+    id: 'load-spike',
+    signature: 'caution',
+    tone: 'caution',
+    weight: 62,
+    headline: 'Ramping quickly',
+    body: `You are at ${ratio}× your own four-week baseline. That is a fine week and a bad month — the ratio is about the speed of the change, not the size of the load, so holding here for a while is how it becomes the new baseline safely.`,
+    action: { label: 'Plan the week', href: '/calendar' },
+  };
 }
 
 /** A logged rest day is not training, and must not hold off a layoff tip. */

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { Activity, AlertTriangle, BookOpen, CalendarRange, CheckCircle2, ChevronRight, Info, Ruler, Trophy, TrendingDown } from 'lucide-react';
+import { Activity, BookOpen, CalendarRange, ChevronRight, Ruler, Trophy } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getDrill } from '@/content/drills';
 import type { Session } from '@/db/sessions';
@@ -16,7 +16,7 @@ import { describeTissue, tissueLoad } from '@/engine/tissueLoad';
 import { compareBlocks, describeBlocks } from '@/engine/blockCompare';
 import { today } from '@/engine/dates';
 import { availableYears } from '@/engine/yearReview';
-import { deriveClimberState, type AcwrZone } from '@/engine/derive';
+import { deriveClimberState } from '@/engine/derive';
 import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
 import { useMetrics } from '@/store/metrics';
 import { useProjects } from '@/store/projects';
@@ -32,41 +32,8 @@ import { ConsistencyBody } from '@/ui/charts/ConsistencyGrid';
 import { LoadTrendLine } from '@/ui/charts/LoadTrendLine';
 import { TissueBars, TissueNote } from '@/ui/charts/TissueBars';
 import { BlockCompareTable } from '@/ui/charts/BlockCompare';
+import { ZONE } from '@/ui/loadZone';
 
-/** Status presentation for ACWR. Colour never carries the meaning alone —
- *  every zone ships with an icon and a sentence. */
-const ZONE: Record<AcwrZone, { label: string; note: string; color: string; Icon: typeof Info }> = {
-  unknown: {
-    label: 'Not enough history',
-    note: 'Three weeks of logged sessions and this becomes meaningful.',
-    color: 'var(--c-ink-soft)',
-    Icon: Info,
-  },
-  detraining: {
-    label: 'Load dropping',
-    note: 'You are training well below your recent baseline. Fine after a trip or illness; worth noticing otherwise.',
-    color: 'var(--viz-warning)',
-    Icon: TrendingDown,
-  },
-  optimal: {
-    label: 'In the sweet spot',
-    note: 'Your recent load sits close to what you are used to. This is where adaptation happens.',
-    color: 'var(--viz-good)',
-    Icon: CheckCircle2,
-  },
-  caution: {
-    label: 'Ramping quickly',
-    note: 'You are training noticeably harder than your baseline. Sustainable briefly, not for weeks.',
-    color: 'var(--viz-serious)',
-    Icon: AlertTriangle,
-  },
-  danger: {
-    label: 'Load spike',
-    note: 'A jump this size is the pattern most associated with injury. Consider an easier week.',
-    color: 'var(--viz-critical)',
-    Icon: AlertTriangle,
-  },
-};
 
 /** Entry point into the journal, counting what there is to read. */
 function JournalCard() {

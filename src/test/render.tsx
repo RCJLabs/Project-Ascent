@@ -4,6 +4,8 @@ import { Router } from 'wouter';
 import { useHashLocation } from 'wouter/use-hash-location';
 import { afterEach } from 'vitest';
 import type { ReactElement } from 'react';
+import { getDb } from '@/db/db';
+import { EXPORTABLE_STORES } from '@/db/schema';
 import { hydrateAll } from '@/store';
 
 /**
@@ -48,5 +50,20 @@ export function renderAt(path: string, element: ReactElement): RenderResult {
  * against a loading state and passes for the wrong reason.
  */
 export async function hydrate(): Promise<void> {
+  await hydrateAll();
+}
+
+/**
+ * Empty every store, so one test's fixture is not the next one's surprise.
+ *
+ * `fake-indexeddb` is one database for the whole file. Tests that re-put the
+ * same ids are accidentally fine; one that seeds *less* than the test before
+ * it inherits the difference — which reads as the app ignoring the fixture,
+ * and cost a confused half-hour before this existed (PLAN.md M46).
+ */
+export async function reset(): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction(EXPORTABLE_STORES, 'readwrite');
+  await Promise.all([...EXPORTABLE_STORES.map((store) => tx.objectStore(store).clear()), tx.done]);
   await hydrateAll();
 }

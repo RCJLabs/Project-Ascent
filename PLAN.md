@@ -1691,14 +1691,35 @@ and why.
   Grip running it reads "Iron Grip", draws the session icons and keeps Rearrange. Four
   mutations, four killed.
 
-- **M46 — Say something on the dangerous side of load.** ACWR is computed, the bands
-  are defined (`optimalTo: 1.3`, `cautionTo: 1.5`), the load chart paints optimal,
-  caution and danger, and the XP brake withholds the effort bonus above 1.3. But of the
-  coach's ten tips — plateau, detraining, stale benchmarks, backup nudge, streak praise
-  — **none fires when the ratio is climbing**. §5.5 specifies an ACWR gauge on Home
-  with plain-language guidance; Home has no load surface at all. The app carries an
-  injury tracker and warns about losing fitness, and is silent about the one direction
-  that hurts people.
+- **M46 — Say something on the dangerous side of load.** *Done.* Everything needed
+  existed and none of it spoke. `derive.ts` names the bands, `AcwrZone` already had
+  `caution` and `danger`, the load chart painted all three, the XP brake withheld the
+  effort bonus above 1.3, and Progress printed the ratio. The coach — the app's only
+  proactive voice, which will tell you about a plateau, a stale benchmark, a missing
+  backup and a streak worth keeping — had **ten rules and not one fired when the ratio
+  climbed**. An app carrying an injury tracker, warning about losing fitness, silent
+  about the pattern most associated with getting hurt.
+  **Both zones speak, and a worsening spike speaks again.** Ramping quickly is a normal
+  week for someone deliberately adding load, so it says so once at weight 62 and can be
+  waved away; the signature is the zone, so dismissing that does not dismiss the spike
+  it may become. A spike is weight 93 — above every tip that fires on real data,
+  because a plateau is a months-long problem and this is a this-week one. Past 1.8 the
+  signature changes again, because a dismissal is "I have read this", not "I have
+  handled it".
+  **Deliberately not the gauge §5.5 describes.** A permanent gauge is ambient awareness
+  of a number that is unremarkable most of the time; what was missing was anyone
+  *saying* something when it stopped being unremarkable. The tip names the ratio, gives
+  the reason in plain language, carries an action, and leads Coach's Corner on Home —
+  and Home is a screen M45 has just finished decongesting, so a ninth card showing a
+  usually-boring number would be a poor trade. The full gauge, chart and bands stay on
+  Progress, one tap away. Recorded here rather than quietly skipped.
+  **`ZONE` moved out of `ProgressPage` into `ui/loadZone.ts`**, because two copies of a
+  threshold's wording is exactly how a guide ends up saying 1.3 while the app draws the
+  line at 1.4.
+  Five mutations, five killed. **The harness gained `reset()`**: `fake-indexeddb` is one
+  database per file, so a test seeding *less* than the one before it inherits the
+  difference — which reads as the app ignoring its fixture. Every component test written
+  so far was accidentally safe because their ids were deterministic; this one was not.
 
 - **M47 — Grade display has to reach the catalogue.** With Font selected, Projects and
   Progress convert correctly; program cards, program detail and the guides still read
