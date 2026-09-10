@@ -84,6 +84,46 @@ export function buildWall(seed: number, points = 24): WallPattern {
   };
 }
 
+/**
+ * Where each notch of a wall edge sits on screen, for one frame.
+ *
+ * Pure, and separate from the drawing, because the scroll *direction* was
+ * wrong and a direction bug is invisible in a canvas call. The climber is
+ * going up, so everything fixed to the wall must travel **down** the screen
+ * — which is what `screenY` does for entities and what the strata already
+ * did, leaving the walls as the one thing sliding the other way. Reported as
+ * "the side walls are moving upwards instead of down", and that is exactly
+ * what it was.
+ *
+ * The arithmetic, so the next person does not have to re-derive it: with
+ * `base = floor(shift / step)` and `frac = shift % step`, taking the depth
+ * at `base - i` and drawing it at `i * step + frac` means that when `shift`
+ * grows by one `step`, the same depth is found one slot further down and
+ * lands one `step` lower. Both halves have to move together; changing only
+ * the `y` slides the outline while the peaks stay put.
+ */
+export function edgeProfile(
+  depths: readonly number[],
+  offset: number,
+  step: number,
+  viewHeight: number,
+): { y: number; depth: number }[] {
+  const n = depths.length;
+  const height = n * step;
+  const shift = ((offset % height) + height) % height;
+  const base = Math.floor(shift / step);
+  const frac = shift % step;
+
+  const out: { y: number; depth: number }[] = [];
+  // Two extra slots at each end: `frac` slides the whole run by up to a
+  // step, and a gap at the top edge is a visible seam.
+  for (let i = -2; i <= viewHeight / step + 2; i++) {
+    const index = (((base - i) % n) + n) % n;
+    out.push({ y: i * step + frac, depth: depths[index]! });
+  }
+  return out;
+}
+
 function drawEdge(
   ctx: CanvasRenderingContext2D,
   depths: number[],
@@ -92,20 +132,15 @@ function drawEdge(
   color: string,
   side: 'left' | 'right',
 ): void {
-  const height = depths.length * step;
-  const shift = ((offset % height) + height) % height;
+  const points = edgeProfile(depths, offset, step, VIEW.height);
   ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.moveTo(side === 'left' ? 0 : VIEW.width, -step);
-  for (let i = -1; i <= VIEW.height / step + 1; i++) {
-    const index = (((Math.floor((shift + i * step) / step) % depths.length) + depths.length) %
-      depths.length) as number;
-    const depth = depths[index]!;
-    const y = i * step - (shift % step);
+  ctx.moveTo(side === 'left' ? 0 : VIEW.width, -step * 2);
+  for (const { y, depth } of points) {
     ctx.lineTo(side === 'left' ? depth : VIEW.width - depth, y);
     ctx.lineTo(side === 'left' ? depth * 0.4 : VIEW.width - depth * 0.4, y + step / 2);
   }
-  ctx.lineTo(side === 'left' ? 0 : VIEW.width, VIEW.height + step);
+  ctx.lineTo(side === 'left' ? 0 : VIEW.width, VIEW.height + step * 2);
   ctx.closePath();
   ctx.fill();
 }
@@ -156,6 +191,119 @@ function drawShape(ctx: CanvasRenderingContext2D, shape: Shape): void {
   }
 }
 
+/**
+ * An obstacle's outline: a lumpy polygon, not a rounded rectangle.
+ *
+ * Rocks were rounded rects with a lighter band across the top, which reads
+ * as a brick. Real rock has facets and no two are the same, so the outline
+ * is a ring of points at varying radii — deterministic from the entity's id,
+ * because a shape re-rolled every frame is a rock that boils.
+ *
+ * Returned as plain numbers so the shape can be tested without a canvas: it
+ * has to stay inside the box the collision maths uses, or the game will
+ * punish a player for a hit they could not see coming.
+ */
+export function rockOutline(
+  id: number,
+  width: number,
+  height: number,
+  points = 9,
+): { x: number; y: number }[] {
+  const rng = createRng((id + 1) * 0x9e3779b1);
+  const out: { x: number; y: number }[] = [];
+  for (let i = 0; i < points; i++) {
+    // Jitter the angle as well as the radius: evenly spaced vertices read as
+    // a gem, and a boulder is not a gem.
+    const spread = (Math.PI * 2) / points;
+    const angle = i * spread + (next(rng) - 0.5) * spread * 0.55;
+    // Never past the collision box — 0.5 is its edge, so this stays inside.
+    const radius = 0.34 + next(rng) * 0.16;
+    out.push({ x: Math.cos(angle) * radius * width, y: Math.sin(angle) * radius * height });
+  }
+  return out;
+}
+
+/** One colour, lightened or darkened. Amount is a fraction of full white/black. */
+function shade(color: string, amount: number): string {
+  const hex = color.replace('#', '');
+  if (hex.length !== 6) return color;
+  const channel = (at: number) => {
+    const value = parseInt(hex.slice(at, at + 2), 16);
+    return Math.max(0, Math.min(255, Math.round(value + amount * 255)));
+  };
+  return `rgb(${channel(0)}, ${channel(2)}, ${channel(4)})`;
+}
+
+/** Light from the upper-left, as a unit vector. Canvas y grows downward. */
+const LIGHT = { x: -0.707, y: -0.707 };
+
+/**
+ * How bright one facet of a rock is, from where it faces.
+ *
+ * The first attempt shaded three vertical bands across the whole rock, which
+ * at 40px read as a striped slab rather than stone — the stripes ran
+ * straight while the silhouette was lumpy, so nothing lined up. Shading each
+ * triangle by the direction it actually faces costs the same and gives the
+ * faceted look the outline was for.
+ *
+ * Returned as a number in roughly [-1, 1] so the mapping to a colour stays
+ * in one place, and so this can be checked without a canvas.
+ */
+export function facetLight(cx: number, cy: number): number {
+  const length = Math.hypot(cx, cy);
+  if (length === 0) return 0;
+  return (cx / length) * LIGHT.x + (cy / length) * LIGHT.y;
+}
+
+function drawRock(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  entity: Entity,
+  color: string,
+): void {
+  const points = rockOutline(entity.id, entity.width, entity.height);
+  const trace = () => {
+    ctx.beginPath();
+    points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+    ctx.closePath();
+  };
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  ctx.fillStyle = color;
+  trace();
+  ctx.fill();
+
+  // One triangle per edge, from the centre out, each shaded by which way it
+  // faces. A hairline stroke in the same colour closes the seams antialiasing
+  // leaves between adjacent triangles.
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i]!;
+    const b = points[(i + 1) % points.length]!;
+    const tone = shade(color, facetLight((a.x + b.x) / 2, (a.y + b.y) / 2) * 0.12);
+    ctx.fillStyle = tone;
+    ctx.strokeStyle = tone;
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // A dark rim, so a rock separates from the wall behind it at speed.
+  ctx.strokeStyle = 'rgba(0,0,0,0.32)';
+  ctx.lineWidth = 1.5;
+  trace();
+  ctx.stroke();
+
+  ctx.restore();
+}
+
 function entityColor(entity: Entity, palette: Palette): string {
   switch (entity.kind) {
     case 'rock': return palette.rock;
@@ -175,15 +323,7 @@ function drawEntity(ctx: CanvasRenderingContext2D, state: RunState, entity: Enti
   const color = entityColor(entity, palette);
 
   if (isObstacle(entity.kind)) {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.roundRect(x - entity.width / 2, y - entity.height / 2, entity.width, entity.height, 8);
-    ctx.fill();
-    // A lighter top face, so a rock reads as a solid rather than a slab.
-    ctx.fillStyle = 'rgba(255,255,255,0.16)';
-    ctx.beginPath();
-    ctx.roundRect(x - entity.width / 2, y - entity.height / 2, entity.width, entity.height * 0.34, 8);
-    ctx.fill();
+    drawRock(ctx, x, y, entity, color);
     return;
   }
 
