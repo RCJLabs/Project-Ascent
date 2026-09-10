@@ -870,6 +870,94 @@ a small diff instead of ninety-five separate edits.
   **Reduced motion needed nothing:** M14 already turns motion off globally when the
   system asks, with a test, and route transitions ride on that same rule rather than each
   remembering to check.
+### Second audit — progress, charts and the game (2026-09-10)
+
+Ten recommendations, each from something measured in the codebase rather than
+brainstormed. Numbers below are counts taken at the time of writing.
+
+**A pattern first, because it has now happened three times.** `validate_palette.js`
+was cited in `index.css` and did not exist (three colours had been failing AA the
+whole time). `EmptyState` was written in M13 and used in **zero** places while eight
+pages kept hand-rolled copies. And `recordCard` — a share card for a personal
+record — sits in `ui/shareCard.ts` today, fully written, reachable from **nothing**.
+Building a primitive is not the same as wiring it, and nothing in the repo notices
+the difference. A test that every exported card/primitive has at least one caller is
+about ten lines and would have caught all three; it belongs with the first of these.
+
+- **M23 — The consistency grid.** There is **no heatmap anywhere in the app** — the
+  only time-shaped charts are `YearPage`'s month bars. A year of days as a grid is
+  the chart climbers actually read, because consistency is the thing that moves
+  grades and a monthly total hides a fortnight off. Colour by session load, not a
+  binary dot, so a deload block looks different from a lost fortnight — and given
+  M15's CVD work, lightness has to carry it, not hue. *Done when: the last twelve
+  months fit one screen and a gap is visible without counting.*
+
+- **M24 — The stat radar.** `stats.ts` defines exactly five axes
+  (`STR`/`END`/`TEC`/`MEN`/`AGI`) with labels and blurbs, surfaced across five files
+  — as numbers and bars, never as a shape. Five axes is a radar, and the shape is
+  the point: a climber who is all fingers and no endurance should *look* lopsided.
+  Pair it with the same shape from six months ago, faint, behind. *Done when: the
+  weakest axis is obvious without reading a number.*
+
+- **M25 — Load and recovery over time.** Three chart primitives exist (`LoadBars`,
+  `ProgressionLine`, `PyramidBars`) across four call sites, and `LoadBars` shows a
+  28-day window only. The app derives far more than it draws: ACWR has a full
+  history and is shown as one current figure; rest cadence, session-type mix and
+  time-of-day are all derivable and none are drawn. ACWR as a line with the
+  `ACWR_BOUNDS` band shaded is the single most useful missing chart, because it
+  turns a number nobody trusts into a trajectory.
+
+- **M26 — The moment a record lands.** A personal record pays `0.5` of a level —
+  **the biggest single award in the economy**, more than three sessions — and the
+  card shown after logging says only "Earned +N XP". It never names the record.
+  Meanwhile `recordCard` exists in `shareCard.ts` and is called from nowhere. Name
+  the record where it happens, offer the card that was already built, and add the
+  ten-line test above so the next unwired primitive fails a run instead of sitting
+  there. *Done when: sending your first V7 is a different screen from any other
+  session.*
+
+- **M27 — What you have been loading.** `bodyLoad.ts` is a real engine —
+  `LOAD_RULES`, `EQUIPMENT_LOADS`, `scanText`, `exerciseConflict`, `drillConflict` —
+  and it is used in exactly one place, the logger, to warn about an injury. The same
+  data answers "which parts of you have taken the most load this month", which is
+  what a climber with a niggle actually wants to know, and it is the honest input to
+  a deload decision. *Done when: a returning climber can see which tissue has been
+  quietest.*
+
+- **M28 — Compare two periods.** `yearReview` compares like-for-like slices of two
+  years and is careful about part-finished ones. The Progress page has no comparison
+  at all — it shows current state. "This four weeks against the four before it",
+  with the same fixed ordering `changes()` already uses (never sorted by flattery),
+  is the missing everyday version. *Done when: "am I actually training more?" is one
+  tap from Progress.*
+
+- **M29 — The next unlock.** There are **125 skill nodes across five trees** and they
+  are reachable from one page. Nothing anywhere else says "two more sends at V5 and
+  Half Crimp unlocks". A single line on Home or after a session, naming the nearest
+  node and what it needs, turns a static tree into a reason to train. Keep it to one:
+  a list of five is a chore, not a pull.
+
+- **M30 — Photos on a session.** Media has exactly one owner shape, `projectOwner`,
+  so a session cannot carry a picture. A photo of the board you set, or the wall on
+  a trip, is the thing that makes a log worth re-reading a year later — and the
+  storage work in M19 plus the import preview in M20 already handle the cost
+  honestly. The `by-owner` index needs no schema change.
+
+- **M31 — The Ascent, tied to the training.** The game currently connects to the app
+  through payouts, three wall themes unlocked by altimeter height, and a rest-day
+  palette. Deeper hooks that cost nothing on a server: seed the daily wall from your
+  own logged week so a hard week is a harder wall; draw the obstacle mix from the
+  drill categories your log shows least; let a skill node change something visible in
+  the run. The `GAME_ACTION_CAP` of 7.5% already guarantees none of this can outpay
+  real training, which is what makes it safe to make the game better.
+
+- **M32 — Named achievements.** `career.ts` is an unbounded counter axis — 250 sends,
+  then 500 — which is good for a timeline and bad for a thing to aim at. A fixed,
+  nameable set ("first outdoor day", "a full block finished", "three months without
+  a missed week") is a different feeling: countable, finite, and shareable. It must
+  derive from the log like everything else, and it should be a separate module from
+  `career` so the two axes cannot be confused.
+
 - **M12 — Ship.** TWA packaging + assetlinks, Play internal testing, store listing.
   Last, after M13–M22.
 
