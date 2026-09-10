@@ -2087,8 +2087,121 @@ and why.
   comes back holding only `display` and `units`, the page stays dark — and a record
   arriving afterwards with someone else's light theme changes nothing.
 
-- **M12 — Ship.** TWA packaging + assetlinks, Play internal testing, store listing.
-  Last, after M13–M22.
+### The next fifteen (proposed, M61-M75)
+
+*Brainstormed against the app as it stands. Three were asked for by name; six sharpen
+something that already exists; six are new. Nothing here is committed.*
+
+- **M61 — More themes, and a way to author one without guessing.** Three ship — Alpine,
+  Slate, Sandstone — each a light and a dark palette of thirteen keys, and `themes.test.ts`
+  holds every one of them to WCAG AA in both modes. That test is the real constraint: a new
+  theme is twenty-six colours that must *all* pass, and the accent failing at 4.31:1 is a
+  mistake this project has already made once. So the work is two things. A **contrast
+  report** — a script that prints which pairs fail and by how much, so a palette is tuned
+  rather than guessed — and then the themes themselves. Rock is the obvious well: Granite,
+  Limestone, Gritstone, Basalt, Desert Varnish, plus a **high-contrast** theme that exists
+  for legibility rather than taste, and a **true-black** one for OLED phones, where it is a
+  battery feature and not a mood.
+
+- **M62 — Gamification that spends what it earns.** `spend()` exists on the game store and
+  **nothing in the app calls it**: the Climber page has printed "N earned · 0 spent" since
+  the day it was written. The currency is a scoreboard wearing an economy's clothes. Three
+  additions, in order of how much they are worth: a **cosmetic sink** — avatar palettes are
+  already stored per-climber, so they are the natural thing to buy, and §feature-11 already
+  says any economy stays cosmetic; **titles** earned from the log rather than bought, shown
+  beside the climber's name; and **seasons** — the board refreshes weekly already, so a
+  longer arc that closes and starts again gives the year a shape. What must *not* happen is
+  a skill shop: the tree is deliberately a map of your training, not a thing you spend on,
+  and the app guide says so in as many words.
+
+- **M63 — Achievements belong on the climber, and the career has to be findable.**
+  Fourteen achievements render on `/career`, which hangs off `/progress` — two taps from a
+  tab, and only if you know it is there. The climber page hangs off Home and holds Skills,
+  Stats, Currency, Ranks, Recent XP, Vitality and Appearance: everything about who you are
+  except the things you have done. Move the achievements card there, leave the timeline on
+  the career page, and link the two.
+  **The deeper problem is the tab bar.** Six tabs, and one of them is Search — a tab whose
+  existence is an admission that things cannot be found. The climber, the board, the coach
+  and the career are all off-tab. Worth considering: the climber takes a tab slot, and
+  search moves to the header where it is one tap from everywhere rather than one tap from
+  the bottom bar.
+
+**Six that sharpen what is already there.**
+
+- **M64 — Tune session priority across the catalogue.** M55 shipped `SessionType.priority`
+  and set it on nothing: every shipped program still drops sessions in declaration order
+  when a week is short. Nine programs, thirty-seven session types, and the values are a
+  coaching judgement. Cheapest useful version: a proposed ordering derived from each
+  program's own `max-per-week` caps and `order-in-week` rules, offered as a diff to correct
+  rather than a blank field.
+
+- **M65 — Search the guides, not just their headings.** The search page indexes a guide by
+  name, subtitle and section *titles*. The bodies — nearly five thousand lines, the app's
+  largest single body of knowledge — are unreachable except by reading. "Where does it say
+  what a deload is for?" has an answer the app is holding and cannot hand over. A
+  build-time index over guide and glossary prose, with a snippet per hit.
+
+- **M66 — A grade pyramid.** Five charts ship — consistency grid, load trend, block compare,
+  stat radar, tissue bars — and none of them is the one climbers actually draw: sends by
+  grade, stacked, over a period. It answers "is my base wide enough for the grade I want"
+  in a single glance, and every input for it is already in the log.
+
+- **M67 — Put the assessments on the calendar.** Every program declares its `assessments`,
+  and nothing ever schedules one. The coach nags when a benchmark goes stale, which is the
+  app noticing after the fact. Testing weeks belong on the plan — at the start, at the phase
+  boundaries and at the end — so a climber arrives at them instead of being told they are
+  late.
+
+- **M68 — Share more than an achievement.** `ShareSheet` and `achievementCard` exist and
+  are wired to exactly one thing. The weekly review, the year in review and a hard send are
+  all things a climber would show someone. *Weakest of the six: it is polish, and an offline
+  app's sharing story is a rendered image and a system sheet, which is what it already has.*
+
+- **M69 — What your projects actually cost.** Projects carry every attempt, and nothing
+  reads them in aggregate. Attempts-to-send by grade, sessions-to-send, how long a project
+  sits before it goes, and what the sends have in common — that is a climber's own history
+  telling them how they send, which no generic advice can.
+
+**Six that are new.**
+
+- **M70 — Your gym, as data.** The app knows programs and sessions but not *where* you
+  climb: the boards, circuits, set dates and named problems that a real training week is
+  made of. A local catalogue — walls, angles, circuits, problems with grades and set dates —
+  that sessions can reference. It makes "I did the blue circuit again" a record rather than
+  a note, and it is the foundation M71 and M69 both get better on.
+
+- **M71 — Draw the beta on the photo.** M53 made photos first-class. The next thing a
+  climber does with a project photo is mark it: this foot, that hold, the reachy move.
+  Freehand and arrows on a canvas, saved as a second image beside the first. Entirely
+  offline, and the most-used feature in every board app for a reason.
+
+- **M72 — A readiness check-in.** Two questions before a session — how the fingers feel, how
+  the sleep was — biasing the day's prescription and the coach's tips, rules-based and
+  honest about being rules. The injury system already proves the pattern: a stored answer
+  that filters what the app suggests. The risk is nagging, so it must be skippable, and its
+  effect must be visible or it is superstition.
+
+- **M73 — Plan the peak, not just the block.** M46 gave the app ACWR; M56 and M57 gave it
+  time available. The next step is projecting *forward*: given a trip date, what the next
+  weeks' load should look like to arrive fresh and not detrained, drawn as a line the
+  climber can follow. Everything needed is already computed — this is the same maths run in
+  the other direction.
+
+- **M74 — Gym mode.** Logging mid-session means chalky hands, a phone on a mat and forty
+  seconds between burns. A stripped screen — one-tap grade tally, attempt and send, a rest
+  timer, nothing else — that folds into a real session afterwards. The full logger is a good
+  form and a bad companion.
+
+- **M75 — Remind me it is a training day.** The one honest use of notifications in an app
+  with no server: a local reminder on a scheduled session day. *Riskiest of the fifteen —
+  scheduled local notifications are unreliable across browsers and the TWA wrapper, so this
+  needs a spike before it is a milestone. If it cannot be made dependable, it should not
+  ship at all: a reminder that fires sometimes is worse than none.*
+
+- **M12 — Ship.** *Parked.* TWA packaging + assetlinks, Play internal testing, store
+  listing. Blocked on two facts only the author has — the app name and the package id —
+  and set aside deliberately rather than waiting on them: everything above can be built
+  without shipping, and shipping cannot start without them.
 
 **Guide verification (the program guides, checked against the programs).** The app
 guide was already asserted against the engines it quotes; the nine *program* guides —
