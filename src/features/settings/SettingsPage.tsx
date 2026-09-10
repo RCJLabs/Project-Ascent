@@ -38,6 +38,7 @@ const GEAR: { value: Equipment; label: string }[] = [
   { value: 'hangboard', label: 'Hangboard' },
   { value: 'campus', label: 'Campus board' },
   { value: 'gym', label: 'Weights & bands' },
+  { value: 'weight', label: 'Added weight' },
 ];
 
 const PARTS: { value: BodyPart; label: string }[] = [

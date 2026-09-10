@@ -46,6 +46,7 @@ const EQUIPMENT: { value: Equipment; label: string; hint: string }[] = [
   { value: 'hangboard', label: 'Hangboard', hint: 'Fingerboard with edges' },
   { value: 'campus', label: 'Campus board', hint: '' },
   { value: 'gym', label: 'Weights & bands', hint: 'Dumbbells, bar, resistance bands' },
+  { value: 'weight', label: 'Added weight', hint: 'Belt, backpack, or plates' },
 ];
 
 const BODY_PARTS: { value: BodyPart; label: string }[] = [

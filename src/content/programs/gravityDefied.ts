@@ -30,7 +30,10 @@ export const GRAVITY_DEFIED: Program = {
   discipline: 'boulder',
   gradeRange: { scale: 'V', min: 'V2', max: 'V5', label: 'V2-V5' },
   weeks: 12,
-  equipment: ['wall', 'gym', 'hangboard'],
+  // Two of thirty: Bulgarian split squats, which are a bodyweight exercise,
+  // and box jumps that ask for a taller box rather than a barbell.
+  equipment: ['wall', 'hangboard'],
+  helpfulEquipment: ['gym'],
 
   intro: {
     pitch:

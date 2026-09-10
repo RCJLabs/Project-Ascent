@@ -48,7 +48,11 @@ export const LOCKDOWN: Program = {
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V3', max: 'V5', label: 'V3-V5' },
   weeks: 12,
-  equipment: ['wall', 'hangboard', 'gym'],
+  // Not one gym exercise in the program. All four loaded prescriptions —
+  // density hangs, wide pull-ups, a weighted vest, ankle weights — want
+  // *added weight*, which is a backpack, not a weights room.
+  equipment: ['wall', 'hangboard'],
+  helpfulEquipment: ['weight'],
 
   intro: {
     pitch:

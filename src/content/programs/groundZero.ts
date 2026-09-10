@@ -20,7 +20,11 @@ export const GROUND_ZERO: Program = {
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V0', max: 'V0', label: 'Pre-Climbing' },
   weeks: 12,
-  equipment: ['gym'],
+  // Two dumbbell exercises out of fifty-two prescriptions, and the third
+  // "gym" item is a *band* lat pulldown. A pre-climbing body-prep block runs
+  // on the floor (PLAN.md M36).
+  equipment: [],
+  helpfulEquipment: ['gym'],
 
   intro: {
     pitch:

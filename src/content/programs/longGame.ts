@@ -35,7 +35,11 @@ export const THE_LONG_GAME: Program = {
   discipline: 'sport',
   gradeRange: { scale: 'YDS', min: '5.9', max: '5.12a', label: '5.9-5.12' },
   weeks: 12,
-  equipment: ['wall', 'gym'],
+  // One prescription of thirty-three touches a dumbbell, and it is written
+  // "Max Push-Ups or DB Press" — the program already supplies its own
+  // alternative.
+  equipment: ['wall'],
+  helpfulEquipment: ['gym'],
 
   intro: {
     pitch:

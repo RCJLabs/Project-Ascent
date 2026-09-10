@@ -113,6 +113,11 @@ const INJURY_RULES: {
   },
 ];
 
+/** The word a climber would use, not the enum. */
+function equipmentWord(kit: Equipment): string {
+  return kit === 'weight' ? 'a way to add weight' : kit;
+}
+
 function gradeIn(scale: GradeScale, grade: string | undefined, min: string, max: string): 'below' | 'in' | 'above' | null {
   if (!grade) return null;
   const g = gradeOrdinal(scale, grade);
@@ -197,12 +202,29 @@ export function recommend(input: FinderInput): Recommendation[] {
     }
 
     // ── Equipment ──────────────────────────────────────────────────────
+    //
+    // Required kit blocks; helpful kit never does. A program that runs
+    // bodyweight and would go further with a barbell says so, rather than
+    // turning the climber away — which is what seven of nine used to do for
+    // between one and eight prescriptions out of thirty to a hundred and
+    // thirty (PLAN.md M36).
     const have = new Set(input.equipment);
     const missing = program.equipment.filter((e) => e !== 'none' && !have.has(e));
     if (missing.length > 0) {
-      blockers.push(`Needs ${missing.join(' and ')} you do not have access to`);
+      blockers.push(`Needs ${missing.map(equipmentWord).join(' and ')} you do not have access to`);
     } else if (program.equipment.some((e) => e !== 'none')) {
       score += 5;
+    }
+
+    // No score attached: if the program runs without it, it runs. Scoring
+    // the absence would rebuild the same wall a step lower down.
+    const helpfulMissing = (program.helpfulEquipment ?? []).filter(
+      (e) => e !== 'none' && !have.has(e) && !missing.includes(e),
+    );
+    if (helpfulMissing.length > 0 && missing.length === 0) {
+      cautions.push(
+        `Runs without ${helpfulMissing.map(equipmentWord).join(' or ')} — some of the loading work needs improvising`,
+      );
     }
 
     // ── Days available ─────────────────────────────────────────────────

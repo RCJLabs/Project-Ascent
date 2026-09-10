@@ -157,6 +157,18 @@ export function validateProgram(program: Program): string[] {
   }
 
   // Assessments and progression graph.
+  // Helpful kit that is also required is a contradiction: the finder would
+  // block on it and then explain how to work around it (PLAN.md M36).
+  for (const kit of program.helpfulEquipment ?? []) {
+    if (program.equipment.includes(kit)) {
+      where(`'${kit}' is listed as both required and helpful equipment`);
+    }
+    if (kit === 'none') where(`'none' cannot be helpful equipment`);
+  }
+  if (new Set(program.helpfulEquipment ?? []).size !== (program.helpfulEquipment ?? []).length) {
+    where('has duplicate helpful equipment');
+  }
+
   for (const metricId of program.assessments) {
     if (!getMetric(metricId)) where(`references unknown metric '${metricId}'`);
   }

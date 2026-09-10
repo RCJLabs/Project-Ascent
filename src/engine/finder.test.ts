@@ -152,25 +152,96 @@ describe('finder', () => {
   });
 
   it('breaks a tie by warnings rather than by catalogue order', () => {
-    // A returning V4 boulderer with three days who wants preparation ties
-    // Ground Zero and Gravity Defied on 60. Ground Zero carries a warning
-    // and sits *earlier* in `PROGRAMS`, so the old sort — which returned
-    // nothing for a tie and inherited the array order — handed over the
-    // one with the caution on it.
+    // A V4 boulderer with two days who wants fundamentals ties Base Camp
+    // against Gravity Defied and Lockdown. Base Camp carries an extra
+    // warning and sits *earlier* in `PROGRAMS`, so the old sort — which
+    // returned nothing for a tie and inherited the array order — handed over
+    // the one with more caution on it.
     const tied = recommend(
-      input({ goal: 'prep', boulderGrade: 'V4', discipline: 'boulder', experience: 'returning', daysPerWeek: 3 }),
+      input({ goal: 'fundamentals', boulderGrade: 'V4', discipline: 'boulder', daysPerWeek: 2 }),
     ).filter((r) => r.blockers.length === 0);
 
     const best = tied[0]!;
-    const runnerUp = tied.find((r) => r.score === best.score && r.program.id !== best.program.id)!;
-    expect(runnerUp, 'the tie this test is about has gone').toBeDefined();
-    expect(best.cautions.length).toBeLessThan(runnerUp.cautions.length);
-    expect(best.program.id).toBe('gravity_defied');
+    const alsoTied = tied.filter((r) => r.score === best.score);
+    expect(alsoTied.length, 'the tie this test is about has gone').toBeGreaterThan(1);
+    const worse = alsoTied.find((r) => r.cautions.length > best.cautions.length);
+    expect(worse, 'nothing in the tie carries more warnings').toBeDefined();
+    expect(best.program.id).not.toBe(worse!.program.id);
   });
 
   it('gives the same answer to the same question', () => {
     const ask = () => recommend(input({ goal: 'prep', experience: 'returning', daysPerWeek: 3 })).map((r) => r.program.id);
     expect(ask()).toEqual(ask());
+  });
+
+  /**
+   * Required kit blocks; helpful kit never does (PLAN.md M36).
+   *
+   * Seven of nine programs required a weights gym for between one and eight
+   * prescriptions out of thirty to a hundred and thirty — several of which
+   * wrote their own bodyweight alternative — so a climbing wall and a
+   * hangboard together unlocked nothing at all.
+   */
+  describe('required and helpful equipment', () => {
+    const viableFor = (equipment: FinderInput['equipment']) => {
+      const found = new Set<string>();
+      for (const goal of ['prep', 'fundamentals', 'technique', 'power', 'fingers', 'dynamic', 'endurance', 'project', 'maintain'] as const) {
+        for (const r of recommend(input({ goal, equipment, daysPerWeek: 4 }))) {
+          if (r.blockers.length === 0) found.add(r.program.id);
+        }
+      }
+      return [...found].sort();
+    };
+
+    it('gives a climber with only a wall something to run', () => {
+      const viable = viableFor(['wall']);
+      expect(viable.length, 'a wall alone unlocks nothing').toBeGreaterThan(2);
+      expect(viable).toContain('the_cruiser');
+      expect(viable).toContain('the_long_game');
+    });
+
+    it('gives a wall and a hangboard more than a wall alone', () => {
+      expect(viableFor(['wall', 'hangboard']).length).toBeGreaterThan(viableFor(['wall']).length);
+      expect(viableFor(['wall', 'hangboard'])).toContain('lockdown');
+    });
+
+    it('still blocks on kit a program genuinely cannot run without', () => {
+      // Iron Grip's third phase is campus work.
+      const ironGrip = recommend(input({ goal: 'fingers', equipment: ['wall', 'hangboard'] })).find(
+        (r) => r.program.id === 'iron_grip',
+      )!;
+      expect(ironGrip.blockers.join(' ')).toContain('campus');
+      // Base Camp's strength block is genuinely barbell-shaped.
+      const baseCamp = recommend(input({ goal: 'fundamentals', equipment: ['wall'] })).find(
+        (r) => r.program.id === 'base_camp',
+      )!;
+      expect(baseCamp.blockers.join(' ')).toContain('gym');
+    });
+
+    it('says what the missing helpful kit would add, and does not block on it', () => {
+      const without = recommend(input({ goal: 'maintain', equipment: ['wall'] })).find(
+        (r) => r.program.id === 'the_cruiser',
+      )!;
+      expect(without.blockers).toEqual([]);
+      expect(without.cautions.join(' ')).toMatch(/Runs without/);
+      expect(without.cautions.join(' ')).toMatch(/improvising/);
+    });
+
+    it('does not score the absence of helpful kit', () => {
+      // Scoring it would rebuild the same wall one step lower down.
+      const bare = recommend(input({ goal: 'maintain', equipment: ['wall'] })).find((r) => r.program.id === 'the_cruiser')!;
+      const kitted = recommend(input({ goal: 'maintain', equipment: ['wall', 'gym', 'weight', 'hangboard'] })).find((r) => r.program.id === 'the_cruiser')!;
+      expect(bare.score).toBe(kitted.score);
+      expect(bare.cautions.length).toBeGreaterThan(kitted.cautions.length);
+    });
+
+    it('names added weight in words a climber would use', () => {
+      const found = recommend(input({ goal: 'power', equipment: ['wall', 'hangboard'] })).find(
+        (r) => r.program.id === 'peak_performance',
+      )!;
+      expect(found.cautions.join(' ')).toContain('a way to add weight');
+      expect(found.cautions.join(' ')).not.toMatch(/\bweight\b —/);
+    });
   });
 
   it('never recommends a logging mode as training', () => {
@@ -183,12 +254,24 @@ describe('finder', () => {
   });
 
   it('always returns something, and says when the match is weak', () => {
-    // A contradictory request: brand new, no gear, one day a week, elite goal.
+    // One day a week fits no structured block in the catalogue.
     const result = findProgram(
-      input({ experience: 'new', goal: 'project', daysPerWeek: 1, equipment: [], boulderGrade: 'V0' }),
+      input({ experience: 'intermediate', goal: 'prep', daysPerWeek: 1, equipment: [], boulderGrade: 'V4' }),
     );
     expect(result.top).toBeDefined();
     expect(result.fallback).toBe(true);
+  });
+
+  it('gives a beginner with no equipment a real program, not a shrug', () => {
+    // Ground Zero is floor and band work: two dumbbell exercises in
+    // fifty-two prescriptions. It used to declare `gym` and be ruled out for
+    // exactly the climber it was written for (PLAN.md M36).
+    const result = findProgram(
+      input({ experience: 'new', goal: 'prep', daysPerWeek: 3, equipment: [], boulderGrade: 'V0' }),
+    );
+    expect(result.fallback).toBe(false);
+    expect(result.top.program.id).toBe('ground_zero');
+    expect(result.top.blockers).toEqual([]);
   });
 
   it('explains every recommendation it makes', () => {

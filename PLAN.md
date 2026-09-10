@@ -1298,13 +1298,39 @@ across its input space.
   Ground Zero, Base Camp, Gravity Defied, Iron Grip, The Long Game and The Cruiser it
   is exactly that prose.
 
-- **M36 — The climber with a wall and nothing else.** Nine of nine programs blocked:
-  every structured program needs a weights gym or a hangboard. A wall is the one thing
-  every climber has, and the app's answer to them is open logging.
+- **M36 / M37 — Required kit and helpful kit.** *Done, as one change.* Nine of nine
+  programs were blocked for a climber with only a wall — and, worse, for a climber
+  with a wall **and a hangboard**, because every hangboard program additionally
+  demanded a weights gym.
+  **Re-verified before building, since the M38 finding from the same audit turned out
+  to be a probe artifact.** This one held and was understated: `wall` alone gave zero,
+  `wall+hangboard` gave zero, `hangboard+campus` gave zero.
+  **Then measured what the requirement was buying.** Ground Zero: two dumbbell
+  exercises in fifty-two prescriptions, and the third "gym" item is a *band* lat
+  pulldown. The Long Game: one of thirty-three, written "Max Push-Ups **or** DB
+  Press". The Cruiser: three of a hundred and twenty-nine, every one carrying its own
+  alternative. Lockdown: not one gym exercise — all four loaded prescriptions want
+  *added weight*, which is a backpack.
+  **So `weight` is its own equipment kind now**, separate from `gym`: loading a
+  hangboard with plates is not having a weights room, and conflating them blocked
+  every max-hang program for anyone without a barbell. And a program declares what it
+  **requires** separately from what **helps**. Helpful kit never blocks and carries no
+  score — scoring its absence would rebuild the same wall one step lower down — it
+  just says what improvising would cost.
+  A wall alone now runs three programs; a wall and a hangboard, six; nothing at all,
+  one. Seven mutations, seven killed, one of them only after the validator's rule got
+  a test that feeds it a deliberately broken program rather than relying on the
+  catalogue to contain one.
+  **Two judgement calls left as they are, and both are yours.** Base Camp keeps `gym`
+  required: its strength block really is barbell-shaped — DB bench, lat pulldowns,
+  goblet squats or deadlifts, RDLs, eight of seventy with no bodyweight form written
+  for them — though that is arguable for a V0–V2 program. Iron Grip keeps `campus`
+  required, because its third phase *is* campus work, which means the finger-strength
+  hole below stays open.
 
-- **M37 — Optional equipment.** The Cruiser has an optional hangboard module and no
-  way to say so: declaring `hangboard` wrongly excludes climbers without one, not
-  declaring it makes the module invisible to the finder.
+- **M37 — Optional equipment.** *Done with M36.* The Cruiser's optional hangboard
+  module is `helpfulEquipment` now, so it neither excludes a climber without one nor
+  hides from the one who has it.
 
 - **M38 — What the days term is allowed to claim.** *Done, and the audit finding it
   came from was wrong.*

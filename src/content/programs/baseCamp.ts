@@ -40,7 +40,11 @@ export const BASE_CAMP: Program = {
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V0', max: 'V2', label: 'V0-V2' },
   weeks: 12,
+  // The one program whose strength work is genuinely barbell-shaped: DB
+  // bench, lat pulldowns, goblet squats or deadlifts, RDLs — eight of
+  // seventy, several with no bodyweight form written for them.
   equipment: ['wall', 'gym'],
+  helpfulEquipment: ['weight'],
 
   intro: {
     pitch:

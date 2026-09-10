@@ -73,7 +73,12 @@ export const THE_CRUISER: Program = {
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V0', max: 'V17', label: 'All Levels' },
   weeks: 12,
-  equipment: ['wall', 'gym'],
+  // Three loaded prescriptions out of a hundred and twenty-nine, and every
+  // one of them writes its own alternative: "Weighted Pull-Ups or Heavy
+  // Rows", "Push-Ups or DB Press", "RDLs, Bulgarians or Goblet Squats". The
+  // hangboard module says "optional" in its own name.
+  equipment: ['wall'],
+  helpfulEquipment: ['weight', 'gym', 'hangboard'],
 
   intro: {
     pitch:

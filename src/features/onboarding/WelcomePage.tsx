@@ -30,6 +30,7 @@ const GEAR: { value: Equipment; label: string; note: string }[] = [
   { value: 'hangboard', label: 'Hangboard', note: 'Any edge you can hang' },
   { value: 'campus', label: 'Campus board', note: 'Rungs, not a system board' },
   { value: 'gym', label: 'Weights & bands', note: 'Barbell, dumbbells, or bands' },
+  { value: 'weight', label: 'Added weight', note: 'A belt, a backpack, plates' },
 ];
 
 const PARTS: BodyPart[] = ['fingers', 'pulley', 'wrist', 'elbow', 'shoulder', 'back', 'hip', 'knee', 'ankle'];

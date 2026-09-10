@@ -42,6 +42,20 @@ describe('catalog integrity', () => {
     expect(validateProgram(broken).join(' ')).toMatch(/unknown drill 'does_not_exist'/);
   });
 
+  it('catches kit listed as both required and helpful', () => {
+    // The finder would block on it and then explain how to work around it
+    // (PLAN.md M36).
+    const broken = structuredClone(IRON_GRIP);
+    broken.helpfulEquipment = ['hangboard'];
+    expect(validateProgram(broken).join(' ')).toMatch(/both required and helpful/);
+  });
+
+  it('catches "none" offered as helpful equipment', () => {
+    const broken = structuredClone(IRON_GRIP);
+    broken.helpfulEquipment = ['none'];
+    expect(validateProgram(broken).join(' ')).toMatch(/cannot be helpful/);
+  });
+
   it('catches a phase gap', () => {
     const broken = structuredClone(IRON_GRIP);
     broken.phases[1]!.weekStart = 6;

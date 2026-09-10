@@ -22,7 +22,10 @@ export const THE_SIEGE: Program = {
   discipline: 'sport',
   gradeRange: { scale: 'YDS', min: '5.12d', max: '5.13d', label: '5.12d-5.13d' },
   weeks: 12,
-  equipment: ['wall', 'hangboard', 'gym'],
+  // Weighted pull-ups at 3-5RM and weighted push-ups want added weight; one
+  // DB overhead press is the whole of the gym requirement.
+  equipment: ['wall', 'hangboard'],
+  helpfulEquipment: ['weight', 'gym'],
 
   intro: {
     pitch:

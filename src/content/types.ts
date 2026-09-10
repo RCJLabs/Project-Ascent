@@ -84,7 +84,15 @@ export type DrillCategory =
   | 'assessment';
 
 export type Discipline = 'boulder' | 'sport' | 'both';
-export type Equipment = 'none' | 'wall' | 'hangboard' | 'campus' | 'gym';
+/**
+ * What a climber has to train with.
+ *
+ * `weight` is separate from `gym` because loading a hangboard with a
+ * backpack is not the same as having a weights room, and treating them as
+ * one blocked every max-hang program for anyone without a barbell
+ * (PLAN.md M36).
+ */
+export type Equipment = 'none' | 'wall' | 'hangboard' | 'campus' | 'gym' | 'weight';
 
 export interface Drill {
   id: DrillId;
@@ -301,9 +309,26 @@ export interface Program {
   discipline: Discipline;
   gradeRange: { scale: GradeScale; min: string; max: string; label: string };
   weeks: number;
-  /** What the program needs to run. The finder uses this to rule out
-   *  programs a climber has no way to train. */
+  /**
+   * What the program cannot run without. The finder rules out a program
+   * whose required kit a climber does not have.
+   *
+   * Keep this to what is load-bearing. Seven of nine programs used to
+   * require `gym` for between one and eight prescriptions out of thirty to
+   * a hundred and thirty — several of which already wrote their own
+   * bodyweight alternative — and the result was that a climbing wall and a
+   * hangboard, together, unlocked nothing at all (PLAN.md M36).
+   */
   equipment: Equipment[];
+  /**
+   * Kit that extends the program without gating it.
+   *
+   * Never blocks. The finder names what it would add so a climber can see
+   * what they are missing rather than being silently turned away, and a
+   * program that runs bodyweight says so instead of demanding a barbell for
+   * one accessory lift.
+   */
+  helpfulEquipment?: Equipment[];
   intro: ProgramIntro;
   phases: Phase[];
   /** Parallel difficulty paths. Exercises tagged with a `track` are shown

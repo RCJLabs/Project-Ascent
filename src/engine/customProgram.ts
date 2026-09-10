@@ -321,4 +321,5 @@ export const EQUIPMENT_LABELS: Record<Equipment, string> = {
   hangboard: 'Hangboard',
   campus: 'Campus board',
   gym: 'Weights & bands',
+  weight: 'Something to add weight with',
 };
