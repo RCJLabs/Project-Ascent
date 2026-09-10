@@ -1665,14 +1665,31 @@ and why.
   this app runs, so there was nothing to trade off. Second flake fixed this pass; the
   first was the ACWR ratio in M41.
 
-- **M45 — The app assumes an active program and hides itself without one.** With 1,600
-  sessions logged, `/calendar` renders "No active program yet… your sessions will
-  appear here" — nine years of history invisible under a promise it is breaking
-  (`CalendarPage.tsx:98`). Home's Today card, which holds the only prominent log
-  button, is gated the same way (`HomePage.tsx:90`). A crawl of 38 screens from a fresh
-  install found logging reachable only from Coach's Corner and from search. Between
-  programs — most of a real climber's year — the two screens that should show training
-  show a pitch instead.
+- **M45 — The app assumes an active program and hides itself without one.** *Done.*
+  With 1,600 sessions logged, `/calendar` rendered "No active program yet… your
+  sessions will appear here" — the history invisible under a promise it was breaking.
+  Home's Today card, which holds the only prominent log button, was gated the same way.
+  A crawl of 38 screens from a fresh install found logging reachable only from Coach's
+  Corner and from search.
+  **A program says what you *should* do. It has never had anything to do with what you
+  already did.** Both gates were early returns that threw away the second half with the
+  first. The calendar's month grid is now always drawn — every day linked, every logged
+  day ticked — with the planned layer conditional: `plannedDay` per cell only when
+  there is a plan, Rearrange hidden, deload marks and the planned-session legend absent
+  because there is nothing to mark. The invitation to pick a program moved from
+  *instead of* the grid to *above* it, so it is still offered and no longer costs
+  anything.
+  **Home's Today card is unconditional, and moved to second.** It was the eighth card
+  down, below the coach, the altimeter, the board, the weekly review and the game —
+  reachable is not the same as usable for the thing a training app is for. It now sits
+  directly under the climber strip and reads "Log a session" with no program, "Start
+  session" with one, "Log rest day" on a rest day and "View session" once done.
+  **The judgement call worth flagging:** moving that card reorders the home screen,
+  which is a design decision rather than a defect. It is one block to move back.
+  Verified in a browser both ways on the same 260-session log: with no program the
+  calendar reads "What you have logged" and ticks sixteen days in July 2025; with Iron
+  Grip running it reads "Iron Grip", draws the session icons and keeps Rearrange. Four
+  mutations, four killed.
 
 - **M46 — Say something on the dangerous side of load.** ACWR is computed, the bands
   are defined (`optimalTo: 1.3`, `cautionTo: 1.5`), the load chart paints optimal,

@@ -95,31 +95,41 @@ export function CalendarPage() {
     setMonth(d.getMonth());
   }
 
-  if (!program || !startDate || !plan) {
-    return (
-      <>
-        <PageHeader title="Calendar" action={<JournalLink />} />
-        <Card>
-          <p className="text-sm text-ink-soft mb-3">
-            No active program yet. Pick one and plan your week, and your sessions will appear here.
-          </p>
-          <Link href="/find" className="text-accent font-semibold text-sm">
-            Find my program →
-          </Link>
-        </Card>
-      </>
-    );
-  }
+  /**
+   * Whether there is a plan to draw on top of the month (PLAN.md M45).
+   *
+   * This used to be an early return: no program, no calendar, and the
+   * sentence in its place promised that sessions would appear here — which
+   * they already had, hundreds of them, invisible. A program says what you
+   * *should* do; it has never had anything to do with what you already did,
+   * and the half of this page that shows the second half needs nothing from
+   * it.
+   */
+  const planning = program !== undefined && startDate !== undefined && plan !== undefined;
 
   return (
     <>
       <PageHeader
         title="Calendar"
-        subtitle={[program.name, summarise(injuries)].filter(Boolean).join(' · ')}
+        subtitle={
+          planning ? [program.name, summarise(injuries)].filter(Boolean).join(' · ') : 'What you have logged'
+        }
         action={<JournalLink />}
       />
 
-      {rearranging && !moving && !pending && (
+      {!planning && (
+        <Card className="mb-3">
+          <p className="text-sm text-ink-soft mb-3">
+            No active program, so this is your log rather than a plan. Pick one and the weeks fill
+            in around what you are already doing.
+          </p>
+          <Link href="/find" className="text-accent font-semibold text-sm">
+            Find my program →
+          </Link>
+        </Card>
+      )}
+
+      {planning && rearranging && !moving && !pending && (
         <Card className="mb-3">
           <p className="text-sm">
             Tap a planned session to pick it up. Logged days and finished weeks stay put — they are
@@ -128,7 +138,7 @@ export function CalendarPage() {
         </Card>
       )}
 
-      {moving && (
+      {planning && moving && (
         <Card className="mb-3">
           <div className="flex items-start gap-2 mb-2">
             <Move size={16} className="text-accent shrink-0 mt-0.5" />
@@ -147,7 +157,7 @@ export function CalendarPage() {
         </Card>
       )}
 
-      {pending && (
+      {planning && pending && (
         <Card className="mb-3">
           <p className="text-sm font-semibold mb-1">
             {pending.preview.swaps ? 'Swap with' : 'Move to'} {shortLabel(pending.to)}?
@@ -202,6 +212,7 @@ export function CalendarPage() {
       </div>
 
       <div className="flex justify-end mb-2">
+        {planning && (
         <Button
           size="sm"
           variant={rearranging ? 'primary' : 'ghost'}
@@ -213,6 +224,7 @@ export function CalendarPage() {
         >
           <Move size={14} /> {rearranging ? 'Done' : 'Rearrange'}
         </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-7 gap-1 mb-1">
@@ -225,12 +237,12 @@ export function CalendarPage() {
 
       <div className="grid grid-cols-7 gap-1">
         {days.map((date) => {
-          const day = plannedDay(program, startDate, plan, date, overrides);
+          const day = planning ? plannedDay(program, startDate, plan, date, overrides) : null;
           const logged = byDate[date] ?? [];
           const done = logged.some((s) => s.completed);
           const inMonth = fromKey(date).getMonth() === month;
           const isToday = date === today();
-          const planned = day.sessionType && !day.isRest;
+          const planned = day !== null && day.sessionType && !day.isRest;
           const preview = previews?.[date];
           const isSource = moving === date;
           const landing = previews !== null && preview !== undefined && !isSource;
@@ -239,7 +251,7 @@ export function CalendarPage() {
           // meaningless, and an override written against it is pruned on the
           // way out, which would make the move silently vanish.
           const pickable =
-            rearranging && !moving && Boolean(planned) && !done && startOfWeek(date) >= thisWeek;
+            planning && rearranging && !moving && Boolean(planned) && !done && startOfWeek(date) >= thisWeek;
 
           const tone = isSource
             ? 'border-accent bg-accent/25'
@@ -263,11 +275,11 @@ export function CalendarPage() {
               {done ? (
                 <span className="text-sm leading-none">✅</span>
               ) : planned ? (
-                <span className="text-sm leading-none">{day.sessionType!.icon}</span>
+                <span className="text-sm leading-none">{day!.sessionType!.icon}</span>
               ) : (
                 <span className="text-sm leading-none text-ink-soft/40">·</span>
               )}
-              {day.isDeload && inMonth && (
+              {day?.isDeload && inMonth && (
                 <span className="text-2xs font-bold uppercase text-warn leading-none">DL</span>
               )}
             </>
@@ -288,10 +300,10 @@ export function CalendarPage() {
                 disabled={!enabled}
                 aria-label={
                   isSource
-                    ? `Cancel moving ${day.sessionType?.name ?? 'session'}`
+                    ? `Cancel moving ${day?.sessionType?.name ?? 'session'}`
                     : moving
                       ? `Move to ${shortLabel(date)}`
-                      : `Move ${day.sessionType?.name ?? 'session'} from ${shortLabel(date)}`
+                      : `Move ${day?.sessionType?.name ?? 'session'} from ${shortLabel(date)}`
                 }
                 onClick={() => {
                   if (isSource) setMoving(null);
@@ -315,8 +327,12 @@ export function CalendarPage() {
       <Card className="mt-4">
         <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-ink-soft">
           <span>✅ Logged</span>
-          <span>{program.sessionTypes.find((t) => !t.isRest)?.icon} Planned session</span>
-          <span className="text-warn font-bold">DL — deload week</span>
+          {planning && (
+            <>
+              <span>{program.sessionTypes.find((t) => !t.isRest)?.icon} Planned session</span>
+              <span className="text-warn font-bold">DL — deload week</span>
+            </>
+          )}
         </div>
       </Card>
     </>

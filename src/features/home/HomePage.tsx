@@ -62,6 +62,57 @@ export function HomePage() {
         <Wide>
           <ClimberStrip />
         </Wide>
+
+        {/* First card under the climber, and always — program or not
+            (PLAN.md M45). This card holds the only
+            prominent route to the logger, and gating it on an active program
+            meant a fresh install and a climber between blocks both arrived at
+            the front door with no way to record the session they had just
+            climbed — reachable, in the end, only from Coach's Corner or from
+            search. What is planned is the part that needs a program. */}
+        <Card title="Today">
+            {done ? (
+              <p className="text-sm text-positive flex items-center gap-2 mb-3">
+                <Check size={16} /> Session logged. Well done.
+              </p>
+            ) : day?.sessionType && !day.isRest ? (
+              <>
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-xl leading-none">{day.sessionType.icon}</span>
+                  <span className="font-bold text-lg">{day.sessionType.name}</span>
+                </div>
+                <p className="text-sm text-ink-soft mb-3">
+                  Week {day.week} of {program!.weeks}
+                  {day.phase ? ` · ${day.phase.name}` : ''}
+                  {day.isDeload ? ' · Deload week' : ''}
+                </p>
+                {day.drill && (
+                  <div className="bg-sunken rounded-xl p-3 mb-3">
+                    <div className="font-semibold text-sm">{day.drill.name}</div>
+                    <p className="text-xs text-ink-soft mt-1 flex items-center gap-1.5">
+                      <Clock size={11} /> {day.drill.duration} · {day.drill.focus}
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : day ? (
+              <p className="text-sm text-ink-soft mb-3">
+                Rest day{day.week ? ` · week ${day.week}` : ''}. Recovery is training.
+              </p>
+            ) : (
+              <p className="text-sm text-ink-soft mb-3">
+                Nothing planned — no program is running. Log whatever you climb and it still counts
+                toward everything.
+              </p>
+            )}
+            <Link
+              href={`/log/${date}`}
+              className="inline-flex items-center justify-center gap-2 w-full bg-accent text-accent-ink font-semibold rounded-xl py-3"
+            >
+              {done ? 'View session' : !day ? 'Log a session' : day.isRest ? 'Log rest day' : 'Start session'}
+            </Link>
+          </Card>
+
         <CoachCard />
         <AltimeterCard />
         <Link href="/board" className="block bg-surface border border-line rounded-2xl p-4">
@@ -83,46 +134,6 @@ export function HomePage() {
               className="inline-flex items-center justify-center gap-2 w-full bg-accent text-accent-ink font-semibold rounded-xl py-3"
             >
               <Sparkles size={16} /> Find my program
-            </Link>
-          </Card>
-        )}
-
-        {program && day && (
-          <Card title="Today">
-            {done ? (
-              <p className="text-sm text-positive flex items-center gap-2 mb-3">
-                <Check size={16} /> Session logged. Well done.
-              </p>
-            ) : day.sessionType && !day.isRest ? (
-              <>
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-xl leading-none">{day.sessionType.icon}</span>
-                  <span className="font-bold text-lg">{day.sessionType.name}</span>
-                </div>
-                <p className="text-sm text-ink-soft mb-3">
-                  Week {day.week} of {program.weeks}
-                  {day.phase ? ` · ${day.phase.name}` : ''}
-                  {day.isDeload ? ' · Deload week' : ''}
-                </p>
-                {day.drill && (
-                  <div className="bg-sunken rounded-xl p-3 mb-3">
-                    <div className="font-semibold text-sm">{day.drill.name}</div>
-                    <p className="text-xs text-ink-soft mt-1 flex items-center gap-1.5">
-                      <Clock size={11} /> {day.drill.duration} · {day.drill.focus}
-                    </p>
-                  </div>
-                )}
-              </>
-            ) : (
-              <p className="text-sm text-ink-soft mb-3">
-                Rest day{day.week ? ` · week ${day.week}` : ''}. Recovery is training.
-              </p>
-            )}
-            <Link
-              href={`/log/${date}`}
-              className="inline-flex items-center justify-center gap-2 w-full bg-accent text-accent-ink font-semibold rounded-xl py-3"
-            >
-              {done ? 'View session' : day.isRest ? 'Log rest day' : 'Start session'}
             </Link>
           </Card>
         )}
