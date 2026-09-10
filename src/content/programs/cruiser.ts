@@ -534,6 +534,16 @@ export const THE_CRUISER: Program = {
     'capacity_4x4_quality',
   ],
 
+  prerequisites: {
+    soft: true,
+    note: 'Maintenance assumes a healthy baseline: a 30-second dead hang, ten strict push-ups and a 60-second plank.',
+    metrics: [
+      { metricId: 'dead_hang', atLeast: 30 },
+      { metricId: 'max_pushups', atLeast: 10 },
+      { metricId: 'core_plank', atLeast: 60 },
+    ],
+  },
+
   nextPrograms: [
     { id: 'iron_grip', reason: 'Cycle back through a focused finger-strength block.' },
     { id: 'peak_performance', reason: 'Chase a hard project — time for a peak phase.' },

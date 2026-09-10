@@ -370,6 +370,19 @@ export const BASE_CAMP: Program = {
     'capacity_test_4x4',
   ],
 
+    // The four rows of its guide's "Entry Requirements" table that map to a
+  // benchmark the app can read. Nothing here blocks a climber who has not
+  // sat an assessment — unmeasured is not failed (PLAN.md M35).
+  prerequisites: {
+    soft: true,
+    note: 'Wants a 30-second dead hang, five strict push-ups and a 60-second plank before the strength work starts. If those are not there yet, Ground Zero builds them.',
+    metrics: [
+      { metricId: 'dead_hang', atLeast: 30 },
+      { metricId: 'max_pushups', atLeast: 5 },
+      { metricId: 'core_plank', atLeast: 60 },
+    ],
+  },
+
   nextPrograms: [
     { id: 'gravity_defied', reason: 'For boulderers who love dynamic, parkour-style climbing.' },
     { id: 'the_long_game', reason: 'For sport climbers who want to build rope-climbing endurance.' },

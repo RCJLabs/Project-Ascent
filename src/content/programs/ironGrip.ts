@@ -380,6 +380,15 @@ export const IRON_GRIP: Program = {
     'max_boulder_grade',
   ],
 
+  prerequisites: {
+    note: 'V5 and a pain-free 60-second dead hang are the floor here — hangboarding below that loads tendons that have not had a year of climbing to adapt.',
+    metrics: [
+      { metricId: 'max_boulder_grade', atLeast: 5 },
+      { metricId: 'dead_hang', atLeast: 60 },
+      { metricId: 'max_pushups', atLeast: 15 },
+    ],
+  },
+
   nextPrograms: [
     { id: 'peak_performance', reason: 'You have the finger strength. Now express it on V8+ boulders.' },
     { id: 'the_long_game', reason: 'Apply your new crimp strength to sport climbing endurance.' },

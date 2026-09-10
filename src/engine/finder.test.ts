@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { findProgram, recommend, type FinderInput } from './finder';
+import { findProgram, recommend, type Experience, type FinderInput, type Goal } from './finder';
+import { PROGRAMS } from '@/content/programs';
+import type { MetricEntry } from '@/db/metrics';
 
 const ALL_GEAR: FinderInput['equipment'] = ['wall', 'hangboard', 'campus', 'gym'];
 
@@ -152,21 +154,180 @@ describe('finder', () => {
   });
 
   it('breaks a tie by warnings rather than by catalogue order', () => {
-    // A V4 boulderer with two days who wants fundamentals ties Base Camp
-    // against Gravity Defied and Lockdown. Base Camp carries an extra
-    // warning and sits *earlier* in `PROGRAMS`, so the old sort — which
-    // returned nothing for a tie and inherited the array order — handed over
-    // the one with more caution on it.
-    const tied = recommend(
-      input({ goal: 'fundamentals', boulderGrade: 'V4', discipline: 'boulder', daysPerWeek: 2 }),
-    ).filter((r) => r.blockers.length === 0);
+    // The old sort returned nothing for a tie, so equal scores inherited the
+    // order of `PROGRAMS` — which handed over the one carrying more caution.
+    // Hardcoding one tied fixture made this test move every time a score
+    // changed, so sweep the question space instead: every tie anywhere in it
+    // must be ordered by caution count, and at least one tie must actually
+    // differ in caution or the rule is not being exercised.
+    const goals: Goal[] = [
+      'prep', 'fundamentals', 'technique', 'power', 'fingers',
+      'endurance', 'dynamic', 'project', 'maintain',
+    ];
+    const experiences: Experience[] = ['new', 'returning', 'intermediate', 'advanced'];
+    const grades = [undefined, 'V1', 'V4', 'V6', 'V9'];
 
-    const best = tied[0]!;
-    const alsoTied = tied.filter((r) => r.score === best.score);
-    expect(alsoTied.length, 'the tie this test is about has gone').toBeGreaterThan(1);
-    const worse = alsoTied.find((r) => r.cautions.length > best.cautions.length);
-    expect(worse, 'nothing in the tie carries more warnings').toBeDefined();
-    expect(best.program.id).not.toBe(worse!.program.id);
+    let tiesSeen = 0;
+    let tiesThatDiffer = 0;
+
+    for (const goal of goals) {
+      for (const experience of experiences) {
+        for (const boulderGrade of grades) {
+          for (const daysPerWeek of [2, 4, 6]) {
+            const ranked = recommend(input({ goal, experience, boulderGrade, daysPerWeek })).filter(
+              (r) => r.blockers.length === 0,
+            );
+            for (let i = 1; i < ranked.length; i += 1) {
+              const before = ranked[i - 1]!;
+              const after = ranked[i]!;
+              if (before.score !== after.score) continue;
+              tiesSeen += 1;
+              if (before.cautions.length !== after.cautions.length) tiesThatDiffer += 1;
+              expect(
+                before.cautions.length,
+                `${before.program.id} (${before.cautions.length} cautions) ranked above ` +
+                  `${after.program.id} (${after.cautions.length}) at an equal score of ${before.score}`,
+              ).toBeLessThanOrEqual(after.cautions.length);
+            }
+          }
+        }
+      }
+    }
+
+    expect(tiesSeen, 'the sweep found no ties at all, so it tests nothing').toBeGreaterThan(10);
+    expect(tiesThatDiffer, 'every tie carried identical caution, so the rule is untested').toBeGreaterThan(0);
+  });
+
+  /**
+   * Entry standards as data (PLAN.md M35).
+   *
+   * Five programs printed an entry standards table in their guide that
+   * nothing checked. Wiring them up found the finder had never read the
+   * metric registry at all: it decided `metricId === 'redpoint_grade' ? 'YDS'
+   * : 'V'` and then compared the *climber's grade ordinal* against the
+   * threshold — so `dead_hang >= 60` compared V8 (ordinal 8) against 60 and
+   * would have blocked every climber alive.
+   */
+  describe('entry standards', () => {
+    const logged = (over: Record<string, number>): FinderInput['metrics'] =>
+      Object.entries(over).map(([metricId, value]) => ({
+        metricId: metricId as MetricEntry['metricId'],
+        date: '2026-01-01',
+        value,
+      }));
+
+    const ironGrip = (over: Partial<FinderInput>) =>
+      recommend(input({ boulderGrade: 'V6', goal: 'fingers', ...over })).find(
+        (r) => r.program.id === 'iron_grip',
+      )!;
+
+    it('compares a benchmark against the benchmark, not against a grade', () => {
+      // Iron Grip asks for a 60-second dead hang. A V6 climber's grade
+      // ordinal is 6; under the old code that 6 was what got compared.
+      const strong = ironGrip({ metrics: logged({ dead_hang: 75, max_pushups: 20 }) });
+      expect(strong.blockers).toEqual([]);
+      expect(strong.reasons.join(' ')).toMatch(/entry requirements/i);
+    });
+
+    it('blocks a climber who has measured the standard and is under it', () => {
+      const weak = ironGrip({ metrics: logged({ dead_hang: 20, max_pushups: 20 }) });
+      expect(weak.blockers.join(' ')).toMatch(/60-second dead hang/);
+    });
+
+    it('says nothing at all about a standard nobody has measured', () => {
+      // Absent is not failing. A climber who has logged no benchmarks must
+      // not be locked out of five of the nine programs. Base Camp's three
+      // standards are all benchmarks, so with nothing logged there is
+      // nothing to say — unlike Iron Grip, whose V5 floor the climber
+      // answers in question three and which therefore always counts.
+      const unmeasured = recommend(input({ goal: 'fundamentals', boulderGrade: 'V2' })).find(
+        (r) => r.program.id === 'base_camp',
+      )!;
+      expect(unmeasured.blockers).toEqual([]);
+      expect(unmeasured.reasons.join(' ')).not.toMatch(/entry requirement/i);
+    });
+
+    it('counts a grade the climber answered as measured', () => {
+      // Iron Grip's V5 floor is `max_boulder_grade`, which question three
+      // already asks. Nothing logged is still a partial measurement there.
+      const unmeasured = ironGrip({});
+      expect(unmeasured.blockers).toEqual([]);
+      expect(unmeasured.reasons.join(' ')).toMatch(/entry requirements you have measured/i);
+      const belowFloor = recommend(input({ boulderGrade: 'V2', goal: 'fingers' })).find(
+        (r) => r.program.id === 'iron_grip',
+      )!;
+      expect(belowFloor.blockers.join(' ')).toMatch(/V5/);
+    });
+
+    it('scores what is measured and stays quiet about the rest', () => {
+      const partial = ironGrip({ metrics: logged({ dead_hang: 75 }) });
+      expect(partial.blockers).toEqual([]);
+      expect(partial.reasons.join(' ')).toMatch(/entry requirements you have measured/i);
+    });
+
+    it('scores meeting every standard above meeting one of them', () => {
+      // A flat bonus made one logged dead hang worth as much as a full
+      // assessment, so a climber who had measured everything and a climber
+      // who had measured a third of it ranked identically.
+      const all = recommend(
+        input({ goal: 'fingers', boulderGrade: 'V6', metrics: logged({ dead_hang: 75, max_pushups: 30 }) }),
+      ).find((r) => r.program.id === 'iron_grip')!;
+      const one = recommend(
+        input({ goal: 'fingers', boulderGrade: 'V6', metrics: logged({ dead_hang: 75 }) }),
+      ).find((r) => r.program.id === 'iron_grip')!;
+      expect(all.score).toBeGreaterThan(one.score);
+    });
+
+    it('warns for a standard the program calls an assumption', () => {
+      // Blocking on every unmet standard turned a V6 climber with an
+      // 18-second dead hang into "nothing was a confident match" — the app
+      // refusing to show a program rather than saying be careful. A floor
+      // the program itself calls a safety limit still blocks; one it calls
+      // an assumption does not.
+      const short = recommend(
+        input({ goal: 'fundamentals', boulderGrade: 'V2', metrics: logged({ dead_hang: 18, max_pushups: 2, core_plank: 10 }) }),
+      ).find((r) => r.program.id === 'base_camp')!;
+      expect(short.blockers).toEqual([]);
+      expect(short.cautions.join(' ')).toMatch(/30-second dead hang/);
+    });
+
+    it('still blocks a standard the program calls a safety floor', () => {
+      const short = ironGrip({ metrics: logged({ dead_hang: 18 }) });
+      expect(short.cautions.join(' ')).not.toMatch(/tendons/);
+      expect(short.blockers.join(' ')).toMatch(/tendons/);
+    });
+
+    it('says the note once, not once per standard', () => {
+      // Base Camp names three standards. Pushing the note per failed metric
+      // printed the same sentence three times.
+      const baseCamp = recommend(
+        input({
+          goal: 'fundamentals',
+          boulderGrade: 'V2',
+          metrics: logged({ dead_hang: 5, max_pushups: 1, core_plank: 5 }),
+        }),
+      ).find((r) => r.program.id === 'base_camp')!;
+      expect(baseCamp.cautions.filter((c) => /dead hang/.test(c))).toHaveLength(1);
+    });
+
+    it('leaves every program reachable by a climber who has logged nothing', () => {
+      // The whole risk of this milestone: a standard nobody can meet on
+      // day one silently removing programs from the catalogue.
+      const reachable = new Set<string>();
+      for (const goal of ['prep', 'fundamentals', 'technique', 'power', 'fingers',
+        'endurance', 'dynamic', 'project', 'maintain'] as Goal[]) {
+        for (const grade of ['V1', 'V4', 'V6', 'V9']) {
+          for (const rec of recommend(input({ goal, boulderGrade: grade, sportGrade: '5.13a' }))) {
+            if (rec.blockers.length === 0) reachable.add(rec.program.id);
+          }
+        }
+      }
+      const trainable = PROGRAMS.filter((p) => p.kind !== 'mode');
+      expect(trainable.length).toBeGreaterThan(8);
+      for (const program of trainable) {
+        expect(reachable.has(program.id), `${program.id} is unreachable with nothing logged`).toBe(true);
+      }
+    });
   });
 
   it('gives the same answer to the same question', () => {

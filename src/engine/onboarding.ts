@@ -206,8 +206,15 @@ export function finderInputFrom(
   answers: BaselineAnswers,
   equipment: Equipment[],
   injuries: string[],
+  /**
+   * Logged benchmarks, for the entry standards the seven questions do not
+   * ask about (PLAN.md M35). Defaults to none, which reads as unmeasured
+   * rather than as failing.
+   */
+  metrics: MetricEntry[] = [],
 ): FinderInput {
   return {
+    metrics,
     discipline: answers.discipline,
     experience: answers.experience,
     ...(answers.boulderGrade.trim() ? { boulderGrade: answers.boulderGrade.trim() } : {}),

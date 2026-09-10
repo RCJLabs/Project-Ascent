@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { getMetric } from '../metrics';
 import { PROGRAMS } from '../programs';
 import { guideFor } from './index';
 import type { Guide, GuideBlock } from './types';
@@ -272,33 +273,55 @@ describe('exercises the guide prescribes', () => {
  *
  * `Program.prerequisites` exists so entry standards are "checkable against
  * the user's own data instead of living in prose the app can't read" — its
- * own words. Nine guides print an entry table; six of those programs declare
- * nothing, so the finder cannot rule the climber out and the standard is
- * exactly the prose the field was added to replace.
+ * own words (PLAN.md M35).
+ *
+ * **An entry table is found by the heading above it, not by its columns.**
+ * Matching `Standard | Minimum` in a header also matches a *Graduation
+ * Standards* table, which is the opposite thing: Ground Zero's only such
+ * table is what you should be able to do at the *end*, and counting it as an
+ * entry requirement is how the audit came to report six programs where there
+ * are five — and how wiring it would have blocked every beginner from the
+ * beginner program.
  */
-const ENTRY_TABLE_WITHOUT_PREREQUISITES = [
-  'base_camp',
-  'ground_zero',
-  'gravity_defied',
-  'iron_grip',
-  'the_cruiser',
-  'the_long_game',
-];
-
 describe('entry standards', () => {
   const entryTables = (guide: Guide) =>
-    tables(guide).filter((t) => /standard|requirement/i.test(t.head.join(' ')));
+    guide.sections.flatMap((section) => {
+      let entry = false;
+      const found = [];
+      for (const block of section.content) {
+        if (block.kind === 'h') entry = /entry|prerequisite/i.test(block.text);
+        if (block.kind === 'table' && entry) found.push(block);
+      }
+      return found;
+    });
 
-  it('are data where the program declares them, and prose everywhere else', () => {
+  it('does not mistake a graduation table for an entry table', () => {
+    const groundZero = PAIRS.find((p) => p.program.id === 'ground_zero')!;
+    expect(entryTables(groundZero.guide)).toEqual([]);
+    expect(
+      tables(groundZero.guide).some((t) => /standard/i.test(t.head.join(' '))),
+      'the table this is guarding against has gone',
+    ).toBe(true);
+  });
+
+  it('are data wherever a guide prints an entry table', () => {
     const prose = PAIRS.filter(
       ({ program, guide }) => entryTables(guide).length > 0 && program.prerequisites === undefined,
     ).map((p) => p.program.id);
-    expect(prose.sort()).toEqual([...ENTRY_TABLE_WITHOUT_PREREQUISITES].sort());
+    expect(prose).toEqual([]);
   });
 
-  it('are printed by every program guide', () => {
-    const without = PAIRS.filter(({ guide }) => entryTables(guide).length === 0).map((p) => p.program.id);
-    // The outdoor mode has no entry standard to state; it is not a block.
-    expect(without).toEqual(['outdoor_climbing']);
+  it('is a check with something to check', () => {
+    const printing = PAIRS.filter(({ guide }) => entryTables(guide).length > 0).map((p) => p.program.id);
+    expect(printing.length).toBeGreaterThan(4);
+  });
+
+  it('never sets a standard on a benchmark where lower is better', () => {
+    // `atLeast` on `min_edge` or `toe_touch` would read the wrong way round.
+    for (const { program } of PAIRS) {
+      for (const prereq of program.prerequisites?.metrics ?? []) {
+        expect(getMetric(prereq.metricId)?.higherIsBetter, `${program.id}/${prereq.metricId}`).toBe(true);
+      }
+    }
   });
 });

@@ -363,6 +363,16 @@ export interface Program {
   prerequisites?: {
     note: string;
     metrics?: { metricId: MetricId; atLeast: number }[];
+    /**
+     * Whether falling short removes the program from the pick, or only
+     * warns. Defaults to blocking. Read the program's own words: a floor
+     * it calls a safety limit ("hangboarding below that loads tendons
+     * that have not had a year of climbing to adapt") blocks; one it calls
+     * an assumption ("assumes that base is already there") warns, because
+     * a 25-second dead hang against a 30-second standard is a reason to be
+     * careful, not a reason the app refuses to show you a program.
+     */
+    soft?: boolean;
   };
 }
 

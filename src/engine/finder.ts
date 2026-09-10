@@ -18,7 +18,10 @@
 
 import { gradeOrdinal, type GradeScale } from '@/engine/grades';
 import { GENERAL_TRAINING, PROGRAMS } from '@/content/programs';
-import type { Discipline, Equipment, Program } from '@/content/types';
+import { getMetric } from '@/content/metrics';
+import type { Discipline, Equipment, MetricId, Program } from '@/content/types';
+import type { MetricEntry } from '@/db/metrics';
+import { seriesFor } from './assessments';
 
 export type Goal =
   | 'prep'
@@ -34,6 +37,11 @@ export type Goal =
 export type Experience = 'new' | 'returning' | 'intermediate' | 'advanced';
 
 export interface FinderInput {
+  /**
+   * Logged benchmarks, for entry standards the seven questions do not ask
+   * about. Absent is not failing — see `meetsPrerequisite`.
+   */
+  metrics?: MetricEntry[];
   discipline: Discipline;
   experience: Experience;
   /** Highest grade climbed consistently, per ladder. Either may be omitted. */
@@ -112,6 +120,33 @@ const INJURY_RULES: {
     note: (p) => `Heavy hangboarding with a ${p} injury needs care — reduce load and stop at any sharp pain`,
   },
 ];
+
+/**
+ * Whether a climber clears one entry standard: true, false, or unknown.
+ *
+ * **Grades come from the form, everything else from the log.** The finder
+ * asks for a boulder and a sport grade, so a grade prerequisite can always
+ * be judged; a dead hang or a push-up count can only come from an
+ * assessment the climber has actually sat.
+ *
+ * This used to read `metricId === 'redpoint_grade' ? 'YDS' : 'V'` and then
+ * compare *the climber's grade ordinal* against the threshold whatever the
+ * metric was — so a `dead_hang >= 60` prerequisite would have compared V8
+ * (ordinal 8) against 60 and blocked every climber alive from a program
+ * they qualified for. The registry has said `kind` and `scale` all along.
+ */
+function meetsPrerequisite(
+  prereq: { metricId: MetricId; atLeast: number },
+  input: FinderInput,
+): boolean | null {
+  const metric = getMetric(prereq.metricId);
+  if (metric?.kind === 'grade') {
+    const ordinal = climberOrdinal(input, metric.scale ?? 'V');
+    return ordinal === null ? null : ordinal >= prereq.atLeast;
+  }
+  const value = seriesFor(input.metrics ?? [], prereq.metricId).at(-1)?.value;
+  return value === undefined ? null : value >= prereq.atLeast;
+}
 
 /** The word a climber would use, not the enum. */
 function equipmentWord(kit: Equipment): string {
@@ -253,17 +288,32 @@ export function recommend(input: FinderInput): Recommendation[] {
     }
 
     // ── Prerequisites ──────────────────────────────────────────────────
-    for (const prereq of program.prerequisites?.metrics ?? []) {
-      const scaleForPrereq: GradeScale = prereq.metricId === 'redpoint_grade' ? 'YDS' : 'V';
-      const actual = climberOrdinal(input, scaleForPrereq);
-      if (actual === null) {
-        cautions.push(program.prerequisites!.note);
-      } else if (actual < prereq.atLeast) {
-        blockers.push(program.prerequisites!.note);
-      } else {
-        score += 10;
-        reasons.push('You meet its entry requirement');
+    //
+    // Once per program, not once per metric: the note used to be pushed for
+    // every entry standard, so a program with four of them said the same
+    // sentence four times (PLAN.md M35).
+    const prereqs = program.prerequisites?.metrics ?? [];
+    if (prereqs.length > 0) {
+      const results = prereqs.map((prereq) => meetsPrerequisite(prereq, input));
+      const failed = results.filter((r) => r === false).length;
+      const met = results.filter((r) => r === true).length;
+      if (failed > 0) {
+        if (program.prerequisites!.soft) cautions.push(program.prerequisites!.note);
+        else blockers.push(program.prerequisites!.note);
+      } else if (met > 0) {
+        // Proportional, not flat: meeting one standard out of four is not
+        // the same evidence as meeting all four, and a flat bonus made a
+        // single logged dead hang worth as much as a full assessment.
+        score += Math.round((10 * met) / prereqs.length);
+        reasons.push(
+          met === prereqs.length
+            ? 'You meet its entry requirements'
+            : 'You meet the entry requirements you have measured',
+        );
       }
+      // Everything unmeasured stays silent. A climber who has not logged a
+      // dead hang has not failed one, and cautioning them for it would put
+      // a warning on every program until they sat an assessment.
     }
 
     // ── Injuries ───────────────────────────────────────────────────────

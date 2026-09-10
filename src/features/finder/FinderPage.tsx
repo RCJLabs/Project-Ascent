@@ -9,6 +9,7 @@ import { finderInputFrom, type BaselineAnswers } from '@/engine/onboarding';
 import { injuryPolicy } from '@/engine/injury';
 import type { Discipline, Equipment } from '@/content/types';
 import type { BodyPart } from '@/content/warmups';
+import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -121,11 +122,16 @@ function RecCard({ rec, headline }: { rec: Recommendation; headline?: boolean })
  */
 export function FinderPage() {
   const hydrated = useProfile((s) => s.hydrated);
+  // Benchmarks decide the entry standards the seven questions cannot ask
+  // about, so wait for them too: an empty set reads as unmeasured, and
+  // running before they land would answer a different climber's question
+  // from the one the same climber gets a second later (PLAN.md M35).
+  const metricsReady = useMetrics((s) => s.hydrated);
   const baseline = useProfile((s) => s.baseline);
   // Not `null`: with nothing in `main` the page has no height, so the
   // layout collapses and snaps back a frame later — which reads as a fault
   // rather than as loading (PLAN.md M22).
-  if (!hydrated) return <PageSkeleton title="Find my program" />;
+  if (!hydrated || !metricsReady) return <PageSkeleton title="Find my program" />;
   return <FinderForm baseline={baseline} />;
 }
 
@@ -153,6 +159,7 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
   // rule out the program it barely affects.
   const injuries = storedInjuries.map((i) => i.part);
   const blocking = useMemo(() => injuryPolicy(storedInjuries).excluded, [storedInjuries]);
+  const metrics = useMetrics((s) => s.entries);
 
   const toggleInjury = (part: BodyPart) => {
     const existing = storedInjuries.find((i) => i.part === part);
@@ -168,11 +175,12 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
   useEffect(() => {
     if (autoRan.current || !baseline) return;
     autoRan.current = true;
-    setResult(findProgram(finderInputFrom(baseline, equipment, blocking)));
-  }, [baseline, equipment, blocking]);
+    setResult(findProgram(finderInputFrom(baseline, equipment, blocking, metrics)));
+  }, [baseline, equipment, blocking, metrics]);
 
   function run() {
     const input: FinderInput = {
+      metrics,
       discipline,
       experience,
       ...(boulderGrade ? { boulderGrade } : {}),
@@ -225,11 +233,17 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
                       <Lock size={13} className="text-ink-soft" />
                       {b.program.name}
                     </div>
-                    {b.blockers.map((blocker) => (
-                      <p key={blocker} className="text-ink-soft ml-5">
-                        {blocker}
-                      </p>
-                    ))}
+                    {/* Spaced, not stacked: a program can be out of reach
+                        for two unrelated reasons — no hangboard *and* an
+                        unmet entry standard — and with no gap the two
+                        sentences ran together as one (PLAN.md M35). */}
+                    <div className="ml-5 grid grid-cols-1 gap-1">
+                      {b.blockers.map((blocker) => (
+                        <p key={blocker} className="text-ink-soft">
+                          {blocker}
+                        </p>
+                      ))}
+                    </div>
                   </li>
                 ))}
               </ul>

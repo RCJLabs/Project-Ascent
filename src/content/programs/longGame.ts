@@ -283,6 +283,17 @@ export const THE_LONG_GAME: Program = {
 
   assessments: ['arc_duration', 'dead_hang', 'onsight_grade', 'redpoint_grade', 'max_pushups', 'core_plank'],
 
+  prerequisites: {
+    soft: true,
+    note: 'Built on a 5.9 on-sight, a 45-second dead hang, a 90-second plank and ten strict push-ups. The volume here assumes that base is already there.',
+    metrics: [
+      { metricId: 'onsight_grade', atLeast: 5 },
+      { metricId: 'dead_hang', atLeast: 45 },
+      { metricId: 'core_plank', atLeast: 90 },
+      { metricId: 'max_pushups', atLeast: 10 },
+    ],
+  },
+
   nextPrograms: [
     {
       id: 'the_siege',

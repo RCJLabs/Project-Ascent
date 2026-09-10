@@ -1292,11 +1292,42 @@ across its input space.
   seven scheduled deload weeks have no row to be marked on — named in
   `accuracy.test.ts`, and authoring rather than plumbing.
 
-- **M35 — Entry standards as data.** Six programs print an entry-requirements table
-  the app cannot check. `Program.prerequisites` exists so a standard is "checkable
-  against the user's own data instead of living in prose the app can't read"; for
-  Ground Zero, Base Camp, Gravity Defied, Iron Grip, The Long Game and The Cruiser it
-  is exactly that prose.
+- **M35 — Entry standards as data.** *Done.* Programs printed an entry-requirements
+  table the app could not check. `Program.prerequisites` exists so a standard is
+  "checkable against the user's own data instead of living in prose the app can't
+  read", and for most of them it was exactly that prose. Base Camp, Gravity Defied,
+  Iron Grip, The Long Game and The Cruiser now declare theirs as data, and the finder
+  reads a climber's logged benchmarks.
+  **The audit's count was wrong: five, not six.** Ground Zero's only standards table
+  is *Graduation Standards* — what you should be able to do when you finish it — and
+  wiring that up as an entry gate would have locked every beginner out of the beginner
+  program. `accuracy.test.ts` now tells the two apart by the heading above the table
+  rather than by its column names, so the next one cannot be miscounted the same way.
+  **Wiring it up found the finder had never read the metric registry.** It decided
+  `metricId === 'redpoint_grade' ? 'YDS' : 'V'` and then compared the *climber's grade
+  ordinal* against the threshold whatever the metric was — so a `dead_hang >= 60`
+  standard would have compared V8 (ordinal 8) against 60 and blocked every climber
+  alive. `meetsPrerequisite` asks the registry for `kind` and `scale`, which it has
+  said all along.
+  **Absent is not failing.** A standard nobody has measured returns `null` and the
+  finder says nothing at all about it — no block, no caution — because otherwise every
+  program carries a warning until the climber sits an assessment. Meeting some of them
+  scores proportionally, not a flat bonus: one logged dead hang was worth as much as a
+  full assessment. And the note is pushed once per program, not once per metric, or a
+  four-standard program said the same sentence four times.
+  **A standard blocks or warns depending on what the program calls it**, which the
+  browser found and the tests could not. Blocking on every unmet standard turned a V6
+  climber with an 18-second dead hang into "nothing was a confident match" — the app
+  refusing to show a program rather than saying be careful. Iron Grip's floor is a
+  safety limit in its own words ("hangboarding below that loads tendons that have not
+  had a year of climbing to adapt") and still blocks; Base Camp, Gravity Defied, The
+  Long Game and The Cruiser call theirs an assumption, and are `soft: true`. A sweep
+  asserts every trainable program stays reachable for a climber who has logged nothing.
+  Six mutations against the new logic, six killed — two of them only after the first
+  attempt turned out to be a no-op against text that had been reformatted.
+  **Also fixed in the browser:** a program can now be out of reach for two unrelated
+  reasons (no hangboard *and* an unmet standard) and the two sentences were rendering
+  glued together as one paragraph.
 
 - **M36 / M37 — Required kit and helpful kit.** *Done, as one change.* Nine of nine
   programs were blocked for a climber with only a wall — and, worse, for a climber

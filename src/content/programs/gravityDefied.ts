@@ -319,6 +319,17 @@ export const GRAVITY_DEFIED: Program = {
     'core_plank',
   ],
 
+  prerequisites: {
+    soft: true,
+    note: 'Dynamic work assumes a base: a 45-second dead hang, ten strict push-ups, a 90-second plank, and a flash grade around V1-V2. Base Camp builds all four.',
+    metrics: [
+      { metricId: 'dead_hang', atLeast: 45 },
+      { metricId: 'max_pushups', atLeast: 10 },
+      { metricId: 'core_plank', atLeast: 90 },
+      { metricId: 'flash_grade', atLeast: 1 },
+    ],
+  },
+
   nextPrograms: [
     { id: 'lockdown', reason: 'Your complement — add static power to the dynamic toolkit you just built.' },
     { id: 'iron_grip', reason: 'If finger strength is the next bottleneck on your V5-V7 projects.' },
