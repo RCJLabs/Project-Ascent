@@ -107,6 +107,7 @@ export const GRAVITY_DEFIED: Program = {
   sessionTypes: [
     {
       id: 'tech',
+      priority: 1,
       name: 'Technical Flight',
       icon: '🧱',
       description: 'Dyno drill of the week, trained for control and consistency.',
@@ -128,6 +129,7 @@ export const GRAVITY_DEFIED: Program = {
     },
     {
       id: 'eng',
+      priority: 3,
       name: 'Engine Room',
       icon: '⚙️',
       description: 'Lower and upper body power, core, and armor.',
@@ -259,6 +261,7 @@ export const GRAVITY_DEFIED: Program = {
     },
     {
       id: 'perf',
+      priority: 2,
       name: 'Performance & Limit',
       icon: '⚡',
       description: 'The hardest dynos and dynamic boulders you can attempt.',

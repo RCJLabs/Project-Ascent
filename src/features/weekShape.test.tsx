@@ -76,9 +76,11 @@ describe('planning a week', () => {
   });
 
   it('says so when the days picked leave no room for the week asked for', async () => {
-    await start();
-    for (const day of [5, 6, 0]) fireEvent.click(dayChip(day));
-    fireEvent.click(screen.getByText('3'));
+    // The Long Game keeps Endurance and Performance off consecutive days,
+    // and a Saturday-Sunday week is nothing but consecutive days.
+    await start('the_long_game');
+    for (const day of [6, 0]) fireEvent.click(dayChip(day));
+    fireEvent.click(screen.getByText('2'));
     expect(screen.getByText(/leave no room for/i)).toBeTruthy();
   });
 

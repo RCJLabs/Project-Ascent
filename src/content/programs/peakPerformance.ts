@@ -93,6 +93,7 @@ export const PEAK_PERFORMANCE: Program = {
   sessionTypes: [
     {
       id: 'perf',
+      priority: 1,
       name: 'Max Intensity Bouldering',
       icon: '⚡',
       description: 'The hardest climbing of the week. Warm up 20-30 minutes.',
@@ -114,6 +115,7 @@ export const PEAK_PERFORMANCE: Program = {
     },
     {
       id: 'tech',
+      priority: 3,
       name: 'Technique & Movement',
       icon: '🧱',
       description: 'Deliberate practice on sub-maximal terrain.',
@@ -135,6 +137,7 @@ export const PEAK_PERFORMANCE: Program = {
     },
     {
       id: 'fp',
+      priority: 4,
       name: 'Fingerboard & Armor',
       icon: '✋',
       description: 'No climbing today. Pure structural loading.',
@@ -317,6 +320,7 @@ export const PEAK_PERFORMANCE: Program = {
     },
     {
       id: 'proj',
+      priority: 2,
       name: 'Projecting & Mental',
       icon: '🎯',
       description: 'Structured projecting. Warm up 30-40 minutes.',

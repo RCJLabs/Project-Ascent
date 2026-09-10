@@ -2181,12 +2181,42 @@ something that already exists; six are new. Nothing here is committed.*
 
 **Six that sharpen what is already there.**
 
-- **M64 — Tune session priority across the catalogue.** M55 shipped `SessionType.priority`
-  and set it on nothing: every shipped program still drops sessions in declaration order
-  when a week is short. Nine programs, thirty-seven session types, and the values are a
-  coaching judgement. Cheapest useful version: a proposed ordering derived from each
-  program's own `max-per-week` caps and `order-in-week` rules, offered as a diff to correct
-  rather than a blank field.
+- **M64 — Tune session priority across the catalogue.** *Done — the derivation and the
+  values; the coaching calls are listed below and want confirming.* M55 gave `SessionType`
+  a `priority` and set it on nothing, so all nine programs still dropped sessions in
+  whatever order they happened to be declared in.
+  `engine/priority.ts` reads the evidence each program already carries — how often the
+  author's own prescribed week runs it, whether a rule protects it, whether it goes first
+  "while fresh", whether it needs 48 hours around it, whether it is climbing or accessory
+  work, whether its own name calls it optional — and proposes an order with the reasons
+  attached. `npm run priority` prints the declared order, the proposed order and every line
+  of evidence. **Where two sessions score the same it says so rather than pretending the
+  program chose**, and declaration order stands, which is exactly what happened before.
+  All nine are now authored from that proposal. Authoring is all-or-nothing per program:
+  an unset priority sorts after every authored one, so tuning half a program would put the
+  untouched half last however important it is — a test holds that.
+  **What changed, and what wants a coach's eye.** *Climbing moved above the gym* in Base
+  Camp, Gravity Defied and The Long Game — a one-day week now keeps the climbing session
+  rather than the strength one. *Iron Grip keeps the climbing day over the fingerboard*,
+  which the program itself argues for by protecting it ("never hang the day before hard
+  climbing"). Both of those I would defend. **Lockdown is the one I would not**: the
+  proposal puts the technique climbing day above "Session A: Static Power", which is the
+  program's named centrepiece, and a two-day week that drops Session A is not a static
+  power block. **The Cruiser's four climbing days score within a point of each other**, so
+  a one-day week now keeps Performance where it used to keep Volume & Flow. **Peak
+  Performance ties** Max Intensity with Projecting, and declaration order stands.
+  **An authoring finding the tuning surfaced.** With the climbing day ranked first, Iron
+  Grip's Friday-Saturday-Sunday week fills as *Performance, Performance, Fingers* — legal,
+  because the program spaces the fingerboard and nothing else. It has no rule against two
+  hard climbing days back to back. That is the program's to decide, not the scheduler's.
+  Six mutations, six killed, after two rules that no shipped program exercises — the
+  protection lift and the optional penalty — were moved onto fixtures rather than left as
+  rules nobody checks. A third, an explicit tie-break, was deleted: `sort` has been required
+  to be stable since ES2019, so it was a line no test could kill.
+  Two M55 tests changed, and it is worth saying why: they pinned Iron Grip having no legal
+  three-day weekend, which stopped being true when the priorities changed which sessions
+  fill that week. They now use The Long Game, which cannot put Endurance and Performance on
+  consecutive days and so still has to step down.
 
 - **M65 — Search the guides, not just their headings.** The search page indexes a guide by
   name, subtitle and section *titles*. The bodies — nearly five thousand lines, the app's

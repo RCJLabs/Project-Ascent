@@ -144,6 +144,7 @@ export const LOCKDOWN: Program = {
   sessionTypes: [
     {
       id: 'sa',
+      priority: 2,
       name: 'Session A: Static Power',
       icon: '🤜',
       description: 'Density hangs, lock-offs, pulling, armor.',
@@ -303,6 +304,7 @@ export const LOCKDOWN: Program = {
     },
     {
       id: 'sb',
+      priority: 3,
       name: 'Session B: Body Tension',
       icon: '🧘',
       description: 'Core circuit, antagonist work, hip mobility.',
@@ -420,6 +422,7 @@ export const LOCKDOWN: Program = {
     },
     {
       id: 'tech',
+      priority: 1,
       name: 'Climbing: Technique',
       icon: '🧱',
       description: 'Static-specific drills. Low intensity, high focus.',

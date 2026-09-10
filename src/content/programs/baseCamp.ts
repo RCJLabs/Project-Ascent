@@ -122,6 +122,7 @@ export const BASE_CAMP: Program = {
   sessionTypes: [
     {
       id: 'tech',
+      priority: 1,
       name: 'Climb: Technique',
       icon: '🧱',
       description: 'Drill of the week. Low intensity, high focus.',
@@ -143,6 +144,7 @@ export const BASE_CAMP: Program = {
     },
     {
       id: 'eng',
+      priority: 3,
       name: 'The Engine Room',
       icon: '⚙️',
       description: 'Push, pull, legs, and a core circuit. Runs on a non-climbing day.',
@@ -290,6 +292,7 @@ export const BASE_CAMP: Program = {
     },
     {
       id: 'perf',
+      priority: 2,
       name: 'Climb: Performance',
       icon: '⚡',
       description: 'Hard effort — limit bouldering or routes, then a short core circuit.',

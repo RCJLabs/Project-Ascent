@@ -157,18 +157,24 @@ describe('layoutsFor', () => {
     expect(full!.note).toBeUndefined();
   });
 
-  // Offering nothing is not an answer. Iron Grip across Friday, Saturday and
-  // Sunday has no legal three-day week — 48 hours between finger sessions and
-  // no fingers the day before hard climbing cannot both hold across three
-  // consecutive days — so it comes back with a two-day one.
+  /**
+   * Offering nothing is not an answer. The Long Game across Saturday and
+   * Sunday has no legal two-day week — Endurance and Performance cannot fall
+   * on consecutive days and both are what a two-day week would hold — so it
+   * comes back with a one-day one.
+   *
+   * This used to be Iron Grip on Friday, Saturday and Sunday, which stopped
+   * being an example when M64 tuned the catalogue: with the climbing day
+   * ranked above the fingerboard, the week it fills is legal.
+   */
   it('offers a shorter week when the asked-for one cannot fit', () => {
-    const generated = layoutsFor(IRON_GRIP, { daysPerWeek: 3, availableDays: [5, 6, 0] }).filter(
+    const generated = layoutsFor(THE_LONG_GAME, { daysPerWeek: 2, availableDays: [6, 0] }).filter(
       (l) => l.name !== 'Recommended',
     );
     expect(generated.length).toBeGreaterThan(0);
     for (const layout of generated) {
-      expect(Object.keys(layout.slots).length).toBeLessThan(3);
-      expect(validateWeek(IRON_GRIP, planFromLayout(layout)).filter((v) => v.severity === 'error')).toEqual([]);
+      expect(Object.keys(layout.slots).length).toBeLessThan(2);
+      expect(validateWeek(THE_LONG_GAME, planFromLayout(layout)).filter((v) => v.severity === 'error')).toEqual([]);
     }
   });
 });

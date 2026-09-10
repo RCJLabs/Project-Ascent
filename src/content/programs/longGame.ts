@@ -128,6 +128,7 @@ export const THE_LONG_GAME: Program = {
   sessionTypes: [
     {
       id: 'end',
+      priority: 1,
       name: 'Endurance Session',
       icon: '🔥',
       description: 'ARC, power endurance, or redpoint burns depending on the phase.',
@@ -149,6 +150,7 @@ export const THE_LONG_GAME: Program = {
     },
     {
       id: 'eng',
+      priority: 3,
       name: 'Strength & Armor',
       icon: '⚙️',
       description: 'Pull and push maintenance, core, and armor. Runs on a non-climbing day.',
@@ -251,6 +253,7 @@ export const THE_LONG_GAME: Program = {
     },
     {
       id: 'perf',
+      priority: 2,
       name: 'Performance Climbing',
       icon: '⚡',
       description: 'On-sight attempts, redpoint burns, and lead fall practice.',

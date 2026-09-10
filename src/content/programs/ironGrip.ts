@@ -103,6 +103,7 @@ export const IRON_GRIP: Program = {
   sessionTypes: [
     {
       id: 'fp',
+      priority: 2,
       name: 'Finger Protocol + Engine',
       icon: '✋',
       description: 'Hangboard protocol plus pulling, pushing, core, and armor work.',
@@ -344,6 +345,7 @@ export const IRON_GRIP: Program = {
     },
     {
       id: 'perf',
+      priority: 1,
       name: 'Climbing Session',
       icon: '⚡',
       description: 'Volume or performance climbing, themed to the current phase.',

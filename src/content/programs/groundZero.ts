@@ -87,6 +87,7 @@ export const GROUND_ZERO: Program = {
   sessionTypes: [
     {
       id: 'str',
+      priority: 1,
       name: 'Structural Integrity',
       icon: '💪',
       description: 'Shoulders, push and pull, forearms, legs.',
@@ -267,6 +268,7 @@ export const GROUND_ZERO: Program = {
     },
     {
       id: 'mob',
+      priority: 2,
       name: 'Mobility & Core',
       icon: '🧘',
       description: 'Core circuit plus a mobility flow.',

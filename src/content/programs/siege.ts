@@ -88,6 +88,7 @@ export const THE_SIEGE: Program = {
   sessionTypes: [
     {
       id: 'proj',
+      priority: 1,
       name: 'Project Session',
       icon: '🎯',
       description: 'Siege work on your chosen project. Structure shifts with the phase.',
@@ -109,6 +110,7 @@ export const THE_SIEGE: Program = {
     },
     {
       id: 'pe',
+      priority: 2,
       name: 'Power-Endurance',
       icon: '🔥',
       description: 'Rope-specific capacity: linked laps and burst power-endurance.',
@@ -130,6 +132,7 @@ export const THE_SIEGE: Program = {
     },
     {
       id: 'fp',
+      priority: 3,
       name: 'Fingerboard + Structural',
       icon: '✋',
       description: 'No climbing. The finger protocol shifts by phase; supporting strength is maintained.',

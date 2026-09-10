@@ -166,6 +166,7 @@ export const THE_CRUISER: Program = {
   sessionTypes: [
     {
       id: 'vol',
+      priority: 3,
       name: 'Climbing: Volume & Flow',
       icon: '🎵',
       description: 'Easy climbing with a technique focus. RPE 4-6, two to four grades below max.',
@@ -201,6 +202,7 @@ export const THE_CRUISER: Program = {
     },
     {
       id: 'perf',
+      priority: 1,
       name: 'Climbing: Performance',
       icon: '⚡',
       description: 'Limit bouldering or hard routes. RPE 8-9.',
@@ -236,6 +238,7 @@ export const THE_CRUISER: Program = {
     },
     {
       id: 'end',
+      priority: 2,
       name: 'Climbing: Endurance',
       icon: '🔥',
       description: 'ARC, 4x4s, linked laps, or circuits. RPE 6-8.',
@@ -271,6 +274,7 @@ export const THE_CRUISER: Program = {
     },
     {
       id: 'str',
+      priority: 4,
       name: 'Strength & Armor',
       icon: '⚙️',
       description: 'Off-wall work on your chosen track.',
@@ -417,6 +421,7 @@ export const THE_CRUISER: Program = {
     },
     {
       id: 'hb',
+      priority: 5,
       name: 'Hangboard Module (optional)',
       icon: '✋',
       description: 'Maintenance hangs at 80% of training max, once or twice a week.',

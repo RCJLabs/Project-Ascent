@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "icons": "node scripts/gen-icons.mjs",
-    "themes:check": "vite-node scripts/theme-report.ts"
+    "themes:check": "vite-node scripts/theme-report.ts",
+    "priority": "vite-node scripts/priority-report.ts"
   },
   "dependencies": {
     "idb": "^8.0.0",
