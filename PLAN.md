@@ -1930,21 +1930,41 @@ and why.
   down, and a one-day week says "Keeps Finger Protocol + Engine. Leaves out Climbing
   Session."
 
-- **M56 — Run a program over the time you have.** A climber with six weeks before a trip
-  cannot run a twelve-week block, and the app has no answer but "start it and stop
-  halfway". Programs carry `weeks`, phases that tile `1..weeks`, `deloadWeeks`, and
-  `drillsByWeek` keyed by week, so a shorter run is a *remapping* rather than a truncation:
-  phases keep their proportions, deloads land where the phase structure puts them, and
-  week-keyed drills follow. Derived, not stored — the profile keeps the adaptation
-  (`{ weeks }`), and the adapted program is registered under its own id at hydration
-  exactly as a custom program is, so all fourteen `getProgram` call sites get it without
-  knowing. **The honesty problem is the real work**: the guide describes the written
-  shape — twelve weeks, deloads at 4 and 8 — and `accuracy.test.ts` enforces that. An
-  adapted program has to say it is adapted, and the guide has to say which shape it is
-  describing, or the app is quietly wrong on a screen a climber trusts.
-  *Done when: Gravity Defied runs over six weeks with its phases intact, the app says so
-  wherever it says the program's name, and the guide does not claim a week that no longer
-  exists.*
+- **M56 — Run a program over the time you have.** *Done.* A climber with six weeks
+  before a trip could not run a twelve-week block; the app's only answer was "start it and
+  stop halfway", which gets them the first two phases and never the third — the one the
+  block was building toward.
+  **A remapping, not a truncation.** `adaptProgram` apportions the weeks across the phases
+  by largest remainder, so proportions hold and no phase is left with none — prescriptions
+  are keyed by phase id, so a lost phase is a lost block. Phase ids, names, session types
+  and every `perPhase` prescription come through untouched. Week-keyed drills follow their
+  phase.
+  **Rescaling keeps both ends of a phase.** Centre-sampling a four-week phase into two
+  picks weeks 2 and 4 — it drops the week that introduces the movement and keeps the
+  repeats. Keeping the endpoints picks 1 and 4, the week a pattern is taught and the week
+  it is loaded, and thins the middle instead. That is also what makes a phase-final deload
+  land on the phase end without a special case for it.
+  **Deloads keep what they meant, then get thinned.** Most of the catalogue deloads on the
+  last week of a phase. Compress twelve weeks into six and that rule alone puts a deload
+  every other week, which is a holiday rather than a block — so they are thinned to three
+  weeks apart, latest first, and the final week is cleared, because a block that ends on a
+  deload ends on nothing. Gravity Defied's `[4, 8]` becomes `[4]`.
+  **Applied in one place.** The length lives on the profile and is registered with the
+  program lookup exactly as a custom program is, so all fourteen `getProgram` call sites —
+  including the two inside pure engines that cannot read a React store — get the adapted
+  program without knowing it exists. Nothing shorter than four weeks or than the program's
+  own phase count is ever offered.
+  **The honesty is the other half.** The guide describes the written block and cannot be
+  rewritten, so the length picker says what the phases become and where the deload lands
+  before the climber commits, the program's own screen reads "6 / of 12", and the guide
+  page says its week numbers belong to the twelve-week block.
+  **A bug the tests found:** the length picker read the program through `getProgram`, which
+  returns the adapted one — so choosing six weeks and then twelve compressed a six-week
+  program into twelve, with no way back to what the author wrote. It reads
+  `writtenProgram` now.
+  Eleven mutations, eleven killed. Verified in a browser end to end: pick six weeks, start,
+  and the profile stores `{gravity_defied: 6}` with the week plan; the program tile reads
+  "6 of 12"; the guide says which block it is describing.
 
 - **M57 — The finder asks how long you have.** `FinderInput` knows days per week,
   equipment, grades, goal and injuries — not how many weeks the climber has. A short

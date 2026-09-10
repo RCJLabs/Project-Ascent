@@ -1,3 +1,4 @@
+import { adaptProgram } from '@/engine/adapt';
 import type { Program, ProgramId, ProgramStage } from '../types';
 import { BASE_CAMP } from './baseCamp';
 import { GRAVITY_DEFIED } from './gravityDefied';
@@ -54,8 +55,48 @@ export function registerCustomPrograms(programs: readonly Program[]): void {
   for (const program of programs) CUSTOM.set(program.id, program);
 }
 
+/**
+ * Lengths a climber is running a program over, when it is not the written
+ * one (PLAN.md M56).
+ *
+ * Applied here rather than at the fourteen places that call `getProgram`,
+ * for the same reason custom programs are registered here: an adaptation
+ * that reaches thirteen screens and misses the fourteenth is worse than no
+ * adaptation at all. Memoised because `getProgram` is called inside render.
+ */
+const ADAPTED = new Map<ProgramId, number>();
+const ADAPTED_CACHE = new Map<string, Program>();
+
+export function registerAdaptations(weeksById: Record<string, number>): void {
+  ADAPTED.clear();
+  ADAPTED_CACHE.clear();
+  for (const [id, weeks] of Object.entries(weeksById)) {
+    if (Number.isFinite(weeks) && weeks > 0) ADAPTED.set(id as ProgramId, Math.round(weeks));
+  }
+}
+
 /** Custom first: a fork keeps its own id, but this is the safe precedence. */
 export function getProgram(id: ProgramId): Program | undefined {
+  const base = CUSTOM.get(id) ?? BY_ID.get(id);
+  if (!base) return undefined;
+  const weeks = ADAPTED.get(id);
+  if (weeks === undefined || weeks === base.weeks) return base;
+  const key = `${id}:${weeks}:${base.weeks}`;
+  const cached = ADAPTED_CACHE.get(key);
+  if (cached) return cached;
+  const adapted = adaptProgram(base, weeks);
+  ADAPTED_CACHE.set(key, adapted);
+  return adapted;
+}
+
+/**
+ * The program as written, whatever length it is being run over.
+ *
+ * The screen that *chooses* a length has to start from the written one, or
+ * choosing six weeks and then twelve compresses a six-week program into
+ * twelve and there is no way back to the block the author wrote.
+ */
+export function writtenProgram(id: ProgramId): Program | undefined {
   return CUSTOM.get(id) ?? BY_ID.get(id);
 }
 
@@ -63,9 +104,10 @@ export function isCustomProgram(id: ProgramId): boolean {
   return CUSTOM.has(id);
 }
 
-/** Everything runnable, shipped and written alike. */
+/** Everything runnable, shipped and written alike — at the length it is
+ *  actually being run, so a list cannot disagree with the program it opens. */
 export function allPrograms(): Program[] {
-  return [...PROGRAMS, ...CUSTOM.values()];
+  return [...PROGRAMS, ...CUSTOM.values()].map((p) => getProgram(p.id) ?? p);
 }
 
 export const STAGE_META: Record<ProgramStage, { label: string; blurb: string }> = {

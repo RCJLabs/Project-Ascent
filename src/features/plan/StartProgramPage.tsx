@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { AlertTriangle, Check } from 'lucide-react';
-import { getProgram } from '@/content/programs';
+import { writtenProgram } from '@/content/programs';
+import { adaptProgram, lengthsFor } from '@/engine/adapt';
 import {
   DAY_NAMES,
   DAY_SHORT,
@@ -22,21 +23,32 @@ import { RecordNotFound } from '@/ui/RecordNotFound';
 const DAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 
 export function StartProgramPage({ params }: { params: { id: string } }) {
-  const program = getProgram(params.id);
+  // The written block: this is the screen that chooses a length, so it must
+  // not start from a length already chosen (PLAN.md M56).
+  const program = writtenProgram(params.id);
   const [, navigate] = useLocation();
   const startDates = useProfile((s) => s.startDates);
   const startProgram = useProfile((s) => s.startProgram);
+  const setProgramLength = useProfile((s) => s.setProgramLength);
+  const adaptations = useProfile((s) => s.adaptations);
 
   const [daysPerWeek, setDaysPerWeek] = useState<number | undefined>(undefined);
   const [availableDays, setAvailableDays] = useState<DayOfWeek[]>([]);
   const [layoutIndex, setLayoutIndex] = useState(0);
   const [track, setTrack] = useState<string | undefined>(program?.tracks?.[0]?.id);
   const [restart, setRestart] = useState(false);
+  const [weeks, setWeeks] = useState<number | null>(
+    program ? (adaptations[program.id] ?? null) : null,
+  );
 
   if (!program) {
     return <RecordNotFound what="That program" backTo="/train" backLabel="Back to Train" />;
   }
 
+  const written = program;
+  const shown = weeks === null ? program : adaptProgram(program, weeks);
+  const lengths = lengthsFor(program);
+  const phaseSizes = shown.phases.map((p) => p.weekEnd - p.weekStart + 1);
   const layouts = layoutsFor(program, {
     ...(daysPerWeek !== undefined ? { daysPerWeek } : {}),
     ...(availableDays.length > 0 ? { availableDays } : {}),
@@ -61,6 +73,10 @@ export function StartProgramPage({ params }: { params: { id: string } }) {
   const previouslyStarted = startDates[program.id];
 
   function commit() {
+    // The length first: `startProgram` stamps a start date, and every screen
+    // that reads the program from that moment on should already be reading
+    // the length it is being run over.
+    setProgramLength(program!.id, weeks === null || weeks === written.weeks ? null : weeks);
     startProgram(program!.id, plan, track, restart);
     navigate('/calendar');
   }
@@ -84,6 +100,40 @@ export function StartProgramPage({ params }: { params: { id: string } }) {
                 />
               ))}
             </div>
+          </Card>
+        )}
+
+        {lengths.length > 1 && (
+          <Card title="How long you have">
+            <div className="flex gap-2 flex-wrap">
+              {lengths.map((n) => (
+                <Chip
+                  key={n}
+                  active={n === (weeks ?? written.weeks)}
+                  onClick={() => setWeeks(n === written.weeks ? null : n)}
+                  className="min-w-11 justify-center"
+                >
+                  {n === written.weeks ? `${n} weeks, as written` : `${n} weeks`}
+                </Chip>
+              ))}
+            </div>
+            {shown.adaptedFrom !== undefined && (
+              <div className="mt-3 grid grid-cols-1 gap-1.5">
+                <p className="text-sm text-ink-soft">
+                  {shown.phases.map((p) => p.name).join(', ')} run{' '}
+                  {phaseSizes.join(', ')} week{phaseSizes[phaseSizes.length - 1] === 1 ? '' : 's'}{' '}
+                  instead of {written.phases.map((p) => p.weekEnd - p.weekStart + 1).join(', ')}.
+                  {(shown.deloadWeeks ?? []).length > 0
+                    ? ` Deload week${(shown.deloadWeeks ?? []).length === 1 ? '' : 's'} ${(shown.deloadWeeks ?? []).join(' and ')}.`
+                    : ' No deload week — the block is too short to need one.'}
+                </p>
+                <p className="text-sm flex gap-2 items-start">
+                  <AlertTriangle size={14} className="text-warn shrink-0 mt-0.5" />
+                  The written program is {written.weeks} weeks, and its guide still describes that
+                  one. The sessions are the same; there are fewer of them.
+                </p>
+              </div>
+            )}
           </Card>
         )}
 

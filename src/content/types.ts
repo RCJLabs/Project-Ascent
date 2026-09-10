@@ -386,6 +386,14 @@ export interface Program {
    * dip was the plan.
    */
   deloadWeeks?: number[];
+  /**
+   * Set when this is a shipped program running over a different number of
+   * weeks than it was written for (PLAN.md M56) — the written length, so
+   * every screen showing the program can say what it is looking at. Never
+   * authored, never read from a program file: it is put there by
+   * `adaptProgram` and by nothing else.
+   */
+  adaptedFrom?: number;
   /** Human-readable scheduling prose, kept verbatim alongside `constraints`. */
   frequency: string;
   ordering: string;

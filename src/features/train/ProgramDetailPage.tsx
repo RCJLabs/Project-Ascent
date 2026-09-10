@@ -218,7 +218,9 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
           <div className="flex gap-4 mb-3">
             <div>
               <div className="text-2xl font-black leading-none">{program.weeks}</div>
-              <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mt-1">Weeks</div>
+              <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mt-1">
+                {program.adaptedFrom === undefined ? 'Weeks' : `of ${program.adaptedFrom}`}
+              </div>
             </div>
             <div>
               <div className="text-2xl font-black leading-none">

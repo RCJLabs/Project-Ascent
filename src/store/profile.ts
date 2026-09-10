@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getDb } from '@/db';
+import { registerAdaptations } from '@/content/programs';
 import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
 import { today } from '@/engine/dates';
@@ -67,6 +68,9 @@ export interface ProfileState {
   tracks: Record<string, string>;
   /** programId → the weekly plan the climber committed to. */
   plans: Record<string, WeekPlan>;
+  /** programId → weeks it is being run over, when that is not the written
+   *  length (PLAN.md M56). Absent means as written. */
+  adaptations: Record<string, number>;
   /** programId → week start → that week's changed plan. A move defaults to
    *  one week; see engine/reschedule.ts. */
   weekOverrides: Record<string, WeekOverrides>;
@@ -92,6 +96,8 @@ export interface ProfileState {
   markExported: () => void;
   startProgram: (programId: string, plan: WeekPlan, trackId?: string, restart?: boolean) => void;
   setPlan: (programId: string, plan: WeekPlan) => void;
+  /** Run a program over a different number of weeks, or as written. */
+  setProgramLength: (programId: string, weeks: number | null) => void;
   /** Change one week without touching the program's plan. */
   setWeekPlan: (programId: string, weekStart: string, plan: WeekPlan) => void;
   stopProgram: () => void;
@@ -111,6 +117,7 @@ interface Persisted {
   tracks: Record<string, string>;
   plans: Record<string, WeekPlan>;
   weekOverrides: Record<string, WeekOverrides>;
+  adaptations: Record<string, number>;
   equipment: Equipment[];
   injuries: Injury[];
   recentWarmups: string[];
@@ -128,6 +135,7 @@ function snapshot(s: ProfileState): Persisted {
     tracks: s.tracks,
     plans: s.plans,
     weekOverrides: s.weekOverrides,
+    adaptations: s.adaptations,
     equipment: s.equipment,
     injuries: s.injuries,
     recentWarmups: s.recentWarmups,
@@ -137,6 +145,25 @@ function snapshot(s: ProfileState): Persisted {
     dismissedTips: s.dismissedTips,
     lastExportAt: s.lastExportAt,
   };
+}
+
+/**
+ * Keep the program registry in step with the lengths stored here.
+ *
+ * `getProgram` reads that registry, and it is read inside pure engines that
+ * cannot see a React store — the same reason custom programs register there.
+ * Every write of `adaptations` goes through this, so the two cannot drift,
+ * and a nonsense value in a restored backup never reaches it.
+ */
+function adopt(value: unknown): Record<string, number> {
+  const raw = (value ?? {}) as Record<string, unknown>;
+  const clean: Record<string, number> = {};
+  for (const [id, weeks] of Object.entries(raw)) {
+    const n = Number(weeks);
+    if (Number.isFinite(n) && n >= 1) clean[id] = Math.round(n);
+  }
+  registerAdaptations(clean);
+  return clean;
 }
 
 async function save(value: Persisted): Promise<void> {
@@ -151,6 +178,7 @@ export const useProfile = create<ProfileState>((set, get) => ({
   tracks: {},
   plans: {},
   weekOverrides: {},
+  adaptations: {},
   equipment: ['wall', 'gym'],
   injuries: [],
   recentWarmups: [],
@@ -197,6 +225,12 @@ export const useProfile = create<ProfileState>((set, get) => ({
     // one: they were written against a shape that no longer exists.
     const { [programId]: _dropped, ...rest } = get().weekOverrides;
     set({ plans: { ...get().plans, [programId]: plan }, weekOverrides: rest });
+    void save(snapshot(get()));
+  },
+
+  setProgramLength: (programId, weeks) => {
+    const { [programId]: _dropped, ...rest } = get().adaptations;
+    set({ adaptations: adopt(weeks === null ? rest : { ...rest, [programId]: Math.round(weeks) }) });
     void save(snapshot(get()));
   },
 
@@ -279,6 +313,7 @@ export async function hydrateProfile(): Promise<void> {
       tracks: value.tracks ?? {},
       plans: value.plans ?? {},
       weekOverrides: value.weekOverrides ?? {},
+      adaptations: adopt(value.adaptations),
       equipment: value.equipment ?? ['wall', 'gym'],
       injuries: (value.injuries ?? []).map(readInjury),
       recentWarmups: value.recentWarmups ?? [],

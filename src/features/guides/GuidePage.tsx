@@ -97,11 +97,23 @@ export function GuidePage({ params }: { params: { id: string } }) {
             <div className="flex-1 min-w-0">
               <div className="font-bold text-sm">{program.name}</div>
               <p className="text-xs text-ink-soft truncate">
-                {program.weeks} weeks · the program this guide is about
+                {program.adaptedFrom ?? program.weeks} weeks · the program this guide is about
               </p>
             </div>
             <ArrowRight size={16} className="text-ink-soft shrink-0" />
           </Link>
+        )}
+
+        {/* The guide is written against the program as written. A climber
+            running it over fewer weeks is reading week numbers that no
+            longer match their calendar, and finding that out from the
+            calendar is finding it out too late (PLAN.md M56). */}
+        {program?.adaptedFrom !== undefined && (
+          <p className="text-sm text-warn border border-line rounded-2xl p-4">
+            You are running {program.name} over {program.weeks} weeks. This guide describes the
+            written {program.adaptedFrom}-week block, so its week numbers are that one&apos;s — the
+            phases and the sessions are the same.
+          </p>
         )}
 
         {guide.sections.map((section, index) => {
