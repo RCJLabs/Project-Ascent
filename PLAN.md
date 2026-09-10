@@ -1899,6 +1899,63 @@ and why.
   `DB_NAME` anticipating one database per profile. Deciding **no** is a fine outcome;
   deciding after shipping costs a migration.
 
+- **M55 — A week a climber can actually train.** *Done.* Three gaps, one change.
+  **One day.** Onboarding offered 2-6 days a week and the Start Program page offered
+  2-6, while the lowest any program asks for is 3 — so a two-day climber was cautioned by
+  every option in the catalogue and a one-day climber could not say so at all. Both now
+  start at one.
+  **Which days.** `layoutsFor` built three fixed shapes and nothing else, so a climber who
+  can only train Friday, Saturday and Sunday picked the nearest miss and dragged sessions
+  around the calendar afterwards. There is now a day picker, and the shapes are built only
+  from the days it holds.
+  **Which sessions.** With fewer days than session types the generator laid them out by
+  declaration order — the first two of four, because they were written first. `SessionType`
+  now carries `priority`, and `sessionsForDays` keeps the important ones and repeats them
+  when a week is long, skipping anything that has hit its own `max-per-week`. Unset
+  priorities sort after every authored one in declaration order, so an untuned program
+  behaves exactly as it did. **The values are a coaching judgement and are deliberately
+  unset**: nothing in the catalogue is tuned yet.
+  **Two things the work turned up.** `assignSessions` now searches orderings for the one
+  that breaks fewest rules, keeping the priority order on a tie — before this an
+  `order-in-week` rule was satisfied by luck or not at all. And **Iron Grip has no legal
+  three-day week on Friday, Saturday and Sunday**: 48 hours between finger sessions and no
+  fingers the day before hard climbing cannot both hold across three consecutive days. The
+  old code offered an empty list; it now steps down and offers the two-day weeks that do
+  work, and the screen says why.
+  A generated shape is also named for what it is. "Front-loaded — hard days early in the
+  week, weekend free" is a false sentence about a Friday-and-Saturday week, so a week built
+  from chosen days is named by its days and described by its spacing.
+  Seven mutations, seven killed. Verified in a browser: the weekend picker produces
+  `Fri, Sat`, `Sun, Fri` and `Sun, Sat` two-day weeks with the notice explaining the step
+  down, and a one-day week says "Keeps Finger Protocol + Engine. Leaves out Climbing
+  Session."
+
+- **M56 — Run a program over the time you have.** A climber with six weeks before a trip
+  cannot run a twelve-week block, and the app has no answer but "start it and stop
+  halfway". Programs carry `weeks`, phases that tile `1..weeks`, `deloadWeeks`, and
+  `drillsByWeek` keyed by week, so a shorter run is a *remapping* rather than a truncation:
+  phases keep their proportions, deloads land where the phase structure puts them, and
+  week-keyed drills follow. Derived, not stored — the profile keeps the adaptation
+  (`{ weeks }`), and the adapted program is registered under its own id at hydration
+  exactly as a custom program is, so all fourteen `getProgram` call sites get it without
+  knowing. **The honesty problem is the real work**: the guide describes the written
+  shape — twelve weeks, deloads at 4 and 8 — and `accuracy.test.ts` enforces that. An
+  adapted program has to say it is adapted, and the guide has to say which shape it is
+  describing, or the app is quietly wrong on a screen a climber trusts.
+  *Done when: Gravity Defied runs over six weeks with its phases intact, the app says so
+  wherever it says the program's name, and the guide does not claim a week that no longer
+  exists.*
+
+- **M57 — The finder asks how long you have.** `FinderInput` knows days per week,
+  equipment, grades, goal and injuries — not how many weeks the climber has. A short
+  program is unreachable for the reason it exists until it does. One input, one
+  onboarding question, one scoring rule, and the reasons say it in the climber's words.
+
+- **M58 — Two programs the catalogue does not have.** A **two-day-a-week** block, which
+  is the hole the app's own onboarding opens, and a **short block** of three or four
+  weeks for the weeks before a trip. Scaffold, guide skeleton and passing tests can be
+  built for both; the training itself is authoring and nobody else can do it.
+
 - **M52 — A catalogue with more than one shape.** All nine programs are exactly twelve
   weeks at 3-5 sessions a week. There is nothing for a climber with four weeks before a
   trip and nothing for one who can train twice a week — the finder can only warn "Asks

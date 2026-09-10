@@ -189,7 +189,7 @@ export function WelcomePage() {
             </Card>
             <Card title="Days a week you can train">
               <div className="flex gap-2">
-                {[2, 3, 4, 5, 6].map((n) => (
+                {[1, 2, 3, 4, 5, 6].map((n) => (
                   <Chip
                     key={n}
                     active={answers.daysPerWeek === n}

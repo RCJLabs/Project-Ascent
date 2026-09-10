@@ -241,6 +241,16 @@ export interface SessionType {
   /** Marks the rest/recovery type so the scheduler and reward pipeline can
    *  find it without string-matching an id. */
   isRest?: boolean;
+  /**
+   * Which sessions survive a short week (PLAN.md M55). Lower is kept first.
+   *
+   * A climber with two days and a four-session program is going to drop two
+   * of them, and which two is a coaching judgement — the session that carries
+   * the block stays, the accessory goes. Unset types sort after every
+   * authored one, in the order the program declares them, so a program that
+   * has not been tuned behaves exactly as it did before.
+   */
+  priority?: number;
 }
 
 // ── Phases ────────────────────────────────────────────────────────────────
