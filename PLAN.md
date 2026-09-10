@@ -1984,17 +1984,137 @@ and why.
   *Not done here: arriving at a program from a finder run with a deadline does not preselect
   that length on the start screen. The climber picks it again, one card down.*
 
+- **M58 — Two programs the catalogue does not have.** *Structure done, training content
+  drafted, not shipped.* Both live in `src/content/programs/drafts/` and are deliberately
+  **not** in `PROGRAMS`: nothing recommends them, nothing lists them, nobody can start one,
+  and the bundle does not carry them (checked — the built assets contain neither id). A
+  program in the catalogue is a coaching prescription, and these are drafts of one until
+  the person who coaches has read them.
+  **Two Days a Week** — 12 weeks, three phases, `sessions-per-week` 2-3, and the hole it
+  fills is the app's own: onboarding offers two days a week and the lowest anything shipped
+  asks for is three. Two session types that matter and one that does not, with `priority`
+  set so a one-day week keeps the climbing.
+  **Trip Prep** — 4 weeks, Sharpen (1-3) and Taper (4), `sessions-per-week` 3-4, no deload
+  because the taper is the deload and a second one would leave two weeks of training in the
+  block. Shorter than anything in the catalogue, and the reason M56's compression is not a
+  substitute: four weeks before a trip is a taper, not a training phase, and remapping a
+  twelve-week block does not turn one into the other.
+  `drafts.test.ts` runs the same validation the builder runs on a climber's own program,
+  plus the catalogue's rules — phases tile, every block prescribes every phase, something
+  changes at every phase *boundary* or the block declares itself constant, the recommended
+  layout breaks no rule, every day count from one to five lays out cleanly, every offered
+  length adapts cleanly, and the ids do not collide with a shipped one. Seven mutations,
+  seven killed, one of which only died once the test checked adjacent phases rather than
+  the block as a whole.
+  **What is still the coach's, before either ships:** every dose and progression step in
+  both files; whether a two-day week deloads once (week 8, as drafted), twice or not at all;
+  whether the climbing day really is what survives a one-day week; whether Trip Prep tapers
+  over one week or two; the `max-per-week` caps; grade ranges and entry standards, which are
+  currently open. And each needs a guide — `guides.test.ts` requires one per shipped
+  program, which is the check that stops either of these reaching a climber half-written.
+
+- **M51 — Decide multi-profile/coach mode.** §9.3 says "decide before schema freeze".
+  The schema is at version 2 and M12 is next. The foundations were laid on purpose:
+  `Program.author`, program-file export and import in the builder, and a comment on
+  `DB_NAME` anticipating one database per profile. Deciding **no** is a fine outcome;
+  deciding after shipping costs a migration.
+
+- **M55 — A week a climber can actually train.** *Done.* Three gaps, one change.
+  **One day.** Onboarding offered 2-6 days a week and the Start Program page offered
+  2-6, while the lowest any program asks for is 3 — so a two-day climber was cautioned by
+  every option in the catalogue and a one-day climber could not say so at all. Both now
+  start at one.
+  **Which days.** `layoutsFor` built three fixed shapes and nothing else, so a climber who
+  can only train Friday, Saturday and Sunday picked the nearest miss and dragged sessions
+  around the calendar afterwards. There is now a day picker, and the shapes are built only
+  from the days it holds.
+  **Which sessions.** With fewer days than session types the generator laid them out by
+  declaration order — the first two of four, because they were written first. `SessionType`
+  now carries `priority`, and `sessionsForDays` keeps the important ones and repeats them
+  when a week is long, skipping anything that has hit its own `max-per-week`. Unset
+  priorities sort after every authored one in declaration order, so an untuned program
+  behaves exactly as it did. **The values are a coaching judgement and are deliberately
+  unset**: nothing in the catalogue is tuned yet.
+  **Two things the work turned up.** `assignSessions` now searches orderings for the one
+  that breaks fewest rules, keeping the priority order on a tie — before this an
+  `order-in-week` rule was satisfied by luck or not at all. And **Iron Grip has no legal
+  three-day week on Friday, Saturday and Sunday**: 48 hours between finger sessions and no
+  fingers the day before hard climbing cannot both hold across three consecutive days. The
+  old code offered an empty list; it now steps down and offers the two-day weeks that do
+  work, and the screen says why.
+  A generated shape is also named for what it is. "Front-loaded — hard days early in the
+  week, weekend free" is a false sentence about a Friday-and-Saturday week, so a week built
+  from chosen days is named by its days and described by its spacing.
+  Seven mutations, seven killed. Verified in a browser: the weekend picker produces
+  `Fri, Sat`, `Sun, Fri` and `Sun, Sat` two-day weeks with the notice explaining the step
+  down, and a one-day week says "Keeps Finger Protocol + Engine. Leaves out Climbing
+  Session."
+
+- **M56 — Run a program over the time you have.** *Done.* A climber with six weeks
+  before a trip could not run a twelve-week block; the app's only answer was "start it and
+  stop halfway", which gets them the first two phases and never the third — the one the
+  block was building toward.
+  **A remapping, not a truncation.** `adaptProgram` apportions the weeks across the phases
+  by largest remainder, so proportions hold and no phase is left with none — prescriptions
+  are keyed by phase id, so a lost phase is a lost block. Phase ids, names, session types
+  and every `perPhase` prescription come through untouched. Week-keyed drills follow their
+  phase.
+  **Rescaling keeps both ends of a phase.** Centre-sampling a four-week phase into two
+  picks weeks 2 and 4 — it drops the week that introduces the movement and keeps the
+  repeats. Keeping the endpoints picks 1 and 4, the week a pattern is taught and the week
+  it is loaded, and thins the middle instead. That is also what makes a phase-final deload
+  land on the phase end without a special case for it.
+  **Deloads keep what they meant, then get thinned.** Most of the catalogue deloads on the
+  last week of a phase. Compress twelve weeks into six and that rule alone puts a deload
+  every other week, which is a holiday rather than a block — so they are thinned to three
+  weeks apart, latest first, and the final week is cleared, because a block that ends on a
+  deload ends on nothing. Gravity Defied's `[4, 8]` becomes `[4]`.
+  **Applied in one place.** The length lives on the profile and is registered with the
+  program lookup exactly as a custom program is, so all fourteen `getProgram` call sites —
+  including the two inside pure engines that cannot read a React store — get the adapted
+  program without knowing it exists. Nothing shorter than four weeks or than the program's
+  own phase count is ever offered.
+  **The honesty is the other half.** The guide describes the written block and cannot be
+  rewritten, so the length picker says what the phases become and where the deload lands
+  before the climber commits, the program's own screen reads "6 / of 12", and the guide
+  page says its week numbers belong to the twelve-week block.
+  **A bug the tests found:** the length picker read the program through `getProgram`, which
+  returns the adapted one — so choosing six weeks and then twelve compressed a six-week
+  program into twelve, with no way back to what the author wrote. It reads
+  `writtenProgram` now.
+  Eleven mutations, eleven killed. Verified in a browser end to end: pick six weeks, start,
+  and the profile stores `{gravity_defied: 6}` with the week plan; the program tile reads
+  "6 of 12"; the guide says which block it is describing.
+
+- **M57 — The finder asks how long you have.** *Done.* `FinderInput` knew days a week,
+  equipment, grades, goal and injuries — not how many weeks the climber had, so a block
+  written to fit a trip could never be recommended for the reason it exists.
+  The question is on the finder screen and **not** in the baseline: a trip is a fact about
+  this month, not about a climber, and the seven questions are answered once. It defaults
+  to open, which is the honest default — most of the time there is no date.
+  A program longer than the time available is **cautioned, never blocked**: since M56 a
+  twelve-week block can be run over six, so "Written as 12 weeks — you would run it over 6"
+  is the true sentence, and it scores below the same program with no deadline. One that
+  fits scores above it. Below four weeks — the floor an adaptation can reach — the caution
+  becomes "12 weeks, and 3 is too few to run it over", which is the catalogue admitting the
+  hole M58 fills.
+  Five mutations, five killed, including two that only died once the test measured a
+  program against *itself with no deadline* rather than against another program.
+  Verified in a browser: asking for six weeks puts the sentence on every recommendation.
+  *Not done here: arriving at a program from a finder run with a deadline does not preselect
+  that length on the start screen. The climber picks it again, one card down.*
+
 - **M58 — Two programs the catalogue does not have.** A **two-day-a-week** block, which
   is the hole the app's own onboarding opens, and a **short block** of three or four
   weeks for the weeks before a trip. Scaffold, guide skeleton and passing tests can be
   built for both; the training itself is authoring and nobody else can do it.
 
-- **M52 — A catalogue with more than one shape.** All nine programs are exactly twelve
-  weeks at 3-5 sessions a week. There is nothing for a climber with four weeks before a
-  trip and nothing for one who can train twice a week — the finder can only warn "Asks
-  for 4-5 days a week; you have 3" because it has nothing shorter to offer. This is a
-  coaching judgement about the catalogue rather than a defect, and it is the one item
-  here that only the person who writes the training can do.
+- **M52 — A catalogue with more than one shape.** *Split into M55-M58 and mostly done.*
+  The engine half is finished: a week can be built from the days a climber actually has and
+  the sessions that matter most (M55), a written block can be run over fewer weeks (M56),
+  and the finder asks how long they have (M57). The authoring half is drafted and unshipped
+  (M58). What is left is a coach's reading of two draft programs and a guide for each —
+  the one part of this that only the person who writes the training can do.
 
 - **M12 — Ship.** TWA packaging + assetlinks, Play internal testing, store listing.
   Last, after M13–M22.
