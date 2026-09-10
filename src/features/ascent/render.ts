@@ -11,7 +11,16 @@ import type { AvatarConfig } from '@/engine/avatar';
 import { CLIMBER, LANES, LANE_WIDTH, VIEW } from '@/engine/ascent/config';
 import { climberX, isObstacle, screenY, type Entity, type RunState } from '@/engine/ascent/game';
 import { createRng, next } from '@/engine/ascent/rng';
-import { climberShapes, type Shape } from '@/ui/climberShapes';
+import { POSES, climberShapes, climbingPose, type Shape } from '@/ui/climberShapes';
+
+/**
+ * World pixels per full climbing cycle.
+ *
+ * One reach per this much wall. Tuned by watching it: much shorter and the
+ * limbs blur, much longer and the figure looks like it is being dragged
+ * rather than moving itself.
+ */
+const CLIMB_CYCLE_PX = 110;
 
 export interface Palette {
   sky: string;
@@ -411,6 +420,10 @@ export function render(
   for (const shape of climberShapes(options.avatar, {
     showGround: false,
     colors: { ground: palette.rockNear, surface: palette.sky, accentGround: palette.strata },
+    // Driven by distance rather than time, so the cadence rises with the
+    // climber's speed and a paused run holds a pose instead of running on
+    // the spot.
+    joints: climbingPose(POSES[options.avatar.pose], state.distance / CLIMB_CYCLE_PX),
   })) {
     drawShape(ctx, shape);
   }

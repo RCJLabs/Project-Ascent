@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   THEME_UNLOCKS,
@@ -156,5 +157,32 @@ describe('rock shading', () => {
   it('depends on direction, not distance', () => {
     // A facet twice as far out faces the same way and is lit the same.
     expect(facetLight(-2, -2)).toBeCloseTo(facetLight(-0.1, -0.1), 10);
+  });
+});
+
+describe('the climber moves', () => {
+  const RENDER = readFileSync('src/features/ascent/render.ts', 'utf8');
+
+  it('poses the figure per frame in the game', () => {
+    // A fixed silhouette sliding up a scrolling wall reads as a sticker
+    // being dragged, not a climber climbing.
+    expect(RENDER).toContain('climbingPose(');
+    expect(RENDER).toContain('joints:');
+  });
+
+  it('drives the cycle from distance, not from a clock', () => {
+    // The cadence then rises with the climber's speed for free, and a
+    // paused run holds a pose instead of running on the spot.
+    expect(RENDER).toContain('state.distance / CLIMB_CYCLE_PX');
+  });
+
+  it('leaves the portraits still', () => {
+    // The avatar on Home, the climber page and the share cards is an
+    // identity, not an animation — and an SVG looping forever is motion
+    // nobody asked for on a page they are reading.
+    const still = ['src/ui/Avatar.tsx', 'src/ui/shareCard.ts'];
+    for (const path of still) {
+      expect(readFileSync(path, 'utf8'), path).not.toContain('climbingPose');
+    }
   });
 });

@@ -49,7 +49,12 @@ export const POSES: Record<AvatarPose, Joints> = {
     kneeL: [60, 192], footL: [68, 228],
     // The knee folds up and out, above the foot. A knee below the foot reads
     // as a broken leg — the first pass drew exactly that.
-    kneeR: [150, 130], footR: [134, 160],
+    //
+    // Lowered from 130/160: at that height the thigh crossed the torso and
+    // the whole leg read as folded into the chest rather than stepped up.
+    // The knee now sits level with the hip and the foot well below it, which
+    // is still unmistakably a high step.
+    kneeR: [148, 150], footR: [132, 182],
   },
   hang: {
     head: [90, 62], neck: [90, 80],
@@ -61,6 +66,51 @@ export const POSES: Record<AvatarPose, Joints> = {
     kneeR: [106, 196], footR: [106, 232],
   },
 };
+
+/**
+ * The same figure, mid-move (PLAN.md — the Ascent).
+ *
+ * The game drew the avatar as a fixed silhouette sliding up a scrolling
+ * wall, which reads as a sticker being dragged rather than a climber
+ * climbing. This offsets the limbs around whatever pose the avatar is in,
+ * so the identity — gear, colours, the posture that reads vitality — is
+ * untouched and only the motion is added.
+ *
+ * **Contralateral**, because that is how anyone climbs: left hand goes with
+ * right foot. Moving the limbs on the same side together produces a gait
+ * nobody has ever used, and it looks wrong before you can say why.
+ *
+ * `phase` is a turn, 0 to 1, and wraps — the caller drives it from distance
+ * so the cadence rises with the climber's speed for free, and a paused game
+ * holds a pose instead of running on the spot.
+ */
+export function climbingPose(base: Joints, phase: number): Joints {
+  const swing = Math.sin(phase * Math.PI * 2);
+  // Twice the frequency: the body rises once per limb, not once per cycle.
+  const bob = Math.cos(phase * Math.PI * 4) * 2.4;
+
+  const shift = (p: Point, dx: number, dy: number): Point => [p[0] + dx, p[1] + dy];
+
+  return {
+    ...base,
+    head: shift(base.head, swing * 1.6, bob),
+    neck: shift(base.neck, swing * 1.2, bob),
+    shoulderL: shift(base.shoulderL, swing * 1.5, bob - swing * 2.5),
+    shoulderR: shift(base.shoulderR, swing * 1.5, bob + swing * 2.5),
+    elbowL: shift(base.elbowL, swing * 2, bob - swing * 8),
+    handL: shift(base.handL, swing * 2, -swing * 14),
+    elbowR: shift(base.elbowR, swing * 2, bob + swing * 8),
+    handR: shift(base.handR, swing * 2, swing * 14),
+    hipL: shift(base.hipL, swing * 1.2, bob),
+    hipR: shift(base.hipR, swing * 1.2, bob),
+    // Opposite the hands, and gentler: a foot swinging as far as a hand
+    // turns a climb into a march.
+    kneeL: shift(base.kneeL, swing * 2.5, swing * 6),
+    footL: shift(base.footL, swing * 2, swing * 10),
+    kneeR: shift(base.kneeR, swing * 2.5, -swing * 6),
+    footR: shift(base.footR, swing * 2, -swing * 10),
+  };
+}
 
 export function mid(a: Point, b: Point, t: number): Point {
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
@@ -78,6 +128,8 @@ export interface ClimberColors {
 export interface ShapeOptions {
   showGround?: boolean;
   colors: ClimberColors;
+  /** Override the pose table — for the game, which animates the figure. */
+  joints?: Joints;
 }
 
 function groundShapes(ground: AvatarGround, j: Joints, colors: ClimberColors): Shape[] {
@@ -103,7 +155,7 @@ function groundShapes(ground: AvatarGround, j: Joints, colors: ClimberColors): S
 
 /** Back to front: ground, legs, shoes, torso, arms, head, gear, hands. */
 export function climberShapes(config: AvatarConfig, options: ShapeOptions): Shape[] {
-  const j = POSES[config.pose];
+  const j = options.joints ?? POSES[config.pose];
   const c: AvatarPalette = config.palette;
   const g = config.gear;
   const out: Shape[] = [];
