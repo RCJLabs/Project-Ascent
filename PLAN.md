@@ -1822,18 +1822,49 @@ and why.
   The refusal message in `lib/image.ts` was already the honest answer; it is now stated
   as a decision rather than a delay.
 
-- **M53 — Media out of the backup JSON.** *Opened by M50's measurement, and about
-  photos.* `exportAll` base64-encodes every blob into one object and `JSON.stringify`s
-  the lot, so a 56MB photo library becomes a **75MB file** — a third larger than the
-  photos themselves — assembled through several full copies at once for a **225MB peak
-  heap**. That is a phone-sized problem today, not a hypothetical: the app's own
-  settings copy already warns that photos "take about a third more room" in a backup,
-  which is the base64 tax described as if it were a fact of nature.
-  A backup becomes a container — the records as one JSON, the photos as files — which
-  removes the string ceiling, drops the third, and makes a restore streamable.
-  Store-only, because JPEG does not compress. **Old JSON backups must still import**,
-  and `importPreview` has to read both. *Done when: a backup of a hundred photos is the
-  size of the photos, and importing last month's JSON still works.*
+- **M53 — Media out of the backup JSON.** *Done.* `exportAll` base64-encoded every
+  blob into one object and `JSON.stringify`d the lot, so a 56MB photo library became a
+  **75MB file** — a third larger than the photos themselves — assembled through several
+  full copies at once for a **225MB peak heap**. The app's own settings copy warned that
+  photos "take about a third more room" in a backup, which is the base64 tax described
+  as if it were a fact of nature.
+  A backup is now a container: `backup.json` holding the records, and `media/<id>.<ext>`
+  holding each photo as itself. `src/lib/zip.ts` writes and reads it — store-only, no
+  deflate, no dependency, because every byte going in is already-compressed JPEG or WebP
+  and a compression library would spend CPU to grow the file. It writes the whole archive
+  into one allocation rather than a buffer per entry copied into a second, which is the
+  other half of the peak-heap number.
+  **Deliberately not a zip library.** No directories, no encryption, no Zip64, no data
+  descriptors; anything else is refused by name rather than mis-parsed, because a backup
+  that restores *wrongly* is worse than one that refuses. It reads through the central
+  directory rather than scanning for local headers, checks every CRC-32, and refuses a
+  compressed entry, a truncated file and a damaged byte with a sentence that says which.
+  **Interoperability was checked outside this app, and the check found a real bug.** The
+  archive is written and read by the system `unzip` and by Python's `zipfile` in both
+  directions — and Python could not find `media/café–2.jpg`, because without
+  general-purpose bit 11 a reader is entitled to decode names as CP437 and Python does.
+  The flag is now set in both headers and asserted in a test; `unzip` had been guessing
+  right and hiding it.
+  **Old backups still import, and that shaped the design.** `readBackupFile` takes bytes
+  and returns records plus photo bytes, detecting the format itself, so the preview, the
+  import and the tests never learn which one they were handed. A pre-M53 JSON file with
+  base64 photos inside it restores exactly as it always did. A photo the records name but
+  the archive does not carry is dropped and *counted* — at read time, so the preview a
+  climber reads and the import they confirm are talking about the same photos, and the
+  count is said before the import rather than discovered after it.
+  Photo file names come from the record id, which arrives from whatever file was imported
+  last: sanitised to `[A-Za-z0-9._-]`, so `../../backup.json` cannot write over the
+  records, and de-duplicated, so two ids that sanitise to the same name stay two photos.
+  Nine mutations, nine killed. Verified in a browser end to end: export downloads a .zip
+  whose contents `unzip -l` lists as `backup.json` plus two photos; wiping the device and
+  importing it back restores both photos byte-for-byte with their types and captions; a
+  hand-written pre-M53 JSON backup imports; an archive missing one photo says so and
+  brings in the rest.
+  **Measured, both formats, same machine and same 96 photos at the 600KB ceiling:** the
+  old path wrote a **75.0MB** file in **4,211ms** and needed **+273MB** of memory beyond
+  the photos it already held; the new one writes **56.3MB** — 0.02% over the photos
+  themselves — in **638ms** for **+66MB**, which is one copy of the archive and nothing
+  else.
 
 - **M51 — Decide multi-profile/coach mode.** §9.3 says "decide before schema freeze".
   The schema is at version 2 and M12 is next. The foundations were laid on purpose:
@@ -1847,6 +1878,21 @@ and why.
   for 4-5 days a week; you have 3" because it has nothing shorter to offer. This is a
   coaching judgement about the catalogue rather than a defect, and it is the one item
   here that only the person who writes the training can do.
+
+- **M54 — Undo an import, keep your photos.** *Found while wiring M53, confirmed with a
+  test, not fixed there.* `takeSnapshot` stores records only — deliberately, since a
+  snapshot with media would double the largest thing in the database at the riskiest
+  moment — and `restoreSnapshot` then calls `importAll(file, 'replace')`. A replace whose
+  file carries no photos clears the media store, which is right for a backup a climber
+  chose (the file is the statement of record) and wrong for a snapshot that never claimed
+  to carry any. So after an import in **merge** mode — where the device's own photos were
+  never at risk — pressing Undo deletes every one of them. The undo card's "photos
+  excepted, which the restore point does not hold" reads as *not restored*; it does not
+  warn that they are *removed*. The fix is to let a snapshot restore leave the media store
+  alone. The question it opens is what should then happen to photos an undone *replace*
+  brought in, which `sweepOrphanMedia` can only answer for owners that went away with the
+  undo. Predates M53. *Done when: importing in merge mode and pressing Undo leaves the
+  photos that were there before the import, and the card says what Undo does to photos.*
 
 - **M12 — Ship.** TWA packaging + assetlinks, Play internal testing, store listing.
   Last, after M13–M22.

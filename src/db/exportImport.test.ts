@@ -1,7 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { getDb, resetDbForTests } from './db';
-import { exportAll, hasRealData, importAll, parseExportFile } from './exportImport';
+import {
+  BACKUP_ENTRY,
+  exportAll,
+  exportArchive,
+  hasRealData,
+  importAll,
+  parseExportFile,
+  readBackupFile,
+  type ExportFile,
+} from './exportImport';
+import { unzip, zip } from '@/lib/zip';
 import { SCHEMA_VERSION } from './schema';
 
 beforeEach(() => {
@@ -112,25 +122,113 @@ describe('photos', () => {
   });
 
   // A backup that silently drops your photos is a backup that lies.
-  it('carries photos through export and back', async () => {
+  it('carries photos through the archive and back', async () => {
     await seedPhoto('project:p1', 'the crux');
-    const file = await exportAll();
+    const { bytes, file } = await exportArchive();
     expect(file.media).toHaveLength(1);
-    expect(file.media![0]!.data).toMatch(/^data:image\/webp;base64,/);
     expect(file.media![0]!.caption).toBe('the crux');
+    // The point of the whole milestone: the picture is a file, not a string.
+    expect(file.media![0]!.file).toMatch(/^media\/.+\.webp$/);
+    expect(file.media![0]!.data).toBeUndefined();
 
-    // A round-trip through JSON is what a real backup goes through.
-    const reloaded = parseExportFile(JSON.stringify(file));
+    // Reading it back the way the import screen does, on a fresh install.
+    const backup = readBackupFile(bytes);
     globalThis.indexedDB = new IDBFactory();
     resetDbForTests();
-    await importAll(reloaded, 'replace');
+    await importAll(backup.file, 'replace', backup.blobs);
 
     const { listMedia } = await import('./media');
     const restored = await listMedia('project:p1');
     expect(restored).toHaveLength(1);
     expect(restored[0]!.caption).toBe('the crux');
     expect(restored[0]!.width).toBe(800);
-    expect(await restored[0]!.blob.arrayBuffer()).toEqual(png.buffer);
+    expect(restored[0]!.type).toBe('image/webp');
+    expect(new Uint8Array(await restored[0]!.blob.arrayBuffer())).toEqual(png);
+  });
+
+  it('puts the records in backup.json and the pictures beside it', async () => {
+    await seedPhoto('project:p1', 'a');
+    await seedPhoto('project:p1', 'b');
+    const { bytes } = await exportArchive();
+    const names = unzip(bytes).map((e) => e.name);
+    expect(names[0]).toBe(BACKUP_ENTRY);
+    expect(names.filter((n) => n.startsWith('media/'))).toHaveLength(2);
+    // Distinct names, or one photo would overwrite the other.
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  // The measurement this milestone exists for: base64 cost a third, and a
+  // third of a phone's photo library is the difference between a backup and
+  // a crash. Stored bytes go in at their own size.
+  it('does not inflate the pictures', async () => {
+    const big = new Uint8Array(200_000);
+    for (let i = 0; i < big.length; i += 1) big[i] = i % 251;
+    const db = await getDb();
+    await db.put('media', {
+      id: 'm-big',
+      ownerId: 'project:p1',
+      blob: new Blob([big], { type: 'image/jpeg' }),
+      type: 'image/jpeg',
+      width: 1600,
+      height: 1200,
+      createdAt: '2026-03-01T10:00:00.000Z',
+    });
+    const { bytes } = await exportArchive();
+    const records = (await exportArchive({ media: false })).bytes.length;
+    expect(bytes.length).toBeLessThan(records + big.length + 500);
+  });
+
+  // Two ids that are different records but the same file name once the
+  // unsafe characters are gone. One overwriting the other would lose a photo
+  // and hand back the wrong one.
+  it('keeps two photos apart when their names would collide', async () => {
+    const db = await getDb();
+    for (const id of ['a/b', 'a?b', 'a b']) {
+      await db.put('media', {
+        id,
+        ownerId: 'project:p1',
+        blob: new Blob([png], { type: 'image/webp' }),
+        type: 'image/webp',
+        width: 8,
+        height: 8,
+        createdAt: '2026-03-01T10:00:00.000Z',
+      });
+    }
+    const { bytes, file } = await exportArchive();
+    const names = unzip(bytes).map((e) => e.name);
+    expect(new Set(names).size).toBe(4);
+    expect(new Set(file.media!.map((m) => m.file)).size).toBe(3);
+
+    const backup = readBackupFile(bytes);
+    expect(backup.photosMissing).toBe(0);
+    globalThis.indexedDB = new IDBFactory();
+    resetDbForTests();
+    await importAll(backup.file, 'replace', backup.blobs);
+    const { listMedia } = await import('./media');
+    expect((await listMedia('project:p1')).map((m) => m.id).sort()).toEqual(['a b', 'a/b', 'a?b']);
+  });
+
+  it('names a photo after its record without trusting the name', async () => {
+    const db = await getDb();
+    await db.put('media', {
+      id: '../../backup.json',
+      ownerId: 'project:p1',
+      blob: new Blob([png], { type: 'image/webp' }),
+      type: 'image/webp',
+      width: 8,
+      height: 8,
+      createdAt: '2026-03-01T10:00:00.000Z',
+    });
+    const { bytes } = await exportArchive();
+    const names = unzip(bytes).map((e) => e.name);
+    expect(names).toEqual([BACKUP_ENTRY, 'media/.._.._backup.json.webp']);
+    // And it still comes back, under the id it actually has.
+    const backup = readBackupFile(bytes);
+    globalThis.indexedDB = new IDBFactory();
+    resetDbForTests();
+    await importAll(backup.file, 'replace', backup.blobs);
+    const { listMedia } = await import('./media');
+    expect((await listMedia('project:p1'))[0]!.id).toBe('../../backup.json');
   });
 
   // The session card says photos "go into a backup with everything else".
@@ -139,12 +237,12 @@ describe('photos', () => {
     const db = await getDb();
     await db.put('sessions', { id: '2026-03-01#0', date: '2026-03-01' } as never);
     await seedPhoto('session:2026-03-01#0', 'the board I set');
-    const file = await exportAll();
+    const { bytes } = await exportArchive();
 
-    const reloaded = parseExportFile(JSON.stringify(file));
+    const backup = readBackupFile(bytes);
     globalThis.indexedDB = new IDBFactory();
     resetDbForTests();
-    await importAll(reloaded, 'replace');
+    await importAll(backup.file, 'replace', backup.blobs);
 
     const { listMedia, sweepOrphanMedia } = await import('./media');
     const restored = await listMedia('session:2026-03-01#0');
@@ -159,15 +257,16 @@ describe('photos', () => {
     const db = await getDb();
     await db.put('sessions', { id: '2026-03-01#0', date: '2026-03-01' });
     await seedPhoto();
-    const file = await exportAll({ media: false });
+    const { file, bytes } = await exportArchive({ media: false });
     expect(file.media).toBeUndefined();
     expect(file.data.sessions).toHaveLength(1);
+    expect(unzip(bytes).map((e) => e.name)).toEqual([BACKUP_ENTRY]);
   });
 
   // Half a restore is worse than either half.
   it('clears existing photos on a replace that carries none', async () => {
     await seedPhoto('project:p1', 'old');
-    const empty = await exportAll({ media: false });
+    const empty = await exportAll();
     await importAll(empty, 'replace');
     const { listMedia } = await import('./media');
     expect(await listMedia('project:p1')).toEqual([]);
@@ -175,10 +274,123 @@ describe('photos', () => {
 
   it('keeps existing photos on a merge', async () => {
     await seedPhoto('project:p1', 'kept');
-    const empty = await exportAll({ media: false });
+    const empty = await exportAll();
     await importAll(empty, 'merge');
     const { listMedia } = await import('./media');
     expect(await listMedia('project:p1')).toHaveLength(1);
+  });
+});
+
+/**
+ * Every backup written before M53 is a bare JSON file with its photos
+ * base64'd inside it, and every one of them is somebody's only copy. The
+ * app stopped writing them; it never stops reading them.
+ */
+describe('a backup from before the archive', () => {
+  const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3, 4]);
+
+  function legacy(media?: unknown[]): Uint8Array {
+    const file = {
+      app: 'project-ascent',
+      schemaVersion: SCHEMA_VERSION,
+      appVersion: '0.9.0',
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      data: { sessions: [{ id: '2026-01-01#0', date: '2026-01-01', rpe: 6 }] },
+      ...(media ? { media } : {}),
+    };
+    return new TextEncoder().encode(JSON.stringify(file));
+  }
+
+  const inline = {
+    id: 'm-old',
+    ownerId: 'project:p1',
+    type: 'image/webp',
+    width: 800,
+    height: 600,
+    caption: 'from the old format',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    data: `data:image/webp;base64,${btoa(String.fromCharCode(...png))}`,
+  };
+
+  it('reads its records', () => {
+    const backup = readBackupFile(legacy());
+    expect(backup.file.data.sessions).toHaveLength(1);
+    expect(backup.blobs.size).toBe(0);
+    expect(backup.photosMissing).toBe(0);
+  });
+
+  it('restores its photos, base64 and all', async () => {
+    const backup = readBackupFile(legacy([inline]));
+    await importAll(backup.file, 'replace', backup.blobs);
+    const { listMedia } = await import('./media');
+    const restored = await listMedia('project:p1');
+    expect(restored).toHaveLength(1);
+    expect(restored[0]!.caption).toBe('from the old format');
+    expect(new Uint8Array(await restored[0]!.blob.arrayBuffer())).toEqual(png);
+  });
+
+  it('counts a photo the old file described but did not carry', () => {
+    const { data: _data, ...noBytes } = inline;
+    const backup = readBackupFile(legacy([inline, noBytes]));
+    expect(backup.photosMissing).toBe(1);
+    expect(backup.file.media).toHaveLength(1);
+  });
+
+  it('still refuses a file that is not a backup at all', () => {
+    expect(() => readBackupFile(new TextEncoder().encode('{}'))).toThrow(/not a project ascent/i);
+    expect(() => readBackupFile(new TextEncoder().encode('nonsense'))).toThrow(/unreadable/i);
+  });
+});
+
+describe('an archive that is not right', () => {
+  const enc = (o: unknown) => new TextEncoder().encode(JSON.stringify(o));
+  const file = (media?: unknown[]): ExportFile =>
+    ({
+      app: 'project-ascent',
+      schemaVersion: SCHEMA_VERSION,
+      appVersion: '1.0.0',
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      data: { sessions: [] },
+      ...(media ? { media } : {}),
+    }) as unknown as ExportFile;
+
+  it('refuses an archive with no records in it', () => {
+    const bytes = zip([{ name: 'media/m-1.webp', bytes: new Uint8Array([1, 2]) }]);
+    expect(() => readBackupFile(bytes)).toThrow(/no backup\.json/i);
+  });
+
+  // A photo named in the records but absent from the archive is counted, not
+  // guessed at — so the preview a climber reads and the import they confirm
+  // are talking about the same photos.
+  it('counts photos the archive does not contain', async () => {
+    const described = {
+      id: 'm-1',
+      ownerId: 'project:p1',
+      type: 'image/webp',
+      width: 8,
+      height: 8,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      file: 'media/m-1.webp',
+    };
+    const bytes = zip([{ name: BACKUP_ENTRY, bytes: enc(file([described, { ...described, id: 'm-2', file: 'media/gone.webp' }])) }, { name: 'media/m-1.webp', bytes: new Uint8Array([1, 2]) }]);
+    const backup = readBackupFile(bytes);
+    expect(backup.photosMissing).toBe(1);
+    expect(backup.file.media).toHaveLength(1);
+
+    await importAll(backup.file, 'replace', backup.blobs);
+    const { listMedia } = await import('./media');
+    expect(await listMedia('project:p1')).toHaveLength(1);
+  });
+
+  it('ignores files in the archive that the records do not name', () => {
+    const bytes = zip([
+      { name: BACKUP_ENTRY, bytes: enc(file()) },
+      { name: 'media/stray.webp', bytes: new Uint8Array([1, 2]) },
+      { name: 'notes.txt', bytes: new Uint8Array([3]) },
+    ]);
+    const backup = readBackupFile(bytes);
+    expect(backup.file.media).toBeUndefined();
+    expect(backup.photosMissing).toBe(0);
   });
 });
 

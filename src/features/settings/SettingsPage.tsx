@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { APP_VERSION } from '@/version';
-import { exportAll, hasRealData, importAll, parseExportFile, SCHEMA_VERSION } from '@/db';
+import { exportArchive, hasRealData, importAll, readBackupFile, SCHEMA_VERSION } from '@/db';
 import { previewFile, type ImportPreview } from '@/db/importPreview';
 import { clearSnapshot, readSnapshot, restoreSnapshot, takeSnapshot } from '@/db/snapshot';
 import { ImportPreviewCard, UndoImportCard } from './ImportPreviewCard';
@@ -131,7 +131,8 @@ export function SettingsPage() {
   const updateInjury = useProfile((s) => s.updateInjury);
   const markExported = useProfile((s) => s.markExported);
   const [pendingImport, setPendingImport] = useState<{
-    text: string;
+    /** The file itself, re-read on confirm. Photos are bytes now, not text. */
+    bytes: Uint8Array;
     label: string;
     preview: ImportPreview;
   } | null>(null);
@@ -163,12 +164,15 @@ export function SettingsPage() {
   }
 
   async function handleExport(withMedia = true) {
-    const file = await exportAll({ media: withMedia });
-    const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
+    // A .zip holding backup.json and the photos as photos (PLAN.md M53).
+    // The old single-JSON form base64'd every picture, which cost a third of
+    // their size in the file and several copies of it in memory.
+    const { bytes, file } = await exportArchive({ media: withMedia });
+    const blob = new Blob([bytes as BlobPart], { type: 'application/zip' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `project-ascent-backup-${file.exportedAt.slice(0, 10)}.json`;
+    a.download = `project-ascent-backup-${file.exportedAt.slice(0, 10)}.zip`;
     a.click();
     URL.revokeObjectURL(url);
     markExported();
@@ -183,8 +187,10 @@ export function SettingsPage() {
     const file = files?.[0];
     if (!file) return;
     try {
-      const text = await file.text();
-      const parsed = parseExportFile(text); // validate before offering choices
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      // Validates before offering choices, and takes either format: the
+      // archive this app writes now, or the plain JSON it wrote before.
+      const { file: parsed, photosMissing } = readBackupFile(bytes);
       // Always preview, even on an empty device. "412 sessions will be added"
       // is worth reading whether or not there is anything to lose, and a
       // silent import gives a climber no way to notice they picked the wrong
@@ -192,11 +198,17 @@ export function SettingsPage() {
       const preview = await previewFile(parsed);
       const on = new Date(parsed.exportedAt);
       setPendingImport({
-        text,
+        bytes,
         label: `Exported ${on.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })} from app version ${parsed.appVersion || 'unknown'}.`,
         preview,
       });
-      setMessage(null)
+      // Said before the import rather than discovered after it.
+      setMessage(
+        photosMissing > 0
+          ? `${photosMissing} photo${photosMissing === 1 ? '' : 's'} listed in this backup ${photosMissing === 1 ? 'is' : 'are'} missing from the file. Everything else is intact.`
+          : null,
+        photosMissing > 0,
+      )
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Import failed.', true);
     } finally {
@@ -214,7 +226,8 @@ export function SettingsPage() {
       if (await hasRealData()) {
         await takeSnapshot(pendingImport.label.replace(/\.$/, ''));
       }
-      await importAll(parseExportFile(pendingImport.text), mode);
+      const backup = readBackupFile(pendingImport.bytes);
+      await importAll(backup.file, mode, backup.blobs);
       await hydrateAll();
       setSnapshot(await readSnapshot());
       setMessage(
@@ -496,8 +509,8 @@ export function SettingsPage() {
             cloud copy to fall back on.
             {photoBytes > 0 && (
               <>
-                {' '}Photos are included, which adds roughly {formatBytes(Math.round(photoBytes * 1.34))}
-                {' '}— they are stored as text in the file, so they take about a third more room.
+                {' '}Photos are included, which adds roughly {formatBytes(photoBytes)} — the
+                backup is a .zip, so they go in at their own size.
               </>
             )}
           </p>
@@ -514,7 +527,7 @@ export function SettingsPage() {
             <Input
               ref={fileRef}
               type="file"
-              accept="application/json,.json"
+              accept="application/zip,.zip,application/json,.json"
               hidden
               onChange={(e) => void handleFilePicked(e.target.files)}
             />

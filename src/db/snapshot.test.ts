@@ -60,7 +60,7 @@ describe('undoing an import', () => {
     await seed(['2026-01-01', '2026-01-03', '2026-01-05']);
     await takeSnapshot('someone else’s backup');
 
-    const incoming = await exportAll({ media: false });
+    const incoming = await exportAll();
     incoming.data.sessions = [session('2020-09-09')];
     await importAll(incoming, 'replace');
     expect(await sessionDates()).toEqual(['2020-09-09']);
@@ -75,7 +75,7 @@ describe('undoing an import', () => {
     await seed(['2026-01-01']);
     await takeSnapshot('a merge');
 
-    const incoming = await exportAll({ media: false });
+    const incoming = await exportAll();
     incoming.data.sessions = [session('2019-01-01'), session('2019-01-02')];
     await importAll(incoming, 'merge');
     expect(await sessionDates()).toHaveLength(3);
@@ -101,7 +101,7 @@ describe('undoing an import', () => {
     await db.put('meta', { key: 'something-else', value: 1 });
     await takeSnapshot('a replace');
 
-    const incoming = await exportAll({ media: false });
+    const incoming = await exportAll();
     incoming.data.sessions = [];
     incoming.data.meta = [];
     await importAll(incoming, 'replace');
@@ -118,7 +118,7 @@ describe('undoing an import', () => {
     await seed(['2026-01-01']);
     await takeSnapshot('mine');
 
-    const incoming = await exportAll({ media: false });
+    const incoming = await exportAll();
     incoming.data.meta = [{ key: SNAPSHOT_KEY, value: { takenAt: 'forged', file: null } }];
     await importAll(incoming, 'merge');
 
@@ -138,7 +138,7 @@ describe('a snapshot never reaches a backup', () => {
     await seed(['2026-01-01']);
     await takeSnapshot('x');
 
-    const file = await exportAll({ media: false });
+    const file = await exportAll();
     const keys = (file.data.meta as { key: string }[]).map((r) => r.key);
     expect(keys).not.toContain(SNAPSHOT_KEY);
   });
@@ -146,7 +146,7 @@ describe('a snapshot never reaches a backup', () => {
   it('survives a round trip through the file format', async () => {
     await seed(['2026-01-01']);
     await takeSnapshot('x');
-    const text = JSON.stringify(await exportAll({ media: false }));
+    const text = JSON.stringify(await exportAll());
     const parsed = parseExportFile(text);
     expect((parsed.data.meta as { key: string }[]).map((r) => r.key)).not.toContain(SNAPSHOT_KEY);
   });

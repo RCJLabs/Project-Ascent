@@ -1,8 +1,21 @@
 import { APP_VERSION } from '@/version';
+import { looksLikeZip, unzip, zip, ZipError, type ZipEntry } from '@/lib/zip';
 import { getDb } from './db';
-import { EXPORTABLE_STORES, SCHEMA_VERSION, SNAPSHOT_KEY, type ExportableStore } from './schema';
+import {
+  EXPORTABLE_STORES,
+  SCHEMA_VERSION,
+  SNAPSHOT_KEY,
+  type ExportableStore,
+  type MediaRecord,
+} from './schema';
 
-/** A photo, flattened to something JSON can carry. */
+/**
+ * A photo's description. The bytes live beside it in the archive.
+ *
+ * Exactly one of `file` and `data` is set. `data` is what backups written
+ * before M53 carry, and reading them is not optional: a backup format that
+ * stops accepting its own older files is not a backup format.
+ */
 export interface MediaExport {
   id: string;
   ownerId: string;
@@ -11,8 +24,10 @@ export interface MediaExport {
   height: number;
   caption?: string;
   createdAt: string;
-  /** Base64 data URL. Roughly a third larger than the blob it came from. */
-  data: string;
+  /** This photo's entry inside the archive, e.g. `media/m-abc.webp`. */
+  file?: string;
+  /** Base64 data URL, from a backup made before the archive format. */
+  data?: string;
 }
 
 export interface ExportFile {
@@ -25,18 +40,18 @@ export interface ExportFile {
   media?: MediaExport[];
 }
 
+/** The records, inside every archive this app writes. */
+export const BACKUP_ENTRY = 'backup.json';
+const MEDIA_DIR = 'media/';
+
 /**
- * Everything, optionally including photos.
+ * Every record, without photos.
  *
- * Blobs do not survive JSON.stringify, so media is carried separately as
- * data URLs. It is opt-out rather than absent: a backup that silently drops
- * your photos is a backup that lies. It is opt-out rather than mandatory
- * because base64 inflates a picture by a third, and a climber with a long
- * project history should be able to take the small file when that is what
- * they want.
+ * This is the JSON that goes inside an archive, and it is also what the
+ * pre-import snapshot stores directly. Photos are never inlined here — see
+ * `exportArchive`, and zip.ts for the measurements that ended that.
  */
-export async function exportAll(options: { media?: boolean } = {}): Promise<ExportFile> {
-  const includeMedia = options.media !== false;
+export async function exportAll(): Promise<ExportFile> {
   const db = await getDb();
   const data = {} as ExportFile['data'];
   for (const store of EXPORTABLE_STORES) {
@@ -49,31 +64,98 @@ export async function exportAll(options: { media?: boolean } = {}): Promise<Expo
         ? rows.filter((r) => (r as { key?: string }).key !== SNAPSHOT_KEY)
         : rows;
   }
-  const file: ExportFile = {
+  return {
     app: 'project-ascent',
     schemaVersion: SCHEMA_VERSION,
     appVersion: APP_VERSION,
     exportedAt: new Date().toISOString(),
     data,
   };
-  if (includeMedia) {
+}
+
+export interface Archive {
+  bytes: Uint8Array;
+  /** The same records the archive carries, for a caller that wants to
+   *  say what it just wrote without opening the file again. */
+  file: ExportFile;
+}
+
+/**
+ * The whole backup as one file: records as JSON, photos as photos.
+ *
+ * Photos are opt-out rather than absent — a backup that silently drops them
+ * is a backup that lies — and opt-out rather than mandatory, because a
+ * climber with four years of project pictures should be able to take the
+ * small file when the small file is what they want.
+ */
+export async function exportArchive(options: { media?: boolean } = {}): Promise<Archive> {
+  const file = await exportAll();
+  const photos: ZipEntry[] = [];
+
+  if (options.media !== false) {
+    const db = await getDb();
     const rows = await db.getAll('media');
     if (rows.length > 0) {
-      file.media = await Promise.all(
-        rows.map(async (r) => ({
-          id: r.id,
-          ownerId: r.ownerId,
-          type: r.type,
-          width: r.width,
-          height: r.height,
-          ...(r.caption ? { caption: r.caption } : {}),
-          createdAt: r.createdAt,
-          data: await blobToDataUrl(r.blob),
-        })),
-      );
+      const taken = new Set<string>();
+      const media: MediaExport[] = [];
+      for (const row of rows) {
+        const name = photoName(row, taken);
+        media.push({
+          id: row.id,
+          ownerId: row.ownerId,
+          type: row.type,
+          width: row.width,
+          height: row.height,
+          ...(row.caption ? { caption: row.caption } : {}),
+          createdAt: row.createdAt,
+          file: name,
+        });
+        photos.push({ name, bytes: new Uint8Array(await row.blob.arrayBuffer()) });
+      }
+      file.media = media;
     }
   }
-  return file;
+
+  // The records first, so anything reading the archive in order — this app
+  // included — knows what it is holding before it reaches the pictures.
+  const entries: ZipEntry[] = [
+    { name: BACKUP_ENTRY, bytes: new TextEncoder().encode(JSON.stringify(file, null, 2)) },
+    ...photos,
+  ];
+  return { bytes: zip(entries), file };
+}
+
+/** File extensions worth naming. Anything else keeps its subtype. */
+const EXTENSIONS: Record<string, string> = {
+  'image/webp': 'webp',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/avif': 'avif',
+  'image/gif': 'gif',
+};
+
+function extensionFor(type: string): string {
+  const known = EXTENSIONS[type];
+  if (known) return known;
+  const subtype = type.split('/')[1]?.replace(/[^a-z0-9]/gi, '') ?? '';
+  return subtype || 'bin';
+}
+
+/**
+ * A file name for a photo, unique within the archive.
+ *
+ * Built from the record's id because an archive a climber opens should be
+ * navigable, but never trusting it: an id arrives from whatever file was
+ * imported last, and a name with a slash in it would write a photo into a
+ * directory — or over the records.
+ */
+function photoName(record: MediaRecord, taken: Set<string>): string {
+  const safe = record.id.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 64) || 'photo';
+  const extension = extensionFor(record.type);
+  let name = `${MEDIA_DIR}${safe}.${extension}`;
+  for (let n = 2; taken.has(name); n += 1) name = `${MEDIA_DIR}${safe}-${n}.${extension}`;
+  taken.add(name);
+  return name;
 }
 
 /**
@@ -81,21 +163,8 @@ export async function exportAll(options: { media?: boolean } = {}): Promise<Expo
  *
  * Both of those are browser-only, and this is a pure data path that the
  * tests need to exercise without a DOM. `btoa`/`atob` exist in browsers and
- * in Node alike; the chunking is because String.fromCharCode(...bytes) blows
- * the call stack somewhere north of a hundred thousand arguments, which a
- * photo comfortably exceeds.
+ * in Node alike.
  */
-const CHUNK = 0x8000;
-
-async function blobToDataUrl(blob: Blob): Promise<string> {
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-  }
-  return `data:${blob.type};base64,${btoa(binary)}`;
-}
-
 function dataUrlToBlob(url: string): Blob {
   const comma = url.indexOf(',');
   const header = url.slice(0, comma);
@@ -141,13 +210,63 @@ export function parseExportFile(text: string): ExportFile {
   return file as ExportFile;
 }
 
+export interface Backup {
+  file: ExportFile;
+  /** Photo bytes by entry name. Empty for a backup written before M53. */
+  blobs: Map<string, Uint8Array>;
+  /** Photos the file describes that its archive does not contain. */
+  photosMissing: number;
+}
+
+/**
+ * One way in for both formats.
+ *
+ * The archive is what this app writes now; the bare JSON is what it wrote
+ * until M53, and every copy of it that exists is somebody's only copy. Both
+ * arrive here as bytes and leave as the same thing, so nothing downstream —
+ * the preview, the import, the tests — has to know which it was.
+ */
+export function readBackupFile(bytes: Uint8Array): Backup {
+  if (!looksLikeZip(bytes)) {
+    return resolveMedia(parseExportFile(new TextDecoder().decode(bytes)), new Map());
+  }
+  const entries = unzip(bytes);
+  const records = entries.find((e) => e.name === BACKUP_ENTRY);
+  if (!records) {
+    throw new ZipError(`This archive is not a Project Ascent backup — there is no ${BACKUP_ENTRY} inside it.`);
+  }
+  const file = parseExportFile(new TextDecoder().decode(records.bytes));
+  const blobs = new Map(entries.filter((e) => e !== records).map((e) => [e.name, e.bytes]));
+  return resolveMedia(file, blobs);
+}
+
+/**
+ * Drop photos the file describes but does not carry, and count them.
+ *
+ * Dropped here rather than at import, so the preview a climber reads and the
+ * import they then confirm are counting the same photos. `media` stays
+ * defined even when nothing survives: the file said it carried photos, and
+ * a replace clears the device's own on that basis.
+ */
+function resolveMedia(file: ExportFile, blobs: Map<string, Uint8Array>): Backup {
+  if (!file.media) return { file, blobs, photosMissing: 0 };
+  const kept = file.media.filter((m) =>
+    m.file !== undefined ? blobs.has(m.file) : typeof m.data === 'string',
+  );
+  return { file: { ...file, media: kept }, blobs, photosMissing: file.media.length - kept.length };
+}
+
 /**
  * mode 'replace': clears every exportable store first.
  * mode 'merge': puts records over existing ones — same keys win from the
  * import, everything else is kept.
  * Callers must check hasRealData() and ask the user before 'replace'.
  */
-export async function importAll(file: ExportFile, mode: 'replace' | 'merge'): Promise<void> {
+export async function importAll(
+  file: ExportFile,
+  mode: 'replace' | 'merge',
+  blobs?: Map<string, Uint8Array>,
+): Promise<void> {
   const db = await getDb();
   const tx = db.transaction(EXPORTABLE_STORES as unknown as ExportableStore[], 'readwrite');
   for (const store of EXPORTABLE_STORES) {
@@ -176,20 +295,36 @@ export async function importAll(file: ExportFile, mode: 'replace' | 'merge'): Pr
 
   // Photos go in a second transaction. The first one covers the exportable
   // stores only, and media is not one of them.
-  const decoded = (file.media ?? []).map((m) => ({
-    id: m.id,
-    ownerId: m.ownerId,
-    type: m.type,
-    width: m.width,
-    height: m.height,
-    ...(m.caption ? { caption: m.caption } : {}),
-    createdAt: m.createdAt,
-    blob: dataUrlToBlob(m.data),
-  }));
+  const decoded = (file.media ?? []).flatMap((m) => {
+    const blob = photoBlob(m, blobs);
+    // Already counted and reported by readBackupFile; a caller that built
+    // the file by hand gets the same treatment rather than a broken record.
+    if (!blob) return [];
+    return [
+      {
+        id: m.id,
+        ownerId: m.ownerId,
+        type: m.type,
+        width: m.width,
+        height: m.height,
+        ...(m.caption ? { caption: m.caption } : {}),
+        createdAt: m.createdAt,
+        blob,
+      },
+    ];
+  });
   const mediaTx = db.transaction('media', 'readwrite');
   // A replace with no photos in the file still clears them: the backup is
   // the statement of record, and half a restore is worse than either half.
   if (mode === 'replace') await mediaTx.store.clear();
   for (const record of decoded) await mediaTx.store.put(record);
   await mediaTx.done;
+}
+
+function photoBlob(m: MediaExport, blobs?: Map<string, Uint8Array>): Blob | null {
+  if (m.file !== undefined) {
+    const bytes = blobs?.get(m.file);
+    return bytes ? new Blob([bytes as BlobPart], { type: m.type }) : null;
+  }
+  return typeof m.data === 'string' ? dataUrlToBlob(m.data) : null;
 }

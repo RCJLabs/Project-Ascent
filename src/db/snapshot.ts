@@ -31,14 +31,15 @@ interface Snapshot {
 /**
  * Photos are left out on purpose.
  *
- * A snapshot with media doubles the largest thing in the database at the
- * exact moment a climber is doing something risky, and M19 exists because
- * running out of room is a real failure. Logs, projects, assessments and
+ * A snapshot with media would double the largest thing in the database at
+ * the exact moment a climber is doing something risky, and M19 exists
+ * because running out of room is a real failure. `exportAll` carries records
+ * only, which is exactly what this wants. Logs, projects, assessments and
  * settings all come back; photos do not, and the UI says so rather than
  * finding out later.
  */
 export async function takeSnapshot(replacedWith: string): Promise<void> {
-  const file = await exportAll({ media: false });
+  const file = await exportAll();
   const db = await getDb();
   const snapshot: Snapshot = { takenAt: new Date().toISOString(), replacedWith, file };
   await db.put('meta', { key: SNAPSHOT_KEY, value: snapshot });
