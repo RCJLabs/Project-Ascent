@@ -9,6 +9,8 @@ import { assessmentBattery } from '@/engine/assessments';
 import { buildJournal } from '@/engine/journal';
 import { deriveCareer } from '@/engine/career';
 import { buildHeatGrid, describeConsistency } from '@/engine/consistency';
+import { describeTrend, loadTrend } from '@/engine/loadTrend';
+import { today } from '@/engine/dates';
 import { availableYears } from '@/engine/yearReview';
 import { deriveClimberState, type AcwrZone } from '@/engine/derive';
 import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
@@ -23,6 +25,7 @@ import { PageHeader } from '@/ui/PageHeader';
 import { TrainingState } from './TrainingState';
 import { LoadBars, ProgressionLine, PyramidBars } from '@/ui/charts/Charts';
 import { ConsistencyBody } from '@/ui/charts/ConsistencyGrid';
+import { LoadTrendLine } from '@/ui/charts/LoadTrendLine';
 
 /** Status presentation for ACWR. Colour never carries the meaning alone —
  *  every zone ships with an icon and a sentence. */
@@ -244,6 +247,7 @@ export function ProgressPage() {
   );
   const points = useMemo(() => weeklyProgression(sessions, scale, 12), [sessions, scale]);
   const heat = useMemo(() => buildHeatGrid({ sessions }), [sessions]);
+  const trend = useMemo(() => loadTrend({ sessions, to: today() }), [sessions]);
   const projection = useMemo(() => projectGrade(points, scale, display), [points, scale, display]);
   const tally = scale === 'V' ? state.boulder : state.sport;
   const rows = useMemo(() => pyramid(tally, scale), [tally, scale]);
@@ -325,6 +329,14 @@ export function ProgressPage() {
           <p className="text-xs text-ink-soft mt-2">
             Last 28 days. Load is session RPE × hours. Deload days are shown in orange.
           </p>
+        </Card>
+
+        {/* The ratio the card above states as one number, as a trajectory.
+            0.99 arrived-from-1.6 and 0.99 arrived-from-0.6 are opposite
+            situations with the same reading (PLAN.md M25). */}
+        <Card title="Where the ratio has been">
+          <LoadTrendLine trend={trend} />
+          <p className="text-sm text-ink-soft mt-2 leading-relaxed">{describeTrend(trend)}</p>
         </Card>
 
         <Wide className="flex gap-2">

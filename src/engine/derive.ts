@@ -325,15 +325,34 @@ function dayNumber(key: string): number {
   return era * 146097 + doe - 719468;
 }
 
+/** One day's standing in the load model. */
+export interface LoadPoint {
+  date: string;
+  /** acute ÷ chronic, or null before there is enough history to mean it. */
+  acwr: number | null;
+  zone: AcwrZone;
+  /** Rolling 7-day load. */
+  acute: number;
+  /** 28-day load ÷ 4 — a weekly-equivalent baseline. */
+  chronic: number;
+  /** A planned deload day sits inside the acute window. */
+  deload: boolean;
+}
+
 /**
- * The load zone for each of `dates`, which must be ascending.
+ * The load standing on each of `dates`, which must be ascending.
  *
  * One pass with a sliding window rather than one 28-day walk per date. The
  * per-date version is still there for callers that need a single answer or
- * a full `LoadState`; this is for the one caller that asks about every
- * session in a log at once, and turns that from 46.6ms into a few.
+ * a full `LoadState`; this is for the callers that ask about every day in a
+ * log at once, and turns that from 46.6ms into a few.
+ *
+ * `zonesFor` is this with everything but the zone thrown away. It was the
+ * original, and the chart in M25 needed the *value* — two sliding windows
+ * over the same data would be two chances for the number under the chart to
+ * disagree with the number in the card.
  */
-export function zonesFor(index: LoadIndex, dates: readonly string[]): AcwrZone[] {
+export function loadSeries(index: LoadIndex, dates: readonly string[]): LoadPoint[] {
   const entries = [...index.byDate.entries()]
     .map(([date, entry]) => ({ day: dayNumber(date), load: entry.load, deload: entry.deload }))
     .sort((a, b) => a.day - b.day);
@@ -374,14 +393,29 @@ export function zonesFor(index: LoadIndex, dates: readonly string[]): AcwrZone[]
 
     const daysOfHistory = earliestDay === null || earliestDay > today ? 0 : today - earliestDay + 1;
     const baseline = chronic / 4;
-    if (daysOfHistory < 21 || chronicDays < MIN_CHRONIC_DAYS || baseline <= 0) return 'unknown';
+    const deload = deloadDays > 0;
+    if (daysOfHistory < 21 || chronicDays < MIN_CHRONIC_DAYS || baseline <= 0) {
+      return { date, acwr: null, zone: 'unknown', acute, chronic: baseline, deload };
+    }
 
     const acwr = acute / baseline;
-    if (acwr < ACWR_BOUNDS.optimalFrom) return deloadDays > 0 ? 'optimal' : 'detraining';
-    if (acwr <= ACWR_BOUNDS.optimalTo) return 'optimal';
-    if (acwr <= ACWR_BOUNDS.cautionTo) return 'caution';
-    return 'danger';
+    const zone: AcwrZone =
+      acwr < ACWR_BOUNDS.optimalFrom
+        ? deload
+          ? 'optimal'
+          : 'detraining'
+        : acwr <= ACWR_BOUNDS.optimalTo
+          ? 'optimal'
+          : acwr <= ACWR_BOUNDS.cautionTo
+            ? 'caution'
+            : 'danger';
+    return { date, acwr, zone, acute, chronic: baseline, deload };
   });
+}
+
+/** Just the zones, for the hot path that only wants those. */
+export function zonesFor(index: LoadIndex, dates: readonly string[]): AcwrZone[] {
+  return loadSeries(index, dates).map((point) => point.zone);
 }
 
 /**

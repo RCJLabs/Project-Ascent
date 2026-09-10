@@ -946,14 +946,41 @@ about ten lines and would have caught all three; it belongs with the first of th
   side, so the pairing is visible on the same card. Renaming the id is a data change,
   not a chart change. Verified at 390/1280px, light and dark, with every label inside
   the frame and zero overflow.
-- **M25 — Load and recovery over time.** Three chart primitives exist (`LoadBars`,
-  `ProgressionLine`, `PyramidBars`) across four call sites, and `LoadBars` shows a
-  28-day window only. The app derives far more than it draws: ACWR has a full
-  history and is shown as one current figure; rest cadence, session-type mix and
-  time-of-day are all derivable and none are drawn. ACWR as a line with the
-  `ACWR_BOUNDS` band shaded is the single most useful missing chart, because it
-  turns a number nobody trusts into a trajectory.
-
+- **M25 — Load and recovery over time.** *Done, narrowly — see the end.* The app
+  derived a full ACWR history and showed one number from it. A ratio has no meaning
+  alone: **0.99 arrived-from-1.6 and 0.99 arrived-from-0.6 are opposite situations with
+  the same reading** — the first a climber coming down off a spike, the second one
+  building back. The line is the same data saying which.
+  **The bands are the chart.** Drawn as filled regions rather than threshold lines,
+  because a band is a place to be and a line is a thing to cross, and the first is what
+  the model means. Their edges come from `ACWR_BOUNDS` — a chart with its own copy of
+  0.8 keeps drawing the old band the day the model is retuned — and they are named in
+  words as well as shaded, because a key that is only a colour fails the same rule the
+  status ramp does.
+  **Gaps stay gaps.** Before three weeks of history there is no ratio, so the line
+  breaks into separate runs rather than joining across. A zero there would tell a
+  climber they were detraining through a period the app knows nothing about.
+  **One sliding window, not two.** `zonesFor` — M18's optimisation, the thing that
+  turned 46.6ms into a few — was generalised into `loadSeries`, which returns the whole
+  standing per day; `zonesFor` is now that with everything but the zone thrown away.
+  Two windows over the same data would be two chances for the number under the chart to
+  disagree with the number in the card. The parity tests and the perf budgets both
+  still pass.
+  **Two defects only a screenshot would find.** The y-axis labels collided: at a
+  ceiling of 2.2 the gap between 1.3 and 1.5 is ten pixels and the two sat on top of
+  each other, so a label is now dropped when it would crowd its neighbour — 1.3 goes
+  first, because the legend can replace it. And the band opacity was tuned on white: at
+  0.1 the caution and danger strips were all but invisible on a dark surface, since a
+  light red at 10% over near-black is nothing. One alpha now, chosen against the dark
+  theme and checked on both.
+  **What was not built, and why.** Session-type mix and time-of-day were on the list
+  and are not here: the plan itself called ACWR "the single most useful missing chart",
+  and three charts on one page compete rather than add. Rest cadence is already visible
+  — M23's grid draws every rest day as its own shade. **The line is visibly jagged**,
+  and that is real rather than a rendering fault: sampling a seven-day rolling window
+  daily, for a climber who trains every other day, genuinely oscillates as one session
+  enters and another leaves. Smoothing it would be averaging a rolling average, which
+  lags and hides the spike this chart exists to show — so the sawtooth stays.
 - **M26 — The moment a record lands.** *Done.* A personal record pays `0.5` of a
   level — the biggest single award in the economy, worth more than three ordinary
   sessions — and the card after logging led with the XP total while the record sat as
