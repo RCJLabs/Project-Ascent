@@ -256,6 +256,20 @@ function resolveMedia(file: ExportFile, blobs: Map<string, Uint8Array>): Backup 
   return { file: { ...file, media: kept }, blobs, photosMissing: file.media.length - kept.length };
 }
 
+export interface ImportOptions {
+  /** Photo bytes from the archive, by entry name. */
+  blobs?: Map<string, Uint8Array>;
+  /**
+   * What a replace does to photos the file does not carry.
+   *
+   * 'clear' — the default, and right for a backup a climber picked: the file
+   * is the statement of record, and half a restore is worse than either half.
+   * 'keep' — for the snapshot restore, which stores records only and so never
+   * claimed to speak for photos at all (PLAN.md M54).
+   */
+  photos?: 'clear' | 'keep';
+}
+
 /**
  * mode 'replace': clears every exportable store first.
  * mode 'merge': puts records over existing ones — same keys win from the
@@ -265,7 +279,7 @@ function resolveMedia(file: ExportFile, blobs: Map<string, Uint8Array>): Backup 
 export async function importAll(
   file: ExportFile,
   mode: 'replace' | 'merge',
-  blobs?: Map<string, Uint8Array>,
+  options: ImportOptions = {},
 ): Promise<void> {
   const db = await getDb();
   const tx = db.transaction(EXPORTABLE_STORES as unknown as ExportableStore[], 'readwrite');
@@ -296,7 +310,7 @@ export async function importAll(
   // Photos go in a second transaction. The first one covers the exportable
   // stores only, and media is not one of them.
   const decoded = (file.media ?? []).flatMap((m) => {
-    const blob = photoBlob(m, blobs);
+    const blob = photoBlob(m, options.blobs);
     // Already counted and reported by readBackupFile; a caller that built
     // the file by hand gets the same treatment rather than a broken record.
     if (!blob) return [];
@@ -316,7 +330,8 @@ export async function importAll(
   const mediaTx = db.transaction('media', 'readwrite');
   // A replace with no photos in the file still clears them: the backup is
   // the statement of record, and half a restore is worse than either half.
-  if (mode === 'replace') await mediaTx.store.clear();
+  // Unless the caller says otherwise — see ImportOptions.photos.
+  if (mode === 'replace' && options.photos !== 'keep') await mediaTx.store.clear();
   for (const record of decoded) await mediaTx.store.put(record);
   await mediaTx.done;
 }

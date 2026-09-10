@@ -227,7 +227,7 @@ export function SettingsPage() {
         await takeSnapshot(pendingImport.label.replace(/\.$/, ''));
       }
       const backup = readBackupFile(pendingImport.bytes);
-      await importAll(backup.file, mode, backup.blobs);
+      await importAll(backup.file, mode, { blobs: backup.blobs });
       await hydrateAll();
       setSnapshot(await readSnapshot());
       setMessage(

@@ -1866,6 +1866,33 @@ and why.
   themselves — in **638ms** for **+66MB**, which is one copy of the archive and nothing
   else.
 
+- **M54 — Undo an import, keep your photos.** *Done.* `takeSnapshot` stores records
+  only — deliberately, since a snapshot with media would double the largest thing in the
+  database at the riskiest moment — and `restoreSnapshot` then called
+  `importAll(file, 'replace')`. A replace whose file carries no photos clears the media
+  store, so **undoing a merge import deleted every photo on the device**, including
+  photos that were never at risk: a merge does not touch them, and the undo did.
+  Confirmed with a test before it was fixed. It predates M53 and was found while wiring
+  it.
+  The ambiguity was in the data: `media: undefined` meant both "this backup deliberately
+  carries no photos, so a replace clears them" and "this file has nothing to say about
+  photos". Those are different sentences and only the caller knows which one it is
+  speaking, so `importAll` now takes `{ blobs, photos: 'clear' | 'keep' }` and the
+  snapshot restore — the only caller with the second meaning — asks to keep. A backup a
+  climber picked still clears, because the file is the statement of record.
+  **Photos an undone import brought in are left to the boot sweep**, not deleted by the
+  undo. They are orphans the moment their owners go, which is what `sweepOrphanMedia`
+  already exists for; the undo cannot tell them from the photos of a delete whose
+  fifteen-second undo bar is still on screen, and boot is the documented moment when no
+  undo can be pending.
+  The two cards were saying something that was true of the *snapshot* and false about
+  what Undo did: "photos excepted, which the restore point does not hold" reads as *not
+  restored*, not as *deleted*. They now say the restore point holds records rather than
+  photos, that photos are left as they are, and — at the moment it can still be avoided —
+  that photos a Replace clears do not come back.
+  Five mutations, five killed. Verified in a browser: two photos, a merge import from a
+  backup carrying none, Undo — two photos.
+
 - **M51 — Decide multi-profile/coach mode.** §9.3 says "decide before schema freeze".
   The schema is at version 2 and M12 is next. The foundations were laid on purpose:
   `Program.author`, program-file export and import in the builder, and a comment on
@@ -1878,21 +1905,6 @@ and why.
   for 4-5 days a week; you have 3" because it has nothing shorter to offer. This is a
   coaching judgement about the catalogue rather than a defect, and it is the one item
   here that only the person who writes the training can do.
-
-- **M54 — Undo an import, keep your photos.** *Found while wiring M53, confirmed with a
-  test, not fixed there.* `takeSnapshot` stores records only — deliberately, since a
-  snapshot with media would double the largest thing in the database at the riskiest
-  moment — and `restoreSnapshot` then calls `importAll(file, 'replace')`. A replace whose
-  file carries no photos clears the media store, which is right for a backup a climber
-  chose (the file is the statement of record) and wrong for a snapshot that never claimed
-  to carry any. So after an import in **merge** mode — where the device's own photos were
-  never at risk — pressing Undo deletes every one of them. The undo card's "photos
-  excepted, which the restore point does not hold" reads as *not restored*; it does not
-  warn that they are *removed*. The fix is to let a snapshot restore leave the media store
-  alone. The question it opens is what should then happen to photos an undone *replace*
-  brought in, which `sweepOrphanMedia` can only answer for owners that went away with the
-  undo. Predates M53. *Done when: importing in merge mode and pressing Undo leaves the
-  photos that were there before the import, and the card says what Undo does to photos.*
 
 - **M12 — Ship.** TWA packaging + assetlinks, Play internal testing, store listing.
   Last, after M13–M22.

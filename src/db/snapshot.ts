@@ -64,7 +64,12 @@ export async function restoreSnapshot(): Promise<boolean> {
   const record = await db.get('meta', SNAPSHOT_KEY);
   const snapshot = record?.value as Snapshot | undefined;
   if (!snapshot?.file) return false;
-  await importAll(snapshot.file, 'replace');
+  // Records only. A snapshot holds no photos, and a replace that reads that
+  // as "this file says there are none" deleted every photo on the device —
+  // including, after a *merge* import, photos that were never at risk
+  // (PLAN.md M54). Photos an undone import brought in are orphans once their
+  // owners go, which is the boot sweep's job and nobody else's.
+  await importAll(snapshot.file, 'replace', { photos: 'keep' });
   await clearSnapshot();
   return true;
 }

@@ -133,6 +133,98 @@ describe('undoing an import', () => {
   });
 });
 
+/**
+ * Undo must not cost a climber their photos (PLAN.md M54).
+ *
+ * A snapshot holds records only, on purpose — a second copy of every photo
+ * at the riskiest moment is exactly what M19 says not to do. What it must
+ * not do is let a *replace* read "no photos in this file" as "there should
+ * be no photos", because after a merge import the photos on the device were
+ * never at risk in the first place.
+ */
+describe('undoing an import and the photos', () => {
+  const photo = (id: string, ownerId: string) => ({
+    id,
+    ownerId,
+    blob: new Blob([new Uint8Array([1, 2, 3])], { type: 'image/webp' }),
+    type: 'image/webp',
+    width: 8,
+    height: 8,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  });
+
+  async function photoIds(): Promise<string[]> {
+    const db = await getDb();
+    return (await db.getAllKeys('media')).map(String).sort();
+  }
+
+  it('keeps the photos that were here when the import was a merge', async () => {
+    const db = await getDb();
+    await seed(['2026-01-01']);
+    await db.put('media', photo('m-mine', 'session:2026-01-01#0'));
+
+    await takeSnapshot('a backup');
+    const incoming = await exportAll();
+    incoming.data.sessions = [session('2026-01-02')];
+    await importAll(incoming, 'merge');
+    expect(await photoIds()).toEqual(['m-mine']);
+
+    expect(await restoreSnapshot()).toBe(true);
+    expect(await sessionDates()).toEqual(['2026-01-01']);
+    expect(await photoIds()).toEqual(['m-mine']);
+  });
+
+  it('leaves a photo whose owner came back attached to it', async () => {
+    const db = await getDb();
+    await seed(['2026-01-01']);
+    await db.put('media', photo('m-mine', 'session:2026-01-01#0'));
+    await takeSnapshot('a backup');
+
+    // A replace that wipes the log the photo belongs to, then undone.
+    const incoming = await exportAll();
+    incoming.data.sessions = [session('2026-05-05')];
+    await importAll(incoming, 'replace', { photos: 'keep' });
+    expect(await restoreSnapshot()).toBe(true);
+
+    const { listMedia, sweepOrphanMedia } = await import('./media');
+    expect(await listMedia('session:2026-01-01#0')).toHaveLength(1);
+    // And the sweep does not take it, because its owner is back.
+    expect(await sweepOrphanMedia()).toBe(0);
+  });
+
+  // Photos an undone import brought in belong to records that no longer
+  // exist. They are collected the way every other orphan is — at boot, not
+  // by the undo, which has no way to tell them from a pending delete's.
+  it('leaves the import\u2019s own photos to the orphan sweep', async () => {
+    const db = await getDb();
+    await seed(['2026-01-01']);
+    await takeSnapshot('a backup');
+
+    const incoming = await exportAll();
+    incoming.data.sessions = [session('2026-05-05')];
+    await importAll(incoming, 'replace');
+    await db.put('media', photo('m-theirs', 'session:2026-05-05#0'));
+
+    expect(await restoreSnapshot()).toBe(true);
+    expect(await photoIds()).toEqual(['m-theirs']);
+    const { sweepOrphanMedia } = await import('./media');
+    expect(await sweepOrphanMedia()).toBe(1);
+    expect(await photoIds()).toEqual([]);
+  });
+
+  // The other half of the rule, unchanged: a backup a climber picked is the
+  // statement of record, so a replace from one carrying no photos clears
+  // them. Only the snapshot restore is exempt.
+  it('still clears photos when the file is a backup that carries none', async () => {
+    const db = await getDb();
+    await seed(['2026-01-01']);
+    await db.put('media', photo('m-mine', 'session:2026-01-01#0'));
+
+    await importAll(await exportAll(), 'replace');
+    expect(await photoIds()).toEqual([]);
+  });
+});
+
 describe('a snapshot never reaches a backup', () => {
   it('is left out of an export', async () => {
     await seed(['2026-01-01']);

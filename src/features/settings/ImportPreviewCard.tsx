@@ -137,8 +137,8 @@ export function ImportPreviewCard({
       )}
 
       <p className="text-xs text-ink-soft mt-3 leading-relaxed">
-        Either way, a restore point is saved first, so you can undo this. The restore point does
-        not include photos.
+        Either way, a restore point is saved first, so you can undo this — it holds your records,
+        not your photos. Photos that Replace clears do not come back.
       </p>
 
       <div className="flex flex-wrap gap-2 mt-3">
@@ -187,13 +187,14 @@ export function UndoImportCard({
         A restore point was saved before importing {replacedWith}, on{' '}
         {when.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })} at{' '}
         {when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}. Undoing puts
-        your data back as it was — photos excepted, which the restore point does not hold.
+        your records back as they were. Your photos are left as they are — the restore point does
+        not hold photos, so any that Replace already cleared are gone.
       </p>
       <div className="flex flex-wrap gap-2 mt-3">
         <Button size="sm" variant="outline" onClick={onUndo} disabled={busy}>
           <Undo2 size={15} /> Undo the import
         </Button>
-        {/* A restore point is a second copy of everything except photos.
+        {/* A restore point is a second copy of every record, photos excepted.
             Keeping it forever is storage the climber may want back, and
             saying "I am happy with this import" is the moment to reclaim it. */}
         <Button size="sm" variant="ghost" onClick={onKeep} disabled={busy}>
