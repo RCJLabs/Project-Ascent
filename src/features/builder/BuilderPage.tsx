@@ -29,16 +29,21 @@ import { IconButton } from '@/ui/IconButton';
 import { Input, Select, TextArea } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 import { RecordNotFound } from '@/ui/RecordNotFound';
+import { offerUndo } from '@/store/undo';
+import { useProfile } from '@/store/profile';
 
 const ICONS = ['🧗', '✋', '⚡', '🔁', '🏋️', '🧘', '😴', '🪨', '🎯', '🔥', '🌀', '🦶'];
 const EQUIPMENT: Equipment[] = ['wall', 'hangboard', 'campus', 'gym'];
 
 export function BuilderPage({ params }: { params: { id: string } }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const custom = useCustomPrograms((s) => s.custom);
   const hydrated = useCustomPrograms((s) => s.hydrated);
   const load = useCustomPrograms((s) => s.load);
   const save = useCustomPrograms((s) => s.save);
   const remove = useCustomPrograms((s) => s.remove);
+  const activeProgramId = useProfile((s) => s.activeProgramId);
+  const stopProgram = useProfile((s) => s.stopProgram);
   const [, navigate] = useLocation();
   const gradeOptions = useGradeOptions();
 
@@ -327,16 +332,44 @@ export function BuilderPage({ params }: { params: { id: string } }) {
         </Card>
 
         <Card title="Danger zone">
-          <Button
-            variant="danger"
-            className="w-full"
-            onClick={() => {
-              void remove(program.id);
-              navigate('/build');
-            }}
-          >
-            <Trash2 size={16} /> Delete this program
-          </Button>
+          {/* Ask, then offer it back (PLAN.md M49). This was one tap with no
+              confirmation and no undo, on the most expensive thing in the app
+              to recreate — a twelve-week block written by hand — while
+              sessions, projects and objectives all had a net. */}
+          {confirmDelete ? (
+            <>
+              <p className="text-sm text-ink-soft mb-3">
+                {program.name || 'This program'} and everything in it — phases, sessions,
+                prescriptions. You will have a moment to undo it.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    const deleted = program;
+                    // Running a program that no longer exists leaves Home and
+                    // the calendar reading a plan against nothing.
+                    if (activeProgramId === deleted.id) stopProgram();
+                    // `save` filters by id and appends, so it puts the program
+                    // back on its own — no separate restore path needed.
+                    void remove(deleted.id).then(() =>
+                      offerUndo(deleted.name || 'Program', () => save(deleted)),
+                    );
+                    navigate('/build');
+                  }}
+                >
+                  <Trash2 size={16} /> Delete for good
+                </Button>
+                <Button variant="ghost" onClick={() => setConfirmDelete(false)}>
+                  Keep it
+                </Button>
+              </div>
+            </>
+          ) : (
+            <Button variant="danger" className="w-full" onClick={() => setConfirmDelete(true)}>
+              <Trash2 size={16} /> Delete this program
+            </Button>
+          )}
         </Card>
       </div>
     </>

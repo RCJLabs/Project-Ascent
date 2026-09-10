@@ -1782,10 +1782,24 @@ and why.
   **Prose is pinned, as in M47**: 16 weights written into program content and 16 into
   the guides, counted so they cannot grow quietly.
 
-- **M49 — A custom program should be hard to lose.** Deleting one is a single tap with
-  no confirmation and no undo, then a navigate away (`BuilderPage.tsx:333`). Sessions,
-  projects and objectives all call `offerUndo`. The custom program is the most
-  expensive thing in the app to recreate and the only delete without a net.
+- **M49 — A custom program should be hard to lose.** *Done.* Deleting one was a single
+  tap in a "Danger zone" card with no confirmation and no undo, then a navigate away.
+  Sessions, projects and objectives all call `offerUndo`; the project asks first as
+  well. The custom program — a coach's twelve-week block written by hand — was the most
+  expensive thing in the app to recreate and the only delete with no net at all.
+  It now follows the project's shape exactly: a confirm step naming what goes with it,
+  then `offerUndo`, and `save` puts the program back on its own because it filters by
+  id and appends.
+  **Writing the test found a second thing.** Deleting the program you are *running*
+  left `activeProgramId` pointing at a program that no longer exists — the case where
+  losing it hurts most. Home and the calendar survive it since M45 taught them to live
+  without a program, so it read as "no active program" while the profile still held an
+  id; `stopProgram()` now fires when the deleted program is the active one. A mutation
+  that stops the *wrong* program is caught too, because a guard written backwards is
+  the easy version of this mistake.
+  Five mutations, five killed. Verified in a browser end to end: first tap asks, "Delete
+  for good" removes it and raises a fifteen-second undo bar, and Undo puts the program
+  back in the list.
 
 - **M50 — Video.** `ACCEPTED = 'image/*'`. Climbing's native medium is a fifteen-second
   beta clip, and M30 already built the owner/orphan-sweep infrastructure video would
