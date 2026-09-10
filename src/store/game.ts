@@ -53,6 +53,11 @@ export interface GameState {
   acceptBounty: (spec: BountySpec, cap?: number) => Promise<void>;
   abandonBounty: (id: string) => Promise<void>;
   spend: (amount: number) => Promise<void>;
+  /**
+   * Buy a kit. Returns false when the balance will not cover it, or when it
+   * is already owned — a caller that asks twice must not be charged twice.
+   */
+  buy: (outfit: { name: string; price?: number }, balance: number) => Promise<boolean>;
 }
 
 /** Focus mechanic, same shape as the project cap. */
@@ -148,8 +153,22 @@ export const useGame = create<GameState>((set, get) => ({
   },
 
   spend: async (amount) => {
-    const wallet = await putWallet({ spent: get().wallet.spent + amount });
+    const wallet = await putWallet({ ...get().wallet, spent: get().wallet.spent + amount });
     set({ wallet });
+  },
+
+  buy: async (outfit, balance) => {
+    const price = outfit.price;
+    if (price === undefined || price <= 0) return false;
+    const current = get().wallet;
+    const owned = current.owned ?? [];
+    if (owned.includes(outfit.name)) return false;
+    if (balance < price) return false;
+    // One write, so a purchase cannot leave the coins gone and the kit
+    // unowned, or the other way round.
+    const wallet = await putWallet({ spent: current.spent + price, owned: [...owned, outfit.name] });
+    set({ wallet });
+    return true;
   },
 }));
 
@@ -178,6 +197,13 @@ export function useXp(): XpState {
 }
 
 /** Spendable soft currency: earned over all time, minus what is spent. */
+/** Kits this climber has bought. */
+export function useOwned(): string[] {
+  return useGame((s) => s.wallet.owned ?? EMPTY_OWNED);
+}
+
+const EMPTY_OWNED: string[] = [];
+
 export function useCurrency(): { balance: number; earned: number; spent: number } {
   const xp = useXp();
   const spent = useGame((s) => s.wallet.spent);

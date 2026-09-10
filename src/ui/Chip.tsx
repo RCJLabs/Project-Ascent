@@ -102,6 +102,7 @@ export function SelectableCard({
   label,
   children,
   padded = true,
+  disabled = false,
   className = '',
 }: {
   selected: boolean;
@@ -117,12 +118,15 @@ export function SelectableCard({
    * grid passed `p-0` and got `p-3`, losing a quarter of every thumbnail.
    */
   padded?: boolean;
+  /** For a card that is shown but cannot be chosen — a locked kit, say. */
+  disabled?: boolean;
   className?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-pressed={selected}
       aria-label={label}
       className={`${BASE} ${selected ? ON : `${OFF} text-ink`} rounded-xl ${padded ? 'p-3' : ''} ${className}`}

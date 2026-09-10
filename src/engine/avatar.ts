@@ -46,8 +46,37 @@ export interface Outfit {
   shorts: string;
   shoes: string;
   gear: string;
+  /**
+   * The skill cosmetic id that grants this kit (PLAN.md M62).
+   *
+   * Five capstones already granted a kit by id, and nothing in the app ever
+   * turned one into something a climber could wear: two named kits that did
+   * not exist, and three named kits that were free to everyone from the
+   * first run. A kit with an `unlock` is earned and cannot be bought.
+   */
+  unlock?: string;
+  /**
+   * What this kit costs, for the ones that are bought rather than earned.
+   *
+   * Prices are in coins, and a coin is a quarter of an XP point
+   * (`CURRENCY_RATE`), so these land at roughly level 7, 10, 14 and 18 for a
+   * climber who has spent nothing else. They are one number each and meant
+   * to be retuned.
+   */
+  price?: number;
 }
 
+/**
+ * Three ways to have a kit, and each means something different.
+ *
+ * **Free** — no `unlock`, no `price`. The six the app has always had, and
+ * they stay free: locking one now would take a kit off a climber's back to
+ * make a point.
+ * **Earned** — an `unlock`, matching the cosmetic id a skill capstone grants.
+ * Never purchasable, because the tree is a record of what you did.
+ * **Bought** — a `price`, paid from the balance. Never granted, because
+ * something you can buy is not a reward for training.
+ */
 export const OUTFITS: Outfit[] = [
   { name: 'Glacier', top: '#2f7bb0', shorts: '#35434e', shoes: '#eb6834', gear: '#5b6b78' },
   { name: 'Granite', top: '#4c5d52', shorts: '#2b3138', shoes: '#d6b24a', gear: '#7b8a93' },
@@ -55,7 +84,35 @@ export const OUTFITS: Outfit[] = [
   { name: 'Alpine', top: '#e4e9ee', shorts: '#1f6f8b', shoes: '#f2b705', gear: '#48606e' },
   { name: 'Slate', top: '#5c6b7a', shorts: '#22303c', shoes: '#9fb3c8', gear: '#3d4b58' },
   { name: 'Chalk', top: '#f0efe9', shorts: '#7d7468', shoes: '#c2503f', gear: '#a89e91' },
+
+  // Earned. One per cosmetic id the skill trees already grant.
+  { name: 'Iron', top: '#3f4650', shorts: '#20252b', shoes: '#b9c2cc', gear: '#6d7681', unlock: 'kit-iron' },
+  { name: 'Tension', top: '#7a4a6b', shorts: '#2a2130', shoes: '#e8d8b7', gear: '#5d4a63', unlock: 'kit-tension' },
+  { name: 'Anchor', top: '#26424f', shorts: '#141d24', shoes: '#c9d6dd', gear: '#456170', unlock: 'gear-tension' },
+  { name: 'Weathered', top: '#8a6a3f', shorts: '#3a2f26', shoes: '#d9cbb4', gear: '#6f5a3e', unlock: 'kit-granite' },
+  { name: 'Summit', top: '#f2f4f7', shorts: '#2c3e50', shoes: '#e0533d', gear: '#8fa3b3', unlock: 'kit-alpine' },
+
+  // Bought. The only thing in the app that costs anything.
+  { name: 'Basalt', top: '#33383d', shorts: '#1b1e21', shoes: '#c86b3c', gear: '#585f66', price: 1_200 },
+  { name: 'Lichen', top: '#6f8a5c', shorts: '#2f3a2c', shoes: '#e4dcc6', gear: '#55684a', price: 2_500 },
+  { name: 'Dusk', top: '#4a4270', shorts: '#221f33', shoes: '#f0a35e', gear: '#6b6294', price: 5_000 },
+  { name: 'Copper', top: '#a75a35', shorts: '#2d2723', shoes: '#f0e2cf', gear: '#7d4526', price: 8_000 },
 ];
+
+/** Free to everyone, from the first run. */
+export function freeOutfits(): Outfit[] {
+  return OUTFITS.filter((o) => o.unlock === undefined && o.price === undefined);
+}
+
+/** Granted by a skill capstone, and only by one. */
+export function earnedOutfits(): Outfit[] {
+  return OUTFITS.filter((o) => o.unlock !== undefined);
+}
+
+/** Bought with the balance, and only bought. */
+export function shopOutfits(): Outfit[] {
+  return OUTFITS.filter((o) => o.price !== undefined);
+}
 
 export type AvatarPose = 'reach' | 'highstep' | 'hang';
 export type AvatarGround = 'gym' | 'rock' | 'alpine';

@@ -34,6 +34,14 @@ export type GameXpEntry = LedgerEntry;
 export interface Wallet {
   /** Soft currency already spent. Earned is derived from total XP. */
   spent: number;
+  /**
+   * Kits bought, by name (PLAN.md M62).
+   *
+   * Stored rather than derived, because unlike everything else in the game
+   * a purchase is not a reading of the log — nothing about the training says
+   * it happened. It rides in the `game` store, so it is in the backup.
+   */
+  owned?: string[];
 }
 
 export interface AscentRecords {
@@ -118,7 +126,9 @@ export async function putAscent(records: AscentRecords): Promise<AscentRecords> 
 export async function getWallet(): Promise<Wallet> {
   const db = await getDb();
   const record = await db.get('game', WALLET_KEY);
-  return (record?.value as Wallet | undefined) ?? { spent: 0 };
+  const wallet = record?.value as Wallet | undefined;
+  // A wallet written before kits could be bought has no `owned` at all.
+  return { spent: wallet?.spent ?? 0, owned: wallet?.owned ?? [] };
 }
 
 export async function putWallet(wallet: Wallet): Promise<Wallet> {

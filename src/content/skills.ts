@@ -173,7 +173,7 @@ const TENSION: SkillTree = {
     capstone('tension', 'Unshakeable', 'STR', {
       kind: 'cosmetic',
       id: 'gear-tension',
-      label: 'the Slate kit',
+      label: 'the Anchor kit',
     }),
   ],
 };
@@ -308,7 +308,7 @@ const GRIT: SkillTree = {
       ['Weekend Regular', 5],
       ['Road Trip', 15],
       ['Local', 40],
-      ['At Home Outside', 90, { kind: 'cosmetic', id: 'kit-granite', label: 'the Granite kit' }],
+      ['At Home Outside', 90, { kind: 'cosmetic', id: 'kit-granite', label: 'the Weathered kit' }],
     ], (v) => ({ kind: 'outdoor-days', count: v })),
 
     ...branch('grit', 'Recovery Discipline', [
@@ -324,7 +324,7 @@ const GRIT: SkillTree = {
       ['Mt. Whitney', 14_505],
       ['Everest', 29_032],
       ['Six Figures', 100_000],
-      ['The Whole Ladder', 380_495, { kind: 'cosmetic', id: 'kit-alpine', label: 'the Alpine kit' }],
+      ['The Whole Ladder', 380_495, { kind: 'cosmetic', id: 'kit-alpine', label: 'the Summit kit' }],
     ], (v) => ({ kind: 'height', feet: v })),
 
     capstone('grit', 'Unbreakable', 'MEN', { kind: 'project-slot', extra: 2 }),

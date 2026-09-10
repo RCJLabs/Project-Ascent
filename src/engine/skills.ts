@@ -346,6 +346,24 @@ const EMPTY_EFFECTS = (): SkillEffects => ({
  * rule almost never bites — it exists so a node can never light up because a
  * one-off assessment was entered out of order.
  */
+/**
+ * Which node grants each cosmetic, read off the trees themselves.
+ *
+ * Derived rather than written down beside the kits: a lock note naming the
+ * wrong node is worse than no note, and the only way that cannot happen is
+ * for the note to come from the tree that grants it.
+ */
+export function cosmeticSources(trees: readonly SkillTree[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const tree of trees) {
+    for (const node of tree.nodes) {
+      const effect = node.effect;
+      if (effect?.kind === 'cosmetic') out[effect.id] = node.name;
+    }
+  }
+  return out;
+}
+
 export function evaluateSkills(trees: SkillTree[], input: SkillInput): SkillState {
   const treeStates: SkillTreeState[] = [];
   const effects = EMPTY_EFFECTS();

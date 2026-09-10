@@ -2103,16 +2103,37 @@ something that already exists; six are new. Nothing here is committed.*
   for legibility rather than taste, and a **true-black** one for OLED phones, where it is a
   battery feature and not a mood.
 
-- **M62 — Gamification that spends what it earns.** `spend()` exists on the game store and
-  **nothing in the app calls it**: the Climber page has printed "N earned · 0 spent" since
-  the day it was written. The currency is a scoreboard wearing an economy's clothes. Three
-  additions, in order of how much they are worth: a **cosmetic sink** — avatar palettes are
-  already stored per-climber, so they are the natural thing to buy, and §feature-11 already
-  says any economy stays cosmetic; **titles** earned from the log rather than bought, shown
-  beside the climber's name; and **seasons** — the board refreshes weekly already, so a
-  longer arc that closes and starts again gives the year a shape. What must *not* happen is
-  a skill shop: the tree is deliberately a map of your training, not a thing you spend on,
-  and the app guide says so in as many words.
+- **M62 — Gamification that spends what it earns.** *Done, and it was two dead rewards
+  rather than one.*
+  **The currency had no sink.** `spend()` sat on the game store and nothing in the app ever
+  called it: the climber page had printed "N earned · 0 spent" since the day it was written.
+  **The cosmetics were worse.** Five skill capstones grant a cosmetic id — and the appearance
+  picker never read `effects.cosmetics` at all. Three of the five named kits that were free
+  to everyone from the first run (90 days outside earned "the Granite kit", which every
+  climber already had), and two named kits — Iron, Tension — that **existed nowhere in the
+  app**. The reward was a sentence.
+  A kit now has one of three provenances and never two. **Free**: the six that always were,
+  and they stay free — locking one now would take a kit off a climber's back to make a
+  point. **Earned**: five new kits, one per cosmetic id the trees already grant, locked
+  until the tree grants them and never purchasable. **Bought**: four new kits, priced in
+  coins, never granted — something you can buy is not a reward for training. Tests hold all
+  three apart in both directions.
+  The lock note names the node that earns it — "Earned by Vice Grip", "Earned by At Home
+  Outside" — and it is *derived from the trees*, because a note naming the wrong node is
+  worse than no note. Buying is one write, so a purchase cannot leave the coins gone and the
+  kit unowned; buying twice is refused rather than charged twice; the balance is checked to
+  the coin.
+  **Prices come from the real rate.** A coin is a quarter of an XP point, which the first
+  pass got wrong by a factor of four — 1,200 / 2,500 / 5,000 / 8,000 lands them at roughly
+  levels 7, 10, 14 and 18. One number each, meant to be retuned.
+  **Three capstone labels changed and are the coach's to confirm:** "the Slate kit" →
+  Anchor, "the Granite kit" → Weathered, "the Alpine kit" → Summit. They had to change,
+  because each named a kit that was already free; the names themselves are a judgement.
+  What was *not* built: no seasons, and no titles beyond the ranks that already exist. And
+  nothing buyable touches training, XP or the log — the shop sells paint.
+  Eight mutations, eight killed. Verified in a browser: five locked kits each naming what
+  earns them, four priced, and buying Basalt for 1,200 leaves the wallet at
+  `{spent: 1200, owned: ["Basalt"]}` with the kit worn.
 
 - **M63 — Achievements belong on the climber, and the career has to be findable.** *Done.*
   Fourteen achievements rendered on `/career`, which hangs off Progress — and on that page
