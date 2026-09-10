@@ -78,7 +78,22 @@ export function Input({
   size?: ControlSize;
   ref?: Ref<HTMLInputElement>;
 }) {
-  return <input ref={ref} className={`${CONTROL} ${SIZE[size]} ${className}`} {...rest} />;
+  // A number field gets a number keypad by default (PLAN.md M21). Browsers
+  // mostly infer one from `type="number"`, but not reliably, and a climber
+  // hunting for the digits on a full QWERTY between hangboard sets is exactly
+  // the friction this milestone is about. `decimal` rather than `numeric`
+  // because added weight and edge sizes are not always whole.
+  //
+  // Caveat kept in the open: neither keypad offers a minus sign, so a field
+  // that accepts negatives — weight taken *off* on an assisted hang — still
+  // needs its own answer. Explicit inputMode wins, so those can set it.
+  const numeric =
+    rest.type === 'number' && rest.inputMode === undefined
+      ? ({ inputMode: 'decimal' } as const)
+      : {};
+  return (
+    <input ref={ref} className={`${CONTROL} ${SIZE[size]} ${className}`} {...numeric} {...rest} />
+  );
 }
 
 export function Select({

@@ -4,6 +4,8 @@ import { AlertTriangle, ArrowLeft, Check, Clock, Copy, Flame, Plus, RotateCw, Sp
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
 import { addDays, fromKey, shortLabel, today } from '@/engine/dates';
+import { clearTimerState, loadTimerState, saveTimerState } from '@/lib/timerState';
+import { ClimbEntry, RepeatLast, type Outcome } from './ClimbEntry';
 import { offerUndo } from '@/store/undo';
 import {
   describeSpan,
@@ -15,7 +17,7 @@ import {
 } from '@/engine/live';
 import { plannedDay, prescriptionFor } from '@/engine/plan';
 import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
-import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
+import {type GradeScale} from '@/engine/grades';
 import type { Climb, ProjectAttempt, Session } from '@/db/sessions';
 import type { AttemptOutcome } from '@/db/projects';
 import { OUTCOME_HIGH_POINT } from '@/engine/projects';
@@ -29,13 +31,13 @@ import { parseCount } from '@/content/types';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
-import { Checkbox, Input, Select, TextArea } from '@/ui/Field';
+import {Checkbox, Input, TextArea} from '@/ui/Field';
 import { Chip } from '@/ui/Chip';
 import { IconButton } from '@/ui/IconButton';
 import { announce } from '@/ui/Announce';
 import { Term } from '@/ui/Term';
 import { TimerSheet } from '@/ui/TimerSheet';
-import { useGradeLabel, useGradeOptions } from '@/ui/useGrade';
+import {useGradeLabel} from '@/ui/useGrade';
 import { alreadySaved, applyTemplate, rankTemplates, suggestName } from '@/engine/templates';
 import { canMerge, describeSession } from '@/engine/sessionEdit';
 import { concerning, injuryPolicy } from '@/engine/injury';
@@ -347,7 +349,6 @@ function SessionEditor({
 }) {
   const type = program?.sessionTypes.find((t) => t.id === session.sessionTypeId);
   const gradeLabel = useGradeLabel();
-  const gradeOptions = useGradeOptions();
   const isRest = type?.isRest === true;
   const patch = (p: Partial<Session>) => onChange({ ...session, ...p });
 
@@ -358,6 +359,23 @@ function SessionEditor({
 
   const [now, setNow] = useState(() => Date.now());
   const live = isLive(session);
+
+  // The most recent completed session before this one, for "same as last
+  // time". Read from the store rather than passed down: `others` is only
+  // this day's sessions, and the last one was almost certainly another day.
+  const allByDate = useSessions((s) => s.byDate);
+  const previousClimbs = useMemo(() => {
+    const before = Object.values(allByDate)
+      .flat()
+      .filter((s) => s.completed && s.id !== session.id && s.date <= session.date && s.climbs.length > 0)
+      .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+    if (!before) return null;
+    return {
+      // Names are dropped on purpose — see RepeatLast.
+      climbs: before.climbs.map(({ name: _name, ...rest }) => rest),
+      label: fromKey(before.date).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' }),
+    };
+  }, [allByDate, session.id, session.date]);
   const stale = isStale(session, now);
   useEffect(() => {
     if (!live) return;
@@ -398,7 +416,7 @@ function SessionEditor({
   const [grade, setGrade] = useState('V3');
   // One control instead of two: style is part of how a climb went, and a
   // separate selector for it would not survive a phone-width row.
-  const [outcome, setOutcome] = useState<'onsight' | 'flash' | 'send' | 'attempt'>('send');
+  const [outcome, setOutcome] = useState<Outcome>('send');
   const [climbName, setClimbName] = useState('');
   const [timer, setTimer] = useState<{
     protocolId: string;
@@ -406,6 +424,19 @@ function SessionEditor({
     sets: number;
     override?: Partial<import('@/content/types').ProtocolTimer>;
   } | null>(null);
+
+  // A timer left running when the page went away comes back where it was —
+  // the M19 finding: this was component state and nothing else, so a refresh
+  // or a phone reclaiming the tab restarted a hangboard protocol from set one.
+  const [resume, setResume] = useState<{ baseElapsed: number; startedAt: number | null }>();
+  useEffect(() => {
+    const saved = loadTimerState(session.id);
+    if (!saved) return;
+    const protocol = getProtocol(saved.protocolId);
+    if (!protocol) return;
+    setResume({ baseElapsed: saved.baseElapsed, startedAt: saved.startedAt });
+    setTimer({ protocolId: saved.protocolId, name: saved.exerciseName, sets: saved.sets });
+  }, [session.id]);
 
   const doneExercises = session.completedExercises ?? [];
   const markExerciseDone = (name: string) =>
@@ -457,7 +488,6 @@ function SessionEditor({
     });
   }
 
-  const grades = gradeOptions(scale, scale === 'V' ? V_GRADES : YDS_GRADES);
   const blocks = type && day?.phase ? prescriptionFor(type, day.phase, trackId) : [];
 
   return (
@@ -547,48 +577,15 @@ function SessionEditor({
       ) : (
         <>
           <Card title="Climbs">
-            {/* Four controls will not fit a 320px phone in one row, and flex
-                items refuse to shrink below their longest option, so without
-                wrapping the Add button lands outside the card. */}
-            <div className="flex flex-wrap gap-2 mb-3">
-              <Select
-                value={scale}
-                onChange={(e) => {
-                  const next = e.target.value as GradeScale;
-                  setScale(next);
-                  setGrade(next === 'V' ? 'V3' : '5.10a');
-                }}
-                className="min-w-0" size="compact"
-              >
-                <option value="V">Boulder</option>
-                <option value="YDS">Route</option>
-              </Select>
-              <Select
-                value={grade}
-                onChange={(e) => setGrade(e.target.value)}
-                className="flex-1 min-w-16" size="compact"
-              >
-                {grades.map((g) => (
-                  <option key={g.value} value={g.value}>
-                    {g.label}
-                  </option>
-                ))}
-              </Select>
-              <Select
-                value={outcome}
-                onChange={(e) => setOutcome(e.target.value as typeof outcome)}
-                aria-label="How it went"
-                className="min-w-0" size="compact"
-              >
-                <option value="onsight">On-sight</option>
-                <option value="flash">Flash</option>
-                <option value="send">Sent</option>
-                <option value="attempt">Tried</option>
-              </Select>
-              <Button size="sm" onClick={addClimb} aria-label="Add climb">
-                <Plus size={16} />
-              </Button>
-            </div>
+            <ClimbEntry
+              scale={scale}
+              grade={grade}
+              outcome={outcome}
+              onScale={setScale}
+              onGrade={setGrade}
+              onOutcome={setOutcome}
+              onAdd={addClimb}
+            />
 
             <Input
               value={climbName}
@@ -599,7 +596,10 @@ function SessionEditor({
             />
 
             {session.climbs.length === 0 ? (
-              <p className="text-sm text-ink-soft">Nothing logged yet.</p>
+              <RepeatLast
+                previous={previousClimbs}
+                onRepeat={(climbs) => patch({ climbs: climbs as Climb[] })}
+              />
             ) : (
               <ul className="grid grid-cols-1 gap-2">
                 {session.climbs.map((c) => (
@@ -811,8 +811,23 @@ function SessionEditor({
           sets={timer.sets}
           {...(timer.override ? { override: timer.override } : {})}
           exerciseName={timer.name}
-          onClose={() => setTimer(null)}
+          resume={resume}
+          onPersist={(state) =>
+            saveTimerState({
+              protocolId: timer.protocolId,
+              exerciseName: timer.name,
+              sets: timer.sets,
+              sessionId: session.id,
+              ...state,
+            })
+          }
+          onClose={() => {
+            clearTimerState();
+            setResume(undefined);
+            setTimer(null);
+          }}
           onComplete={() => {
+            clearTimerState();
             if (!doneExercises.includes(timer.name)) markExerciseDone(timer.name);
           }}
         />

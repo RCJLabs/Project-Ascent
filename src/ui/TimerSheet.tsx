@@ -33,6 +33,8 @@ export function TimerSheet({
   sets,
   exerciseName,
   override,
+  resume,
+  onPersist,
   onClose,
   onComplete,
 }: {
@@ -41,16 +43,27 @@ export function TimerSheet({
   exerciseName: string;
   /** Week-specific timing that supersedes the protocol's defaults. */
   override?: Partial<ProtocolTimer>;
+  /** Where a reload left off, if it left off anywhere. */
+  resume?: { baseElapsed: number; startedAt: number | null } | undefined;
+  /** Called whenever the clock starts, stops or resets, so the owner can
+   *  write it somewhere a reload cannot reach. */
+  onPersist?: (state: { baseElapsed: number; startedAt: number | null }) => void;
   onClose: () => void;
   onComplete?: () => void;
 }) {
   const plan = useRef(buildTimer({ ...protocol.timer!, ...override }, sets)).current;
 
-  const [running, setRunning] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
+  const [running, setRunning] = useState(resume?.startedAt != null);
+  const [elapsed, setElapsed] = useState(() =>
+    resume === undefined
+      ? 0
+      : resume.startedAt === null
+        ? resume.baseElapsed
+        : resume.baseElapsed + Math.max(0, Date.now() - resume.startedAt),
+  );
   const [sound, setSound] = useState(cuesEnabled());
-  const startedAt = useRef<number | null>(null);
-  const baseElapsed = useRef(0);
+  const startedAt = useRef<number | null>(resume?.startedAt ?? null);
+  const baseElapsed = useRef(resume?.baseElapsed ?? 0);
   const lastIndex = useRef(-1);
   const lastCountdown = useRef(-1);
   const finished = useRef(false);
@@ -122,14 +135,16 @@ export function TimerSheet({
     finished.current = false;
     startedAt.current = Date.now();
     setRunning(true);
-  }, []);
+    onPersist?.({ baseElapsed: baseElapsed.current, startedAt: startedAt.current });
+  }, [onPersist]);
 
   const pause = useCallback(() => {
     const from = startedAt.current;
     if (from !== null) baseElapsed.current += Date.now() - from;
     startedAt.current = null;
     setRunning(false);
-  }, []);
+    onPersist?.({ baseElapsed: baseElapsed.current, startedAt: null });
+  }, [onPersist]);
 
   const reset = useCallback(() => {
     baseElapsed.current = 0;
@@ -138,6 +153,7 @@ export function TimerSheet({
     lastCountdown.current = -1;
     finished.current = false;
     setElapsed(0);
+    onPersist?.({ baseElapsed: 0, startedAt: null });
     setRunning(false);
   }, []);
 

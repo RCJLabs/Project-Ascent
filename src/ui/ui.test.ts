@@ -35,6 +35,12 @@ const FEATURE_FILES = componentFiles(FEATURES);
 const UI_FILES = componentFiles(UI);
 
 /** Occurrences of `needle`, as `path:line` for a readable failure. */
+/** A line that is only a comment. Prose about `<select>` is not a select. */
+function isComment(line: string): boolean {
+  const t = line.trim();
+  return t.startsWith('//') || t.startsWith('*') || t.startsWith('/*');
+}
+
 function findAll(
   files: { path: string; source: string }[],
   test: (line: string) => boolean,
@@ -43,7 +49,7 @@ function findAll(
     source
       .split('\n')
       .map((line, i) => ({ line, n: i + 1 }))
-      .filter(({ line }) => test(line))
+      .filter(({ line }) => !isComment(line) && test(line))
       .map(({ line, n }) => `${path}:${n} ${line.trim().slice(0, 70)}`),
   );
 }
@@ -61,6 +67,8 @@ const BESPOKE: Record<string, string> = {
     'a calendar day is a grid cell with its own state shell — a Button would be a worse abstraction, not a better one',
   'src/features/ascent/AscentPage.tsx':
     'the game canvas and its overlay controls are their own visual language',
+  'src/features/log/ClimbEntry.tsx':
+    'the grade strip is a dense scrolling value picker, not a filter — Chip’s tinted-border selection is unreadable at that size, so it fills solid instead',
 };
 
 describe('feature files use the primitives', () => {
