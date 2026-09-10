@@ -1573,6 +1573,126 @@ across its input space.
   so `/log/:date` fell out of the list it walks and one rule was checking nothing. Its
   coverage floor is what caught it.
 
+### Third audit — the app as a shipping product (2026-09-10)
+
+Driven in a browser against three datasets — empty, 260 sessions, and 1,600 sessions
+across nine years — plus a fresh-install link crawl of 38 screens, an offline test
+against a real build, and structural measurement. Two findings were withdrawn as
+artefacts of my own seed data before they reached this list, and one ("nothing reaches
+the logger from a fresh install") was wrong once crawled: two links do.
+
+**What measured clean, so nobody spends a milestone on it:** offline is complete —
+every route including the lazy ones, and a hard reload while offline, against a real
+build. Base accessibility holds: skip link, one `main`/`nav`/`header`, `lang`, live
+regions, visible focus rings on every tab stop, a global `prefers-reduced-motion`
+block, and real `role="dialog"` + `aria-modal` with focus management where dialogs
+exist. Search indexes 697 items across glossary, guides, sessions, projects and
+programs and is honest about being exact rather than fuzzy. Persistent storage is
+requested on boot. All 29 routes render with two years of data with no console errors
+and no horizontal overflow at 412px, and every empty state explains what will appear
+and why.
+
+- **M43 — Tests that render the app.** *Done.* The features layer was **12,934 lines
+  against 362 lines of test — 2.8%**, against an engine at 12,306 and 10,781. Every
+  defect in M35, M39, M41 and M42 lived in features and was found by driving a browser
+  by hand: the finder never reading logged metrics, five "not found" behaviours across
+  eleven routes, `/log/nope` writing a session no other screen could see. The
+  source-scanning tests written since are a workaround for having no way to render a
+  component — they prove a call is *written*, which is why two of them survived their
+  first mutation.
+  **jsdom per file, not for the suite.** `// @vitest-environment jsdom` on the five
+  component files leaves 85 node-environment files untouched; the whole run went from
+  11s to 16.7s. `src/test/render.tsx` mounts a page inside the app's own `Router` with
+  hash location — there are no context providers to reproduce, because the stores are
+  module-level zustand — and `hydrate()` loads them from fake-indexeddb the way boot
+  does, since every page gates on `hydrated` and a test that skips it asserts against a
+  skeleton.
+  **The proof, not the claim.** Re-introducing M35's exact wiring bug — the page holding
+  `metrics` and not passing them to `findProgram` — leaves **1,556 tests passing** and
+  fails the one component test. That is the class no source rule can reach.
+  **`mounts.test.tsx` is the cheap net over the other 12,000 lines**: every routed page,
+  mounted twice, once on a new install and once against 120 sessions, six months of
+  benchmarks and a project. It asserts almost nothing per page — a top-level heading
+  with words in it, and nothing thrown — because that is the failure this app kept
+  shipping. A coverage check reads `component={…}` out of `App.tsx` and fails if a
+  routed page is missing from the list.
+  Six mutations, six killed: a page dropped from the list, a page that throws, a page
+  with an empty heading, and the three historical bugs. One was a no-op first time
+  round and had to be redone against the real source, which is now the fourth time that
+  has happened.
+  **Deliberately not covered:** jsdom has no layout and no stylesheet, so it cannot see
+  the M30 defect where `p-0` lost to `p-3` on Tailwind's ordering, or a card that
+  collapses to no height. That class still needs a browser. **And a third mount pass —
+  well-formed records are all these two seed — belongs here once M44 lands**, because
+  the audit's central finding is that one malformed record kills `/journal` and
+  `/search` outright.
+
+- **M44 — A bad record costs one card, not the page.** Deleting one field from one
+  project out of seven killed **`/journal` and `/search` outright** while `/projects`,
+  `/progress` and `/` carried on. M20 states the goal — "a bad record should cost one
+  card" — and `CardBoundary` exists to deliver it; the pages that aggregate across
+  records do not use it. It is reachable through the app's own supported path:
+  `importAll` checks that the file is a Project Ascent backup and that each store is an
+  array, then writes every record verbatim with no shape validation. The boundary's own
+  message blames "a backup restored from an older version", which is precisely what
+  import accepts.
+
+- **M45 — The app assumes an active program and hides itself without one.** With 1,600
+  sessions logged, `/calendar` renders "No active program yet… your sessions will
+  appear here" — nine years of history invisible under a promise it is breaking
+  (`CalendarPage.tsx:98`). Home's Today card, which holds the only prominent log
+  button, is gated the same way (`HomePage.tsx:90`). A crawl of 38 screens from a fresh
+  install found logging reachable only from Coach's Corner and from search. Between
+  programs — most of a real climber's year — the two screens that should show training
+  show a pitch instead.
+
+- **M46 — Say something on the dangerous side of load.** ACWR is computed, the bands
+  are defined (`optimalTo: 1.3`, `cautionTo: 1.5`), the load chart paints optimal,
+  caution and danger, and the XP brake withholds the effort bonus above 1.3. But of the
+  coach's ten tips — plateau, detraining, stale benchmarks, backup nudge, streak praise
+  — **none fires when the ratio is climbing**. §5.5 specifies an ACWR gauge on Home
+  with plain-language guidance; Home has no load surface at all. The app carries an
+  injury tracker and warns about losing fitness, and is silent about the one direction
+  that hurts people.
+
+- **M47 — Grade display has to reach the catalogue.** With Font selected, Projects and
+  Progress convert correctly; program cards, program detail and the guides still read
+  "Base Camp V0-V2", "V5-V8 GRADES", "Grade Range V5+ or 5.11+". `gradeRange.label` is
+  an authored string and guide prose has grades baked into text. **This is the
+  known limitation recorded at the foot of the guide-verification section, parked
+  against M9** — M9 is done and the limitation outlived it, so it needs a milestone of
+  its own rather than a note. The guides half is new: the note covered `gradeRange`
+  only.
+
+- **M48 — Weight in kilograms.** 42 occurrences of "lbs" against 2 of "kg", and a
+  benchmark unit'd `BW+lbs`. An app that offers V/Font and YDS/French and then
+  prescribes max hangs in pounds is half-internationalised. Same pass as M47 by nature,
+  separate by cost: this one is a stored-unit decision plus content, not display
+  plumbing.
+
+- **M49 — A custom program should be hard to lose.** Deleting one is a single tap with
+  no confirmation and no undo, then a navigate away (`BuilderPage.tsx:333`). Sessions,
+  projects and objectives all call `offerUndo`. The custom program is the most
+  expensive thing in the app to recreate and the only delete without a net.
+
+- **M50 — Video.** `ACCEPTED = 'image/*'`. Climbing's native medium is a fifteen-second
+  beta clip, and M30 already built the owner/orphan-sweep infrastructure video would
+  reuse. The blocker is size rather than plumbing, so the work is a real decision —
+  duration cap, re-encode, or refuse politely — not a small one.
+
+- **M51 — Decide multi-profile/coach mode.** §9.3 says "decide before schema freeze".
+  The schema is at version 2 and M12 is next. The foundations were laid on purpose:
+  `Program.author`, program-file export and import in the builder, and a comment on
+  `DB_NAME` anticipating one database per profile. Deciding **no** is a fine outcome;
+  deciding after shipping costs a migration.
+
+- **M52 — A catalogue with more than one shape.** All nine programs are exactly twelve
+  weeks at 3-5 sessions a week. There is nothing for a climber with four weeks before a
+  trip and nothing for one who can train twice a week — the finder can only warn "Asks
+  for 4-5 days a week; you have 3" because it has nothing shorter to offer. This is a
+  coaching judgement about the catalogue rather than a defect, and it is the one item
+  here that only the person who writes the training can do.
+
 - **M12 — Ship.** TWA packaging + assetlinks, Play internal testing, store listing.
   Last, after M13–M22.
 
