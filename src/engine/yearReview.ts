@@ -294,28 +294,35 @@ export interface Change {
  * Returned in a fixed order rather than sorted by how good it looks, so a
  * year that went badly does not have its one improvement floated to the top.
  */
+export const CHANGE_ROWS: [string, keyof Totals, string][] = [
+  ['Sessions', 'sessions', ''],
+  ['Hours', 'hours', 'h'],
+  ['Sends', 'sends', ''],
+  ['Days on rock', 'outdoorDays', ''],
+  ['Height', 'feet', 'ft'],
+];
+
+/**
+ * Two sets of totals, compared.
+ *
+ * Split out from `changes` so the four-week comparison on the Progress page
+ * inherits the same rows in the same order rather than growing its own —
+ * the "not sorted by flattery" rule is only a rule while there is one list.
+ */
+export function changesBetween(now: Totals, then: Totals | null): Change[] {
+  if (then === null) return [];
+  return CHANGE_ROWS.map(([label, key, unit]) => ({
+    label,
+    now: now[key],
+    then: then[key],
+    delta: Math.round((now[key] - then[key]) * 10) / 10,
+    percent: then[key] === 0 ? null : Math.round(((now[key] - then[key]) / then[key]) * 100),
+    unit,
+  }));
+}
+
 export function changes(review: YearReview): Change[] {
-  const previous = review.previous;
-  if (previous === null) return [];
-  const rows: [string, keyof Totals, string][] = [
-    ['Sessions', 'sessions', ''],
-    ['Hours', 'hours', 'h'],
-    ['Sends', 'sends', ''],
-    ['Days on rock', 'outdoorDays', ''],
-    ['Height', 'feet', 'ft'],
-  ];
-  return rows.map(([label, key, unit]) => {
-    const now = review.totals[key];
-    const then = previous[key];
-    return {
-      label,
-      now,
-      then,
-      delta: Math.round((now - then) * 10) / 10,
-      percent: then === 0 ? null : Math.round(((now - then) / then) * 100),
-      unit,
-    };
-  });
+  return changesBetween(review.totals, review.previous);
 }
 
 /**

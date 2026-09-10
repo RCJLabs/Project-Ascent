@@ -1044,13 +1044,31 @@ about ten lines and would have caught all three; it belongs with the first of th
   deserves to know the app is reading their own words back. The card says it, and says
   how many sessions it could not place. It prescribes nothing — the training-state card
   is where advice belongs, and a keyword scan has not earned the right.
-- **M28 — Compare two periods.** `yearReview` compares like-for-like slices of two
-  years and is careful about part-finished ones. The Progress page has no comparison
-  at all — it shows current state. "This four weeks against the four before it",
-  with the same fixed ordering `changes()` already uses (never sorted by flattery),
-  is the missing everyday version. *Done when: "am I actually training more?" is one
-  tap from Progress.*
-
+- **M28 — Compare two periods.** *Done.* `yearReview` compared one year against the
+  last and was careful about part-finished ones; the Progress page had no comparison at
+  all — every card on it describes the present. "Am I actually training more than I was
+  a month ago?" is asked far more often than the annual question and nothing answered
+  it. Four weeks against the four before, at the top of Progress, so it is the first
+  thing on the page rather than one tap away.
+  **One list of rows, not two.** `changes()` already carried the rule that the
+  comparison is returned in a fixed order and never sorted by how good it looks, so a
+  year that went badly does not float its one improvement to the top. That list is now
+  `CHANGE_ROWS` and both comparisons read from it — the rule is only a rule while there
+  is one list.
+  **Neutral on purpose.** Up is not painted green and down is not painted red, because
+  the app has no idea which is which: a deload block is *supposed* to show as a decline,
+  and so is the month after a trip. The direction is an arrow and a signed number —
+  shape and text, which is also what M15's rule requires — and the card says outright
+  that a quieter month is not a worse one.
+  **The comparison is withheld until the log covers the earlier window.** A climber who
+  installed the app five weeks ago has a "previous four weeks" made mostly of days
+  before they arrived, and comparing against it would report the act of installing as a
+  training improvement. Instead the card says how many more days of log it needs. That
+  rule cost six test fixtures on its first run — they were reaching back 52 days where
+  56 were needed — which is the rule working rather than a bug, and a helper now builds
+  fixtures that span the window properly.
+  Verified at 390px light and dark and across the width sweep: a month of building, a
+  month of tapering, and a climber too new to compare. Zero horizontal overflow.
 - **M29 — The next unlock.** There are **125 skill nodes across five trees** and they
   are reachable from one page. Nothing anywhere else says "two more sends at V5 and
   Half Crimp unlocks". A single line on Home or after a session, naming the nearest

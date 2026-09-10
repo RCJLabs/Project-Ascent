@@ -13,6 +13,7 @@ import { deriveCareer } from '@/engine/career';
 import { buildHeatGrid, describeConsistency } from '@/engine/consistency';
 import { describeTrend, loadTrend } from '@/engine/loadTrend';
 import { describeTissue, tissueLoad } from '@/engine/tissueLoad';
+import { compareBlocks, describeBlocks } from '@/engine/blockCompare';
 import { today } from '@/engine/dates';
 import { availableYears } from '@/engine/yearReview';
 import { deriveClimberState, type AcwrZone } from '@/engine/derive';
@@ -30,6 +31,7 @@ import { LoadBars, ProgressionLine, PyramidBars } from '@/ui/charts/Charts';
 import { ConsistencyBody } from '@/ui/charts/ConsistencyGrid';
 import { LoadTrendLine } from '@/ui/charts/LoadTrendLine';
 import { TissueBars, TissueNote } from '@/ui/charts/TissueBars';
+import { BlockCompareTable } from '@/ui/charts/BlockCompare';
 
 /** Status presentation for ACWR. Colour never carries the meaning alone —
  *  every zone ships with an icon and a sentence. */
@@ -276,6 +278,7 @@ export function ProgressPage() {
   const points = useMemo(() => weeklyProgression(sessions, scale, 12), [sessions, scale]);
   const heat = useMemo(() => buildHeatGrid({ sessions }), [sessions]);
   const trend = useMemo(() => loadTrend({ sessions, to: today() }), [sessions]);
+  const block = useMemo(() => compareBlocks({ sessions, to: today() }), [sessions]);
   // The scan reads the record; the drill a session ran and the exercises its
   // program prescribed live in the catalogue, so they are fetched here and
   // handed in. Without them a program session counts only what was ticked.
@@ -364,6 +367,20 @@ export function ProgressPage() {
           <p className="text-xs text-ink-soft mt-2">
             Last 28 days. Load is session RPE × hours. Deload days are shown in orange.
           </p>
+        </Card>
+
+        {/* The only card here that is not about the present. Placed above
+            the tissue and trend cards because "am I training more than I
+            was?" is the question a climber opens this page with. */}
+        <Card title="Against the four weeks before">
+          <BlockCompareTable compare={block} />
+          <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeBlocks(block)}</p>
+          {block.before !== null && (
+            <p className="text-xs text-ink-soft mt-2 leading-relaxed">
+              Up is not better and down is not worse — a deload block is supposed to show as a
+              decline, and so is the month after a trip.
+            </p>
+          )}
         </Card>
 
         <Card title="What you have been loading">
