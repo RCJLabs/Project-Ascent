@@ -1801,10 +1801,39 @@ and why.
   for good" removes it and raises a fifteen-second undo bar, and Undo puts the program
   back in the list.
 
-- **M50 — Video.** `ACCEPTED = 'image/*'`. Climbing's native medium is a fifteen-second
-  beta clip, and M30 already built the owner/orphan-sweep infrastructure video would
-  reuse. The blocker is size rather than plumbing, so the work is a real decision —
-  duration cap, re-encode, or refuse politely — not a small one.
+- **M50 — Video.** *Decided: no. Photos only, and the app says so without the "for
+  now".* Climbing's native medium is a fifteen-second beta clip and M30 already built
+  the owner and orphan-sweep infrastructure it would reuse, so the plumbing was never
+  the problem. Three things were, and they are worth writing down so this is not
+  reopened on a hunch:
+  **Nothing can make a clip small in this app.** `prepareImage` re-encodes a photo with
+  `createImageBitmap` and a canvas; video has no equivalent. The options were
+  WebCodecs plus a muxer — Android Chrome and Safari 16.4+ only, with no fallback below
+  that — or `ffmpeg.wasm`, which is 25-30MB against a **225KB first load**. Recording
+  in-app with `MediaRecorder` was the one route with full size control and no
+  dependency, and it cannot import the clip your mate already filmed, which is how
+  climbing video actually gets shot.
+  **The backup could not carry it.** Measured: 96 photos at the app's own 600KB ceiling
+  — 56MB — already produce a **75MB file and a 225MB peak heap**. One 15s 1080p clip is
+  10-20MB before base64.
+  **And a beta clip is a photo sequence away from solved.** Eight photos per owner
+  already covers "here is the sequence"; video buys motion, which is worth less than
+  the storage it costs in an app with no cloud behind it.
+  The refusal message in `lib/image.ts` was already the honest answer; it is now stated
+  as a decision rather than a delay.
+
+- **M53 — Media out of the backup JSON.** *Opened by M50's measurement, and about
+  photos.* `exportAll` base64-encodes every blob into one object and `JSON.stringify`s
+  the lot, so a 56MB photo library becomes a **75MB file** — a third larger than the
+  photos themselves — assembled through several full copies at once for a **225MB peak
+  heap**. That is a phone-sized problem today, not a hypothetical: the app's own
+  settings copy already warns that photos "take about a third more room" in a backup,
+  which is the base64 tax described as if it were a fact of nature.
+  A backup becomes a container — the records as one JSON, the photos as files — which
+  removes the string ceiling, drops the third, and makes a restore streamable.
+  Store-only, because JPEG does not compress. **Old JSON backups must still import**,
+  and `importPreview` has to read both. *Done when: a backup of a hundred photos is the
+  size of the photos, and importing last month's JSON still works.*
 
 - **M51 — Decide multi-profile/coach mode.** §9.3 says "decide before schema freeze".
   The schema is at version 2 and M12 is next. The foundations were laid on purpose:

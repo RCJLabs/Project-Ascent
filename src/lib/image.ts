@@ -48,7 +48,7 @@ export async function prepareImage(file: File, maxEdge = MAX_EDGE): Promise<Prep
 
 async function encode(file: File, maxEdge: number, quality: number): Promise<PreparedImage> {
   if (!file.type.startsWith('image/')) {
-    throw new ImageError('That is not an image. Photos only for now — video would fill the phone.');
+    throw new ImageError('That is not an image. Photos only — see PLAN.md M50 for why video is not coming.');
   }
 
   let bitmap: ImageBitmap;
