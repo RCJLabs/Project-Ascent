@@ -317,8 +317,13 @@ export interface Program {
    * a fixed cycle (Peak Performance runs one at week 4, another at 8, and a
    * second taper at 9 because tendons adapt slower than muscle).
    *
-   * Sessions in these weeks are excluded from training-load math, so a
-   * planned deload never reads as detraining.
+   * Sessions in these weeks are **not** excluded from training-load math —
+   * a lighter week is genuinely lighter, and `derive.ts` uses the flag to
+   * explain the dip rather than to hide it. (The prototype excluded them,
+   * which is what made a planned deload read as detraining.) What the flag
+   * actually drives: the calendar marks the week, the logger stamps
+   * `deload: true` on the session, and the training-state card can say the
+   * dip was the plan.
    */
   deloadWeeks?: number[];
   /** Human-readable scheduling prose, kept verbatim alongside `constraints`. */

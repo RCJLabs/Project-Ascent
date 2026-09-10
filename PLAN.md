@@ -1224,6 +1224,42 @@ about ten lines and would have caught all three; it belongs with the first of th
 - **M12 — Ship.** TWA packaging + assetlinks, Play internal testing, store listing.
   Last, after M13–M22.
 
+**Guide verification (the program guides, checked against the programs).** The app
+guide was already asserted against the engines it quotes; the nine *program* guides —
+2,800 lines telling a climber how a block runs — were not. `guides/accuracy.test.ts`
+now checks them, and what it found is content debt that only the author can settle:
+
+- **Eight of the nine disagree with their program about which weeks are deloads.**
+  Two contradict it outright: Peak Performance's table calls week 5 "DELOAD 1" where
+  the program schedules week 4, and The Siege's labels week 8 where the program
+  schedules week 11. Ground Zero's guide describes "The Week 8 Deload" in detail and
+  the program marks no deload at all; Iron Grip's guide never mentions a deload and
+  the program schedules two. Only Base Camp agrees. This is not cosmetic: the flag is
+  what makes the calendar mark the week and lets the training-state card say a dip in
+  load was the plan rather than detraining.
+- **Six programs print an entry-requirements table their program cannot check.**
+  `Program.prerequisites` exists so a standard is "checkable against the user's own
+  data instead of living in prose the app can't read" — and for Ground Zero, Base
+  Camp, Gravity Defied, Iron Grip, The Long Game and The Cruiser it is exactly that
+  prose. Iron Grip is the sharpest: "V5+, Dead Hang 60+ seconds, 15+ strict push-ups",
+  of which `dead_hang` and `max_boulder_grade` are registered metrics the finder
+  could read today.
+- **Three guides prescribe exercises their program never schedules** — Band Face Pulls
+  in Ground Zero, Lockdown and The Long Game, plus Wide-Grip Pull-Ups and Hanging
+  Windshield Wipers in Lockdown, and Side/Front Delt Raises in Ground Zero. They are
+  in starred, "non-negotiable" armour blocks, so the session screen never hands over
+  work the guide calls mandatory.
+- Week counts, and every week number referenced in prose, all agree.
+
+Two holes in the checks themselves were found by mutating them. Every guide scan read
+`section.content` and never `section.title`, so a section *titled* "The Armory" passed
+the one test written to stop cut systems being documented; and the banned-system list
+held 11 of the ~16 systems the app guide's own preamble names. Both fixed — with
+`shop` and `skill points` deliberately left out, because a guide should be able to say
+the app has neither. `Program.deloadWeeks`' own doc comment also claimed deload
+sessions are excluded from training-load maths; `derive.ts` deliberately includes them
+and says why, so the comment was corrected to the code.
+
 **Known limitations carried forward:** program metadata grade ranges
 (`gradeRange.label`, e.g. "V5-V8") are authored strings and do not follow the Font
 /French display preference — converting them means re-authoring the content as

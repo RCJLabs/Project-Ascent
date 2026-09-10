@@ -34,7 +34,17 @@ function strings(block: GuideBlock): string[] {
   }
 }
 
-const ALL_STRINGS = ALL_BLOCKS.flatMap(strings);
+/**
+ * Section titles count too.
+ *
+ * These scans used to read `section.content` and nothing else, so a section
+ * *titled* "The Armory" would have sailed past the check that exists to stop
+ * exactly that — and a guide heading is the most-read prose in the file.
+ */
+const ALL_STRINGS = [
+  ...GUIDES.flatMap((g) => g.sections.map((s) => s.title)),
+  ...ALL_BLOCKS.flatMap(strings),
+];
 
 describe('guide structure', () => {
   it('gives every guide an id, a name and sections', () => {
@@ -105,6 +115,13 @@ describe('guide structure', () => {
  * These are cheap and they will keep earning their keep as the app changes.
  */
 describe('guides describe this app', () => {
+  /**
+   * The app guide's own preamble lists what the prototype had and this app
+   * does not. This is that list, minus the two words the guides use
+   * legitimately: a guide is allowed — encouraged — to say "there are no
+   * skill points" and "the tree is a map of your training, not a shop",
+   * and banning the noun would ban the denial along with the claim.
+   */
   const BANNED = [
     'Headwall',
     'Expedition',
@@ -117,16 +134,27 @@ describe('guides describe this app', () => {
     'Vehicle',
     'Guild',
     'Trail Encounter',
+    'Armory',
+    'gear set',
+    'garage',
+    'card battler',
+    'sponsor',
+    'tycoon',
+    'pro team',
+    'routesetting',
+    'companion',
+    'exploration map',
   ];
 
   it('mentions no cut system', () => {
+    // Reads ALL_STRINGS, which carries the section titles. Walking only
+    // `section.content` — which this did — let a section *titled* "The
+    // Armory" through the one check written to stop it.
     const offences: string[] = [];
-    for (const guide of GUIDES) {
-      for (const text of blocks(guide).flatMap(strings)) {
-        for (const banned of BANNED) {
-          if (text.toLowerCase().includes(banned.toLowerCase())) {
-            offences.push(`${guide.id}: "${banned}" in "${text.slice(0, 80)}"`);
-          }
+    for (const text of ALL_STRINGS) {
+      for (const banned of BANNED) {
+        if (text.toLowerCase().includes(banned.toLowerCase())) {
+          offences.push(`"${banned}" in "${text.slice(0, 80)}"`);
         }
       }
     }
