@@ -17,9 +17,16 @@ import {
 import { deriveAltimeter } from '@/engine/altimeter';
 import { OUTFITS, SKIN_TONES, deriveAvatar, type AvatarPalette } from '@/engine/avatar';
 import { RANKS } from '@/engine/economy';
-import { shortLabel } from '@/engine/dates';
+import { fromKey, shortLabel, today } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { deriveStats, type Stat, type StatId } from '@/engine/stats';
+import { compareStats } from '@/engine/statHistory';
+
+/** "March 2026" — the month is the useful precision for a six-month-old shape. */
+function sixMonthsLabel(asOf: string): string {
+  return fromKey(asOf).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+import { StatRadar } from '@/ui/charts/StatRadar';
 import { deriveVitality, type Vitality, type VitalityState } from '@/engine/vitality';
 import type { XpEvent } from '@/engine/xp';
 import { useCurrency, useXp } from '@/store/game';
@@ -62,6 +69,27 @@ export function ClimberPage() {
     () => deriveStats({ state, metrics, projects }),
     [state, metrics, projects],
   );
+  const statValues = useMemo(
+    () => ({
+      STR: stats.STR.value,
+      END: stats.END.value,
+      TEC: stats.TEC.value,
+      MEN: stats.MEN.value,
+      AGI: stats.AGI.value,
+    }),
+    [stats],
+  );
+  const comparison = useMemo(
+    () =>
+      compareStats({
+        sessions: Object.values(byDate).flat(),
+        metrics,
+        projects,
+        today: today(),
+      }),
+    [byDate, metrics, projects],
+  );
+
   const skills = useSkills();
   const vitality = useMemo(
     () =>
@@ -138,7 +166,21 @@ export function ClimberPage() {
         </Card>
 
         <Card title="Stats">
-          <ul className="grid grid-cols-1 gap-2.5">
+          {/* The shape first, the numbers under it. Five bars are five
+              numbers stacked up; the shape is what makes a lopsided climber
+              look lopsided (PLAN.md M24). */}
+          <StatRadar
+            values={statValues}
+            {...(comparison.then ? { then: comparison.then } : {})}
+            {...(comparison.asOf ? { thenLabel: sixMonthsLabel(comparison.asOf) } : {})}
+          />
+          {comparison.then === null && (
+            <p className="text-xs text-ink-soft mt-2 text-center">
+              Six months of logs and this gets a second shape behind it, so you can see what
+              moved.
+            </p>
+          )}
+          <ul className="grid grid-cols-1 gap-2.5 mt-4">
             {(Object.keys(stats) as StatId[]).map((id) => (
               <StatRow key={id} stat={stats[id]} />
             ))}

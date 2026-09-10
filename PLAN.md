@@ -918,13 +918,34 @@ about ten lines and would have caught all three; it belongs with the first of th
   table lists the logged days only — 371 rows of "nothing logged" is a
   denial-of-service, not an alternative. Verified at 320/390/1280px and in dark mode,
   zero horizontal overflow.
-- **M24 — The stat radar.** `stats.ts` defines exactly five axes
-  (`STR`/`END`/`TEC`/`MEN`/`AGI`) with labels and blurbs, surfaced across five files
-  — as numbers and bars, never as a shape. Five axes is a radar, and the shape is
-  the point: a climber who is all fingers and no endurance should *look* lopsided.
-  Pair it with the same shape from six months ago, faint, behind. *Done when: the
-  weakest axis is obvious without reading a number.*
-
+- **M24 — The stat radar.** *Done.* `stats.ts` defines exactly five axes and the app
+  only ever drew them as five bars — which is five numbers stacked up, so telling a
+  lopsided climber from a rounded one meant comparing "70" against "10" four rows
+  apart. Now a pentagon, and the shape does the work.
+  **The weakest axis is marked three ways, none of them colour:** a ring on its vertex,
+  its label in bold, and its name in the caption. A dip in a pentagon is only obvious
+  once you know which corner is which, and M15's rule means colour cannot be the cue —
+  a spike chart is exactly where that bites. The `aria-label` names it too, so the
+  headline fact survives having no picture at all.
+  **The second shape is six months ago**, recomputed from the log rather than stored: a
+  snapshot taken under an older formula would compare today against a different
+  definition and call the difference progress. It is an outline, dashed, painted before
+  the current shape — two filled shapes fight each other and neither reads. A climber
+  with under two months of log gets one shape and a line saying why, because a ghost
+  pinned to the centre is not a comparison, it is a picture of the app not having
+  existed yet.
+  **Two things worth keeping.** The axis-spacing test failed on correct geometry because
+  `atan2` wraps at ±π, so one gap read −5.03 instead of +1.26 — the test needed
+  normalising, not the maths. And `PAD` was set to the label's *distance* from the
+  centre when it needed the distance *plus the label's own width*: a label anchored
+  `start` runs outward from its vertex, so "END" rendered as "EN" and "AGI" lost its
+  left edge. Both caught by looking at the picture, not the code.
+  **A known wrinkle left alone:** the axes are labelled with the stat ids, so the
+  Mobility corner reads "AGI". That mismatch is upstream — the id is `AGI` and the name
+  is `Mobility` — and the rows directly beneath the chart show "AGI · Mobility" side by
+  side, so the pairing is visible on the same card. Renaming the id is a data change,
+  not a chart change. Verified at 390/1280px, light and dark, with every label inside
+  the frame and zero overflow.
 - **M25 — Load and recovery over time.** Three chart primitives exist (`LoadBars`,
   `ProgressionLine`, `PyramidBars`) across four call sites, and `LoadBars` shows a
   28-day window only. The app derives far more than it draws: ACWR has a full
