@@ -14,6 +14,8 @@ import {
   type Palette,
 } from './themes';
 import { CVD, contrast, distance, luminance, rgb } from './contrast';
+import { checkTheme, failed } from './paletteRules';
+import type { Theme } from './themes';
 
 /**
  * The check the comment in index.css claimed existed.
@@ -79,12 +81,36 @@ describe('the themes on offer', () => {
     }
   });
 
+  // The tool an author tunes a palette with has to be trustworthy, and its
+  // own failure mode is silence: a comparison written the wrong way round
+  // reports "0 failing" for a palette that fails everything.
+  it('has a report that actually reports', () => {
+    const broken: Theme = {
+      id: 'broken',
+      name: 'Broken',
+      blurb: 'Deliberately unreadable.',
+      light: { ...THEMES[0]!.light, ink: '#f4f4f4', accent: '#f0f0f0' },
+      dark: THEMES[0]!.dark,
+    };
+    const bad = checkTheme(broken).filter(failed);
+    expect(bad.length).toBeGreaterThan(0);
+    expect(bad.map((c) => c.rule).join(' ')).toMatch(/ink on/);
+  });
+
+  it('agrees with this suite about what passes', () => {
+    for (const theme of THEMES) {
+      expect(checkTheme(theme).filter(failed), theme.id).toEqual([]);
+    }
+  });
+
   it('has one implementation of the contrast maths, not two', () => {
     // The report tool and this suite have to agree about what passes, and
     // two copies of a luminance formula is how they stop agreeing.
     const source = readFileSync('src/ui/themes.test.ts', 'utf8');
     expect(source).not.toMatch(/function (contrast|luminance)\(/);
-    expect(readFileSync('scripts/theme-report.ts', 'utf8')).toContain("from '@/ui/contrast'");
+    // The report reads the shared rules, which read the shared maths.
+    expect(readFileSync('scripts/theme-report.ts', 'utf8')).toContain("from '@/ui/paletteRules'");
+    expect(readFileSync('src/ui/paletteRules.ts', 'utf8')).toContain("from './contrast'");
   });
 });
 

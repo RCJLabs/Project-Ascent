@@ -548,6 +548,15 @@ export const THEMES: Theme[] = [
 
 export const DEFAULT_THEME_ID = ALPINE.id;
 
+/**
+ * The palette used when the system asks for more contrast.
+ *
+ * Named rather than inlined, because two places have to agree about it: the
+ * code that applies it and the sentence in Settings that tells a climber
+ * what will happen.
+ */
+export const CONTRAST_THEME_ID = CONTRAST.id;
+
 export function getTheme(id: string): Theme {
   return THEMES.find((t) => t.id === id) ?? ALPINE;
 }

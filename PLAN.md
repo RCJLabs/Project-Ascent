@@ -2092,16 +2092,38 @@ and why.
 *Brainstormed against the app as it stands. Three were asked for by name; six sharpen
 something that already exists; six are new. Nothing here is committed.*
 
-- **M61 — More themes, and a way to author one without guessing.** Three ship — Alpine,
-  Slate, Sandstone — each a light and a dark palette of thirteen keys, and `themes.test.ts`
-  holds every one of them to WCAG AA in both modes. That test is the real constraint: a new
-  theme is twenty-six colours that must *all* pass, and the accent failing at 4.31:1 is a
-  mistake this project has already made once. So the work is two things. A **contrast
-  report** — a script that prints which pairs fail and by how much, so a palette is tuned
-  rather than guessed — and then the themes themselves. Rock is the obvious well: Granite,
-  Limestone, Gritstone, Basalt, Desert Varnish, plus a **high-contrast** theme that exists
-  for legibility rather than taste, and a **true-black** one for OLED phones, where it is a
-  battery feature and not a mood.
+- **M61 — More themes, and a way to author one without guessing.** *Done.* Three themes
+  became ten, and the tool came first for a reason: `themes.test.ts` answers "does this
+  palette pass" and nothing answered "by how much is this one failing" — which is how the
+  app shipped an accent at 4.31:1 for months.
+  **The tool.** `npm run themes:check` measures all 640 pairs and prints the failures worst
+  first; `-- --all` shows the headroom. Its rules live in `src/ui/paletteRules.ts` and the
+  colour maths in `src/ui/contrast.ts`, both shared with the suite — a second copy of a
+  contrast formula is how a report and a check start disagreeing, and a test now holds them
+  to the same answer. A report that says "0 failing" because its comparison is inverted is
+  worse than no report, so that is tested too, against a deliberately unreadable palette.
+  **The drafter.** `scripts/theme-draft.ts` takes a character — hues, warmth, how dark the
+  ground is — and solves each foreground's lightness until its rule clears with a margin.
+  The judgement stays in the spec; the arithmetic is arithmetic. Two things fell out of
+  running it. Lightness walked past 100 produced a three-character channel and a nonsense
+  colour that the contrast maths then measured quite happily. And the shared `STATUS` ramp —
+  which is deliberately not themed, so a climber changing theme does not relearn danger —
+  failed on `good` for six of the first seven drafts, between 4.05:1 and 4.43:1, purely
+  because their card sat a shade too close to it. The surface is solved against the ramp now
+  rather than chosen.
+  **Seven new: Limestone, Gritstone, Volcanic, Desert, Ice, High Contrast, Midnight.** The
+  last two are not moods. High Contrast is for reading in sunlight or with low vision, and
+  its two chart series are separated by lightness as well as hue — on a white ground both
+  were darkened to reach 3:1 until they were 25 apart under simulation against a floor of
+  40. Midnight is true black, which on an OLED screen is a battery setting as much as a look.
+  **A find the new theme exposed.** `prefers-contrast: more` reached for Slate — the
+  highest-contrast palette that happened to exist — and nothing tested that path. It uses
+  the theme built for it now, an explicit choice still outranks it, and a test holds the code
+  and the sentence in Settings to the same palette name.
+  Also pinned: every theme id that has shipped. `getTheme` falls back to Alpine for an id it
+  does not know, so renaming one silently resets every climber who had chosen it.
+  Seven mutations, seven killed. Verified in a browser in both modes; the picker shows all
+  ten; the bundle grew 2.3KB gzipped.
 
 - **M62 — Gamification that spends what it earns.** *Done, and it was two dead rewards
   rather than one.*

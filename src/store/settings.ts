@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { getDb } from '@/db';
 import { DEFAULT_DISPLAY, type BoulderDisplay, type GradeDisplay, type RouteDisplay } from '@/engine/grades';
 import { setCuesEnabled } from '@/lib/cues';
-import { DEFAULT_THEME_ID, applyPalette, getTheme } from '@/ui/themes';
+import { CONTRAST_THEME_ID, DEFAULT_THEME_ID, applyPalette, getTheme } from '@/ui/themes';
 import type { UnitSystem } from '@/engine/units';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
@@ -242,14 +242,16 @@ export function applyTheme(theme: ThemePreference, themeId: string = DEFAULT_THE
     theme === 'dark' ||
     (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-  // The OS asking for more contrast is a real request, and there is a theme
-  // built for it. Only honoured while the climber is on the default — an
-  // explicit choice outranks a system preference.
+  // The OS asking for more contrast is a real request, and there is now a
+  // theme built for exactly it — this used to reach for Slate, which was
+  // merely the highest-contrast palette that happened to exist (PLAN.md
+  // M61). Only honoured while the climber is on the default: an explicit
+  // choice outranks a system preference.
   const wantsContrast =
     themeId === DEFAULT_THEME_ID && window.matchMedia('(prefers-contrast: more)').matches;
   if (wantsContrast) {
-    const slate = getTheme('slate');
-    applyPalette(root, dark ? slate.dark : slate.light, dark ? 'dark' : 'light');
+    const high = getTheme(CONTRAST_THEME_ID);
+    applyPalette(root, dark ? high.dark : high.light, dark ? 'dark' : 'light');
     return;
   }
 

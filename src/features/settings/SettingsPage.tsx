@@ -313,7 +313,7 @@ export function SettingsPage() {
             ))}
           </div>
           <p className="text-xs text-ink-soft mt-2.5 leading-relaxed">
-            If your system asks for more contrast, the Slate palette is used automatically — unless
+            If your system asks for more contrast, the High Contrast palette is used automatically — unless
             you have picked one yourself, in which case yours wins.
           </p>
         </Card>
