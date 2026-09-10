@@ -3,6 +3,7 @@ import { getDb } from '@/db';
 import { DEFAULT_DISPLAY, type BoulderDisplay, type GradeDisplay, type RouteDisplay } from '@/engine/grades';
 import { setCuesEnabled } from '@/lib/cues';
 import { DEFAULT_THEME_ID, applyPalette, getTheme } from '@/ui/themes';
+import type { UnitSystem } from '@/engine/units';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
@@ -31,12 +32,21 @@ export interface SettingsState {
   textSize: TextSize;
   /** How grades are read. Storage stays canonical V/YDS either way. */
   display: GradeDisplay;
+  /**
+   * Pounds and inches, or kilograms and centimetres (PLAN.md M48). Storage
+   * stays imperial either way, for the same reason grades stay canonical:
+   * the stored unit is invisible and migrating every logged benchmark would
+   * buy nothing. Edge depth is millimetres in both, because it is
+   * millimetres to every climber alive.
+   */
+  units: UnitSystem;
   /** Timer beeps, game sounds and haptics. */
   cues: boolean;
   setTheme: (theme: ThemePreference) => void;
   setThemeId: (id: string) => void;
   setTextSize: (size: TextSize) => void;
   setCues: (value: boolean) => void;
+  setUnits: (value: UnitSystem) => void;
   setBoulderDisplay: (value: BoulderDisplay) => void;
   setRouteDisplay: (value: RouteDisplay) => void;
 }
@@ -49,6 +59,7 @@ interface PersistedSettings {
   textSize: TextSize;
   cues: boolean;
   display: GradeDisplay;
+  units: UnitSystem;
 }
 
 function persisted(state: SettingsState): PersistedSettings {
@@ -58,6 +69,7 @@ function persisted(state: SettingsState): PersistedSettings {
     textSize: state.textSize,
     cues: state.cues,
     display: state.display,
+    units: state.units,
   };
 }
 
@@ -67,6 +79,10 @@ export const useSettings = create<SettingsState>((set, get) => ({
   themeId: DEFAULT_THEME_ID,
   textSize: 'normal',
   display: DEFAULT_DISPLAY,
+  // Imperial, matching the V/YDS grade defaults and the content as it is
+  // authored, so the app is self-consistent out of the box. One line to
+  // flip if the audience says otherwise.
+  units: 'imperial',
   cues: true,
   setTheme: (theme) => {
     set({ theme });
@@ -86,6 +102,10 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setCues: (value) => {
     set({ cues: value });
     setCuesEnabled(value);
+    void saveSettings(persisted(get()));
+  },
+  setUnits: (value) => {
+    set({ units: value });
     void saveSettings(persisted(get()));
   },
   setBoulderDisplay: (value) => {
@@ -113,6 +133,7 @@ export async function hydrateSettings(): Promise<void> {
       hydrated: true,
       cues,
       display: { ...DEFAULT_DISPLAY, ...value.display },
+      units: value.units === 'metric' ? 'metric' : 'imperial',
       themeId: typeof value.themeId === 'string' ? value.themeId : DEFAULT_THEME_ID,
       textSize:
         typeof value.textSize === 'string' && value.textSize in TEXT_SCALE

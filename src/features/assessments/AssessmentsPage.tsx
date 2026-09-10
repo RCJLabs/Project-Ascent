@@ -25,6 +25,7 @@ import { SelectableCard } from '@/ui/Chip';
 import { DisclosureButton } from '@/ui/Disclosure';
 import { Input, Select } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
+import { unitLabel } from '@/engine/units';
 
 export function AssessmentsPage() {
   const entries = useMetrics((s) => s.entries);
@@ -198,6 +199,7 @@ function MetricRow({
 }
 
 export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => void }) {
+  const units = useSettings((st) => st.units);
   const gradeOptions = useGradeOptions();
   const record = useMetrics((s) => s.record);
   const [raw, setRaw] = useState('');
@@ -206,7 +208,7 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
   const [note, setNote] = useState('');
 
   async function save(value?: string) {
-    const parsed = parseMetricInput(metric, value ?? raw);
+    const parsed = parseMetricInput(metric, value ?? raw, units);
     if (!parsed.ok) {
       setError(parsed.error);
       return;
@@ -256,7 +258,7 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
               value={raw}
               onChange={(e) => setRaw(e.target.value)}
               inputMode={metric.kind === 'number' ? 'decimal' : 'text'}
-              placeholder={metric.unit || 'Result'}
+              placeholder={unitLabel(metric.unit, units) || 'Result'}
               aria-label={`${metric.label} result`}
               className="flex-1 bg-surface"
             />
@@ -286,7 +288,7 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
       </div>
       {error && <p className="text-sm text-danger mt-2">{error}</p>}
       {metric.unit && metric.kind === 'number' && (
-        <p className="text-xs text-ink-soft mt-2">Measured in {metric.unit}.</p>
+        <p className="text-xs text-ink-soft mt-2">Measured in {unitLabel(metric.unit, units)}.</p>
       )}
     </div>
   );

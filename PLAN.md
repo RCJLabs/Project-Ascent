@@ -1749,11 +1749,38 @@ and why.
   from four V-scale ranges to `6A-6C`, `6C-7B`, `7B-8A` with none left; the program
   page header converts and its prose does not, which is exactly the pinned debt.
 
-- **M48 — Weight in kilograms.** 42 occurrences of "lbs" against 2 of "kg", and a
-  benchmark unit'd `BW+lbs`. An app that offers V/Font and YDS/French and then
-  prescribes max hangs in pounds is half-internationalised. Same pass as M47 by nature,
-  separate by cost: this one is a stored-unit decision plus content, not display
-  plumbing.
+- **M48 — Weight in kilograms.** *Done, the half that can be.* An app that offers
+  V/Font and YDS/French and then prescribes max hangs in pounds is half-
+  internationalised — and `min_edge` was already millimetres, because a 20mm edge is a
+  20mm edge everywhere. **The app was never imperial; it was inconsistent.**
+  **Storage stays imperial**, the same call as grades: which unit a number is stored in
+  is invisible, and migrating every logged benchmark would buy nothing anyone can see.
+  Which unit it is *shown* in was the part that was wrong, so `units.ts` is a display
+  concern keyed on the exact `unit` string a metric declares — a unit not in the table
+  needs no conversion, which is the common case.
+  **The surface was bigger than the audit found.** Three weight metrics, yes — and two
+  in inches (`box_jump_height`, `toe_touch`), and **the whole altimeter, which is feet
+  from end to end and is not in the metric registry at all**. Shipping a units toggle
+  that converts a max hang and leaves "10,238 ft climbed" would be the same half-done
+  thing the milestone exists to fix, so the altimeter converts too. Its page already
+  printed metres underneath the feet, for everyone, regardless of who was reading —
+  that line now shows whichever unit is *not* selected.
+  **Default imperial**, matching the V/YDS grade defaults and the content as authored,
+  so the app is self-consistent out of the box. One line to flip.
+  **`ScalePicker` was constrained to `BoulderDisplay | RouteDisplay`** for no reason it
+  earns — it does nothing scale-specific — so widening it to `string` let the units
+  picker reuse it rather than grow a near-copy.
+  Five mutations, five killed, **two only after the tests were fixed**. Entering a
+  number was never tested through `parseMetricInput`, which is the dangerous direction:
+  type 27.2 reading kilograms, store 27.2 pounds, and every comparison against that
+  history is silently wrong. And the altimeter assertion matched the *shape* of the
+  headline, so printing the feet with an "m" after it passed — the two lines have to
+  agree on the height now, not just end in the right letter.
+  **The browser caught what neither found**: `SelectableCard`'s `label` is the
+  accessible name and the visible text is a separate span, so the option's display name
+  reached a screen reader and the screen still read "imperial" in lower case.
+  **Prose is pinned, as in M47**: 16 weights written into program content and 16 into
+  the guides, counted so they cannot grow quietly.
 
 - **M49 — A custom program should be hard to lose.** Deleting one is a single tap with
   no confirmation and no undo, then a navigate away (`BuilderPage.tsx:333`). Sessions,

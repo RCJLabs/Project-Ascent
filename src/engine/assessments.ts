@@ -13,6 +13,7 @@ import { getMetric, METRICS } from '@/content/metrics';
 import { phaseForWeek, type Metric, type MetricId, type Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import { addDays, daysBetween, programWeek, today as todayKey } from './dates';
+import { fromInput, toDisplay, unitLabel, type UnitSystem } from './units';
 import {
   DEFAULT_DISPLAY,
   V_GRADES,
@@ -30,7 +31,11 @@ export type ParseResult =
   | { ok: true; value: number; display?: string }
   | { ok: false; error: string };
 
-export function parseMetricInput(metric: Metric, raw: string): ParseResult {
+export function parseMetricInput(
+  metric: Metric,
+  raw: string,
+  units: UnitSystem = 'imperial',
+): ParseResult {
   const text = raw.trim();
   if (text === '') return { ok: false, error: 'Enter a result.' };
 
@@ -52,7 +57,8 @@ export function parseMetricInput(metric: Metric, raw: string): ParseResult {
     case 'number': {
       const n = Number(text);
       if (!Number.isFinite(n)) return { ok: false, error: 'Enter a number.' };
-      return { ok: true, value: n };
+      // A climber reading in kilograms types kilograms; storage is imperial.
+      return { ok: true, value: fromInput(n, metric.unit, units) };
     }
   }
 }
@@ -61,6 +67,7 @@ export function formatEntry(
   metric: Metric,
   entry: MetricEntry,
   display: GradeDisplay = DEFAULT_DISPLAY,
+  units: UnitSystem = 'imperial',
 ): string {
   // A grade metric stores its canonical ladder string; the climber may read
   // a different notation, and this is the one place that knows both.
@@ -69,7 +76,11 @@ export function formatEntry(
     return grade === undefined ? trim(entry.value) : displayGrade(metric.scale ?? 'V', grade, display);
   }
   if (entry.display !== undefined) return entry.display;
-  return metric.unit ? `${trim(entry.value)} ${metric.unit}` : trim(entry.value);
+  // Weight and length are stored imperial and read either way (M48). The
+  // number and its label have to move together, or 60 lbs becomes "60 kg".
+  const shown = trim(toDisplay(entry.value, metric.unit, units));
+  const label = unitLabel(metric.unit, units);
+  return label ? `${shown} ${label}` : shown;
 }
 
 function trim(n: number): string {

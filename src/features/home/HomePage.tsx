@@ -23,6 +23,8 @@ import { MountainMeter } from '@/ui/MountainMeter';
 import { PageHeader } from '@/ui/PageHeader';
 import { useClimberAvatar } from '@/ui/useClimberAvatar';
 import { useTips } from '@/features/coach/CoachPage';
+import { formatHeight, heightValue } from '@/engine/units';
+import { useSettings } from '@/store/settings';
 
 export function HomePage() {
   const activeProgramId = useProfile((s) => s.activeProgramId);
@@ -222,6 +224,7 @@ function cap(text: string): string {
 /** The mountain filling toward the next milestone — the plan's home-screen
  *  silhouette, and the only meter here that no game action can move. */
 function AltimeterCard() {
+  const units = useSettings((st) => st.units);
   const byDate = useSessions((s) => s.byDate);
   const alt = useMemo(() => deriveAltimeter(Object.values(byDate).flat()), [byDate]);
 
@@ -229,12 +232,14 @@ function AltimeterCard() {
     <Link href="/altimeter" className="block bg-surface border border-line rounded-2xl p-4">
       <div className="flex items-baseline gap-2 mb-2">
         <span className="font-black text-lg tabular-nums leading-none">
-          {alt.feet.toLocaleString()}
+          {heightValue(alt.feet, units).toLocaleString()}
         </span>
-        <span className="text-xs font-bold uppercase tracking-widest text-ink-soft">ft climbed</span>
+        <span className="text-xs font-bold uppercase tracking-widest text-ink-soft">
+          {units === 'metric' ? 'm' : 'ft'} climbed
+        </span>
         {alt.next && (
           <span className="text-xs text-ink-soft ml-auto truncate">
-            {alt.next.name} · {alt.toNext.toLocaleString()} ft
+            {alt.next.name} · {formatHeight(alt.toNext, units)}
           </span>
         )}
       </div>

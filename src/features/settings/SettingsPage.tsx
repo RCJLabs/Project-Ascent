@@ -8,7 +8,7 @@ import { ImportPreviewCard, UndoImportCard } from './ImportPreviewCard';
 import { mediaBytes } from '@/db/media';
 import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
-import { displayGrade, type BoulderDisplay, type RouteDisplay } from '@/engine/grades';
+import { displayGrade } from '@/engine/grades';
 import { formatBytes, storagePressure } from '@/engine/offline';
 import { useAppUpdate } from '@/store/appUpdate';
 import { unlock } from '@/lib/cues';
@@ -103,6 +103,8 @@ export function SettingsPage() {
   const cues = useSettings((s) => s.cues);
   const setCues = useSettings((s) => s.setCues);
   const display = useSettings((s) => s.display);
+  const units = useSettings((s) => s.units);
+  const setUnits = useSettings((s) => s.setUnits);
   const setBoulderDisplay = useSettings((s) => s.setBoulderDisplay);
   const setRouteDisplay = useSettings((s) => s.setRouteDisplay);
   const [storage, setStorage] = useState<StorageStatus>({ persisted: null });
@@ -333,6 +335,24 @@ export function SettingsPage() {
             Conversions between systems are approximate — the grades were never designed to line up,
             and any chart that says otherwise is rounding. One rung each way is normal.
           </p>
+        </Card>
+
+        <Card title="Weight & height">
+          <p className="text-sm text-ink-soft mb-3">
+            Added weight on hangs and pull-ups, box-jump height, and the altimeter's total. Stored
+            one way and re-labelled either way, the same as grades — switching does not change a
+            number you logged. Edge depth stays in millimetres, which is what climbers say
+            everywhere.
+          </p>
+          <ScalePicker
+            label="Units"
+            options={[
+              { value: 'imperial', name: 'Imperial', sample: ['lbs', 'in', 'ft'] },
+              { value: 'metric', name: 'Metric', sample: ['kg', 'cm', 'm'] },
+            ]}
+            value={units}
+            onChange={setUnits}
+          />
         </Card>
 
         <Card title="Sound & haptics">
@@ -567,14 +587,24 @@ export function SettingsPage() {
 }
 
 /** One ladder's notation, shown by example rather than by name alone. */
-function ScalePicker<T extends BoulderDisplay | RouteDisplay>({
+/**
+ * Pick one notation out of two, with a sample of each so the choice is
+ * legible without knowing the names.
+ *
+ * `T extends string`, not `BoulderDisplay | RouteDisplay` — the component
+ * does nothing scale-specific, and the narrower constraint only meant the
+ * units picker could not reuse it (PLAN.md M48). `name` is for a value
+ * whose stored key is not what you would print: "imperial" reads poorly
+ * beside "V" and "Font".
+ */
+function ScalePicker<T extends string>({
   label,
   options,
   value,
   onChange,
 }: {
   label: string;
-  options: { value: T; sample: string[] }[];
+  options: { value: T; name?: string; sample: string[] }[];
   value: T;
   onChange: (v: T) => void;
 }) {
@@ -587,10 +617,10 @@ function ScalePicker<T extends BoulderDisplay | RouteDisplay>({
             key={o.value}
             selected={value === o.value}
             onClick={() => onChange(o.value)}
-            label={`${o.value}: ${o.sample.join(', ')}`}
+            label={`${o.name ?? o.value}: ${o.sample.join(', ')}`}
             className="flex items-baseline gap-2 bg-sunken px-3 py-2.5"
           >
-            <span className="font-semibold text-sm">{o.value}</span>
+            <span className="font-semibold text-sm">{o.name ?? o.value}</span>
             <span className="text-sm text-ink-soft tabular-nums ml-auto">{o.sample.join(' · ')}</span>
           </SelectableCard>
         ))}

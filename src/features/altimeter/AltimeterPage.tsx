@@ -20,8 +20,11 @@ import { LoadBars } from '@/ui/charts/Charts';
 import { MountainMeter } from '@/ui/MountainMeter';
 import { PageHeader } from '@/ui/PageHeader';
 import { altimeterCard } from '@/ui/shareCard';
+import { formatHeight, heightValue } from '@/engine/units';
+import { useSettings } from '@/store/settings';
 
 export function AltimeterPage() {
+  const units = useSettings((st) => st.units);
   const byDate = useSessions((s) => s.byDate);
   const hydrated = useSessions((s) => s.hydrated);
   const load = useSessions((s) => s.load);
@@ -50,11 +53,18 @@ export function AltimeterPage() {
       <PageGrid>
         <Card>
           <div className="text-center mb-3">
+            {/* Both, with the climber's own unit first (PLAN.md M48). The
+                second line was always here — the app knew metres existed and
+                showed them underneath regardless of who was reading. */}
             <div className="text-4xl font-black tabular-nums leading-none">
-              {alt.feet.toLocaleString()}
-              <span className="text-lg font-bold text-ink-soft ml-1.5">ft</span>
+              {heightValue(alt.feet, units).toLocaleString()}
+              <span className="text-lg font-bold text-ink-soft ml-1.5">{units === 'metric' ? 'm' : 'ft'}</span>
             </div>
-            <p className="text-sm text-ink-soft mt-1.5">{alt.meters.toLocaleString()} m climbed</p>
+            <p className="text-sm text-ink-soft mt-1.5">
+              {units === 'metric'
+                ? `${alt.feet.toLocaleString()} ft climbed`
+                : `${alt.meters.toLocaleString()} m climbed`}
+            </p>
           </div>
           <MountainMeter
             fraction={alt.fraction}
@@ -79,10 +89,10 @@ export function AltimeterPage() {
           <Card title="Everest">
             <div className="flex items-baseline justify-between gap-3 mb-2">
               <span className="text-sm">
-                {Math.round(alt.everest.fraction * 100)}% of {EVEREST.feet.toLocaleString()} ft
+                {Math.round(alt.everest.fraction * 100)}% of {formatHeight(EVEREST.feet, units)}
               </span>
               <span className="text-sm font-semibold tabular-nums">
-                {alt.everest.toGo.toLocaleString()} ft to go
+                {formatHeight(alt.everest.toGo, units)} to go
               </span>
             </div>
             <Meter
@@ -93,7 +103,7 @@ export function AltimeterPage() {
             />
             <p className="text-sm text-ink-soft mt-2.5 leading-relaxed">
               {alt.everest.etaLabel
-                ? `At ${alt.pace.toLocaleString()} ft a week, that is ${alt.everest.etaLabel}.`
+                ? `At ${formatHeight(alt.pace, units)} a week, that is ${alt.everest.etaLabel}.`
                 : 'Three weeks of logging and this gets an estimate.'}
             </p>
           </Card>
@@ -112,10 +122,10 @@ export function AltimeterPage() {
             <LoadBars
               data={weeks.map((w) => ({ date: w.week, value: w.feet }))}
               label="Feet climbed per week over the last twelve weeks"
-              formatValue={(n) => `${Math.round(n).toLocaleString()} ft`}
+              formatValue={(n) => formatHeight(n, units)}
             />
             <p className="text-xs text-ink-soft mt-2">
-              Rolling seven-day windows. Current pace {alt.pace.toLocaleString()} ft a week.
+              Rolling seven-day windows. Current pace {formatHeight(alt.pace, units)} a week.
             </p>
           </Card>
         )}
@@ -168,18 +178,19 @@ export function AltimeterPage() {
 }
 
 function NextUp({ alt }: { alt: AltimeterState }) {
+  const units = useSettings((st) => st.units);
   if (!alt.next) return null;
   return (
     <div className="mt-3 pt-3 border-t border-line">
       <div className="flex items-baseline justify-between gap-3">
         <span className="font-semibold text-sm">{alt.next.name}</span>
         <span className="text-sm text-ink-soft tabular-nums shrink-0">
-          {alt.toNext.toLocaleString()} ft to go
+          {formatHeight(alt.toNext, units)} to go
         </span>
       </div>
       <p className="text-sm text-ink-soft mt-1 leading-relaxed">
         {alt.etaLabel
-          ? `At ${alt.pace.toLocaleString()} ft a week, ${alt.etaLabel}.`
+          ? `At ${formatHeight(alt.pace, units)} a week, ${alt.etaLabel}.`
           : alt.pace > 0
             ? 'A few more weeks of logging and this gets an estimate.'
             : 'Log a send and this starts moving.'}
