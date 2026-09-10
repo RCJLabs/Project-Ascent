@@ -40,10 +40,29 @@ const statusBlock = slice('export const STATUS:', '};');
 const statusLight = Object.fromEntries(pairs(statusBlock.slice(statusBlock.indexOf('light:'), statusBlock.indexOf('dark:'))));
 const statusDark = Object.fromEntries(pairs(statusBlock.slice(statusBlock.indexOf('dark:'))));
 
+/** The consistency ramp, mixed the same way `heatRamp` mixes it. */
+const HEAT_STOPS = JSON.parse(
+  slice('export const HEAT_STOPS', 'as const;').match(/\[([^\]]*)\]/)[0],
+);
+
+function mix(a, b, amount) {
+  const channel = (hex, at) => parseInt(hex.slice(at, at + 2), 16);
+  const out = [1, 3, 5].map((at) =>
+    Math.max(0, Math.min(255, Math.round(channel(a, at) + (channel(b, at) - channel(a, at)) * amount)))
+      .toString(16)
+      .padStart(2, '0'),
+  );
+  return `#${out.join('')}`;
+}
+
 const render = (palette, status, indent) =>
   [
     ...Object.entries(VAR).map(([key, v]) => `${indent}${v}: ${palette[key]};`),
     ...Object.entries(STATUS_VAR).map(([key, v]) => `${indent}${v}: ${status[key]};`),
+    // Written here as well as by applyPalette, because the first frame is
+    // painted before any script runs and an unset var makes an SVG fill
+    // invalid — which renders as black, not as nothing. Measured.
+    ...HEAT_STOPS.map((amount, i) => `${indent}--heat-${i + 1}: ${mix(palette.sunken, palette.viz1, amount)};`),
   ].join('\n');
 
 let css = readFileSync('src/index.css', 'utf8');

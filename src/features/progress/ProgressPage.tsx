@@ -8,6 +8,7 @@ import { useGradeLabel } from '@/ui/useGrade';
 import { assessmentBattery } from '@/engine/assessments';
 import { buildJournal } from '@/engine/journal';
 import { deriveCareer } from '@/engine/career';
+import { buildHeatGrid, describeConsistency } from '@/engine/consistency';
 import { availableYears } from '@/engine/yearReview';
 import { deriveClimberState, type AcwrZone } from '@/engine/derive';
 import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
@@ -21,6 +22,7 @@ import { Chip } from '@/ui/Chip';
 import { PageHeader } from '@/ui/PageHeader';
 import { TrainingState } from './TrainingState';
 import { LoadBars, ProgressionLine, PyramidBars } from '@/ui/charts/Charts';
+import { ConsistencyBody } from '@/ui/charts/ConsistencyGrid';
 
 /** Status presentation for ACWR. Colour never carries the meaning alone —
  *  every zone ships with an icon and a sentence. */
@@ -241,6 +243,7 @@ export function ProgressPage() {
     [sessions, weeklyTarget],
   );
   const points = useMemo(() => weeklyProgression(sessions, scale, 12), [sessions, scale]);
+  const heat = useMemo(() => buildHeatGrid({ sessions }), [sessions]);
   const projection = useMemo(() => projectGrade(points, scale, display), [points, scale, display]);
   const tally = scale === 'V' ? state.boulder : state.sport;
   const rows = useMemo(() => pyramid(tally, scale), [tally, scale]);
@@ -286,6 +289,15 @@ export function ProgressPage() {
         </Wide>
 
         <TrainingState state={state} sessions={sessions} program={program} scale={scale} />
+
+        {/* Wide, always. Fifty-three weeks squeezed into half a column is a
+            smear — the whole point is that a fortnight off is visible as a
+            hole, and at 4px a cell that reads only at full width. */}
+        <Wide>
+          <Card title="Consistency">
+            <ConsistencyBody grid={heat} summary={describeConsistency(heat)} />
+          </Card>
+        </Wide>
 
         <Card title="Training load">
           <div className="flex items-start gap-3 mb-3">

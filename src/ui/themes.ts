@@ -245,6 +245,45 @@ export function getTheme(id: string): Theme {
 }
 
 /**
+ * The consistency grid's five steps, from one hue (PLAN.md M23).
+ *
+ * Derived rather than authored, and derived *here* rather than written as a
+ * `color-mix` in the stylesheet, so there is one source of truth and a test
+ * can measure it. A ramp only checked by eye is how this project shipped
+ * three colours failing AA.
+ *
+ * One hue, mixed toward the empty-cell colour, so **lightness carries the
+ * scale**. That is the M15 rule and it matters more here than anywhere else:
+ * a grid is read by comparing hundreds of four-pixel squares at a glance,
+ * and a scale that needs hue discrimination is unreadable to roughly one man
+ * in twelve.
+ *
+ * A rested day gets the faintest step rather than the empty colour, because
+ * "I rested on purpose" and "I did not open the app" are opposite facts and
+ * the same square would report the first as the second.
+ */
+export const HEAT_STOPS = [0.16, 0.34, 0.55, 0.78, 1] as const;
+
+export function heatRamp(palette: Palette): string[] {
+  return HEAT_STOPS.map((amount) => mix(palette.sunken, palette.viz1, amount));
+}
+
+/** Linear blend of two hex colours, `amount` of `b` over `a`. */
+function mix(a: string, b: string, amount: number): string {
+  const channel = (hex: string, at: number) => parseInt(hex.slice(at, at + 2), 16);
+  const out = [1, 3, 5].map((at) => {
+    const value = channel(a, at) + (channel(b, at) - channel(a, at)) * amount;
+    return Math.max(0, Math.min(255, Math.round(value)))
+      .toString(16)
+      .padStart(2, '0');
+  });
+  return `#${out.join('')}`;
+}
+
+/** `--heat-1` is a rested day; 2–5 are the four load levels. */
+export const HEAT_VAR = HEAT_STOPS.map((_, i) => `--heat-${i + 1}`);
+
+/**
  * Paint a palette onto an element as custom properties.
  *
  * Set inline on `<html>` rather than swapped as a stylesheet, so a theme
@@ -257,6 +296,7 @@ export function applyPalette(element: HTMLElement, palette: Palette, mode: 'ligh
   for (const [key, variable] of Object.entries(STATUS_VAR)) {
     element.style.setProperty(variable, STATUS[mode][key as keyof (typeof STATUS)['light']]);
   }
+  heatRamp(palette).forEach((color, i) => element.style.setProperty(HEAT_VAR[i]!, color));
 }
 
 /** Every surface a foreground colour can legitimately be painted on. */

@@ -2,12 +2,14 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   CSS_VAR,
+  HEAT_STOPS,
   STATUS,
   STATUS_VAR,
   DEFAULT_THEME_ID,
   FOREGROUNDS,
   SURFACES,
   THEMES,
+  heatRamp,
   getTheme,
   type Palette,
 } from './themes';
@@ -279,9 +281,84 @@ describe('the CSS default matches the data', () => {
     }
   });
 
+  it('carries the consistency ramp for both modes', () => {
+    // Without these the very first paint has no `--heat-*` at all, and an
+    // SVG `fill: var(--heat-3)` that resolves to nothing is not transparent
+    // — it is black. The whole grid rendered as a solid block until this
+    // was generated rather than only set by applyPalette.
+    const root = block(':root {');
+    heatRamp(alpine.light).forEach((color, i) => {
+      expect(root, `--heat-${i + 1} in :root`).toContain(`--heat-${i + 1}: ${color}`);
+    });
+    for (const start of ["[data-theme='dark'] {", ":root:not([data-theme='light']) {"]) {
+      const chunk = css.slice(css.indexOf(start), css.indexOf(start) + 1400);
+      heatRamp(alpine.dark).forEach((color, i) => {
+        expect(chunk, `--heat-${i + 1} in ${start}`).toContain(`--heat-${i + 1}: ${color}`);
+      });
+    }
+  });
+
   it('is generated rather than hand-kept', () => {
     // scripts/gen-theme-css.mjs writes these blocks from themes.ts; the
     // tests above are what make the duplicate safe.
     expect(readFileSync('scripts/gen-theme-css.mjs', 'utf8')).toContain('src/ui/themes.ts');
+  });
+});
+
+describe('the consistency ramp reads as a scale', () => {
+  /** The empty cell, then the five steps: rested, then loads 1–4. */
+  const steps = (palette: Palette) => [palette.sunken, ...heatRamp(palette)];
+
+  it('has a step for a rested day as well as the four loads', () => {
+    expect(HEAT_STOPS).toHaveLength(5);
+    each((theme, mode, palette) => {
+      expect(steps(palette), `${theme.id}/${mode}`).toHaveLength(6);
+    });
+  });
+
+  it('gets lighter or darker in one direction, never back on itself', () => {
+    // A grid is read by comparing hundreds of four-pixel squares at a
+    // glance. If step 3 is lighter than step 2 the scale means nothing.
+    each((theme, mode, palette) => {
+      const lums = steps(palette).map((c) => luminance(rgb(c)));
+      const rising = lums.every((l, i) => i === 0 || l >= lums[i - 1]!);
+      const falling = lums.every((l, i) => i === 0 || l <= lums[i - 1]!);
+      expect(rising || falling, `${theme.id}/${mode} ramp is not monotonic`).toBe(true);
+    });
+  });
+
+  it('separates every neighbouring step, colour-blind or not', () => {
+    // One hue mixed toward the empty colour, so lightness carries the whole
+    // scale — which is the point: a ramp that needs hue discrimination is
+    // unreadable to roughly one man in twelve.
+    each((theme, mode, palette) => {
+      const ramp = steps(palette);
+      for (const [kind, simulate] of Object.entries(CVD)) {
+        for (let i = 1; i < ramp.length; i++) {
+          const gap = distance(simulate(rgb(ramp[i - 1]!)), simulate(rgb(ramp[i]!)));
+          expect(gap, `${theme.id}/${mode} ${kind}: step ${i - 1}→${i}`).toBeGreaterThan(6);
+        }
+      }
+    });
+  });
+
+  it('tells a rested day from an untouched one', () => {
+    // The pair most at risk, because it is the smallest step in the ramp and
+    // the two facts are opposites.
+    each((theme, mode, palette) => {
+      const [empty, rested] = steps(palette) as [string, string];
+      for (const [kind, simulate] of Object.entries(CVD)) {
+        const gap = distance(simulate(rgb(empty)), simulate(rgb(rested)));
+        expect(gap, `${theme.id}/${mode} ${kind}`).toBeGreaterThan(6);
+      }
+    });
+  });
+
+  it('makes the busiest day clearly different from an empty one', () => {
+    each((theme, mode, palette) => {
+      const ramp = steps(palette);
+      const gap = distance(rgb(ramp[0]!), rgb(ramp[ramp.length - 1]!));
+      expect(gap, `${theme.id}/${mode}`).toBeGreaterThan(60);
+    });
   });
 });

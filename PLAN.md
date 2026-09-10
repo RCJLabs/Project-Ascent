@@ -884,14 +884,40 @@ Building a primitive is not the same as wiring it, and nothing in the repo notic
 the difference. A test that every exported card/primitive has at least one caller is
 about ten lines and would have caught all three; it belongs with the first of these.
 
-- **M23 — The consistency grid.** There is **no heatmap anywhere in the app** — the
-  only time-shaped charts are `YearPage`'s month bars. A year of days as a grid is
-  the chart climbers actually read, because consistency is the thing that moves
-  grades and a monthly total hides a fortnight off. Colour by session load, not a
-  binary dot, so a deload block looks different from a lost fortnight — and given
-  M15's CVD work, lightness has to carry it, not hue. *Done when: the last twelve
-  months fit one screen and a gap is visible without counting.*
-
+- **M23 — The consistency grid.** *Done.* There was no heatmap anywhere; the only
+  time-shaped chart was `YearPage`'s month bars, and a monthly total hides a fortnight
+  off — two weeks lost and two doubled up read as an ordinary month. Now 53 columns of
+  seven days on Progress, full width, with a fortnight's gap visible as a hole.
+  **A rested day is not a missed day.** A logged rest gets the faintest step of the
+  ramp rather than the empty colour, because "I rested on purpose" and "I did not open
+  the app" are opposite facts and the same square would report the first as the second.
+  Days after today are drawn as holes, never as misses, and the empty months before a
+  climber installed the app are excluded from the gap count — nobody lapsed before they
+  arrived.
+  **The scale is this climber's own.** Levels are quantiles of the loads in the window,
+  not absolute numbers: an absolute scale renders a beginner's whole first year as one
+  flat colour, and this chart is about whether the days are there at all. A log with no
+  variation renders as one shade, which is the truth about it.
+  **The ramp is generated, not authored** — one hue mixed toward the empty colour in
+  `themes.ts`, so lightness carries the whole scale, and tested under all three
+  colour-blindness simulations across every theme and both modes. That matters more
+  here than anywhere else: a grid is read by comparing hundreds of four-pixel squares
+  at a glance, and a scale needing hue discrimination is unreadable to roughly one man
+  in twelve.
+  **Three things caught by building it.** The 0.75 quantile landed *on* the largest
+  value, so the top of the scale was unreachable — nothing could ever be level 4. The
+  `--heat-*` variables were only written by `applyPalette`, so the first paint had none
+  and an SVG `fill: var(--heat-3)` that resolves to nothing renders **black**, not
+  transparent: the entire grid was a solid block until the generator wrote them into
+  `index.css` too, with a test holding the two together. And the month labels started
+  inside the SVG, which scales with it — at 320px they were a 2.5px smear, so the
+  labels are HTML at a real rem size and only the squares scale.
+  **Not interactive, on purpose:** a cell is 3.9px at 320px, measured, and WCAG 2.5.8
+  asks 24px of any target, so the grid is a picture with one link to the calendar
+  beneath it rather than 371 targets a sixth of the required size. The screen-reader
+  table lists the logged days only — 371 rows of "nothing logged" is a
+  denial-of-service, not an alternative. Verified at 320/390/1280px and in dark mode,
+  zero horizontal overflow.
 - **M24 — The stat radar.** `stats.ts` defines exactly five axes
   (`STR`/`END`/`TEC`/`MEN`/`AGI`) with labels and blurbs, surfaced across five files
   — as numbers and bars, never as a shape. Five axes is a radar, and the shape is
