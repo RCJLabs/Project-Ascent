@@ -1538,8 +1538,40 @@ across its input space.
   *fastest* of five runs now — the one with least interference — while absolute budgets
   keep the conservative median. Four consecutive full-suite runs green.
 
-- **M42 — Validate route parameters.** `/log/<malformed>` renders a page whose
-  heading is literally "Invalid Date".
+- **M42 — Validate route parameters.** *Done.* The heading was the least of it.
+  **`/log/:date` used the parameter as the session's stored primary key.** Logging a
+  session from `/log/nope` wrote `{ id: 'nope#0', date: 'nope' }`; logging one from
+  `/log/2026-9-1` wrote a row that `/log/2026-09-01` — the same day, written the way
+  the rest of the app writes days — reported as "Nothing planned". Verified in a
+  browser against the database: both rows landed, and neither appeared on the calendar,
+  in a streak, or in any derivation. A second spelling of a day is a second key.
+  **And the parse rolls overflow forward silently.** `fromKey` is `new Date(y, m - 1,
+  d)`, so `/log/2026-13-45` rendered "**Sunday, February 14**" and `/log/2026-02-30`
+  rendered "Monday, March 2" — a different day from the one in the URL, with nothing
+  to say so. `/year/:year` read `Number(params.year) || years[0] || thisYear`, which
+  quietly showed the current year for `nope` and `0`, and rendered `-5`, `2026.5`,
+  `99999` and `1000000000` as page headings.
+  **`isDateKey` round-trips rather than pattern-matching**: a key that survives
+  `fromKey` then `toKey` unchanged is a real day written the one way this app writes
+  days. Both halves earn their place — the round-trip alone accepts `10000-01-01`, and
+  the shape test alone accepts every rollover.
+  **Two layers, so neither is the only one.** The route refuses to mount the page, and
+  `newSession` throws on a date that is not a key — which covers import, restore and
+  any future caller, not just the URL. Fifteen malformed parameters swept in a browser,
+  all fifteen caught, and day-to-day navigation and `/year` unchanged.
+  **`BadParameter` is deliberately not `RecordNotFound`**: a malformed date is not a
+  deleted record, and "That day is not here" would be a worse lie than the "Sunday,
+  February 14" it replaces. It shows the offending value back, truncated, so the reader
+  can see which character is wrong.
+  Five mutations, three survived first time. Two were gaps in the cases — the year
+  bound and the not-quite-a-year (`2020.5` parses inside the range) — now closed. The
+  third is a limit rather than a gap: the route rule is a *source* check and cannot
+  tell a guard that is written from one that is disabled with `if (false && …)`. Said
+  so in the test rather than implying otherwise, and pointed at where the invariant is
+  really held — `newSession`, which is behavioural and does kill that mutation.
+  **Also fixed:** the M41 route parser read only the first name out of `import { X, Y }`,
+  so `/log/:date` fell out of the list it walks and one rule was checking nothing. Its
+  coverage floor is what caught it.
 
 - **M12 — Ship.** TWA packaging + assetlinks, Play internal testing, store listing.
   Last, after M13–M22.

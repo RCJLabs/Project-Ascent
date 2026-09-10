@@ -3,7 +3,7 @@ import { Link, useLocation } from 'wouter';
 import { AlertTriangle, ArrowLeft, Check, Clock, Copy, Flame, Plus, RotateCw, Sparkles, Timer, Trash2, TrendingUp, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
-import { addDays, fromKey, shortLabel, today } from '@/engine/dates';
+import { addDays, fromKey, isDateKey, shortLabel, today } from '@/engine/dates';
 import { clearTimerState, loadTimerState, saveTimerState } from '@/lib/timerState';
 import { ClimbEntry, RepeatLast, type Outcome } from './ClimbEntry';
 import { sessionOwner } from '@/db/media';
@@ -58,6 +58,7 @@ import { alreadySaved, applyTemplate, rankTemplates, suggestName } from '@/engin
 import { canMerge, describeSession } from '@/engine/sessionEdit';
 import { concerning, injuryPolicy } from '@/engine/injury';
 import { describeParts, drillConflict, exerciseConflict } from '@/engine/bodyLoad';
+import { BadParameter } from '@/ui/RecordNotFound';
 
 const REST_ITEMS = [
   { key: 'hydration', label: 'Hydration' },
@@ -70,8 +71,25 @@ function rid(): string {
   return Math.random().toString(36).slice(2, 9);
 }
 
+/**
+ * The date has to be a date before anything else happens (PLAN.md M42).
+ *
+ * A wrapper rather than an early return inside the page: the page runs
+ * twenty-odd hooks off this value, and hooks cannot be skipped. This way the
+ * page is never mounted with a date that is not one.
+ */
 export function LogPage({ params }: { params: { date: string } }) {
-  const date = params.date;
+  if (!isDateKey(params.date)) {
+    return (
+      <BadParameter expected="a date, like 2026-09-10" got={params.date} goTo={`/log/${today()}`} goLabel="Go to today">
+        Dates are written year, month, day, with both the month and the day padded to two digits.
+      </BadParameter>
+    );
+  }
+  return <LogDay date={params.date} />;
+}
+
+function LogDay({ date }: { date: string }) {
   const [, navigate] = useLocation();
 
   const activeProgramId = useProfile((s) => s.activeProgramId);

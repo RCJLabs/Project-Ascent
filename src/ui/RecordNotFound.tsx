@@ -17,6 +17,50 @@ import { PageHeader } from './PageHeader';
  * the app's global 404 so there is exactly one "Not found" in the app. What
  * the record was goes in the sentence underneath, along with the way back.
  */
+/**
+ * A route parameter that is not what the route says it is (PLAN.md M42).
+ *
+ * Distinct from `RecordNotFound` on purpose, and only in its words: a
+ * malformed date is not a deleted record, and answering `/log/2026-13-45`
+ * with "That day is not here" would be a worse lie than the "Sunday,
+ * February 14" it replaces. Same layout, so the two read as one family.
+ */
+export function BadParameter({
+  /** What the route wanted: 'a date', 'a year'. */
+  expected,
+  /** What the URL actually said, shown back so a typo is visible. */
+  got,
+  goTo,
+  goLabel,
+  children,
+}: {
+  expected: string;
+  got: string;
+  goTo: string;
+  goLabel: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <>
+      <PageHeader title="Not a valid link" />
+      <EmptyState
+        action={
+          <Link href={goTo} className="text-sm font-semibold text-accent">
+            {goLabel}
+          </Link>
+        }
+      >
+        This address needs {expected}, and it has{' '}
+        {/* Shown verbatim rather than summarised: the whole value of saying
+            anything here is that the reader can see which character is
+            wrong. React escapes it, so it is text, not markup. */}
+        <span className="font-semibold text-ink break-all">{got.slice(0, 60) || '(nothing)'}</span>
+        {got.length > 60 ? '…' : ''}. {children}
+      </EmptyState>
+    </>
+  );
+}
+
 export function RecordNotFound({
   /** The record, as the sentence's subject: 'That project', 'That guide'. */
   what,

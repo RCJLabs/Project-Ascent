@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { ChevronLeft, ChevronRight, Minus, TrendingDown, TrendingUp } from 'lucide-react';
-import { fromKey, today as todayKey } from '@/engine/dates';
+import { fromKey, isYearKey, today as todayKey } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { displayGrade } from '@/engine/grades';
 import {
@@ -20,6 +20,7 @@ import { Card } from '@/ui/Card';
 import { Select } from '@/ui/Field';
 import { IconButton } from '@/ui/IconButton';
 import { PageHeader } from '@/ui/PageHeader';
+import { BadParameter } from '@/ui/RecordNotFound';
 
 /**
  * A year, summarised.
@@ -29,6 +30,26 @@ import { PageHeader } from '@/ui/PageHeader';
  * engine/yearReview.ts. A running year is labelled as running.
  */
 export function YearPage({ params }: { params: { year?: string } }) {
+  // `/year` with no parameter is the route's own entry point and picks a
+  // year itself. A parameter that is present and not a year is a broken
+  // link, and used to render `-5` or `1000000000` as the heading.
+  if (params.year !== undefined && !isYearKey(params.year)) {
+    return (
+      <BadParameter
+        expected="a four-digit year"
+        got={params.year}
+        goTo="/year"
+        goLabel="Go to the latest year"
+      >
+        There is nothing to review for a year that has not happened.
+      </BadParameter>
+    );
+  }
+  return <YearReview {...(params.year === undefined ? {} : { year: params.year })} />;
+}
+
+function YearReview({ year: requested }: { year?: string }) {
+  const params = { year: requested };
   const byDate = useSessions((s) => s.byDate);
   const display = useSettings((s) => s.display);
   const [, navigate] = useLocation();

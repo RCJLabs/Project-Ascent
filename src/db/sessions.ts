@@ -10,6 +10,7 @@
 import type { GradeScale } from '@/engine/grades';
 import type { AttemptOutcome } from './projects';
 import { getDb } from './db';
+import { isDateKey } from '@/engine/dates';
 
 export type SessionMode = 'indoor' | 'outdoor';
 export type ClimbResult = 'send' | 'attempt';
@@ -93,6 +94,15 @@ export function sessionId(date: string, index: number): string {
 }
 
 export function newSession(date: string, index: number, patch: Partial<Session> = {}): Session {
+  // The date is the primary key, and it used to be whatever the URL said.
+  // `/log/nope` wrote `{ id: 'nope#0', date: 'nope' }`; `/log/2026-9-1`
+  // wrote a row that `/log/2026-09-01` could never find, because a second
+  // spelling of a day is a second key (PLAN.md M42). The route guards this
+  // now, and so does this, because a row written here is a row the calendar,
+  // the streak and every derivation have to be able to read.
+  if (!isDateKey(date)) {
+    throw new Error(`newSession: ${JSON.stringify(date)} is not a YYYY-MM-DD date key`);
+  }
   const now = new Date().toISOString();
   return {
     id: sessionId(date, index),

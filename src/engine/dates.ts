@@ -21,6 +21,39 @@ export function fromKey(key: string): Date {
   return new Date(y!, m! - 1, d!);
 }
 
+/**
+ * Whether a string is a real day in the app's own key format (PLAN.md M42).
+ *
+ * The shape test alone is not enough, because `fromKey` is built on `new
+ * Date(y, m - 1, d)`, which rolls overflow forward without complaint:
+ * `2026-13-45` becomes 14 February 2027 and `2026-02-30` becomes 2 March.
+ * `/log/2026-13-45` rendered "Sunday, February 14" — a different day from
+ * the one in the URL, with no sign anything was wrong.
+ *
+ * So it round-trips. A key that survives `fromKey` and `toKey` unchanged is
+ * a real day written the one way this app writes days; anything else — an
+ * overflow, an unpadded `2026-9-1`, `nope` — is not.
+ */
+export function isDateKey(key: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return false;
+  return toKey(fromKey(key)) === key;
+}
+
+/**
+ * Whether a string names a year this app could hold sessions for.
+ *
+ * `/year/:year` read `Number(params.year) || years[0] || thisYear`, which
+ * quietly showed the current year for `nope` and for `0`, and rendered
+ * `-5`, `2026.5` and `1e9` as headings.
+ */
+export function isYearKey(value: string, now: number = new Date().getFullYear()): boolean {
+  if (!/^\d{4}$/.test(value)) return false;
+  const year = Number(value);
+  // No climbing log starts before modern grading, and a year that has not
+  // begun has nothing to review.
+  return year >= 1900 && year <= now;
+}
+
 export function today(): string {
   return toKey(new Date());
 }
