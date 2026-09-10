@@ -212,8 +212,16 @@ describe('headings', () => {
     // one top-level heading naming where you are. Fragment components like
     // Card and GuideBody legitimately start deeper — they are rendered
     // inside a page, not as one — so they are judged by the skip rule only.
+    // Both forms: a page is either statically imported or lazily. Matching
+    // only `from '@/features/…'` quietly stopped finding twenty-five of them
+    // the moment M40 split the routes — the check still passed, on four
+    // pages, which is the failure mode a coverage floor exists to catch.
     const app = readFileSync('src/App.tsx', 'utf8');
-    const pages = [...app.matchAll(/from '@\/(features\/[^']+)'/g)].map((m) => `src/${m[1]}.tsx`);
+    const pages = [
+      ...new Set(
+        [...app.matchAll(/(?:from|import\()\s*'@\/(features\/[^']+)'/g)].map((m) => `src/${m[1]}.tsx`),
+      ),
+    ];
     expect(pages.length).toBeGreaterThan(20);
 
     const offences: string[] = [];

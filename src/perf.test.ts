@@ -132,11 +132,20 @@ describe('ten years of logs stays cheap', () => {
   });
 });
 
+/**
+ * Budgets with headroom in them (PLAN.md M40).
+ *
+ * These were 300KB and 900KB and the app sat at 282.9KB and 894.6KB — 5.7%
+ * and 0.6% of room, which is a budget that has already been spent. Splitting
+ * every route but the four that cannot be deferred took the first load to
+ * 225KB and the entry chunk to 694KiB; the numbers below leave real room for
+ * the next feature rather than for the next line.
+ */
 describe('the bundle stays small', () => {
   const dist = 'dist/assets';
   const built = existsSync(dist);
 
-  it.runIf(built)('keeps the first load under 300KB gzipped', () => {
+  it.runIf(built)('keeps the first load under 260KB gzipped', () => {
     const html = readFileSync('dist/index.html', 'utf8');
     const entry = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)?.[1];
     expect(entry, 'no entry chunk in index.html').toBeDefined();
@@ -147,23 +156,38 @@ describe('the bundle stays small', () => {
       .reduce((n, f) => n + gzipSync(readFileSync(`${dist}/${f}`)).length, 0);
     const total = (js + css) / 1024;
 
-    expect(total, `first load is ${total.toFixed(0)}KB gzipped`).toBeLessThan(300);
+    expect(total, `first load is ${total.toFixed(0)}KB gzipped`).toBeLessThan(260);
   });
 
   it.runIf(built)('keeps the heavy routes out of the first load', () => {
     const names = readdirSync(dist).filter((f) => f.endsWith('.js'));
-    // The game, the builder, the guides and search each carry weight and
-    // none is on the path from opening the app to logging a session.
     for (const split of ['AscentPage', 'BuilderPage', 'GuidePage', 'SearchPage']) {
       expect(names.some((f) => f.startsWith(split)), `${split} is not split out`).toBe(true);
     }
   });
 
-  it.runIf(built)('has no single chunk over 900KB', () => {
+  it('imports only the routes that cannot be deferred', () => {
+    // The guard that keeps the split from eroding one convenient static
+    // import at a time. Home is where the app opens, the logger is what it
+    // is for, onboarding is the first screen of a new install, and the
+    // placeholder is a few lines. Everything else is a chunk.
+    const app = readFileSync('src/App.tsx', 'utf8');
+    const eager = [...app.matchAll(/^import \{([^}]+)\} from '@\/(features\/[^']+)'/gm)].map(
+      (m) => m[2],
+    );
+    expect(eager.sort()).toEqual([
+      'features/home/HomePage',
+      'features/log/LogPage',
+      'features/onboarding/WelcomePage',
+      'features/placeholder/PlaceholderPage',
+    ]);
+  });
+
+  it.runIf(built)('has no single chunk over 780KB', () => {
     const big = readdirSync(dist)
       .filter((f) => f.endsWith('.js'))
       .map((f) => ({ f, kb: statSync(`${dist}/${f}`).size / 1024 }))
-      .filter((x) => x.kb > 900)
+      .filter((x) => x.kb > 780)
       .map((x) => `${x.f} ${x.kb.toFixed(0)}KB`);
     expect(big).toEqual([]);
   });

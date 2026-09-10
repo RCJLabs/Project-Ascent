@@ -1335,10 +1335,37 @@ across its input space.
 - **M39 — The finger-strength hole (M9, carried).** With a hangboard and no campus
   board, Iron Grip is blocked from V6 up and the fallback is maintenance again.
 
-- **M40 — Split the bundle.** The entry chunk is 894.6 KiB against its own 900 KiB
-  limit — 0.6% of headroom — and first load is 282.9 KiB gzipped against 300 KiB.
-  Only 6 of 40 routes are split and 12,166 lines of content ship in the entry chunk.
-  The next feature breaks a budget.
+- **M40 — Split the bundle.** *Done.* The entry chunk was 894.6 KiB against its own
+  900 KiB limit — 0.6% of headroom — and first load was 282.9 KiB gzipped against 300
+  KiB. Every route is now its own chunk but the four that cannot be deferred, and the
+  entry is **693.8 KiB** with first load at **225.4 KiB gzipped**: a fifth off the
+  download, and headroom back from 0.6% to 23%.
+  **Measured before touching anything, which changed what to do.** A diagnostic build
+  grouping by directory put the weight at features 76.6 KB gzip, vendor 73.4, guides
+  49.1, engine 50.5, programs 35.9, drills 20.3, ui 21.0, glossary 14.3 — content
+  being 46% of the payload. But the guides and the glossary were *already* deferred:
+  they sit in a shared chunk that only the lazy routes pull, and the second `index-*`
+  file in the build is preloaded with them rather than at boot. The eager weight was
+  twenty-five pages statically imported into `App.tsx`, and that is what moved.
+  **What stays.** Programs and drills — 196 KiB raw between them — are in the entry
+  chunk because Home needs the active program for "Today" and the logger needs its
+  prescription. Splitting per-program means an async `getProgram`, which would make
+  the finder, the plan engine and the guides async to save 56 KB gzip. Not worth
+  turning a synchronous derive-everything model inside out. Home's three cross-imports
+  (the board, review and coach cards) hold ~660 lines in the entry for the same
+  reason, and extracting them buys about 3 KB.
+  **Offline is intact**: 56 precache entries covering every chunk, so a lazy route is
+  a cache read after the first visit. A cold one paints in ~320ms including the
+  navigation.
+  **The budgets were the real problem.** 300 KB and 900 KiB against 282.9 and 894.6
+  is a budget already spent. They are 260 KB and 780 KiB now, and a new test asserts
+  `App.tsx` statically imports exactly four pages — the guard against the split
+  eroding one convenient import at a time.
+  One thing worth recording: the a11y check that every routed page has an `h1` found
+  its pages by scanning `App.tsx` for `from '@/features/…'`, so the split silently cut
+  its coverage from twenty-five pages to four. It failed only because it carried a
+  `expect(pages.length).toBeGreaterThan(20)` floor — which is the argument for putting
+  a floor under every source-scanning test.
 
 - **M41 — One shape for a missing record.** Four "not found" routes behave three
   ways: `/projects/<gone>` and `/assessments/<gone>` say so with **no `h1`**, while

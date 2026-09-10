@@ -2,42 +2,48 @@ import { Suspense, lazy, useEffect } from 'react';
 import { Route, Router, Switch, useLocation } from 'wouter';
 import { RouteBoundary } from '@/ui/ErrorBoundary';
 import { useHashLocation } from 'wouter/use-hash-location';
-import { AltimeterPage } from '@/features/altimeter/AltimeterPage';
-import { ClimberPage } from '@/features/climber/ClimberPage';
-import { CoachPage } from '@/features/coach/CoachPage';
 import { HomePage } from '@/features/home/HomePage';
 import { PlaceholderPage } from '@/features/placeholder/PlaceholderPage';
-import { SettingsPage } from '@/features/settings/SettingsPage';
-import { InjuryPage } from '@/features/injury/InjuryPage';
-import { BoardPage } from '@/features/challenges/BoardPage';
-import { CalendarPage } from '@/features/calendar/CalendarPage';
-import { CareerPage } from '@/features/career/CareerPage';
-import { YearPage } from '@/features/career/YearPage';
-import { FinderPage } from '@/features/finder/FinderPage';
 import { LogPage, TodayRedirect } from '@/features/log/LogPage';
-import { AssessmentsPage } from '@/features/assessments/AssessmentsPage';
-import { MetricDetailPage } from '@/features/assessments/MetricDetailPage';
-import { JournalPage } from '@/features/journal/JournalPage';
-import { ProgressPage } from '@/features/progress/ProgressPage';
-import { ReviewPage } from '@/features/review/ReviewPage';
-import { SkillsPage } from '@/features/skills/SkillsPage';
-import { ProjectDetailPage } from '@/features/projects/ProjectDetailPage';
-import { ProjectsPage } from '@/features/projects/ProjectsPage';
-import { StartProgramPage } from '@/features/plan/StartProgramPage';
-import { ProgramDetailPage } from '@/features/train/ProgramDetailPage';
-import { TrainPage } from '@/features/train/TrainPage';
-import { BuilderList } from '@/features/builder/BuilderList';
-import { ObjectiveDetailPage } from '@/features/objectives/ObjectiveDetailPage';
-import { ObjectivesPage } from '@/features/objectives/ObjectivesPage';
 import { WelcomePage } from '@/features/onboarding/WelcomePage';
 /**
- * Split off the routes that carry weight and are not where anyone starts.
+ * Every route is its own chunk but the four you cannot defer.
  *
- * The Ascent bundles a canvas game loop; the builder is 844 lines of
- * editor; the glossary and guides carry a few hundred KB of prose. None of
- * them is on the path from opening the app to logging a session, and all of
- * them were in the single 1,038KB chunk every visitor downloaded first.
+ * Home is where the app opens, the logger is what it is for, onboarding is
+ * the first thing a new install shows, and the placeholder is a few lines.
+ * Everything else is a tap away at most, and the service worker precaches
+ * every chunk — so after the first visit a lazy route is a cache read, and
+ * the app is still fully offline.
+ *
+ * It started as six routes split by hand because they carried obvious
+ * weight — the canvas game, the 844-line editor, the prose. That left
+ * twenty-five pages in an entry chunk sitting at 894.6 KiB against its own
+ * 900 KiB budget, with 0.6% of headroom for the next feature (PLAN.md M40).
  */
+const AltimeterPage = lazy(() => import('@/features/altimeter/AltimeterPage').then((m) => ({ default: m.AltimeterPage })));
+const AssessmentsPage = lazy(() => import('@/features/assessments/AssessmentsPage').then((m) => ({ default: m.AssessmentsPage })));
+const BoardPage = lazy(() => import('@/features/challenges/BoardPage').then((m) => ({ default: m.BoardPage })));
+const BuilderList = lazy(() => import('@/features/builder/BuilderList').then((m) => ({ default: m.BuilderList })));
+const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage').then((m) => ({ default: m.CalendarPage })));
+const CareerPage = lazy(() => import('@/features/career/CareerPage').then((m) => ({ default: m.CareerPage })));
+const ClimberPage = lazy(() => import('@/features/climber/ClimberPage').then((m) => ({ default: m.ClimberPage })));
+const CoachPage = lazy(() => import('@/features/coach/CoachPage').then((m) => ({ default: m.CoachPage })));
+const FinderPage = lazy(() => import('@/features/finder/FinderPage').then((m) => ({ default: m.FinderPage })));
+const InjuryPage = lazy(() => import('@/features/injury/InjuryPage').then((m) => ({ default: m.InjuryPage })));
+const JournalPage = lazy(() => import('@/features/journal/JournalPage').then((m) => ({ default: m.JournalPage })));
+const MetricDetailPage = lazy(() => import('@/features/assessments/MetricDetailPage').then((m) => ({ default: m.MetricDetailPage })));
+const ObjectiveDetailPage = lazy(() => import('@/features/objectives/ObjectiveDetailPage').then((m) => ({ default: m.ObjectiveDetailPage })));
+const ObjectivesPage = lazy(() => import('@/features/objectives/ObjectivesPage').then((m) => ({ default: m.ObjectivesPage })));
+const ProgramDetailPage = lazy(() => import('@/features/train/ProgramDetailPage').then((m) => ({ default: m.ProgramDetailPage })));
+const ProgressPage = lazy(() => import('@/features/progress/ProgressPage').then((m) => ({ default: m.ProgressPage })));
+const ProjectDetailPage = lazy(() => import('@/features/projects/ProjectDetailPage').then((m) => ({ default: m.ProjectDetailPage })));
+const ProjectsPage = lazy(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.ProjectsPage })));
+const ReviewPage = lazy(() => import('@/features/review/ReviewPage').then((m) => ({ default: m.ReviewPage })));
+const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const SkillsPage = lazy(() => import('@/features/skills/SkillsPage').then((m) => ({ default: m.SkillsPage })));
+const StartProgramPage = lazy(() => import('@/features/plan/StartProgramPage').then((m) => ({ default: m.StartProgramPage })));
+const TrainPage = lazy(() => import('@/features/train/TrainPage').then((m) => ({ default: m.TrainPage })));
+const YearPage = lazy(() => import('@/features/career/YearPage').then((m) => ({ default: m.YearPage })));
 const AscentPage = lazy(() => import('@/features/ascent/AscentPage').then((m) => ({ default: m.AscentPage })));
 const BuilderPage = lazy(() => import('@/features/builder/BuilderPage').then((m) => ({ default: m.BuilderPage })));
 const SessionEditorPage = lazy(() => import('@/features/builder/SessionEditorPage').then((m) => ({ default: m.SessionEditorPage })));
