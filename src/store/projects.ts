@@ -22,6 +22,9 @@ export interface ProjectsState {
   create: (patch: Parameters<typeof newProject>[0]) => Promise<Project>;
   update: (project: Project) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  /** Put a deleted project back. Its photos do not come with it — `remove`
+   *  deletes them so they cannot sit orphaned in the quota. */
+  restore: (project: Project) => Promise<void>;
   dismiss: (key: string) => Promise<void>;
   /** Fold session sends into projects. Idempotent — safe to call on every
    *  session write, which is exactly what the subscription below does. */
@@ -66,6 +69,11 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     // blobs would sit in the quota with nothing left to display them.
     await deleteMediaFor(projectOwner(id));
     set({ projects: get().projects.filter((p) => p.id !== id) });
+  },
+
+  restore: async (project) => {
+    const saved = await putProject(project);
+    set({ projects: [...get().projects.filter((p) => p.id !== saved.id), saved] });
   },
 
   dismiss: async (key) => {

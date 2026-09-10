@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { APP_VERSION } from '@/version';
 import { exportAll, hasRealData, importAll, parseExportFile, SCHEMA_VERSION } from '@/db';
+import { previewFile, type ImportPreview } from '@/db/importPreview';
+import { clearSnapshot, readSnapshot, restoreSnapshot, takeSnapshot } from '@/db/snapshot';
+import { ImportPreviewCard, UndoImportCard } from './ImportPreviewCard';
 import { mediaBytes } from '@/db/media';
 import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
@@ -107,12 +110,19 @@ export function SettingsPage() {
   const addInjury = useProfile((s) => s.addInjury);
   const updateInjury = useProfile((s) => s.updateInjury);
   const markExported = useProfile((s) => s.markExported);
-  const [pendingImport, setPendingImport] = useState<{ text: string; hasData: boolean } | null>(null);
+  const [pendingImport, setPendingImport] = useState<{
+    text: string;
+    label: string;
+    preview: ImportPreview;
+  } | null>(null);
+  const [snapshot, setSnapshot] = useState<{ takenAt: string; replacedWith: string } | null>(null);
+  const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void refreshStorage();
     void mediaBytes().then(setPhotoBytes);
+    void readSnapshot().then(setSnapshot);
   }, []);
 
   async function refreshStorage() {
@@ -154,17 +164,19 @@ export function SettingsPage() {
     if (!file) return;
     try {
       const text = await file.text();
-      parseExportFile(text); // validate before offering choices
-      const existing = await hasRealData();
-      if (existing) {
-        setPendingImport({ text, hasData: true });
-        setMessage(null);
-      } else {
-        await importAll(parseExportFile(text), 'replace');
-        await hydrateAll();
-        setMessage('Backup imported.');
-        void refreshStorage();
-      }
+      const parsed = parseExportFile(text); // validate before offering choices
+      // Always preview, even on an empty device. "412 sessions will be added"
+      // is worth reading whether or not there is anything to lose, and a
+      // silent import gives a climber no way to notice they picked the wrong
+      // file until the data is already in.
+      const preview = await previewFile(parsed);
+      const on = new Date(parsed.exportedAt);
+      setPendingImport({
+        text,
+        label: `Exported ${on.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })} from app version ${parsed.appVersion || 'unknown'}.`,
+        preview,
+      });
+      setMessage(null)
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Import failed.', true);
     } finally {
@@ -174,14 +186,49 @@ export function SettingsPage() {
 
   async function confirmImport(mode: 'replace' | 'merge') {
     if (!pendingImport) return;
+    setBusy(true);
     try {
+      // The restore point comes first, and only when there is something to
+      // restore — snapshotting an empty database would offer an undo that
+      // undoes to nothing.
+      if (await hasRealData()) {
+        await takeSnapshot(pendingImport.label.replace(/\.$/, ''));
+      }
       await importAll(parseExportFile(pendingImport.text), mode);
       await hydrateAll();
-      setMessage(mode === 'replace' ? 'Backup imported — previous data replaced.' : 'Backup merged into existing data.');
+      setSnapshot(await readSnapshot());
+      setMessage(
+        mode === 'replace'
+          ? 'Backup imported — previous data replaced. You can undo this below.'
+          : 'Backup merged into existing data. You can undo this below.',
+      );
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Import failed.', true);
     } finally {
+      setBusy(false);
       setPendingImport(null);
+      void refreshStorage();
+    }
+  }
+
+  async function keepImport() {
+    await clearSnapshot();
+    setSnapshot(null);
+    setMessage('Restore point discarded.');
+    void refreshStorage();
+  }
+
+  async function undoImport() {
+    setBusy(true);
+    try {
+      const ok = await restoreSnapshot();
+      await hydrateAll();
+      setSnapshot(null);
+      setMessage(ok ? 'Import undone — your data is back as it was.' : 'Nothing to undo.', !ok);
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Undo failed.', true);
+    } finally {
+      setBusy(false);
       void refreshStorage();
     }
   }
@@ -421,25 +468,27 @@ export function SettingsPage() {
               onChange={(e) => void handleFilePicked(e.target.files)}
             />
           </div>
-          {pendingImport && (
-            <div className="mt-3 border border-warn/50 rounded-xl p-3">
-              <p className="text-sm font-semibold mb-2">
-                This device already has data. How should the backup be applied?
-              </p>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => void confirmImport('merge')}>
-                  Merge
-                </Button>
-                <Button size="sm" variant="danger" onClick={() => void confirmImport('replace')}>
-                  Replace everything
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setPendingImport(null)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
         </Card>
+
+        {pendingImport && (
+          <ImportPreviewCard
+            preview={pendingImport.preview}
+            fileLabel={pendingImport.label}
+            busy={busy}
+            onImport={(mode) => void confirmImport(mode)}
+            onCancel={() => setPendingImport(null)}
+          />
+        )}
+
+        {snapshot && (
+          <UndoImportCard
+            takenAt={snapshot.takenAt}
+            replacedWith={snapshot.replacedWith}
+            busy={busy}
+            onUndo={() => void undoImport()}
+            onKeep={() => void keepImport()}
+          />
+        )}
 
         <StorageCard
           storage={storage}

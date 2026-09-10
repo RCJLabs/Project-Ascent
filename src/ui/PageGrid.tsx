@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { Children, type ReactNode } from 'react';
+import { CardBoundary } from './ErrorBoundary';
 
 /**
  * A page's stack of cards, which becomes two columns when there is room.
@@ -17,7 +18,17 @@ import type { ReactNode } from 'react';
 export function PageGrid({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div className={`grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-start ${className}`}>
-      {children}
+      {/* Every card gets its own boundary, which is M20's "done when": one
+          record of the wrong shape costs the card that reads it, not the
+          page. Doing it here rather than at ~100 call sites also means a new
+          card cannot forget to have one.
+
+          A boundary renders no DOM of its own, so the grid's children are
+          still the cards themselves — `Wide`'s `lg:col-span-2` keeps working.
+          When one does fail, its ErrorCard becomes that grid cell. */}
+      {Children.map(children, (child) => (
+        <CardBoundary label="This card">{child}</CardBoundary>
+      ))}
     </div>
   );
 }

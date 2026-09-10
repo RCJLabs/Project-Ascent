@@ -3,7 +3,7 @@ import { getDb } from '@/db';
 import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
 import { today } from '@/engine/dates';
-import type { BaselineAnswers } from '@/engine/onboarding';
+import { readBaseline, type BaselineAnswers } from '@/engine/onboarding';
 import { pruneOverrides, withOverride, type WeekOverrides } from '@/engine/reschedule';
 import type { WeekPlan } from '@/engine/scheduler';
 import { DEFAULT_PALETTE, type AvatarPalette } from '@/engine/avatar';
@@ -284,7 +284,7 @@ export async function hydrateProfile(): Promise<void> {
       recentWarmups: value.recentWarmups ?? [],
       avatarPalette: { ...DEFAULT_PALETTE, ...value.avatarPalette },
       onboardedAt: value.onboardedAt ?? null,
-      baseline: value.baseline ?? null,
+      baseline: readBaseline(value.baseline),
       dismissedTips: value.dismissedTips ?? {},
       lastExportAt: value.lastExportAt ?? null,
     });

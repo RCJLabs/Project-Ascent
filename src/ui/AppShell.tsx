@@ -4,6 +4,7 @@ import { CalendarDays, Dumbbell, Mountain, Search, Target, TrendingUp } from 'lu
 import { Announcer } from './Announce';
 import { LiveBar, useLiveBanner } from './LiveBar';
 import { StorageWarning } from './StorageWarning';
+import { UndoBar } from './UndoBar';
 import { UpdatePrompt } from './UpdatePrompt';
 
 /**
@@ -90,6 +91,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               would inset the bar. */}
           <div className="px-3 pt-3 empty:hidden [&>*+*]:mt-2">
             <StorageWarning />
+            <UndoBar />
             <UpdatePrompt live={live} />
           </div>
           <LiveBar banner={banner} />
@@ -123,6 +125,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <div className="hidden lg:block px-3 mt-3 [&>*+*]:mt-2">
           <StorageWarning />
+          <UndoBar />
           <UpdatePrompt live={live} />
           <LiveBar banner={banner} />
         </div>

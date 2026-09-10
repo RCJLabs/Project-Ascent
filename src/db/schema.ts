@@ -25,6 +25,15 @@ export const EXPORTABLE_STORES = [
 ] as const;
 export type ExportableStore = (typeof EXPORTABLE_STORES)[number];
 
+/**
+ * Reserved `meta` key holding the pre-import restore point (PLAN.md M20).
+ *
+ * Lives here rather than in snapshot.ts because both the export path and the
+ * snapshot itself need it, and having them import from each other makes a
+ * cycle out of two modules that only share a string.
+ */
+export const SNAPSHOT_KEY = '__import-snapshot';
+
 export interface MetaRecord {
   key: string;
   value: unknown;

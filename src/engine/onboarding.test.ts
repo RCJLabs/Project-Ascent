@@ -8,6 +8,7 @@ import {
   baselineEntries,
   benchmarksFor,
   finderInputFrom,
+  readBaseline,
   type BaselineAnswers,
 } from './onboarding';
 
@@ -138,5 +139,62 @@ describe('handing the answers to the finder', () => {
   it('flags a returning climber as coming off a break', () => {
     expect(finderInputFrom(answers({ experience: 'returning' }), [], []).comingOffBreak).toBe(true);
     expect(finderInputFrom(answers({ experience: 'advanced' }), [], []).comingOffBreak).toBe(false);
+  });
+});
+
+describe('reading a stored baseline', () => {
+  it('keeps a well-formed one intact', () => {
+    const stored = {
+      discipline: 'boulder',
+      experience: 'advanced',
+      goal: 'fingers',
+      daysPerWeek: 4,
+      boulderGrade: 'V7',
+      sportGrade: '5.12a',
+      benchmarks: { max_pullups: '12' },
+    };
+    expect(readBaseline(stored)).toEqual(stored);
+  });
+
+  it('survives the record that white-screened the finder', () => {
+    // The actual reproduction from M13: no boulderGrade, no sportGrade, and
+    // a null benchmarks. `finderInputFrom` called .trim() on undefined and
+    // took the whole page down.
+    const bad = {
+      discipline: 'both',
+      experience: 'intermediate',
+      goal: 'fingers',
+      daysPerWeek: 3,
+      benchmarks: null,
+    };
+    const read = readBaseline(bad);
+    expect(read).not.toBeNull();
+    expect(() => finderInputFrom(read!, ['wall'], [])).not.toThrow();
+    expect(read!.boulderGrade).toBe('');
+    expect(read!.benchmarks).toEqual({});
+  });
+
+  it('replaces a value that is not one of the options', () => {
+    const read = readBaseline({ discipline: 'freesolo', experience: 12, goal: 'vibes', daysPerWeek: 3 });
+    expect(read?.discipline).toBe(EMPTY_BASELINE.discipline);
+    expect(read?.experience).toBe(EMPTY_BASELINE.experience);
+    expect(read?.goal).toBe(EMPTY_BASELINE.goal);
+  });
+
+  it('keeps days per week inside a week', () => {
+    expect(readBaseline({ goal: 'fingers', daysPerWeek: 0 })?.daysPerWeek).toBe(3);
+    expect(readBaseline({ goal: 'fingers', daysPerWeek: 99 })?.daysPerWeek).toBe(3);
+    expect(readBaseline({ goal: 'fingers', daysPerWeek: '5' })?.daysPerWeek).toBe(5);
+    expect(readBaseline({ goal: 'fingers', daysPerWeek: 4.4 })?.daysPerWeek).toBe(4);
+  });
+
+  it('says null rather than inventing a climber', () => {
+    // A default-filled baseline would hand the finder a confident answer
+    // built from nothing.
+    expect(readBaseline(null)).toBeNull();
+    expect(readBaseline(undefined)).toBeNull();
+    expect(readBaseline('a string')).toBeNull();
+    expect(readBaseline({})).toBeNull();
+    expect(readBaseline({ somethingElse: 1 })).toBeNull();
   });
 });

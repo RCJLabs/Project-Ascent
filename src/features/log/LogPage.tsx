@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowLeft, Check, Clock, Copy, Flame, Plus, RotateCw, Sp
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
 import { addDays, fromKey, shortLabel, today } from '@/engine/dates';
+import { offerUndo } from '@/store/undo';
 import {
   describeSpan,
   durationFromSpan,
@@ -67,6 +68,7 @@ export function LogPage({ params }: { params: { date: string } }) {
   const create = useSessions((s) => s.create);
   const update = useSessions((s) => s.update);
   const remove = useSessions((s) => s.remove);
+  const restore = useSessions((s) => s.restore);
 
   useEffect(() => {
     if (!hydrated) void load();
@@ -199,7 +201,14 @@ export function LogPage({ params }: { params: { date: string } }) {
             trackId={trackId}
             others={sessions.filter((s) => s.id !== session.id)}
             onChange={(s) => void update(s)}
-            onDelete={() => void remove(session)}
+            onDelete={() => {
+              const deleted = session;
+              void remove(deleted).then(() =>
+                offerUndo(`${fromKey(deleted.date).toLocaleDateString(undefined, { weekday: 'long' })}'s session`, () =>
+                  restore(deleted),
+                ),
+              );
+            }}
             onMoved={(s) => setSelectedId(s.id)}
           />
         )}

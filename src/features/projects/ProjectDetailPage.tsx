@@ -5,6 +5,7 @@ import type { Project } from '@/db/projects';
 import { OUTCOME_LABEL, highPointOf, summariseProject } from '@/engine/projects';
 import { fromKey, today } from '@/engine/dates';
 import { useProjects } from '@/store/projects';
+import { offerUndo } from '@/store/undo';
 import { useSettings } from '@/store/settings';
 import { BackLink } from '@/ui/BackLink';
 import { projectCard } from '@/ui/shareCard';
@@ -27,6 +28,7 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
   const load = useProjects((s) => s.load);
   const update = useProjects((s) => s.update);
   const remove = useProjects((s) => s.remove);
+  const restore = useProjects((s) => s.restore);
   const byDate = useSessions((s) => s.byDate);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -167,7 +169,14 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
                   size="sm"
                   variant="danger"
                   onClick={() => {
-                    void remove(project.id);
+                    const deleted = project;
+                    void remove(deleted.id).then(() =>
+                      // Photos are not offered back: `remove` deletes them so
+                      // they cannot sit orphaned in the quota, and undoing to
+                      // a project with its pictures missing would be a
+                      // quieter lie than saying so.
+                      offerUndo(deleted.name || 'Project', () => restore(deleted)),
+                    );
                     navigate('/projects');
                   }}
                 >

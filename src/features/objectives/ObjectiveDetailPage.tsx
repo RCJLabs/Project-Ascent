@@ -14,6 +14,7 @@ import {
 } from '@/engine/objectives';
 import type { SkillRequirement } from '@/engine/skills';
 import { useObjectives } from '@/store/objectives';
+import { offerUndo } from '@/store/undo';
 import { useProjects } from '@/store/projects';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
@@ -272,7 +273,12 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
           variant="danger"
           className="w-full"
           onClick={() => {
-            void remove(objective.id);
+            const deleted = objective;
+            // `save` filters by id and appends, so it puts a deleted
+            // objective back on its own — no restore action needed here.
+            void remove(deleted.id).then(() =>
+              offerUndo(deleted.name || 'Objective', () => save(deleted)),
+            );
             navigate('/objectives');
           }}
         >

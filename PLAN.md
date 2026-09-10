@@ -771,15 +771,45 @@ a small diff instead of ninety-five separate edits.
   prompt disappeared" — a second page held open fixed both. Verified against two real
   builds with a genuinely waiting worker: held during a session, offered after it,
   four times alternating, plus "Later" and the next launch.
-- **M20 — Data safety.** Import is all-or-nothing with no preview. Per-store merge
-  versus replace, a dry-run summary before it writes, an automatic snapshot before any
-  import, and undo for destructive deletes. Also: **there is no error boundary
-  anywhere**, and one malformed stored record white-screens a route — found during
-  M13 by writing a `baseline` of the wrong shape, which crashed `/find` in
-  `finderInputFrom` and left the page blank. A backup from an older schema would do
-  the same. Normalise on read (the injury store already does) and catch what gets
-  through. *Done when: no single tap can lose a year of logs, and a bad record costs
-  one card rather than the page.*
+- **M20 — Data safety.** *Done.*
+  **The error boundary the app did not have.** One malformed record white-screened a
+  route: a `baseline` of the wrong shape crashed `/find` in `finderInputFrom`, and a
+  backup from an older schema does the same. Now a `RouteBoundary` inside the shell
+  keeps the nav — and so the way out — standing, and `PageGrid` gives **every card its
+  own boundary**, which is the "one card rather than the page" half. Doing that in
+  PageGrid rather than at ~100 call sites also means a new card cannot forget to have
+  one. Verified by breaking a card for real: the page kept its load chart, pyramid,
+  career, journal and records while one card showed the error.
+  **A boundary is a backstop, not a fix**, so the record is normalised before anything
+  reads it: `readBaseline` returns a usable baseline or null, never a half-built one.
+  It deliberately does *not* default every field — a fully defaulted baseline would
+  hand the finder a confident answer built from nothing, and "we do not know your
+  grade yet" is the truth. The original reproduction is now a test, and `/find`
+  renders its honest fallback instead of crashing.
+  **Import shows its work and can be undone.** The old flow asked "replace or merge?"
+  over a file the climber could not see into. Now `previewImport` compares keys on
+  both sides and leads with the number that matters — *"Replace would delete 40 things
+  this backup does not contain. Merge keeps them."* — with a per-store table
+  underneath. A restore point is taken automatically before either mode, and undo
+  stands until the climber says "keep the import" and reclaims the space. The snapshot
+  lives under a reserved `meta` key rather than a new store: a new store means a schema
+  bump, and the export format shares that number, so every older copy of the app would
+  start rejecting new backups over a change that does not affect the format. It is
+  excluded from export and ignored on import, and a **replace deliberately does not
+  clear it** — otherwise the import would delete the way back mid-import, which is a
+  test.
+  **Undo for deletes.** One offer, not a stack, standing fifteen seconds, announced
+  for screen readers. Wiring it found a real bug: every store's `update`/`save` maps
+  over its list, and a deleted record has nothing to map onto — the write landed in
+  IndexedDB and never reached the screen. Sessions and projects grew a real `restore`.
+  **Not built, deliberately:** per-store merge-versus-replace. A climber choosing
+  "replace sessions but merge projects" is a control nobody will use correctly; the
+  per-store *information* is what was missing, and that is now in the preview table.
+  **Photos are the honest gap:** the restore point excludes them (a snapshot with
+  media doubles the largest thing in the database at the riskiest moment, and M19
+  exists because running out of room is real), and deleting a project deletes its
+  photos so they cannot sit orphaned in the quota, so undoing a project brings back
+  everything but its pictures. Both are said in the UI rather than discovered later.
 - **M21 — Entry speed.** Logging is the most repeated action in the app and
   `LogPage.tsx` is 1,297 lines. Quick-log from the last session, grade steppers
   instead of selects, numeric keypads, swipe-to-delete on climb rows. **Also found

@@ -22,6 +22,10 @@ export interface SessionsState {
   create: (date: string, patch?: Partial<Session>) => Promise<Session>;
   update: (session: Session) => Promise<void>;
   remove: (session: Session) => Promise<void>;
+  /** Put a deleted session back. Not `update`: that maps over the day and
+   *  a record that is no longer in the list has nothing to map onto, so the
+   *  write would land in the database and never reach the screen. */
+  restore: (session: Session) => Promise<void>;
   /** Re-date a session. Its id encodes the date, so this is a write and a
    *  delete rather than an edit. Returns the session at its new id. */
   move: (session: Session, toDate: string) => Promise<Session>;
@@ -65,6 +69,15 @@ export const useSessions = create<SessionsState>((set, get) => ({
     await deleteSession(session.id);
     const day = (get().byDate[session.date] ?? []).filter((s) => s.id !== session.id);
     set({ byDate: { ...get().byDate, [session.date]: day } });
+  },
+
+  restore: async (session) => {
+    const saved = await putSession(session);
+    const day = [...(get().byDate[saved.date] ?? []).filter((s) => s.id !== saved.id), saved];
+    // Ids carry the day and an index, so sorting by id puts a restored
+    // session back where it was rather than on the end.
+    day.sort((a, b) => (a.id < b.id ? -1 : 1));
+    set({ byDate: { ...get().byDate, [saved.date]: day } });
   },
 
   move: async (session, toDate) => {

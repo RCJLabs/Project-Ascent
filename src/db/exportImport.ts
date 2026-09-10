@@ -1,6 +1,6 @@
 import { APP_VERSION } from '@/version';
 import { getDb } from './db';
-import { EXPORTABLE_STORES, SCHEMA_VERSION, type ExportableStore } from './schema';
+import { EXPORTABLE_STORES, SCHEMA_VERSION, SNAPSHOT_KEY, type ExportableStore } from './schema';
 
 /** A photo, flattened to something JSON can carry. */
 export interface MediaExport {
@@ -40,7 +40,14 @@ export async function exportAll(options: { media?: boolean } = {}): Promise<Expo
   const db = await getDb();
   const data = {} as ExportFile['data'];
   for (const store of EXPORTABLE_STORES) {
-    data[store] = await db.getAll(store);
+    const rows = await db.getAll(store);
+    // The pre-import snapshot lives in `meta`. A backup containing a backup
+    // doubles in size every time one is taken from a restored database, and
+    // restoring one would hand the climber someone else's undo history.
+    data[store] =
+      store === 'meta'
+        ? rows.filter((r) => (r as { key?: string }).key !== SNAPSHOT_KEY)
+        : rows;
   }
   const file: ExportFile = {
     app: 'project-ascent',
@@ -147,8 +154,20 @@ export async function importAll(file: ExportFile, mode: 'replace' | 'merge'): Pr
     const incoming = file.data[store];
     if (!Array.isArray(incoming)) continue;
     const os = tx.objectStore(store);
-    if (mode === 'replace') await os.clear();
+    if (mode === 'replace') {
+      // Everything except the snapshot, which is what makes this import
+      // undoable — clearing it here would delete the way back mid-import.
+      if (store === 'meta') {
+        for (const key of await os.getAllKeys()) {
+          if (key !== SNAPSHOT_KEY) await os.delete(key);
+        }
+      } else {
+        await os.clear();
+      }
+    }
     for (const record of incoming) {
+      // A file cannot write the reserved key, whatever it claims to hold.
+      if (store === 'meta' && (record as { key?: string })?.key === SNAPSHOT_KEY) continue;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await os.put(record as any);
     }

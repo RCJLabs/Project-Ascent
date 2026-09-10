@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { Route, Router, Switch, useLocation } from 'wouter';
+import { RouteBoundary } from '@/ui/ErrorBoundary';
 import { useHashLocation } from 'wouter/use-hash-location';
 import { AltimeterPage } from '@/features/altimeter/AltimeterPage';
 import { ClimberPage } from '@/features/climber/ClimberPage';
@@ -114,8 +115,14 @@ function useFirstRunRedirect(): void {
 
 function Shell() {
   useFirstRunRedirect();
+  const [location] = useLocation();
   return (
       <AppShell>
+        {/* Inside the shell, so a page that throws leaves the nav — and so a
+            way out — standing. Keyed on the location: without that, a page
+            that threw once stays broken for the rest of the run, even after
+            navigating away and back. */}
+        <RouteBoundary resetKey={location}>
         {/* A split route arrives a frame later. The fallback is deliberately
             quiet rather than a spinner: on a warm cache it is never seen,
             and a spinner that flashes for 20ms is worse than nothing. */}
@@ -161,6 +168,7 @@ function Shell() {
           </Route>
         </Switch>
         </Suspense>
+        </RouteBoundary>
       </AppShell>
   );
 }
