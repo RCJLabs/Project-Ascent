@@ -297,6 +297,13 @@ export function ProgressPage() {
           </Card>
         </Wide>
 
+        {/* Above the charts, not below them (PLAN.md M63). These were the
+            last two cards on a page with seven charts on it, which is a
+            place nobody scrolls to twice. What happened comes before how it
+            is going. */}
+        <CareerCard />
+        <YearCard />
+
         <TrainingState state={state} sessions={sessions} program={program} scale={scale} />
 
         {/* Wide, always. Fifty-three weeks squeezed into half a column is a
@@ -410,8 +417,6 @@ export function ProgressPage() {
           )}
         </Card>
 
-        <CareerCard />
-        <YearCard />
         <AssessmentsCard />
         <JournalCard />
 

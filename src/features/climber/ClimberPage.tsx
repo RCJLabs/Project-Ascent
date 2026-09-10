@@ -37,6 +37,7 @@ import { describeNext } from '@/engine/nextUnlock';
 import { useNextUnlock, useSkills } from '@/store/skills';
 import { useSessions } from '@/store/sessions';
 import { ShareButton } from '@/features/share/ShareSheet';
+import { AchievementsCard, CareerLinkCard } from './AchievementsCard';
 import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
@@ -145,6 +146,11 @@ export function ClimberPage() {
         <Card>
           <LevelBar progress={xp.progress} rank={xp.rank} next={xp.next} />
         </Card>
+
+        {/* What you have done, on the page about who you are (PLAN.md M63).
+            These used to sit on the career page, four scrolls down a tab. */}
+        <AchievementsCard />
+        <CareerLinkCard />
 
         <VitalityCard vitality={vitality} />
 

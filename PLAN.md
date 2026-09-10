@@ -2114,17 +2114,27 @@ something that already exists; six are new. Nothing here is committed.*
   a skill shop: the tree is deliberately a map of your training, not a thing you spend on,
   and the app guide says so in as many words.
 
-- **M63 — Achievements belong on the climber, and the career has to be findable.**
-  Fourteen achievements render on `/career`, which hangs off `/progress` — two taps from a
-  tab, and only if you know it is there. The climber page hangs off Home and holds Skills,
-  Stats, Currency, Ranks, Recent XP, Vitality and Appearance: everything about who you are
-  except the things you have done. Move the achievements card there, leave the timeline on
-  the career page, and link the two.
-  **The deeper problem is the tab bar.** Six tabs, and one of them is Search — a tab whose
-  existence is an admission that things cannot be found. The climber, the board, the coach
-  and the career are all off-tab. Worth considering: the climber takes a tab slot, and
-  search moves to the header where it is one tap from everywhere rather than one tap from
-  the bottom bar.
+- **M63 — Achievements belong on the climber, and the career has to be findable.** *Done.*
+  Fourteen achievements rendered on `/career`, which hangs off Progress — and on that page
+  the career card was the **eighth card down, under seven charts**. Meanwhile the climber
+  page held Skills, Stats, Currency, Ranks, Recent XP, Vitality and Appearance: everything
+  about who you are except what you had done.
+  The achievements card moved to the climber, directly under the level bar, with a career
+  card beneath it. It reads its own stores now instead of taking props, which is how every
+  other card of this kind works and is what let it move without either page knowing what it
+  needs. On Progress, the career and year cards came up above the charts — what happened,
+  then how it is going. The career page keeps the timeline, which is its point, and carries
+  a signpost to where the fourteen went, placed *below* its own content rather than above
+  it: a page about milestones should open with milestones.
+  **The tab-bar surgery I proposed is withdrawn.** The brainstorm suggested the climber take
+  a tab slot and search move to the header. Two things were wrong with that. Home already
+  links to the climber, so it was never more than two taps away; and there is no header to
+  move search into — the shell is a bottom bar on a phone and a left column on a desktop.
+  Taking search's tab away would have made search worse to fix a problem Home already
+  solves.
+  Four mutations, four killed, including a placement one: putting the career card back
+  below the charts fails a test that reads the rendered page and asserts it comes first.
+  Verified in a browser at phone width across all three pages.
 
 **Six that sharpen what is already there.**
 
@@ -2141,10 +2151,13 @@ something that already exists; six are new. Nothing here is committed.*
   what a deload is for?" has an answer the app is holding and cannot hand over. A
   build-time index over guide and glossary prose, with a snippet per hit.
 
-- **M66 — A grade pyramid.** Five charts ship — consistency grid, load trend, block compare,
-  stat radar, tissue bars — and none of them is the one climbers actually draw: sends by
-  grade, stacked, over a period. It answers "is my base wide enough for the grade I want"
-  in a single glance, and every input for it is already in the log.
+- **M66 — ~~A grade pyramid~~ — withdrawn, it already ships.** The proposal said five
+  charts ship and none of them is the pyramid. That was wrong: `PyramidBars` lives in
+  `ui/charts/Charts.tsx` rather than in a file of its own, and Progress has rendered a
+  "Grade pyramid" card, built on `engine/progress.ts`'s `pyramid()`, for some time. Listing
+  a directory is not reading it. **Replaced by: sends by grade over *time*** — the pyramid
+  is a snapshot, and the question it cannot answer is whether this year's base is wider than
+  last year's. Same data, a second axis.
 
 - **M67 — Put the assessments on the calendar.** Every program declares its `assessments`,
   and nothing ever schedules one. The coach nags when a benchmark goes stale, which is the
