@@ -75,7 +75,7 @@ describe('Iron Grip', () => {
     expect(IRON_GRIP.phases.map((p) => p.name)).toEqual([
       'The Anvil (Repeaters)',
       'The Hammer (Max Hangs)',
-      'The Spark (Campus)',
+      'The Spark (Contact Strength)',
     ]);
   });
 
@@ -92,11 +92,30 @@ describe('Iron Grip', () => {
     const block = IRON_GRIP.sessionTypes[0]!.blocks!.find((b) => b.id === 'finger_protocol')!;
     expect(block.perPhase['anvil']!.exercises[0]!.protocolId).toBe('repeaters_7_3');
     expect(block.perPhase['hammer']!.exercises[0]!.protocolId).toBe('max_hangs_10s');
-    expect(block.perPhase['spark']!.exercises.map((e) => e.name)).toEqual([
+    // Phase 3 carries both tracks. Campus is the sharper tool and the
+    // higher risk; the no-board lines train the same quality and are why the
+    // program no longer requires a board at all (PLAN.md M39).
+    const spark = block.perPhase['spark']!.exercises;
+    expect(spark.filter((e) => e.track === 'no_board').map((e) => e.name)).toEqual([
+      'Foot-On Laddering',
+      'Deadpoint Repeats',
+      'Recruitment Pulls',
+    ]);
+    expect(spark.filter((e) => e.track === 'board').map((e) => e.name)).toEqual([
       'Campus Laddering',
       'Campus Skips',
       'Campus Double Dynos',
     ]);
+    expect(spark.filter((e) => !e.track), 'an untracked line here shows on both tracks').toEqual([]);
+  });
+
+  it('runs every phase without a campus board', () => {
+    // The hole M9 opened and this milestone closes: with a hangboard and no
+    // board, Iron Grip was blocked and a V6 boulderer asking for fingers got
+    // Perpetual Maintenance instead.
+    expect(IRON_GRIP.equipment).not.toContain('campus');
+    expect(IRON_GRIP.helpfulEquipment).toContain('campus');
+    expect(IRON_GRIP.tracks?.[0]?.id, 'the no-board track is the default').toBe('no_board');
   });
 
   it('separates dosage from the exercise name', () => {
@@ -452,12 +471,18 @@ describe('helpers', () => {
   });
 
   it('filters drills by equipment availability', () => {
-    const noGear = filterDrills({ equipment: [] }).map((d) => d.id);
-    expect(noGear).toContain('the_crimp_project');
-    expect(noGear).not.toContain('contact_strength_projecting');
+    // Nothing at all runs nothing. Every drill in this library is climbing
+    // or hanging, and the six that claimed to need no equipment all read
+    // "pick a project" or "before placing each hand on a hold" (PLAN.md M39).
+    expect(filterDrills({ equipment: [] })).toEqual([]);
 
-    const withCampus = filterDrills({ equipment: ['campus'] }).map((d) => d.id);
-    expect(withCampus).toContain('contact_strength_projecting');
+    const withWall = filterDrills({ equipment: ['wall'] }).map((d) => d.id);
+    expect(withWall).toContain('the_crimp_project');
+    expect(withWall).toContain('contact_strength_projecting');
+    expect(withWall).not.toContain('graduation_retest_fingers');
+
+    const withBoard = filterDrills({ equipment: ['wall', 'hangboard'] }).map((d) => d.id);
+    expect(withBoard).toContain('graduation_retest_fingers');
   });
 
   it('filters drills by category and search', () => {

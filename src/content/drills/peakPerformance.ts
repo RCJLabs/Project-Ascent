@@ -311,7 +311,7 @@ export const PEAK_PERFORMANCE_DRILLS: Drill[] = [
     category: 'assessment',
     discipline: 'boulder',
     level: 'V8-V11',
-    equipment: ['hangboard', 'wall'],
+    equipment: ['wall'],
     sources: ['peak_performance'],
   },
   {
@@ -467,7 +467,7 @@ export const PEAK_PERFORMANCE_DRILLS: Drill[] = [
     category: 'assessment',
     discipline: 'boulder',
     level: 'V8-V11',
-    equipment: ['hangboard', 'wall'],
+    equipment: ['wall'],
     sources: ['peak_performance'],
   },
 ];

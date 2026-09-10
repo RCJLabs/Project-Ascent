@@ -94,30 +94,41 @@ const INJURY_RULES: {
   equipment: Equipment;
   severity: 'block' | 'caution';
   note: (part: string) => string;
+  /**
+   * The same risk when the program only *offers* the equipment. Written
+   * separately rather than suffixed onto `note`, because "not while that is
+   * healing" and "the program runs without it" are different sentences and
+   * stapling them together produced three em-dash clauses in a row.
+   */
+  optional?: (part: string) => string;
 }[] = [
+  // `your ${part}` throughout: the part is the logged injury's own name, so
+  // an article in front of it wrote "a a2 pulley injury" and "a elbow injury".
   {
     parts: ['finger', 'pulley', 'hand'],
     equipment: 'hangboard',
     severity: 'block',
-    note: (p) => `Not while a ${p} injury is healing — this program's hangboard work loads exactly that tissue`,
+    note: (p) => `Not while your ${p} injury is healing — this program's hangboard work loads exactly that tissue`,
   },
   {
     parts: ['finger', 'pulley', 'hand'],
     equipment: 'campus',
     severity: 'block',
-    note: (p) => `Campus work is the highest-force protocol here, and you have logged a ${p} injury`,
+    note: (p) => `Campus work is the highest-force protocol here, and your ${p} is healing`,
+    optional: (p) => `Leave the campus board alone until your ${p} has healed — the rest of the program runs without it`,
   },
   {
     parts: ['elbow', 'shoulder'],
     equipment: 'campus',
     severity: 'block',
     note: (p) => `Campus work spikes ${p} load — not while that is healing`,
+    optional: (p) => `Campus work spikes ${p} load, so run the no-board track until that has healed`,
   },
   {
     parts: ['elbow', 'shoulder', 'wrist'],
     equipment: 'hangboard',
     severity: 'caution',
-    note: (p) => `Heavy hangboarding with a ${p} injury needs care — reduce load and stop at any sharp pain`,
+    note: (p) => `Heavy hangboarding with your ${p} injury needs care — reduce load and stop at any sharp pain`,
   },
 ];
 
@@ -317,16 +328,24 @@ export function recommend(input: FinderInput): Recommendation[] {
     }
 
     // ── Injuries ───────────────────────────────────────────────────────
+    //
+    // Kit a program merely *offers* still carries its risk, but the climber
+    // can decline it, so an optional protocol warns where a required one
+    // blocks. Reading required kit alone silently dropped Iron Grip's
+    // campus rules the moment campus became optional (PLAN.md M39) — the
+    // protocol did not get safer, it got skippable.
     const injured = (input.injuries ?? []).map((i) => i.toLowerCase());
     for (const rule of INJURY_RULES) {
-      if (!program.equipment.includes(rule.equipment)) continue;
+      const required = program.equipment.includes(rule.equipment);
+      const offered = program.helpfulEquipment?.includes(rule.equipment) ?? false;
+      if (!required && !offered) continue;
       const hit = injured.find((i) => rule.parts.some((p) => i.includes(p)));
       if (!hit) continue;
-      if (rule.severity === 'block') {
+      if (rule.severity === 'block' && required) {
         if (!blockers.some((b) => b.includes(hit))) blockers.push(rule.note(hit));
       } else {
         score -= 20;
-        cautions.push(rule.note(hit));
+        cautions.push(required ? rule.note(hit) : (rule.optional ?? rule.note)(hit));
       }
     }
 
@@ -356,6 +375,16 @@ export interface FinderResult {
   fallback: boolean;
   /** Programs that fit but are out of reach, with what stands in the way. */
   blocked: Recommendation[];
+  /**
+   * What the catalogue cannot answer, when the honest answer is "nothing
+   * here really does this".
+   *
+   * A climber with a wall and no hangboard who asks for finger strength was
+   * handed Perpetual Maintenance at every grade up to V10 and told nothing
+   * (PLAN.md M39). The pick is still the best available one; this is the
+   * sentence that stops it reading as the right one.
+   */
+  gap?: string;
 }
 
 /** The honest answer when nothing fits: log what you climb, and here is why. */
@@ -381,6 +410,20 @@ function openLogging(input: FinderInput, blocked: Recommendation[]): Recommendat
  * really fits. Never returns nothing, and never recommends a program the
  * climber has no way to run.
  */
+/**
+ * The one hole the catalogue genuinely has, named rather than papered over.
+ *
+ * Every program that trains fingers deliberately needs a hangboard. Without
+ * one, finger strength is a by-product of climbing rather than something you
+ * can program, and that is worth saying out loud to someone who just asked
+ * for it — including which single piece of kit changes the answer.
+ */
+function catalogueGap(input: FinderInput): string | undefined {
+  if (input.goal !== 'fingers') return undefined;
+  if (input.equipment.includes('hangboard')) return undefined;
+  return 'Nothing here trains fingers without a hangboard — off the wall, finger strength needs a load you can measure and repeat. A hangboard is the one piece of kit that opens Iron Grip, and the cheapest thing you can buy for this goal.';
+}
+
 export function findProgram(input: FinderInput): FinderResult {
   const ranked = recommend(input);
   const viable = ranked.filter((r) => r.blockers.length === 0);
@@ -389,8 +432,16 @@ export function findProgram(input: FinderInput): FinderResult {
   const best = viable[0];
   const weak = !best || best.score < 40;
 
+  const gap = catalogueGap(input);
+
   if (!best) {
-    return { top: openLogging(input, blocked), alternatives: [], fallback: true, blocked: blocked.slice(0, 3) };
+    return {
+      top: openLogging(input, blocked),
+      alternatives: [],
+      fallback: true,
+      blocked: blocked.slice(0, 3),
+      ...(gap ? { gap } : {}),
+    };
   }
 
   return {
@@ -398,5 +449,6 @@ export function findProgram(input: FinderInput): FinderResult {
     alternatives: viable.slice(1, 3),
     fallback: weak,
     blocked: blocked.slice(0, 3),
+    ...(gap ? { gap } : {}),
   };
 }

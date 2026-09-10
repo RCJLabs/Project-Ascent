@@ -213,6 +213,18 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
         <div className="grid grid-cols-1 gap-3">
           <RecCard rec={result.top} headline />
 
+          {/* Above the alternatives, below the pick: the pick is still the
+              best available answer, and this is why it is not the right one
+              (PLAN.md M39). */}
+          {result.gap && (
+            <Card>
+              <div className="flex gap-2">
+                <AlertTriangle size={16} className="text-warn shrink-0 mt-0.5" aria-hidden />
+                <p className="text-sm text-ink-soft">{result.gap}</p>
+              </div>
+            </Card>
+          )}
+
           {result.alternatives.length > 0 && (
             <>
               <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft mt-2">

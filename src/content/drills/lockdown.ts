@@ -155,7 +155,7 @@ export const LOCKDOWN_DRILLS: Drill[] = [
     category: 'assessment',
     discipline: 'both',
     level: 'V3-V5',
-    equipment: ['hangboard', 'gym'],
+    equipment: ['hangboard', 'wall'],
     sources: ['lockdown'],
   },
 ];

@@ -1428,8 +1428,50 @@ across its input space.
   survived, because `Array.sort` is stable and returning nothing for a tie is
   deterministic too. The test had to be rewritten against a tie the rule reorders.
 
-- **M39 — The finger-strength hole (M9, carried).** With a hangboard and no campus
-  board, Iron Grip is blocked from V6 up and the fallback is maintenance again.
+- **M39 — The finger-strength hole (M9, carried).** *Done.* With a hangboard and no
+  campus board, Iron Grip was blocked and a V6 boulderer asking for stronger fingers
+  got Perpetual Maintenance. Swept the finder across all 32 equipment subsets × five
+  grades to find the exact shape of it.
+  **Measured what the campus requirement bought, the way M36 did.** Three exercises
+  and three drills out of thirty-eight prescriptions, all in phase 3 — and **all three
+  drills were mislabelled**. `contact_strength_projecting` is "pick 2-3 max-grade
+  projects", `crimp_pull_power_application` is "pick 3-4 boulders", and
+  `deload_max_hang_day_off_flow` declared a hangboard *and* a campus board while its
+  own description reads "Very easy climbing only. **No hangboard this week.**" No drill
+  in the catalogue needs a campus board. The whole requirement rested on three
+  exercises in one phase of three.
+  **So campus is helpful now, and phase 3 has two tracks.** `no_board` is the default:
+  foot-on laddering, deadpoint repeats and recruitment pulls train the same fast force
+  production at a fraction of the peak load. The phase was called "The Spark (Campus)"
+  — named after the tool, which is part of why requiring the tool looked inevitable —
+  and is "The Spark (Contact Strength)" now. A hangboard and a wall run Iron Grip at
+  every grade from V5 to V8.
+  **Dropping the requirement silently disabled two safety rules**, which the suite
+  caught. `INJURY_RULES` were keyed to *required* equipment, so the moment campus
+  became optional Iron Grip stopped blocking a healing elbow or shoulder — the protocol
+  did not get safer, it got skippable. Rules now read required **and** helpful kit: a
+  required protocol blocks, an optional one cautions with its own sentence ("Campus
+  work spikes elbow load, so run the no-board track until that has healed"). A healing
+  pulley still blocks Iron Grip outright, through the hangboard rule. Fixed alongside:
+  every note said `a ${part}`, which wrote "a a2 pulley injury" and "a elbow injury".
+  **Nineteen drill equipment tags were wrong, not nine.** Nine over-declared — pure
+  bouldering sessions tagged `hangboard` because their rationale mentioned one, hidden
+  by `filterDrills` from every climber without a board. And **all six drills tagged
+  `none` need a wall**: "pick a project 1-2 grades above your flash level", "before
+  placing each hand on a hold". A climber with no equipment was offered six drills,
+  every one of which needs a climbing wall; that filter returns nothing now, which is
+  the true answer.
+  **The wall-only hole is named rather than papered over.** Nothing here trains fingers
+  without a hangboard, so `FinderResult.gap` says so, says which single piece of kit
+  changes the answer, and still recommends the best available program. It fires only
+  for a finger goal with no hangboard.
+  Three checks, and the honest limit of each is written down: a scheduled drill can
+  never need more than its program requires; a drill about projecting must declare a
+  wall; and declared kit must appear in the drill's own text — that last one is the
+  weakest, and **it survived its first mutation**, because "Repeater phase should not
+  push into pain" satisfied a vocabulary containing `repeater`. Six of the nine were
+  found by reading, not by a rule, and the test says so rather than implying otherwise.
+  Five mutations, five killed after that narrowing.
 
 - **M40 — Split the bundle.** *Done.* The entry chunk was 894.6 KiB against its own
   900 KiB limit — 0.6% of headroom — and first load was 282.9 KiB gzipped against 300

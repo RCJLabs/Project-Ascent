@@ -12,7 +12,7 @@ export const IRON_GRIP_DRILLS: Drill[] = [
     category: 'finger-strength',
     discipline: 'both',
     level: 'V5-V8',
-    equipment: ['hangboard', 'wall'],
+    equipment: ['wall'],
     sources: ['iron_grip'],
   },
   {
@@ -25,7 +25,7 @@ export const IRON_GRIP_DRILLS: Drill[] = [
     category: 'finger-strength',
     discipline: 'both',
     level: 'V5-V8',
-    equipment: ['hangboard', 'wall'],
+    equipment: ['wall'],
     sources: ['iron_grip'],
   },
   {
@@ -38,7 +38,7 @@ export const IRON_GRIP_DRILLS: Drill[] = [
     category: 'finger-strength',
     discipline: 'both',
     level: 'V5-V8',
-    equipment: ['hangboard'],
+    equipment: ['wall'],
     sources: ['iron_grip'],
   },
   {
@@ -64,7 +64,7 @@ export const IRON_GRIP_DRILLS: Drill[] = [
     category: 'power-endurance',
     discipline: 'both',
     level: 'V5-V8',
-    equipment: ['hangboard', 'wall'],
+    equipment: ['wall'],
     sources: ['iron_grip'],
   },
   {
@@ -77,7 +77,7 @@ export const IRON_GRIP_DRILLS: Drill[] = [
     category: 'power',
     discipline: 'both',
     level: 'V5-V8',
-    equipment: ['hangboard', 'wall'],
+    equipment: ['wall'],
     sources: ['iron_grip'],
   },
   {
@@ -90,7 +90,7 @@ export const IRON_GRIP_DRILLS: Drill[] = [
     category: 'strategy',
     discipline: 'both',
     level: 'V5-V8',
-    equipment: ['none'],
+    equipment: ['wall'],
     sources: ['iron_grip'],
   },
   {
@@ -103,7 +103,7 @@ export const IRON_GRIP_DRILLS: Drill[] = [
     category: 'recovery',
     discipline: 'both',
     level: 'V5-V8',
-    equipment: ['hangboard', 'campus', 'wall'],
+    equipment: ['wall'],
     sources: ['iron_grip'],
   },
   {
@@ -116,7 +116,7 @@ export const IRON_GRIP_DRILLS: Drill[] = [
     category: 'power',
     discipline: 'both',
     level: 'V5-V8',
-    equipment: ['campus'],
+    equipment: ['wall'],
     sources: ['iron_grip'],
   },
   {
@@ -129,7 +129,7 @@ export const IRON_GRIP_DRILLS: Drill[] = [
     category: 'finger-strength',
     discipline: 'both',
     level: 'V5-V8',
-    equipment: ['campus', 'wall'],
+    equipment: ['wall'],
     sources: ['iron_grip'],
   },
   {
@@ -142,7 +142,7 @@ export const IRON_GRIP_DRILLS: Drill[] = [
     category: 'performance',
     discipline: 'both',
     level: 'V5-V8',
-    equipment: ['none'],
+    equipment: ['wall'],
     sources: ['iron_grip'],
   },
   {
@@ -155,7 +155,7 @@ export const IRON_GRIP_DRILLS: Drill[] = [
     category: 'assessment',
     discipline: 'both',
     level: 'V5-V8',
-    equipment: ['hangboard', 'gym', 'wall'],
+    equipment: ['hangboard', 'wall'],
     sources: ['iron_grip'],
   },
 ];

@@ -78,8 +78,12 @@ describe('finder', () => {
     const injured = recommend(input({ boulderGrade: 'V6', goal: 'fingers', injuries: ['Elbow'] }));
     const ironGrip = injured.find((r) => r.program.id === 'iron_grip')!;
     expect(ironGrip.cautions.join(' ')).toMatch(/elbow/i);
-    // Campus work is still off the table with a bad elbow.
-    expect(ironGrip.blockers.join(' ')).toMatch(/campus/i);
+    // Campus work is still off the table with a bad elbow — but the board is
+    // optional now, so that is a warning to run the other track rather than a
+    // reason the whole program is unavailable (PLAN.md M39).
+    expect(ironGrip.blockers).toEqual([]);
+    expect(ironGrip.cautions.join(' ')).toMatch(/campus work spikes elbow load/i);
+    expect(ironGrip.cautions.join(' ')).toMatch(/no-board track/i);
   });
 
   it('warns rather than blocks when the week is too short', () => {
@@ -367,16 +371,60 @@ describe('finder', () => {
     });
 
     it('still blocks on kit a program genuinely cannot run without', () => {
-      // Iron Grip's third phase is campus work.
-      const ironGrip = recommend(input({ goal: 'fingers', equipment: ['wall', 'hangboard'] })).find(
-        (r) => r.program.id === 'iron_grip',
+      // Lockdown's density hangs and weighted lock-offs are the program.
+      const lockdown = recommend(input({ goal: 'power', equipment: ['wall'] })).find(
+        (r) => r.program.id === 'lockdown',
       )!;
-      expect(ironGrip.blockers.join(' ')).toContain('campus');
+      expect(lockdown.blockers.join(' ')).toContain('hangboard');
       // Base Camp's strength block is genuinely barbell-shaped.
       const baseCamp = recommend(input({ goal: 'fundamentals', equipment: ['wall'] })).find(
         (r) => r.program.id === 'base_camp',
       )!;
       expect(baseCamp.blockers.join(' ')).toContain('gym');
+    });
+
+    /**
+     * The finger-strength hole (PLAN.md M39, carried from M9).
+     *
+     * A campus board gated Iron Grip on three exercises out of thirty-eight,
+     * all in one phase, so a climber with a hangboard and no board was told
+     * their finger-strength program was out of reach and handed Perpetual
+     * Maintenance at every grade from V6 up.
+     */
+    describe('the finger-strength hole', () => {
+      const fingers = (kit: FinderInput['equipment'], boulderGrade: string) =>
+        findProgram(input({ goal: 'fingers', equipment: kit, boulderGrade }));
+
+      it('runs the finger program on a hangboard alone', () => {
+        for (const grade of ['V5', 'V6', 'V7', 'V8']) {
+          expect(fingers(['wall', 'hangboard'], grade).top.program.id, grade).toBe('iron_grip');
+        }
+      });
+
+      it('never answers a finger goal with maintenance', () => {
+        // The specific shape of the bug: The Cruiser, at V6, for a climber
+        // who asked for stronger fingers.
+        for (const kit of [['wall', 'hangboard'], ['wall', 'hangboard', 'campus']] as const) {
+          for (const grade of ['V5', 'V6', 'V7', 'V8', 'V10']) {
+            const { top } = fingers([...kit], grade);
+            expect(top.program.id, `${kit.join('+')} at ${grade}`).not.toBe('the_cruiser');
+          }
+        }
+      });
+
+      it('names the hole it cannot fill instead of quietly filling it badly', () => {
+        // Without a hangboard there is no honest answer, and saying which
+        // single piece of kit changes that beats handing over maintenance
+        // with no explanation.
+        const { gap, top } = fingers(['wall'], 'V8');
+        expect(gap, 'no hangboard is the one gap the catalogue really has').toMatch(/hangboard/i);
+        expect(top.program, 'a gap is not a reason to stop recommending').toBeDefined();
+      });
+
+      it('says nothing about a gap that is not there', () => {
+        expect(fingers(['wall', 'hangboard'], 'V6').gap).toBeUndefined();
+        expect(findProgram(input({ goal: 'endurance', equipment: ['wall'] })).gap).toBeUndefined();
+      });
     });
 
     it('says what the missing helpful kit would add, and does not block on it', () => {

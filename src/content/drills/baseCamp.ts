@@ -38,7 +38,7 @@ export const BASE_CAMP_DRILLS: Drill[] = [
     category: 'technique',
     discipline: 'both',
     level: 'V0-V2',
-    equipment: ['none'],
+    equipment: ['wall'],
     sources: ['base_camp'],
   },
   {
@@ -116,7 +116,7 @@ export const BASE_CAMP_DRILLS: Drill[] = [
     category: 'mental',
     discipline: 'both',
     level: 'V0-V2',
-    equipment: ['none'],
+    equipment: ['wall'],
     sources: ['base_camp'],
   },
   {
@@ -142,7 +142,7 @@ export const BASE_CAMP_DRILLS: Drill[] = [
     category: 'performance',
     discipline: 'both',
     level: 'V0-V2',
-    equipment: ['none'],
+    equipment: ['wall'],
     sources: ['base_camp'],
   },
   {
@@ -155,7 +155,7 @@ export const BASE_CAMP_DRILLS: Drill[] = [
     category: 'assessment',
     discipline: 'both',
     level: 'V0-V2',
-    equipment: ['none'],
+    equipment: ['wall'],
     sources: ['base_camp'],
   },
 

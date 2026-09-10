@@ -25,7 +25,22 @@ export const IRON_GRIP: Program = {
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V5', max: 'V8', label: 'V5-V8' },
   weeks: 12,
-  equipment: ['wall', 'hangboard', 'campus'],
+  tracks: [
+    {
+      id: 'no_board',
+      name: 'No campus board',
+      description:
+        'Contact strength on a wall and a hangboard. Foot-on laddering, deadpoint repeats and recruitment pulls train the same fast force production with a fraction of the peak load — slower to build than campusing, and far harder to hurt yourself on.',
+    },
+    {
+      id: 'board',
+      name: 'Campus board',
+      description:
+        'The sharpest tool for contact strength, and the highest injury risk in the program. Open hand only, largest rungs first, fifteen minutes of board time a session, and the session ends the second a rung gets missed twice.',
+    },
+  ],
+  equipment: ['wall', 'hangboard'],
+  helpfulEquipment: ['campus', 'weight'],
 
   intro: {
     pitch:
@@ -71,11 +86,11 @@ export const IRON_GRIP: Program = {
     },
     {
       id: PHASE.spark,
-      name: 'The Spark (Campus)',
+      name: 'The Spark (Contact Strength)',
       weekStart: 9,
       weekEnd: 12,
       description:
-        'The Spark phase adds contact strength via the campus board. You’ll do progressions from matches to skips, training the nervous system to generate force fast. This is the most injury-prone protocol in the program — respect the volume caps.',
+        'The Spark phase trains contact strength — the nervous system generating force fast, rather than holding it long. A campus board is the sharpest tool for it and the most injury-prone protocol in the program; without one, foot-on laddering, deadpoint repeats and recruitment pulls train the same quality at a fraction of the peak load. Pick your track and respect the volume caps either way.',
       goals: [
         'Develop contact strength and recruitment speed',
         'Translate max hangs into dynamic grabbing power',
@@ -128,11 +143,37 @@ export const IRON_GRIP: Program = {
             },
             [PHASE.spark]: {
               rationale:
-                'Phase 3 (Spark): Campus work is the highest injury risk of the program. OPEN HAND ONLY — no crimping on rungs. Start on largest rungs with feet on ground. Cap at 15 minutes total board time. If you miss a rung twice in a row, session is over. CNS warm-up with 3 sets Clap Push-Ups or Box Jumps before touching the board.',
+                'Phase 3 (Spark): whichever track you are on, this is the highest injury risk of the program and the volume caps are the point of it. OPEN HAND ONLY — no crimping on rungs or small edges. Cap at 15 minutes of hard contact work per session. If you miss the same move twice in a row, the session is over: contact strength is a nervous-system quality, and a tired nervous system trains nothing. CNS warm-up with 3 sets of Clap Push-Ups or Box Jumps before the first hard pull.',
               exercises: [
+                // No board. The same quality — fast force production — with
+                // the peak load an order of magnitude lower, which is why
+                // this is the default track (PLAN.md M39).
+                {
+                  name: 'Foot-On Laddering',
+                  track: 'no_board',
+                  sets: '3-5',
+                  reps: '1-2-3-4-5 matched',
+                  notes: 'Steep wall or board, feet stay on. Hands move between two holds in the ladder pattern. Feet carry the load a campus board would put through the fingers.',
+                },
+                {
+                  name: 'Deadpoint Repeats',
+                  track: 'no_board',
+                  sets: '3-5',
+                  reps: '3-5 moves',
+                  notes: 'One hard deadpoint to a defined hold, repeated. Stop the set the moment you stop sticking it cleanly — a sloppy catch is the injury.',
+                },
+                {
+                  name: 'Recruitment Pulls',
+                  track: 'no_board',
+                  sets: '3-5',
+                  reps: '3',
+                  hold: '3-5s',
+                  notes: 'From a two-hand dead hang on a large open-hand edge, pull as hard and as fast as you can into the edge. Maximal intent, short duration. Full rest between reps.',
+                },
                 {
                   name: 'Campus Laddering',
                   protocolId: 'campus_ladder',
+                  track: 'board',
                   sets: '3-5',
                   reps: '1-2-3-4-5 matched',
                   notes: 'Open hand only. Start on the largest rungs with feet on the ground.',
@@ -140,12 +181,14 @@ export const IRON_GRIP: Program = {
                 {
                   name: 'Campus Skips',
                   protocolId: 'campus_ladder',
+                  track: 'board',
                   sets: '3-5',
                   reps: '1-3-5 single-hand',
                 },
                 {
                   name: 'Campus Double Dynos',
                   protocolId: 'campus_ladder',
+                  track: 'board',
                   sets: '3-5',
                   reps: '3 reps (1→3, both hands simultaneous)',
                 },
