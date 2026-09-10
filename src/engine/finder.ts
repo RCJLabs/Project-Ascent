@@ -206,11 +206,24 @@ export function recommend(input: FinderInput): Recommendation[] {
     }
 
     // ── Days available ─────────────────────────────────────────────────
+    //
+    // Three cases, not two. `max` used to be ignored, so a program asking
+    // for four or five days told a climber with seven that it "fits 7 days
+    // a week" — which is not what it asks for, and the rest days it leaves
+    // are the point of a hangboard block rather than slack in the schedule
+    // (PLAN.md M38).
     const perWeek = program.constraints.find((c) => c.kind === 'sessions-per-week');
     if (perWeek && perWeek.kind === 'sessions-per-week') {
+      const asks = perWeek.min === perWeek.max ? `${perWeek.min}` : `${perWeek.min}-${perWeek.max}`;
       if (input.daysPerWeek < perWeek.min) {
         score -= 20;
-        cautions.push(`Asks for ${perWeek.min}-${perWeek.max} days a week; you have ${input.daysPerWeek}`);
+        cautions.push(`Asks for ${asks} days a week; you have ${input.daysPerWeek}`);
+      } else if (input.daysPerWeek > perWeek.max) {
+        // Spare days are not a misfit — the program simply does not use
+        // them, and saying so is the difference between a reason and a
+        // claim that happens to be false.
+        score += 10;
+        reasons.push(`Uses ${asks} of your ${input.daysPerWeek} days`);
       } else {
         score += 10;
         reasons.push(`Fits ${input.daysPerWeek} days a week`);
@@ -252,7 +265,12 @@ export function recommend(input: FinderInput): Recommendation[] {
     const aBlocked = a.blockers.length > 0 ? 1 : 0;
     const bBlocked = b.blockers.length > 0 ? 1 : 0;
     if (aBlocked !== bBlocked) return aBlocked - bBlocked;
-    return b.score - a.score;
+    if (a.score !== b.score) return b.score - a.score;
+    // A tie used to be settled by the order programs happen to sit in the
+    // catalogue, which is not a reason. Fewer warnings wins, and the id
+    // settles what is left so the same input always gives the same answer.
+    if (a.cautions.length !== b.cautions.length) return a.cautions.length - b.cautions.length;
+    return a.program.id.localeCompare(b.program.id);
   });
 }
 

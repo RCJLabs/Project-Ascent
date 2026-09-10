@@ -1306,10 +1306,31 @@ across its input space.
   way to say so: declaring `hangboard` wrongly excludes climbers without one, not
   declaring it makes the module invisible to the finder.
 
-- **M38 — The finder's scoring is not monotonic.** A V8 boulderer wanting strength
-  gets Peak Performance at two days a week (40) and at four or more (70) — but at
-  **three days** The Cruiser wins at 50 and they are handed maintenance. Three days a
-  week is the most common training week there is.
+- **M38 — What the days term is allowed to claim.** *Done, and the audit finding it
+  came from was wrong.*
+  **The correction first.** The audit reported that a V8 boulderer wanting strength is
+  handed maintenance at three days a week. That was an artifact of the sweep, not the
+  finder: it passed `strength`, `send-project` and `general` as goals, and `Goal` has
+  none of them — so the goal term, the strongest signal at +50, scored zero for every
+  program in the sweep and the ranking collapsed onto grade and days. Re-swept against
+  the real union, the finder picks well: `power` sends a V8 to Peak Performance at
+  every week length, `fingers` to Iron Grip, `project` to Peak Performance, `maintain`
+  to The Cruiser. The day-count cliff does not misfire either — where the goal-matched
+  program is a genuine fit it wins at two days and at seven, which is now a test.
+  **What was actually broken.** The days term ignored `max`, so the branch for a
+  climber with *more* days than a program asks for was the same branch as an exact
+  fit, and Iron Grip told a climber with seven days that it "fits 7 days a week". It
+  asks for four or five, and the rest days a hangboard block leaves are the point of
+  it rather than slack in the schedule. Three cases now, and the spare-day case scores
+  the same as an exact fit — only the sentence was wrong.
+  **And a tie was settled by nothing.** Two programs on the same score fell back to
+  the order they happen to sit in `PROGRAMS`, which handed a returning V4 boulderer
+  Ground Zero *with* a caution over Gravity Defied *without* one, both on 60. Fewer
+  warnings wins now, with the id settling the rest so the same question always gets
+  the same answer.
+  Five mutations, five killed — the tie-break one only after the first attempt
+  survived, because `Array.sort` is stable and returning nothing for a tie is
+  deterministic too. The test had to be rewritten against a tie the rule reorders.
 
 - **M39 — The finger-strength hole (M9, carried).** With a hangboard and no campus
   board, Iron Grip is blocked from V6 up and the fallback is maintenance again.

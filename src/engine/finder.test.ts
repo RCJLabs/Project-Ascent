@@ -87,6 +87,92 @@ describe('finder', () => {
     expect(ironGrip.cautions.join(' ')).toMatch(/days a week/);
   });
 
+  /**
+   * What the days term says, and what it is allowed to claim (PLAN.md M38).
+   *
+   * `max` was ignored, so the branch that fires when a climber has *more*
+   * days than a program asks for was the same branch that fires when they
+   * have exactly the right number — and it said "Fits 7 days a week" about
+   * a program that asks for four or five. The rest days a hangboard block
+   * leaves are the point of it, not slack in the schedule.
+   */
+  describe('days a week', () => {
+    const daysLine = (over: Partial<FinderInput>, id: string) => {
+      const found = recommend(input(over)).find((r) => r.program.id === id)!;
+      return [...found.reasons, ...found.cautions].filter((line) => /days/i.test(line));
+    };
+
+    it('says a program fits only when the week is inside its range', () => {
+      // Iron Grip asks for 4-5.
+      expect(daysLine({ goal: 'fingers', daysPerWeek: 4 }, 'iron_grip')).toEqual([
+        'Fits 4 days a week',
+      ]);
+      expect(daysLine({ goal: 'fingers', daysPerWeek: 5 }, 'iron_grip')).toEqual([
+        'Fits 5 days a week',
+      ]);
+    });
+
+    it('does not claim to fit a week longer than it asks for', () => {
+      const line = daysLine({ goal: 'fingers', daysPerWeek: 7 }, 'iron_grip');
+      expect(line).toEqual(['Uses 4-5 of your 7 days']);
+      expect(line.join(' ')).not.toContain('Fits 7');
+    });
+
+    it('still warns when the week is too short', () => {
+      expect(daysLine({ goal: 'fingers', daysPerWeek: 3 }, 'iron_grip')).toEqual([
+        'Asks for 4-5 days a week; you have 3',
+      ]);
+    });
+
+    it('does not write a range for a program that wants one number', () => {
+      // The Long Game asks for exactly four.
+      expect(daysLine({ discipline: 'sport', sportGrade: '5.11a', goal: 'endurance', daysPerWeek: 6 }, 'the_long_game')).toEqual([
+        'Uses 4 of your 6 days',
+      ]);
+    });
+
+    it('scores a spare day the same as an exact fit', () => {
+      // Having days left over is not a misfit; only the sentence was wrong.
+      const exact = recommend(input({ goal: 'fingers', daysPerWeek: 5 })).find((r) => r.program.id === 'iron_grip')!;
+      const spare = recommend(input({ goal: 'fingers', daysPerWeek: 7 })).find((r) => r.program.id === 'iron_grip')!;
+      expect(spare.score).toBe(exact.score);
+    });
+
+    it('leaves the pick alone where the goal-matched program really fits', () => {
+      // The audit claimed a day-count cliff handed a climber maintenance.
+      // It does not: where the matched program is a genuine fit it wins at
+      // every week length, and this is the check that says so.
+      for (const daysPerWeek of [2, 3, 4, 5, 6, 7]) {
+        const { top } = findProgram(
+          input({ discipline: 'sport', sportGrade: '5.11a', boulderGrade: undefined, goal: 'endurance', daysPerWeek }),
+        );
+        expect(top.program.id, `${daysPerWeek} days`).toBe('the_long_game');
+      }
+    });
+  });
+
+  it('breaks a tie by warnings rather than by catalogue order', () => {
+    // A returning V4 boulderer with three days who wants preparation ties
+    // Ground Zero and Gravity Defied on 60. Ground Zero carries a warning
+    // and sits *earlier* in `PROGRAMS`, so the old sort — which returned
+    // nothing for a tie and inherited the array order — handed over the
+    // one with the caution on it.
+    const tied = recommend(
+      input({ goal: 'prep', boulderGrade: 'V4', discipline: 'boulder', experience: 'returning', daysPerWeek: 3 }),
+    ).filter((r) => r.blockers.length === 0);
+
+    const best = tied[0]!;
+    const runnerUp = tied.find((r) => r.score === best.score && r.program.id !== best.program.id)!;
+    expect(runnerUp, 'the tie this test is about has gone').toBeDefined();
+    expect(best.cautions.length).toBeLessThan(runnerUp.cautions.length);
+    expect(best.program.id).toBe('gravity_defied');
+  });
+
+  it('gives the same answer to the same question', () => {
+    const ask = () => recommend(input({ goal: 'prep', experience: 'returning', daysPerWeek: 3 })).map((r) => r.program.id);
+    expect(ask()).toEqual(ask());
+  });
+
   it('never recommends a logging mode as training', () => {
     for (const goal of ['prep', 'fingers', 'endurance', 'maintain'] as const) {
       const { top, alternatives } = findProgram(input({ goal }));
