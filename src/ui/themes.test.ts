@@ -13,6 +13,7 @@ import {
   getTheme,
   type Palette,
 } from './themes';
+import { CVD, contrast, distance, luminance, rgb } from './contrast';
 
 /**
  * The check the comment in index.css claimed existed.
@@ -26,61 +27,6 @@ import {
  * This is that check, for real, over every theme and both modes.
  */
 
-// ── Colour maths ──────────────────────────────────────────────────────────
-
-type Rgb = [number, number, number];
-
-function rgb(hex: string): Rgb {
-  return [
-    parseInt(hex.slice(1, 3), 16),
-    parseInt(hex.slice(3, 5), 16),
-    parseInt(hex.slice(5, 7), 16),
-  ];
-}
-
-function luminance([r, g, b]: Rgb): number {
-  const channel = (c: number) => {
-    const s = c / 255;
-    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
-}
-
-function contrast(a: string, b: string): number {
-  const [hi, lo] = [luminance(rgb(a)), luminance(rgb(b))].sort((x, y) => y - x) as [number, number];
-  return (hi + 0.05) / (lo + 0.05);
-}
-
-/**
- * Brettel-style simulation of the three common kinds of colour blindness,
- * via the standard LMS transform.
- *
- * Approximate — a simulation is not an experience — but it is enough to
- * catch the actual failure mode, which is two chart series that are only
- * distinguishable by a red/green difference.
- */
-const CVD: Record<string, (c: Rgb) => Rgb> = {
-  protanopia: ([r, g, b]) => [
-    0.567 * r + 0.433 * g,
-    0.558 * r + 0.442 * g,
-    0.242 * g + 0.758 * b,
-  ],
-  deuteranopia: ([r, g, b]) => [
-    0.625 * r + 0.375 * g,
-    0.7 * r + 0.3 * g,
-    0.3 * g + 0.7 * b,
-  ],
-  tritanopia: ([r, g, b]) => [
-    0.95 * r + 0.05 * g,
-    0.433 * g + 0.567 * b,
-    0.475 * g + 0.525 * b,
-  ],
-};
-
-/** Perceptual-ish distance, good enough to say "these two look the same". */
-function distance(a: Rgb, b: Rgb): number {
-  return Math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2);
-}
 
 const MODES = ['light', 'dark'] as const;
 const each = (fn: (theme: (typeof THEMES)[number], mode: 'light' | 'dark', palette: Palette) => void) => {
@@ -108,6 +54,37 @@ describe('every theme is complete', () => {
     }
     expect(getTheme(DEFAULT_THEME_ID).id).toBe(DEFAULT_THEME_ID);
     expect(getTheme('nonsense').id).toBe(DEFAULT_THEME_ID);
+  });
+});
+
+describe('the themes on offer', () => {
+  // `getTheme` falls back to Alpine for an id it does not know, so renaming
+  // one silently resets every climber who had chosen it — with no error and
+  // nothing in the log. The list is pinned for that reason.
+  it('keeps every id that has ever shipped', () => {
+    const ids = THEMES.map((t) => t.id);
+    for (const id of [
+      'alpine',
+      'slate',
+      'sandstone',
+      'limestone',
+      'gritstone',
+      'volcanic',
+      'desert',
+      'ice',
+      'contrast',
+      'midnight',
+    ]) {
+      expect(ids, `${id} has gone missing`).toContain(id);
+    }
+  });
+
+  it('has one implementation of the contrast maths, not two', () => {
+    // The report tool and this suite have to agree about what passes, and
+    // two copies of a luminance formula is how they stop agreeing.
+    const source = readFileSync('src/ui/themes.test.ts', 'utf8');
+    expect(source).not.toMatch(/function (contrast|luminance)\(/);
+    expect(readFileSync('scripts/theme-report.ts', 'utf8')).toContain("from '@/ui/contrast'");
   });
 });
 
