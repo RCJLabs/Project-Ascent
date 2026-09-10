@@ -1,9 +1,18 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { ArrowRight, Mountain } from 'lucide-react';
+import {
+  ACHIEVEMENT_COUNT,
+  deriveAchievements,
+  earnedCount,
+  sortAchievements,
+  type Achievement,
+} from '@/engine/achievements';
 import { CATEGORY_LABEL, byYear, deriveCareer, type CareerCategory } from '@/engine/career';
+import { getProgram } from '@/content/programs';
 import { fromKey } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
+import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { PageGrid } from '@/ui/PageGrid';
@@ -12,6 +21,8 @@ import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
 import { Meter } from '@/ui/Meter';
 import { PageHeader } from '@/ui/PageHeader';
+import { ShareButton } from '@/features/share/ShareSheet';
+import { achievementCard } from '@/ui/shareCard';
 
 const DOT: Record<CareerCategory, string> = {
   grade: 'bg-accent',
@@ -32,8 +43,21 @@ const DOT: Record<CareerCategory, string> = {
  */
 export function CareerPage() {
   const byDate = useSessions((s) => s.byDate);
+  const projects = useProjects((s) => s.projects);
   const display = useSettings((s) => s.display);
   const [filter, setFilter] = useState<CareerCategory | 'all'>('all');
+
+  const achievements = useMemo(
+    () =>
+      sortAchievements(
+        deriveAchievements({
+          sessions: Object.values(byDate).flat(),
+          projects,
+          programWeeks: (id) => getProgram(id)?.weeks,
+        }),
+      ),
+    [byDate, projects],
+  );
 
   const career = useMemo(() => {
     const sessions = Object.values(byDate).flat();
@@ -95,6 +119,8 @@ export function CareerPage() {
             </ul>
           </Card>
         )}
+
+        <AchievementsCard achievements={achievements} />
 
         {career.achieved.length === 0 ? (
           <Card>
@@ -190,5 +216,69 @@ function FilterChip({
     <Chip active={active} onClick={onClick}>
       {label}
     </Chip>
+  );
+}
+
+/**
+ * The other axis (PLAN.md M32).
+ *
+ * The timeline above counts — 250 sends, then 500 — which is right for a
+ * history and wrong for a thing to aim at. This is fourteen named days, and
+ * it stays fourteen: what is left is a list you could finish, not a number
+ * that keeps going.
+ *
+ * The locked rows carry their sentence too. A row that only says its name
+ * once you have earned it is a row nobody could have aimed at.
+ */
+function AchievementsCard({ achievements }: { achievements: Achievement[] }) {
+  const earned = earnedCount(achievements);
+  const newest = achievements.find((a) => a.date !== null);
+
+  return (
+    <Card title="Achievements">
+      <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+        {earned} of {ACHIEVEMENT_COUNT}. Not counters — days with a shape to them, read from the
+        log, so editing a session away takes one back.
+      </p>
+      <ul className="grid grid-cols-1 gap-2">
+        {achievements.map((achievement) => (
+          <li
+            key={achievement.id}
+            className={`flex items-baseline gap-2 ${achievement.date === null ? 'opacity-55' : ''}`}
+          >
+            <span className="text-xs shrink-0 translate-y-px" aria-hidden>
+              {achievement.date === null ? '·' : '✓'}
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="text-sm font-semibold">{achievement.name}</span>
+              <span className="block text-xs text-ink-soft leading-relaxed">
+                {achievement.detail}
+              </span>
+            </span>
+            {achievement.date !== null && (
+              <span className="text-xs text-ink-soft tabular-nums shrink-0">
+                {fromKey(achievement.date).toLocaleDateString(undefined, {
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      {newest?.date != null && (
+        <ShareButton
+          className="mt-3"
+          content={achievementCard({
+            name: newest.name,
+            detail: newest.detail,
+            date: newest.date,
+            earned,
+            total: ACHIEVEMENT_COUNT,
+          })}
+          filename={`ascent-${newest.id}.png`}
+        />
+      )}
+    </Card>
   );
 }

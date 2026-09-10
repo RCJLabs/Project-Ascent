@@ -1182,12 +1182,44 @@ about ten lines and would have caught all three; it belongs with the first of th
   change start partway across the gap. Verified in a browser: a real run with
   twenty-four lane changes, and the card for an untrained and a trained climber.
 
-- **M32 — Named achievements.** `career.ts` is an unbounded counter axis — 250 sends,
-  then 500 — which is good for a timeline and bad for a thing to aim at. A fixed,
-  nameable set ("first outdoor day", "a full block finished", "three months without
-  a missed week") is a different feeling: countable, finite, and shareable. It must
-  derive from the log like everything else, and it should be a separate module from
-  `career` so the two axes cannot be confused.
+- **M32 — Named achievements.** *Done.* Fourteen, fixed, on the Career page under
+  the timeline, with the newest one shareable.
+  **All three of the plan's own examples already existed, twice each.** "First
+  outdoor day" is `grit-real-rock-1` in the skill trees *and* a `first-outdoor`
+  session milestone; "three months without a missed week" is the Consistency branch;
+  "a full block finished" is the closest to new. Writing them here would have been
+  the same facts in a fourth place, next to 130 skill rungs and an unbounded counter
+  axis that already name accomplishments.
+  **So the module carries a rule instead of a list:** *an achievement is a shape in
+  the log, never a running total.* A day with a property, or a pattern across time.
+  The other two axes answer **how much**; nothing answered **what kind**. That rule
+  is enforced, not asserted — no achievement name may collide with any of the 130
+  skill nodes, and three hundred identical indoor sessions earn **two of fourteen**
+  while sweeping the trees.
+  **A real bug, found by a fixture that would not go green.** A grade ordinal is an
+  index into its own ladder and the two ladders are not the same length: 5.11a and
+  V10 both come out as 10. Comparing across them meant a climber's "hardest" was
+  decided by whichever ladder had more rungs underneath them, so a V7 boulderer who
+  had also led a 5.11a could never earn a limit achievement on the wall they actually
+  climb.
+  **And a design wart fixed before it shipped.** Judging a limit day against the
+  all-time maximum meant *getting better took an achievement away*: flash your limit
+  at V7, send V9 a year later, and the flash silently stopped counting. Limits are
+  now judged against the log as it stood that morning — a send later in the same
+  session does not retroactively raise the bar either.
+  **Persistence is keyed on `sentDate`, not `status`.** The app is careful never to
+  flip a sent project back, so a project sent and later shelved keeps its date —
+  filtering on status would have dropped exactly the long projects this is about.
+  Twenty-six mutations. Three survived the first pass: two were weak fixtures of mine
+  (a rest day that ticked a warmup, so it advanced the run it was meant to be skipped
+  from; a "still open" project with no send date at all, which passed for the wrong
+  reason), and the third was the status bug above. Two more "survivors" turned out to
+  be mutations that were no-ops — a duplicate object key, and a comment-only edit —
+  which is its own reminder that a surviving mutation is a claim to check rather than
+  a verdict.
+  Verified at 390px light and dark on a two-year log: nine of fourteen, zero
+  horizontal overflow, and the two outdoor-run achievements correctly withheld from a
+  fixture whose rock days were every *other* day.
 
 - **M12 — Ship.** TWA packaging + assetlinks, Play internal testing, store listing.
   Last, after M13–M22.

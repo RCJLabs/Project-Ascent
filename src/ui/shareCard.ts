@@ -15,7 +15,7 @@ import type { Project } from '@/db/projects';
 import { DEFAULT_DISPLAY, displayGrade, type GradeDisplay } from '@/engine/grades';
 import type { AltimeterState } from '@/engine/altimeter';
 import type { AvatarConfig } from '@/engine/avatar';
-import { shortLabel } from '@/engine/dates';
+import { fromKey, shortLabel } from '@/engine/dates';
 import type { ProjectSummary } from '@/engine/projects';
 import type { WeekReview } from '@/engine/review';
 import type { XpState } from '@/engine/xp';
@@ -278,6 +278,31 @@ export function dailyWallCard(input: {
     ],
     ...(input.avatar ? { avatar: input.avatar } : {}),
     footnote: 'Same wall for everyone today — the pattern comes from the date.',
+  };
+}
+
+/**
+ * One achievement, not the tally (PLAN.md M32).
+ *
+ * "Six of fourteen" is a progress bar, and nobody wants a screenshot of one.
+ * The thing worth handing to somebody is the named day itself.
+ */
+export function achievementCard(input: {
+  name: string;
+  detail: string;
+  date: string;
+  earned: number;
+  total: number;
+}): CardContent {
+  return {
+    eyebrow: 'Achievement',
+    headline: input.name,
+    subhead: input.detail,
+    stats: [
+      { label: 'Earned', value: fromKey(input.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) },
+      { label: 'Collected', value: `${input.earned} of ${input.total}` },
+    ],
+    footnote: 'Read from the log. Nothing here was awarded twice.',
   };
 }
 
