@@ -539,7 +539,9 @@ avatar pipeline for a solo dev.
    `src/ui/Avatar.tsx`.
 2. **Visual direction**: A / B / C / B+C hybrid (recommended). *(The app is
    built on direction B, Modern Alpine Minimal, and the avatar matches it.)*
-3. **Multi-profile/coach mode**: in or out (decide before schema freeze).
+3. ~~**Multi-profile/coach mode**~~ — **DECIDED: out of v1.** One climber per
+   install. See the milestone entry (M51) for what was checked before closing it
+   and for the one piece that is genuinely path-dependent.
 4. **Name/branding**: keep Project Ascent or rename (new package id either way —
    the old TWA package is tied to the old origin/keys).
 5. **Altimeter tuning**: 15/50 ft flat, or scale height with grade? (Flat recommended:
@@ -2007,11 +2009,32 @@ and why.
   currently open. And each needs a guide — `guides.test.ts` requires one per shipped
   program, which is the check that stops either of these reaching a climber half-written.
 
-- **M51 — Decide multi-profile/coach mode.** §9.3 says "decide before schema freeze".
-  The schema is at version 2 and M12 is next. The foundations were laid on purpose:
-  `Program.author`, program-file export and import in the builder, and a comment on
-  `DB_NAME` anticipating one database per profile. Deciding **no** is a fine outcome;
-  deciding after shipping costs a migration.
+- **M51 — Decide multi-profile/coach mode.** *Decided: no. One climber per install.*
+  §feature-9 had already recorded this; §9.3 and this entry had not caught up, so the
+  decision existed twice in the plan with two different answers. Both claims it rested on
+  were re-checked against the code as it now stands and both hold: `DB_NAME` still has
+  exactly one functional use, `openDB(DB_NAME, …)` in `db.ts`, so "one database per
+  profile" really is one line plus a registry; and `hydrateAll()` is still the switch,
+  running at boot and again after an import and an undo.
+  **The reasoning had a hole worth writing down.** The old note said coach mode is a *view
+  someone else's data* problem "not a local-profiles problem", and pointed at import and
+  share. But viewing an athlete's backup means loading it somewhere, and the only somewhere
+  is the coach's own live database, as a replace or a merge. So if coach mode is ever
+  built, **it arrives through local profiles rather than instead of them**: a scratch
+  profile that an athlete's backup opens into, browsed with the whole app working normally
+  and then discarded. The alternative — a read-only mode inside the live database — means
+  gating roughly thirty write call sites and getting every one right, which is more work
+  and more risk for a worse result. Program *sharing* is already built and is untouched by
+  this: `Program.author`, program-file import and export, attribution on the detail page.
+  **One piece is genuinely path-dependent and is not about profiles at all.** The record at
+  `profile/settings` holds `theme`, `themeId`, `textSize` and `cues` — device-level — beside
+  `display` and `units`, which belong to the climber. `profile` is an exportable store, so
+  importing anyone's backup today changes your theme, text size and sound. That is worth
+  fixing before Play whatever happens to profiles, and it is the only part of this that gets
+  harder once real installs exist. Carried as M60.
+  Everything else is additive: a registry and a second database can be built years later
+  without touching an existing install, and the v1→v2 migration already shipped proves the
+  framework works when it is needed.
 
 - **M52 — A catalogue with more than one shape.** *Split into M55-M58 and mostly done.*
   The engine half is finished: a week can be built from the days a climber actually has and
@@ -2019,6 +2042,21 @@ and why.
   and the finder asks how long they have (M57). The authoring half is drafted and unshipped
   (M58). What is left is a coach's reading of two draft programs and a guide for each —
   the one part of this that only the person who writes the training can do.
+
+- **M59 — The deadline a climber just gave the finder.** They tell the finder they have
+  six weeks, it recommends a twelve-week block saying "you would run it over 6", they open
+  it, and the start screen asks the same question again one card down. The answer should
+  arrive with them. Transient on purpose — a trip is not a setting — and visible rather
+  than magic: a length preselected without saying why is a length a climber cannot trust.
+
+- **M60 — Device settings stop travelling in backups.** `profile/settings` holds `theme`,
+  `themeId`, `textSize` and `cues`, which belong to the device, beside `display` and
+  `units`, which belong to the climber. `profile` is exportable, so **importing anyone's
+  backup changes your theme, text size and sound** — and restoring your own onto a new
+  phone in daylight brings back the dark theme you set at night. Found while closing M51,
+  and the one piece of that decision that gets harder after real installs exist. The split
+  is the fix: device settings to device storage, climber settings stay in the backup, and
+  an existing install migrates once from what it already has.
 
 - **M12 — Ship.** TWA packaging + assetlinks, Play internal testing, store listing.
   Last, after M13–M22.
