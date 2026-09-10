@@ -32,7 +32,14 @@ export function isCustomId(id: string): boolean {
 }
 
 export function newProgramId(): ProgramId {
-  return `${CUSTOM_PREFIX}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` as ProgramId;
+  // The timestamp keeps ids roughly sortable and readable in a database
+  // inspector; the random half is what makes them unique. It used to be four
+  // base-36 characters — 36^4, which over two hundred ids made in the same
+  // millisecond collides about 1.2% of the time, and the test that draws two
+  // hundred failed about that often (PLAN.md M44). `randomUUID` is available
+  // everywhere this app runs, and the id is opaque, so there is nothing to
+  // trade off.
+  return `${CUSTOM_PREFIX}${Date.now().toString(36)}-${crypto.randomUUID()}` as ProgramId;
 }
 
 /** A skeleton that is coherent from the first render: one phase, one week. */

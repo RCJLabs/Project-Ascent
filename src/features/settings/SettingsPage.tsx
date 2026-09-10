@@ -32,6 +32,7 @@ import { Chip, SelectableCard } from '@/ui/Chip';
 import { THEMES as PALETTES } from '@/ui/themes';
 import { Input } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
+import { readingProblems } from '@/db/sound';
 
 const GEAR: { value: Equipment; label: string }[] = [
   { value: 'wall', label: 'Climbing wall' },
@@ -74,6 +75,22 @@ interface StorageStatus {
   persisted: boolean | null;
   usage?: number;
   quota?: number;
+}
+
+/**
+ * "1 projects record" is not English (PLAN.md M44). The store names are the
+ * database's, and this is the only place they are shown to a person.
+ */
+const RECORD_NOUN: Record<string, [string, string]> = {
+  sessions: ['session', 'sessions'],
+  projects: ['project', 'projects'],
+  metrics: ['benchmark', 'benchmarks'],
+  programs: ['program', 'programs'],
+};
+
+function count(n: number, store: string): string {
+  const [one, many] = RECORD_NOUN[store] ?? [store, store];
+  return `${n} ${n === 1 ? one : many}`;
 }
 
 export function SettingsPage() {
@@ -441,6 +458,19 @@ export function SettingsPage() {
         <TemplatesCard />
 
         <Card title="Your data">
+          {/* Read-time repairs, said out loud (PLAN.md M44). Records that
+              arrive in a shape the app cannot walk are repaired where that is
+              honest and left out where it is not, and a climber whose list is
+              quietly shorter than it was deserves to know which part of their
+              data it happened to. */}
+          {readingProblems().map(({ store, dropped, repaired }) => (
+            <p key={store} className="text-sm text-warn mb-3">
+              {dropped > 0 && `${count(dropped, store)} could not be read and ${dropped === 1 ? 'was' : 'were'} left out. `}
+              {repaired > 0 &&
+                `${count(repaired, store)} ${repaired === 1 ? 'was' : 'were'} missing part of ${repaired === 1 ? 'its' : 'their'} contents and ${repaired === 1 ? 'was' : 'were'} read without it. `}
+              This usually means a backup from an older version. Importing a newer one replaces them.
+            </p>
+          ))}
           <p className="text-sm text-ink-soft mb-3">
             Everything lives on this device. Export a backup regularly — an offline app has no
             cloud copy to fall back on.

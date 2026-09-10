@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import type { ReactElement } from 'react';
+import { getDb } from '@/db/db';
 import { newProject, putProject } from '@/db/projects';
 import { putMetricEntry } from '@/db/metrics';
 import { newSession, putSession } from '@/db/sessions';
@@ -53,11 +54,9 @@ import { YearPage } from '@/features/career/YearPage';
  * points and a chart with two years of them are different code paths, and
  * so are "no active program" and "mid-week-7".
  *
- * **A third pass belongs here once M44 lands.** Both passes seed well-formed
- * records, and the audit that produced this file found that deleting one
- * field from one project killed `/journal` and `/search` outright while
- * `/projects` carried on. That pass would fail today, which is M44's job to
- * fix and this file's job to keep fixed.
+ * A third pass seeds records the app cannot read, because that is what an
+ * older backup restores and what took `/journal` and `/search` down before
+ * M44 checked shapes at the read boundary.
  */
 
 const PAGES: [string, string, ReactElement][] = [
@@ -128,6 +127,34 @@ async function fill(): Promise<void> {
   }
 }
 
+/**
+ * Records in the shape an older export leaves them.
+ *
+ * Every one still carries its key. That is not a courtesy: each store has a
+ * `keyPath`, so IndexedDB rejects a record without one outright — from
+ * `importAll` exactly as from here. A record missing its *identifier* can
+ * never reach the database; a record missing anything else always can, and
+ * those are the ones the app walked into.
+ */
+async function corrupt(): Promise<void> {
+  const db = await getDb();
+  const project = { ...newProject({ name: 'Missing Its Beta', grade: 'V5', scale: 'V' }), id: 'halfProject' };
+  const { beta: _beta, ...noBeta } = project;
+  await db.put('projects', noBeta as never);
+  // No name: nothing to label it with, so it is dropped rather than shown blank.
+  await db.put('projects', { id: 'noName', grade: 'V4', scale: 'V', createdAt: '2025-01-01' } as never);
+  // A beta note with no date reached the journal as an entry with no date.
+  await db.put('projects', {
+    ...project,
+    id: 'undatedNote',
+    beta: [{ id: 'n', text: 'no date on this one' }],
+  } as never);
+  const { climbs: _climbs, ...noClimbs } = newSession('2025-06-06', 1);
+  await db.put('sessions', noClimbs as never);
+  // A benchmark with no number: nothing to plot.
+  await db.put('metrics', { metricId: 'dead_hang', date: '2025-05-05' } as never);
+}
+
 async function mounts(path: string, element: ReactElement): Promise<void> {
   const view = renderAt(path, element);
   const h1 = await view.findByRole('heading', { level: 1 });
@@ -145,6 +172,15 @@ describe('every page mounts', () => {
   describe('with a couple of years of logs', () => {
     it.each([...PAGES, ...WITH_RECORDS])('%s', async (_name, path, element) => {
       await fill();
+      await hydrate();
+      await mounts(path, element);
+    });
+  });
+
+  describe('with records an older backup left broken', () => {
+    it.each([...PAGES, ...WITH_RECORDS])('%s', async (_name, path, element) => {
+      await fill();
+      await corrupt();
       await hydrate();
       await mounts(path, element);
     });

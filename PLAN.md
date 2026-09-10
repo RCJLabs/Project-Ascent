@@ -1627,15 +1627,43 @@ and why.
   the audit's central finding is that one malformed record kills `/journal` and
   `/search` outright.
 
-- **M44 — A bad record costs one card, not the page.** Deleting one field from one
-  project out of seven killed **`/journal` and `/search` outright** while `/projects`,
-  `/progress` and `/` carried on. M20 states the goal — "a bad record should cost one
-  card" — and `CardBoundary` exists to deliver it; the pages that aggregate across
-  records do not use it. It is reachable through the app's own supported path:
-  `importAll` checks that the file is a Project Ascent backup and that each store is an
-  array, then writes every record verbatim with no shape validation. The boundary's own
-  message blames "a backup restored from an older version", which is precisely what
-  import accepts.
+- **M44 — A bad record costs one card, not the page.** *Done.* Deleting one field from
+  one project out of seven killed **`/journal` and `/search` outright**.
+  **The audit's diagnosis was wrong, and the real one is more interesting.** It read as
+  "those pages do not use `CardBoundary`". They do — both use `PageGrid`, which wraps
+  every child in one. The throw is in a `useMemo` in the page body, *above* the grid: a
+  boundary catches what its children throw while rendering and cannot catch its parent
+  computing what to hand them. So the pages that derive across every record are exactly
+  the ones no card boundary can protect, and adding more boundaries would have fixed
+  nothing.
+  **Checked where the records enter instead.** Every `list*` ended `db.getAll(store) as
+  unknown as Thing[]` — a cast, which is a promise nothing kept. `sound()` takes a
+  declarative shape per store and returns records the app can walk: **a missing list
+  becomes an empty one** (a project with no beta notes is a true statement about that
+  project), **a record missing something unrepairable is left out** (nothing can be
+  addressed without a name to show or a number to plot), and **an element the engines
+  walk into is dropped from its list** — a beta note with no date reached the journal
+  as an entry with no date, which `byMonth` then sliced. One level deep, deliberately:
+  it covers a session's climbs and a project's beta notes, and a recursive validator
+  here would be a schema library, which is a different decision.
+  **Not silent.** A repair nobody is told about is its own kind of data loss: the page
+  renders, the list is one shorter, and there is nothing to notice. `readingProblems()`
+  is counted per store and Settings says which part of the data was short and by how
+  much.
+  **A record cannot be missing its identifier**, which the malformed-record seeding
+  found: every store has a `keyPath`, so IndexedDB rejects such a record outright —
+  from `importAll` exactly as from a test. Anything *else* can be absent, and those are
+  what the app walked into. Import is left alone on purpose: the read boundary covers
+  records already stored, which validating on the way in would not.
+  `mounts.test.tsx` gained the third pass M43 promised — all 34 pages, now mounted
+  empty, full, and against records an older backup left broken. Five mutations, five
+  killed.
+  **Also fixed, found by the suite rather than looked for:** `newProgramId` was a
+  timestamp plus **four** base-36 characters. Two hundred ids made inside one
+  millisecond collide about 1.2% of the time, which is how often the test that draws
+  two hundred was failing. The id is opaque and `randomUUID` is available everywhere
+  this app runs, so there was nothing to trade off. Second flake fixed this pass; the
+  first was the ACWR ratio in M41.
 
 - **M45 — The app assumes an active program and hides itself without one.** With 1,600
   sessions logged, `/calendar` renders "No active program yet… your sessions will

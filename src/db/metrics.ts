@@ -19,6 +19,7 @@
 
 import type { MetricId } from '@/content/types';
 import { getDb } from './db';
+import { recordReading, sound, type Shape } from './sound';
 
 export interface MetricEntry {
   metricId: MetricId;
@@ -29,10 +30,16 @@ export interface MetricEntry {
   note?: string;
 }
 
+/** A benchmark is its metric, its day and its number; charts plot all three. */
+const METRIC_SHAPE: Shape = {
+  needs: { metricId: 'string', date: 'string', value: 'number' },
+};
+
 export async function listMetricEntries(): Promise<MetricEntry[]> {
   const db = await getDb();
-  const rows = (await db.getAll('metrics')) as unknown as MetricEntry[];
-  return rows.sort((a, b) => (a.date < b.date ? -1 : 1));
+  const reading = sound<MetricEntry>(await db.getAll('metrics'), METRIC_SHAPE);
+  recordReading('metrics', reading);
+  return reading.rows.sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
 export async function putMetricEntry(entry: MetricEntry): Promise<MetricEntry> {

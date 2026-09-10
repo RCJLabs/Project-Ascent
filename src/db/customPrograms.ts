@@ -6,11 +6,24 @@
 
 import type { Program, ProgramId } from '@/content/types';
 import { getDb } from './db';
+import { recordReading, sound, type Shape } from './sound';
+
+/**
+ * A custom program is walked by the plan engine, the logger and the guides.
+ * `phases` and `sessionTypes` are iterated on the program page before
+ * anything is rendered, so an absent one is not a missing card, it is a
+ * page. Their contents are validated by `parseProgramFile` on the way in.
+ */
+const PROGRAM_SHAPE: Shape = {
+  needs: { id: 'string', name: 'string', weeks: 'number' },
+  lists: { phases: { id: 'string', name: 'string' }, sessionTypes: { id: 'string', name: 'string' } },
+};
 
 export async function listCustomPrograms(): Promise<Program[]> {
   const db = await getDb();
-  const rows = (await db.getAll('programs')) as unknown as Program[];
-  return rows.sort((a, b) => a.name.localeCompare(b.name));
+  const reading = sound<Program>(await db.getAll('programs'), PROGRAM_SHAPE);
+  recordReading('programs', reading);
+  return reading.rows.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function putCustomProgram(program: Program): Promise<Program> {

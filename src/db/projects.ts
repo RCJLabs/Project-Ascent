@@ -13,6 +13,7 @@
 
 import type { GradeScale } from '@/engine/grades';
 import { getDb } from './db';
+import { recordReading, sound, type Shape } from './sound';
 
 export type ProjectStatus = 'active' | 'sent' | 'shelved';
 
@@ -68,10 +69,22 @@ export function newProject(patch: Partial<Project> & Pick<Project, 'name' | 'gra
   };
 }
 
+/**
+ * `beta` is the one that took two pages down (M44): the journal iterates it
+ * and reads each note's `date` straight into an entry, which `byMonth` then
+ * slices. A note without a date is worse than a missing note, because it
+ * reaches further before it fails.
+ */
+const PROJECT_SHAPE: Shape = {
+  needs: { id: 'string', name: 'string', grade: 'string', scale: 'string', createdAt: 'string' },
+  lists: { beta: { id: 'string', date: 'string', text: 'string' } },
+};
+
 export async function listProjects(): Promise<Project[]> {
   const db = await getDb();
-  const rows = (await db.getAll('projects')) as unknown as Project[];
-  return rows.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  const reading = sound<Project>(await db.getAll('projects'), PROJECT_SHAPE);
+  recordReading('projects', reading);
+  return reading.rows.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
 export async function putProject(project: Project): Promise<Project> {

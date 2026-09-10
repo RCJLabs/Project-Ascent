@@ -11,6 +11,7 @@ import type { GradeScale } from '@/engine/grades';
 import type { AttemptOutcome } from './projects';
 import { getDb } from './db';
 import { isDateKey } from '@/engine/dates';
+import { recordReading, sound, type Shape } from './sound';
 
 export type SessionMode = 'indoor' | 'outdoor';
 export type ClimbResult = 'send' | 'attempt';
@@ -118,12 +119,29 @@ export function newSession(date: string, index: number, patch: Partial<Session> 
   };
 }
 
+/**
+ * What every reader of a session dereferences without checking (M44).
+ *
+ * `id` and `date` are the record's identity — a session without them cannot
+ * be opened, edited or placed on a calendar. `climbs` is walked by the XP
+ * pipeline, the grade pyramid, the altimeter and the journal, and a grade
+ * with no scale is compared against the wrong ladder rather than failing.
+ */
+const SESSION_SHAPE: Shape = {
+  needs: { id: 'string', date: 'string' },
+  lists: { climbs: { id: 'string', grade: 'string', scale: 'string' } },
+};
+
 export async function listSessions(from?: string, to?: string): Promise<Session[]> {
   const db = await getDb();
   const range =
     from && to ? IDBKeyRange.bound(from, to) : from ? IDBKeyRange.lowerBound(from) : undefined;
-  const rows = (await db.getAllFromIndex('sessions', 'by-date', range)) as unknown as Session[];
-  return rows.sort((a, b) => (a.id < b.id ? -1 : 1));
+  const reading = sound<Session>(
+    await db.getAllFromIndex('sessions', 'by-date', range),
+    SESSION_SHAPE,
+  );
+  recordReading('sessions', reading);
+  return reading.rows.sort((a, b) => (a.id < b.id ? -1 : 1));
 }
 
 export async function getSession(id: string): Promise<Session | undefined> {
