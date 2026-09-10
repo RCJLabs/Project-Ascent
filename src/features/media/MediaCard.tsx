@@ -9,6 +9,7 @@ import { SelectableCard } from '@/ui/Chip';
 import { Input } from '@/ui/Field';
 import { IconButton } from '@/ui/IconButton';
 import { Card } from '@/ui/Card';
+import { useDialog } from '@/ui/useDialog';
 
 /**
  * Photos on something. Projects have had them; sessions get them in M30.
@@ -89,6 +90,9 @@ export function MediaCard({
   const bytes = items.reduce((n, i) => n + i.blob.size, 0);
   const full = items.length >= MAX_PER_OWNER;
   const open = viewing ? items.find((i) => i.id === viewing) : undefined;
+  // This card stays mounted and renders the viewer conditionally, so the
+  // trap has to be told when there is a dialog to trap.
+  const viewer = useDialog<HTMLDivElement>(() => setViewing(null), open !== undefined);
 
   return (
     <Card title={title}>
@@ -135,9 +139,12 @@ export function MediaCard({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 flex flex-col p-4"
+          ref={viewer}
+          tabIndex={-1}
+          className="fixed inset-0 z-50 bg-black/80 flex flex-col p-4 outline-none"
           role="dialog"
-          aria-label="Photo"
+          aria-modal="true"
+          aria-label={open.caption ? `Photo: ${open.caption}` : 'Photo'}
         >
           <IconButton
             inline={false}

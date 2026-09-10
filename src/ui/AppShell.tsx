@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { CalendarDays, Dumbbell, Mountain, Search, Target, TrendingUp } from 'lucide-react';
 import { Announcer } from './Announce';
@@ -45,6 +45,34 @@ function isActive(href: string, location: string): boolean {
 export function AppShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const banner = useLiveBanner();
+  const mainRef = useRef<HTMLElement>(null);
+  const navigated = useRef(false);
+
+  /**
+   * Move focus into the content when the route changes (PLAN.md M14).
+   *
+   * Nothing did, and the consequence was measurable rather than theoretical:
+   * pressing Enter on "Start session" left `document.activeElement` as
+   * `<body>`, because the control that was focused had just unmounted. A
+   * keyboard user arrives on the new page with focus nowhere, has to Tab
+   * from the top of the document past the whole nav to reach what they
+   * navigated to, and a screen reader says nothing about having arrived.
+   *
+   * Focusing the `<main>` landmark is what assistive technology expects
+   * here, and the page's own `h1` is the first thing inside it — which is
+   * why nothing is announced on top. Synthesising a "now on Progress" would
+   * make every navigation say the page name twice.
+   *
+   * Not on the first render: the app has not navigated anywhere yet, and
+   * stealing focus on load is its own bug.
+   */
+  useEffect(() => {
+    if (!navigated.current) {
+      navigated.current = true;
+      return;
+    }
+    mainRef.current?.focus();
+  }, [location]);
   // Only a running session holds an update back. A stale one is already over
   // — it is waiting for a decision, not counting — and reloading costs it
   // nothing, because its clock is derived from what is stored.
@@ -136,6 +164,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           something unfocusable moves the scroll and leaves focus behind. */}
       <main
         id="main"
+        ref={mainRef}
         tabIndex={-1}
         className={`flex-1 min-w-0 px-4 pt-6 outline-none lg:px-8 lg:pb-12 ${
           banner ? 'pb-36' : 'pb-24'

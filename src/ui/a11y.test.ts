@@ -52,6 +52,78 @@ describe('the shell', () => {
   it('names its landmark', () => {
     expect(shell).toMatch(/<nav\s+aria-label="Main"/);
   });
+
+  it('moves focus into the content when the route changes', () => {
+    // Measured before this: pressing Enter on "Start session" left
+    // `document.activeElement` as `<body>`, because the control that was
+    // focused had just unmounted. The next Tab started at the top of the
+    // document, and a reader said nothing about having arrived.
+    expect(shell).toMatch(/<main[^>]*ref=\{mainRef\}/s);
+    expect(shell).toContain('mainRef.current?.focus()');
+    expect(shell).toMatch(/\}, \[location\]\)/);
+  });
+
+  it('does not steal focus on the first render', () => {
+    // The app has not navigated anywhere yet, and taking focus on load is
+    // its own bug.
+    expect(shell).toContain('navigated.current');
+  });
+});
+
+/**
+ * A dialog you can Tab out of is not a dialog.
+ *
+ * The app had three — the protocol timer, the share sheet and the photo
+ * viewer — and between them one Escape handler, one `aria-modal` and no
+ * focus management at all. `useDialog` is the one mechanism; these check
+ * every dialog uses it rather than growing its own half.
+ */
+describe('modal dialogs', () => {
+  const dialogs = FILES.filter(({ source }) => /role="dialog"/.test(source));
+
+  it('finds the dialogs to check', () => {
+    expect(dialogs.map((d) => d.path).sort()).toEqual([
+      'src/features/media/MediaCard.tsx',
+      'src/features/share/ShareSheet.tsx',
+      'src/ui/TimerSheet.tsx',
+    ]);
+  });
+
+  it('traps focus, closes on Escape and hands focus back', () => {
+    // All four behaviours live in one hook, so calling it is the check —
+    // and it has to be the call, not the import. Swapping the call for a
+    // plain `useRef` and leaving the import behind passed the first version
+    // of this test.
+    const without = dialogs
+      .filter(({ source }) => !/useDialog\s*[<(]/.test(source.replace(/^import .*$/gm, '')))
+      .map((d) => d.path);
+    expect(without).toEqual([]);
+  });
+
+  it('hides the page behind it from a screen reader', () => {
+    const without = dialogs
+      .filter(({ source }) => !/role="dialog"[\s\S]{0,200}aria-modal="true"|aria-modal="true"[\s\S]{0,200}role="dialog"/.test(source))
+      .map((d) => d.path);
+    expect(without).toEqual([]);
+  });
+
+  it('gives the container something to focus', () => {
+    // `useDialog` focuses the container rather than the first control, so a
+    // reader lands on the dialog's own label instead of mid-way through it.
+    // A div is not focusable without this.
+    const without = dialogs
+      .filter(({ source }) => !/tabIndex=\{-1\}[\s\S]{0,300}role="dialog"|role="dialog"[\s\S]{0,300}tabIndex=\{-1\}/.test(source))
+      .map((d) => d.path);
+    expect(without).toEqual([]);
+  });
+
+  it('registers nothing while there is no dialog on screen', () => {
+    // The photo card stays mounted and renders its viewer conditionally.
+    // Without the `open` argument the trap would swallow every Escape on
+    // every session page, with nothing to close.
+    const media = read('src/features/media/MediaCard.tsx');
+    expect(media).toMatch(/useDialog<[\s\S]{0,80}open !== undefined\)/);
+  });
 });
 
 describe('live regions', () => {

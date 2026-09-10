@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useDialog } from '@/ui/useDialog';
 import { Download, Share2, X } from 'lucide-react';
 import { useSettings } from '@/store/settings';
 import { Button } from '@/ui/Button';
@@ -35,14 +36,8 @@ export function ShareSheet({
   const [message, setMessage] = useState<string | null>(null);
 
   const svg = buildCardSvg(content, dark ? DARK_CARD : LIGHT_CARD);
+  const sheet = useDialog<HTMLDivElement>(onClose);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
 
   async function run(save: boolean) {
     setBusy(true);
@@ -69,7 +64,9 @@ export function ShareSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-4"
+      ref={sheet}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-4 outline-none"
       role="dialog"
       aria-modal="true"
       aria-label="Share card"

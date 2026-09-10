@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useDialog } from './useDialog';
 import { Pause, Play, RotateCcw, SkipForward, Volume2, VolumeX, X } from 'lucide-react';
 import { announce } from './Announce';
 import { IconButton } from './IconButton';
@@ -164,6 +165,10 @@ export function TimerSheet({
     setElapsed(target);
   }, [plan, pos.index, running]);
 
+  // Escape here does what the X does, including discarding a running
+  // protocol — see `useDialog`.
+  const sheet = useDialog<HTMLDivElement>(onClose);
+
   const segment = pos.segment;
   const kind: SegmentKind = segment?.kind ?? 'prepare';
   const label =
@@ -172,7 +177,14 @@ export function TimerSheet({
   const circumference = 2 * Math.PI * 46;
 
   return (
-    <div className="fixed inset-0 z-50 bg-bg flex flex-col" role="dialog" aria-label={`${protocol.name} timer`}>
+    <div
+      ref={sheet}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 bg-bg flex flex-col outline-none"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${protocol.name} timer`}
+    >
       <div className="flex items-center justify-between px-4 py-3 border-b border-line">
         <div className="min-w-0">
           <div className="font-bold truncate">{protocol.name}</div>

@@ -658,12 +658,40 @@ a small diff instead of ninety-five separate edits.
   Button, IconButton, Chip, Field/Input/Select/TextArea, EmptyState, Stat — give each
   one a focus ring and a real hit target, and convert the raw ones. *Done when: no
   feature file styles a bare button or repeats the input class string.*
-- **M14 — Accessibility.** Live regions for what changes without a navigation (XP
-  awards, timer state, saves, board completion). A visible focus ring on everything
-  interactive. `aria-current` on the nav. Heading levels that do not skip. Reduced
-  motion honoured by the progress bars, the transitions and the Ascent's rAF loop.
-  Labels on the hand-built SVG charts. *Done when: a full session can be logged with
-  a keyboard and a screen reader.*
+- **M14 — Accessibility.** *Done.* Live regions, focus rings, `aria-current`,
+  heading levels, reduced motion and chart alternatives were all built alongside M13
+  and M15; what was left was the milestone's actual gate — *a full session logged
+  with a keyboard and a screen reader* — and testing it found two real defects that
+  no amount of source review had.
+  **Focus was dropped on every route change.** Measured, not inferred: pressing Enter
+  on "Start session" left `document.activeElement` as `<body>`, because the control
+  that had focus unmounted with the page. A keyboard user arrives with focus nowhere,
+  Tabs from the top of the document past the whole nav to reach what they navigated
+  to, and a reader says nothing about having arrived. The shell now moves focus to
+  the `<main>` landmark on a route change — and not on the first render, because the
+  app has not navigated anywhere yet and taking focus on load is its own bug. Nothing
+  is announced on top of it: the page's `h1` is the first thing inside `main`, and
+  synthesising "now on Progress" would make every navigation say the name twice.
+  **All three dialogs were pictures of dialogs.** The protocol timer, the share sheet
+  and the photo viewer had one Escape handler, one `aria-modal` and no focus
+  management between them: opening the timer left focus on the button behind it, Tab
+  walked straight out of a full-screen sheet into the page underneath, and closing
+  left focus wherever it had wandered. `useDialog` is one mechanism for all three —
+  focus in to the container (not the first control, which skips the dialog's own
+  label), Tab trapped with wrapping at both ends, Escape doing exactly what the close
+  button does, and focus handed back to whatever opened it. Verified in a browser on
+  each of the three: focus in, trapped, Escape closes, focus returns to the opener.
+  It takes an `open` flag, because the photo card stays mounted and renders its
+  viewer conditionally — without it the trap registered a document-level Escape
+  handler on every session page with nothing to close, which is a bug this milestone
+  introduced and caught in the same hour.
+  *Done when* met, by driving it: navigate, start the session, pick a grade, pick an
+  outcome, add the climb, set RPE, tick the warmup, mark complete — Tab and Enter
+  only, every stop named and ringed, `aria-pressed` correct on every chip, and the
+  live region reading "First V4. Your hardest boulder so far… 1,588 XP earned."
+  Six mutations, six killed — the last only after the first version of the
+  hook-usage check passed on a dialog that had swapped the call for a `useRef` and
+  kept the import.
 - **M15 — Themes worth having.** *Done.* Three AA failures, not two — `positive`
   was also below the bar at 3.74:1 on sunken. All fixed, and `validate_palette.js`
   turned out not to exist: the claim in index.css that the palette was "validated for
