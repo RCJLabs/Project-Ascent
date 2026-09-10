@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { PROGRAMS } from '../programs';
 import { guideFor } from './index';
@@ -99,80 +100,102 @@ describe('a program guide and its program', () => {
  *
  * `deloadWeeks` is what the app acts on: the calendar marks the week, the
  * session carries a `deload` flag, and the training-state card uses it to
- * explain a dip in load rather than call it detraining. A guide that names a
- * different week is not a typo — it is the written plan and the scheduled
- * plan disagreeing about the week you are supposed to back off.
+ * explain a dip in load rather than call it detraining.
  *
- * Eight of the nine program guides disagree with their program. Two of them
- * contradict it outright rather than merely under-documenting it.
+ * **A guide can no longer state one.** Eight of the nine used to write
+ * "DELOAD" into a week row by hand and eight of the nine disagreed with
+ * their program — two outright, one describing a deload week the program did
+ * not have at all. `GuideBody` now derives the mark from the program, so the
+ * only thing left to check is that the guide's own prose has not drifted
+ * back into contradicting it (PLAN.md M34).
  */
-const DELOAD_DISAGREEMENTS: Record<string, { guide: number[]; program: number[]; note: string }> = {
-  ground_zero: {
-    guide: [8],
-    program: [],
-    note: 'Guide: "The Week 8 Deload — reduce all sets to 2". The program marks no deload at all, so the app never says so.',
-  },
-  gravity_defied: { guide: [8], program: [4, 8], note: 'The week 4 deload is scheduled but undocumented.' },
-  lockdown: {
-    guide: [],
-    program: [8],
-    note: 'The guide prose calls week 4 and week 8 deloads; only week 8 is scheduled, and no week table labels either.',
-  },
-  iron_grip: { guide: [], program: [4, 8], note: 'The guide never mentions a deload; the program schedules two.' },
-  the_long_game: { guide: [4], program: [4, 8, 11], note: 'Week 8 is prose-only and week 11 is undocumented.' },
-  peak_performance: {
-    guide: [5, 9, 12],
-    program: [4, 8, 9],
-    note: 'A direct contradiction: the guide table calls week 5 "DELOAD 1" and the program schedules week 4; the program also deloads week 8, which the guide does not.',
-  },
-  the_siege: {
-    guide: [4, 8],
-    program: [4, 11],
-    note: 'A direct contradiction: the guide table labels week 8, the program schedules week 11.',
-  },
-  the_cruiser: { guide: [4], program: [4, 8, 12], note: 'Weeks 8 and 12 are scheduled but undocumented.' },
-};
+/**
+ * A cell *labels* a week a deload, rather than using the word in a sentence.
+ *
+ * Peak Performance's week 12 reads "Deload volume. All energy toward
+ * project." — a SEND week that tapers, not a deload week. Matching the bare
+ * word flagged it, which would have made the check demand a program change
+ * that would have been wrong.
+ */
+const claimsDeload = (cell: string): boolean =>
+  /\bDELOAD\b/.test(cell) || /\bDeload\b(?!\s+[a-z])/.test(cell);
 
 describe('which weeks are deloads', () => {
   const labelled = (guide: Guide): number[] => {
     const weeks = new Set<number>();
     for (const table of tables(guide)) {
       for (const row of table.rows) {
-        const week = Number(/^(\d+)/.exec(row[0]?.trim() ?? '')?.[1]);
+        // Same rule the renderer uses: a single week, never a range.
+        const week = Number(/^(\d+)(?!\s*[–—-]\s*\d)/.exec(row[0]?.trim() ?? '')?.[1]);
         if (!Number.isFinite(week)) continue;
-        if (row.some((cell) => /deload/i.test(cell))) weeks.add(week);
+        if (row.some(claimsDeload)) weeks.add(week);
       }
     }
     return [...weeks].sort((a, b) => a - b);
   };
 
-  it('agrees, or is on the list of known disagreements', () => {
-    const surprises: string[] = [];
+  it('is never a week the program does not schedule', () => {
+    // The guide may still *name* a deload phase in a phase column — Peak
+    // Performance's weeks really are called "Deload 1" and "Deload 2". It
+    // may not name one on a week the app treats as ordinary.
+    const wrong: string[] = [];
     for (const { program, guide } of PAIRS) {
-      const fromGuide = labelled(guide);
-      const scheduled = [...(program.deloadWeeks ?? [])].sort((a, b) => a - b);
-      const known = DELOAD_DISAGREEMENTS[program.id];
-      if (known === undefined) {
-        if (fromGuide.join() !== scheduled.join()) {
-          surprises.push(`${program.id}: guide [${fromGuide}] vs program [${scheduled}] — new, and not on the list`);
+      const scheduled = new Set(program.deloadWeeks ?? []);
+      for (const week of labelled(guide)) {
+        if (!scheduled.has(week)) {
+          wrong.push(`${program.id}: guide calls week ${week} a deload; program schedules [${[...scheduled].join(',')}]`);
         }
-        continue;
-      }
-      // A listed disagreement has to still be the one that was listed.
-      if (fromGuide.join() !== known.guide.join() || scheduled.join() !== known.program.join()) {
-        surprises.push(
-          `${program.id}: listed as guide [${known.guide}] vs program [${known.program}], now guide [${fromGuide}] vs program [${scheduled}] — update or remove the entry`,
-        );
       }
     }
-    expect(surprises).toEqual([]);
+    expect(wrong).toEqual([]);
   });
 
-  it('still has exactly one guide that agrees with its program', () => {
-    // Base Camp. When a second one is fixed, this number moves and the
-    // entry above comes off the list.
-    const agreeing = PAIRS.filter(({ program }) => DELOAD_DISAGREEMENTS[program.id] === undefined);
-    expect(agreeing.map((p) => p.program.id).sort()).toEqual(['base_camp', 'outdoor_climbing']);
+  /** Weeks a guide's own week tables have a row for. */
+  const weekRows = (guide: Guide): Set<number> => {
+    const weeks = new Set<number>();
+    for (const table of tables(guide)) {
+      if (!/^weeks?$/i.test((table.head[0] ?? '').trim())) continue;
+      for (const row of table.rows) {
+        const match = /^(\d+)(?!\s*[–—-]\s*\d)/.exec(row[0]?.trim() ?? '');
+        if (match !== null) weeks.add(Number(match[1]));
+      }
+    }
+    return weeks;
+  };
+
+  /**
+   * Deload weeks the guide has no row for, so the derived mark has nowhere
+   * to land and the reader is never told.
+   *
+   * The mechanism closes the gap for six of the nine. These three need a
+   * week table written, which is authoring rather than plumbing: Lockdown
+   * and Iron Grip have no week-by-week table at all, and The Long Game and
+   * The Cruiser stop theirs partway through the block.
+   */
+  const NO_ROW_TO_MARK: Record<string, number[]> = {
+    lockdown: [4, 8],
+    iron_grip: [4, 8],
+    the_long_game: [8],
+    the_cruiser: [8, 12],
+  };
+
+  it('reaches the reader wherever the guide has a week to put it on', () => {
+    const gaps: Record<string, number[]> = {};
+    for (const { program, guide } of PAIRS) {
+      const rows = weekRows(guide);
+      const missing = (program.deloadWeeks ?? []).filter((week) => !rows.has(week));
+      if (missing.length > 0) gaps[program.id] = missing;
+    }
+    expect(gaps).toEqual(NO_ROW_TO_MARK);
+  });
+
+  it('is rendered from the program rather than authored', () => {
+    const body = readFileSync('src/features/guides/GuideBody.tsx', 'utf8');
+    expect(body).toContain('deloadWeeks');
+    // The rules themselves live in `weekMarks.ts`, where they can be tested.
+    expect(body).toMatch(/marksDeload\(block\.head, row, deloadWeeks\)/);
+    const page = readFileSync('src/features/guides/GuidePage.tsx', 'utf8');
+    expect(page).toMatch(/deloadWeeks: program\.deloadWeeks/);
   });
 });
 

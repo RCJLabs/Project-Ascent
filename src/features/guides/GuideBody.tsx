@@ -1,6 +1,7 @@
 import { Quote, ShieldAlert } from 'lucide-react';
 import type { GuideBlock } from '@/content/guides';
 import { Rich } from '@/ui/Rich';
+import { marksDeload } from './weekMarks';
 import { Term } from '@/ui/Term';
 
 /**
@@ -11,7 +12,22 @@ import { Term } from '@/ui/Term';
  * reflowed into cards: a table in these guides is usually week-by-week
  * progression, where reading across the row is the whole point.
  */
-export function Block({ block }: { block: GuideBlock }) {
+export function Block({
+  block,
+  deloadWeeks,
+}: {
+  block: GuideBlock;
+  /**
+   * The program's own deload weeks, for a program guide (PLAN.md M34).
+   *
+   * The mark is **derived, never authored**. Eight of the nine program
+   * guides used to write "DELOAD" into a week row by hand, and eight of the
+   * nine disagreed with the program the app actually schedules from — two of
+   * them outright, one describing a deload week the program does not have at
+   * all. A guide cannot contradict a program it does not state.
+   */
+  deloadWeeks?: readonly number[];
+}) {
   switch (block.kind) {
     case 'h':
       return <h3 className="font-bold mt-4 first:mt-0 mb-1.5">{block.text}</h3>;
@@ -128,7 +144,9 @@ export function Block({ block }: { block: GuideBlock }) {
               </tr>
             </thead>
             <tbody>
-              {block.rows.map((row, i) => (
+              {block.rows.map((row, i) => {
+                const deload = marksDeload(block.head, row, deloadWeeks);
+                return (
                 <tr key={i}>
                   {row.map((cell, j) =>
                     // A blank corner header means the first column labels the
@@ -140,6 +158,7 @@ export function Block({ block }: { block: GuideBlock }) {
                         className="text-left font-bold border-b border-line py-2 pr-3 align-top leading-relaxed min-w-[4.75rem]"
                       >
                         <Rich text={cell} />
+                        {deload && <DeloadMark />}
                       </th>
                     ) : (
                       <td
@@ -147,11 +166,13 @@ export function Block({ block }: { block: GuideBlock }) {
                         className="border-b border-line py-2 pr-3 last:pr-0 align-top leading-relaxed text-ink-soft min-w-[4.75rem]"
                       >
                         <Rich text={cell} />
+                        {j === 0 && deload && <DeloadMark />}
                       </td>
                     ),
                   )}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -178,5 +199,14 @@ function ExerciseLine({ line }: { line: string }) {
         <Rich text={line.slice(colon)} />
       </span>
     </>
+  );
+}
+
+/** Text, not colour — the same rule the rest of the app follows (M15). */
+function DeloadMark() {
+  return (
+    <span className="block text-2xs font-bold uppercase tracking-wide text-accent mt-0.5">
+      Deload
+    </span>
   );
 }

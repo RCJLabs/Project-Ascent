@@ -1249,6 +1249,83 @@ about ten lines and would have caught all three; it belongs with the first of th
   horizontal overflow, and the two outdoor-run achievements correctly withheld from a
   fixture whose rock days were every *other* day.
 
+### Second audit, third pass — M33–M42
+
+Found by auditing the app *and* the eleven programs as training content. The
+programs had never been audited as training before; the finder had never been swept
+across its input space.
+
+- **M33 — Periodisation that is more than prose.** The Long Game prescribes
+  *identical* strength work in weeks 1–8: Pull, Push, Core and Armor all carry the
+  same sets, reps and load in phase 1 and phase 2. Only the rationales differ, so a
+  climber entering "The Engine" does exactly what they did in "The Base". Audit every
+  program for a phase boundary that changes nothing, and make the progression real.
+
+- **M34 — One source of truth for the deloads.** *Done.* Eight of nine program guides
+  disagreed with their program about which weeks are deloads.
+  **The four contradictions were settled and in every one the guide was right.** Peak
+  Performance's `[4, 8, 9]` — phase-end deloads apparently added on top of an existing
+  week 9, which put two deload weeks **back to back** — is now `[5, 9]`, the two
+  windows its guide has always described. The Siege's week 11 becomes week 8, whose
+  guide row is explicitly a half-volume week where week 11's is a refining week with
+  no backing off in it. Ground Zero gains the week 8 deload its guide describes in
+  detail and its own prescription table already halves the sets for. Lockdown gains
+  week 4, which its guide calls non-negotiable and which matches Gravity Defied and
+  Iron Grip.
+  **A guide can no longer state a deload at all.** `GuideBody` derives the mark from
+  the program, so the two can no longer drift: what the calendar marks and what the
+  guide prints come from one list. That also closes the *other* half — four programs
+  schedule deloads their guide never wrote down, and The Long Game's week 11 now says
+  so for the first time.
+  **Three rules, each got wrong once, and none of the mistakes showed up in a passing
+  suite.** A table is a week table only if its header says so — guessing from the
+  cells marked a *4x4 interval* row as week 4, because "4x4 Intervals" starts with a
+  digit, and these guides also head numeric columns with Step, Level, RPE, Attempt,
+  Metric, Protocol, Limiter and Position. A range is not a week — and `10–11` came
+  back as week 1 through regex backtracking, which is what the `(?!\d)` in `weekOf`
+  is for. And a row that already carries the label does not get the mark on top, or
+  Peak Performance's week 5 reads "5 DELOAD | DELOAD 1".
+  The rules live in `weekMarks.ts` rather than in the component, because that is the
+  difference between finding those three in a browser and finding them in a test.
+  Five mutations, five killed. **Still open:** Lockdown and Iron Grip have no
+  week-by-week table at all and The Long Game and The Cruiser stop theirs partway, so
+  seven scheduled deload weeks have no row to be marked on — named in
+  `accuracy.test.ts`, and authoring rather than plumbing.
+
+- **M35 — Entry standards as data.** Six programs print an entry-requirements table
+  the app cannot check. `Program.prerequisites` exists so a standard is "checkable
+  against the user's own data instead of living in prose the app can't read"; for
+  Ground Zero, Base Camp, Gravity Defied, Iron Grip, The Long Game and The Cruiser it
+  is exactly that prose.
+
+- **M36 — The climber with a wall and nothing else.** Nine of nine programs blocked:
+  every structured program needs a weights gym or a hangboard. A wall is the one thing
+  every climber has, and the app's answer to them is open logging.
+
+- **M37 — Optional equipment.** The Cruiser has an optional hangboard module and no
+  way to say so: declaring `hangboard` wrongly excludes climbers without one, not
+  declaring it makes the module invisible to the finder.
+
+- **M38 — The finder's scoring is not monotonic.** A V8 boulderer wanting strength
+  gets Peak Performance at two days a week (40) and at four or more (70) — but at
+  **three days** The Cruiser wins at 50 and they are handed maintenance. Three days a
+  week is the most common training week there is.
+
+- **M39 — The finger-strength hole (M9, carried).** With a hangboard and no campus
+  board, Iron Grip is blocked from V6 up and the fallback is maintenance again.
+
+- **M40 — Split the bundle.** The entry chunk is 894.6 KiB against its own 900 KiB
+  limit — 0.6% of headroom — and first load is 282.9 KiB gzipped against 300 KiB.
+  Only 6 of 40 routes are split and 12,166 lines of content ship in the entry chunk.
+  The next feature breaks a budget.
+
+- **M41 — One shape for a missing record.** Four "not found" routes behave three
+  ways: `/projects/<gone>` and `/assessments/<gone>` say so with **no `h1`**, while
+  `/objectives/<gone>` and `/guides/<gone>` silently render the index instead.
+
+- **M42 — Validate route parameters.** `/log/<malformed>` renders a page whose
+  heading is literally "Invalid Date".
+
 - **M12 — Ship.** TWA packaging + assetlinks, Play internal testing, store listing.
   Last, after M13–M22.
 

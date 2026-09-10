@@ -415,7 +415,9 @@ export const LOCKDOWN: Program = {
     },
   ],
 
-  deloadWeeks: [8],
+  // Week 4 was missing, against a guide that calls both non-negotiable —
+  // and against Gravity Defied and Iron Grip, which deload at 4 and 8 too.
+  deloadWeeks: [4, 8],
 
   frequency: '4-5 sessions/week. Session A and B should not be on consecutive days.',
   ordering:

@@ -126,7 +126,11 @@ export function GuidePage({ params }: { params: { id: string } }) {
               {isOpen && (
                 <div className="px-4 pb-4 border-t border-line pt-3">
                   {section.content.map((block, i) => (
-                    <Block key={i} block={block} />
+                    <Block
+                      key={i}
+                      block={block}
+                      {...(program?.deloadWeeks ? { deloadWeeks: program.deloadWeeks } : {})}
+                    />
                   ))}
                 </div>
               )}

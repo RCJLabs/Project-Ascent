@@ -4,9 +4,14 @@
  * The largest program in the catalog: three drill-driven session types
  * (limit bouldering, technique, projecting) plus a fingerboard day. Its
  * deload placement is the reason `deloadWeeks` is an explicit list rather
- * than a repeating cycle — week 4 and week 8 close their phases, and week 9
- * is a second taper the program calls non-negotiable because tendons adapt
- * on a slower clock than muscle.
+ * than a repeating cycle: the two windows open the Intensify and Peak
+ * phases rather than closing the ones before them, because a deload is the
+ * first week of the harder thing rather than the last week of the easier
+ * one.
+ *
+ * It used to read `[4, 8, 9]` — phase-end deloads apparently added on top of
+ * an existing week 9, which put **two deload weeks back to back** and
+ * disagreed with this program's own guide (PLAN.md M34).
  */
 
 import type { Program } from '../types';
@@ -339,7 +344,7 @@ export const PEAK_PERFORMANCE: Program = {
     },
   ],
 
-  deloadWeeks: [4, 8, 9],
+  deloadWeeks: [5, 9],
 
   frequency: '4 days/week. Hard/Easy alternation is mandatory at this level.',
   ordering:

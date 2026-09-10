@@ -357,6 +357,10 @@ export const GROUND_ZERO: Program = {
     },
   ],
 
+  // The guide has always described "The Week 8 Deload — reduce all sets to
+  // 2", and the prescription table already halves the sets there. The
+  // program simply never declared it, so the app never marked the week.
+  deloadWeeks: [8],
   frequency: '3-4 sessions/week + rest days as needed',
   ordering:
     'Alternate Structural Integrity and Mobility/Core days. Never do two Structural days back-to-back.',

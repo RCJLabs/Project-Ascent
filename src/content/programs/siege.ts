@@ -303,7 +303,10 @@ export const THE_SIEGE: Program = {
     },
   ],
 
-  deloadWeeks: [4, 11],
+  // Both close a phase. Week 11 used to stand here in place of week 8,
+  // against a guide whose week 8 is explicitly a half-volume week and whose
+  // week 11 is a refining week with no backing off in it (PLAN.md M34).
+  deloadWeeks: [4, 8],
 
   frequency: '4 sessions/week. Hard/Easy alternation is mandatory.',
   ordering:
