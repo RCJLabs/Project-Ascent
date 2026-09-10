@@ -161,7 +161,7 @@ export const PEAK_PERFORMANCE: Guide = {
           group: 'A',
           name: 'PUSH',
           items: [
-            'Push-Ups or DB Press: 3×12.',
+            'Push-Ups or DB Press: 3×12 → 4×12 in Intensify, 2–3×12 in Peak & Send.',
           ],
         },
         {
@@ -188,9 +188,9 @@ export const PEAK_PERFORMANCE: Guide = {
           group: 'D',
           name: 'CORE — THE PILLAR',
           items: [
-            'Hollow Body: 3×20–30s',
-            'L-Sits: 3×10–15s',
-            'Front Lever Progressions: 3×5–8s',
+            'Hollow Body: 3×20–30s → 3×30–40s from Intensify',
+            'L-Sits: 3×10–15s → 3×15–20s from Intensify',
+            'Front Lever Progressions: 3×5–8s → 3×8–12s from Intensify',
           ],
         },
       ],

@@ -1255,11 +1255,50 @@ Found by auditing the app *and* the eleven programs as training content. The
 programs had never been audited as training before; the finder had never been swept
 across its input space.
 
-- **M33 — Periodisation that is more than prose.** The Long Game prescribes
-  *identical* strength work in weeks 1–8: Pull, Push, Core and Armor all carry the
-  same sets, reps and load in phase 1 and phase 2. Only the rationales differ, so a
-  climber entering "The Engine" does exactly what they did in "The Base". Audit every
-  program for a phase boundary that changes nothing, and make the progression real.
+- **M33 — Periodisation that is more than prose.** *Done.* Measured on **dose only**
+  — sets, reps, holds, load, rest, pick count, circuit rounds — because a changed
+  rationale is not a changed prescription, and counting prose as progression is
+  exactly how twelve identical weeks read as a periodised program. **12 of 52 blocks
+  never changed dose in any phase**, and **10 of 32 session-type phase boundaries
+  changed no dose at all**. It is now 4 and 8, every one of them declared.
+  **The audit's framing was wrong and the correction matters.** "A climber entering
+  The Engine does exactly what they did in The Base" is false at the program level:
+  **0 of 18** program-wide boundaries change nothing, because the endurance and
+  performance sessions progress by drill. What was true is the narrower claim, and it
+  held exactly — The Long Game's *strength session* was byte-identical across weeks
+  1–8, all four blocks of it.
+  **The progressions were already written; they had just never reached the fields the
+  app reads.** Gravity Defied's armor rationale said "increase the volume (add 1 set)
+  rather than the resistance". Lockdown's said "add a SET — not weight". Lockdown's
+  hip mobility said "if the 30s frog stretch is comfortable, extend to 45s". The Long
+  Game's push said "bump to 3x12". Peak Performance's push said "add a set". Every one
+  of those is now the dose. Eleven blocks across seven programs: armor steps to three
+  sets where climbing load steps up and **holds through the peak rather than
+  tapering**, which is what those programs' own phase-3 rationales have always said
+  ("the one block you do not scale back"); accessory push and core build into phase 2
+  and taper in phase 3, which is what their phase descriptions already claimed.
+  **The Cruiser is the exception, and my first reading of it was too harsh.** I said
+  its phase prose promised changes the data did not deliver. It does deliver them —
+  in RPE, grade choice, session length and pick advice ("bias toward your weaker
+  discipline", "climb 1-2 grades below max, not 2-4", "keep them short and genuinely
+  easy") — dimensions this content model has no field for. So its four menus carry a
+  `constantDose` declaration naming what moves instead, and the prose stands.
+  **`ExerciseBlock.constantDose` is checked both ways.** A block that never changes
+  must declare why; a block that declares it must actually be constant; and a reason
+  under sixty characters is not a reason. Six mutations, six killed — including
+  restoring The Long Game's original strength session, which the session-boundary rule
+  names by hand.
+  **Then the guides, which restate every dose in prose.** Making the progressions real
+  meant several blocks now carry two or three doses across twelve weeks, and nothing
+  checked guide against program. Building that check found **two contradictions that
+  predate this milestone**: Lockdown's guide printed its dip at 3×8–10 against a
+  program that says 3×10–12 — and whose own rationale says "add load if 12 reps is
+  easy" and "drop to 3x8", neither of which reads against 8–10 — and its Hammer Curls
+  at 2×10 against 2×12 everywhere else in the catalogue. Both fixed in the guide.
+  Eighteen guide lines now print the progression after an arrow. **110 printed doses
+  are checked**, with a coverage floor, and the rule is loose one way (a line may
+  state any single phase's dose) and strict the other (every number on it must be
+  real).
 
 - **M34 — One source of truth for the deloads.** *Done.* Eight of nine program guides
   disagreed with their program about which weeks are deloads.

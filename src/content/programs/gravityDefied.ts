@@ -21,6 +21,17 @@ const ARMOR: Exercise[] = [
   { name: 'Wrist Extensor Curls', sets: '2', reps: '15' },
 ];
 
+/**
+ * Phase 2 onward: the same movements, three sets each.
+ *
+ * Every one of these programs already told the climber in prose to "add a
+ * SET — not weight" when tissue felt tight, and none of it reached the dose,
+ * so the block read as twelve identical weeks (PLAN.md M33). The step up
+ * lands where climbing load steps up and is *held* through the peak rather
+ * than tapered, which is what the phase-3 rationales have always said.
+ */
+const ARMOR_BUILT: Exercise[] = ARMOR.map((e) => ({ ...e, sets: '3' }));
+
 export const GRAVITY_DEFIED: Program = {
   id: 'gravity_defied',
   name: 'Gravity Defied',
@@ -234,13 +245,13 @@ export const GRAVITY_DEFIED: Program = {
             },
             [PHASE.advanced]: {
               rationale:
-                'Exact same routine. Do not increase load — this is maintenance, not strength-building. If you feel any shoulder pinch or elbow flare, increase the volume (add 1 set) rather than the resistance.',
-              exercises: ARMOR,
+                'Three sets now, same movements and the same light load. Volume is the progression for prehab — never resistance. Phase 2 is where the clap and campus work starts landing real force through the cuff, so the tissue supporting it steps up first.',
+              exercises: ARMOR_BUILT,
             },
             [PHASE.flight]: {
               rationale:
-                'Still the same. Phase 3 pushes the hardest dynos of the program — you need the shoulder capsule and tendon chain working better than ever. Consider this the insurance policy on your graduation attempts.',
-              exercises: ARMOR,
+                'Hold at three sets. Phase 3 pushes the hardest dynos of the program — you need the shoulder capsule and tendon chain working better than ever, which means armor is the one block that does not taper into the graduation attempts.',
+              exercises: ARMOR_BUILT,
             },
           },
         },

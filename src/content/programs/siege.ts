@@ -273,24 +273,24 @@ export const THE_SIEGE: Program = {
             },
             [PHASE.link]: {
               rationale:
-                'Same routine, every structural session. The linking block stacks pump on top of heavy hangs — this is the tissue that keeps up with it.',
+                'Shoulder work steps to three sets. The linking block stacks pump on top of heavy hangs, and the cuff is what keeps up with it — volume at the same light load, never more resistance.',
               exercises: [
                 { name: 'Wrist Extensor Curls', sets: '3', reps: '15' },
                 { name: 'Finger Extensions', sets: '3', reps: '15' },
                 { name: 'Hammer Curls', sets: '3', reps: '12' },
-                { name: 'Band External Rotations', sets: '2', reps: '12 per arm' },
-                { name: 'Face Pulls', sets: '2', reps: '15' },
+                { name: 'Band External Rotations', sets: '3', reps: '12 per arm' },
+                { name: 'Face Pulls', sets: '3', reps: '15' },
               ],
             },
             [PHASE.send]: {
               rationale:
-                'The one block that never scales back. An A2 tweak in week 11 ends the cycle; ten minutes of armor work prevents it.',
+                'The one block that never scales back — held at the phase 2 volume right through the send window. An A2 tweak in week 11 ends the cycle; ten minutes of armor work prevents it.',
               exercises: [
                 { name: 'Wrist Extensor Curls', sets: '3', reps: '15' },
                 { name: 'Finger Extensions', sets: '3', reps: '15' },
                 { name: 'Hammer Curls', sets: '3', reps: '12' },
-                { name: 'Band External Rotations', sets: '2', reps: '12 per arm' },
-                { name: 'Face Pulls', sets: '2', reps: '15' },
+                { name: 'Band External Rotations', sets: '3', reps: '12 per arm' },
+                { name: 'Face Pulls', sets: '3', reps: '15' },
               ],
             },
           },

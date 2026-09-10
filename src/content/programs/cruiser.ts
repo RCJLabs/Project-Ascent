@@ -41,6 +41,17 @@ const ARMOR: Exercise[] = [
   { name: 'Pronation/Supination', track: 'B', sets: '2', reps: '15 per side' },
 ];
 
+/**
+ * Phase 2 onward: the same movements, three sets each.
+ *
+ * Every one of these programs already told the climber in prose to "add a
+ * SET — not weight" when tissue felt tight, and none of it reached the dose,
+ * so the block read as twelve identical weeks (PLAN.md M33). The step up
+ * lands where climbing load steps up and is *held* through the peak rather
+ * than tapered, which is what the phase-3 rationales have always said.
+ */
+const ARMOR_BUILT: Exercise[] = ARMOR.map((e) => ({ ...e, sets: '3' }));
+
 const TECHNIQUE_MENU: Exercise[] = [
   { name: 'Quiet Feet', notes: 'Place every foot silently and deliberately.' },
   { name: 'Straight Arms', notes: 'Hang off the skeleton, not the muscle — save energy.' },
@@ -163,6 +174,8 @@ export const THE_CRUISER: Program = {
         {
           id: 'technique_focus',
           name: 'Technique Focus',
+          constantDose:
+            'The menu is the same six cues all twelve weeks; what changes is how hard you climb while drilling them — RPE 4-5 in Block 1’s deload, one to two grades below max in Block 2, 45-60 easy minutes in Block 3 — and intensity is not something a sets-and-reps field can carry.',
           perPhase: {
             [PHASE.block1]: {
               rationale:
@@ -196,6 +209,8 @@ export const THE_CRUISER: Program = {
         {
           id: 'performance_focus',
           name: 'Performance Focus',
+          constantDose:
+            'Same four approaches throughout. The progression is RPE and grade: honest but submaximal at 7-8 in Block 1, creeping toward your true limit at 8 in Block 2, real burns at 8-9 in Block 3. None of that is a dose.',
           perPhase: {
             [PHASE.block1]: {
               rationale:
@@ -229,6 +244,8 @@ export const THE_CRUISER: Program = {
         {
           id: 'endurance_protocol',
           name: 'Endurance Protocol',
+          constantDose:
+            'All four protocols are available in every block. What moves is which one you are told to pick — ARC-biased in Block 1, the harder 4x4s and Linked Laps rotating in through Block 2, project-matched in Block 3 — and the pick advice is where that lives.',
           perPhase: {
             [PHASE.block1]: {
               rationale:
@@ -386,13 +403,13 @@ export const THE_CRUISER: Program = {
             },
             [PHASE.block2]: {
               rationale:
-                'Same routine. If anything feels tight (grumpy elbow, sensitive shoulder), add a SET at the same light load — do NOT increase resistance to push through symptoms.',
-              exercises: ARMOR,
+                'Three sets across the board at the same light load — never more resistance to push through symptoms. Block 2 is where the grade creeps up, and the tissue carrying it goes first.',
+              exercises: ARMOR_BUILT,
             },
             [PHASE.block3]: {
               rationale:
-                'Armor NEVER deloads. Even in the intra-block deload weeks, Armor stays at full volume. A tweaked pulley or elbow in Block 3 ends your project window — 10 minutes of Armor prevents it.',
-              exercises: ARMOR,
+                'Armor NEVER deloads — it holds at Block 2’s volume through the project window and through the intra-block deload weeks. A tweaked pulley or elbow in Block 3 ends that window; 10 minutes of Armor prevents it.',
+              exercises: ARMOR_BUILT,
             },
           },
         },
@@ -407,6 +424,8 @@ export const THE_CRUISER: Program = {
         {
           id: 'hangboard_protocol',
           name: 'Hangboard Protocol',
+          constantDose:
+            'Deliberately flat: this is a preservation dose at 80% of training max, and a maintenance program that progressed the hangboard would be a different program. The rationale says so — if you want to push, run Iron Grip.',
           perPhase: {
             [PHASE.block1]: {
               rationale:

@@ -308,9 +308,9 @@ export const BASE_CAMP: Program = {
             },
             [PHASE.engine]: {
               rationale:
-                'Same setup. Pick 3, 40-60s, 1 round. Mid-program fatigue is real — if you’re behind on sleep, skip this and prioritize the next session.',
+                'Pick 3, but the work interval goes to 50-70s. Still one round and still short — mid-program fatigue is real, and if you’re behind on sleep, skip this and prioritize the next session.',
               selection: { pick: 3 },
-              circuit: { work: '40-60s', restBetween: '20s', rounds: '1' },
+              circuit: { work: '50-70s', restBetween: '20s', rounds: '1' },
               exercises: CORE_POOL,
             },
             [PHASE.headspace]: {

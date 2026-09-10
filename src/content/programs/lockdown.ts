@@ -22,6 +22,17 @@ const ARMOR_A: Exercise[] = [
   { name: 'Face Pulls', sets: '2', reps: '15' },
 ];
 
+/**
+ * Phase 2 onward: the same movements, three sets each.
+ *
+ * Every one of these programs already told the climber in prose to "add a
+ * SET — not weight" when tissue felt tight, and none of it reached the dose,
+ * so the block read as twelve identical weeks (PLAN.md M33). The step up
+ * lands where climbing load steps up and is *held* through the peak rather
+ * than tapered, which is what the phase-3 rationales have always said.
+ */
+const ARMOR_A_BUILT: Exercise[] = ARMOR_A.map((e) => ({ ...e, sets: '3' }));
+
 /** Session B armor: a different emphasis, same intent. */
 const ARMOR_B: Exercise[] = [
   { name: 'Wrist Extensor Curls', sets: '2', reps: '15' },
@@ -37,6 +48,24 @@ const HIP_MOBILITY: Exercise[] = [
     notes: 'Box high enough that the knee starts above hip level.',
   },
   { name: 'Frog Stretch', sets: '2', hold: '30s', notes: 'Knees wide, hips sinking back. Breathe into it.' },
+];
+
+/**
+ * Phase 2 onward. The phase-2 rationale has always read "if the 30s frog
+ * stretch is comfortable, extend to 45s" and "Step-Ups can progress to
+ * single-arm offset loading" — advice that never reached the dose, so the
+ * block prescribed the same two sets of ten for twelve weeks (PLAN.md M33).
+ * Held rather than raised again in phase 3, because that rationale is
+ * explicit that new mobility work near graduation is the risk.
+ */
+const HIP_MOBILITY_OPEN: Exercise[] = [
+  {
+    name: 'Deep Box Step-Ups',
+    sets: '2',
+    reps: '12',
+    notes: 'Offset-load it: hold a dumbbell in the hand opposite the working leg.',
+  },
+  { name: 'Frog Stretch', sets: '2', hold: '45s', notes: 'Knees wide, hips sinking back. Breathe into it.' },
 ];
 
 export const LOCKDOWN: Program = {
@@ -260,13 +289,13 @@ export const LOCKDOWN: Program = {
             },
             [PHASE.intensification]: {
               rationale:
-                'Same routine, every session. If anything feels tight (elbows, wrists, shoulders), add a SET — not weight. Volume at light load is what actually builds tendon health; heavy armor work is counterproductive.',
-              exercises: ARMOR_A,
+                'Three sets now, every session, at the same light load. Volume at light load is what builds tendon health; heavy armor work is counterproductive. The step up matches the heavier hangs and weighted lock-offs this phase adds.',
+              exercises: ARMOR_A_BUILT,
             },
             [PHASE.integration]: {
               rationale:
-                'Still the same. Phase 3 brings the hardest projecting of the program plus the graduation retests — your shoulders and forearms need to be at their most resilient, not their most fatigued. Treat armor as the warm-down, not the grind.',
-              exercises: ARMOR_A,
+                'Hold at three sets. Phase 3 brings the hardest projecting of the program plus the graduation retests — your shoulders and forearms need to be at their most resilient, not their most fatigued. Treat armor as the warm-down, not the grind.',
+              exercises: ARMOR_A_BUILT,
             },
           },
         },
@@ -355,13 +384,13 @@ export const LOCKDOWN: Program = {
             },
             [PHASE.intensification]: {
               rationale:
-                'Same work. If the 30s frog stretch is comfortable, extend to 45s. Step-Ups can progress to single-arm offset loading (hold a dumbbell on the non-working side) for added core challenge.',
-              exercises: HIP_MOBILITY,
+                'The frog stretch extends to 45 seconds and the step-ups go to twelve with an offset load — a dumbbell in the hand opposite the working leg, which makes the core hold the pelvis square. If 45 seconds is not comfortable yet, stay at 30 and take the reps instead.',
+              exercises: HIP_MOBILITY_OPEN,
             },
             [PHASE.integration]: {
               rationale:
-                'Keep it in maintenance. Don’t introduce new mobility exercises this close to graduation — body-tension programs are most vulnerable to new mobility work creating dysfunction. Stick with what works.',
-              exercises: HIP_MOBILITY,
+                'Held exactly where phase 2 left it. Don’t introduce new mobility exercises this close to graduation — body-tension programs are most vulnerable to new mobility work creating dysfunction. Stick with what works.',
+              exercises: HIP_MOBILITY_OPEN,
             },
           },
         },

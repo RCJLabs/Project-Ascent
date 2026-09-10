@@ -199,8 +199,9 @@ export const THE_CRUISER: Guide = {
           items: [
             'Wrist Extensor Curls: 3x15',
             'Finger Extensions: 3x15',
-            'Band External Rotations: 2x12/arm',
-            'Band Face Pulls: 2x15',
+            'Every Armor line steps to three sets from Block 2 and holds there — Armor never deloads.',
+            'Band External Rotations: 2x12/arm → 3x12 from Block 2',
+            'Band Face Pulls: 2x15 → 3x15 from Block 2',
           ],
         },
         { kind: 'h', text: 'Track B — Progressive' },
@@ -242,8 +243,8 @@ export const THE_CRUISER: Guide = {
           name: 'THE ARMOR ★ + EXTRAS',
           items: [
             'Same Armor as Track A PLUS:',
-            'Hammer Curls: 2x12',
-            'Pronation/Supination: 2x15 each direction',
+            'Hammer Curls: 2x12 → 3x12 from Block 2',
+            'Pronation/Supination: 2x15 each direction → 3x15 from Block 2',
           ],
         },
         { kind: 'h', text: 'Core Menu — Pick 4-5 Per Session' },

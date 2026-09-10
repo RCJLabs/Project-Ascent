@@ -189,6 +189,20 @@ export interface ExerciseBlock {
   id: string;
   name: string;
   perPhase: Record<PhaseId, PhasePrescription>;
+  /**
+   * Why this block prescribes the same sets, reps, holds and load in every
+   * phase — required when it does, and rejected when it doesn't (PLAN.md
+   * M33).
+   *
+   * Twelve of fifty-two blocks ran an identical dose for twelve weeks while
+   * their own rationales said things like "add a SET — not weight", advice
+   * that never reached the dose fields. Most of those were real stalls and
+   * were fixed. The ones that remain are menus whose progression is genuine
+   * but lives in intensity, grade choice and session length — dimensions
+   * this model has no field for — so the block has to say so out loud
+   * rather than reading as an oversight.
+   */
+  constantDose?: string;
 }
 
 // ── Session types ─────────────────────────────────────────────────────────

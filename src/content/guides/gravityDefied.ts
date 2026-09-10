@@ -141,9 +141,9 @@ export const GRAVITY_DEFIED: Guide = {
           group: 'D',
           name: 'SHOULDER & FOREARM MAINTENANCE ★',
           items: [
-            'Band External Rotations: 2×12/arm',
-            'Wrist Extensor Curls: 2×15',
-            'Finger Extensions: 2×15',
+            'Band External Rotations: 2×12/arm → 3×12 from Phase 2',
+            'Wrist Extensor Curls: 2×15 → 3×15 from Phase 2',
+            'Finger Extensions: 2×15 → 3×15 from Phase 2',
           ],
         },
         { kind: 'h', text: 'Progression Table' },

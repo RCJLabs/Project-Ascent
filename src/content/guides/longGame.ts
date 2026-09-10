@@ -222,7 +222,7 @@ export const THE_LONG_GAME: Guide = {
           group: 'B',
           name: 'PUSH',
           items: [
-            'Max Push-Ups or DB Press: 3×10–12. ★ Prevents impingement.',
+            'Max Push-Ups or DB Press: 3×10–12 → 3×12 in The Engine, 2×12 in The Send. ★ Prevents impingement.',
           ],
         },
         {
@@ -239,8 +239,8 @@ export const THE_LONG_GAME: Guide = {
           group: 'D',
           name: 'THE ARMOR ★',
           items: [
-            'Band External Rotations: 2×12/arm',
-            'Band Face Pulls: 2×15',
+            'Band External Rotations: 2×12/arm → 3×12 from The Engine',
+            'Band Face Pulls: 2×15 → 3×15 from The Engine',
             'Wrist Extensor Curls: 3×15 ★',
             'Finger Extensions: 3×15 ★',
           ],

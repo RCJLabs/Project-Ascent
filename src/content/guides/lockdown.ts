@@ -151,8 +151,8 @@ export const LOCKDOWN: Guide = {
           items: [
             'Wrist Extensor Curls: 3×15',
             'Finger Extensions: 3×15 ★',
-            'Band External Rotations: 2×12/arm',
-            'Band Face Pulls: 2×15',
+            'Band External Rotations: 2×12/arm → 3×12 from Phase 2',
+            'Band Face Pulls: 2×15 → 3×15 from Phase 2',
           ],
         },
       ],
@@ -175,7 +175,7 @@ export const LOCKDOWN: Guide = {
           group: 'B',
           name: 'THE ANTAGONIST — Pushing',
           items: [
-            'Dips or Overhead Press: 3×8–10. Full ROM. ★ Non-negotiable.',
+            'Dips or Overhead Press: 3×10–12. Full ROM. ★ Non-negotiable.',
           ],
         },
         {
@@ -183,8 +183,8 @@ export const LOCKDOWN: Guide = {
           group: 'C',
           name: 'HIP MOBILITY',
           items: [
-            'Deep Box Step-Ups: 2×10. Knee higher than hip.',
-            'Frog Stretch: 2×30s.',
+            'Deep Box Step-Ups: 2×10. Knee higher than hip. → 2×12 offset-loaded from Phase 2',
+            'Frog Stretch: 2×30s. → 2×45s from Phase 2',
           ],
         },
         {
@@ -194,7 +194,7 @@ export const LOCKDOWN: Guide = {
           items: [
             'Wrist Extensor Curls: 2×15',
             'Finger Extensions: 2×15',
-            'Hammer Curls: 2×10',
+            'Hammer Curls: 2×12',
           ],
         },
       ],

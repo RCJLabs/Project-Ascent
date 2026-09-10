@@ -201,15 +201,13 @@ export const PEAK_PERFORMANCE: Program = {
             },
             [PHASE.intensify]: {
               rationale:
-                'Same dosage. Intensify phase peaks pulling demands via limit bouldering; your antagonist work must hold steady to keep the shoulder joint balanced. If shoulders feel pinched, add a set rather than changing the exercise.',
-              exercises: [{ name: 'Push-Ups or DB Press', sets: '3', reps: '12' }],
+                'Four sets. Intensify phase peaks pulling demands via limit bouldering, and antagonist work that holds steady while the pulling side climbs is not holding the joint balanced — it is falling behind it. Add the set rather than changing the exercise.',
+              exercises: [{ name: 'Push-Ups or DB Press', sets: '4', reps: '12' }],
             },
             [PHASE.peak]: {
               rationale:
-                'Maintenance dose. Peak phase and send taper — this is not the week to progress push work. If fatigue accumulates, drop to 2x12 rather than skipping entirely.',
-              exercises: [
-                { name: 'Push-Ups or DB Press', sets: '3', reps: '12', notes: 'Drop to 2x12 if fatigue accumulates.' },
-              ],
+                'Back to two or three sets. Peak phase and send taper — this is not the week to progress push work, and the shoulder only needs the pattern kept alive while everything else comes down.',
+              exercises: [{ name: 'Push-Ups or DB Press', sets: '2-3', reps: '12' }],
             },
           },
         },
@@ -262,22 +260,22 @@ export const PEAK_PERFORMANCE: Program = {
             },
             [PHASE.intensify]: {
               rationale:
-                'Same stack. If the Front Lever progression advances by Intensify (e.g. tuck → advanced tuck), hold the new position for 3-5s before progressing. Don’t rush — a rock-solid advanced tuck beats a shaky full lever.',
+                'Same stack, longer holds. Isometric core progresses by time under tension, not by sets. If the Front Lever progression advances this phase (tuck → advanced tuck), hold the new position for 3-5s and build from there — a rock-solid advanced tuck beats a shaky full lever.',
               exercises: [
-                { name: 'Hollow Body', sets: '3', hold: '20-30s' },
-                { name: 'L-Sits', sets: '3', hold: '10-15s' },
-                { name: 'Front Lever Progressions', protocolId: 'front_lever', sets: '3', hold: '5-8s' },
-                { name: 'Hanging Leg Raises', sets: '3', reps: '10' },
+                { name: 'Hollow Body', sets: '3', hold: '30-40s' },
+                { name: 'L-Sits', sets: '3', hold: '15-20s' },
+                { name: 'Front Lever Progressions', protocolId: 'front_lever', sets: '3', hold: '8-12s' },
+                { name: 'Hanging Leg Raises', sets: '3', reps: '12' },
               ],
             },
             [PHASE.peak]: {
               rationale:
-                'Maintenance. Peak phase projecting demands core, but providing it while also grinding new gains is too much load. Hit 2 sets minimum to keep the pattern active, then move on.',
+                'Maintenance. Keep phase 2’s holds — the quality you built is the thing worth keeping — and drop the sets. Peak phase projecting demands core, but providing it while also grinding new gains is too much load.',
               exercises: [
-                { name: 'Hollow Body', sets: '2-3', hold: '20-30s' },
-                { name: 'L-Sits', sets: '2-3', hold: '10-15s' },
-                { name: 'Front Lever Progressions', protocolId: 'front_lever', sets: '2-3', hold: '5-8s' },
-                { name: 'Hanging Leg Raises', sets: '2-3', reps: '10' },
+                { name: 'Hollow Body', sets: '2', hold: '30-40s' },
+                { name: 'L-Sits', sets: '2', hold: '15-20s' },
+                { name: 'Front Lever Progressions', protocolId: 'front_lever', sets: '2', hold: '8-12s' },
+                { name: 'Hanging Leg Raises', sets: '2', reps: '12' },
               ],
             },
           },

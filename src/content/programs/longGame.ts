@@ -19,12 +19,38 @@ const CORE_POOL: Exercise[] = [
   { name: 'Windshield Wipers', reps: '8 per side' },
 ];
 
+/**
+ * Phase 2 onward. Duration is the dial for route core — it is an endurance
+ * quality, and the point is firing on the twentieth move as well as the
+ * first — so the holds extend rather than the load going up. Phase 1 and
+ * phase 2 previously prescribed the identical circuit, which is four weeks
+ * past where a fixed dose stops producing anything (PLAN.md M33).
+ */
+const CORE_POOL_LONG: Exercise[] = [
+  { name: 'Plank', hold: '60-75s' },
+  { name: 'Dead Bugs', reps: '15' },
+  { name: 'Hollow Body', hold: '30-40s' },
+  { name: 'Knee Raises', reps: '10-12' },
+  { name: 'Windshield Wipers', reps: '10 per side' },
+];
+
 const ARMOR: Exercise[] = [
   { name: 'Wrist Extensor Curls', sets: '3', reps: '15' },
   { name: 'Finger Extensions', sets: '3', reps: '15' },
   { name: 'Band External Rotations', sets: '2', reps: '12 per arm' },
   { name: 'Face Pulls', sets: '2', reps: '15' },
 ];
+
+/**
+ * Phase 2 onward: the same movements, three sets each.
+ *
+ * Every one of these programs already told the climber in prose to "add a
+ * SET — not weight" when tissue felt tight, and none of it reached the dose,
+ * so the block read as twelve identical weeks (PLAN.md M33). The step up
+ * lands where climbing load steps up and is *held* through the peak rather
+ * than tapered, which is what the phase-3 rationales have always said.
+ */
+const ARMOR_BUILT: Exercise[] = ARMOR.map((e) => ({ ...e, sets: '3' }));
 
 export const THE_LONG_GAME: Program = {
   id: 'the_long_game',
@@ -163,13 +189,13 @@ export const THE_LONG_GAME: Program = {
             },
             [PHASE.engine]: {
               rationale:
-                'Same. If your linked-laps sessions leave the shoulders feeling pinched, bump to 3x12 — volume is your friend here, not load. Skip if push feels flat and you’re conserving for climbing.',
-              exercises: [{ name: 'Max Push-Ups or DB Press', sets: '3', reps: '10-12' }],
+                '3x12 now — volume is your friend here, not load. Linked-laps sessions leave the shoulders pinched precisely because the pulling volume has gone up, and this is the block that answers it. Skip a set if push feels flat and you’re conserving for climbing.',
+              exercises: [{ name: 'Max Push-Ups or DB Press', sets: '3', reps: '12' }],
             },
             [PHASE.send]: {
               rationale:
-                'Maintenance only. Don’t add load in send phase. The insurance policy stays in place even when you’re deloading other work.',
-              exercises: [{ name: 'Max Push-Ups or DB Press', sets: '3', reps: '10-12' }],
+                'Drops to two sets — the taper phase 3 asks for everywhere else applies here too. Keep the twelve reps and don’t add load. The insurance policy stays in place even when you’re deloading other work.',
+              exercises: [{ name: 'Max Push-Ups or DB Press', sets: '2', reps: '12' }],
             },
           },
         },
@@ -186,17 +212,17 @@ export const THE_LONG_GAME: Program = {
             },
             [PHASE.engine]: {
               rationale:
-                'Same 4-exercise pick, 2 rounds. Engine phase’s power-endurance intervals already tax the core via sustained tension on the wall — this is reinforcing that adaptation, not replacing it.',
+                'Same 4-exercise pick and 2 rounds, but every hold and rep count goes up a notch. Engine phase’s power-endurance intervals already tax the core via sustained tension on the wall — this reinforces that adaptation rather than replacing it, and a circuit that never moves stops producing one.',
               selection: { pick: 4 },
               circuit: { rounds: '2', restBetween: 'Minimal' },
-              exercises: CORE_POOL,
+              exercises: CORE_POOL_LONG,
             },
             [PHASE.send]: {
               rationale:
-                'Maintenance: 2 or 3 exercises, 1-2 rounds is enough. No need to hit failure. Your project’s crux already trains your core at max demand.',
+                'Maintenance: 3 exercises, 1-2 rounds is enough. Keep phase 2’s longer holds — it is the rounds that come down, not the quality. No need to hit failure; your project’s crux already trains your core at max demand.',
               selection: { pick: 3 },
               circuit: { rounds: '1-2', restBetween: 'Minimal' },
-              exercises: CORE_POOL,
+              exercises: CORE_POOL_LONG,
             },
           },
         },
@@ -211,13 +237,13 @@ export const THE_LONG_GAME: Program = {
             },
             [PHASE.engine]: {
               rationale:
-                'Same routine. If anything feels tight (grumpy elbow, sensitive shoulder), add a fourth set on the affected tissue — volume at light load is what tendons respond to.',
-              exercises: ARMOR,
+                'Shoulder work joins the forearm work at three sets. Volume at light load is what tendons respond to — if something is still tight, add a fourth set on that tissue alone rather than reaching for more resistance.',
+              exercises: ARMOR_BUILT,
             },
             [PHASE.send]: {
               rationale:
-                'Non-negotiable through send phase. This is the one block you do not scale back. A tweaked pulley or elbow injury in Week 11 is a catastrophe; 10 minutes of armor work prevents it.',
-              exercises: ARMOR,
+                'Held at the phase 2 volume. This is the one block you do not scale back. A tweaked pulley or elbow injury in Week 11 is a catastrophe; 10 minutes of armor work prevents it.',
+              exercises: ARMOR_BUILT,
             },
           },
         },

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { getMetric } from '../metrics';
 import { PROGRAMS } from '../programs';
 import { guideFor } from './index';
+import type { Exercise } from '../types';
 import type { Guide, GuideBlock } from './types';
 
 /**
@@ -323,5 +324,103 @@ describe('entry standards', () => {
         expect(getMetric(prereq.metricId)?.higherIsBetter, `${program.id}/${prereq.metricId}`).toBe(true);
       }
     }
+  });
+  /**
+   * A dose a guide prints must be a dose the program prescribes (PLAN.md M33).
+   *
+   * Making the phase progressions real meant several blocks now carry two or
+   * three different doses across twelve weeks, and every one of those numbers
+   * is also written out in prose in the guide. Nothing checked the two
+   * against each other, and the measurement found two that had already
+   * drifted before this milestone touched anything: Lockdown's guide printed
+   * its dip at 3x8-10 against a program that says 3x10-12 — and whose own
+   * rationale says "add load if 12 reps is easy" — and its Hammer Curls at
+   * 2x10 against 2x12 everywhere else in the catalogue.
+   *
+   * The rule is deliberately loose in one direction: a guide line may state
+   * any *one* phase's dose, because that is how these guides are written —
+   * the entry number, then the progression after an arrow. It is strict in
+   * the other: every number on the line has to be a real one.
+   */
+  describe('printed doses', () => {
+    /** '3×15', '3x10-12', '2×12/arm', '3×10–12' — every one on the line. */
+    const doses = (text: string): [string, string][] =>
+      [...text.matchAll(/(\d+)\s*[x×]\s*(\d+(?:\s*[–—-]\s*\d+)?)/g)].map(
+        (m) => [m[1]!, m[2]!.replace(/\s*[–—-]\s*/, '-')] as [string, string],
+      );
+
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    /** The exercise a guide line is about, minus the ways guides dress it up. */
+    const named = (item: string) =>
+      item
+        .replace(/^Track [AB]:\s*/i, '')
+        .replace(/\([^)]*\)/g, '')
+        .split(/[:0-9]/)[0]!
+        .trim();
+
+    function audit() {
+      const wrong: string[] = [];
+      let seen = 0;
+      let skipped = 0;
+      for (const program of PROGRAMS) {
+        const guide = guideFor(program.id);
+        if (!guide) continue;
+        const byName = new Map<string, Exercise[]>();
+        for (const session of program.sessionTypes) {
+          for (const block of session.blocks ?? []) {
+            for (const prescription of Object.values(block.perPhase)) {
+              for (const exercise of prescription.exercises) {
+                const key = norm(exercise.name);
+                byName.set(key, [...(byName.get(key) ?? []), exercise]);
+              }
+            }
+          }
+        }
+        for (const block of blocks(guide)) {
+          if (block.kind !== 'exercises') continue;
+          for (const item of block.items) {
+            const stated = doses(item);
+            if (stated.length === 0) continue;
+            const name = named(item);
+            // A guide names plenty the program does not prescribe as a block
+            // — warm-up movements, menu pools, "X 3x8 or Y 3x10" written as
+            // one line. Those are out of range here, not failures.
+            const hits = byName.get(norm(name)) ?? byName.get(norm(name.replace(/^Band /i, '')));
+            if (!hits) { skipped += stated.length; continue; }
+            for (const [sets, amount] of stated) {
+              seen += 1;
+              const bare = amount.replace(/s$/, '');
+              const ok = hits.some((e) => {
+                if ((e.sets ?? '') !== sets) return false;
+                const reps = (e.reps ?? '').replace(/\s.*/, '');
+                const hold = (e.hold ?? '').replace(/s$/, '');
+                return reps === amount || reps === bare || hold === bare || hold === amount;
+              });
+              if (!ok) {
+                wrong.push(
+                  `${program.id}: "${item.slice(0, 60)}" says ${sets}x${amount}; the program prescribes ` +
+                    hits.map((e) => `${e.sets ?? '-'}x${e.reps ?? e.hold ?? '-'}`).join(' / '),
+                );
+              }
+            }
+          }
+        }
+      }
+      return { wrong, seen, skipped };
+    }
+
+    it('never prints a dose the program does not prescribe', () => {
+      expect(audit().wrong).toEqual([]);
+    });
+
+    it('actually reaches the doses it claims to check', () => {
+      // Without this the check passes just as well when the name matching
+      // silently stops resolving anything — the failure mode that let an
+      // accessibility sweep here drop from 25 pages to 4 (PLAN.md M40).
+      const { seen, skipped } = audit();
+      expect(seen).toBeGreaterThan(90);
+      expect(seen).toBeGreaterThan(skipped * 2);
+    });
   });
 });
