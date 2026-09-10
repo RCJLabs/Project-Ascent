@@ -173,6 +173,7 @@ function Shell() {
           <Route path="/projects" component={ProjectsPage} />
           <Route path="/injury/:id" component={InjuryPage} />
           <Route path="/search" component={SearchPage} />
+          <Route path="/guides/:id/:section" component={GuidePage} />
           <Route path="/guides/:id" component={GuidePage} />
           <Route path="/guides" component={GuideList} />
           <Route path="/glossary" component={GlossaryPage} />

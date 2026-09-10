@@ -81,6 +81,8 @@ export const ROUTES: RouteMeta[] = [
   { path: '/settings', title: 'Settings', parent: '/', group: 'Reference', keywords: ['theme', 'backup', 'export', 'grades', 'sound', 'equipment'] },
   { path: '/guides', title: 'Guides', parent: '/settings', group: 'Reference', keywords: ['manual', 'how to', 'reading'] },
   { path: '/guides/:id', title: 'Guide', parent: '/guides' },
+  // A section of one, which is where a search hit on the prose lands.
+  { path: '/guides/:id/:section', title: 'Guide', parent: '/guides' },
   { path: '/glossary', title: 'Glossary', parent: '/settings', group: 'Reference', keywords: ['terms', 'jargon', 'what does', 'definition'] },
   { path: '/injury/:id', title: 'Injury', parent: '/settings' },
 

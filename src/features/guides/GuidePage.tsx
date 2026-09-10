@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { ArrowRight, BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
 import { GUIDES, getGuide, guideLength } from '@/content/guides';
@@ -56,17 +56,48 @@ export function GuideList() {
  * thirteen sections and several thousand words; a single scroll would bury
  * the contents, and the contents are how anyone finds week seven again.
  */
-export function GuidePage({ params }: { params: { id: string } }) {
+export function GuidePage({ params }: { params: { id: string; section?: string } }) {
   const guide = getGuide(params.id);
-  const [open, setOpen] = useState<number[]>([0]);
+  /**
+   * The section a link asked for, as an index (PLAN.md M65).
+   *
+   * One-based in the URL because that is the number printed beside the
+   * heading, and a link a climber can read is worth an off-by-one here.
+   * Anything that is not a section of this guide is ignored rather than
+   * treated as the first one — a stale link should open the document, not
+   * silently show a different passage.
+   */
+  const asked = Number(params.section);
+  const wanted =
+    guide !== undefined && Number.isInteger(asked) && asked >= 1 && asked <= guide.sections.length
+      ? asked - 1
+      : null;
 
-  useEffect(() => {
-  }, [guide]);
+  // Opened in the initial state as well as in the effect below, so the
+  // first paint is already on the asked-for section. The effect covers a
+  // later change of section; this covers the flash of section one before it
+  // runs, which is real on screen and invisible to a test.
+  const [open, setOpen] = useState<number[]>([wanted ?? 0]);
+  const target = useRef<HTMLElement | null>(null);
 
-  // A different guide is a different document — start it at the top.
+  // A different guide — or a different section of one — is a different
+  // place to be, so it starts there rather than where the last one was.
   useEffect(() => {
-    setOpen([0]);
-  }, [params.id]);
+    setOpen([wanted ?? 0]);
+  }, [params.id, wanted]);
+
+  // And it is scrolled to, because opening the ninth section of a guide
+  // without moving leaves a climber looking at the first one.
+  //
+  // Whenever a section was *asked for*, including the first — skipping the
+  // scroll for section one meant following a link to it from section six
+  // left the reader 1,473 pixels below the thing they had asked to read. A
+  // guide opened without a section in the URL is a different case and is
+  // left where it starts.
+  useEffect(() => {
+    if (wanted === null) return;
+    target.current?.scrollIntoView({ block: 'start' });
+  }, [params.id, wanted]);
 
   const program = useMemo(() => (guide ? getProgram(guide.id) : undefined), [guide]);
 
@@ -119,7 +150,11 @@ export function GuidePage({ params }: { params: { id: string } }) {
         {guide.sections.map((section, index) => {
           const isOpen = open.includes(index);
           return (
-            <section key={section.title} className="bg-surface border border-line rounded-2xl">
+            <section
+              key={section.title}
+              ref={index === wanted ? target : undefined}
+              className="bg-surface border border-line rounded-2xl scroll-mt-4"
+            >
               {/* The heading wraps the control, which is the accordion
                   pattern a screen reader can navigate by heading. A span
                   inside a button is neither. */}

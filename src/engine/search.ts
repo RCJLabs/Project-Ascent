@@ -38,6 +38,8 @@ export type ResultKind =
   | 'session'
   | 'term'
   | 'guide'
+  /** A section of a guide, matched on what it actually says (PLAN.md M65). */
+  | 'passage'
   | 'metric'
   | 'drill';
 
@@ -50,6 +52,14 @@ export interface SearchItem {
   href: string;
   /** Words worth matching that a climber would not see. */
   keywords?: string[];
+  /**
+   * The whole text of the thing, searched at the same weight as keywords
+   * and kept so a result can show the words around the match.
+   *
+   * Separate from `keywords` because it is not a list of extra terms — it is
+   * the item itself, and the search page reads it back to build a snippet.
+   */
+  body?: string;
   /** For ordering things that happened. `YYYY-MM-DD`. */
   date?: string;
   /** Shown as a small label, e.g. the group a page belongs to. */
@@ -68,6 +78,9 @@ const KIND_WEIGHT: Record<ResultKind, number> = {
   project: 4,
   term: 3,
   guide: 3,
+  // Below the guide it belongs to: someone searching a guide's name wants
+  // the guide, not the paragraph of it that repeats the name.
+  passage: 2,
   metric: 2,
   drill: 2,
   session: 1,
@@ -100,7 +113,7 @@ export function scoreItem(item: SearchItem, query: string): number {
   else if (title.includes(needle)) score = CONTAINS;
   else {
     const body = normalise(
-      [item.detail ?? '', ...(item.keywords ?? [])].join(' '),
+      [item.detail ?? '', item.body ?? '', ...(item.keywords ?? [])].join(' '),
     );
     if (body.includes(needle)) score = BODY;
     else return 0;
@@ -150,6 +163,7 @@ export const KIND_LABEL: Record<ResultKind, string> = {
   objective: 'Objectives',
   project: 'Projects',
   guide: 'Guides',
+  passage: 'In the guides',
   term: 'Glossary',
   metric: 'Assessments',
   drill: 'Drills',

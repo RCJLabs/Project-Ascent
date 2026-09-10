@@ -2218,11 +2218,32 @@ something that already exists; six are new. Nothing here is committed.*
   fill that week. They now use The Long Game, which cannot put Endurance and Performance on
   consecutive days and so still has to step down.
 
-- **M65 — Search the guides, not just their headings.** The search page indexes a guide by
-  name, subtitle and section *titles*. The bodies — nearly five thousand lines, the app's
-  largest single body of knowledge — are unreachable except by reading. "Where does it say
-  what a deload is for?" has an answer the app is holding and cannot hand over. A
-  build-time index over guide and glossary prose, with a snippet per hit.
+- **M65 — Search the guides, not just their headings.** *Done.* A guide was indexed by
+  its name, its subtitle and its section *titles*. The bodies — the app's largest single
+  body of knowledge, and the only place several things are explained at all — were
+  unreachable except by opening a guide and reading it.
+  `engine/guideText.ts` flattens a section to plain text: every block kind, not only the
+  paragraphs, with the inline `**bold**` and `_italic_` markers stripped so a climber
+  searching "deload" does not miss the line that wrote it in bold. A test walks the whole
+  catalogue and fails if a new block kind is added to the content without being flattened.
+  **One index entry per section, not per guide**, so a hit opens the passage rather than
+  the top of a document that runs to several thousand words. `SearchItem` gained a `body` —
+  distinct from `keywords`, which is a list of extra terms; this is the thing itself, and
+  the results page reads it back to show the words around the match. A passage sits below
+  the guide it belongs to, so searching a guide's name still returns the guide.
+  **The destination is the passage.** `/guides/:id/:section` opens that section and scrolls
+  to it, one-based because that is the number printed beside the heading. A section number
+  that is not in the guide opens the document rather than silently showing a different
+  passage — a stale link should not lie.
+  **A bug the browser found in the hour it was written:** the scroll was skipped for
+  section one, which conflated "the first section" with "no section asked for". Following a
+  link to section one from section six left the reader 1,473 pixels below the thing they
+  had asked to read. Fixed, and tested by watching what actually gets scrolled to.
+  Eight mutations, eight killed, after one was moved off the rendered grouping — which is
+  in a fixed order and hid the ranking — onto `scoreItem` itself. Also removed an empty
+  `useEffect` that had been sitting in the guide page doing nothing.
+  Verified in a browser: "deload" returns passages from three guides with the match in
+  context, and following one lands on the open section.
 
 - **M66 — ~~A grade pyramid~~ — withdrawn, it already ships.** The proposal said five
   charts ship and none of them is the pyramid. That was wrong: `PyramidBars` lives in

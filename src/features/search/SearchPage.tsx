@@ -4,6 +4,7 @@ import { Search as SearchIcon, X } from 'lucide-react';
 import { DRILLS } from '@/content/drills';
 import { GLOSSARY } from '@/content/glossary';
 import { GUIDES } from '@/content/guides';
+import { sectionText, snippet } from '@/engine/guideText';
 import { METRICS } from '@/content/metrics';
 import { allPrograms } from '@/content/programs';
 import { fromKey } from '@/engine/dates';
@@ -113,6 +114,21 @@ function useIndex(): SearchItem[] {
         ...(guide.subtitle ? { detail: guide.subtitle } : {}),
         href: `/guides/${guide.id}`,
         keywords: guide.sections.map((section) => section.title),
+      });
+
+      // And every section, matched on what it says rather than what it is
+      // called (PLAN.md M65). One item per section rather than per guide, so
+      // a hit can open the passage instead of the top of a document that
+      // runs to several thousand words.
+      guide.sections.forEach((section, index) => {
+        items.push({
+          id: `passage:${guide.id}:${index}`,
+          kind: 'passage',
+          title: section.title,
+          detail: guide.name,
+          href: `/guides/${guide.id}/${index + 1}`,
+          body: sectionText(section),
+        });
       });
     }
 
@@ -246,6 +262,14 @@ export function SearchPage() {
                       {result.detail !== undefined && result.detail !== '' && (
                         <p className="text-xs text-ink-soft mt-0.5 line-clamp-2 leading-relaxed">
                           {result.detail}
+                        </p>
+                      )}
+                      {/* Why it matched. A passage hit that only shows the
+                          section's title is asking a climber to open a
+                          guide and search it again by eye. */}
+                      {result.body !== undefined && (
+                        <p className="text-xs text-ink mt-1.5 leading-relaxed">
+                          {snippet(result.body, query)}
                         </p>
                       )}
                     </Link>
