@@ -13,6 +13,7 @@ import { Card } from '@/ui/Card';
 import { OptionCard } from '@/ui/Chip';
 import { Term } from '@/ui/Term';
 import { PageHeader } from '@/ui/PageHeader';
+import { RecordNotFound } from '@/ui/RecordNotFound';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -170,18 +171,12 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
   const [track, setTrack] = useState<TrackId | null>(null);
 
   if (!program) {
+    // Was "That program has not been converted yet" — true of the prototype
+    // port, and untrue since every program in the catalogue is data.
     return (
-      <>
-        <PageHeader title="Program not found" />
-        <Card>
-          <p className="text-sm text-ink-soft">
-            That program has not been converted yet.{' '}
-            <Link href="/train" className="text-accent font-semibold">
-              Back to Train
-            </Link>
-          </p>
-        </Card>
-      </>
+      <RecordNotFound what="That program" backTo="/train" backLabel="Back to Train">
+        It may have been a custom program you deleted.
+      </RecordNotFound>
     );
   }
 

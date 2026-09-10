@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { Plus, ShieldAlert, Trash2 } from 'lucide-react';
 import { RETURN_DISCLAIMER } from '@/content/returnToClimbing';
@@ -19,6 +19,8 @@ import { OptionCard } from '@/ui/Chip';
 import { IconButton } from '@/ui/IconButton';
 import { Checkbox, Input, TextArea } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
+import { RecordNotFound } from '@/ui/RecordNotFound';
+import { PageSkeleton } from '@/ui/Skeleton';
 
 /**
  * One injury, and the climber's own record of coming back from it.
@@ -37,11 +39,14 @@ export function InjuryPage({ params }: { params: { id: string } }) {
 
   const injury = injuries.find((i) => i.id === params.id);
 
-  useEffect(() => {
-    if (hydrated && !injury) navigate('/settings', { replace: true });
-  }, [hydrated, injury, navigate]);
-
-  if (!injury) return null;
+  if (!hydrated) return <PageSkeleton title="Injury" />;
+  if (!injury) {
+    return (
+      <RecordNotFound what="That injury record" backTo="/settings" backLabel="Back to settings">
+        Recovered injuries are cleared from the tracker.
+      </RecordNotFound>
+    );
+  }
 
   const steps = stepsFor(injury);
   const { done, total } = progress(injury);

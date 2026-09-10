@@ -26,6 +26,8 @@ import { Input, Select, TextArea } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 import { useGradeOptions } from '@/ui/useGrade';
 import { useSkillInput } from './ObjectivesPage';
+import { RecordNotFound } from '@/ui/RecordNotFound';
+import { PageSkeleton } from '@/ui/Skeleton';
 
 const STATUSES: { value: ObjectiveStatus; label: string }[] = [
   { value: 'planning', label: 'Planning' },
@@ -64,11 +66,17 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
   }, [hydrated, load]);
 
   const objective = objectives.find((o) => o.id === params.id);
-  useEffect(() => {
-    if (hydrated && !objective) navigate('/objectives', { replace: true });
-  }, [hydrated, objective, navigate]);
 
-  if (!objective) return null;
+  // Wait for the store before deciding it is missing, or a reload lands on
+  // "Not found" for one frame and then swaps to the record (PLAN.md M22).
+  if (!hydrated) return <PageSkeleton title="Objective" />;
+  if (!objective) {
+    return (
+      <RecordNotFound what="That objective" backTo="/objectives" backLabel="Back to objectives">
+        It may have been completed and cleared, or deleted.
+      </RecordNotFound>
+    );
+  }
 
   const progress = objectiveProgress(objective, skillInput);
   const edit = (patch: Partial<Objective>) => void save({ ...objective, ...patch });

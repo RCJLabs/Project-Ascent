@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'wouter';
+import { useLocation } from 'wouter';
 import { AlertTriangle, Check } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { DAY_SHORT, layoutsFor, planFromLayout, validateWeek, type WeekPlan } from '@/engine/scheduler';
@@ -9,6 +9,7 @@ import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Chip, OptionCard, SelectableCard } from '@/ui/Chip';
 import { PageHeader } from '@/ui/PageHeader';
+import { RecordNotFound } from '@/ui/RecordNotFound';
 
 const DAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 
@@ -24,16 +25,7 @@ export function StartProgramPage({ params }: { params: { id: string } }) {
   const [restart, setRestart] = useState(false);
 
   if (!program) {
-    return (
-      <>
-        <PageHeader title="Program not found" />
-        <Card>
-          <Link href="/train" className="text-accent font-semibold text-sm">
-            Back to Train
-          </Link>
-        </Card>
-      </>
-    );
+    return <RecordNotFound what="That program" backTo="/train" backLabel="Back to Train" />;
   }
 
   const layouts = layoutsFor(program, daysPerWeek);

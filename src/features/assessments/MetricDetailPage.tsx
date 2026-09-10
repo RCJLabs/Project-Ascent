@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { Link } from 'wouter';
+
 import { Trash2 } from 'lucide-react';
 import { getMetric } from '@/content/metrics';
 import type { MetricId } from '@/content/types';
@@ -12,6 +12,7 @@ import { Card } from '@/ui/Card';
 import { IconButton } from '@/ui/IconButton';
 import { ProgressionLine } from '@/ui/charts/Charts';
 import { ResultForm } from './AssessmentsPage';
+import { RecordNotFound } from '@/ui/RecordNotFound';
 
 export function MetricDetailPage({ params }: { params: { id: string } }) {
   const display = useSettings((s) => s.display);
@@ -32,12 +33,9 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
 
   if (!metric) {
     return (
-      <Card>
-        <p className="text-sm text-ink-soft mb-3">No such benchmark.</p>
-        <Link href="/assessments" className="text-sm font-semibold text-accent">
-          Back to assessments
-        </Link>
-      </Card>
+      <RecordNotFound what="That benchmark" backTo="/assessments" backLabel="Back to assessments">
+        The benchmarks the app tracks are all listed there.
+      </RecordNotFound>
     );
   }
 

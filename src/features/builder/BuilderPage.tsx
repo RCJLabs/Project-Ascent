@@ -28,6 +28,7 @@ import { Chip } from '@/ui/Chip';
 import { IconButton } from '@/ui/IconButton';
 import { Input, Select, TextArea } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
+import { RecordNotFound } from '@/ui/RecordNotFound';
 
 const ICONS = ['🧗', '✋', '⚡', '🔁', '🏋️', '🧘', '😴', '🪨', '🎯', '🔥', '🌀', '🦶'];
 const EQUIPMENT: Equipment[] = ['wall', 'hangboard', 'campus', 'gym'];
@@ -57,12 +58,9 @@ export function BuilderPage({ params }: { params: { id: string } }) {
   if (!hydrated) return <PageSkeleton title="Edit a program" />;
   if (!program) {
     return (
-      <>
-        <PageHeader title="Not found" />
-        <Card>
-          <p className="text-sm text-ink-soft">That program is not here. It may have been deleted.</p>
-        </Card>
-      </>
+      <RecordNotFound what="That program" backTo="/build" backLabel="Back to your programs">
+        It may have been deleted.
+      </RecordNotFound>
     );
   }
 

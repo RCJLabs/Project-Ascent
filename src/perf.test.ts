@@ -47,8 +47,7 @@ function log(sessions: number): Session[] {
   return out;
 }
 
-/** Median of five, so one unlucky GC pause does not fail a build. */
-function median(fn: () => void): number {
+function timings(fn: () => void): number[] {
   fn();
   const runs: number[] = [];
   for (let i = 0; i < 5; i += 1) {
@@ -56,7 +55,27 @@ function median(fn: () => void): number {
     fn();
     runs.push(performance.now() - start);
   }
-  return runs.sort((a, b) => a - b)[2] as number;
+  return runs.sort((a, b) => a - b);
+}
+
+/** Median of five, so one unlucky GC pause does not fail a build. */
+function median(fn: () => void): number {
+  return timings(fn)[2] as number;
+}
+
+/**
+ * The fastest of five — the run with the least interference from everything
+ * else on the machine, and so the closest estimate of what the work itself
+ * costs.
+ *
+ * Only for *ratios*. An absolute budget wants the conservative number and
+ * keeps the median; a ratio of two medians divides one noisy measurement by
+ * another, and with a three-millisecond denominator that is enough to fail a
+ * green build. This one did, twice in a day, while passing on its own
+ * (PLAN.md M41).
+ */
+function fastest(fn: () => void): number {
+  return timings(fn)[0] as number;
 }
 
 const TEN_YEARS = 1560;
@@ -78,11 +97,11 @@ describe('ten years of logs stays cheap', () => {
 
   it('scales linearly rather than superlinearly', () => {
     const half = log(TEN_YEARS / 2);
-    const one = median(() => {
+    const one = fastest(() => {
       clearXpCache();
       deriveXp({ sessions: half, projects: [], ledger: [] });
     });
-    const two = median(() => {
+    const two = fastest(() => {
       clearXpCache();
       deriveXp({ sessions, projects: [], ledger: [] });
     });

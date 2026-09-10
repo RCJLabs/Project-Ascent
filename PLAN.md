@@ -1505,9 +1505,38 @@ across its input space.
   `expect(pages.length).toBeGreaterThan(20)` floor — which is the argument for putting
   a floor under every source-scanning test.
 
-- **M41 — One shape for a missing record.** Four "not found" routes behave three
-  ways: `/projects/<gone>` and `/assessments/<gone>` say so with **no `h1`**, while
-  `/objectives/<gone>` and `/guides/<gone>` silently render the index instead.
+- **M41 — One shape for a missing record.** *Done.* The audit said four routes, three
+  ways. Driving every parameterised route in a browser with a junk id found **eleven
+  routes and five different behaviours**:
+  `/build/<gone>` said "Not found"; `/train/<gone>` said "**Program not found**" — a
+  second heading for the same event — under "That program has not been converted yet",
+  which was true of the prototype port and has not been true since;
+  `/projects/<gone>` and `/assessments/<gone>` rendered a bare card with **no `h1` at
+  all**; `/objectives/<gone>`, `/guides/<gone>` and `/injury/<gone>` **navigated
+  silently to the index** — the injury one to *Settings*; and `/year/<bad>` and
+  `/log/<bad>` rendered as though the parameter were fine, which is a malformed
+  parameter rather than a missing record and is M42's.
+  **`RecordNotFound` is the one shape**: the same two words as the app's global 404 in
+  an `h1`, a sentence naming the record and why it might be gone, and the way back.
+  Nine routes now answer identically, with the URL left alone.
+  **The redirects were the worst of the five**, not the missing headings. A silent
+  bounce to the index throws away the only evidence of what happened: a stale bookmark
+  or a link someone shared becomes an ordinary index page, and the reader concludes
+  they mis-tapped rather than that the record is gone.
+  **The general heading check could never have caught this** and now does not need to:
+  it reads whether a page *file* contains a `PageHeader`, not whether the branch you
+  are looking at renders one, so every one of these pages passed it while its
+  not-found branch had no heading. The `h1` comes from the shared component, so the
+  branch is right by construction.
+  Five rules, each mutated. One survived — "every record route uses `RecordNotFound`"
+  passed when the JSX was replaced by a bare card, because the leftover *import* line
+  still matched the string. It matches `<RecordNotFound` now. Five of five killed
+  after that.
+  **Also fixed, out of scope and worth it:** the `scales linearly` perf test failed
+  twice in a day while passing in isolation. It divides one median by another, and with
+  a three-millisecond denominator that is enough to fail a green build. Ratios take the
+  *fastest* of five runs now — the one with least interference — while absolute budgets
+  keep the conservative median. Four consecutive full-suite runs green.
 
 - **M42 — Validate route parameters.** `/log/<malformed>` renders a page whose
   heading is literally "Invalid Date".

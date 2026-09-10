@@ -20,6 +20,7 @@ import { projectOwner } from '@/db/media';
 import { MediaCard } from '@/features/media/MediaCard';
 import { useGradeLabel } from '@/ui/useGrade';
 import { ProgressionLine } from '@/ui/charts/Charts';
+import { RecordNotFound } from '@/ui/RecordNotFound';
 
 export function ProjectDetailPage({ params }: { params: { id: string } }) {
   const gradeLabel = useGradeLabel();
@@ -51,12 +52,9 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
   if (!hydrated) return <PageSkeleton title="Project" />;
   if (!project || !summary) {
     return (
-      <Card>
-        <p className="text-sm text-ink-soft mb-3">That project is gone.</p>
-        <Link href="/projects" className="text-sm font-semibold text-accent">
-          Back to projects
-        </Link>
-      </Card>
+      <RecordNotFound what="That project" backTo="/projects" backLabel="Back to projects">
+        It may have been sent and archived, or deleted.
+      </RecordNotFound>
     );
   }
 

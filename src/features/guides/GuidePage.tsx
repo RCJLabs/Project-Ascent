@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation } from 'wouter';
+import { Link } from 'wouter';
 import { ArrowRight, BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
 import { GUIDES, getGuide, guideLength } from '@/content/guides';
 import { getProgram } from '@/content/programs';
@@ -8,6 +8,7 @@ import { EmptyState } from '@/ui/EmptyState';
 import { DisclosureButton } from '@/ui/Disclosure';
 import { PageHeader } from '@/ui/PageHeader';
 import { Block } from './GuideBody';
+import { RecordNotFound } from '@/ui/RecordNotFound';
 
 /** Every guide, in reading order. */
 export function GuideList() {
@@ -56,13 +57,11 @@ export function GuideList() {
  * the contents, and the contents are how anyone finds week seven again.
  */
 export function GuidePage({ params }: { params: { id: string } }) {
-  const [, navigate] = useLocation();
   const guide = getGuide(params.id);
   const [open, setOpen] = useState<number[]>([0]);
 
   useEffect(() => {
-    if (!guide) navigate('/guides', { replace: true });
-  }, [guide, navigate]);
+  }, [guide]);
 
   // A different guide is a different document — start it at the top.
   useEffect(() => {
@@ -71,7 +70,13 @@ export function GuidePage({ params }: { params: { id: string } }) {
 
   const program = useMemo(() => (guide ? getProgram(guide.id) : undefined), [guide]);
 
-  if (!guide) return null;
+  if (!guide) {
+    return (
+      <RecordNotFound what="That guide" backTo="/guides" backLabel="Back to guides">
+        Every guide the app ships is listed there.
+      </RecordNotFound>
+    );
+  }
 
   const toggle = (index: number) =>
     setOpen((current) =>

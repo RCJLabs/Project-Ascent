@@ -22,6 +22,7 @@ import { OptionCard } from '@/ui/Chip';
 import { IconButton } from '@/ui/IconButton';
 import { Input, Select, TextArea } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
+import { RecordNotFound } from '@/ui/RecordNotFound';
 
 const small = 'bg-surface border border-line rounded-lg px-2 py-1.5 text-sm min-w-0';
 
@@ -49,12 +50,7 @@ export function SessionEditorPage({ params }: { params: { id: string; typeId: st
   if (!hydrated) return <PageSkeleton title="Edit a session" />;
   if (!program || !type) {
     return (
-      <>
-        <PageHeader title="Not found" />
-        <Card>
-          <p className="text-sm text-ink-soft">That session is not here any more.</p>
-        </Card>
-      </>
+      <RecordNotFound what="That session" backTo="/build" backLabel="Back to your programs" />
     );
   }
 
