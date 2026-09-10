@@ -4,6 +4,7 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import { renderAt, reset } from '@/test/render';
 import { StartProgramPage } from '@/features/plan/StartProgramPage';
 import { FinderPage } from '@/features/finder/FinderPage';
+import { useIntent } from '@/store/intent';
 import { DAY_NAMES } from '@/engine/scheduler';
 
 /**
@@ -124,6 +125,23 @@ describe('the finder asks how long you have', () => {
     renderAt('/find', <FinderPage />);
     fireEvent.click(screen.getByText('Find my program'));
     expect(screen.queryByText(/you would run it over/)).toBeNull();
+  });
+
+  it('remembers the answer for the screen that can act on it', async () => {
+    useIntent.setState({ weeksAvailable: null });
+    await reset();
+    renderAt('/find', <FinderPage />);
+    fireEvent.click(screen.getByText('6 wk').closest('button')!);
+    fireEvent.click(screen.getByText('Find my program'));
+    expect(useIntent.getState().weeksAvailable).toBe(6);
+  });
+
+  it('forgets it again when the answer goes back to open', async () => {
+    useIntent.setState({ weeksAvailable: 6 });
+    await reset();
+    renderAt('/find', <FinderPage />);
+    fireEvent.click(screen.getByText('Find my program'));
+    expect(useIntent.getState().weeksAvailable).toBeNull();
   });
 
   it('offers a one-day week here too', async () => {

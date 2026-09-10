@@ -13,6 +13,7 @@ import {
 } from '@/engine/scheduler';
 import type { DayOfWeek } from '@/content/types';
 import { useProfile } from '@/store/profile';
+import { useIntent } from '@/store/intent';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -37,9 +38,22 @@ export function StartProgramPage({ params }: { params: { id: string } }) {
   const [layoutIndex, setLayoutIndex] = useState(0);
   const [track, setTrack] = useState<string | undefined>(program?.tracks?.[0]?.id);
   const [restart, setRestart] = useState(false);
-  const [weeks, setWeeks] = useState<number | null>(
-    program ? (adaptations[program.id] ?? null) : null,
-  );
+  // A length the climber already chose wins; otherwise the deadline they
+  // gave the finder, if this program is longer than it and can be run over it
+  // (PLAN.md M59). Read once, at mount, so changing the picker is never
+  // fought by the answer that suggested it.
+  const intentWeeks = useIntent((s) => s.weeksAvailable);
+  const [weeks, setWeeks] = useState<number | null>(() => {
+    if (!program) return null;
+    const chosen = adaptations[program.id];
+    if (chosen !== undefined) return chosen;
+    // `lengthsFor` never offers more than the written length, so this also
+    // covers a deadline longer than the program: nothing stretches to fill
+    // the time available.
+    if (intentWeeks === null) return null;
+    return lengthsFor(program).includes(intentWeeks) ? intentWeeks : null;
+  });
+  const fromFinder = weeks !== null && adaptations[params.id] === undefined && weeks === intentWeeks;
 
   if (!program) {
     return <RecordNotFound what="That program" backTo="/train" backLabel="Back to Train" />;
@@ -119,6 +133,13 @@ export function StartProgramPage({ params }: { params: { id: string } }) {
             </div>
             {shown.adaptedFrom !== undefined && (
               <div className="mt-3 grid grid-cols-1 gap-1.5">
+                {/* A length preselected without saying why is a length a
+                    climber cannot trust. */}
+                {fromFinder && (
+                  <p className="text-sm text-ink-soft">
+                    Set from what you told the finder: {intentWeeks} weeks.
+                  </p>
+                )}
                 <p className="text-sm text-ink-soft">
                   {shown.phases.map((p) => p.name).join(', ')} run{' '}
                   {phaseSizes.join(', ')} week{phaseSizes[phaseSizes.length - 1] === 1 ? '' : 's'}{' '}

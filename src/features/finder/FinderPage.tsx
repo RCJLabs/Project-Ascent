@@ -17,6 +17,7 @@ import { OptionCard } from '@/ui/Chip';
 import { Select } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 import { useSettings } from '@/store/settings';
+import { useIntent } from '@/store/intent';
 
 const EXPERIENCE: { value: Experience; label: string; hint: string }[] = [
   { value: 'new', label: 'New to it', hint: 'Under a year, or never trained deliberately' },
@@ -168,6 +169,7 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
   const blocking = useMemo(() => injuryPolicy(storedInjuries).excluded, [storedInjuries]);
   const metrics = useMetrics((s) => s.entries);
   const display = useSettings((s) => s.display);
+  const setIntentWeeks = useIntent((s) => s.setWeeksAvailable);
 
   const toggleInjury = (part: BodyPart) => {
     const existing = storedInjuries.find((i) => i.part === part);
@@ -187,6 +189,10 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
   }, [baseline, equipment, blocking, metrics, display]);
 
   function run() {
+    // Carried to the start screen, which is the only place it can be acted
+    // on (PLAN.md M59). Set on every run, including back to null, so an
+    // answer changed here is the answer that travels.
+    setIntentWeeks(weeksAvailable);
     const input: FinderInput = {
       metrics,
       display,

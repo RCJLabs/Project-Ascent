@@ -2043,11 +2043,24 @@ and why.
   (M58). What is left is a coach's reading of two draft programs and a guide for each —
   the one part of this that only the person who writes the training can do.
 
-- **M59 — The deadline a climber just gave the finder.** They tell the finder they have
-  six weeks, it recommends a twelve-week block saying "you would run it over 6", they open
-  it, and the start screen asks the same question again one card down. The answer should
-  arrive with them. Transient on purpose — a trip is not a setting — and visible rather
-  than magic: a length preselected without saying why is a length a climber cannot trust.
+- **M59 — The deadline a climber just gave the finder.** *Done.* They told the finder
+  they had six weeks, it recommended a twelve-week block saying "you would run it over 6",
+  they opened it — and the start screen asked the same question again one card down.
+  The answer now travels with them, in a store that is **deliberately not persisted**: a
+  trip is a fact about this month, and a deadline that outlived the session it was typed in
+  would silently shorten a program months later. A reload clears it, which is right.
+  It is a suggestion and behaves like one. A length the climber already committed to wins
+  over it; changing the picker wins over it and takes the note with it; a deadline longer
+  than the program never stretches it, because `lengthsFor` never offers more than the
+  written length; and a deadline no offered length serves — five weeks, say — preselects
+  nothing rather than choosing something near it on their behalf. It also says where it
+  came from: "Set from what you told the finder: 6 weeks." A length preselected silently is
+  a length a climber cannot trust.
+  Six mutations, five killed and one deleted: the guard against a deadline longer than the
+  program could not be killed because `lengthsFor` already makes it impossible, so it went
+  rather than staying as code no test can defend.
+  Verified in a browser along the path a climber actually walks — finder, six weeks, top
+  recommendation, program page, start — and the length is preselected with its reason.
 
 - **M60 — Device settings stop travelling in backups.** `profile/settings` holds `theme`,
   `themeId`, `textSize` and `cues`, which belong to the device, beside `display` and
