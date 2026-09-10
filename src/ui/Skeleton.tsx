@@ -15,12 +15,12 @@
  * `aria-hidden` with `aria-busy` on the container: a screen reader should be
  * told the region is loading, not read a description of grey rectangles.
  */
-export function SkeletonBlock({ className = '' }: { className?: string }) {
+function SkeletonBlock({ className = '' }: { className?: string }) {
   return <div className={`bg-sunken rounded-lg ${className}`} aria-hidden />;
 }
 
 /** A card-shaped placeholder, sized to what usually lands there. */
-export function SkeletonCard({ lines = 3 }: { lines?: number }) {
+function SkeletonCard({ lines = 3 }: { lines?: number }) {
   return (
     <div className="bg-surface border border-line rounded-2xl p-4">
       <SkeletonBlock className="h-3 w-24 mb-3" />
@@ -43,6 +43,13 @@ export function SkeletonCard({ lines = 3 }: { lines?: number }) {
  * Takes the page title when there is one, because the title is known before
  * the data is — a page that can say "Projects" while it loads is a page the
  * climber can tell they arrived at.
+ */
+/**
+ * The only export: the two helpers above are `PageSkeleton`'s own parts.
+ *
+ * Exporting them made them look like a public offer nothing had taken up —
+ * which is the pattern `ui/wired.test.ts` exists to catch, and it caught
+ * these on its first run.
  */
 export function PageSkeleton({ title, cards = 2 }: { title?: string; cards?: number }) {
   return (

@@ -933,15 +933,39 @@ about ten lines and would have caught all three; it belongs with the first of th
   `ACWR_BOUNDS` band shaded is the single most useful missing chart, because it
   turns a number nobody trusts into a trajectory.
 
-- **M26 — The moment a record lands.** A personal record pays `0.5` of a level —
-  **the biggest single award in the economy**, more than three sessions — and the
-  card shown after logging says only "Earned +N XP". It never names the record.
-  Meanwhile `recordCard` exists in `shareCard.ts` and is called from nowhere. Name
-  the record where it happens, offer the card that was already built, and add the
-  ten-line test above so the next unwired primitive fails a run instead of sitting
-  there. *Done when: sending your first V7 is a different screen from any other
-  session.*
-
+- **M26 — The moment a record lands.** *Done.* A personal record pays `0.5` of a
+  level — the biggest single award in the economy, worth more than three ordinary
+  sessions — and the card after logging led with the XP total while the record sat as
+  one grey line among "3× V4" and "Warmed up". (The audit said it "never named" the
+  record; it did name it, in a list, indistinguishable from a routine send. The economy
+  knew it mattered and the screen did not say so.) Now a session that was more than a
+  session **is a different card**: the eyebrow, the headline and a sentence, with the
+  XP dropped to a line underneath.
+  `sessionMilestones` ranks six kinds — grade record, project sent, first day on rock,
+  first session, rank, level — **rarest first**, because a session can set a record
+  *and* level you up *and* be your first day outdoors and only one of those can lead. A
+  grade record outranks the rest because it is the only one about climbing rather than
+  about the app's own arithmetic, and for the same reason **only a grade or a send is
+  shareable**: handing someone a level the app invented is not an achievement. A rank
+  suppresses the level-up it implies — "Level 13" under "Crusher" is one fact told
+  twice.
+  **The records are read back out of the reward, not re-derived.** `recordsInReward`
+  parses them from the award ids the economy already wrote, so the headline can never
+  disagree with the line that paid for it, and no climber-state derivation runs to name
+  one grade. The id shape is a string coupling, so a test asserts it against
+  `economy.ts`.
+  The screen-reader announcement now leads with the record: "412 XP earned" told a
+  climber nothing about having just climbed the hardest thing they ever have. And
+  `recordCard` — written in M13, reachable from nowhere — is finally wired. Seeing it
+  for the first time showed a hole in the middle where the avatar goes, so the three
+  screens that each derived a climber avatar now share one `useClimberAvatar`, derived
+  only when there is a card to put it on.
+  **The unwired-primitive check is in.** `ui/wired.test.ts` asserts every share-card
+  builder and every `ui/` primitive has a caller outside its own file. It caught two of
+  my own on its first run — `SkeletonBlock` and `SkeletonCard` from M22 were exported
+  but only used inside `Skeleton.tsx`, which is the same pattern in miniature. They are
+  internal now. That is three occurrences found (`validate_palette.js`, `EmptyState`,
+  `recordCard`) and a fourth prevented.
 - **M27 — What you have been loading.** `bodyLoad.ts` is a real engine —
   `LOAD_RULES`, `EQUIPMENT_LOADS`, `scanText`, `exerciseConflict`, `drillConflict` —
   and it is used in exactly one place, the logger, to warn about an injury. The same

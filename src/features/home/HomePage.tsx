@@ -3,17 +3,16 @@ import { Link } from 'wouter';
 import { CalendarDays, Check, Clock, Gamepad2, MessageSquare, Settings, Sparkles } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { deriveAltimeter } from '@/engine/altimeter';
-import { deriveAvatar } from '@/engine/avatar';
+
 import { deriveClimberState } from '@/engine/derive';
-import { deriveStats } from '@/engine/stats';
-import { deriveVitality } from '@/engine/vitality';
+
 import { BoardCard } from '@/features/challenges/BoardPage';
 import { ReviewCard } from '@/features/review/ReviewPage';
 import { today } from '@/engine/dates';
 import { plannedDay } from '@/engine/plan';
 import { useXp } from '@/store/game';
 import { useProfile } from '@/store/profile';
-import { useSkillEffects } from '@/store/skills';
+
 import { useSessions } from '@/store/sessions';
 import { PageGrid, Wide } from '@/ui/PageGrid';
 import { Card } from '@/ui/Card';
@@ -21,6 +20,7 @@ import { Avatar } from '@/ui/Avatar';
 import { LevelBar } from '@/ui/LevelBar';
 import { MountainMeter } from '@/ui/MountainMeter';
 import { PageHeader } from '@/ui/PageHeader';
+import { useClimberAvatar } from '@/ui/useClimberAvatar';
 import { useTips } from '@/features/coach/CoachPage';
 
 export function HomePage() {
@@ -173,27 +173,7 @@ function CoachCard() {
 
 function ClimberStrip() {
   const xp = useXp();
-  const byDate = useSessions((s) => s.byDate);
-  const injuries = useProfile((s) => s.injuries);
-  const palette = useProfile((s) => s.avatarPalette);
-  const restBonus = useSkillEffects().restRecovery;
-
-  const avatar = useMemo(() => {
-    const sessions = Object.values(byDate).flat();
-    const state = deriveClimberState(sessions);
-    const vitality = deriveVitality({
-      state,
-      endurance: deriveStats({ state }).END,
-      injuries,
-      restBonus,
-    });
-    return deriveAvatar({
-      level: xp.progress.level,
-      vitality: vitality.state,
-      feet: deriveAltimeter(sessions).feet,
-      palette,
-    });
-  }, [byDate, injuries, palette, restBonus, xp.progress.level]);
+  const avatar = useClimberAvatar();
 
   return (
     <Link href="/climber" className="flex items-center gap-3 bg-surface border border-line rounded-2xl p-4">

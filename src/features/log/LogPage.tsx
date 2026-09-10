@@ -7,6 +7,20 @@ import { addDays, fromKey, shortLabel, today } from '@/engine/dates';
 import { clearTimerState, loadTimerState, saveTimerState } from '@/lib/timerState';
 import { ClimbEntry, RepeatLast, type Outcome } from './ClimbEntry';
 import { offerUndo } from '@/store/undo';
+import { rankFor } from '@/engine/economy';
+import { useSettings } from '@/store/settings';
+import type { SessionXp } from '@/engine/xp';
+import {
+  announcementFor,
+  headlineMilestone,
+  recordsInReward,
+  sessionMilestones,
+  type Milestone,
+  type MilestoneKind,
+} from '@/engine/milestones';
+import { recordCard } from '@/ui/shareCard';
+import { useClimberAvatar } from '@/ui/useClimberAvatar';
+import { ShareButton } from '@/features/share/ShareSheet';
 import {
   describeSpan,
   durationFromSpan,
@@ -1011,22 +1025,70 @@ function ProjectBurnsCard({
  * an edited session is worth a different number and hiding that would be
  * the same dishonesty the derived total exists to avoid.
  */
+/** How the headline names itself, above the thing itself. */
+const MILESTONE_EYEBROW: Record<MilestoneKind, string> = {
+  'grade-pr': 'Personal record',
+  'project-send': 'Project sent',
+  'first-outdoor': 'A first',
+  'first-session': 'A first',
+  'rank-up': 'New rank',
+  'level-up': 'Level up',
+};
+
+/**
+ * What this session was, beyond its XP (PLAN.md M26).
+ *
+ * The records come out of the reward breakdown rather than a fresh
+ * derivation — see `recordsInReward` — so the headline can never disagree
+ * with the line that paid for it.
+ */
+function useSessionMilestones(session: Session, detail: SessionXp | undefined): Milestone[] {
+  const byDate = useSessions((s) => s.byDate);
+  const projects = useProjects((s) => s.projects);
+  const display = useSettings((s) => s.display);
+
+  return useMemo(() => {
+    if (!detail) return [];
+    const all = Object.values(byDate).flat();
+    const earlier = all.filter(
+      (s) => s.completed && (s.date < session.date || (s.date === session.date && s.id < session.id)),
+    );
+    return sessionMilestones({
+      session,
+      records: recordsInReward(detail.reward.awards, session.date),
+      earlierSessions: earlier.length,
+      earlierOutdoor: earlier.filter((s) => s.mode === 'outdoor').length,
+      levelBefore: detail.levelBefore,
+      levelAfter: detail.levelAfter,
+      rankBefore: rankFor(detail.levelBefore).title,
+      rankAfter: rankFor(detail.levelAfter).title,
+      projectsSent: projects
+        .filter((p) => p.status === 'sent' && p.sentDate === session.date)
+        .map((p) => ({ name: p.name, grade: p.grade, scale: p.scale })),
+      display,
+    });
+  }, [byDate, projects, display, session, detail]);
+}
+
 function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledge: () => void }) {
   const xp = useXp();
   const detail = xp.bySession[session.id];
   const levelled = detail !== undefined && detail.levelAfter > detail.levelBefore;
+  const milestones = useSessionMilestones(session, detail);
+  const lead = headlineMilestone(milestones);
+  const display = useSettings((s) => s.display);
+  // Only derived when there is actually a card to put it on — see the hook.
+  const avatar = useClimberAvatar(Boolean(lead?.shareable && lead.record));
 
   // The card appearing is the whole feedback for logging a session, and it
   // arrives without a navigation — so on screen it is unmissable and to a
-  // screen reader it was, until this, completely silent.
+  // screen reader it was, until this, completely silent. The record leads,
+  // because "412 XP earned" says nothing about having just climbed the
+  // hardest thing you ever have.
   useEffect(() => {
     if (detail === undefined || session.rewarded) return;
-    announce(
-      levelled
-        ? `Session logged. ${detail.xp.toLocaleString()} XP earned, and you reached level ${detail.levelAfter}.`
-        : `Session logged. ${detail.xp.toLocaleString()} XP earned.`,
-    );
-  }, [detail?.xp, detail?.levelAfter, levelled, session.rewarded, detail, session.id]);
+    announce(announcementFor(milestones, detail.xp));
+  }, [detail?.xp, session.rewarded, detail, session.id, milestones]);
 
   if (!detail) return null;
 
@@ -1040,16 +1102,47 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
 
   return (
     <Card>
-      <div className="text-center mb-3">
-        <div className="text-3xl font-black tabular-nums leading-none">
-          +{detail.xp.toLocaleString()}
+      {/* M26: when something happened, it is the card. The XP total drops to
+          a line underneath — it is the same number either way, and a
+          climber who has just done the hardest thing they ever have should
+          not have to read an arithmetic breakdown to find that out. */}
+      {lead ? (
+        <div className="text-center mb-3">
+          <div className="text-2xs font-bold uppercase tracking-widest text-accent">
+            {MILESTONE_EYEBROW[lead.kind]}
+          </div>
+          <div className="text-3xl font-black tracking-tight leading-tight mt-1">
+            {lead.headline}
+          </div>
+          <p className="text-sm text-ink-soft mt-1.5 leading-relaxed">{lead.detail}</p>
+          <p className="text-sm text-ink-soft mt-2 tabular-nums">
+            +{detail.xp.toLocaleString()} XP
+          </p>
         </div>
-        <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mt-1.5">
-          XP earned
+      ) : (
+        <div className="text-center mb-3">
+          <div className="text-3xl font-black tabular-nums leading-none">
+            +{detail.xp.toLocaleString()}
+          </div>
+          <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mt-1.5">
+            XP earned
+          </div>
         </div>
-      </div>
+      )}
 
-      {levelled && (
+      {/* Anything else the session was, under the headline rather than lost. */}
+      {milestones.length > 1 && (
+        <ul className="grid grid-cols-1 gap-1 mb-3">
+          {milestones.slice(1).map((m) => (
+            <li key={`${m.kind}-${m.headline}`} className="flex items-center gap-2 text-sm">
+              <Sparkles size={13} className="text-accent shrink-0" aria-hidden />
+              <span className="font-semibold">{m.headline}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {levelled && !lead && (
         <p className="flex items-center justify-center gap-1.5 text-sm font-semibold text-accent mb-3">
           <TrendingUp size={15} /> Level {detail.levelAfter} — {xp.rank.title}
         </p>
@@ -1084,9 +1177,21 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
         </p>
       )}
 
-      <Button className="w-full" onClick={onAcknowledge}>
-        <Sparkles size={16} /> Nice
-      </Button>
+      <div className="grid grid-cols-1 gap-2">
+        {/* The card for exactly this was written in M13 and reachable from
+            nowhere until now. */}
+        {lead?.shareable && lead.record && (
+          <ShareButton
+            content={recordCard(lead.record.grade, lead.record.date, avatar, lead.record.scale, display)}
+            filename={`personal-record-${lead.record.grade}`}
+            label="Share this"
+            className="w-full justify-center"
+          />
+        )}
+        <Button className="w-full" onClick={onAcknowledge}>
+          <Sparkles size={16} /> Nice
+        </Button>
+      </div>
     </Card>
   );
 }
