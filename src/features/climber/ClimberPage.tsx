@@ -33,7 +33,8 @@ import { useCurrency, useXp } from '@/store/game';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
-import { useSkills } from '@/store/skills';
+import { describeNext } from '@/engine/nextUnlock';
+import { useNextUnlock, useSkills } from '@/store/skills';
 import { useSessions } from '@/store/sessions';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { PageGrid } from '@/ui/PageGrid';
@@ -91,6 +92,7 @@ export function ClimberPage() {
   );
 
   const skills = useSkills();
+  const next = useNextUnlock();
   const vitality = useMemo(
     () =>
       deriveVitality({
@@ -155,10 +157,8 @@ export function ClimberPage() {
               <p className="text-sm font-semibold">
                 {skills.unlocked} of {skills.total} unlocked
               </p>
-              <p className="text-xs text-ink-soft mt-0.5 truncate">
-                {skills.next[0]
-                  ? `Closest: ${skills.next[0].node.name} — ${skills.next[0].measurement.detail}`
-                  : 'Five trees, every requirement real training.'}
+              <p className="text-xs text-ink-soft mt-0.5 leading-relaxed">
+                {describeNext(next)}
               </p>
             </div>
             <ChevronRight size={18} className="text-ink-soft shrink-0" />

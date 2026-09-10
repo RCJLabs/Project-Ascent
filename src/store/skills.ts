@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { SKILL_TREES } from '@/content/skills';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveClimberState } from '@/engine/derive';
+import { nextUnlock, type NextUnlock } from '@/engine/nextUnlock';
 import { evaluateSkills, type SkillState } from '@/engine/skills';
 import { deriveStats } from '@/engine/stats';
 import { useXp } from './game';
@@ -37,6 +38,17 @@ export function useSkills(): SkillState {
       display,
     });
   }, [byDate, metrics, projects, xp.progress.level, display]);
+}
+
+/**
+ * The one thing closest to unlocking, for the screens that show a prompt.
+ *
+ * `useSkills` is memoised on the log, so the three callers share one
+ * evaluation of 130 nodes rather than each running their own.
+ */
+export function useNextUnlock(): NextUnlock | null {
+  const skills = useSkills();
+  return useMemo(() => nextUnlock(skills), [skills]);
 }
 
 /** Just the perks, for the systems that only need those. */

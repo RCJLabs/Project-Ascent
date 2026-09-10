@@ -90,6 +90,14 @@ export interface Measurement {
   met: boolean;
   /** What the requirement asks for, in words. */
   detail: string;
+  /**
+   * Units still to do, zero once met. Usually `target - current` — but not
+   * always, and `streak-weeks` is the exception that makes the field worth
+   * having rather than deriving.
+   */
+  short: number;
+  /** `short` in the requirement's own words, or '' once it is met. */
+  remaining: string;
 }
 
 function metricValue(input: SkillInput, id: MetricId): number | null {
@@ -105,79 +113,178 @@ function plural(count: number, one: string, many = `${one}s`): string {
   return count === 1 ? one : many;
 }
 
+function trim(value: number): string {
+  return Number.isInteger(value) ? value.toLocaleString() : value.toFixed(1);
+}
+
+/**
+ * The target in words, and the gap in words.
+ *
+ * `detail` says what the node asks for; `remaining` says what is left. Both,
+ * because they answer different questions — the tree wants the requirement
+ * and the one-line prompt on Home wants "two more days on rock". Quoting the
+ * requirement where the gap belongs is what the old prompt did, and it is
+ * why nothing in the app ever told a climber how close they were.
+ */
 export function measure(requirement: SkillRequirement, input: SkillInput): Measurement {
   const s = input.state;
   const display = input.display ?? DEFAULT_DISPLAY;
-  const done = (current: number, target: number, detail: string): Measurement => ({
-    current,
-    target,
-    met: current >= target,
-    detail,
-  });
+  const done = (
+    current: number,
+    target: number,
+    detail: string,
+    gap: (short: number) => string,
+    /** Where to count the gap from, when that is not where progress stands. */
+    shortFrom: number = current,
+  ): Measurement => {
+    const met = current >= target;
+    const short = met ? 0 : Math.max(0, target - shortFrom);
+    return { current, target, met, detail, short, remaining: short > 0 ? gap(short) : '' };
+  };
 
   switch (requirement.kind) {
     case 'level':
-      return done(input.level ?? 0, requirement.level, `Reach level ${requirement.level}`);
+      return done(
+        input.level ?? 0,
+        requirement.level,
+        `Reach level ${requirement.level}`,
+        (n) => `${n} more ${plural(n, 'level')}`,
+      );
     case 'sessions':
-      return done(s.completedSessions, requirement.count, `Log ${requirement.count} ${plural(requirement.count, 'session')}`);
+      return done(
+        s.completedSessions,
+        requirement.count,
+        `Log ${requirement.count} ${plural(requirement.count, 'session')}`,
+        (n) => `${n} more ${plural(n, 'session')}`,
+      );
     case 'hours':
-      return done(Math.floor(s.totalMinutes / 60), requirement.hours, `Climb ${requirement.hours} ${plural(requirement.hours, 'hour')}`);
+      return done(
+        Math.floor(s.totalMinutes / 60),
+        requirement.hours,
+        `Climb ${requirement.hours} ${plural(requirement.hours, 'hour')}`,
+        (n) => `${n} more ${plural(n, 'hour')}`,
+      );
     case 'sends': {
       const tally = requirement.scale === 'V' ? s.boulder : s.sport;
       const floor = gradeOrdinal(requirement.scale, requirement.grade);
       const current = Object.entries(tally.sends)
         .filter(([grade]) => gradeOrdinal(requirement.scale, grade) >= floor)
         .reduce((sum, [, n]) => sum + n, 0);
+      const shown = displayGrade(requirement.scale, requirement.grade, display);
       return done(
         current,
         requirement.count,
-        `Send ${requirement.count} at ${displayGrade(requirement.scale, requirement.grade, display)} or harder`,
+        `Send ${requirement.count} at ${shown} or harder`,
+        (n) => `${n} more at ${shown} or harder`,
       );
     }
     case 'style-sends': {
       const current = s.styleSends[requirement.style];
       const word = requirement.style === 'onsight' ? 'on-sight' : 'flash';
-      return done(current, requirement.count, `${cap(word)} ${requirement.count} ${plural(requirement.count, 'climb')}`);
+      const many = requirement.style === 'onsight' ? 'on-sights' : 'flashes';
+      return done(
+        current,
+        requirement.count,
+        `${cap(word)} ${requirement.count} ${plural(requirement.count, 'climb')}`,
+        (n) => `${n} more ${plural(n, word, many)}`,
+      );
     }
     case 'grade-variety': {
       const current = Object.keys(s.boulder.sends).length + Object.keys(s.sport.sends).length;
-      return done(current, requirement.count, `Send ${requirement.count} different ${plural(requirement.count, 'grade')}`);
+      return done(
+        current,
+        requirement.count,
+        `Send ${requirement.count} different ${plural(requirement.count, 'grade')}`,
+        (n) => `${n} more ${plural(n, 'grade')} you have not sent`,
+      );
     }
     case 'drills': {
       const current = s.drillsByCategory[requirement.category] ?? 0;
-      return done(current, requirement.count, `Complete ${requirement.count} ${requirement.category.replace('-', ' ')} ${plural(requirement.count, 'drill')}`);
+      const category = requirement.category.replace('-', ' ');
+      return done(
+        current,
+        requirement.count,
+        `Complete ${requirement.count} ${category} ${plural(requirement.count, 'drill')}`,
+        (n) => `${n} more ${category} ${plural(n, 'drill')}`,
+      );
     }
     case 'streak-weeks':
-      return done(s.longestStreakWeeks, requirement.weeks, `Hit your weekly target ${requirement.weeks} ${plural(requirement.weeks, 'week')} running`);
+      // Counted from the streak you are *on*, not your best one. A broken
+      // streak starts over, so telling a climber whose record is behind them
+      // that they are "two weeks away" would be false — their best is two
+      // weeks away, and they are sixteen.
+      return done(
+        s.longestStreakWeeks,
+        requirement.weeks,
+        `Hit your weekly target ${requirement.weeks} ${plural(requirement.weeks, 'week')} running`,
+        (n) => `${n} more ${plural(n, 'week')} in a row`,
+        s.streakWeeks,
+      );
     case 'outdoor-days':
-      return done(s.outdoorDays, requirement.count, `Climb outdoors on ${requirement.count} ${plural(requirement.count, 'day')}`);
+      return done(
+        s.outdoorDays,
+        requirement.count,
+        `Climb outdoors on ${requirement.count} ${plural(requirement.count, 'day')}`,
+        (n) => `${n} more ${plural(n, 'day')} on rock`,
+      );
     case 'projects-sent': {
       const current = (input.projects ?? []).filter((p) => p.status === 'sent').length;
-      return done(current, requirement.count, `Send ${requirement.count} tracked ${plural(requirement.count, 'project')}`);
+      return done(
+        current,
+        requirement.count,
+        `Send ${requirement.count} tracked ${plural(requirement.count, 'project')}`,
+        (n) => `${n} more tracked ${plural(n, 'project')}`,
+      );
     }
     case 'rest-days':
-      return done(s.restSessions, requirement.count, `Log ${requirement.count} rest ${plural(requirement.count, 'day')}`);
+      return done(
+        s.restSessions,
+        requirement.count,
+        `Log ${requirement.count} rest ${plural(requirement.count, 'day')}`,
+        (n) => `${n} more rest ${plural(n, 'day')}`,
+      );
     case 'height':
-      return done(Math.round((input.feet ?? 0)), requirement.feet, `Climb ${requirement.feet.toLocaleString()} ft on the altimeter`);
+      return done(
+        Math.round(input.feet ?? 0),
+        requirement.feet,
+        `Climb ${requirement.feet.toLocaleString()} ft on the altimeter`,
+        (n) => `${n.toLocaleString()} more ft`,
+      );
     case 'metric': {
       const current = metricValue(input, requirement.metricId);
-      return done(current ?? 0, requirement.atLeast, `Reach ${requirement.atLeast} on ${metricLabel(requirement.metricId)}`);
+      const label = metricLabel(requirement.metricId);
+      return done(
+        current ?? 0,
+        requirement.atLeast,
+        `Reach ${requirement.atLeast} on ${label}`,
+        (n) => `${trim(n)} more on ${label}`,
+      );
     }
     case 'metric-under': {
       const current = metricValue(input, requirement.metricId);
       // Lower is better, so progress is the distance closed rather than the
       // raw number — a bar that fills as the measurement drops.
       const met = current !== null && current <= requirement.atMost;
+      const detail = `Get ${metricLabel(requirement.metricId)} to ${requirement.atMost} or under`;
       return {
         current: met ? 1 : 0,
         target: 1,
         met,
-        detail: `Get ${metricLabel(requirement.metricId)} to ${requirement.atMost} or under`,
+        detail,
+        short: met ? 0 : 1,
+        // Reduced to met-or-not above, so there is no gap left to quote and
+        // the target is the whole of what can honestly be said.
+        remaining: met ? '' : detail,
       };
     }
     case 'stat': {
       const current = input.stats?.[requirement.stat]?.value ?? 0;
-      return done(current, requirement.atLeast, `Reach ${requirement.stat} ${requirement.atLeast}`);
+      return done(
+        current,
+        requirement.atLeast,
+        `Reach ${requirement.stat} ${requirement.atLeast}`,
+        (n) => `${n} more ${requirement.stat}`,
+      );
     }
   }
 }
@@ -219,8 +326,6 @@ export interface SkillState {
   unlocked: number;
   total: number;
   effects: SkillEffects;
-  /** The closest unlocks that are not yet met, nearest first. */
-  next: SkillProgress[];
 }
 
 const EMPTY_EFFECTS = (): SkillEffects => ({
@@ -243,7 +348,6 @@ export function evaluateSkills(trees: SkillTree[], input: SkillInput): SkillStat
   const effects = EMPTY_EFFECTS();
   let unlockedTotal = 0;
   let total = 0;
-  const pending: SkillProgress[] = [];
 
   for (const tree of trees) {
     const byBranch = new Map<string, SkillNode[]>();
@@ -277,7 +381,6 @@ export function evaluateSkills(trees: SkillTree[], input: SkillInput): SkillStat
 
     for (const entry of nodes) {
       if (entry.unlocked) applyEffect(effects, entry.node.effect);
-      else pending.push(entry);
     }
 
     treeStates.push({
@@ -290,16 +393,11 @@ export function evaluateSkills(trees: SkillTree[], input: SkillInput): SkillStat
     });
   }
 
-  // Nearest first, by how much of the requirement is already done.
-  const next = pending
-    .filter((p) => p.measurement.target > 0)
-    .sort(
-      (a, b) =>
-        b.measurement.current / b.measurement.target - a.measurement.current / a.measurement.target,
-    )
-    .slice(0, 5);
-
-  return { trees: treeStates, unlocked: unlockedTotal, total, effects, next };
+  // What is closest to unlocking is `nextUnlock.ts`, not a second list here:
+  // ranking by how much of a requirement is done put a *blocked* node first
+  // (ratio ≥ 1, and unreachable until the rung below it lights up) and put a
+  // stat capstone three points away ahead of one more day on rock.
+  return { trees: treeStates, unlocked: unlockedTotal, total, effects };
 }
 
 function applyEffect(effects: SkillEffects, effect: SkillEffect | undefined): void {

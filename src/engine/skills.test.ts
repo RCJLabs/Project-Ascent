@@ -198,13 +198,11 @@ describe('evaluation', () => {
     expect(state.effects.restRecovery).toBeGreaterThan(0);
   });
 
-  it('lists what is closest to unlocking, nearest first', () => {
-    const sessions = [session(TODAY, { climbs: [climb('V3', 9)] })];
-    const state = evaluateSkills(SKILL_TREES, inputOf(sessions));
-    expect(state.next.length).toBeGreaterThan(0);
-    const fractions = state.next.map((p) => p.measurement.current / p.measurement.target);
-    expect(fractions).toEqual([...fractions].sort((a, b) => b - a));
-    expect(state.next.every((p) => !p.unlocked)).toBe(true);
+  it('does not rank what is closest to unlocking', () => {
+    // It used to, by fraction of the requirement done, which put a *blocked*
+    // node first and a stat capstone ahead of one more day on rock. That job
+    // belongs to `nextUnlock.ts` and there is no second answer here.
+    expect('next' in evaluateSkills(SKILL_TREES, inputOf([]))).toBe(false);
   });
 
   it('counts per tree as well as overall', () => {

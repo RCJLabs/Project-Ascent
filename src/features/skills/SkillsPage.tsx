@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Check, Lock, Sparkles } from 'lucide-react';
 import { describeEffect, type SkillProgress, type SkillTreeState, type TreeId } from '@/engine/skills';
+import { nextUnlocks } from '@/engine/nextUnlock';
 import { useSkills } from '@/store/skills';
 import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
@@ -12,6 +13,12 @@ import { PageHeader } from '@/ui/PageHeader';
 
 export function SkillsPage() {
   const skills = useSkills();
+  // Ranked by what is left to do, and only among rungs that can actually
+  // light up next — see `nextUnlock.ts` for what the old ordering got wrong.
+  const closest = useMemo(() => {
+    const byId = new Map(skills.trees.flatMap((t) => t.nodes).map((n) => [n.node.id, n]));
+    return nextUnlocks(skills, 3).flatMap((n) => byId.get(n.node.id) ?? []);
+  }, [skills]);
   const [open, setOpen] = useState<TreeId | null>(skills.trees[0]?.id ?? null);
   const effects = skills.effects;
   const perks = [
@@ -53,10 +60,10 @@ export function SkillsPage() {
           </Card>
         )}
 
-        {skills.next.length > 0 && (
+        {closest.length > 0 && (
           <Card title="Closest to unlocking">
             <ul className="grid grid-cols-1 gap-2.5">
-              {skills.next.map((entry) => (
+              {closest.map((entry) => (
                 <li key={entry.node.id}>
                   <NodeRow entry={entry} />
                 </li>
@@ -157,8 +164,19 @@ function NodeRow({ entry }: { entry: SkillProgress }) {
 
       <p className="text-xs text-ink-soft mt-1 leading-relaxed">{measurement.detail}</p>
 
+      {/* The requirement above, what is left below. The row used to show
+          only the first, so a climber one send away read the same line as
+          one who had never started (PLAN.md M29).
+
+          Only once there is something on it: at zero the gap is the target
+          said twice, and a branch of five untouched rungs read as five pairs
+          of near-identical lines. */}
+      {!unlocked && measurement.current > 0 && measurement.remaining !== '' && (
+        <p className="text-xs font-semibold mt-0.5">{cap(measurement.remaining)}</p>
+      )}
+
       {!unlocked && (
-        <div className="h-1 rounded-full bg-surface overflow-hidden mt-1.5">
+        <div className="h-1 rounded-full bg-surface overflow-hidden mt-2">
           <div className="h-full bg-accent rounded-full" style={{ width: `${Math.max(2, pct)}%` }} />
         </div>
       )}
@@ -176,4 +194,8 @@ function NodeRow({ entry }: { entry: SkillProgress }) {
       )}
     </div>
   );
+}
+
+function cap(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }

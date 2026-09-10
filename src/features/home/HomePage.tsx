@@ -11,6 +11,7 @@ import { ReviewCard } from '@/features/review/ReviewPage';
 import { today } from '@/engine/dates';
 import { plannedDay } from '@/engine/plan';
 import { useXp } from '@/store/game';
+import { useNextUnlock } from '@/store/skills';
 import { useProfile } from '@/store/profile';
 
 import { useSessions } from '@/store/sessions';
@@ -171,9 +172,19 @@ function CoachCard() {
   );
 }
 
+/**
+ * You, your level, and the one thing closest to unlocking (PLAN.md M29).
+ *
+ * The 130 skill nodes lived behind two taps and nothing outside them said
+ * how close any of them was — the character page named the closest node but
+ * quoted its *requirement*, so a climber one send away read the same line as
+ * one who had never started. One line, not a list: five things you are
+ * nearly at is a chore, and the pull comes from there being one.
+ */
 function ClimberStrip() {
   const xp = useXp();
   const avatar = useClimberAvatar();
+  const next = useNextUnlock();
 
   return (
     <Link href="/climber" className="flex items-center gap-3 bg-surface border border-line rounded-2xl p-4">
@@ -182,9 +193,19 @@ function ClimberStrip() {
       </div>
       <div className="flex-1 min-w-0">
         <LevelBar progress={xp.progress} rank={xp.rank} compact />
+        {next && (
+          <p className="text-xs text-ink-soft mt-1.5 leading-relaxed">
+            <span className="font-semibold text-ink">{cap(next.remaining)}</span> and{' '}
+            {next.node.name} unlocks.
+          </p>
+        )}
       </div>
     </Link>
   );
+}
+
+function cap(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /** The mountain filling toward the next milestone — the plan's home-screen

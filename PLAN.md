@@ -1069,11 +1069,41 @@ about ten lines and would have caught all three; it belongs with the first of th
   fixtures that span the window properly.
   Verified at 390px light and dark and across the width sweep: a month of building, a
   month of tapering, and a climber too new to compare. Zero horizontal overflow.
-- **M29 — The next unlock.** There are **125 skill nodes across five trees** and they
-  are reachable from one page. Nothing anywhere else says "two more sends at V5 and
-  Half Crimp unlocks". A single line on Home or after a session, naming the nearest
-  node and what it needs, turns a static tree into a reason to train. Keep it to one:
-  a list of five is a chore, not a pull.
+- **M29 — The next unlock.** *Done.* There are **130 skill nodes across five trees**
+  and they were reachable from one page. One line on Home now names the nearest node
+  and what it needs, and it stays one line: a list of five is a chore, not a pull.
+  **The plan's premise was half wrong and the half that was right mattered more.** The
+  character page *did* carry a "Closest:" line — but it quoted the node's
+  *requirement*, "Send 4 different grades", so a climber one grade away read exactly
+  what a climber who had never started read. `measure()` produced the target and had no
+  way to say the gap. It now returns both: `detail` for the tree row and `remaining`
+  for the prompt, so the app can finally say "1 more grade you have not sent".
+  **The old ranking was broken twice, and `nextUnlock.ts` replaces it.** `SkillState`
+  used to sort locked nodes by how much of the requirement was behind them, which put a
+  **blocked** node first — a climber with twelve V6s and no V4s was told the closest
+  thing was "Send 12 at V6 or harder", which they had already done and which could not
+  unlock until the V4 rung did. And a fraction rewards a big requirement you are mostly
+  through: a real year-long log ranked *Reach END 70* (67/70, a capstone, and not
+  something anyone can go and do) above *2 more days on rock*. So: only the first
+  locked rung of each branch, ranked by work remaining rather than fraction done.
+  **Ranking on remaining work alone was worse.** The cheapest first rung anywhere in
+  the 130 beats everything a climber is genuinely close to, so a log 150 sessions deep
+  got the same line as an empty one — *1 more on-sight* — and would have gone on
+  getting it forever, because plenty of climbers log grades and never touch the
+  on-sight chip or run a program's drills. A zero is evidence, so the pull comes from
+  requirements with something already on them and the untouched rungs are the fallback.
+  **A floor is not progress.** Every stat starts at `BASE_STAT` so a maxed one lands on
+  exactly 100 by construction — counted as "started", it made a capstone the closest
+  thing for a climber with an empty log: "60 more END", three hundred sessions of work,
+  offered as a first step.
+  **The effort weights are an ordering device and nothing built on them says "three
+  weeks away".** Two rows are measured from the app's own arithmetic over a year-long
+  log — 1.5 hours and 113 ft per logged session; the rest are judgement. Assessment
+  numbers have arbitrary units, so a gap of 7 kilos is scaled as a fraction of the span
+  rather than multiplied against 7 sessions.
+  Nine mutations, nine killed — one of them only after the ninth survived and exposed
+  that the blocked-node test was passing for the wrong reason. Verified at 390px light
+  and dark, and at 320px at the largest text size: zero horizontal overflow.
 
 - **M30 — Photos on a session.** Media has exactly one owner shape, `projectOwner`,
   so a session cannot carry a picture. A photo of the board you set, or the wall on
