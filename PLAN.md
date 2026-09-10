@@ -2062,14 +2062,30 @@ and why.
   Verified in a browser along the path a climber actually walks — finder, six weeks, top
   recommendation, program page, start — and the length is preselected with its reason.
 
-- **M60 — Device settings stop travelling in backups.** `profile/settings` holds `theme`,
-  `themeId`, `textSize` and `cues`, which belong to the device, beside `display` and
-  `units`, which belong to the climber. `profile` is exportable, so **importing anyone's
-  backup changes your theme, text size and sound** — and restoring your own onto a new
-  phone in daylight brings back the dark theme you set at night. Found while closing M51,
-  and the one piece of that decision that gets harder after real installs exist. The split
-  is the fix: device settings to device storage, climber settings stay in the backup, and
-  an existing install migrates once from what it already has.
+- **M60 — Device settings stop travelling in backups.** *Done.* `profile/settings` held
+  `theme`, `themeId`, `textSize` and `cues` — which belong to the phone in the hand — beside
+  `display` and `units`, which belong to the climber. `profile` is an exportable store, so
+  **importing anyone's backup changed your theme, your text size and your sound**, and
+  restoring your own onto a new phone in daylight brought back the dark theme you set at
+  night. Found while closing M51, and the one piece of that decision that gets harder once
+  real installs exist.
+  Device settings live in `localStorage` now: per-device by definition, synchronous, and
+  never inside a backup. The climber's two stay in the record and still travel.
+  **An existing install keeps what it had.** The first hydrate on a device reads the device
+  fields out of the record it already has, moves them, and rewrites the record without them
+  so the next backup does not carry them. The guard is that `localStorage` holding *nothing*
+  is the only signal of a device that has not been here before — and at boot that is the
+  only moment it can be true, so an imported backup can never be the thing that gets
+  migrated.
+  Every read and write is guarded, because `localStorage` throws outright in some
+  private-browsing modes rather than merely being empty. A private window with an existing
+  database still reads its theme out of that database for the session; it simply cannot
+  remember a new choice past it.
+  Six mutations, six killed — the last only once the test covered a private window that
+  *has* a database, which is the case where reading `null` and reading `{}` differ.
+  Verified in a browser: an install seeded the old way migrates on first load, the record
+  comes back holding only `display` and `units`, the page stays dark — and a record
+  arriving afterwards with someone else's light theme changes nothing.
 
 - **M12 — Ship.** TWA packaging + assetlinks, Play internal testing, store listing.
   Last, after M13–M22.

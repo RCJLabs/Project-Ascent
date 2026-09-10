@@ -52,25 +52,70 @@ export interface SettingsState {
 }
 
 const SETTINGS_KEY = 'settings';
+/** Device settings, and the flag that says this device has been here. */
+const DEVICE_KEY = 'project-ascent:device';
 
-interface PersistedSettings {
-  theme: ThemePreference;
-  themeId: string;
-  textSize: TextSize;
-  cues: boolean;
+/**
+ * Two kinds of setting, split because they belong to different things
+ * (PLAN.md M60).
+ *
+ * **The climber's** — how they read grades, whether they think in kilograms —
+ * travel with them. They live in the `profile` store, which is exportable, so
+ * a backup restored on a new phone brings them along.
+ *
+ * **The device's** — theme, palette, text size, whether the phone makes a
+ * noise — belong to the phone in the hand. They used to sit in the same
+ * exportable record, which meant importing anyone's backup changed your
+ * theme, your text size and your sound. They live in `localStorage` now:
+ * per-device by definition, synchronous, and never inside a backup.
+ */
+interface ClimberSettings {
   display: GradeDisplay;
   units: UnitSystem;
 }
 
-function persisted(state: SettingsState): PersistedSettings {
+interface DeviceSettings {
+  theme: ThemePreference;
+  themeId: string;
+  textSize: TextSize;
+  cues: boolean;
+}
+
+function climberSettings(state: SettingsState): ClimberSettings {
+  return { display: state.display, units: state.units };
+}
+
+function deviceSettings(state: SettingsState): DeviceSettings {
   return {
     theme: state.theme,
     themeId: state.themeId,
     textSize: state.textSize,
     cues: state.cues,
-    display: state.display,
-    units: state.units,
   };
+}
+
+/**
+ * Every read and write guarded: `localStorage` throws outright in some
+ * private-browsing modes rather than merely being empty, and a theme
+ * preference is not worth a blank screen.
+ */
+function readDevice(): Partial<DeviceSettings> | null {
+  try {
+    const raw = localStorage.getItem(DEVICE_KEY);
+    if (raw === null) return null;
+    const value = JSON.parse(raw) as unknown;
+    return typeof value === 'object' && value !== null ? (value as Partial<DeviceSettings>) : {};
+  } catch {
+    return null;
+  }
+}
+
+function writeDevice(value: DeviceSettings): void {
+  try {
+    localStorage.setItem(DEVICE_KEY, JSON.stringify(value));
+  } catch {
+    // Nothing to do and nothing worth saying: the app runs on defaults.
+  }
 }
 
 export const useSettings = create<SettingsState>((set, get) => ({
@@ -87,66 +132,91 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setTheme: (theme) => {
     set({ theme });
     applyTheme(theme, get().themeId);
-    void saveSettings(persisted(get()));
+    writeDevice(deviceSettings(get()));
   },
   setThemeId: (id) => {
     set({ themeId: id });
     applyTheme(get().theme, id);
-    void saveSettings(persisted(get()));
+    writeDevice(deviceSettings(get()));
   },
   setTextSize: (size) => {
     set({ textSize: size });
     applyTextSize(size);
-    void saveSettings(persisted(get()));
+    writeDevice(deviceSettings(get()));
   },
   setCues: (value) => {
     set({ cues: value });
     setCuesEnabled(value);
-    void saveSettings(persisted(get()));
+    writeDevice(deviceSettings(get()));
   },
   setUnits: (value) => {
     set({ units: value });
-    void saveSettings(persisted(get()));
+    void saveClimber(climberSettings(get()));
   },
   setBoulderDisplay: (value) => {
     set({ display: { ...get().display, boulder: value } });
-    void saveSettings(persisted(get()));
+    void saveClimber(climberSettings(get()));
   },
   setRouteDisplay: (value) => {
     set({ display: { ...get().display, route: value } });
-    void saveSettings(persisted(get()));
+    void saveClimber(climberSettings(get()));
   },
 }));
 
-async function saveSettings(value: PersistedSettings): Promise<void> {
+async function saveClimber(value: ClimberSettings): Promise<void> {
   const db = await getDb();
   await db.put('profile', { key: SETTINGS_KEY, value });
 }
 
 export async function hydrateSettings(): Promise<void> {
+  const stored = readDevice();
   try {
     const db = await getDb();
     const record = await db.get('profile', SETTINGS_KEY);
-    const value = (record?.value ?? {}) as Partial<PersistedSettings>;
-    const cues = value.cues !== false;
+    const value = (record?.value ?? {}) as Partial<ClimberSettings & DeviceSettings>;
+
+    // An install from before the split keeps its theme: the first hydrate on
+    // a device reads the device fields out of the record it already has and
+    // moves them. `stored === null` means this device has not been here
+    // before — and at boot that is the only moment it can be true, so an
+    // imported backup can never be the thing that gets migrated.
+    const device: Partial<DeviceSettings> = stored ?? value;
+    const cues = device.cues !== false;
+    const next: DeviceSettings = {
+      cues,
+      themeId: typeof device.themeId === 'string' ? device.themeId : DEFAULT_THEME_ID,
+      textSize:
+        typeof device.textSize === 'string' && device.textSize in TEXT_SCALE
+          ? (device.textSize as TextSize)
+          : 'normal',
+      theme:
+        device.theme === 'light' || device.theme === 'dark' || device.theme === 'system'
+          ? device.theme
+          : 'system',
+    };
+
     useSettings.setState({
       hydrated: true,
-      cues,
+      ...next,
       display: { ...DEFAULT_DISPLAY, ...value.display },
       units: value.units === 'metric' ? 'metric' : 'imperial',
-      themeId: typeof value.themeId === 'string' ? value.themeId : DEFAULT_THEME_ID,
-      textSize:
-        typeof value.textSize === 'string' && value.textSize in TEXT_SCALE
-          ? (value.textSize as TextSize)
-          : 'normal',
-      ...(value.theme === 'light' || value.theme === 'dark' || value.theme === 'system'
-        ? { theme: value.theme }
-        : {}),
     });
     setCuesEnabled(cues);
+
+    if (stored === null) {
+      writeDevice(next);
+      // And the record stops carrying them, so the next backup does not.
+      if (record !== undefined) {
+        await db.put('profile', {
+          key: SETTINGS_KEY,
+          value: { display: value.display ?? DEFAULT_DISPLAY, units: value.units ?? 'imperial' },
+        });
+      }
+    }
   } catch {
-    // Storage unavailable (private window, blocked) — run on defaults.
-    useSettings.setState({ hydrated: true });
+    // Storage unavailable (private window, blocked) — run on defaults, but
+    // honour anything the device did manage to remember.
+    useSettings.setState({ hydrated: true, ...(stored ?? {}) });
   }
 }
 
