@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { AlertTriangle, ArrowLeft, Check, Lock, Sparkles } from 'lucide-react';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
 import { useGradeOptions } from '@/ui/useGrade';
+import { PageSkeleton } from '@/ui/Skeleton';
 import { findProgram, type Experience, type FinderInput, type FinderResult, type Goal, type Recommendation } from '@/engine/finder';
 import { finderInputFrom, type BaselineAnswers } from '@/engine/onboarding';
 import { injuryPolicy } from '@/engine/injury';
@@ -120,7 +121,10 @@ function RecCard({ rec, headline }: { rec: Recommendation; headline?: boolean })
 export function FinderPage() {
   const hydrated = useProfile((s) => s.hydrated);
   const baseline = useProfile((s) => s.baseline);
-  if (!hydrated) return null;
+  // Not `null`: with nothing in `main` the page has no height, so the
+  // layout collapses and snaps back a frame later — which reads as a fault
+  // rather than as loading (PLAN.md M22).
+  if (!hydrated) return <PageSkeleton title="Find my program" />;
   return <FinderForm baseline={baseline} />;
 }
 

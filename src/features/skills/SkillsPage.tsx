@@ -5,6 +5,7 @@ import { useSkills } from '@/store/skills';
 import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
+import { EmptyState } from '@/ui/EmptyState';
 import { DisclosureButton } from '@/ui/Disclosure';
 import { Meter } from '@/ui/Meter';
 import { PageHeader } from '@/ui/PageHeader';
@@ -28,13 +29,11 @@ export function SkillsPage() {
       <PageHeader title="Skills" subtitle={`${skills.unlocked} of ${skills.total} unlocked`} />
 
       <PageGrid>
-        <Card>
-          <p className="text-sm text-ink-soft leading-relaxed">
-            There are no points to spend. Every node here unlocks because the log says you did the
-            thing — a drill count, a grade, a run of weeks, a number on a benchmark. The tree is a
-            map of your training, not a shop.
-          </p>
-        </Card>
+        <EmptyState>
+          There are no points to spend. Every node here unlocks because the log says you did the
+          thing — a drill count, a grade, a run of weeks, a number on a benchmark. The tree is a
+          map of your training, not a shop.
+        </EmptyState>
 
         {perks.length > 0 && (
           <Card title="Active perks">
@@ -114,7 +113,7 @@ function TreeCard({
         <div className="grid grid-cols-1 gap-4 mt-4">
           {[...branches.entries()].map(([name, entries]) => (
             <div key={name}>
-              <h3 className="text-[11px] font-bold uppercase tracking-widest text-ink-soft mb-2">
+              <h3 className="text-2xs font-bold uppercase tracking-widest text-ink-soft mb-2">
                 {name}
               </h3>
               <ol className="grid grid-cols-1 gap-2">

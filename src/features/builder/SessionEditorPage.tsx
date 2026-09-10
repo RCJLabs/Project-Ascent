@@ -15,6 +15,7 @@ import {
 } from '@/engine/prescription';
 import { useCustomPrograms } from '@/store/programs';
 import { BackLink } from '@/ui/BackLink';
+import { PageSkeleton } from '@/ui/Skeleton';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { OptionCard } from '@/ui/Chip';
@@ -42,7 +43,10 @@ export function SessionEditorPage({ params }: { params: { id: string; typeId: st
   );
   const [phaseId, setPhaseId] = useState<string | null>(null);
 
-  if (!hydrated) return null;
+  // Not `null`: with nothing in `main` the page has no height, so the
+  // layout collapses and snaps back a frame later — which reads as a fault
+  // rather than as loading (PLAN.md M22).
+  if (!hydrated) return <PageSkeleton title="Edit a session" />;
   if (!program || !type) {
     return (
       <>

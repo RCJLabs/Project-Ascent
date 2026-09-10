@@ -4,7 +4,7 @@ import { ArrowRight, BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
 import { GUIDES, getGuide, guideLength } from '@/content/guides';
 import { getProgram } from '@/content/programs';
 import { BackLink } from '@/ui/BackLink';
-import { Card } from '@/ui/Card';
+import { EmptyState } from '@/ui/EmptyState';
 import { DisclosureButton } from '@/ui/Disclosure';
 import { PageHeader } from '@/ui/PageHeader';
 import { Block } from './GuideBody';
@@ -134,13 +134,11 @@ export function GuidePage({ params }: { params: { id: string } }) {
           );
         })}
 
-        <Card>
-          <p className="text-sm text-ink-soft leading-relaxed">
-            Guides explain; the programs decide. Nothing here changes a plan, a session or a
-            prescription — if a guide and its program disagree, the program is what the app runs and
-            the guide is what needs fixing.
-          </p>
-        </Card>
+        <EmptyState>
+          Guides explain; the programs decide. Nothing here changes a plan, a session or a
+          prescription — if a guide and its program disagree, the program is what the app runs and
+          the guide is what needs fixing.
+        </EmptyState>
       </div>
     </>
   );

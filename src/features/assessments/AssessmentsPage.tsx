@@ -20,6 +20,7 @@ import { useSettings } from '@/store/settings';
 import { useProfile } from '@/store/profile';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { EmptyState } from '@/ui/EmptyState';
 import { SelectableCard } from '@/ui/Chip';
 import { DisclosureButton } from '@/ui/Disclosure';
 import { Input, Select } from '@/ui/Field';
@@ -64,12 +65,10 @@ export function AssessmentsPage() {
 
       <PageGrid>
         {battery.length === 0 && (
-          <Card>
-            <p className="text-sm leading-relaxed text-ink-soft">
-              Assessments are the numbers a program is trying to move. Start one and its battery
-              appears here — or pick a benchmark below and take a baseline today.
-            </p>
-          </Card>
+          <EmptyState>
+            Assessments are the numbers a program is trying to move. Start one and its battery
+            appears here — or pick a benchmark below and take a baseline today.
+          </EmptyState>
         )}
 
         {battery.length > 0 && (

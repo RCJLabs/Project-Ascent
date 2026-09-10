@@ -101,7 +101,7 @@ export function TrainPage() {
                       <div className="flex items-baseline gap-2 flex-wrap">
                         <span className="font-bold">{program.name}</span>
                         {program.kind === 'mode' ? (
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-ink-soft border border-line rounded px-1.5 py-0.5">
+                          <span className="text-2xs font-bold uppercase tracking-wide text-ink-soft border border-line rounded px-1.5 py-0.5">
                             Log only
                           </span>
                         ) : (

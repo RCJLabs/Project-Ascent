@@ -12,6 +12,7 @@ import { useSkillEffects } from '@/store/skills';
 import { useSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { EmptyState } from '@/ui/EmptyState';
 import { Input, Select } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 
@@ -84,12 +85,10 @@ export function ProjectsPage() {
         )}
 
         {projects.length === 0 && !adding && (
-          <Card>
-            <p className="text-sm leading-relaxed text-ink-soft">
-              A project is a climb you cannot do yet. Track one and every burn you log builds a
-              high-point line, so you can see the difference between grinding and progressing.
-            </p>
-          </Card>
+          <EmptyState>
+            A project is a climb you cannot do yet. Track one and every burn you log builds a
+            high-point line, so you can see the difference between grinding and progressing.
+          </EmptyState>
         )}
 
         {active.length > 0 && (
@@ -198,7 +197,7 @@ function ProjectRow({ project, sessions }: { project: Project; sessions: Session
           <span className="shrink-0 text-xs font-bold tabular-nums">{summary.highPoint}%</span>
         ) : null}
         {stale && (
-          <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-warn border border-warn/40 rounded px-1.5 py-0.5">
+          <span className="shrink-0 text-2xs font-bold uppercase tracking-wide text-warn border border-warn/40 rounded px-1.5 py-0.5">
             {summary.daysSinceLast}d
           </span>
         )}

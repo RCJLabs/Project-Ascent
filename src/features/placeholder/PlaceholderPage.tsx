@@ -1,4 +1,4 @@
-import { Card } from '@/ui/Card';
+import { EmptyState } from '@/ui/EmptyState';
 import { PageHeader } from '@/ui/PageHeader';
 
 export function PlaceholderPage({
@@ -13,9 +13,7 @@ export function PlaceholderPage({
   return (
     <>
       <PageHeader title={title} subtitle={subtitle} />
-      <Card>
-        <p className="text-sm text-ink-soft leading-relaxed">{body}</p>
-      </Card>
+      <EmptyState>{body}</EmptyState>
     </>
   );
 }

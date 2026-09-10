@@ -102,10 +102,10 @@ export function TrainingState({
                 {diagnosis.reset.steps.map((step, i) => (
                   <li key={step.days} className="bg-sunken rounded-xl px-3 py-2.5">
                     <div className="flex items-baseline gap-2 mb-1">
-                      <span className="text-[11px] font-bold uppercase tracking-widest text-accent">
+                      <span className="text-2xs font-bold uppercase tracking-widest text-accent">
                         {step.days}
                       </span>
-                      <span className="text-[11px] text-ink-soft ml-auto">
+                      <span className="text-2xs text-ink-soft ml-auto">
                         from {shortLabel(dates[i] ?? dates[0]!)}
                       </span>
                     </div>

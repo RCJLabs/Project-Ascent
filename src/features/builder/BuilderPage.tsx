@@ -20,6 +20,7 @@ import { contentIssues, reconcileProgramPhases, trimDrills } from '@/engine/pres
 import { buildProgramFile, fileName } from '@/engine/programFile';
 import { useCustomPrograms } from '@/store/programs';
 import { BackLink } from '@/ui/BackLink';
+import { PageSkeleton } from '@/ui/Skeleton';
 import { useGradeOptions } from '@/ui/useGrade';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -50,7 +51,10 @@ export function BuilderPage({ params }: { params: { id: string } }) {
     [program],
   );
 
-  if (!hydrated) return null;
+  // Not `null`: with nothing in `main` the page has no height, so the
+  // layout collapses and snaps back a frame later — which reads as a fault
+  // rather than as loading (PLAN.md M22).
+  if (!hydrated) return <PageSkeleton title="Edit a program" />;
   if (!program) {
     return (
       <>

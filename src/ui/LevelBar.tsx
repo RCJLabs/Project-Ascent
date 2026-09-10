@@ -21,7 +21,7 @@ export function LevelBar({
   return (
     <div>
       <div className="flex items-baseline gap-2 mb-1.5">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">Lvl</span>
+        <span className="text-2xs font-bold uppercase tracking-widest text-ink-soft">Lvl</span>
         <span className="font-black text-lg leading-none tabular-nums">{progress.level}</span>
         <span className="font-semibold text-sm truncate">{rank.title}</span>
         <span className="text-xs text-ink-soft ml-auto tabular-nums shrink-0">

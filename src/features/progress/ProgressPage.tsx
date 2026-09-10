@@ -210,7 +210,7 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
   return (
     <div>
       <div className="text-2xl font-black leading-none">{value}</div>
-      <div className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mt-1">{label}</div>
+      <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mt-1">{label}</div>
       {sub && <div className="text-xs text-ink-soft mt-0.5">{sub}</div>}
     </div>
   );

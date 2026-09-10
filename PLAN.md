@@ -843,10 +843,33 @@ a small diff instead of ninety-five separate edits.
   program with a timed drill was more setup than the remaining budget allowed.
   **Still open, and only the user can answer it:** where logging actually annoys the
   climber using it. Everything above is inferred from tap counts.
-- **M22 — Polish and motion.** Skeletons instead of blank flashes during hydration,
-  consistent empty states in place of ad-hoc prose per page, route transitions that
-  respect reduced motion, and a typography scale pass. *Done when: nothing renders a
-  blank card while it thinks.*
+- **M22 — Polish and motion.** *Done.* Measured first: on a warm cache no page shows a
+  blank `main` at all — they go from unmounted straight to content. The real failure was
+  narrower and worse. **Four pages returned `null` while their store hydrated**
+  (`/find`, `/build`, the session editor, a project). That is not a blank card, it is no
+  card: `main` has no height, so the layout collapses and snaps back a frame later,
+  which reads as a fault rather than as loading. They now render a `PageSkeleton` —
+  measured at **394px of held height instead of 0**, with the real page title (known
+  before the data is) and `aria-busy`, so a screen reader is told the region is loading
+  rather than read a description of grey rectangles. The blocks are deliberately dull: a
+  shimmer is an animation that says "still working" for the 40ms an IndexedDB read
+  actually takes, which is long enough to notice and too short to learn anything from.
+  **`EmptyState` was written in M13 and used in exactly zero places** while eight pages
+  kept their own hand-rolled copy. All eight converted; a test now forbids the shape it
+  replaced.
+  **The typography pass found a real bug, not a tidy-up.** Thirty-one labels were written
+  as `text-[10px]` / `text-[11px]` and one badge as `text-[8px]` — *absolute pixels*,
+  which M15's text-size setting cannot move, because that setting scales the root font
+  size and with it every **rem**-based utility. Measured against a probe: a ten-pixel
+  label read 10.00px at "Normal" and 10.00px at "Largest", while the new `--text-2xs`
+  step reads 11.00px and 14.30px. So the nav labels, every badge and every chart key
+  silently ignored the accessibility setting the app offers. Ten versus eleven pixels is
+  not a distinction anyone perceives, so three off-scale sizes collapsed into one named
+  rung. The 8px→11px badge sits in a calendar cell, so it was re-checked at 320px on the
+  largest setting: zero overflow, nothing clipped.
+  **Reduced motion needed nothing:** M14 already turns motion off globally when the
+  system asks, with a test, and route transitions ride on that same rule rather than each
+  remembering to check.
 - **M12 — Ship.** TWA packaging + assetlinks, Play internal testing, store listing.
   Last, after M13–M22.
 

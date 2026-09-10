@@ -88,7 +88,7 @@ export function Block({ block }: { block: GuideBlock }) {
         <div className="bg-sunken rounded-xl p-3.5 my-2.5">
           <div className="flex items-baseline gap-2 mb-2">
             {block.group !== undefined && (
-              <span className="text-[10px] font-bold uppercase tracking-wide text-accent-ink bg-accent rounded px-1.5 py-0.5 shrink-0">
+              <span className="text-2xs font-bold uppercase tracking-wide text-accent-ink bg-accent rounded px-1.5 py-0.5 shrink-0">
                 {block.group}
               </span>
             )}

@@ -8,6 +8,7 @@ import { useProjects } from '@/store/projects';
 import { offerUndo } from '@/store/undo';
 import { useSettings } from '@/store/settings';
 import { BackLink } from '@/ui/BackLink';
+import { PageSkeleton } from '@/ui/Skeleton';
 import { projectCard } from '@/ui/shareCard';
 import { useSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';
@@ -43,7 +44,10 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
     [project, sessions],
   );
 
-  if (!hydrated) return null;
+  // Not `null`: with nothing in `main` the page has no height, so the
+  // layout collapses and snaps back a frame later — which reads as a fault
+  // rather than as loading (PLAN.md M22).
+  if (!hydrated) return <PageSkeleton title="Project" />;
   if (!project || !summary) {
     return (
       <Card>
@@ -210,7 +214,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div className="text-xl font-black tabular-nums leading-none">{value}</div>
-      <div className="text-[11px] text-ink-soft mt-1">{label}</div>
+      <div className="text-2xs text-ink-soft mt-1">{label}</div>
     </div>
   );
 }
@@ -246,7 +250,7 @@ function BetaCard({ project, onChange }: { project: Project; onChange: (p: Proje
                   <Trash2 size={14} />
                 </IconButton>
               </div>
-              <p className="text-[11px] text-ink-soft mt-1">{shortDate(note.date)}</p>
+              <p className="text-2xs text-ink-soft mt-1">{shortDate(note.date)}</p>
             </li>
           ))}
         </ul>

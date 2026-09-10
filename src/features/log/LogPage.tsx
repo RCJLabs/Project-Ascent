@@ -1044,7 +1044,7 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
         <div className="text-3xl font-black tabular-nums leading-none">
           +{detail.xp.toLocaleString()}
         </div>
-        <div className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mt-1.5">
+        <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mt-1.5">
           XP earned
         </div>
       </div>

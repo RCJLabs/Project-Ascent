@@ -14,6 +14,7 @@ import { useSessions } from '@/store/sessions';
 import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
+import { EmptyState } from '@/ui/EmptyState';
 import { Meter } from '@/ui/Meter';
 import { LoadBars } from '@/ui/charts/Charts';
 import { MountainMeter } from '@/ui/MountainMeter';
@@ -67,13 +68,11 @@ export function AltimeterPage() {
         </Card>
 
         {!hasHeight && (
-          <Card>
-            <p className="text-sm leading-relaxed text-ink-soft">
-              A boulder send is {HEIGHT.boulder} feet, a route is {HEIGHT.route}, and real rock
-              counts for a quarter more. Nothing else adds height — not a game, not a streak, not a
-              level. Log a send and the mountain starts filling.
-            </p>
-          </Card>
+          <EmptyState>
+            A boulder send is {HEIGHT.boulder} feet, a route is {HEIGHT.route}, and real rock
+            counts for a quarter more. Nothing else adds height — not a game, not a streak, not a
+            level. Log a send and the mountain starts filling.
+          </EmptyState>
         )}
 
         {hasHeight && !alt.everest.reached && (

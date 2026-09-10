@@ -93,6 +93,19 @@
   --color-viz-grid: var(--viz-grid);
   --color-warn: var(--c-warn);
   --color-danger: var(--c-danger);
+
+  /* One step below `text-xs`, for the badges and tab labels that used to be
+     written as arbitrary pixel sizes (PLAN.md M22).
+
+     Two reasons to name it. Absolute pixels do not respond to M15's
+     text-size setting, which scales the root font size and every rem-based
+     utility with it: measured, a ten-pixel nav label stayed at ten pixels
+     at every setting, so a climber who chose "Largest" got no larger text
+     in the nav, on any badge, or in any chart key. And ten versus eleven
+     pixels is not a distinction anyone perceives, so the sizes collapse
+     into one rung rather than staying as three off-scale values. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1.25;
 }
 
 /* ── Focus ───────────────────────────────────────────────────────────────────

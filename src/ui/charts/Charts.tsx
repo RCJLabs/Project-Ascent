@@ -262,7 +262,7 @@ export function ProgressionLine({
               x={Math.min(width - 14, Math.max(14, x(i)))}
               y={above ? y(p.value) - 10 : y(p.value) + 18}
               textAnchor={n === 0 ? 'start' : 'end'}
-              className="fill-ink text-[11px] font-semibold"
+              className="fill-ink text-2xs font-semibold"
             >
               {p.display}
             </text>

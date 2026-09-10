@@ -167,7 +167,7 @@ export function YearPage({ params }: { params: { year?: string } }) {
                   {review.months.map((bar) => (
                     <span
                       key={bar.month}
-                      className="flex-1 min-w-0 text-[10px] text-ink-soft text-center"
+                      className="flex-1 min-w-0 text-2xs text-ink-soft text-center"
                     >
                       {bar.month.slice(5)}
                     </span>

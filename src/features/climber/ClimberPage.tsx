@@ -314,7 +314,7 @@ function StatRow({ stat }: { stat: Stat }) {
     <li>
       <DisclosureButton open={open} onToggle={() => setOpen(!open)}>
         <div className="flex items-baseline gap-2 mb-1">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-soft w-8">
+          <span className="text-2xs font-bold uppercase tracking-widest text-ink-soft w-8">
             {stat.id}
           </span>
           <span className="text-sm font-semibold">{stat.name}</span>
@@ -346,7 +346,7 @@ function StatRow({ stat }: { stat: Stat }) {
                 >
                   {c.detail === null ? 'not measured' : `+${Math.round(c.points)}`}
                   {c.detail !== null && c.points >= c.cap && (
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-accent ml-1">max</span>
+                    <span className="text-2xs font-bold uppercase tracking-wide text-accent ml-1">max</span>
                   )}
                 </dd>
               </div>
@@ -382,7 +382,7 @@ function AppearanceCard({ palette }: { palette: AvatarPalette }) {
       </p>
 
       <div className="mb-3">
-        <div className="text-[11px] font-bold uppercase tracking-widest text-ink-soft mb-1.5">Skin</div>
+        <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mb-1.5">Skin</div>
         <div className="flex flex-wrap gap-2">
           {SKIN_TONES.map((tone) => (
             <Swatch
@@ -397,7 +397,7 @@ function AppearanceCard({ palette }: { palette: AvatarPalette }) {
       </div>
 
       <div>
-        <div className="text-[11px] font-bold uppercase tracking-widest text-ink-soft mb-1.5">Kit</div>
+        <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mb-1.5">Kit</div>
         <div className="grid grid-cols-3 gap-2">
           {OUTFITS.map((outfit) => {
             const on = activeOutfit?.name === outfit.name;

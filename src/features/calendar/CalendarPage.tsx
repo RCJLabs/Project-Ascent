@@ -217,7 +217,7 @@ export function CalendarPage() {
 
       <div className="grid grid-cols-7 gap-1 mb-1">
         {DAY_INITIALS.map((d, i) => (
-          <div key={i} className="text-center text-[10px] font-bold uppercase text-ink-soft py-1">
+          <div key={i} className="text-center text-2xs font-bold uppercase text-ink-soft py-1">
             {d}
           </div>
         ))}
@@ -268,7 +268,7 @@ export function CalendarPage() {
                 <span className="text-sm leading-none text-ink-soft/40">·</span>
               )}
               {day.isDeload && inMonth && (
-                <span className="text-[8px] font-bold uppercase text-warn leading-none">DL</span>
+                <span className="text-2xs font-bold uppercase text-warn leading-none">DL</span>
               )}
             </>
           );

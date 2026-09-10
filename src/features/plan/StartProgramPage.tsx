@@ -127,7 +127,7 @@ export function StartProgramPage({ params }: { params: { id: string } }) {
                       return (
                         <div
                           key={d}
-                          className={`rounded-lg px-0.5 py-1.5 text-center text-[10px] overflow-hidden ${
+                          className={`rounded-lg px-0.5 py-1.5 text-center text-2xs overflow-hidden ${
                             type && !type.isRest ? 'bg-accent/20' : 'bg-surface'
                           }`}
                         >

@@ -14,7 +14,7 @@ import { useObjectives } from '@/store/objectives';
 import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
-import { Card } from '@/ui/Card';
+import { EmptyState } from '@/ui/EmptyState';
 import { CHIP_LINK } from '@/ui/Chip';
 import { Input } from '@/ui/Field';
 import { IconButton } from '@/ui/IconButton';
@@ -212,12 +212,10 @@ export function SearchPage() {
       {query.trim() === '' ? (
         <Browse />
       ) : results.length === 0 ? (
-        <Card>
-          <p className="text-sm text-ink-soft leading-relaxed">
-            Nothing matches “{query}”. Search is exact rather than fuzzy — it would rather find
-            nothing than offer you the wrong thing.
-          </p>
-        </Card>
+        <EmptyState>
+          Nothing matches “{query}”. Search is exact rather than fuzzy — it would rather find
+          nothing than offer you the wrong thing.
+        </EmptyState>
       ) : (
         <div className="grid grid-cols-1 gap-4" aria-live="polite" aria-atomic="false">
           <p className="sr-only">
@@ -240,7 +238,7 @@ export function SearchPage() {
                           {result.title}
                         </span>
                         {result.badge !== undefined && (
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-ink-soft shrink-0">
+                          <span className="text-2xs font-bold uppercase tracking-wide text-ink-soft shrink-0">
                             {result.badge}
                           </span>
                         )}

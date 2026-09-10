@@ -16,6 +16,7 @@ import { useSessions } from '@/store/sessions';
 import { PageGrid } from '@/ui/PageGrid';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { EmptyState } from '@/ui/EmptyState';
 import { Chip } from '@/ui/Chip';
 import { Input } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
@@ -76,13 +77,11 @@ export function JournalPage() {
       />
 
       {journal.length === 0 ? (
-        <Card>
-          <p className="text-sm leading-relaxed text-ink-soft">
-            Nothing written yet. Notes you add to a session, beta you save on a project, and notes
-            beside an assessment result all land here — nothing to fill in twice. Add{' '}
-            <span className="text-ink font-semibold">#tags</span> as you write and they become filters.
-          </p>
-        </Card>
+        <EmptyState>
+          Nothing written yet. Notes you add to a session, beta you save on a project, and notes
+          beside an assessment result all land here — nothing to fill in twice. Add{' '}
+          <span className="text-ink font-semibold">#tags</span> as you write and they become filters.
+        </EmptyState>
       ) : (
         <PageGrid>
           <Card>

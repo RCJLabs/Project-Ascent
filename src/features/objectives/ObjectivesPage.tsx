@@ -28,6 +28,7 @@ import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { EmptyState } from '@/ui/EmptyState';
 import { OptionCard } from '@/ui/Chip';
 import { Meter } from '@/ui/Meter';
 import { Input, Select } from '@/ui/Field';
@@ -135,12 +136,10 @@ export function ObjectivesPage() {
         {active.length < MAX_ACTIVE ? (
           <NewObjective />
         ) : (
-          <Card>
-            <p className="text-sm text-ink-soft leading-relaxed">
-              {MAX_ACTIVE} on the go is the limit. More than that and none of them is really the
-              objective — shelve one to start another.
-            </p>
-          </Card>
+          <EmptyState>
+            {MAX_ACTIVE} on the go is the limit. More than that and none of them is really the
+            objective — shelve one to start another.
+          </EmptyState>
         )}
       </PageGrid>
     </>

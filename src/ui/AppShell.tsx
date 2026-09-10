@@ -110,7 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 key={href}
                 href={href}
                 aria-current={active ? 'page' : undefined}
-                className={`focus-ring flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold transition-colors lg:flex-row lg:gap-3 lg:px-3 lg:py-2.5 lg:rounded-xl lg:text-sm ${
+                className={`focus-ring flex flex-col items-center gap-1 py-2.5 text-2xs font-semibold transition-colors lg:flex-row lg:gap-3 lg:px-3 lg:py-2.5 lg:rounded-xl lg:text-sm ${
                   active
                     ? 'text-accent lg:bg-accent/10'
                     : 'text-ink-soft hover:text-ink lg:hover:bg-sunken'

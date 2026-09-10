@@ -36,7 +36,7 @@ function ExerciseRow({ ex }: { ex: Exercise }) {
           <div className="flex items-center gap-1.5 flex-wrap">
             <Term name={ex.name} className="font-semibold text-sm" />
             {protocol?.timer && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-accent border border-accent/40 rounded px-1.5 py-0.5">
+              <span className="inline-flex items-center gap-1 text-2xs font-bold uppercase tracking-wide text-accent border border-accent/40 rounded px-1.5 py-0.5">
                 <Timer size={10} />
                 {protocol.timer.workSec}s / {protocol.timer.restSec}s
               </span>
@@ -105,7 +105,7 @@ function SessionTypeCard({
             ) : (
               <div className="bg-sunken rounded-xl p-3">
                 {(entry.selection || entry.circuit) && (
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-ink-soft mb-2.5 pb-2.5 border-b border-line">
+                  <p className="text-2xs font-bold uppercase tracking-wide text-ink-soft mb-2.5 pb-2.5 border-b border-line">
                     {formatLine(entry.selection, entry.circuit, entry.exercises.length)}
                   </p>
                 )}
@@ -133,11 +133,11 @@ function SessionTypeCard({
                 return (
                   <div key={week} className="bg-sunken rounded-xl p-3">
                     <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-ink-soft">
+                      <span className="text-2xs font-bold uppercase tracking-wide text-ink-soft">
                         Week {week}
                       </span>
                       {deloadWeeks.has(week) && (
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-warn">
+                        <span className="text-2xs font-bold uppercase tracking-wide text-warn">
                           Deload
                         </span>
                       )}
@@ -220,15 +220,15 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
           <div className="flex gap-4 mb-3">
             <div>
               <div className="text-2xl font-black leading-none">{program.weeks}</div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mt-1">Weeks</div>
+              <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mt-1">Weeks</div>
             </div>
             <div>
               <div className="text-2xl font-black leading-none">{program.gradeRange.label}</div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mt-1">Grades</div>
+              <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mt-1">Grades</div>
             </div>
             <div>
               <div className="text-2xl font-black leading-none">{program.phases.length}</div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mt-1">Phases</div>
+              <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mt-1">Phases</div>
             </div>
           </div>
           <p className="text-sm leading-relaxed mb-3">{program.intro.pitch}</p>
@@ -282,7 +282,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
                     // pushed "WED" out of it.
                     className={`rounded-lg px-0.5 py-2 text-center overflow-hidden ${type ? 'bg-accent/10 border border-accent/30' : 'bg-sunken'}`}
                   >
-                    <div className="text-[10px] font-bold uppercase text-ink-soft">{label}</div>
+                    <div className="text-2xs font-bold uppercase text-ink-soft">{label}</div>
                     <div className="text-lg leading-tight mt-1">{type ? type.icon : '·'}</div>
                   </div>
                 );
@@ -320,7 +320,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
                 aria-pressed={i === phaseIndex}
                 className="shrink-0 flex-col gap-0 items-start"
               >
-                <span className="block text-[10px] uppercase tracking-wide opacity-80">
+                <span className="block text-2xs uppercase tracking-wide opacity-80">
                   Weeks {p.weekStart}-{p.weekEnd}
                 </span>
                 {p.name}
