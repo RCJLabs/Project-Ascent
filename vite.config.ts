@@ -13,7 +13,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // Prompt, not autoUpdate. `autoUpdate` hands over to the new version
+      // and reloads the moment one is precached — which, mid-session, restarts
+      // a running hangboard protocol from set one and empties a half-typed
+      // climb row. The app asks instead, and never asks during a session.
+      // See PLAN.md M19 and `engine/offline.ts`.
+      registerType: 'prompt',
       // Fully-offline app: precache the entire shell. (The old app's
       // "no precache" rule was an AI Studio constraint — see PLAN.md §2.)
       workbox: {

@@ -3,6 +3,8 @@ import { Link, useLocation } from 'wouter';
 import { CalendarDays, Dumbbell, Mountain, Search, Target, TrendingUp } from 'lucide-react';
 import { Announcer } from './Announce';
 import { LiveBar, useLiveBanner } from './LiveBar';
+import { StorageWarning } from './StorageWarning';
+import { UpdatePrompt } from './UpdatePrompt';
 
 /**
  * Six, not five.
@@ -42,6 +44,10 @@ function isActive(href: string, location: string): boolean {
 export function AppShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const banner = useLiveBanner();
+  // Only a running session holds an update back. A stale one is already over
+  // — it is waiting for a decision, not counting — and reloading costs it
+  // nothing, because its clock is derived from what is stored.
+  const live = banner?.kind === 'running';
 
   return (
     <div className="min-h-dvh lg:flex">
@@ -79,6 +85,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="max-w-2xl mx-auto lg:hidden">
+          {/* Its own box: LiveBar is a full-bleed bar with its own padding
+              and a bottom border, and sharing a padded container with it
+              would inset the bar. */}
+          <div className="px-3 pt-3 empty:hidden [&>*+*]:mt-2">
+            <StorageWarning />
+            <UpdatePrompt live={live} />
+          </div>
           <LiveBar banner={banner} />
         </div>
 
@@ -108,7 +121,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </div>
 
-        <div className="hidden lg:block px-3 mt-3">
+        <div className="hidden lg:block px-3 mt-3 [&>*+*]:mt-2">
+          <StorageWarning />
+          <UpdatePrompt live={live} />
           <LiveBar banner={banner} />
         </div>
       </nav>

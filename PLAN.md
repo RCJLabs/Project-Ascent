@@ -736,10 +736,41 @@ a small diff instead of ninety-five separate edits.
   78–144ms including navigation, so there was nothing to fix. If a decade of journal
   entries with notes on every session turns out to be slow in real use, that is when
   it earns its place.
-- **M19 — The offline contract.** `registerSW({ immediate: true })` swaps the app
-  under the climber mid-session with no prompt. An update prompt, an offline
-  indicator, storage-pressure warnings, and an export reminder on a real cadence.
-  *Done when: an update never interrupts a live session.*
+- **M19 — The offline contract.** *Done.* The app shipped
+  `registerSW({ immediate: true })` with `registerType: 'autoUpdate'`, so a deploy
+  reloaded the running app the moment a new version finished precaching. Now
+  `registerType: 'prompt'`: the update still downloads eagerly — the climber may
+  well be somewhere with no signal by the time they say yes — but handing over is
+  asked for. **The prompt never appears while a session is running**, because the
+  reload is the cost: the protocol timer and a half-entered climb row live in
+  component state, so a reload mid-hangboard restarts the protocol from set one.
+  (The session *clock* survives either way — it is derived from `startedAt` in
+  IndexedDB, not held in memory. The plan assumed otherwise; the timer is the real
+  loss.) "Later" is honest rather than a snooze: a waiting worker activates once
+  every tab is closed, so the next launch is the new version anyway.
+  Storage is now a verdict rather than two numbers. `storagePressure` ranks
+  **eviction above a full quota** — a browser that never granted persistent storage
+  can clear the whole database without asking, which is the failure; a high quota
+  reading is only a warning. Only "the next write may fail" interrupts, in the
+  shell; everything else stays in Settings, because a banner on every launch about
+  something most browsers decline until the app is installed is noise the climber
+  learns to ignore.
+  **No offline indicator, deliberately.** Nothing in this app needs a network, so a
+  running "you are offline" banner would report a problem that does not exist and
+  devalue the place real warnings appear. Settings confirms the opposite instead —
+  that the whole app is cached — and a test forbids `navigator.onLine` in the UI.
+  **Three bugs found while building it.** `onOfflineReady` fires once, on the very
+  first install and never again, so every launch after the first reported the app as
+  still caching — caught only by testing against a real build, twice. Offline
+  readiness now comes from `navigator.serviceWorker.ready`. There were **three**
+  `formatBytes` implementations and two stopped at megabytes, so a browser offering
+  a 60GB quota rendered "61440.0 MB" in Settings; one now, and a test counts them.
+  And the harness lied twice before the gate could be verified at all: `page.reload()`
+  keeps the current hash, so reloads were re-loading `#/welcome`; and navigating the
+  last client away lets a *waiting* worker activate, which looks exactly like "the
+  prompt disappeared" — a second page held open fixed both. Verified against two real
+  builds with a genuinely waiting worker: held during a session, offered after it,
+  four times alternating, plus "Later" and the next launch.
 - **M20 — Data safety.** Import is all-or-nothing with no preview. Per-store merge
   versus replace, a dry-run summary before it writes, an automatic snapshot before any
   import, and undo for destructive deletes. Also: **there is no error boundary
@@ -751,7 +782,11 @@ a small diff instead of ninety-five separate edits.
   one card rather than the page.*
 - **M21 — Entry speed.** Logging is the most repeated action in the app and
   `LogPage.tsx` is 1,297 lines. Quick-log from the last session, grade steppers
-  instead of selects, numeric keypads, swipe-to-delete on climb rows. *Done when: a
+  instead of selects, numeric keypads, swipe-to-delete on climb rows. **Also found
+  during M19: the protocol timer does not survive a reload at all.** It is
+  `useState` in `LogPage`, so a refresh, a crash, or a phone reclaiming the tab
+  mid-hangboard restarts the protocol from set one — the update prompt now avoids
+  causing it, but nothing else does. *Done when: a
   typical bouldering session logs in under thirty seconds.* Open question the code
   cannot answer: where logging actually annoys the climber using it.
 - **M22 — Polish and motion.** Skeletons instead of blank flashes during hydration,

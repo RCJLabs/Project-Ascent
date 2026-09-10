@@ -6,6 +6,8 @@ import { mediaBytes } from '@/db/media';
 import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
 import { displayGrade, type BoulderDisplay, type RouteDisplay } from '@/engine/grades';
+import { formatBytes, storagePressure } from '@/engine/offline';
+import { useAppUpdate } from '@/store/appUpdate';
 import { unlock } from '@/lib/cues';
 import { hydrateAll } from '@/store';
 import {
@@ -22,6 +24,7 @@ import { PageGrid } from '@/ui/PageGrid';
 import { Button } from '@/ui/Button';
 import { announce } from '@/ui/Announce';
 import { Card } from '@/ui/Card';
+import { Meter } from '@/ui/Meter';
 import { Chip, SelectableCard } from '@/ui/Chip';
 import { THEMES as PALETTES } from '@/ui/themes';
 import { Input } from '@/ui/Field';
@@ -69,12 +72,6 @@ interface StorageStatus {
   quota?: number;
 }
 
-function formatBytes(n?: number): string {
-  if (n === undefined) return '?';
-  if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 export function SettingsPage() {
   const theme = useSettings((s) => s.theme);
   const setTheme = useSettings((s) => s.setTheme);
@@ -89,6 +86,7 @@ export function SettingsPage() {
   const setRouteDisplay = useSettings((s) => s.setRouteDisplay);
   const [storage, setStorage] = useState<StorageStatus>({ persisted: null });
   const [photoBytes, setPhotoBytes] = useState(0);
+  const offlineReady = useAppUpdate((s) => s.offlineReady);
   const [message, setMessageState] = useState<string | null>(null);
 
   /**
@@ -443,24 +441,11 @@ export function SettingsPage() {
           )}
         </Card>
 
-        <Card title="Storage">
-          <div className="text-sm space-y-1">
-            <p>
-              Persistent storage:{' '}
-              <span className={storage.persisted ? 'text-positive font-semibold' : 'text-warn font-semibold'}>
-                {storage.persisted === null ? 'unknown' : storage.persisted ? 'granted' : 'not granted'}
-              </span>
-            </p>
-            <p className="text-ink-soft">
-              Used {formatBytes(storage.usage)} of {formatBytes(storage.quota)}
-            </p>
-          </div>
-          {storage.persisted === false && (
-            <Button size="sm" variant="outline" className="mt-3" onClick={() => void requestPersist()}>
-              Request persistent storage
-            </Button>
-          )}
-        </Card>
+        <StorageCard
+          storage={storage}
+          offlineReady={offlineReady}
+          onRequestPersist={() => void requestPersist()}
+        />
 
         <Card title="Reference">
           <Link href="/guides" className="flex items-center gap-3 mb-3 pb-3 border-b border-line">
@@ -607,6 +592,70 @@ function TemplatesCard() {
           ))}
         </ul>
       )}
+    </Card>
+  );
+}
+
+/**
+ * What the browser has promised, and how close it is to breaking it.
+ *
+ * Reads as a verdict rather than two numbers: "used 12.4 MB of 60.0 GB" is
+ * true and tells a climber nothing. `storagePressure` decides what the
+ * numbers mean, and the numbers stay underneath for anyone who wants them.
+ */
+function StorageCard({
+  storage,
+  offlineReady,
+  onRequestPersist,
+}: {
+  storage: StorageStatus;
+  offlineReady: boolean;
+  onRequestPersist: () => void;
+}) {
+  const pressure = storagePressure(storage);
+  const tone =
+    pressure.level === 'full' || pressure.level === 'evictable'
+      ? 'text-critical'
+      : pressure.level === 'tight'
+        ? 'text-warn'
+        : pressure.level === 'fine'
+          ? 'text-positive'
+          : 'text-ink-soft';
+
+  return (
+    <Card title="Storage">
+      <p className={`font-semibold text-sm ${tone}`}>{pressure.headline}</p>
+      <p className="text-sm text-ink-soft mt-1 leading-relaxed">{pressure.detail}</p>
+
+      {pressure.ratio !== null && (
+        <div className="mt-3">
+          <Meter
+            value={pressure.ratio}
+            label="Storage used"
+            valueText={`${formatBytes(storage.usage)} of ${formatBytes(storage.quota)}`}
+            tone={pressure.level === 'full' ? 'warn' : pressure.level === 'tight' ? 'warn' : 'accent'}
+          />
+          <p className="text-xs text-ink-soft mt-1 tabular-nums">
+            {formatBytes(storage.usage)} of {formatBytes(storage.quota)}
+          </p>
+        </div>
+      )}
+
+      {storage.persisted === false && (
+        <Button size="sm" variant="outline" className="mt-3" onClick={onRequestPersist}>
+          Request persistent storage
+        </Button>
+      )}
+
+      {/* Not a banner. This app needs the network for nothing at all, so a
+          running "you are offline" indicator would report a problem that does
+          not exist. What is worth confirming once is the opposite: that
+          everything is cached, so a session in a basement gym works. */}
+      <p className="text-xs text-ink-soft mt-3 pt-3 border-t border-line leading-relaxed">
+        {offlineReady
+          ? 'Ready to work offline — the whole app is cached on this device. Nothing here needs a network.'
+          : 'Caching the app for offline use. Once this finishes it works with no network at all.'}
+      </p>
     </Card>
   );
 }

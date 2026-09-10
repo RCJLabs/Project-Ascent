@@ -9,7 +9,8 @@ import {
   updateMedia,
 } from '@/db/media';
 import type { MediaRecord } from '@/db/schema';
-import { ACCEPTED, ImageError, formatBytes, prepareImage } from '@/lib/image';
+import { formatBytes } from '@/engine/offline';
+import { ACCEPTED, ImageError, prepareImage } from '@/lib/image';
 import { Button } from '@/ui/Button';
 import { SelectableCard } from '@/ui/Chip';
 import { Input } from '@/ui/Field';
