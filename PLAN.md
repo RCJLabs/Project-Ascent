@@ -3060,3 +3060,133 @@ structured ranges, which belongs with M9.
   media-on-projects, trivia toy, expedition-style long-arc sieges of famous climbs
   (the one cut system worth reconsidering — real sessions advancing a named objective
   was the old app's best long-arc hook).
+
+---
+
+**Ten more, from a third audit (M87–M96).** No brief this time, so the method was the
+one that has paid best twice running: find what the app **stores and never reads**, and
+what it **has written and cannot reach**. Every claim below was checked against the code
+before it was written down, and two candidates were killed by that check — they are
+recorded at the end rather than proposed, because a rejected finding is worth as much as
+a kept one.
+
+**The large one.**
+
+- **M87 — The training history the app does not keep.** `profile.startDates` is
+  `Record<programId, string>` — **one date per program** — and `startProgram` overwrites it
+  on a restart (`profile.ts:218`). Nothing anywhere records that a block *happened*. The
+  consequences compound: run Iron Grip twice and the first block is gone; switch programs
+  and M85's `/finish` can no longer describe the one you just finished, because it reads
+  the *active* program; M84's block report has no previous block to compare against; and
+  the year review counts sessions and grades but cannot say "you ran three blocks this
+  year". A climber two years in has no record of what they have actually trained.
+  Several steps, and they have to land in this order: a `blocks` store (program, start,
+  end, the plan and track it ran with); writing a row on start, restart and switch, with a
+  migration that turns today's `startDates` into rows so existing climbers keep their
+  current block; `/finish` reading a *past* block by id rather than only the live one; a
+  history page listing them; and the year review gaining the one line it cannot currently
+  say. Feeds M88 and M91.
+
+**The app itself.**
+
+- **M88 — The answers the logger asks for and nothing reads.** Exactly M82's shape, one
+  layer down and larger. `content/fields.ts` declares sixteen `FieldId`s, twenty-two
+  session types across the catalogue name them, and `session.fields` is written by
+  `LogPage.tsx:1124` and read back by `LogPage.tsx:1112` — **the same screen, the same
+  day, and nowhere else.** The file's own header says a question the content asks and the
+  app never renders is a promise the content cannot keep; M70 kept the first half of that
+  promise by rendering the inputs, and the answers still go nowhere. Three of them are
+  worth real surfaces: `pumpLevel` is a 1-10 scale collected every route session and never
+  plotted; `location` is asked on every outdoor session and the app has no venue concept at
+  all (the catalogue deferred out of M70); `sessionNumber` is literally labelled "Day of the
+  trip" and nothing in the app knows what a trip is.
+- **M89 — Injury load, counted before you get to the gym.** `bodyLoad.sessionConflicts` is
+  written, documented, unit-tested, and **called by nothing**. Its own doc comment states
+  the case better than I can: *"A program-wide count is what makes the warning worth
+  reading: 'four exercises here load your elbow' is a decision, 'this one does' is a
+  shrug."* The shrug is what ships — `exerciseConflict` is called per exercise inside
+  today's session list (`LogPage.tsx:737`), so a climber with a logged elbow finds out one
+  row at a time, mid-session, after they have already travelled to the wall. The count
+  belongs where the decision is made: on the day before, on the calendar, and on the
+  program page.
+- **M90 — Why the dose does not change.** M33 added `ExerciseBlock.constantDose` for blocks
+  that genuinely run the same sets and reps for twelve weeks, with the explicit reasoning
+  that such a block *"has to say so out loud rather than reading as an oversight"*. Twelve
+  blocks across the catalogue now carry that explanation — Cruiser's Technique Focus writes
+  four lines about intensity, grade choice and session length carrying the progression
+  instead — and **nothing renders it**. So the field added to stop a block reading as an
+  oversight is itself invisible, and the block still reads as an oversight.
+
+**Progress tracking.**
+
+- **M91 — Did you do the work?** The app places specific session *types* on specific days
+  and never once asks which of them happened. `session.planned` is read by exactly one
+  function, and it is `sessionEdit.ts:85` merging two records. `review.adherence` exists but
+  counts sessions against a *weekly number*, not against the plan's own placements — it
+  cannot tell four climbing sessions from four skipped Finger Protocols. Every input is
+  already there: `plannedDay` for any date, and logged sessions carrying `sessionTypeId`.
+  "You did 9 of 12 Finger Protocol sessions and 4 of 12 Power Endurance" is the sentence a
+  block report should open with, and it is the other half of M84 — which numbers moved,
+  against which work actually happened.
+- **M92 — The retrospectives have no pictures in them.** Photos attach to sessions and
+  projects, M30 gave them captions and M71 let you draw beta on them — and `MediaCard` is
+  mounted in exactly two places, the session logger and the project detail page. Neither
+  `JournalEntry` nor `Review` carries a media reference: the journal is described as "a
+  reading of your own words" and shows none of the pictures filed alongside those words,
+  and the year in review has no photograph in it. The one surface in this app that is
+  meant to be *looked at* rather than read is the one with no images.
+- **M93 — The baseline goes stale.** M85 fixed the narrow half of this: the finder now
+  takes grades from the log where the log is ahead. The rest of `BaselineAnswers` —
+  `experience`, `goal`, `daysPerWeek` — is answered once at first run and **never asked
+  again**, and there is no screen on which to change it. A climber who answered "coming
+  back" eighteen months and three blocks ago is still described that way to every
+  recommendation the app makes. Derivable signals exist for two of the three (`daysPerWeek`
+  against what the log shows, `experience` against history and grade), so the honest shape
+  is the app noticing the drift and asking, not silently overwriting an answer the climber
+  gave about themselves.
+
+**Programs.**
+
+- **M94 — What the rest day was actually spent on.** The purest instance of the pattern in
+  the codebase. `RestChecklist` stores four booleans — hydration, mobility, zone 1, sleep —
+  and **every one of its six readers checks only `!== undefined`**, to decide whether the
+  session was a rest day at all (`derive.ts:155`, `derive.ts:536`, `review.ts:102`,
+  `economy.ts:222`, `coach.ts:298`, `templates.ts:57`). The four ticks themselves have never
+  been read by anything. A climber ticks them on every rest day of every block, and the app
+  has never once looked at what they ticked — while `readiness.ts` asks separately about
+  sleep and the coach has rules about recovery.
+- **M95 — The two programs nobody can start.** `content/programs/drafts/` holds Trip Prep
+  and Two-Day Week: structurally complete, validating against the same rules the builder
+  enforces, covered by `drafts.test.ts`, and deliberately out of `PROGRAMS` until *"the
+  person who coaches has read them"*. That is the right gate and it has not moved since
+  M58. **This one is blocked on you, not on me** — the code change is the two lines the
+  draft index promises, and what it needs first is a coach's read. Worth naming as a
+  milestone so it stops being a file nobody opens.
+
+**The Ascent.**
+
+- **M96 — The day's wall is thrown away.** `AscentRecords.daily` holds **one** record, and
+  it is overwritten every day. The game tells the climber that everyone gets the same wall
+  and that "a score is comparable without anything leaving your phone" — and then keeps no
+  history to compare. What survives is an accident: the ledger writes one `ascent:${date}`
+  entry per day whose *label* reads "The Ascent · 1,063 m", so the numbers exist only as
+  text inside a string written for a rewards feed. Reading a metre count back out of a
+  label is the kind of thing this codebase calls a smell everywhere else. A daily series —
+  scores, streak, the walls you skipped — from a record that stores the number as a number.
+
+**Two findings that did not survive the check**, recorded so they are not proposed again:
+
+- *"`Program.ordering` is authored on every program and read by nothing"* — true as far as
+  the field goes, and not a gap. `ordering` is documented as "human-readable scheduling
+  prose, kept verbatim alongside `constraints`", and the machine-readable `Constraint[]`
+  beside it carries a `note` per rule that **is** surfaced, in both places a climber can
+  break one: `StartProgramPage.tsx:274` when the layout is chosen, and
+  `CalendarPage.tsx:175` when a session is dragged. The prose is a duplicate of a rule the
+  app already enforces and explains.
+- *"Program grade ranges ignore the Font/French preference"* — carried as a known
+  limitation since the guide audit, and it is wrong. `gradeRange` is already structured
+  (`{ scale, min, max, label? }`) and `displayRange` already converts `min` and `max`
+  through `displayGrade`. Only four of the eleven programs set `label`, and all four are
+  words rather than grades — "All Levels", "Pre-Climbing" — which is exactly what the
+  escape hatch is for. **The carried limitation should be struck from the notes above
+  rather than fixed.**
