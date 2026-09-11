@@ -1,4 +1,5 @@
 import type { DBSchema } from 'idb';
+import type { Mark } from '@/lib/marks';
 
 /**
  * IndexedDB schema (PLAN.md §3). Split stores, never one blob.
@@ -87,6 +88,11 @@ export interface MediaRecord {
   width: number;
   height: number;
   caption?: string;
+  /** Beta drawn on top (PLAN.md M71). Geometry rather than a flattened copy,
+   *  so it stays editable and costs bytes instead of a second blob. Absent
+   *  when nothing has been drawn — an empty array is a photo that claims to
+   *  have been annotated and was not. */
+  marks?: Mark[];
   createdAt: string;
 }
 

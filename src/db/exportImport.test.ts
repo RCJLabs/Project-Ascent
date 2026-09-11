@@ -121,6 +121,37 @@ describe('photos', () => {
     expect(await listMedia('project:p2')).toHaveLength(1);
   });
 
+  // The drawn beta is geometry on the photo's record, and both sides of the
+  // archive list their fields by hand — so a field added to one and not the
+  // other disappears on the round trip with nothing to notice it (M71).
+  it('carries the drawn beta through the archive and back', async () => {
+    const db = await getDb();
+    const marks = [
+      { kind: 'circle' as const, color: 'gold' as const, points: [0.5, 0.5, 0.6, 0.5] },
+      { kind: 'arrow' as const, color: 'red' as const, points: [0.1, 0.9, 0.5, 0.55] },
+    ];
+    await db.put('media', { ...(await seedPhoto('project:p1', 'the crux')), marks });
+
+    const { bytes, file } = await exportArchive();
+    expect(file.media![0]!.marks).toEqual(marks);
+    // Geometry, not a second picture: one entry per photo, still.
+    expect(unzip(bytes).filter((e) => e.name.startsWith('media/'))).toHaveLength(1);
+
+    const backup = readBackupFile(bytes);
+    globalThis.indexedDB = new IDBFactory();
+    resetDbForTests();
+    await importAll(backup.file, 'replace', { blobs: backup.blobs });
+
+    const { listMedia } = await import('./media');
+    expect((await listMedia('project:p1'))[0]!.marks).toEqual(marks);
+  });
+
+  it('leaves an undrawn photo without an empty bag of marks', async () => {
+    await seedPhoto('project:p1');
+    const { file } = await exportArchive();
+    expect('marks' in file.media![0]!).toBe(false);
+  });
+
   // A backup that silently drops your photos is a backup that lies.
   it('carries photos through the archive and back', async () => {
     await seedPhoto('project:p1', 'the crux');

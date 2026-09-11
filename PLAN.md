@@ -2337,10 +2337,58 @@ something that already exists; six are new. Nothing here is committed.*
   they happened, in free text. Turning that text into a catalogue of walls, circuits and set
   dates is a separate milestone, and a better one for having somewhere to attach to.
 
-- **M71 — Draw the beta on the photo.** M53 made photos first-class. The next thing a
-  climber does with a project photo is mark it: this foot, that hold, the reachy move.
-  Freehand and arrows on a canvas, saved as a second image beside the first. Entirely
-  offline, and the most-used feature in every board app for a reason.
+- **M71 — Draw the beta on the photo.** *Done, and stored against the proposal.* The
+  proposal said "freehand and arrows on a canvas, **saved as a second image** beside the
+  first", which is how every board app does it and is the wrong shape for this one. A
+  flattened copy costs a second 600KB blob and one of the eight slots an owner gets; it
+  cannot be undone, re-coloured or partly erased; and beta is the most revised thing a
+  climber owns — the foot you marked in March is wrong by May. So the marks are kept as
+  **geometry on the photo's own record**: a few hundred bytes against six hundred
+  kilobytes, editable forever, and re-drawn crisp at whatever size the screen is. Three
+  tools — freehand, an arrow for a move, a circle for a hold — four colours, undo, and
+  tap-to-erase one mark, which is the one that matters once the photo has been closed and
+  reopened and undo has nothing left to undo.
+  **Two coordinate spaces, and the difference is load-bearing.** Points are *stored*
+  normalised to 0..1 of the image, so a mark survives a re-encode at another resolution;
+  they are *rendered* in the image's own pixel space, because a circle drawn in normalised
+  space on a 4:3 photo is an ellipse on screen and an arrowhead is skewed. Colours are ids
+  rather than hex, for the reason the themes were: a stored `#ffb300` freezes a palette
+  decision at the moment of drawing, and an imported backup writing arbitrary text into an
+  SVG paint attribute is a surface an id that falls back does not have.
+  **SVG, not a canvas** — the opposite of the choice `features/ascent` made, for the
+  opposite reason. That draws sixty frames a second of moving geometry and the pixels are
+  the output; this draws a dozen static shapes that have to survive a re-render, scale to
+  any screen and be assertable by a test. Every mark is drawn twice, a near-black halo
+  under the colour, because rock is mid-grey in every photo anyone takes of it and a
+  mid-tone stroke disappears into it — and every halo goes down before any ink, or the
+  outline of the second mark cuts a channel through the colour of the first.
+  Douglas–Peucker runs **once, on commit**, never on the live preview: simplifying a
+  growing array on every pointer event is what makes a drawing tool lag behind the hand.
+  Points closer together than five pixels are dropped at the door, by returning the same
+  array so React skips the render entirely. The 120-point cap is met by *loosening the
+  tolerance until it fits*, never by truncating — a sliced stroke is one that stops halfway
+  up the wall, which is a worse lie than a coarser one that reaches the top.
+  **A mutation survivor that deleted a claim instead of defending it.** `makeMark` guarded
+  on `points.length < 4` and the guard survived being loosened to `< 2`, because `moved()`
+  had already rejected every case it claimed to be rejecting. It is `< 2` now — the only
+  thing it really covers is an empty gesture, which would otherwise become a mark made of
+  four `undefined`s that renders as nothing, erases as nothing and can never be got rid of
+  — and that case has a test.
+  **A bug only the browser could show.** The photo viewer's scrim has always been
+  `bg-black/80`, so the page behind read through it. Survivable for looking at a photo and
+  not for drawing on one: the tool tray landed on top of the beta notes and the tab bar,
+  and at 430px the single wrapping row broke into three ragged ones with a colour swatch
+  orphaned on its own. Scrim to 95%, and the tray split into two rows that cannot wrap.
+  Eighteen mutations, eighteen killed. Verified in a browser at phone width: a circle round
+  a hold, a red arrow to the next, a cyan line up the sequence, all three stored to the
+  exact fractions they were drawn at, still there after a reload, and the arrow gone when
+  tapped with the eraser.
+  *What it does not do:* the grid crops each thumbnail to a square, so a thumbnail carries a
+  pen badge and the count in its label rather than the marks themselves — drawn on a crop,
+  they would land somewhere they were not put, and a mark in the wrong place is worse than
+  no mark. The backup carries the geometry inside `backup.json`; both sides of the archive
+  list their fields by hand, so a round-trip test now stands where a field added to one and
+  not the other would disappear with nothing to notice it.
 
 - **M72 — A readiness check-in.** Two questions before a session — how the fingers feel, how
   the sleep was — biasing the day's prescription and the coach's tips, rules-based and

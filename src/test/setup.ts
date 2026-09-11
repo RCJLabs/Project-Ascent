@@ -16,6 +16,12 @@ if (typeof window !== 'undefined') {
   window.scrollTo = () => {};
   Element.prototype.scrollTo = () => {};
   Element.prototype.scrollIntoView = () => {};
+  // jsdom has no pointer capture either, and a drawing surface that takes a
+  // drag has to claim the pointer or the stroke stops at the edge of the
+  // element (PLAN.md M71).
+  Element.prototype.setPointerCapture = () => {};
+  Element.prototype.releasePointerCapture = () => {};
+  Element.prototype.hasPointerCapture = () => false;
   if (!window.matchMedia) {
     window.matchMedia = (query: string) =>
       ({

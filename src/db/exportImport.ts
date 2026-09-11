@@ -1,5 +1,6 @@
 import { APP_VERSION } from '@/version';
 import { looksLikeZip, unzip, zip, ZipError, type ZipEntry } from '@/lib/zip';
+import type { Mark } from '@/lib/marks';
 import { getDb } from './db';
 import {
   EXPORTABLE_STORES,
@@ -23,6 +24,9 @@ export interface MediaExport {
   width: number;
   height: number;
   caption?: string;
+  /** The drawn beta (PLAN.md M71). Rides inside backup.json, not beside the
+   *  photo: it is geometry, and a few hundred bytes of it. */
+  marks?: Mark[];
   createdAt: string;
   /** This photo's entry inside the archive, e.g. `media/m-abc.webp`. */
   file?: string;
@@ -107,6 +111,7 @@ export async function exportArchive(options: { media?: boolean } = {}): Promise<
           width: row.width,
           height: row.height,
           ...(row.caption ? { caption: row.caption } : {}),
+          ...(row.marks?.length ? { marks: row.marks } : {}),
           createdAt: row.createdAt,
           file: name,
         });
@@ -321,6 +326,7 @@ export async function importAll(
         type: m.type,
         width: m.width,
         height: m.height,
+        ...(m.marks?.length ? { marks: m.marks } : {}),
         ...(m.caption ? { caption: m.caption } : {}),
         createdAt: m.createdAt,
         blob,
