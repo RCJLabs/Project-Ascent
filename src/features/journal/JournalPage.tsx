@@ -10,6 +10,8 @@ import {
   type JournalKind,
 } from '@/engine/journal';
 import { fromKey, shortLabel } from '@/engine/dates';
+import { projectOwner, sessionOwner } from '@/db/media';
+import { PhotoStrip, useMediaOwners } from '@/features/media/Thumbnails';
 import { useMetrics } from '@/store/metrics';
 import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
@@ -39,6 +41,7 @@ export function JournalPage() {
   const metricsHydrated = useMetrics((s) => s.hydrated);
   const loadMetrics = useMetrics((s) => s.load);
 
+  const { owners } = useMediaOwners();
   const [query, setQuery] = useState('');
   const [kinds, setKinds] = useState<JournalKind[]>([]);
   const [tag, setTag] = useState<string | null>(null);
@@ -155,7 +158,7 @@ export function JournalPage() {
                 </h2>
                 <ul className="grid grid-cols-1 gap-2">
                   {group.entries.map((entry) => (
-                    <EntryCard key={entry.id} entry={entry} />
+                    <EntryCard key={entry.id} entry={entry} owners={owners} />
                   ))}
                 </ul>
               </section>
@@ -178,8 +181,29 @@ const KIND_ICON: Record<JournalKind, typeof BookOpen> = {
   assessment: Ruler,
 };
 
-function EntryCard({ entry }: { entry: JournalEntry }) {
+/**
+ * The photos filed alongside the words (PLAN.md M92).
+ *
+ * A journal entry knows what it was written about, and the pictures are
+ * filed on that same thing — so "a reading of your own words" was showing
+ * the words and none of what the climber took a photograph of to go with
+ * them.
+ */
+function photosFor(entry: JournalEntry, owners: ReadonlyMap<string, readonly string[]>): readonly string[] {
+  if (entry.sessionId) return owners.get(sessionOwner(entry.sessionId)) ?? [];
+  if (entry.projectId) return owners.get(projectOwner(entry.projectId)) ?? [];
+  return [];
+}
+
+function EntryCard({
+  entry,
+  owners,
+}: {
+  entry: JournalEntry;
+  owners: ReadonlyMap<string, readonly string[]>;
+}) {
   const Icon = KIND_ICON[entry.kind];
+  const photos = photosFor(entry, owners);
   return (
     <li>
       <Link href={entry.href} className="block bg-surface border border-line rounded-2xl p-3.5">
@@ -190,6 +214,7 @@ function EntryCard({ entry }: { entry: JournalEntry }) {
           <span className="text-xs text-ink-soft ml-auto shrink-0">{shortLabel(entry.date)}</span>
         </div>
         <p className="text-sm leading-relaxed whitespace-pre-wrap">{entry.text}</p>
+        <PhotoStrip ids={photos} alt={`Photo on ${entry.title}`} />
       </Link>
     </li>
   );

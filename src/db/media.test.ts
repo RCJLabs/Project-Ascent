@@ -9,6 +9,8 @@ import {
   projectOwner,
   sessionOwner,
   findOrphanMedia,
+  mediaByIds,
+  mediaOwners,
   sweepOrphanMedia,
 } from './media';
 
@@ -229,5 +231,47 @@ describe('finding orphan photos', () => {
 
   it('costs nothing when there are none', async () => {
     expect(await findOrphanMedia()).toEqual({ ids: [], bytes: 0 });
+  });
+});
+
+/**
+ * Who has photos, answered from the index (PLAN.md M92).
+ *
+ * The retrospectives need to know *which* entries have pictures before they
+ * know which pictures to load. Reading the values to answer that would pull
+ * every blob in the database into memory to decide which twelve to show.
+ */
+describe('the owner index', () => {
+  it('groups every photo under its owner', async () => {
+    await addMedia({ ownerId: sessionOwner('s1'), blob: blob(), type: 'image/webp', width: 8, height: 6 });
+    await addMedia({ ownerId: sessionOwner('s1'), blob: blob(), type: 'image/webp', width: 8, height: 6 });
+    await addMedia({ ownerId: projectOwner('p1'), blob: blob(), type: 'image/webp', width: 8, height: 6 });
+
+    const owners = await mediaOwners();
+    expect(owners.get(sessionOwner('s1'))).toHaveLength(2);
+    expect(owners.get(projectOwner('p1'))).toHaveLength(1);
+    expect(owners.get(sessionOwner('nobody'))).toBeUndefined();
+  });
+
+  it('is empty when nothing has a photo', async () => {
+    expect((await mediaOwners()).size).toBe(0);
+  });
+
+  it('reads back the records it names', async () => {
+    const one = await addMedia({ ownerId: sessionOwner('s1'), blob: blob(), type: 'image/webp', width: 8, height: 6 });
+    expect((await mediaByIds([one.id])).map((r) => r.id)).toEqual([one.id]);
+  });
+
+  /**
+   * The index is read first and the blobs after, so a photo deleted in
+   * between is named by an id that no longer resolves. Handing the caller
+   * a hole where a record should be would be an `undefined.blob` on a page
+   * the climber is looking at.
+   */
+  it('skips an id whose photo has gone', async () => {
+    const one = await addMedia({ ownerId: sessionOwner('s1'), blob: blob(), type: 'image/webp', width: 8, height: 6 });
+    const rows = await mediaByIds([one.id, 'm-never-existed']);
+    expect(rows).toHaveLength(1);
+    expect(rows.every((r) => r !== undefined)).toBe(true);
   });
 });

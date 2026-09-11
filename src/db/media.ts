@@ -122,6 +122,43 @@ export async function moveMediaOwner(from: string, to: string): Promise<number> 
 }
 
 /**
+ * Which owners hold photos, and which photos they hold (PLAN.md M92).
+ *
+ * A key cursor, for the reason spelled out in `findOrphanMedia`: the values
+ * here are blobs, and reading them to find out who owns them would pull
+ * every photo in the database into memory. The retrospectives need to know
+ * *which* entries have pictures before they know which pictures to load,
+ * and that question is answerable from the index alone.
+ *
+ * Ids come back in index order, which is by owner and then by primary key.
+ * Not `createdAt` order — that lives in the record — so a caller that needs
+ * the climber's own ordering reads the records for the handful it is about
+ * to show.
+ */
+export async function mediaOwners(): Promise<Map<string, string[]>> {
+  const db = await getDb();
+  const out = new Map<string, string[]>();
+  const scan = db.transaction('media', 'readonly');
+  let cursor = await scan.store.index('by-owner').openKeyCursor();
+  while (cursor) {
+    const owner = String(cursor.key);
+    const ids = out.get(owner);
+    if (ids) ids.push(String(cursor.primaryKey));
+    else out.set(owner, [String(cursor.primaryKey)]);
+    cursor = await cursor.continue();
+  }
+  await scan.done;
+  return out;
+}
+
+/** The records named, in the climber's own order. Missing ids are skipped. */
+export async function mediaByIds(ids: readonly string[]): Promise<MediaRecord[]> {
+  const db = await getDb();
+  const rows = await Promise.all(ids.map((id) => db.get('media', id)));
+  return rows.filter((r): r is MediaRecord => r !== undefined);
+}
+
+/**
  * Photos whose owner is gone, and what they cost — without deleting them.
  *
  * Split out of the sweep for M80: the data page has to be able to say what

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { ChevronLeft, ChevronRight, Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import { fromKey, isYearKey, today as todayKey } from '@/engine/dates';
@@ -24,6 +24,9 @@ import { ShareButton } from '@/features/share/ShareSheet';
 import { yearCard } from '@/ui/shareCard';
 import { BadParameter } from '@/ui/RecordNotFound';
 import { useProfile } from '@/store/profile';
+import { useProjects } from '@/store/projects';
+import { pickPhotos } from '@/engine/photos';
+import { PhotoTile, useMediaOwners } from '@/features/media/Thumbnails';
 
 /**
  * A year, summarised.
@@ -56,7 +59,15 @@ function YearReview({ year: requested }: { year?: string }) {
   const byDate = useSessions((s) => s.byDate);
   const display = useSettings((s) => s.display);
   const blocks = useProfile((s) => s.blocks);
+  const projects = useProjects((s) => s.projects);
+  const loadProjects = useProjects((s) => s.load);
+  const projectsReady = useProjects((s) => s.hydrated);
+  const { owners } = useMediaOwners();
   const [, navigate] = useLocation();
+
+  useEffect(() => {
+    if (!projectsReady) void loadProjects();
+  }, [projectsReady, loadProjects]);
 
   const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
   const years = useMemo(() => availableYears(sessions), [sessions]);
@@ -74,6 +85,13 @@ function YearReview({ year: requested }: { year?: string }) {
   const older = index >= 0 ? years[index + 1] : years[0];
   const newer = index > 0 ? years[index - 1] : undefined;
   const peak = Math.max(1, ...review.months.map((m) => m.sessions));
+
+  // Twelve, spread across the months that have any: the grid is a year and
+  // not a fortnight (PLAN.md M92).
+  const photos = useMemo(
+    () => pickPhotos({ owners, sessions, projects, from: review.from, to: review.to, limit: 12 }),
+    [owners, sessions, projects, review.from, review.to],
+  );
 
   return (
     <>
@@ -167,6 +185,25 @@ function YearReview({ year: requested }: { year?: string }) {
                       })}
                     />
                   )}
+                </div>
+              </Card>
+            )}
+
+            {photos.length > 0 && (
+              <Card title="The year in pictures">
+                <div className="grid grid-cols-3 gap-1.5">
+                  {photos.map((photo) => (
+                    <PhotoTile
+                      key={photo.id}
+                      id={photo.id}
+                      href={photo.href}
+                      title={photo.title}
+                      date={fromKey(photo.date).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    />
+                  ))}
                 </div>
               </Card>
             )}

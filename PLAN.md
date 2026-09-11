@@ -3273,13 +3273,36 @@ a kept one.
   so it could not tell which of the two was read; and no test ever logged a type the plan
   never placed, so the breakdown's filter was free.
   Verified in both themes. 2,696 tests pass.
-- **M92 — The retrospectives have no pictures in them.** Photos attach to sessions and
-  projects, M30 gave them captions and M71 let you draw beta on them — and `MediaCard` is
-  mounted in exactly two places, the session logger and the project detail page. Neither
-  `JournalEntry` nor `Review` carries a media reference: the journal is described as "a
-  reading of your own words" and shows none of the pictures filed alongside those words,
-  and the year in review has no photograph in it. The one surface in this app that is
-  meant to be *looked at* rather than read is the one with no images.
+- **M92 — The retrospectives have no pictures in them.** *Done.* The premise held exactly:
+  `MediaCard` had two mounts, the logger and the project page, and neither the journal nor
+  the year in review touched media at all.
+  **The shape of this one is an ordering, not a feature.** A journal renders every matching
+  entry with no paging and a year can hold four hundred photographs, so "show the pictures"
+  had to become: ask the *index* who has photos — a key cursor, never a value, the pattern
+  `findOrphanMedia` already argues for — then name the handful worth loading, then read only
+  those blobs. A year costs four hundred index keys and twelve reads.
+  **Twelve, spread across the months that have any.** Taking the first twelve in date order
+  hands back one busy fortnight and calls it a year, so the months take turns.
+  **A project's photos are dated by its send**, and one still in progress stays out of the
+  grid. A session is a day and needs no argument; a project spans months and the app has no
+  date for the picture itself, so filing unsent beta under a year would be the app inventing
+  one.
+  **A real bug, and only a browser could find it.** The first draft set the observer up in
+  an effect keyed on a ref object. On the journal that effect ran before the owner index
+  resolved, so the strip had no photos, rendered nothing, and the effect saw a null ref and
+  bailed — and nothing re-ran it, because **a ref is not a dependency**. Every strip on the
+  page stayed grey forever. jsdom has no `IntersectionObserver`, so all ten tests took the
+  eager branch and passed while the branch a phone actually takes was broken. Fixed with a
+  callback ref, which fires when the node attaches; and the lazy path now has a test that
+  stubs the observer and drives it by hand — checked against the old implementation, which
+  it fails.
+  Twenty-one mutations, all killed after a second pass. Six survived the first, and one was
+  **dead code of mine**: a `limit <= 0` guard the loop condition already made unreachable,
+  now deleted. The other five were weak fixtures — no session *after* the range, a project
+  whose blank `createdAt` defeated the very fallback the test was about, an intra-month
+  ordering case where `reverse()` happened to equal the sort, an untested missing-id path,
+  and an empty strip that rendered an empty flex box with a top margin under every note.
+  Verified in both themes. 2,726 tests pass.
 - **M93 — The baseline goes stale.** M85 fixed the narrow half of this: the finder now
   takes grades from the log where the log is ahead. The rest of `BaselineAnswers` —
   `experience`, `goal`, `daysPerWeek` — is answered once at first run and **never asked
