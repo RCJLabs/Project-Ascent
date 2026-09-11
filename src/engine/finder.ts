@@ -65,7 +65,58 @@ export interface FinderInput {
   comingOffBreak?: boolean;
   /** How this climber reads grades, so the reasons say it their way. */
   display?: GradeDisplay;
+  /** What the log knows about the block just run (PLAN.md M101). */
+  history?: FinderHistory;
 }
+
+/**
+ * The last block, read back (PLAN.md M101).
+ *
+ * The finder asked seven questions and used the answers, plus the grades M85
+ * taught it to take from the log. Everything else it knew about a climber it
+ * threw away — including the one fact most obviously relevant to "what should
+ * I run next", which is what they just ran.
+ *
+ * **Days rather than a date, so `recommend` keeps no clock.** Every other
+ * input here is a fact about the climber rather than about the moment, and
+ * the one function in this module is pure over them.
+ *
+ * **Only a block that is over.** A block still running is not a thing you
+ * are choosing what to follow; the finder is reached mid-block too, and the
+ * answer there is the same as it always was.
+ */
+export interface FinderHistory {
+  programId: string;
+  /** Days since its last day. */
+  daysSince: number;
+  /**
+   * Whether it ran to the end. A block left early is not one to steer away
+   * from repeating — not finishing it is the reason to run it again.
+   */
+  completed: boolean;
+  /** Sessions done against sessions the plan placed, where there were enough
+   *  placed for the ratio to mean anything. */
+  adherence?: { done: number; planned: number };
+}
+
+/**
+ * How recently a finished block still argues against repeating itself.
+ *
+ * My number, not the programs'. Ninety days is a season: long enough that
+ * running Iron Grip again is a fresh decision rather than a loop, short
+ * enough that "you finished this three weeks ago" is still the most useful
+ * thing the app can say. It deducts rather than blocks — a climber who wants
+ * the same block again is allowed to have it.
+ */
+export const REPEAT_WINDOW_DAYS = 90;
+
+/** Below this share of the plan, the days a program asks for are worth
+ *  mentioning. Also my number. */
+export const LOW_ADHERENCE = 0.5;
+
+/** Sessions a plan had to place before its adherence is a ratio rather than
+ *  an anecdote — roughly a month at two a week. */
+export const ENOUGH_PLANNED = 8;
 
 export interface Recommendation {
   program: Program;
@@ -191,6 +242,22 @@ function climberOrdinal(input: FinderInput, scale: GradeScale): number | null {
   if (!grade) return null;
   const ord = gradeOrdinal(scale, grade);
   return ord < 0 ? null : ord;
+}
+
+/** "three weeks ago", for a caution that has to feel like a date. */
+function describeSince(days: number): string {
+  if (days <= 1) return days <= 0 ? 'today' : 'yesterday';
+  if (days < 14) return `${days} days ago`;
+  const weeks = Math.round(days / 7);
+  if (weeks < 9) return `${weeks} weeks ago`;
+  const months = Math.round(days / 30);
+  return `${months} month${months === 1 ? '' : 's'} ago`;
+}
+
+/** The days a program asks for, or null when it does not say. */
+function sessionsPerWeek(program: Program): { min: number; max: number } | null {
+  const rule = program.constraints.find((c) => c.kind === 'sessions-per-week');
+  return rule && rule.kind === 'sessions-per-week' ? { min: rule.min, max: rule.max } : null;
 }
 
 export function recommend(input: FinderInput): Recommendation[] {
@@ -321,8 +388,8 @@ export function recommend(input: FinderInput): Recommendation[] {
     // a week" — which is not what it asks for, and the rest days it leaves
     // are the point of a hangboard block rather than slack in the schedule
     // (PLAN.md M38).
-    const perWeek = program.constraints.find((c) => c.kind === 'sessions-per-week');
-    if (perWeek && perWeek.kind === 'sessions-per-week') {
+    const perWeek = sessionsPerWeek(program);
+    if (perWeek) {
       const asks = perWeek.min === perWeek.max ? `${perWeek.min}` : `${perWeek.min}-${perWeek.max}`;
       if (input.daysPerWeek < perWeek.min) {
         score -= 20;
@@ -336,6 +403,64 @@ export function recommend(input: FinderInput): Recommendation[] {
       } else {
         score += 10;
         reasons.push(`Fits ${input.daysPerWeek} days a week`);
+      }
+    }
+
+    // ── The block you just ran (PLAN.md M101) ──────────────────────────
+    //
+    // Three readings of one fact, and none of them overrules an answer the
+    // climber gave. The stated goal is worth 50 and the stated day count 10;
+    // what follows moves a program within that, never past it.
+    const history = input.history;
+    if (history !== undefined) {
+      const ran = PROGRAMS.find((p) => p.id === history.programId);
+
+      // Whether the block was actually *run*, which is not the same question
+      // as whether its calendar ran out. `outcomeOf` says "completed" when
+      // the last week has passed and the climber never switched away — so a
+      // block done at 13% of its plan reads as finished, and the finder told
+      // a climber "you finished this four weeks ago" about twelve weeks they
+      // had mostly skipped. Found in a browser; M91 exists because the
+      // calendar running out is not the work being done.
+      const done = history.adherence;
+      const thin =
+        done !== undefined && done.planned >= ENOUGH_PLANNED && done.done / done.planned < LOW_ADHERENCE;
+      const ranIt = history.completed && !thin;
+
+      // A block you ran is not one to run again this season. A block you
+      // left, or barely did, is the opposite: not finishing it is the reason
+      // to go back to it.
+      if (history.programId === program.id && ranIt && history.daysSince <= REPEAT_WINDOW_DAYS) {
+        score -= 30;
+        cautions.push(`You finished this ${describeSince(history.daysSince)}`);
+      }
+
+      // What the program itself says comes after it, with the reason its
+      // author wrote. Read on `/finish` since M85 and nowhere else — and
+      // "what should I run next" is the question this screen exists for.
+      const follows = ran?.nextPrograms.find((n) => n.id === program.id);
+      if (follows && history.daysSince <= REPEAT_WINDOW_DAYS) {
+        score += 25;
+        reasons.push(`${ran!.name} names this as what follows it: ${follows.reason}`);
+      }
+
+      // Said, never scored. A climber who ran a four-day block at a third of
+      // its plan may have been injured, or busy, or may simply want to try
+      // again — and they have already told this screen how many days they
+      // have. Deducting here would be the app disbelieving that answer.
+      //
+      // Not about the program it came from: "this asks for the same days as
+      // the program you just ran" is a circle when *this* is that program.
+      if (thin && done && history.programId !== program.id) {
+        const asks = sessionsPerWeek(program);
+        const ranAsks = ran ? sessionsPerWeek(ran) : null;
+        if (asks !== null && ranAsks !== null && asks.min >= ranAsks.min) {
+          cautions.push(
+            `You ran ${ran!.name} at ${Math.round((done.done / done.planned) * 100)}% of its plan, and this asks for ${
+              asks.min === ranAsks.min ? 'the same' : 'more'
+            } — ${asks.min === asks.max ? asks.min : `${asks.min}-${asks.max}`} days a week`,
+          );
+        }
       }
     }
 

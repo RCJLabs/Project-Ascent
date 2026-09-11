@@ -4,7 +4,8 @@ import { AlertTriangle, ArrowLeft, Check, Lock, Sparkles } from 'lucide-react';
 import { V_GRADES, YDS_GRADES, displayRange } from '@/engine/grades';
 import { useGradeOptions } from '@/ui/useGrade';
 import { PageSkeleton } from '@/ui/Skeleton';
-import { findProgram, type Experience, type FinderInput, type FinderResult, type Goal, type Recommendation } from '@/engine/finder';
+import { findProgram, type Experience, type FinderHistory, type FinderInput, type FinderResult, type Goal, type Recommendation } from '@/engine/finder';
+import { lastBlockFor } from '@/engine/finderHistory';
 import { finderInputFrom, gradesFromLog, type BaselineAnswers } from '@/engine/onboarding';
 import {
   baselineDrift,
@@ -152,11 +153,26 @@ export function FinderPage() {
     () => gradesFromLog(baseline, deriveClimberState(sessions)),
     [baseline, sessions],
   );
+  // The block just run, which is the most obviously relevant thing the log
+  // holds about "what should I do next" and the finder was blind to it
+  // (PLAN.md M101).
+  const blocks = useProfile((s) => s.blocks);
+  const history = useMemo(
+    () => lastBlockFor(blocks, sessions, today()),
+    [blocks, sessions],
+  );
   // Not `null`: with nothing in `main` the page has no height, so the
   // layout collapses and snaps back a frame later — which reads as a fault
   // rather than as loading (PLAN.md M22).
   if (!hydrated || !metricsReady || !sessionsReady) return <PageSkeleton title="Find my program" />;
-  return <FinderForm baseline={baseline} grades={logged} sessions={sessions} />;
+  return (
+    <FinderForm
+      baseline={baseline}
+      grades={logged}
+      sessions={sessions}
+      {...(history ? { history } : {})}
+    />
+  );
 }
 
 /** What the log says, beside an answer that no longer matches it. */
@@ -173,10 +189,12 @@ function FinderForm({
   baseline,
   grades,
   sessions,
+  history,
 }: {
   baseline: BaselineAnswers | null;
   grades: { boulderGrade: string; sportGrade: string };
   sessions: Session[];
+  history?: FinderHistory;
 }) {
   const gradeOptions = useGradeOptions();
   // Seeded from the first-run baseline where there is one: these are the same
@@ -287,6 +305,7 @@ function FinderForm({
       equipment,
       injuries: blocking,
       comingOffBreak: experience === 'returning',
+      ...(history ? { history } : {}),
     };
     // Keep it. The finder asks the five questions the baseline holds and
     // used to throw every answer away, so a correction made here lasted

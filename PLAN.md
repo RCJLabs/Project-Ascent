@@ -3871,20 +3871,48 @@ materially wrong premise. Sizes are guesses.*
   `completed` first — M94 found twice the readers the plan claimed for a smaller field —
   and the ones that must not count a sketch are the ones that pay or measure climbs.
 
-- **M101 — The finder reads the log, not just the questionnaire.** *Proposed. Size M.*
-  **Premise.** `FinderInput` is the baseline plus metrics, equipment and injuries. M85 made
-  the grades come from the log. Nothing else does. The app knows which drill categories a
-  climber has never trained (`drillsByCategory`), which tissue has been quiet for weeks
-  (`tissueLoad.daysSinceLoaded`), how many days they have spent outdoors, which block they
-  just finished (M87) and whether they actually did it (M91). A climber who finished Iron
-  Grip at 40 % adherence and one who finished at 95 % get the same recommendation, and
-  either can be recommended Iron Grip again.
-  **Shape.** `FinderInput.history?`, derived: last block and its adherence, weakest drill
-  category, tissue gaps, outdoor share. Each becomes a *stated reason* on a recommendation
-  — "not Iron Grip: you finished it three weeks ago", "Lockdown: technique is 4 % of your
-  log" — the way reasons already print. The log adds reasons and re-orders.
-  **Never.** Veto a stated goal or a stated day count. Cold start changes nothing, by
-  construction.
+- **M101 — The finder reads the log, not just the questionnaire.** *Done, with three of
+  the four proposed signals refused for measured reasons and a better one used instead.*
+  **The premise held.** `FinderInput` was the seven answers plus metrics, equipment and
+  injuries; the only thing it took from the log was the grades M85 taught it. A climber who
+  had just finished Iron Grip could be recommended Iron Grip.
+  **The proposal's best material was one it did not name.** `nextPrograms` is authored on
+  **all thirteen programs** with a written reason per destination — and was read on `/finish`
+  and nowhere else, not on the screen whose entire question it answers. So the finder now
+  carries it: *"Iron Grip names this as what follows it: Maintain what you built. The Cruiser
+  keeps fingers sharp without grinding."*
+  **Three of the four proposed signals were refused, each after measuring.**
+  *The weakest drill category* would have rewarded authoring density, not training: **six of
+  thirteen programs declare no drills at all**, so a "trains what you neglect" reason would be
+  silent for half the catalogue and systematically favour the other half. *Tissue gaps* rest on
+  a keyword scan whose own module says it is "not tolerable for a number with a unit" — using
+  it to re-order programs is exactly that. *Outdoor share* had no action behind it that the
+  stated goal does not already cover.
+  **So what is used is the block you just ran**, which is the single most relevant thing the
+  log holds and the one the finder was blind to: a deduction and a caution against repeating
+  it inside a season, the successor its own author named, and adherence.
+  **Adherence is said and never scored.** A climber who ran a four-day block at a third of its
+  plan may have been injured, or busy, or may want to try again — and they have already told
+  this screen how many days they have. Deducting would be the app disbelieving that answer.
+  **The browser found the design fault, and it is an M91 fault.** `outcomeOf` says "completed"
+  when the last week has passed and the climber never switched away — so a block done at **13%
+  of its plan** reads as finished, and the finder told a climber *"you finished this four weeks
+  ago"* about twelve weeks they had mostly skipped, and argued against the one program they had
+  most reason to go back to. The calendar running out is not the work being done, which is
+  precisely why M91 exists. The repeat argument now needs the block to have been *run*, and the
+  days caution no longer fires on the program it came from, which was a circle.
+  **Its own module.** `finderHistory.ts` rather than a function in `finder.ts`, because
+  `finder.ts` is reached from `onboarding.ts` and therefore from the first screens the app
+  paints; pulling `adherence` and its dependencies in behind it is the shape M78 spent a
+  milestone undoing. Entry chunk unchanged at 215.5KB against its 216 budget.
+  Twenty-one mutations, twenty killed. **The survivor was serious**: nothing pinned that the
+  gap is measured from the block's last day rather than its first, and on a twelve-week block
+  those are eighty-four days apart — the difference between inside the repeat window and well
+  outside it. Every other assertion about it was relative, so both readings passed.
+  Also caught immediately by a test: `sortBlocks` is newest **first**, which is not the order
+  a `.at(-1)` reads.
+  Verified in a browser in both themes, on a block barely done and a block fully done.
+  3,155 tests pass.
 
 - **M102 — Links, not just high points.** *Proposed. Size M.*
   **Premise.** A burn is `worked | fell-low | fell-mid | fell-high | fell-crux | send` with
