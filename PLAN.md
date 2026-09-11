@@ -2922,13 +2922,46 @@ commit.
   And the first wording of that sentence ran the name into the number: *"V7 5 tries in six
   months"*. Verified in both themes. 2,416 tests pass, and the new derivation is in the perf
   budget.
-- **M84 — The block's numbers, on one chart.** Programs declare `assessments: MetricId[]`
-  and M67 knows which weeks are baseline, phase and final tests; the builder's Benchmarks
-  card even says the retests exist "so the strength curve has something to draw" — and each
-  metric is drawn alone, on its own page. A block report: for every assessment the program
-  asked for, baseline against final with the phase tests between, normalised so a hang in
-  seconds and a pull-up count share one axis, and the plain sentence: which of the numbers
-  this block was trying to move actually moved. Feeds M85.
+- **M84 — The block's numbers, on one chart.** *Done, with "one axis" qualified.*
+  The premise held, and reading the code sharpened it: `changeOf` compares **the last two
+  entries**, so every existing reading of an assessment answers "did it move since last time"
+  and none of them answers "did this block move it". The two questions have different answers
+  the moment a climber tests three times.
+  **"Normalised so a hang in seconds and a pull-up count share one axis" is right, and not
+  universal.** Percent change is honest for ratio-scale quantities, and seconds and reps are
+  both. The catalogue's batteries are not all like that, and I checked rather than assumed:
+  across the eleven programs there are 24 `number` metrics, **nine `grade`**, **three
+  `passfail`** and **one `text`** (Iron Grip assesses `core_lever`, which `isChartable`
+  already refuses). A grade is ordinal — V4 to V5 is a step on a ladder, not "+25%" — and a
+  pass is not a quantity. So the chart carries percent change and nothing else, and everything
+  it cannot honestly carry is listed beneath it in its own units rather than dropped, because
+  a grade that went up two steps is the most interesting line in most batteries.
+  **Two of the assessed metrics are `higherIsBetter: false`** — `toe_touch` and `min_edge` —
+  so every sign is flipped through that flag in the engine and a bar to the right always means
+  the block worked, on both kinds of scale.
+  **A baseline of zero has no percent**, and neither does a negative one taken at face value:
+  `weighted_pullup_3rm` is measured in BW+lbs, so a climber on band assistance logs −20, and
+  going to −5 is fifteen pounds of progress that dividing by the raw baseline would report as
+  a 75% *decline* — while `moved` correctly said "better" and the chart drew them against each
+  other. `Math.abs` on the denominator, and a test that would have caught it.
+  Thirty-four mutations, thirty-two killed. Both survivors were weak tests: the fixture start
+  date was itself a Sunday, so `startOfWeek` was invisible (it matters — `programWeek` snaps
+  to the week too, and a Wednesday start would otherwise put the report three days out of step
+  with the week numbers it reports on), and the negative-baseline case above had no test at
+  all.
+  **One grammar bug I wrote and the tests caught**: "one of the 2 retested **number** improved"
+  — the noun was agreeing with how many *rose* rather than how many were *retested*.
+  **Two browser findings.** A five-name list came out as *"Max Hang, Repeater Weight and
+  Lock-Off and 2 more"*, the Oxford-less join and the truncation each adding their own "and";
+  that is now `engine/phrase.ts`, shared with M83's thin-grade sentence, which was silently
+  dropping anything past the third. And SVG text does not clip, it overflows: "Weighted
+  Pull-Ups 3RM" rendered as "/eighted Pull-Ups 3RM" off the edge of the viewBox, so labels are
+  fitted to the gutter with the full name kept in the row's title.
+  Verified in both themes against Iron Grip, the widest battery in the catalogue. 2,476 tests
+  pass, and the new derivation is in the perf budget.
+  *Left alone:* the three plain list joins already in `plateau.ts`, `bodyLoad.ts` and
+  `review.ts`. None truncates, so none has the bug, and sweeping them up in a milestone about
+  assessments is how unrelated regressions get in.
 
 **Programs.**
 

@@ -27,6 +27,7 @@
 
 import type { Session } from '@/db/sessions';
 import { addDays } from './dates';
+import { joinCapped, joinList } from './phrase';
 import {
   DEFAULT_DISPLAY,
   V_GRADES,
@@ -255,12 +256,6 @@ export function describeConversion(trend: ConversionTrend, display?: GradeDispla
     .join(' ');
 }
 
-/** "V7", "V7 and V8", "V7, V8 and V9". */
-function andList(parts: string[]): string {
-  if (parts.length <= 1) return parts[0] ?? '';
-  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]!}`;
-}
-
 /**
  * The grades that never reached the threshold, which the grid leaves out.
  *
@@ -270,13 +265,17 @@ function andList(parts: string[]): string {
  * a browser made obvious was unreadable.
  */
 function thinNote(trend: ConversionTrend, display?: GradeDisplay): string {
-  const thin = tooThin(trend).slice(0, 3);
-  if (thin.length === 0) return '';
-  const names = andList(
-    thin.map((g) => displayGrade(trend.scale, g.grade, display ?? DEFAULT_DISPLAY)),
+  const all = tooThin(trend);
+  if (all.length === 0) return '';
+  // Named up to three, and the rest counted rather than silently dropped,
+  // which is what the first version did.
+  const names = joinCapped(
+    all.map((g) => displayGrade(trend.scale, g.grade, display ?? DEFAULT_DISPLAY)),
+    3,
   );
-  const counts = andList(thin.map((g) => String(g.tries)));
-  const total = thin.reduce((n, g) => n + g.tries, 0);
-  const verb = thin.length === 1 ? 'is' : 'are';
+  const shown = all.slice(0, 3);
+  const counts = joinList(shown.map((g) => String(g.tries)));
+  const total = shown.reduce((n, g) => n + g.tries, 0);
+  const verb = all.length === 1 ? 'is' : 'are';
   return `${names} ${verb} not drawn: ${counts} ${total === 1 ? 'try' : 'tries'} in six months, never ${ENOUGH_TRIES} inside one block.`;
 }

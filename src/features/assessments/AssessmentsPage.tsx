@@ -11,6 +11,7 @@ import {
   parseMetricInput,
   type AssessmentStatus,
 } from '@/engine/assessments';
+import { blockReport, describeBlock } from '@/engine/blockReport';
 import { shortLabel, today } from '@/engine/dates';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
 import { PageGrid } from '@/ui/PageGrid';
@@ -25,6 +26,7 @@ import { SelectableCard } from '@/ui/Chip';
 import { DisclosureButton } from '@/ui/Disclosure';
 import { Input, Select } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
+import { BlockReportChart, BlockReportRest } from '@/ui/charts/BlockReportChart';
 import { unitLabel } from '@/engine/units';
 
 export function AssessmentsPage() {
@@ -45,6 +47,14 @@ export function AssessmentsPage() {
   const battery = useMemo(
     () => assessmentBattery(entries, { program, startDate }),
     [entries, program, startDate],
+  );
+
+  // The block report is about the *program's* declared battery, so it is
+  // built from the program rather than from the battery rows, which also
+  // carry benchmarks the climber added for themselves.
+  const report = useMemo(
+    () => (program && startDate ? blockReport({ program, startDate, entries, today: today() }) : null),
+    [program, startDate, entries],
   );
 
   const due = battery.filter((s) => s.due !== null);
@@ -87,6 +97,19 @@ export function AssessmentsPage() {
             <p className="text-xs text-ink-soft mt-3">
               Results are keyed to the benchmark, not to the program, so history carries over when
               you switch.
+            </p>
+          </Card>
+        )}
+
+        {report !== null && (
+          <Card title={report.finished ? 'What the block moved' : 'What the block is moving'}>
+            <BlockReportChart report={report} />
+            <BlockReportRest report={report} />
+            <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeBlock(report)}</p>
+            <p className="text-xs text-ink-soft mt-2 leading-relaxed">
+              Against the first reading taken inside this block, not against your last test. Only
+              the numbers that are quantities share the percentage axis — a grade is a step on a
+              ladder, and a pass is not a number.
             </p>
           </Card>
         )}

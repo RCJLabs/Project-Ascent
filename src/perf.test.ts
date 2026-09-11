@@ -3,10 +3,12 @@ import { CATALOGUE } from '@/content/programs/catalogue';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import type { Session } from '@/db/sessions';
+import type { MetricEntry } from '@/db/metrics';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveCareer } from '@/engine/career';
 import { checkInHistory } from '@/engine/checkIns';
 import { conversionTrend } from '@/engine/conversion';
+import { blockReport } from '@/engine/blockReport';
 import { deriveClimberState } from '@/engine/derive';
 import { deriveStats } from '@/engine/stats';
 import { clearXpCache, deriveXp } from '@/engine/xp';
@@ -83,8 +85,28 @@ function fastest(fn: () => void): number {
 
 const TEN_YEARS = 1560;
 
+/** A decade of benchmark results, for the block report's scan. */
+function results(n: number): MetricEntry[] {
+  const ids = CATALOGUE[0]!.assessments;
+  const date = new Date('2016-01-01T00:00:00');
+  const out: MetricEntry[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const key = date.toISOString().slice(0, 10);
+    out.push({
+      id: `m${i}`,
+      metricId: ids[i % ids.length]!,
+      date: key,
+      value: 20 + (i % 40),
+      createdAt: `${key}T10:00:00.000Z`,
+    } as MetricEntry);
+    date.setDate(date.getDate() + 7);
+  }
+  return out;
+}
+
 describe('ten years of logs stays cheap', () => {
   const sessions = log(TEN_YEARS);
+  const metricEntries = results(520);
   const state = deriveClimberState(sessions);
 
   it('derives XP in single-digit milliseconds', () => {
@@ -122,6 +144,14 @@ describe('ten years of logs stays cheap', () => {
       // finds them — which is the part that grows with the log.
       ['checkIns', 20, () => checkInHistory({ sessions, to: sessions[sessions.length - 1]!.date })],
       ['conversion', 25, () => conversionTrend({ sessions, scale: 'V', to: sessions[sessions.length - 1]!.date })],
+      // Ten years of metric entries against one twelve-week battery: the
+      // cost is the scan per assessment, which grows with the log.
+      ['blockReport', 20, () => blockReport({
+        program: CATALOGUE[0]!,
+        startDate: '2025-01-05',
+        entries: metricEntries,
+        today: '2025-04-01',
+      })],
     ];
     const over = budgets
       .map(([name, budget, fn]) => ({ name, budget, ms: median(fn) }))
