@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { GRAVITY_DEFIED, PROGRAMS, THE_LONG_GAME } from '@/content/programs';
+import { PROGRAMS } from '@/content/programs';
+import { GRAVITY_DEFIED, THE_LONG_GAME } from '@/content/programs/catalogue';
 import { adaptProgram, apportion, lengthsFor, MIN_ADAPTED_WEEKS, MIN_DELOAD_GAP } from './adapt';
 
 /**

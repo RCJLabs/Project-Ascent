@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BASE_CAMP, IRON_GRIP, LOCKDOWN, PROGRAMS, THE_LONG_GAME } from '@/content/programs';
+import { PROGRAMS } from '@/content/programs';
+import { BASE_CAMP, IRON_GRIP, LOCKDOWN, THE_LONG_GAME } from '@/content/programs/catalogue';
 import {
   assignSessions,
   describeDays,

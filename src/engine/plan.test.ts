@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BASE_CAMP, IRON_GRIP, PEAK_PERFORMANCE } from '@/content/programs';
+import { BASE_CAMP, IRON_GRIP, PEAK_PERFORMANCE } from '@/content/programs/catalogue';
 import { planFromLayout } from './scheduler';
 import { plannedDay } from './plan';
 

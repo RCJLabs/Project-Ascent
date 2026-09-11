@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { Route, Router, Switch, useLocation } from 'wouter';
 import { RouteBoundary } from '@/ui/ErrorBoundary';
 import { useHashLocation } from 'wouter/use-hash-location';
@@ -55,6 +55,7 @@ const GlossaryPage = lazy(() => import('@/features/glossary/GlossaryPage').then(
 
 import { sweepOrphanMedia } from '@/db/media';
 import { hydrateAll } from '@/store';
+import { loadPrograms, programsLoaded } from '@/content/programs';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { applyTextSize, applyTheme, useSettings } from '@/store/settings';
@@ -128,9 +129,34 @@ function useFirstRunRedirect(): void {
   }, [profileReady, sessionsReady, onboardedAt, activeProgramId, byDate, location, navigate]);
 }
 
+/**
+ * The router waits for the catalogue; the shell does not (PLAN.md M78).
+ *
+ * Twenty-two call sites read a program synchronously at render, and eight
+ * pages do it with no hydration gate at all — a climber cold-loading
+ * `#/train` would get an empty catalogue that never re-rendered. Gating
+ * those eight one by one is eight chances to miss one. Gating the routes
+ * here is one, and the nav still paints while the bodies are parsed.
+ */
+function useCatalogue(): boolean {
+  const [ready, setReady] = useState(programsLoaded);
+  useEffect(() => {
+    if (ready) return;
+    let live = true;
+    void loadPrograms().then(() => {
+      if (live) setReady(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [ready]);
+  return ready;
+}
+
 function Shell() {
   useFirstRunRedirect();
   const [location] = useLocation();
+  const catalogue = useCatalogue();
   return (
       <AppShell>
         {/* Inside the shell, so a page that throws leaves the nav — and so a
@@ -142,6 +168,9 @@ function Shell() {
             quiet rather than a spinner: on a warm cache it is never seen,
             and a spinner that flashes for 20ms is worse than nothing. */}
         <Suspense fallback={<div className="min-h-40" aria-busy="true" />}>
+        {!catalogue ? (
+          <div className="min-h-40" aria-busy="true" />
+        ) : (
         <Switch>
           <Route path="/" component={HomePage} />
           <Route path="/climber" component={ClimberPage} />
@@ -184,6 +213,7 @@ function Shell() {
             <PlaceholderPage title="Not found" subtitle="" body="That page does not exist." />
           </Route>
         </Switch>
+        )}
         </Suspense>
         </RouteBoundary>
       </AppShell>

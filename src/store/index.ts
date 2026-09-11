@@ -7,6 +7,7 @@ import { useProjects } from './projects';
 import { useTemplates } from './templates';
 import { useSessions } from './sessions';
 import { hydrateSettings } from './settings';
+import { loadPrograms } from '@/content/programs';
 
 /**
  * Load every store from IndexedDB.
@@ -19,6 +20,9 @@ import { hydrateSettings } from './settings';
  */
 export async function hydrateAll(): Promise<void> {
   await Promise.all([
+    // The catalogue is fetched, not imported (PLAN.md M78). Idempotent, so
+    // the boot path and the after-import path can both ask for it.
+    loadPrograms(),
     hydrateSettings(),
     hydrateProfile(),
     useSessions.getState().load(),

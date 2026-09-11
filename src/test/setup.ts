@@ -1,5 +1,12 @@
 // Vitest runs in node; give the db layer a real-enough IndexedDB.
 import 'fake-indexeddb/auto';
+import { loadPrograms } from '@/content/programs';
+
+// The shipped programs are loaded, not imported (PLAN.md M78), and dozens of
+// test files call `getProgram` at module scope. A setup file runs before the
+// test module is evaluated, so awaiting here is what lets them keep doing
+// that — the same guarantee the router gives the pages.
+await loadPrograms();
 
 /**
  * jsdom implements no layout, so anything that scrolls or measures throws a

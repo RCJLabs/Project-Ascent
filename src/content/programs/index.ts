@@ -1,16 +1,5 @@
 import { adaptProgram } from '@/engine/adapt';
 import type { Program, ProgramId, ProgramStage } from '../types';
-import { BASE_CAMP } from './baseCamp';
-import { GRAVITY_DEFIED } from './gravityDefied';
-import { GROUND_ZERO } from './groundZero';
-import { IRON_GRIP } from './ironGrip';
-import { LOCKDOWN } from './lockdown';
-import { THE_LONG_GAME } from './longGame';
-import { GENERAL_TRAINING } from './generalTraining';
-import { OUTDOOR_CLIMBING } from './outdoorClimbing';
-import { THE_CRUISER } from './cruiser';
-import { THE_SIEGE } from './siege';
-import { PEAK_PERFORMANCE } from './peakPerformance';
 
 /**
  * The full catalog the port is working toward (PLAN.md §4.1). Ids are
@@ -31,10 +20,44 @@ export const PLANNED_PROGRAM_IDS: readonly ProgramId[] = [
   'outdoor_climbing',
 ];
 
-/** Programs converted to the new schema so far, in catalog order. */
-export const PROGRAMS: Program[] = [GROUND_ZERO, BASE_CAMP, GRAVITY_DEFIED, LOCKDOWN, IRON_GRIP, THE_LONG_GAME, PEAK_PERFORMANCE, THE_SIEGE, THE_CRUISER, GENERAL_TRAINING, OUTDOOR_CLIMBING];
+/**
+ * The shipped programs, in catalog order.
+ *
+ * **Empty until `loadPrograms` has run** (PLAN.md M78). The bodies used to
+ * be imported here statically, which put all eleven — a sixth of the entry
+ * chunk — in front of the first paint of a screen that needed none of them.
+ * They live in `./catalogue` now and arrive through one `import()`.
+ *
+ * The array is filled in place rather than replaced, so the twenty-odd
+ * callers that hold a reference to it see the programs the moment they
+ * land. Nothing reads it before the router mounts, because the router waits
+ * for `loadPrograms` — see App.tsx — and every test file gets it filled by
+ * `src/test/setup.ts` before its own module scope runs.
+ */
+export const PROGRAMS: Program[] = [];
 
-const BY_ID = new Map<ProgramId, Program>(PROGRAMS.map((p) => [p.id, p]));
+const BY_ID = new Map<ProgramId, Program>();
+
+let loading: Promise<void> | null = null;
+
+/**
+ * Fetch the bodies and register them. Idempotent: the second caller gets the
+ * first caller's promise, so App and `hydrateAll` can both ask without
+ * loading twice or racing the array.
+ */
+export function loadPrograms(): Promise<void> {
+  loading ??= import('./catalogue').then(({ CATALOGUE }) => {
+    PROGRAMS.splice(0, PROGRAMS.length, ...CATALOGUE);
+    BY_ID.clear();
+    for (const program of CATALOGUE) BY_ID.set(program.id, program);
+  });
+  return loading;
+}
+
+/** True once the shipped programs are in the registry. */
+export function programsLoaded(): boolean {
+  return BY_ID.size > 0;
+}
 
 /**
  * Programs the climber wrote, kept in the same lookup as the shipped ones.
@@ -119,5 +142,3 @@ export const STAGE_META: Record<ProgramStage, { label: string; blurb: string }> 
 };
 
 export const STAGE_ORDER: ProgramStage[] = ['start', 'foundations', 'style', 'advanced', 'ongoing'];
-
-export { BASE_CAMP, GRAVITY_DEFIED, GROUND_ZERO, IRON_GRIP, LOCKDOWN, GENERAL_TRAINING, OUTDOOR_CLIMBING, PEAK_PERFORMANCE, THE_CRUISER, THE_LONG_GAME, THE_SIEGE };

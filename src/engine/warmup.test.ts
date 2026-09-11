@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { IRON_GRIP, THE_LONG_GAME } from '@/content/programs';
+import { IRON_GRIP, THE_LONG_GAME } from '@/content/programs/catalogue';
 import { WARMUP_EXERCISES } from '@/content/warmups';
 import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup } from './warmup';
 

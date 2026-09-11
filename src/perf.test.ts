@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { CATALOGUE } from '@/content/programs/catalogue';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import type { Session } from '@/db/sessions';
@@ -164,7 +165,7 @@ describe('the bundle stays small', () => {
   const dist = 'dist/assets';
   const built = existsSync(dist);
 
-  it.runIf(built)('keeps the first load under 260KB gzipped', () => {
+  it.runIf(built)('keeps the first load under 215KB gzipped', () => {
     const html = readFileSync('dist/index.html', 'utf8');
     const entry = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)?.[1];
     expect(entry, 'no entry chunk in index.html').toBeDefined();
@@ -175,7 +176,37 @@ describe('the bundle stays small', () => {
       .reduce((n, f) => n + gzipSync(readFileSync(`${dist}/${f}`)).length, 0);
     const total = (js + css) / 1024;
 
-    expect(total, `first load is ${total.toFixed(0)}KB gzipped`).toBeLessThan(260);
+    // 260 until M78 moved the program bodies out of the entry chunk, which
+    // took it from 239.5KB to 197.7KB. The budget follows the win, and
+    // closely: a first draft set it at 230, and a mutation that leaked 57KB
+    // of bodies back into the entry landed at 219 and passed. Headroom a
+    // regression can hide in is not headroom.
+    expect(total, `first load is ${total.toFixed(0)}KB gzipped`).toBeLessThan(215);
+  });
+
+  it.runIf(built)('keeps every program body out of the entry chunk', () => {
+    // One marker per program, not one marker. The first version of this
+    // checked for a single exercise name, and a static import of the
+    // catalogue survived it: Rollup split the bodies across both chunks,
+    // 57KB of them into the entry, and the one name happened to stay
+    // behind. A body is only out of the entry if all eleven are.
+    const html = readFileSync('dist/index.html', 'utf8');
+    const entryName = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)![1]!;
+    const entry = readFileSync(`${dist}/${entryName}`, 'utf8');
+    const chunks = readdirSync(dist).filter((f) => f.endsWith('.js'));
+    const catalogue = chunks.filter((f) => f.startsWith('catalogue-'));
+    expect(catalogue, 'the catalogue is its own chunk').toHaveLength(1);
+    const bodies = readFileSync(`${dist}/${catalogue[0]!}`, 'utf8');
+
+    expect(CATALOGUE.length).toBeGreaterThanOrEqual(11);
+    for (const program of CATALOGUE) {
+      // Subtitles are prose long enough to be unique and, trimmed at the
+      // first quote, safe from whatever quoting the minifier chose.
+      const marker = program.subtitle.split(/['"]/)[0]!.trim();
+      expect(marker.length, `${program.id} subtitle too short to be a marker`).toBeGreaterThan(12);
+      expect(entry.includes(marker), `${program.id} is in the entry chunk`).toBe(false);
+      expect(bodies.includes(marker), `${program.id} is not in the catalogue chunk`).toBe(true);
+    }
   });
 
   it.runIf(built)('keeps the heavy routes out of the first load', () => {

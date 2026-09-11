@@ -2683,16 +2683,41 @@ commit.
 
 **The app itself.**
 
-- **M78 — Programs stop shipping eagerly.** Measured: the first-load chunk is **239.5 KB
-  gzipped against a 260 KB budget** — 92% of the headroom gone. The reason is two lines:
-  `store/profile.ts` and `store/programs.ts` import `@/content/programs` at module level to
-  register adaptations and custom programs, which drags all eleven programs — five thousand
-  lines of prescriptions — into the bundle before the home page can draw. The guides are
-  already lazy, which is why "Week 8 Deload" is *not* in the eager chunk and "The Anvil"
-  is. A light catalogue (id, name, stage, weeks, grade range, kind) stays eager; bodies go
-  behind `import()`. *Caveat before promising:* `getProgram` is synchronous at roughly
-  twenty call sites, so the honest first step is to count them and measure what a
-  preload-after-hydrate saves, not to assume the split is free.
+- **M78 — Programs stop shipping eagerly.** *Done, and measured before it was promised.*
+  The proposal's own caveat was to count the synchronous `getProgram` call sites and
+  measure what the bodies cost first. Counted: twenty-one importers, twenty-two sync calls
+  at render, and **eight pages that read the catalogue with no hydration gate at all**
+  (Train, the builder list, Search, the guide, the program page, the start page, the
+  achievements card, the coach). Measured, by building with the eleven bodies stubbed out:
+  the entry chunk went **239.5 → 202.3 KB gzipped, 756 → 627 KB raw** — the programs were
+  a sixth of first paint, not the bulk. Real, and modest, and the milestone says which.
+  **The registry changed, not the callers.** `content/programs/catalogue.ts` now holds the
+  eleven static imports and nothing in `src/` reaches it except one `import()` in
+  `loadPrograms()`; `PROGRAMS` starts empty and is filled *in place*, so every reference
+  the twenty-two callers already hold sees the bodies the moment they land. The named
+  bodies moved with it — five test files and the finder imported `GENERAL_TRAINING`
+  directly, and the finder now looks its fallback up at call time.
+  **The router waits for the catalogue; the shell does not.** Gating eight ungated pages
+  one by one is eight chances to miss one, and a cold load of `#/train` with the bodies
+  still in flight would have drawn an empty catalogue that never re-rendered. One gate in
+  `App.tsx` under the `Suspense` boundary does it: the nav paints, routes wait, and every
+  page keeps its synchronous read. Tests keep theirs too — `src/test/setup.ts` awaits
+  `loadPrograms()` at the top level, which runs before any test module is evaluated, so
+  the dozens of files calling `getProgram` at module scope needed no change.
+  **The guard was wrong the first time, and a mutation said so.** The first assertion
+  checked the entry chunk for one exercise name. A static import of the catalogue, added
+  as a mutation, *passed* it: Rollup did not inline the bodies, it **split them across both
+  chunks — 57 KB into the entry** — and the one name stayed behind. The 230 KB budget
+  passed too, at 219. Headroom a regression can hide in is not headroom. The guard is now
+  one marker per program — each subtitle, checked absent from the entry and present in the
+  `catalogue-` chunk — and the budget is 215, eight percent above the measured 202. Under
+  the same mutation both now fail, naming Gravity Defied as the body that leaked.
+  Verified in a browser on a cold start straight onto `#/train`: the entry, then the
+  `catalogue-` chunk, then eleven program cards. 2,223 tests pass. *Left as found:* the
+  glossary is eager too, through `ui/Term.tsx`, and warmups, drills and metrics ride in the
+  entry through the engines; each is a fraction of what the programs were, and none was
+  measured here.
+
 - **M79 — Undo wherever it destroys.** `store/undo.ts` holds one offer and it is wired to
   deleting a session, a project and an objective. Four destructive actions have no way back,
   all seen while building the last block: **Mark healed** on an injury (M76 wired the

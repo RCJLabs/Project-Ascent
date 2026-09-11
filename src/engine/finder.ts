@@ -17,7 +17,7 @@
  */
 
 import { DEFAULT_DISPLAY, displayRange, gradeOrdinal, type GradeDisplay, type GradeScale } from '@/engine/grades';
-import { GENERAL_TRAINING, PROGRAMS } from '@/content/programs';
+import { PROGRAMS } from '@/content/programs';
 import { getMetric } from '@/content/metrics';
 import { MIN_ADAPTED_WEEKS } from './adapt';
 import type { Discipline, Equipment, MetricId, Program } from '@/content/types';
@@ -438,7 +438,9 @@ function openLogging(input: FinderInput, blocked: Recommendation[]): Recommendat
     reasons.push('Every structured program here needs equipment you do not have yet');
   }
   return {
-    program: GENERAL_TRAINING,
+    // Looked up rather than imported: the bodies arrive through `loadPrograms`
+      // (PLAN.md M78), and the finder only runs once the router has waited for them.
+      program: PROGRAMS.find((p) => p.id === 'general_training')!,
     score: 0,
     reasons,
     cautions: [],
