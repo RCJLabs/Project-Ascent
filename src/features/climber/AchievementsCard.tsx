@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'wouter';
-import { ChevronRight, Trophy } from 'lucide-react';
+import { Award, ChevronRight, Trophy } from 'lucide-react';
 import {
   ACHIEVEMENT_COUNT,
   deriveAchievements,
@@ -19,19 +19,19 @@ import { ShareButton } from '@/features/share/ShareSheet';
 import { achievementCard } from '@/ui/shareCard';
 
 /**
- * Achievements live on the climber, and the career is one tap from them
- * (PLAN.md M63).
+ * The achievements a climber has, read from the log.
  *
- * They were on the career page, which hangs off Progress under seven charts —
- * so the fourteen named days a climber might aim at were the least visible
- * thing in the app, and the page about *who you are* held everything except
- * what you had done.
+ * M63 moved them onto the climber page, off the career page that hangs
+ * under seven charts on Progress. They stay one tap from the climber — but
+ * the list is its own page now that it is twenty-five long, because a card
+ * holding twenty-five rows is the reason a page about *who you are* becomes
+ * a page about scrolling.
  *
  * Reads its own stores rather than taking props, which is how every other
  * card of this kind works, and is what lets it be moved without a page
  * having to know what it needs.
  */
-export function AchievementsCard() {
+export function useAchievements() {
   const byDate = useSessions((s) => s.byDate);
   const projects = useProjects((s) => s.projects);
   const achievements = useMemo(
@@ -45,14 +45,49 @@ export function AchievementsCard() {
       ),
     [byDate, projects],
   );
-  const earned = earnedCount(achievements);
+  return { achievements, earned: earnedCount(achievements) };
+}
+
+/** The link on the climber page, and the count it carries. */
+export function AchievementsCard() {
+  const { achievements, earned } = useAchievements();
   const newest = achievements.find((a) => a.date !== null);
 
   return (
     <Card title="Achievements">
+      <Link href="/achievements" className="flex items-center gap-3">
+        <Award size={18} className="text-accent shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold truncate">
+            {earned} of {ACHIEVEMENT_COUNT}
+          </p>
+          <p className="text-xs text-ink-soft mt-0.5 truncate">
+            {newest
+              ? `Latest: ${newest.name}, ${fromKey(newest.date!).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`
+              : 'Days with a shape to them, read from the log.'}
+          </p>
+        </div>
+        <ChevronRight size={18} className="text-ink-soft shrink-0" />
+      </Link>
+    </Card>
+  );
+}
+
+/**
+ * The whole list, on a page of its own.
+ *
+ * No title and no count: the page header above it carries both, and a card
+ * repeating them says "Achievements — 7 of 25" twice on one screen.
+ */
+export function AchievementList() {
+  const { achievements, earned } = useAchievements();
+  const newest = achievements.find((a) => a.date !== null);
+
+  return (
+    <Card>
       <p className="text-sm text-ink-soft mb-3 leading-relaxed">
-        {earned} of {ACHIEVEMENT_COUNT}. Not counters — days with a shape to them, read from the
-        log, so editing a session away takes one back.
+        Not counters — days with a shape to them, read from the log, so editing a session away
+        takes one back.
       </p>
       <ul className="grid grid-cols-1 gap-2">
         {achievements.map((achievement) => (

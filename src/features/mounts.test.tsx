@@ -16,6 +16,7 @@ import { BuilderList } from '@/features/builder/BuilderList';
 import { BuilderPage } from '@/features/builder/BuilderPage';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { CareerPage } from '@/features/career/CareerPage';
+import { AchievementsPage } from '@/features/climber/AchievementsPage';
 import { ClimberPage } from '@/features/climber/ClimberPage';
 import { CoachPage } from '@/features/coach/CoachPage';
 import { FinderPage } from '@/features/finder/FinderPage';
@@ -66,6 +67,7 @@ const PAGES: [string, string, ReactElement][] = [
   ['home', '/', <HomePage />],
   ['climber', '/climber', <ClimberPage />],
   ['skills', '/skills', <SkillsPage />],
+  ['achievements', '/achievements', <AchievementsPage />],
   ['coach', '/coach', <CoachPage />],
   ['review', '/review', <ReviewPage />],
   ['altimeter', '/altimeter', <AltimeterPage />],

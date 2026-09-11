@@ -7,6 +7,12 @@ import {
   ACHIEVEMENT_COUNT,
   BREAK_DAYS,
   BURNS_FOR_PERSISTENCE,
+  CLEAN_SHEET_CLIMBS,
+  COMEBACK_DAYS,
+  DELOAD_RPE_CAP,
+  EASY_RPE,
+  LONG_SESSION_MIN,
+  OUTDOOR_MONTHS,
   MAXIMAL_RPE,
   SPREAD_GRADES,
   TRIP_DAYS,
@@ -385,5 +391,274 @@ describe('reading the list', () => {
       climbs: [climb('V4', { style: 'onsight' })],
     });
     expect(dateOf([planned], 'no-beta-outdoors')).toBeNull();
+  });
+});
+
+/**
+ * The eleven added after the first fourteen.
+ *
+ * Held to the same rule as the originals — a shape in the log, never a
+ * running total — which the volume guard above enforces for the set as a
+ * whole. Two earlier drafts of this batch failed it: "trained on all seven
+ * weekdays" and "eight consecutive weeks with a session" were both earned
+ * by three hundred identical sessions, because neither asked anything of a
+ * session but that it happened.
+ */
+describe('a day with two sessions in it', () => {
+  it('is earned by two training sessions on one date', () => {
+    expect(dateOf([session(TODAY), session(TODAY)], 'twice-in-a-day')).toBe(TODAY);
+  });
+
+  it('is not earned by one', () => {
+    expect(dateOf([session(TODAY)], 'twice-in-a-day')).toBeNull();
+  });
+
+  // A session and a rest day on one date is a day with a rest day in it.
+  it('does not count a rest day as the second', () => {
+    expect(dateOf([session(TODAY), rest(TODAY)], 'twice-in-a-day')).toBeNull();
+  });
+});
+
+describe('a long session', () => {
+  it('is earned at the threshold', () => {
+    expect(dateOf([session(TODAY, { durationMin: LONG_SESSION_MIN })], 'long-haul')).toBe(TODAY);
+  });
+
+  it('is not earned just below it', () => {
+    expect(dateOf([session(TODAY, { durationMin: LONG_SESSION_MIN - 1 })], 'long-haul')).toBeNull();
+  });
+
+  it('is not earned by a session that never said how long it was', () => {
+    expect(dateOf([session(TODAY, { durationMin: undefined })], 'long-haul')).toBeNull();
+  });
+});
+
+describe('a week with both ends of the effort scale in it', () => {
+  const week = (easy: number, hard: number) => [
+    session('2026-09-07', { rpe: easy }),
+    session('2026-09-09', { rpe: hard }),
+  ];
+
+  it('is earned by an easy session and a maximal one', () => {
+    expect(dateOf(week(EASY_RPE, MAXIMAL_RPE), 'both-ends')).toBe('2026-09-09');
+  });
+
+  it('is not earned by two medium sessions', () => {
+    expect(dateOf(week(6, 7), 'both-ends')).toBeNull();
+  });
+
+  // Both ends across two weeks is not a week with range in it.
+  it('is not earned across separate weeks', () => {
+    expect(
+      dateOf([session('2026-09-02', { rpe: EASY_RPE }), session('2026-09-09', { rpe: MAXIMAL_RPE })], 'both-ends'),
+    ).toBeNull();
+  });
+
+  it('is not earned by a session with no effort logged', () => {
+    expect(dateOf(week(undefined as never, MAXIMAL_RPE), 'both-ends')).toBeNull();
+  });
+});
+
+describe('a session with nothing failed in it', () => {
+  const sends = (n: number) => Array.from({ length: n }, () => climb('V4'));
+
+  it('is earned by a full session of sends', () => {
+    expect(dateOf([session(TODAY, { climbs: sends(CLEAN_SHEET_CLIMBS) })], 'clean-sheet')).toBe(TODAY);
+  });
+
+  it('is not earned by a short one', () => {
+    expect(dateOf([session(TODAY, { climbs: sends(CLEAN_SHEET_CLIMBS - 1) })], 'clean-sheet')).toBeNull();
+  });
+
+  it('is broken by a single attempt', () => {
+    const climbs = [...sends(CLEAN_SHEET_CLIMBS), climb('V6', { result: 'attempt' })];
+    expect(dateOf([session(TODAY, { climbs })], 'clean-sheet')).toBeNull();
+  });
+
+  // Five of one problem is five climbs, and the session still had nothing
+  // fail in it.
+  it('counts repeats as the climbs they were', () => {
+    const climbs = [climb('V4', { count: CLEAN_SHEET_CLIMBS })];
+    expect(dateOf([session(TODAY, { climbs })], 'clean-sheet')).toBe(TODAY);
+  });
+});
+
+describe('two projects on one day', () => {
+  const sent = (date: string) => ({ ...newProject({ name: `p${counter++}`, grade: 'V5', scale: 'V' as const }), sentDate: date });
+
+  it('is earned when two carry the same send date', () => {
+    expect(dateOf([session(TODAY)], 'the-double', { projects: [sent(TODAY), sent(TODAY)] })).toBe(TODAY);
+  });
+
+  it('is not earned by two sent on different days', () => {
+    expect(
+      dateOf([session(TODAY)], 'the-double', { projects: [sent(TODAY), sent(addDays(TODAY, -1))] }),
+    ).toBeNull();
+  });
+
+  it('is not earned by a project still open', () => {
+    const open: Project = newProject({ name: 'open', grade: 'V5', scale: 'V' });
+    expect(dateOf([session(TODAY)], 'the-double', { projects: [open, open] })).toBeNull();
+  });
+});
+
+describe('both ladders in one session', () => {
+  it('is earned by a boulder and a route sent together', () => {
+    expect(dateOf([session(TODAY, { climbs: [climb('V4'), climb('5.11a')] })], 'both-in-a-day')).toBe(TODAY);
+  });
+
+  // Both Sides is the whole-log version; this one is about a single day.
+  it('is not earned across two sessions', () => {
+    expect(
+      dateOf([session(TODAY, { climbs: [climb('V4')] }), session(TODAY, { climbs: [climb('5.11a')] })], 'both-in-a-day'),
+    ).toBeNull();
+  });
+
+  it('is not earned when one of them was only attempted', () => {
+    const climbs = [climb('V4'), climb('5.11a', { result: 'attempt' })];
+    expect(dateOf([session(TODAY, { climbs })], 'both-in-a-day')).toBeNull();
+  });
+});
+
+describe('a deload week taken as one', () => {
+  const deloadWeek = (rpes: number[]) =>
+    rpes.map((rpe, i) => session(addDays('2026-09-07', i), { rpe, deload: true }));
+
+  it('is earned when nothing went above the cap', () => {
+    expect(dateOf(deloadWeek([DELOAD_RPE_CAP, DELOAD_RPE_CAP - 2]), 'deload-honoured')).toBe('2026-09-08');
+  });
+
+  /**
+   * The whole week, not the marked sessions: a deload with one maximal
+   * session in it was not a deload, and reading only the marked ones would
+   * let that pass.
+   */
+  it('is broken by one hard session in the same week, marked or not', () => {
+    const week = [
+      ...deloadWeek([DELOAD_RPE_CAP]),
+      session('2026-09-09', { rpe: MAXIMAL_RPE }),
+    ];
+    expect(dateOf(week, 'deload-honoured')).toBeNull();
+  });
+
+  it('is not earned by a week nobody called a deload', () => {
+    expect(
+      dateOf([session('2026-09-07', { rpe: 4 }), session('2026-09-08', { rpe: 4 })], 'deload-honoured'),
+    ).toBeNull();
+  });
+
+  it('is not earned by a single easy session', () => {
+    expect(dateOf([session('2026-09-07', { rpe: 4, deload: true })], 'deload-honoured')).toBeNull();
+  });
+});
+
+describe('a limit send after coming back', () => {
+  const away = addDays(TODAY, -BREAK_DAYS - 1);
+
+  it('is earned inside the window', () => {
+    const log = [
+      session(away, { climbs: [climb('V4')] }),
+      session(TODAY, { climbs: [climb('V6')] }),
+    ];
+    expect(dateOf(log, 'the-comeback')).toBe(TODAY);
+  });
+
+  it('is not earned long after the return', () => {
+    const back = addDays(TODAY, -COMEBACK_DAYS - 1);
+    const log = [
+      // Harder before the break than on the day back, so the return itself
+      // is not a limit send — equalling your best counts as one.
+      session(addDays(back, -BREAK_DAYS - 1), { climbs: [climb('V6')] }),
+      session(back, { climbs: [climb('V4')] }),
+      session(TODAY, { climbs: [climb('V6')] }),
+    ];
+    expect(dateOf(log, 'the-comeback')).toBeNull();
+  });
+
+  it('is not earned without a break to come back from', () => {
+    const log = [
+      session(addDays(TODAY, -2), { climbs: [climb('V4')] }),
+      session(TODAY, { climbs: [climb('V6')] }),
+    ];
+    expect(dateOf(log, 'the-comeback')).toBeNull();
+  });
+});
+
+describe('a season outdoors', () => {
+  const outside = (date: string) => session(date, { mode: 'outdoor', climbs: [climb('V4')] });
+
+  it('is earned on the third month', () => {
+    expect(dateOf([outside('2026-04-01'), outside('2026-05-01'), outside('2026-06-01')], 'months-outside')).toBe(
+      '2026-06-01',
+    );
+  });
+
+  it('is not earned by more days in fewer months', () => {
+    const many = ['2026-04-01', '2026-04-08', '2026-05-01', '2026-05-08'].map(outside);
+    expect(dateOf(many, 'months-outside')).toBeNull();
+  });
+
+  // Three months across two years is two seasons, not one.
+  it('does not count months from different years together', () => {
+    const split = [outside('2025-11-01'), outside('2025-12-01'), outside('2026-01-01')];
+    expect(dateOf(split, 'months-outside')).toBeNull();
+    expect(OUTDOOR_MONTHS).toBe(3);
+  });
+
+  it('does not count an indoor day', () => {
+    const indoors = [outside('2026-04-01'), outside('2026-05-01'), session('2026-06-01')];
+    expect(dateOf(indoors, 'months-outside')).toBeNull();
+  });
+});
+
+describe('a limit send the day after a rest day', () => {
+  it('is earned when the rest was the day before', () => {
+    const log = [rest(addDays(TODAY, -1)), session(TODAY, { climbs: [climb('V6')] })];
+    expect(dateOf(log, 'rested-and-ready')).toBe(TODAY);
+  });
+
+  it('is not earned two days after', () => {
+    const log = [rest(addDays(TODAY, -2)), session(TODAY, { climbs: [climb('V6')] })];
+    expect(dateOf(log, 'rested-and-ready')).toBeNull();
+  });
+
+  it('is not earned without a rest day at all', () => {
+    expect(dateOf([session(TODAY, { climbs: [climb('V6')] })], 'rested-and-ready')).toBeNull();
+  });
+});
+
+describe('a grade that beat you first', () => {
+  it('is earned when a failed grade is later sent', () => {
+    const log = [
+      session(addDays(TODAY, -7), { climbs: [climb('V6', { result: 'attempt' })] }),
+      session(TODAY, { climbs: [climb('V6')] }),
+    ];
+    expect(dateOf(log, 'redemption')).toBe(TODAY);
+  });
+
+  /**
+   * A later session, not the same one: attempting a grade and then sending
+   * it in one session is an ordinary working session, and calling that
+   * redemption would hand it out for climbing normally.
+   */
+  it('is not earned inside a single session', () => {
+    const climbs = [climb('V6', { result: 'attempt' }), climb('V6')];
+    expect(dateOf([session(TODAY, { climbs })], 'redemption')).toBeNull();
+  });
+
+  it('is not earned by sending a grade you never failed on', () => {
+    const log = [
+      session(addDays(TODAY, -7), { climbs: [climb('V4', { result: 'attempt' })] }),
+      session(TODAY, { climbs: [climb('V6')] }),
+    ];
+    expect(dateOf(log, 'redemption')).toBeNull();
+  });
+
+  it('keeps the ladders apart', () => {
+    const log = [
+      session(addDays(TODAY, -7), { climbs: [climb('5.11a', { result: 'attempt' })] }),
+      session(TODAY, { climbs: [climb('V6')] }),
+    ];
+    expect(dateOf(log, 'redemption')).toBeNull();
   });
 });

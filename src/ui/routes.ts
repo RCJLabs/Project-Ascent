@@ -77,6 +77,7 @@ export const ROUTES: RouteMeta[] = [
   // Climber
   { path: '/climber', title: 'Your climber', parent: '/', group: 'Climber', keywords: ['stats', 'level', 'avatar', 'vitality', 'rank', 'injuries', 'injury'] },
   { path: '/skills', title: 'Skill trees', parent: '/climber', group: 'Climber', keywords: ['unlock', 'nodes', 'power', 'tension'] },
+  { path: '/achievements', title: 'Achievements', parent: '/climber', group: 'Climber', keywords: ['badges', 'earned', 'trophies', 'awards'] },
   { path: '/altimeter', title: 'The altimeter', parent: '/', group: 'Climber', keywords: ['height', 'feet', 'everest', 'metres'] },
   { path: '/coach', title: "Coach's Corner", parent: '/', group: 'Climber', keywords: ['tips', 'advice', 'observations'] },
 

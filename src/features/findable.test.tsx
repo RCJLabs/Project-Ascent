@@ -53,8 +53,17 @@ describe('the career', () => {
   it('is one tap from the climber', async () => {
     await seedSessions();
     renderAt('/climber', <ClimberPage />);
-    const link = screen.getByText('Career').closest('div')!.querySelector('a')!;
+    const link = screen.getByText(/milestones/).closest('a')!;
     expect(link.getAttribute('href')).toBe('#/career');
+  });
+
+  // The achievements are their own page now that there are twenty-five of
+  // them, and the climber carries the count and the newest one.
+  it('sits beside the achievements, which are one tap too', async () => {
+    await seedSessions();
+    renderAt('/climber', <ClimberPage />);
+    const link = screen.getByText(/^\d+ of \d+$/).closest('a')!;
+    expect(link.getAttribute('href')).toBe('#/achievements');
   });
 
   // It was the second-to-last card on a page with seven charts above it.

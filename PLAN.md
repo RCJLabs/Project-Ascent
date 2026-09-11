@@ -2845,6 +2845,32 @@ commit.
   one. Splitting it per mode would change what the day's payout is priced on, which is the
   economy, not this milestone.
 
+- **M97 — The achievements get a page, and eleven more of them.** *Done, at the coach's
+  request.* Fourteen was a card on the climber page; twenty-five is a page you scroll past,
+  so the climber keeps the count and the newest one and the list moved to `/achievements`,
+  one tap away with the skill trees.
+  **The eleven were held to the module's own rule** — *"a shape in the log, never a running
+  total"* — and the guard that enforces it caught two of them. "Trained on all seven
+  weekdays" and "eight consecutive weeks with a session" were both earned by the test's
+  three-hundred-identical-sessions fixture, because neither asks anything of a session but
+  that it happened. They were replaced with **Both Ends** (a week holding a session at RPE 3
+  or less and one at 9 or more) and **Redemption** (a grade you had only failed on, sent in
+  a *later* session — the same session is ordinary working). The other nine: Twice in a Day,
+  The Long Haul, Clean Sheet, The Double, Both in a Day, Deload Honoured, The Comeback,
+  Three Months Outside, Rested and Ready.
+  **One was considered and rejected**, recorded in the module so it is not proposed again: a
+  dawn-patrol achievement reads an hour out of `startedAt`, which is an instant in UTC, so
+  the same log would earn it at home and not in Spain. A fact that moves with the reader is
+  not a fact about the log.
+  Twenty-four mutations. Twenty-three killed by tests; the twenty-fourth — dropping the
+  unsent-project guard — is killed by `tsc` rather than vitest, which is worth knowing about
+  a battery that only runs the suite. One survivor was **dead code of mine**, an early
+  return whose absence `firstAtLimit` already handled, now deleted. One was a real gap: the
+  page's loading guard was untested because every test hydrated first.
+  **Two duplications the browser found**, both mine: the page header and the card inside it
+  each said "Achievements" and "7 of 25".
+  Verified in both themes. 2,951 tests pass.
+
 **Progress tracking.**
 
 - **M82 — The check-in as a series.** *Done, on a different chart from the one proposed.*

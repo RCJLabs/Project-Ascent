@@ -1,6 +1,6 @@
 import type { Session } from '@/db/sessions';
 import type { Project } from '@/db/projects';
-import { daysBetween, startOfWeek } from './dates';
+import { addDays, daysBetween, startOfWeek } from './dates';
 import { gradeOrdinal, type GradeScale } from './grades';
 
 /**
@@ -26,10 +26,18 @@ import { gradeOrdinal, type GradeScale } from './grades';
  *
  * ## Finite on purpose
  *
- * Fourteen, fixed. "Nine of fourteen" is a thing to aim at in a way that
- * "250 sends, then 500" is not — the counters are a timeline, and this is a
- * list. Adding one later is a deliberate act, not an emergent consequence of
- * logging more.
+ * Twenty-five, fixed. "Nine of twenty-five" is a thing to aim at in a way
+ * that "250 sends, then 500" is not — the counters are a timeline, and this
+ * is a list. Adding one is a deliberate act, not an emergent consequence of
+ * logging more: fourteen were written for M32 and eleven more added at
+ * once, each of them a shape rather than a threshold.
+ *
+ * **One was considered and rejected**, and it is worth writing down why. A
+ * dawn-patrol achievement — a session started before six — reads an hour out
+ * of `startedAt`, which is an instant in UTC. Turning it into a local hour
+ * needs the runtime's timezone, so the same log would earn it on a phone at
+ * home and not on the same phone in Spain. Everything here is a fact about
+ * the log; a fact that moves with the reader is not one.
  *
  * ## Derived, dated, and unpaid
  *
@@ -54,7 +62,19 @@ export type AchievementId =
   | 'a-trip'
   | 'both-sides'
   | 'listened'
-  | 'block-finished';
+  | 'block-finished'
+  // Eleven more, added deliberately — see "Finite on purpose".
+  | 'twice-in-a-day'
+  | 'long-haul'
+  | 'both-ends'
+  | 'clean-sheet'
+  | 'the-double'
+  | 'both-in-a-day'
+  | 'deload-honoured'
+  | 'the-comeback'
+  | 'months-outside'
+  | 'rested-and-ready'
+  | 'redemption';
 
 export interface Achievement {
   id: AchievementId;
@@ -86,6 +106,18 @@ export const BURNS_FOR_PERSISTENCE = 20;
 export const TRIP_DAYS = 4;
 /** RPE at or above which a session counts as maximal. */
 export const MAXIMAL_RPE = 9;
+/** Minutes that make a session a long one. */
+export const LONG_SESSION_MIN = 180;
+/** Climbs in a session with no failed attempt among them. */
+export const CLEAN_SHEET_CLIMBS = 5;
+/** The RPE a deload week is not supposed to go above. */
+export const DELOAD_RPE_CAP = 7;
+/** Days after coming back inside which a limit send is a comeback. */
+export const COMEBACK_DAYS = 30;
+/** Separate calendar months outdoors, inside one year. */
+export const OUTDOOR_MONTHS = 3;
+/** RPE at or below which a session counts as genuinely easy. */
+export const EASY_RPE = 3;
 
 interface Definition {
   id: AchievementId;
@@ -299,6 +331,168 @@ const DEFINITIONS: Definition[] = [
         if (earliest === null || last < earliest) earliest = last;
       }
       return earliest;
+    },
+  },
+  {
+    id: 'twice-in-a-day',
+    name: 'Twice in a Day',
+    detail: 'Two separate training sessions logged on one date.',
+    // Rest days do not count: a session and a rest day on the same date is
+    // a day with a rest day in it, not two sessions.
+    find: (log) =>
+      log.dates.find((date) => (log.byDate.get(date) ?? []).filter((s) => !isRest(s)).length >= 2) ??
+      null,
+  },
+  {
+    id: 'long-haul',
+    name: 'The Long Haul',
+    detail: `A single session of ${LONG_SESSION_MIN / 60} hours or more.`,
+    find: (log) => log.completed.find((s) => (s.durationMin ?? 0) >= LONG_SESSION_MIN)?.date ?? null,
+  },
+  {
+    id: 'both-ends',
+    name: 'Both Ends',
+    detail: `One week holding a session at RPE ${EASY_RPE} or less and one at RPE ${MAXIMAL_RPE} or more.`,
+    // Training with a range in it, which is the thing a climber who only
+    // ever goes medium never has. An earlier draft of this list had "trained
+    // on all seven weekdays" here; three hundred identical sessions earned
+    // it, which is exactly what this module says an achievement is not.
+    find: (log) => {
+      const weeks = new Map<string, Session[]>();
+      for (const session of log.completed) {
+        if (isRest(session)) continue;
+        const week = startOfWeek(session.date);
+        weeks.set(week, [...(weeks.get(week) ?? []), session]);
+      }
+      const found = [...weeks.values()]
+        .filter((sessions) => sessions.some((s) => s.rpe !== undefined && s.rpe <= EASY_RPE))
+        .filter((sessions) => sessions.some((s) => (s.rpe ?? 0) >= MAXIMAL_RPE))
+        .map((sessions) => sessions.at(-1)!.date)
+        .sort();
+      return found[0] ?? null;
+    },
+  },
+  {
+    id: 'clean-sheet',
+    name: 'Clean Sheet',
+    detail: `A session of ${CLEAN_SHEET_CLIMBS} climbs or more with no failed attempt in it.`,
+    find: (log) =>
+      log.completed.find((s) => {
+        const climbs = s.climbs.reduce((n, c) => n + c.count, 0);
+        return climbs >= CLEAN_SHEET_CLIMBS && s.climbs.every((c) => c.result === 'send');
+      })?.date ?? null,
+  },
+  {
+    id: 'the-double',
+    name: 'The Double',
+    detail: 'Two projects sent on the same day.',
+    find: (log) => {
+      const byDay = new Map<string, number>();
+      for (const project of log.projects) {
+        if (project.sentDate === undefined) continue;
+        byDay.set(project.sentDate, (byDay.get(project.sentDate) ?? 0) + 1);
+      }
+      return [...byDay.entries()].filter(([, n]) => n >= 2).map(([date]) => date).sort()[0] ?? null;
+    },
+  },
+  {
+    id: 'both-in-a-day',
+    name: 'Both in a Day',
+    detail: 'A boulder and a route, both sent in one session.',
+    find: (log) =>
+      log.completed.find((s) => {
+        const scales = new Set(s.climbs.filter((c) => c.result === 'send').map((c) => c.scale));
+        return scales.has('V') && scales.has('YDS');
+      })?.date ?? null,
+  },
+  {
+    id: 'deload-honoured',
+    name: 'Deload Honoured',
+    detail: `A deload week where nothing went above RPE ${DELOAD_RPE_CAP}.`,
+    // The whole week, not the marked sessions: a deload with one maximal
+    // session in it was not a deload, and reading only the marked ones
+    // would let that pass.
+    find: (log) => {
+      const weeks = new Map<string, Session[]>();
+      for (const session of log.completed) {
+        const week = startOfWeek(session.date);
+        weeks.set(week, [...(weeks.get(week) ?? []), session]);
+      }
+      const honoured = [...weeks.entries()]
+        .filter(([, sessions]) => sessions.some((s) => s.deload === true))
+        .filter(([, sessions]) => sessions.filter((s) => !isRest(s)).length >= 2)
+        .filter(([, sessions]) => sessions.every((s) => (s.rpe ?? 0) <= DELOAD_RPE_CAP))
+        .map(([, sessions]) => sessions.at(-1)!.date)
+        .sort();
+      return honoured[0] ?? null;
+    },
+  },
+  {
+    id: 'the-comeback',
+    name: 'The Comeback',
+    detail: `A send at your limit within ${COMEBACK_DAYS} days of coming back from a break.`,
+    find: (log) => {
+      // The days that sit inside a comeback window, worked out first so the
+      // limit check stays the shared one.
+      const windows: string[] = [];
+      for (let i = 1; i < log.dates.length; i++) {
+        if (daysBetween(log.dates[i - 1]!, log.dates[i]!) >= BREAK_DAYS) windows.push(log.dates[i]!);
+      }
+      const inWindow = (date: string): boolean =>
+        windows.some((start) => date >= start && daysBetween(start, date) <= COMEBACK_DAYS);
+      return firstAtLimit(log.completed, (session) => inWindow(session.date));
+    },
+  },
+  {
+    id: 'months-outside',
+    name: 'Three Months Outside',
+    detail: `Days on rock in ${OUTDOOR_MONTHS} different months of one year.`,
+    find: (log) => {
+      const years = new Map<string, Set<string>>();
+      for (const session of log.completed) {
+        if (session.mode !== 'outdoor') continue;
+        const year = session.date.slice(0, 4);
+        const months = years.get(year) ?? new Set<string>();
+        months.add(session.date.slice(5, 7));
+        years.set(year, months);
+        if (months.size >= OUTDOOR_MONTHS) return session.date;
+      }
+      return null;
+    },
+  },
+  {
+    id: 'rested-and-ready',
+    name: 'Rested and Ready',
+    detail: 'A send at your limit the day after a logged rest day.',
+    // The other side of Listened: that one is for taking the rest, this one
+    // is for what the rest was for.
+    find: (log) => {
+      const after = new Set<string>();
+      for (const session of log.completed) {
+        if (isRest(session)) after.add(addDays(session.date, 1));
+      }
+      if (after.size === 0) return null;
+      return firstAtLimit(log.completed, (session) => after.has(session.date));
+    },
+  },
+  {
+    id: 'redemption',
+    name: 'Redemption',
+    detail: 'A grade you had only ever failed on, sent in a later session.',
+    // A later session, not the same one: attempting a grade and then
+    // sending it in the same session is a normal working session, and
+    // calling that redemption would hand it out for ordinary climbing.
+    find: (log) => {
+      const failed = new Set<string>();
+      for (const session of log.completed) {
+        for (const climb of session.climbs) {
+          if (climb.result === 'send' && failed.has(`${climb.scale}${climb.grade}`)) return session.date;
+        }
+        for (const climb of session.climbs) {
+          if (climb.result === 'attempt') failed.add(`${climb.scale}${climb.grade}`);
+        }
+      }
+      return null;
     },
   },
 ];
