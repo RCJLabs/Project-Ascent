@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { AlertTriangle, ArrowLeft, Check, Clock, Copy, Flame, Plus, RotateCw, Sparkles, Timer, Trash2, TrendingUp, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Check, Clock, Copy, Dumbbell, Flame, Plus, RotateCw, Sparkles, Timer, Trash2, TrendingUp, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
 import { SCALE_MAX, getField, type FieldSpec } from '@/content/fields';
@@ -50,7 +50,7 @@ import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Checkbox, Input, Select, TextArea } from '@/ui/Field';
-import { Chip } from '@/ui/Chip';
+import { CHIP_LINK, Chip } from '@/ui/Chip';
 import { IconButton } from '@/ui/IconButton';
 import { announce } from '@/ui/Announce';
 import { Term } from '@/ui/Term';
@@ -570,6 +570,11 @@ function SessionEditor({
             </span>
             <span className="text-ink-soft">Live</span>
             <span className="font-bold tabular-nums text-base">{formatClock(elapsed)}</span>
+            {/* The way into gym mode, on the only screen that knows a session
+                is running (PLAN.md M74). It is the same session either way. */}
+            <Link href="/gym" className={`${CHIP_LINK} ml-auto gap-1.5`}>
+              <Dumbbell size={15} /> Gym mode
+            </Link>
           </p>
         ) : (
           <p className="text-sm text-ink-soft">In progress — fill in what you did, then mark it complete.</p>

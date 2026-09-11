@@ -48,8 +48,9 @@ export function LiveBar({ banner }: { banner: Banner }) {
   if (!banner) return null;
 
   const href = `/log/${banner.session.date}`;
-  // Two clocks on one screen is one too many.
-  if (location === href) return null;
+  // Two clocks on one screen is one too many. Gym mode runs its own, larger,
+  // and it is the same session — so the bar stands down there as well.
+  if (location === href || location === '/gym') return null;
 
   const day = fromKey(banner.session.date).toLocaleDateString(undefined, { weekday: 'long' });
 

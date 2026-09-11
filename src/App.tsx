@@ -29,6 +29,7 @@ const CareerPage = lazy(() => import('@/features/career/CareerPage').then((m) =>
 const ClimberPage = lazy(() => import('@/features/climber/ClimberPage').then((m) => ({ default: m.ClimberPage })));
 const CoachPage = lazy(() => import('@/features/coach/CoachPage').then((m) => ({ default: m.CoachPage })));
 const FinderPage = lazy(() => import('@/features/finder/FinderPage').then((m) => ({ default: m.FinderPage })));
+const GymPage = lazy(() => import('@/features/gym/GymPage').then((m) => ({ default: m.GymPage })));
 const InjuryPage = lazy(() => import('@/features/injury/InjuryPage').then((m) => ({ default: m.InjuryPage })));
 const JournalPage = lazy(() => import('@/features/journal/JournalPage').then((m) => ({ default: m.JournalPage })));
 const MetricDetailPage = lazy(() => import('@/features/assessments/MetricDetailPage').then((m) => ({ default: m.MetricDetailPage })));
@@ -163,6 +164,7 @@ function Shell() {
           <Route path="/objectives" component={ObjectivesPage} />
           <Route path="/board" component={BoardPage} />
           <Route path="/calendar" component={CalendarPage} />
+          <Route path="/gym" component={GymPage} />
           <Route path="/log/:date" component={LogPage} />
           <Route path="/today" component={TodayRedirect} />
           <Route path="/progress" component={ProgressPage} />

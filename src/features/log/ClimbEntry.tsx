@@ -115,7 +115,7 @@ export function ClimbEntry({
             aria-pressed={g.value === grade}
             className={`focus-ring shrink-0 min-h-9 px-3 rounded-xl text-sm font-bold tabular-nums border transition-colors ${
               g.value === grade
-                ? 'bg-accent text-on-accent border-accent'
+                ? 'bg-accent text-accent-ink border-accent'
                 : 'bg-surface border-line text-ink-soft'
             }`}
           >

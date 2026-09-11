@@ -20,6 +20,7 @@ import { ClimberPage } from '@/features/climber/ClimberPage';
 import { CoachPage } from '@/features/coach/CoachPage';
 import { FinderPage } from '@/features/finder/FinderPage';
 import { GlossaryPage } from '@/features/glossary/GlossaryPage';
+import { GymPage } from '@/features/gym/GymPage';
 import { GuideList } from '@/features/guides/GuidePage';
 import { GuidePage } from '@/features/guides/GuidePage';
 import { HomePage } from '@/features/home/HomePage';
@@ -76,6 +77,7 @@ const PAGES: [string, string, ReactElement][] = [
   ['board', '/board', <BoardPage />],
   ['calendar', '/calendar', <CalendarPage />],
   ['log', '/log/2026-03-04', <LogPage params={{ date: '2026-03-04' }} />],
+  ['gym', '/gym', <GymPage />],
   ['progress', '/progress', <ProgressPage />],
   ['journal', '/journal', <JournalPage />],
   ['assessments', '/assessments', <AssessmentsPage />],

@@ -14,6 +14,7 @@
  */
 
 const KEY = 'ascent:timer';
+const REST_KEY = 'ascent:rest';
 
 /** Past this, a restored timer is a stale one. Nobody's protocol is 3h long. */
 export const TIMER_MAX_AGE_MS = 3 * 3600_000;
@@ -95,4 +96,61 @@ export function elapsedFrom(state: TimerState, now = Date.now()): number {
   return state.startedAt === null
     ? state.baseElapsed
     : state.baseElapsed + Math.max(0, now - state.startedAt);
+}
+
+/**
+ * The rest timer between burns (PLAN.md M74).
+ *
+ * Its own key rather than a field on the protocol timer: the two can run at
+ * once — a climber can be resting between boulders on a day that also has a
+ * hangboard protocol in it — and merging them would make starting one cancel
+ * the other.
+ *
+ * Only an end time is kept. A countdown stored as "ninety seconds left" is
+ * wrong the moment the page is hidden; an end time is still right when it
+ * comes back, which is the whole reason the protocol timer stores a wall
+ * clock too.
+ */
+export interface RestState {
+  endsAt: number;
+  /** What was asked for, so the ring can show how much of it is left. */
+  seconds: number;
+  sessionId: string;
+}
+
+export function saveRest(state: RestState): void {
+  try {
+    sessionStorage.setItem(REST_KEY, JSON.stringify(state));
+  } catch {
+    // Blocked site data: the rest still counts down, it just will not
+    // survive a reload.
+  }
+}
+
+export function loadRest(sessionId: string, now = Date.now()): RestState | null {
+  try {
+    const raw = sessionStorage.getItem(REST_KEY);
+    if (!raw) return null;
+    const state = JSON.parse(raw) as Partial<RestState>;
+    if (
+      typeof state.endsAt !== 'number' ||
+      typeof state.seconds !== 'number' ||
+      state.sessionId !== sessionId
+    ) {
+      return null;
+    }
+    // A rest that finished while the page was away is over, not resumable.
+    if (state.endsAt <= now) return null;
+    return { endsAt: state.endsAt, seconds: state.seconds, sessionId: state.sessionId };
+  } catch {
+    return null;
+  }
+}
+
+export function clearRest(): void {
+  try {
+    sessionStorage.removeItem(REST_KEY);
+  } catch {
+    /* nothing to clear if it cannot be reached */
+  }
 }

@@ -58,6 +58,7 @@ export const ROUTES: RouteMeta[] = [
 
   // Log
   { path: '/log/:date', title: 'Log', parent: '/calendar' },
+  { path: '/gym', title: 'Gym mode', parent: '/calendar', group: 'Log', keywords: ['tally', 'rest timer', 'at the wall', 'mid-session'] },
   { path: '/today', title: 'Today', parent: '/calendar', group: 'Log', keywords: ['log a session'] },
   { path: '/board', title: 'The board', parent: '/', group: 'Log', keywords: ['challenges', 'bounties', 'daily', 'weekly'] },
 

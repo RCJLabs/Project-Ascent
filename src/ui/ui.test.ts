@@ -203,3 +203,42 @@ describe('overriding a component from the outside', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+describe('colour classes name colours that exist', () => {
+  /** Every token Tailwind is told about, from the one place they are declared. */
+  const TOKENS = new Set(
+    [...readFileSync('src/index.css', 'utf8').matchAll(/--color-([a-z0-9-]+):/g)].map((m) => m[1] as string),
+  );
+
+  /** Tailwind's own keywords, which are colours without being tokens. */
+  const BUILT_IN = new Set(['white', 'black', 'transparent', 'current', 'inherit', 'none']);
+
+  const PREFIXES = ['text', 'bg', 'border', 'fill', 'stroke', 'ring', 'from', 'to', 'via', 'decoration', 'divide', 'outline', 'shadow', 'accent', 'caret', 'placeholder'];
+
+  it('declares the tokens it thinks it declares', () => {
+    for (const token of ['accent', 'accent-ink', 'ink-soft', 'danger', 'warn', 'positive']) {
+      expect(TOKENS.has(token), token).toBe(true);
+    }
+  });
+
+  it('writes no colour class for a token that was never defined', () => {
+    // `text-on-accent` shipped in M21 and generated nothing at all, so the
+    // selected grade in the logger's picker inherited `ink` and rendered at
+    // 2.96:1 on the accent — below AA, and invisible to every test the app
+    // had, because a class that does not exist breaks nothing loudly.
+    const offences: string[] = [];
+    for (const file of [...FEATURE_FILES, ...UI_FILES]) {
+      for (const [, prefix, name] of file.source.matchAll(
+        new RegExp(`\\b(${PREFIXES.join('|')})-([a-z][a-z0-9]*(?:-[a-z0-9]+)*)\\b`, 'g'),
+      )) {
+        const token = name as string;
+        // Anything that is not one of ours is either a Tailwind keyword or a
+        // utility that has nothing to do with colour (`text-sm`, `border-2`).
+        if (!token.startsWith('accent') && !token.startsWith('on-')) continue;
+        if (BUILT_IN.has(token) || TOKENS.has(token)) continue;
+        offences.push(`${file.path}: ${prefix}-${token}`);
+      }
+    }
+    expect(offences).toEqual([]);
+  });
+});

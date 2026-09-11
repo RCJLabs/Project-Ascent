@@ -2501,10 +2501,56 @@ something that already exists; six are new. Nothing here is committed.*
   from the other side. And nothing tells you the trip is coming; you have to open the
   objective.
 
-- **M74 — Gym mode.** Logging mid-session means chalky hands, a phone on a mat and forty
-  seconds between burns. A stripped screen — one-tap grade tally, attempt and send, a rest
-  timer, nothing else — that folds into a real session afterwards. The full logger is a good
-  form and a bad companion.
+- **M74 — Gym mode.** *Done, with the headline feature struck out because it already
+  existed.* The proposal asked for "one-tap grade tally, attempt and send". **That is M21**,
+  which replaced three native selects with chip rows and measured it: twenty interactions
+  down to fifteen on a typical bouldering session, with the real win in the *kind* of
+  interaction rather than the count. Building it again would have been building it again.
+  What is actually wrong mid-session is everything around it. The logger renders ten cards —
+  check-in, climbs, session questions, project burns, prescription, drill, warmup, effort,
+  notes, templates — and the climb entry is one of them, a scroll or two down. Between burns
+  the cost is not taps: it is finding the control, hitting a 36px chip with a chalky hand,
+  and the screen having gone dark. So gym mode is the same session with everything else
+  taken away, and the tally row's plus is **56px** rather than 36.
+  **There is no buffer**, which is the second correction. "Folds into a real session
+  afterwards" implies one; `engine/live.ts` already refused exactly that idea for exactly
+  this reason — *"a session record is written the moment you start it and re-written on
+  every change, so the buffer already exists"*. Nothing folds in because nothing ever left:
+  a tap on the tally is a write to the session the logger reads.
+  **A route, not an overlay.** The app's other immersive screens are dialogs, and a dialog
+  does not survive the tab being reclaimed — which is the normal fate of a phone face-down
+  on a mat for two hours. `#/gym` does. The live bar stands down there, under its own
+  existing rule that two clocks on one screen is one too many.
+  **The list is deliberately not sorted.** Hardest-first reads better on a page you are
+  looking at, and is the wrong rule for a control you tap without looking: inserting a
+  harder grade shifts every row under your thumb. Insertion order never moves an existing
+  row and a new one appears at the bottom, which is where you were.
+  **The rest timer is not the protocol timer.** That one is work/rest/reps/sets attached to
+  a prescribed exercise, and "give me three minutes" is none of those. It stores an *end
+  time* rather than a countdown, the same choice `live.ts` made about `startedAt` and for
+  the same reason — a phone that sleeps stops running timers, and the rest interval does
+  not stop because the page did. Verified: reloading mid-rest picks the clock up where the
+  wall clock is, not where it was.
+  **Two contrast bugs, one of them eighteen milestones old.** The gym plus was written as
+  `className="bg-accent text-accent-ink"` and rendered in `ink-soft` at **1.12:1** against
+  the accent — effectively invisible — because two utilities setting `color` are resolved by
+  the order Tailwind *generated* them in, not the order they appear in the attribute. That
+  is the M30 bug, walked into three paragraphs after writing a comment warning about it;
+  the fix is an `onAccent` tone inside `IconButton`, so the pairing belongs to the
+  primitive. Looking for other instances found the worse one: **`ClimbEntry` has said
+  `text-on-accent` since M21, and there is no such token** — the class generated nothing at
+  all, so the selected grade in the logger's own picker inherited `ink` and sat at
+  **2.96:1** on the accent, below AA, on the control M21 was written to celebrate. Both are
+  5.47:1 now, and `ui.test.ts` has a new rule: a colour class naming a token `index.css`
+  never declared fails the suite. A class that does not exist breaks nothing loudly, which
+  is why nothing caught it for eighteen milestones.
+  Seventeen mutations, seventeen killed. Verified in a browser at phone width: a V5 tallied
+  to four and a V7 tried, written straight to the session record, a 56×56 target, the rest
+  clock surviving a reload, and the live bar absent.
+  *What it does not do:* finishing still means going to the logger, because effort and
+  duration are what the load maths needs and neither belongs on a screen you are using
+  between burns. And there is no way in from Home — only from a session that is already
+  running.
 
 - **M75 — Remind me it is a training day.** The one honest use of notifications in an app
   with no server: a local reminder on a scheduled session day. *Riskiest of the fifteen —
