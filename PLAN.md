@@ -3529,3 +3529,262 @@ a kept one.
   words rather than grades — "All Levels", "Pre-Climbing" — which is exactly what the
   escape hatch is for. **The carried limitation should be struck from the notes above
   rather than fixed.**
+
+### The next fifteen, again (proposed, M98–M112)
+
+*Brainstormed against the app as it stands at M97, by reading the routes, the engines, the
+content shapes and every page's cards rather than the plan's memory of them. Two are the
+kind of thing a training app cannot really call itself one without (M98, M99); five sharpen
+something that already ships (M100, M101, M104, M106, M107); eight are new. Nothing here is
+committed. M12 stays parked until there is a name.*
+
+*A rule for all of them, carried from M89–M97: every premise below is a claim about the
+code and should be re-measured before the milestone starts. Six of the last ten had a
+materially wrong premise. Sizes are guesses.*
+
+- **M98 — Log the load, not just the tick.** *Proposed. Size L.*
+  **Premise.** `completedExercises` is `string[]` — a name, ticked. Four readers: the
+  logger, templates (copies the names), tissue load (keyword-scans them), and session
+  merging. The prescription writes the dose in prose — `load: 'BW+15lb'`, `sets: '3-5'` —
+  and the climber can say *done* and nothing else. A block whose entire progression is
+  "add weight" (Iron Grip's max hangs, The Siege's weighted pull-ups) is invisible to the
+  block report: M84 reads `metrics`, which are assessments, tested once a phase. Between
+  tests the app has no idea what you pulled.
+  **Shape.** `session.exercises?: { name; sets?; reps?; load?; hold?; note? }[]` — the
+  climber's numbers, not the prescription's, in the unit M48 chose. Pre-filled from the
+  last session that logged the same exercise name ("last time: 3×5 at +22.5 kg") so the
+  common case is one tap to confirm. A per-exercise series page like `MetricDetailPage`,
+  and the block report draws the working load beside the tested max. `completedExercises`
+  stays: a tick without numbers is still a tick, and nothing that reads it changes.
+  **Never.** Parse a prose dose into a number — "60-70% max" is not a starting value, and
+  a guessed pre-fill is a claim the climber never made. The field starts empty until there
+  is a last time.
+  **Risk.** Logger length. M74's complaint was that the logger is already long; this adds a
+  row per exercise. Mitigation is that the rows exist only for exercises the prescription
+  lists, and the default path — tick, no numbers — costs the same taps as today. Measure it
+  the way M21 did.
+
+- **M99 — The clock reaches the circuits and the tests.** *Proposed. Size M.*
+  **Premise.** `CircuitFormat` (rounds, work, rest between, rest between rounds) is authored
+  on blocks, rendered by `prescriptionLine` ("3 rounds · 30s each"), and driven by nothing:
+  `timer.ts` expands a `Protocol` and only a `Protocol`. Gym mode's rest timer is
+  unattached to anything. And the assessments page takes a *number*: `max_hang_20mm_7s` is
+  a procedure (ramp, attempts at rising load, three-minute rests) with `how` and `hint`
+  prose written for onboarding, and the timer that could run it sits one tab over.
+  **Shape.** Two things sharing one expansion. A circuit becomes segments the way a protocol
+  does — work, rest, round rest — with the exercise name in the spoken cue (`lib/cues.ts`),
+  opened from the logger and gym mode. And guided tests for the metrics that *are*
+  procedures: max hang (ramp with "add 2.5 kg" prompts, records the last hold completed),
+  repeaters to failure, max pull-ups, the 4×4 capacity test (which is a circuit), ARC
+  duration and front-lever hold (stopwatches). Each writes a `MetricEntry` with the ramp
+  in `note`.
+  **Never.** Record a result the climber did not confirm on screen. Parse a prose duration
+  loosely — "30-45s" gets a strict shape like `heightFromLabel` had to, and an unparseable
+  one gets no timer and a sentence saying why.
+
+- **M100 — Unlogged is not untrained.** *Proposed. Size M.*
+  **Premise.** The coach's detraining rule prints *"N days since you trained"* from the
+  newest completed session. Vitality, the streak, the consistency grid, the ratio's
+  chronic window, `staleSessions` and the finder's `comingOffBreak` all read a gap in the
+  log as a gap in training. A climber who climbed for three weeks and did not open the app
+  is told they have detrained and to *"come back at two-thirds of the volume you left on"*
+  — advice that is wrong, delivered confidently, by an app whose whole pitch is that it
+  never says more than the log supports.
+  **Shape.** A *sketch*: a completed session with `sketch: true`, placed from the calendar
+  over a day or a range in one tap — "Been away from the app? Mark the days you climbed."
+  It counts for consistency, the streak and the gap. It carries load only if the climber
+  gives RPE and duration; otherwise it is excluded from the ratio the way a deload is, and
+  every reader that would have counted it says so: *"3 unlogged days in this window"*.
+  **Never.** Invent climbs, feet or records. A sketch pays the session base and nothing
+  else, and no challenge that measures climbs can be satisfied by one. It is exactly as
+  gameable as an empty completed session is today, which is to say: already.
+  **Caveat.** This changes what a completed session means. Count the readers of
+  `completed` first — M94 found twice the readers the plan claimed for a smaller field —
+  and the ones that must not count a sketch are the ones that pay or measure climbs.
+
+- **M101 — The finder reads the log, not just the questionnaire.** *Proposed. Size M.*
+  **Premise.** `FinderInput` is the baseline plus metrics, equipment and injuries. M85 made
+  the grades come from the log. Nothing else does. The app knows which drill categories a
+  climber has never trained (`drillsByCategory`), which tissue has been quiet for weeks
+  (`tissueLoad.daysSinceLoaded`), how many days they have spent outdoors, which block they
+  just finished (M87) and whether they actually did it (M91). A climber who finished Iron
+  Grip at 40 % adherence and one who finished at 95 % get the same recommendation, and
+  either can be recommended Iron Grip again.
+  **Shape.** `FinderInput.history?`, derived: last block and its adherence, weakest drill
+  category, tissue gaps, outdoor share. Each becomes a *stated reason* on a recommendation
+  — "not Iron Grip: you finished it three weeks ago", "Lockdown: technique is 4 % of your
+  log" — the way reasons already print. The log adds reasons and re-orders.
+  **Never.** Veto a stated goal or a stated day count. Cold start changes nothing, by
+  construction.
+
+- **M102 — Links, not just high points.** *Proposed. Size M.*
+  **Premise.** A burn is `worked | fell-low | fell-mid | fell-high | fell-crux | send` with
+  a `highPoint` percentage. That is one number from the ground. Redpointing is done in
+  overlapping links — top-out from the crux, ground to the crux, then the join — and the
+  app cannot store a link, so "What they cost" (M69) can count burns and never say the one
+  thing that decides a send: *you have never linked through move seven from below*.
+  **Shape.** An optional section map on a project — named sections or move numbers, the
+  climber's choice — and a burn may record a link `from → to`. Derived: the coverage
+  picture (a bar per section, the longest overlap, the gap), on the project page and in
+  "What they cost". The M71 beta drawing gets a section marker, so the picture and the
+  photo agree.
+  **Never.** Predict the send. Below two links it draws nothing; `projectHistory` set the
+  rule that a small sample is an anecdote and is labelled as one.
+
+- **M103 — The injury as a series.** *Proposed. Size M.*
+  **Premise.** `Injury` is part, since, severity, status, side, a checklist and your own
+  steps. The check-in asks about *fingers* and *sleep* and nothing else. So the one
+  question every physio asks — *does it flare after a particular kind of session?* — has
+  no data in an app that has both the injury and the sessions.
+  **Shape.** M82's pattern, again. The check-in grows one chip per *active* injury —
+  fine / niggly / worse — stored as `checkIn.parts?: Partial<Record<BodyPart, Feel>>`,
+  reusing the injury vocabulary so one flag means one thing. `/injury/:id` gets a strip
+  like `CheckInStrip`, and the honest co-occurrence: *"worse on 4 of the 5 days after a
+  session that loaded the elbow; 1 of 9 otherwise"* — counts, with coverage stated first.
+  **Never.** Diagnose, or say "cause". Two counts side by side and the tissue-load caveat
+  (it is a keyword scan) printed under them.
+
+- **M104 — The coach rules the plan promised.** *Proposed. Size S–M.*
+  **Premise.** §6.6 named the triggers worth keeping: PR reactions, outdoor re-entry,
+  *project-escalation nudges at 5/10/20 attempts, hangboard-gap warnings, missing-domain
+  observations*. The coach has ten rules and none of the last three. The data for all
+  three exists: attempts per project (M69), `daysSinceLoaded('fingers')` against a program
+  that has finger blocks, `drillsByCategory` at zero across a whole block. Two more the
+  log supports and nothing says: warmups skipped (`recentSkippedWarmups` is read only by
+  vitality, which turns it into a posture) and a retest owed (`blockEnd` computes it and
+  shows it once, on `/finish`).
+  **Shape.** Five rules, each with a `signature` so dismissal works, each slotted into the
+  existing weights, each with a fixture that earns it and one that does not.
+  **Never.** Say the same thing the weekly review says. The line between the two is
+  written in `coach.ts` and this has to respect it.
+
+- **M105 — Bring your history.** *Proposed. Size L.*
+  **Premise.** Onboarding says *"your altimeter starts at zero"*. M87 recovered block
+  history from the app's own records, but a climber with five years in a spreadsheet — or
+  an export from the app they are leaving — starts with an empty pyramid, a career page
+  with one entry, and an eight-week wait before the ratio says anything. There is no CSV
+  in the codebase, in either direction.
+  **Shape.** `/data` gains *Import a spreadsheet*: CSV with date, grade, result, count,
+  mode, place, notes; columns mapped by header guess and confirmed; a preview like
+  `ImportPreviewCard`; rows become sessions (one per day) tagged `imported: 'csv'`;
+  M20's snapshot before, M54's undo after. Grades go through `parseGrade`, so Font and
+  French come in; anything else is refused row by row with a reason. And the reverse:
+  sessions, climbs, attempts and metrics as CSVs inside M53's archive.
+  **Decision to make up front.** Imported sessions arrive `rewarded: true` — they pay no
+  XP, because five years paid out at once is the level-100-on-day-one the audit cut — but
+  they count for stats, the career, the pyramid and the altimeter, because height is a
+  fact about climbing and XP is pacing for a game.
+
+- **M106 — Indoor and outdoor are two ladders, and the app draws one.** *Proposed. Size M.*
+  **Premise.** `GradeTally` is per scale. `session.mode` is read for outdoor *days* (career,
+  achievements, a challenge), the altimeter's outdoor multiplier, and the trips. Best
+  outdoor grade against best indoor — the gap every climber talks about, the thing Trip
+  Prep exists to close — is computed nowhere and shown nowhere. `progress.ts` does not
+  mention `mode`.
+  **Shape.** Tallies per mode in `derive`; a toggle on the pyramid and the conversion grid;
+  "on rock" rows in personal records; the venue page (M88b) gets a best per venue; Trip
+  Prep's finder reason cites the gap in the climber's own numbers.
+  **Never.** Convert one into the other, or call the gap a problem. Some of it is
+  sandbagging and some of it is fear, and the app cannot tell which.
+
+- **M107 — The drill library, with the coach's cues.** *Proposed. Size L, mostly content.*
+  **Premise.** 138 drills, reachable from a program's week and from search (they are
+  indexed) — but never browsed, and never with the climber's own history beside them.
+  `Drill` has description, duration, focus, level and equipment. `Protocol` has `cues`
+  and `safety`; `Drill` has neither. A drill is a paragraph.
+  **Shape.** `/drills`, browsable by category, equipment, level and discipline; a page per
+  drill with what it trains, how to run it, `cues`, `faults` (what going wrong looks
+  like), which programs use it, and — derived — *your* history with it: sessions where
+  `drillId` matches, done rate, last done. Authoring: `cues?: string[]`, `faults?:
+  string[]` on `Drill`, written by the coach, with a content guard that every drill in a
+  shipped program carries at least two cues.
+  **Caveat.** This is days of writing, not hours of code, and it is the part only the
+  coach can do. The page without the cues is a list; the cues without the page are
+  unread. Both or neither.
+
+- **M108 — Style on a climb.** *Proposed. Size M.*
+  **Premise.** `Climb` is grade, scale, count, result, `style` (onsight/flash/redpoint) and
+  a name. No angle, no lead-versus-top-rope, no board. "Technique: breadth of grades and
+  styles" in the stat table means ascent styles. A coach's first question — *what do you
+  avoid?* — has no data, and the answer is usually "slab" or "roofs" and the app cannot
+  say. Board climbing (Kilter, Moon, Tension) is seventeen mentions in drill and program prose and
+  not an `Equipment`. And the session field `clipStyle` asks for onsight/flash/redpoint in
+  free text, which `Climb.style` already stores structurally — two places for one fact.
+  **Shape.** Optional chips on a climb: angle (slab, vert, overhang, roof); lead or
+  top-rope on ropes; and `board` as an `Equipment` plus a board session type in General
+  Training. Derived: a pyramid per angle, "your slab best is two grades under your
+  overhang best", a coach rule for the avoided angle, and a weekly challenge that targets
+  it — the generator already picks the weakest drill category, same shape. Retire
+  `clipStyle` in favour of the structured field. Default: absent. Nothing inferred.
+  **Caveat.** Chip creep in the logger. A test that the default path — grade, send — costs
+  exactly the taps it costs today.
+
+- **M109 — A season, as a sequence of blocks.** *Proposed. Size L.*
+  **Premise.** The pieces exist and do not join: `nextPrograms` with a written reason per
+  destination (read on `/finish` since M85), `adapt` for fitting a block into fewer weeks
+  (M56), the peaking shape (M73), an objective with a `targetDate`. A climber cannot lay
+  out *Base Camp → Iron Grip → Trip Prep, ending on the trip* and see it; each block is
+  chosen only when the last one runs out.
+  **Shape.** On the objective, first: a sequence of program ids, start dates *derived*
+  working back from the target, each block adapted where it does not fit, deloads read
+  from each; the calendar draws future blocks as ghost weeks; `/finish` offers the next
+  one as *next in your season*. Stored: the sequence. Derived: every date.
+  **Never.** Place sessions beyond the active block, or mark a season missed. It is an
+  intention, and the objective's own rule already says a season that did not go to plan
+  is a season.
+
+- **M110 — A demo climber, for the screenshots and the videos.** *Proposed. Size M.*
+  **Premise.** §9.3 closed multi-profile with "better served by a sample-data mode".
+  Nothing was built. M12 needs store screenshots, the coach makes content about the app,
+  and every browser verification from M89 to M97 hand-rolled a fixture into IndexedDB
+  through the console.
+  **Shape.** Settings → *Load a demo climber*, offered only when the log is empty (or
+  after an export the app has seen succeed); deterministic from a seed — a year of
+  plausible sessions across two programs, three projects with burns, a trip, one injury
+  with its checklist, a set of assessments; a banner on every page and one tap to wipe;
+  export refuses to write it as a real backup. And a Playwright script that takes the
+  Play listing's screenshot set in both themes at the sizes the store wants.
+  **Risk.** Demo data in a real log. Two gates — the empty-log condition and a `demo` tag
+  on every record the wipe can find — and a test that a real session written on top of it
+  survives the wipe.
+
+- **M111 — The app on the phone: shortcuts, share target, file handlers.** *Proposed.
+  Size S–M. Not blocked on the name.*
+  **Premise.** The manifest has display, orientation, categories and icons. No
+  `shortcuts`, no `share_target`, no `file_handlers`. A TWA honours all three, and each is
+  a thing the app already does with a front door missing: gym mode, the timer and today's
+  log are each a navigation away from a cold launch; a photo shared from the gallery has nowhere to
+  land although the media store is built for it; a program file (M7's `programFile.ts`,
+  which exists so a coach can hand an athlete a block) opens in nothing.
+  **Shape.** Shortcuts: *Log today*, *Gym mode*, *Timer*, *The Ascent*. Share target for
+  images → pick the session or project it belongs to. File handlers for the backup JSON
+  and the program file → the existing import previews. `launch_handler` set to focus the
+  running instance rather than open a second one.
+  **Caveat.** Every one of these is a manifest entry the pure web mostly ignores; the value
+  is on the Play build, and the verification has to happen on a phone, not in Playwright.
+
+- **M112 — The cooldown, from what today actually loaded.** *Proposed. Size M, half
+  content.*
+  **Premise.** The warmup generator is a four-stage funnel over 26 exercises and it is the
+  best small thing in the app. There is no counterpart at the other end. "Cooldown",
+  "prehab" and "antagonist" appear in ten programs' prose and in nothing that runs;
+  tissue load can say *your fingers took every session this week* and then the sentence
+  ends.
+  **Shape.** A second funnel: filter by equipment, weight toward what *this session*
+  loaded (tissue load, per session rather than per window), fold in the return-to-
+  climbing steps for any active injury, fill to five minutes, run on the timer. Lands on
+  the log page after Effort and in gym mode's rest screen. Content: a cooldown and prehab
+  set the size of the warmup set, tagged with what each one *unloads*, written by the
+  coach.
+  **Never.** Claim it prevents anything. The copy says what it is: five minutes the
+  program's own prose keeps asking for.
+
+**Considered and left out, with the reason, so they are not re-proposed:**
+- *Race a ghost on the Daily Wall* — already ships (`createGhost`, `tapeToRace`, M81).
+- *Ascent wall themes as a currency sink* — the sink is four outfits and it is thin, but
+  a cosmetic is worth less than any row above; revisit if the balance keeps piling up.
+- *More grade systems* (Ewbank, UIAA, British) — table work, cheap, and no one has asked.
+  Fold into whichever milestone touches `grades.ts` next.
+- *Post-session debrief* — the notes field and M103's chips cover what it would ask.
+- *Multi-device sync, notifications, wearables, localisation* — all need a server or a
+  translator, and the plan's cut list stands.
