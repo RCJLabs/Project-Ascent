@@ -2965,14 +2965,48 @@ commit.
 
 **Programs.**
 
-- **M85 — When the block ends.** There is no code for the last week: `plan.ts`, Home and the
-  profile store have nothing for "finished", the `final` test reason (M67) marks a week and
-  ties to nothing, and `nextPrograms` — authored on every program with a reason each — is
-  surfaced only on the catalogue detail page, where a climber mid-block never looks.
-  `Program.graduation` exists as a string and is read by nothing found. A block-end screen:
-  did you finish it, what moved (M84), the retest you owe, the graduation line, and the
-  authored next programs with their reasons — with the finder pre-filled from the log
-  rather than asked again.
+- **M85 — When the block ends.** *Done, and the premise was understated in one place and
+  wrong in another.*
+  **Understated: the app did not merely lack a block-end screen, it asserted something false
+  every day.** `programWeek` **clamps**, so `plannedDay` on any date past the last week
+  returned the last week — measured, not inferred: Iron Grip started 2026-01-04 reports
+  *"week 12, phase The Spark, test = final"* on 2026-06-01 and on 2027-01-01 alike. Six
+  screens read a planned day, and every one of them was handing a climber who finished nine
+  months ago week twelve's sessions under a banner reading *"Final week — the after, to put
+  beside the before."* The whole suite passed while that was true, which is why the tests came
+  first.
+  **Wrong: `Program.graduation` is not "read by nothing".** It is read — on the catalogue
+  detail page, `ProgramDetailPage.tsx:378`, immediately above `nextPrograms`. The conclusion
+  survives the correction: both sit behind a page you visit to *choose* a program, not one you
+  are on when a program runs out.
+  **The fix is a week-level fact, like `isDeload` and `test` before it.** `plan.ts` gained
+  `blockWindow`, `blockStatus` and an `over` flag, and `plannedDay` now returns nothing past
+  the end — so all six screens are corrected at once rather than each remembering to ask. The
+  window arithmetic also had *three* copies by then (`calendar.lastDayOf`, M84's `blockReport`,
+  and this); they are one now.
+  **`/finish` carries what was already authored**: the M84 comparison, the graduation line, the
+  retests owed — an assessment with a baseline this block and no second reading, which is
+  exactly what the final test week existed for — and every `nextPrograms` entry with its
+  written reason. **It does not congratulate.** A climber who trained every week and one who
+  stopped in week six and let the calendar run out both arrive here and the app cannot tell
+  them apart, so it says so: *"Whether you trained every week of it is between you and the
+  log."*
+  **"Pre-filled from the log rather than asked again" was half true already** — the finder has
+  always seeded from the first-run baseline. The half that was missing is the half that
+  matters: a climber who answered "V4" at onboarding and has since sent V6 was being
+  recommended programs for a V4 climber. `gradesFromLog` takes the harder of the two, never
+  the lower — a quiet month is not evidence you got worse — and it is applied to the auto-run
+  as well as the form, or the recommendation disagrees with the fields beside it.
+  Twenty-nine mutations, twenty-six killed. The three survivors: two were untested paths I
+  then covered, and one was a redundant guard I deleted — `gradeOrdinal` returns −1 for
+  anything it cannot place, including `''`, so a blank answer already loses the comparison
+  without a special case for it.
+  **Two browser findings.** Home said *"no program is running"* while one was, because an over
+  day has no session; and then, once that was fixed, the button still offered *"Log rest day"*
+  three weeks after the block ended, because `over` sets `isRest`. **And one false claim in my
+  own copy**: the finder card said "your grades come from the log" before that was true, which
+  is what prompted building it rather than softening the sentence.
+  Verified in both themes. 2,517 tests pass.
 - **M86 — ~~Entry standards the app can check~~.** *Withdrawn in M77.* Already done by M35:
   `accuracy.test.ts` asserts that every guide printing an entry table has `prerequisites`
   the finder reads, and it passes empty. Proposed from stale audit prose.

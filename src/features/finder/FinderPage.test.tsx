@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { putMetricEntry } from '@/db/metrics';
+import { newSession, putSession } from '@/db/sessions';
 import { FinderPage } from './FinderPage';
 import { hydrate, renderAt } from '@/test/render';
 
@@ -40,4 +41,33 @@ describe('the finder page', () => {
       'the page never handed the finder its metrics, so entry standards read as unmeasured',
     ).toMatch(/entry requirements/i);
   });
+});
+
+/**
+ * The grades it starts from are the ones the log knows (PLAN.md M85).
+ *
+ * The form seeded from the first-run baseline, which is right the day it is
+ * taken and stale a block later. Replacing the seed with the baseline value
+ * again passed every other test here, because none of them logs a climb.
+ */
+describe('the grades the finder starts from', () => {
+  it('offers the hardest grade in the log', async () => {
+    await putSession({
+      ...newSession('2026-08-01', 0),
+      completed: true,
+      rewarded: true,
+      rpe: 7,
+      durationMin: 90,
+      climbs: [{ id: 'c1', grade: 'V6', scale: 'V', count: 1, result: 'send' }],
+    });
+    await hydrate();
+    const view = renderAt('/find', <FinderPage />);
+    const grade = await view.findByDisplayValue('V6');
+    expect(grade).toBeTruthy();
+  });
+
+  // No "offers nothing with an empty log" counterpart: this file shares one
+  // database across its tests by design, so the session logged above is
+  // still there and the assertion would depend on the order they run in.
+  // `engine/onboarding.test.ts` holds the empty case directly.
 });

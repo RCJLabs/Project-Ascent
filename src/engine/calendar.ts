@@ -17,8 +17,8 @@
 import type { Program } from '@/content/types';
 import type { Session } from '@/db/sessions';
 import type { IcsEvent } from '@/lib/ics';
-import { addDays, daysBetween, startOfWeek } from './dates';
-import { plannedDay } from './plan';
+import { addDays, daysBetween } from './dates';
+import { blockWindow, plannedDay } from './plan';
 import type { WeekOverrides } from './reschedule';
 import type { WeekPlan } from './scheduler';
 import { TEST_REASON_LABEL } from './assessments';
@@ -117,12 +117,13 @@ export interface ScheduleRequest {
 /**
  * The last day the program covers.
  *
- * Computed here because `programWeek` **clamps** rather than returning null
- * past the end — a date a year after a twelve-week block still reports week
- * 12 — so asking it where the program stops gives the wrong answer.
+ * The arithmetic moved to `plan.blockWindow` when M85 needed it a third
+ * time; this stays as the name calendar code already calls it by. It exists
+ * at all because `programWeek` **clamps** rather than returning null past
+ * the end, so asking it where the program stops gives the wrong answer.
  */
 export function lastDayOf(program: Program, startDate: string): string {
-  return addDays(startOfWeek(startDate), program.weeks * 7 - 1);
+  return blockWindow(program, startDate).to;
 }
 
 export function scheduleEvents(request: ScheduleRequest): IcsEvent[] {

@@ -32,6 +32,7 @@ import { MetricDetailPage } from '@/features/assessments/MetricDetailPage';
 import { ObjectiveDetailPage } from '@/features/objectives/ObjectiveDetailPage';
 import { ObjectivesPage } from '@/features/objectives/ObjectivesPage';
 import { ProgramDetailPage } from '@/features/train/ProgramDetailPage';
+import { FinishPage } from '@/features/finish/FinishPage';
 import { ProgressPage } from '@/features/progress/ProgressPage';
 import { ProjectDetailPage } from '@/features/projects/ProjectDetailPage';
 import { ProjectsPage } from '@/features/projects/ProjectsPage';
@@ -80,6 +81,7 @@ const PAGES: [string, string, ReactElement][] = [
   ['log', '/log/2026-03-04', <LogPage params={{ date: '2026-03-04' }} />],
   ['gym', '/gym', <GymPage />],
   ['progress', '/progress', <ProgressPage />],
+  ['finish', '/finish', <FinishPage />],
   ['journal', '/journal', <JournalPage />],
   ['assessments', '/assessments', <AssessmentsPage />],
   ['benchmark', '/assessments/dead_hang', <MetricDetailPage params={{ id: 'dead_hang' }} />],

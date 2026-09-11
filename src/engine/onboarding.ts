@@ -28,6 +28,7 @@ import type { Discipline, Equipment, MetricId } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import { parseMetricInput } from './assessments';
 import type { Experience, FinderInput, Goal } from './finder';
+import { gradeOrdinal, type GradeScale } from './grades';
 
 export interface BaselineAnswers {
   discipline: Discipline;
@@ -224,5 +225,32 @@ export function finderInputFrom(
     equipment,
     injuries,
     comingOffBreak: answers.experience === 'returning',
+  };
+}
+
+/**
+ * The grades the log says, where they beat the ones the climber typed.
+ *
+ * The finder seeds from the first-run baseline, which is right the day it
+ * is taken and stale a block later: a climber who answered "V4" at
+ * onboarding and has since sent V6 is offered programs for a V4 climber
+ * (PLAN.md M85). Only ever upward — a quiet month is not evidence you got
+ * worse, and the baseline is what the climber themselves claimed.
+ */
+export function gradesFromLog(
+  answers: BaselineAnswers | null,
+  state: { boulder: { best: string | null }; sport: { best: string | null } },
+): { boulderGrade: string; sportGrade: string } {
+  const better = (typed: string, logged: string | null, scale: GradeScale): string => {
+    if (logged === null) return typed;
+    // No special case for a blank answer: `gradeOrdinal` gives −1 for
+    // anything it cannot place, including '', so any real logged grade
+    // already wins the comparison. An explicit guard was there first and no
+    // mutation could kill it.
+    return gradeOrdinal(scale, logged) > gradeOrdinal(scale, typed) ? logged : typed;
+  };
+  return {
+    boulderGrade: better(answers?.boulderGrade ?? '', state.boulder.best, 'V'),
+    sportGrade: better(answers?.sportGrade ?? '', state.sport.best, 'YDS'),
   };
 }

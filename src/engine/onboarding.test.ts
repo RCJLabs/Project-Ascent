@@ -8,6 +8,7 @@ import {
   baselineEntries,
   benchmarksFor,
   finderInputFrom,
+  gradesFromLog,
   readBaseline,
   type BaselineAnswers,
 } from './onboarding';
@@ -196,5 +197,55 @@ describe('reading a stored baseline', () => {
     expect(readBaseline('a string')).toBeNull();
     expect(readBaseline({})).toBeNull();
     expect(readBaseline({ somethingElse: 1 })).toBeNull();
+  });
+});
+
+describe('grades the log has overtaken (PLAN.md M85)', () => {
+  const answers = (patch: Partial<BaselineAnswers> = {}): BaselineAnswers => ({
+    experience: 'intermediate',
+    discipline: 'both',
+    boulderGrade: 'V4',
+    sportGrade: '5.10a',
+    goal: 'fingers',
+    daysPerWeek: 4,
+    benchmarks: {},
+    ...patch,
+  });
+  const log = (boulder: string | null, sport: string | null) => ({
+    boulder: { best: boulder },
+    sport: { best: sport },
+  });
+
+  it('takes the harder of the two', () => {
+    // Answered V4 at onboarding, has since sent V6: the finder was
+    // recommending programs for a climber two grades behind.
+    expect(gradesFromLog(answers(), log('V6', '5.12a'))).toEqual({
+      boulderGrade: 'V6',
+      sportGrade: '5.12a',
+    });
+  });
+
+  it('never moves a grade down', () => {
+    // A quiet month is not evidence you got worse, and the baseline is
+    // what the climber claimed about themselves.
+    expect(gradesFromLog(answers({ boulderGrade: 'V7' }), log('V3', null)).boulderGrade).toBe('V7');
+  });
+
+  it('fills a blank answer from the log', () => {
+    expect(gradesFromLog(answers({ sportGrade: '' }), log(null, '5.11a')).sportGrade).toBe('5.11a');
+  });
+
+  it('leaves a blank answer blank with nothing logged', () => {
+    expect(gradesFromLog(answers({ boulderGrade: '' }), log(null, null)).boulderGrade).toBe('');
+  });
+
+  it('works with no baseline at all', () => {
+    expect(gradesFromLog(null, log('V5', null))).toEqual({ boulderGrade: 'V5', sportGrade: '' });
+  });
+
+  it('keeps the ladders apart', () => {
+    const out = gradesFromLog(answers(), log('V9', null));
+    expect(out.boulderGrade).toBe('V9');
+    expect(out.sportGrade).toBe('5.10a');
   });
 });

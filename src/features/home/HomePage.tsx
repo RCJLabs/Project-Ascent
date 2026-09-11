@@ -5,6 +5,7 @@ import {
   Check,
   ChevronRight,
   Clock,
+  Flag,
   Gamepad2,
   MessageSquare,
   Ruler,
@@ -109,6 +110,14 @@ export function HomePage() {
                   </div>
                 )}
               </>
+            ) : day?.over ? (
+              /* Before the rest-day branch, which an over day would
+                 otherwise land in — `over` sets `isRest`, so it would read
+                 as "Rest day. Recovery is training." And before M85 it read
+                 "Week 12 of 12 · Test week" instead, every day, forever. */
+              <p className="text-sm text-ink-soft mb-3">
+                {program!.name} has run its course. Nothing is planned until you pick what is next.
+              </p>
             ) : day ? (
               <p className="text-sm text-ink-soft mb-3">
                 Rest day{day.week ? ` · week ${day.week}` : ''}
@@ -119,6 +128,19 @@ export function HomePage() {
                 Nothing planned — no program is running. Log whatever you climb and it still counts
                 toward everything.
               </p>
+            )}
+
+            {day?.over && (
+              <Link
+                href="/finish"
+                className="focus-ring flex items-center gap-2 bg-sunken rounded-xl p-3 mb-3"
+              >
+                <Flag size={16} className="text-accent shrink-0" />
+                <span className="flex-1 min-w-0 text-xs leading-relaxed">
+                  See what the block moved, and what {program!.name} says comes after it.
+                </span>
+                <ChevronRight size={16} className="text-ink-soft shrink-0" />
+              </Link>
             )}
             {/* Outside the training-day branch on purpose (PLAN.md M67): a
                 test wants you fresh, so the rest day in a test week is the
@@ -139,7 +161,17 @@ export function HomePage() {
               href={`/log/${date}`}
               className="inline-flex items-center justify-center gap-2 w-full bg-accent text-accent-ink font-semibold rounded-xl py-3"
             >
-              {done ? 'View session' : !day ? 'Log a session' : day.isRest ? 'Log rest day' : 'Start session'}
+              {done
+                ? 'View session'
+                : !day || day.over
+                  ? // An over day carries `isRest`, so without this the
+                    // button offered to log a rest day from a block that
+                    // ended three weeks ago. Nothing is planned; whatever
+                    // gets climbed is a session like any other.
+                    'Log a session'
+                  : day.isRest
+                    ? 'Log rest day'
+                    : 'Start session'}
             </Link>
           </Card>
 

@@ -37,7 +37,8 @@
 import { getMetric } from '@/content/metrics';
 import type { Metric, MetricId, Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
-import { addDays, startOfWeek } from './dates';
+import { addDays } from './dates';
+import { blockWindow } from './plan';
 import { seriesFor, testWeeks, type TestReason } from './assessments';
 import { joinCapped } from './phrase';
 
@@ -111,8 +112,7 @@ export function blockReport(input: BlockInput): BlockReport | null {
   const tests = testWeeks(input.program);
   if (tests.length === 0) return null;
 
-  const from = startOfWeek(input.startDate);
-  const to = addDays(from, input.program.weeks * 7 - 1);
+  const { from, to } = blockWindow(input.program, input.startDate);
   const through = input.today < to ? input.today : to;
   if (through < from) return null;
 

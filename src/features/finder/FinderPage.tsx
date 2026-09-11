@@ -5,7 +5,9 @@ import { V_GRADES, YDS_GRADES, displayRange } from '@/engine/grades';
 import { useGradeOptions } from '@/ui/useGrade';
 import { PageSkeleton } from '@/ui/Skeleton';
 import { findProgram, type Experience, type FinderInput, type FinderResult, type Goal, type Recommendation } from '@/engine/finder';
-import { finderInputFrom, type BaselineAnswers } from '@/engine/onboarding';
+import { finderInputFrom, gradesFromLog, type BaselineAnswers } from '@/engine/onboarding';
+import { deriveClimberState } from '@/engine/derive';
+import { useSessions } from '@/store/sessions';
 import { injuryPolicy } from '@/engine/injury';
 import type { Discipline, Equipment } from '@/content/types';
 import type { BodyPart } from '@/content/warmups';
@@ -133,21 +135,37 @@ export function FinderPage() {
   // from the one the same climber gets a second later (PLAN.md M35).
   const metricsReady = useMetrics((s) => s.hydrated);
   const baseline = useProfile((s) => s.baseline);
+  const byDate = useSessions((s) => s.byDate);
+  const sessionsReady = useSessions((s) => s.hydrated);
+  // The grades the log says, where they beat the ones typed at onboarding
+  // (PLAN.md M85). Computed here rather than inside the form so the form
+  // keeps taking plain values and stays easy to test.
+  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const logged = useMemo(
+    () => gradesFromLog(baseline, deriveClimberState(sessions)),
+    [baseline, sessions],
+  );
   // Not `null`: with nothing in `main` the page has no height, so the
   // layout collapses and snaps back a frame later — which reads as a fault
   // rather than as loading (PLAN.md M22).
-  if (!hydrated || !metricsReady) return <PageSkeleton title="Find my program" />;
-  return <FinderForm baseline={baseline} />;
+  if (!hydrated || !metricsReady || !sessionsReady) return <PageSkeleton title="Find my program" />;
+  return <FinderForm baseline={baseline} grades={logged} />;
 }
 
-function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
+function FinderForm({
+  baseline,
+  grades,
+}: {
+  baseline: BaselineAnswers | null;
+  grades: { boulderGrade: string; sportGrade: string };
+}) {
   const gradeOptions = useGradeOptions();
   // Seeded from the first-run baseline where there is one: these are the same
   // five questions, and asking them twice is how a finder gets abandoned.
   const [experience, setExperience] = useState<Experience>(baseline?.experience ?? 'intermediate');
   const [discipline, setDiscipline] = useState<Discipline>(baseline?.discipline ?? 'both');
-  const [boulderGrade, setBoulderGrade] = useState(baseline?.boulderGrade ?? '');
-  const [sportGrade, setSportGrade] = useState(baseline?.sportGrade ?? '');
+  const [boulderGrade, setBoulderGrade] = useState(grades.boulderGrade);
+  const [sportGrade, setSportGrade] = useState(grades.sportGrade);
   const [goal, setGoal] = useState<Goal>(baseline?.goal ?? 'technique');
   const [daysPerWeek, setDaysPerWeek] = useState(baseline?.daysPerWeek ?? 4);
   // Weeks until whatever they are training for. Not part of the baseline: a
@@ -185,8 +203,18 @@ function FinderForm({ baseline }: { baseline: BaselineAnswers | null }) {
   useEffect(() => {
     if (autoRan.current || !baseline) return;
     autoRan.current = true;
-    setResult(findProgram({ ...finderInputFrom(baseline, equipment, blocking, metrics), display }));
-  }, [baseline, equipment, blocking, metrics, display]);
+    setResult(
+      findProgram({
+        ...finderInputFrom(baseline, equipment, blocking, metrics),
+        // The grades the log says, not the ones typed at onboarding
+        // (PLAN.md M85). Applied here too, or the auto-run recommends for a
+        // climber two grades behind the one it is recommending to.
+        ...(grades.boulderGrade ? { boulderGrade: grades.boulderGrade } : {}),
+        ...(grades.sportGrade ? { sportGrade: grades.sportGrade } : {}),
+        display,
+      }),
+    );
+  }, [baseline, equipment, blocking, metrics, display, grades]);
 
   function run() {
     // Carried to the start screen, which is the only place it can be acted

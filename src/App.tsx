@@ -29,6 +29,7 @@ const CareerPage = lazy(() => import('@/features/career/CareerPage').then((m) =>
 const ClimberPage = lazy(() => import('@/features/climber/ClimberPage').then((m) => ({ default: m.ClimberPage })));
 const CoachPage = lazy(() => import('@/features/coach/CoachPage').then((m) => ({ default: m.CoachPage })));
 const FinderPage = lazy(() => import('@/features/finder/FinderPage').then((m) => ({ default: m.FinderPage })));
+const FinishPage = lazy(() => import('@/features/finish/FinishPage').then((m) => ({ default: m.FinishPage })));
 const GymPage = lazy(() => import('@/features/gym/GymPage').then((m) => ({ default: m.GymPage })));
 const DataPage = lazy(() => import('@/features/data/DataPage').then((m) => ({ default: m.DataPage })));
 const InjuryPage = lazy(() => import('@/features/injury/InjuryPage').then((m) => ({ default: m.InjuryPage })));
@@ -182,6 +183,7 @@ function Shell() {
           <Route path="/ascent" component={AscentPage} />
           <Route path="/train" component={TrainPage} />
           <Route path="/find" component={FinderPage} />
+          <Route path="/finish" component={FinishPage} />
           <Route path="/build/:id/session/:typeId" component={SessionEditorPage} />
           <Route path="/build/:id" component={BuilderPage} />
           <Route path="/build" component={BuilderList} />
