@@ -9,6 +9,7 @@
 
 import type { FieldId } from '@/content/types';
 import type { GradeScale } from '@/engine/grades';
+import type { CheckIn } from '@/engine/readiness';
 import type { AttemptOutcome } from './projects';
 import { getDb } from './db';
 import { isDateKey } from '@/engine/dates';
@@ -84,6 +85,14 @@ export interface Session {
    * id rather than by position.
    */
   fields?: Partial<Record<FieldId, string | number>>;
+  /**
+   * The readiness check-in taken before this session (PLAN.md M72).
+   *
+   * Absent when it was never answered, which is most sessions: the card
+   * asks and does not insist, and a skipped check-in must look different
+   * from a session where everything was fine.
+   */
+  checkIn?: CheckIn;
   projectAttempts?: ProjectAttempt[];
   restChecklist?: RestChecklist;
   notes?: string;

@@ -141,6 +141,11 @@ function joinExercise(exercise: Exercise): string {
   return [exercise.name, exercise.notes, exercise.load].filter(Boolean).join(' ');
 }
 
+/** Every part an exercise loads, by its own words. Empty when none match. */
+export function exerciseLoads(exercise: Exercise): BodyPart[] {
+  return partsInText(joinExercise(exercise));
+}
+
 /**
  * Whether an exercise loads any of the injured parts, and why.
  *

@@ -2390,11 +2390,55 @@ something that already exists; six are new. Nothing here is committed.*
   list their fields by hand, so a round-trip test now stands where a field added to one and
   not the other would disappear with nothing to notice it.
 
-- **M72 — A readiness check-in.** Two questions before a session — how the fingers feel, how
-  the sleep was — biasing the day's prescription and the coach's tips, rules-based and
-  honest about being rules. The injury system already proves the pattern: a stored answer
-  that filters what the app suggests. The risk is nagging, so it must be skippable, and its
-  effect must be visible or it is superstition.
+- **M72 — A readiness check-in.** *Done, and kept out of the coach.* Two questions before a
+  session — how the fingers feel, how the sleep was — and a set of rules over the answers.
+  **The proposal wanted it to bias "the day's prescription and the coach's tips", and the
+  coach half is wrong.** `engine/coach.ts` says what it is for in its own first paragraph:
+  "standing observations about the training as a whole — things that stay true until they
+  are dealt with", and *"every rule reads the derived state. None of them stores anything,
+  so a tip cannot go stale"*. How you slept last night is the opposite on both counts, and
+  putting it in there would make it the first tip with a shelf life measured in hours. So
+  this lives with the session it is about, in `engine/readiness.ts`, and the coach is left
+  alone.
+  **Why two questions.** A second question only earns its place if it changes the answer by
+  itself, and a test holds that: sore fingers on a good night and fresh fingers on no sleep
+  are the same call and a different day. One takes the fingerboard away and leaves the
+  volume; the other leaves the fingerboard and takes the intensity. Nine combinations, all
+  nine asserted, because nine is small enough to check and a rules engine nobody has read
+  end to end has a hole in it.
+  **Three places it bites, because a check-in whose only output is a mood word is
+  superstition with a UI.** The lines that load the part get flagged — through
+  `exerciseConflict`, the same mechanism injuries already use, so one flag means one thing
+  across the app. The effort card carries a ceiling next to the RPE chips: **RPE rather than
+  load, deliberately**, because perceived effort self-adjusts — the hang that was a 6 last
+  week is an 8 today and the ceiling catches that without being told. And a test scheduled
+  for the week is told to wait, with the reason that is actually worth paying for: not the
+  safety, the datum. *"A maximum effort on no sleep goes into the record as your strength,
+  and stands there for 8 weeks"* — and the 8 is read out of `STALE_DAYS` rather than typed
+  into the sentence, since the whole force of the line is the number.
+  **It knows what today loads.** "Leave the fingerboard alone" on a mobility day is the sort
+  of line that teaches people to stop reading, so the advice is filtered by the parts the
+  day's own prescription loads. An *unknown* day — a climber with no program — still gets
+  it; an empty one does not, and the difference between `undefined` and `[]` is tested in
+  both directions.
+  **An injury outranks the check-in on a line.** Both warnings on one exercise makes the
+  first mean less, and a standing condition outranks how today happens to feel.
+  **A half-answer is not a check-in.** Nothing is stored until both questions are answered,
+  because filling in the missing half as "fine" puts words in the climber's mouth and then
+  advises them on it. Leave it alone entirely and the card is two rows of chips that do
+  nothing — which is the whole answer to the nagging risk.
+  **A copy bug the browser caught**, and the same shape as M70's: the chip labels were cut
+  out of the sentence labels, and `'Barely slept'.replace('Slept ', '')` is still
+  `'Barely slept'` — so one chip in six came out at twice the width of its neighbours.
+  Short labels are their own strings now, and a test holds every chip to one word.
+  Sixteen mutations, sixteen killed. Verified in a browser on a Structural Integrity day:
+  one answer stored nothing, both stored `{fingers: 'sore', sleep: 'good'}`, the flag landed
+  on Dead Hang and on nothing else in a nine-exercise prescription, and setting the fingers
+  back to fine took the flag, the ceiling and the whole readout away again.
+  *What it does not do:* Home still says "Test week" without knowing the check-in wants it
+  deferred — the deferral shows on the session screen only. And the answers are stored per
+  session but nothing reads the series yet; a run of "barely slept" against the load chart
+  is the obvious next thing and is not built.
 
 - **M73 — Plan the peak, not just the block.** M46 gave the app ACWR; M56 and M57 gave it
   time available. The next step is projecting *forward*: given a trip date, what the next

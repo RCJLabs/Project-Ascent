@@ -59,7 +59,16 @@ import {useGradeLabel} from '@/ui/useGrade';
 import { alreadySaved, applyTemplate, rankTemplates, suggestName } from '@/engine/templates';
 import { canMerge, describeSession } from '@/engine/sessionEdit';
 import { concerning, injuryPolicy } from '@/engine/injury';
-import { describeParts, drillConflict, exerciseConflict } from '@/engine/bodyLoad';
+import {
+  FINGER_ANSWERS,
+  FINGER_CHIP,
+  SLEEP_ANSWERS,
+  SLEEP_CHIP,
+  readinessFor,
+  type CheckIn,
+  type ReadinessCall,
+} from '@/engine/readiness';
+import { describeParts, drillConflict, exerciseConflict, exerciseLoads } from '@/engine/bodyLoad';
 import { BadParameter } from '@/ui/RecordNotFound';
 
 const REST_ITEMS = [
@@ -525,6 +534,14 @@ function SessionEditor({
   }
 
   const blocks = type && day?.phase ? prescriptionFor(type, day.phase, trackId) : [];
+  // What today actually loads, so the check-in does not tell a climber on a
+  // legs-and-core day to leave the fingerboard alone.
+  const loads = type
+    ? [...new Set(blocks.flatMap((b) => b.entry.exercises).flatMap(exerciseLoads))]
+    : undefined;
+  const readiness = session.checkIn
+    ? readinessFor(session.checkIn, { ...(loads ? { loads } : {}), test: day?.test !== undefined })
+    : null;
 
   return (
     <>
@@ -612,6 +629,12 @@ function SessionEditor({
         </Card>
       ) : (
         <>
+          <CheckInCard
+            checkIn={session.checkIn}
+            readiness={readiness}
+            onAnswer={(checkIn) => patch({ checkIn })}
+          />
+
           <Card title="Climbs">
             <ClimbEntry
               scale={scale}
@@ -701,11 +724,26 @@ function SessionEditor({
                             {(() => {
                               // Advisory, never a refusal to show the program.
                               const clash = exerciseConflict(ex, hurtParts);
-                              return clash ? (
-                                <div className="text-warn text-xs mt-1 flex items-start gap-1.5">
+                              if (clash) {
+                                return (
+                                  <div className="text-warn text-xs mt-1 flex items-start gap-1.5">
+                                    <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                                    <span>
+                                      Loads {describeParts(clash.parts)} — {clash.because}.
+                                    </span>
+                                  </div>
+                                );
+                              }
+                              // One warning a line. An injury is a standing
+                              // condition and today's check-in is not; saying
+                              // both on the same exercise makes the first mean
+                              // less, and the injury is the one that outranks.
+                              const today = readiness ? exerciseConflict(ex, readiness.flag) : null;
+                              return today ? (
+                                <div className="text-accent text-xs mt-1 flex items-start gap-1.5">
                                   <AlertTriangle size={12} className="shrink-0 mt-0.5" />
                                   <span>
-                                    Loads {describeParts(clash.parts)} — {clash.because}.
+                                    {readiness!.flagBecause} — {today.because}.
                                   </span>
                                 </div>
                               ) : null;
@@ -810,6 +848,13 @@ function SessionEditor({
                   </Chip>
                 ))}
               </div>
+              {readiness?.cap !== null && readiness !== null && (
+                // Said, not enforced. The climber gets to log what the
+                // session actually was, including that they ignored this.
+                <p className="text-xs text-ink-soft mt-1.5">
+                  {readiness.because} — the check-in suggested {readiness.cap} or below.
+                </p>
+              )}
             </div>
             <label className="text-sm block mb-3">
               <span className="block text-ink-soft mb-1">Duration (minutes)</span>
@@ -944,6 +989,101 @@ const OUTCOMES: { value: AttemptOutcome; label: string }[] = [
  * Sparse on purpose — clearing an answer removes it rather than storing an
  * empty string, so a session never claims a blank it was not given.
  */
+/**
+ * The readiness check-in (PLAN.md M72).
+ *
+ * Two questions, above the session, and no insistence: leave them and the
+ * card is three lines of chips that do nothing. The readout appears only
+ * once both are answered, because a check-in with one answer is not a
+ * check-in — and guessing the missing half as "fine" would put words in the
+ * climber's mouth and then advise them on it.
+ *
+ * Everything it decides is shown somewhere it bites: the ceiling next to the
+ * RPE chips, the flags on the prescription lines that load the part. The
+ * card itself only says what the rules made of the answers.
+ */
+const CALL_TONE: Record<ReadinessCall, string> = {
+  full: 'text-positive',
+  adjusted: 'text-accent',
+  easy: 'text-warn',
+};
+
+function CheckInCard({
+  checkIn,
+  readiness,
+  onAnswer,
+}: {
+  checkIn?: CheckIn;
+  readiness: ReturnType<typeof readinessFor> | null;
+  onAnswer: (checkIn: CheckIn) => void;
+}) {
+  const [draft, setDraft] = useState<Partial<CheckIn>>(checkIn ?? {});
+
+  function pick(patch: Partial<CheckIn>) {
+    const next = { ...draft, ...patch };
+    setDraft(next);
+    if (next.fingers && next.sleep) onAnswer(next as CheckIn);
+  }
+
+  return (
+    <Card title="Before you start">
+      <fieldset className="mb-3">
+        <legend className="text-sm text-ink-soft mb-1.5">How do the fingers feel?</legend>
+        <div className="grid grid-cols-3 gap-2">
+          {FINGER_ANSWERS.map((answer) => (
+            <Chip
+              key={answer}
+              active={draft.fingers === answer}
+              onClick={() => pick({ fingers: answer })}
+              className="justify-center text-center px-1"
+            >
+              {FINGER_CHIP[answer]}
+            </Chip>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="text-sm text-ink-soft mb-1.5">How was the sleep?</legend>
+        <div className="grid grid-cols-3 gap-2">
+          {SLEEP_ANSWERS.map((answer) => (
+            <Chip
+              key={answer}
+              active={draft.sleep === answer}
+              onClick={() => pick({ sleep: answer })}
+              className="justify-center text-center px-1"
+            >
+              {SLEEP_CHIP[answer]}
+            </Chip>
+          ))}
+        </div>
+      </fieldset>
+
+      {readiness && (
+        <div className="mt-3 pt-3 border-t border-line">
+          <p className={`font-bold text-sm ${CALL_TONE[readiness.call]}`}>{readiness.headline}</p>
+          <p className="text-xs text-ink-soft mt-0.5">{readiness.because}</p>
+          {readiness.advice.length > 0 && (
+            <ul className="mt-2 grid grid-cols-1 gap-1.5">
+              {readiness.advice.map((line) => (
+                <li key={line} className="text-sm leading-relaxed text-ink-soft">
+                  {line}
+                </li>
+              ))}
+            </ul>
+          )}
+          {readiness.deferTest && (
+            <p className="text-warn text-xs mt-2 flex items-start gap-1.5">
+              <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+              <span>Let the test wait for a better day. {readiness.deferTest}</span>
+            </p>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function FieldsCard({
   session,
   type,
