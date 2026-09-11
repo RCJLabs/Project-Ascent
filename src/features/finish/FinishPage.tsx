@@ -2,7 +2,15 @@ import { useEffect, useMemo } from 'react';
 import { Link } from 'wouter';
 import { ChevronRight, Ruler, Search } from 'lucide-react';
 import { getProgram } from '@/content/programs';
-import { blockEnd, describeBlockEnd } from '@/engine/blockEnd';
+import { blockEnd, describeBlockEnd, programForRecord } from '@/engine/blockEnd';
+import {
+  findBlock,
+  outcomeOf,
+  rowWindow,
+  sortBlocks,
+  weeksRun,
+  type BlockRecord,
+} from '@/engine/blocks';
 import { describeBlock } from '@/engine/blockReport';
 import { formatEntry } from '@/engine/assessments';
 import { fromKey, today } from '@/engine/dates';
@@ -16,6 +24,7 @@ import { EmptyState } from '@/ui/EmptyState';
 import { PageGrid } from '@/ui/PageGrid';
 import { PageHeader } from '@/ui/PageHeader';
 import { PageSkeleton } from '@/ui/Skeleton';
+import { RecordNotFound } from '@/ui/RecordNotFound';
 import { BlockReportChart, BlockReportRest } from '@/ui/charts/BlockReportChart';
 
 /**
@@ -34,7 +43,59 @@ import { BlockReportChart, BlockReportRest } from '@/ui/charts/BlockReportChart'
  * many words rather than guessing.
  */
 
-export function FinishPage() {
+const OUTCOME_WORD: Record<ReturnType<typeof outcomeOf>, string> = {
+  running: 'running',
+  completed: 'ran to the end',
+  left: 'left early',
+  unknown: 'no record of how it ended',
+};
+
+/**
+ * Every block the climber has run (PLAN.md M87).
+ *
+ * The list is the milestone: before this the app held one start date per
+ * program, so a block you switched away from was unreachable and one you
+ * restarted was gone. Each row says what became of it, because a window on
+ * a calendar cannot — a block left in week six and one run to its last day
+ * look identical from the dates alone.
+ */
+function BlockHistory({ history, current }: { history: BlockRecord[]; current: BlockRecord | null }) {
+  if (history.length <= 1) return null;
+  return (
+    <Card title="Blocks you have run">
+      <ul className="grid grid-cols-1 gap-2">
+        {history.map((row) => {
+          const outcome = outcomeOf(row, today());
+          const { from } = rowWindow(row);
+          const here = row.id === current?.id;
+          return (
+            <li key={row.id}>
+              <Link
+                href={`/finish/${encodeURIComponent(row.id)}`}
+                className={`focus-ring block rounded-xl p-3 ${here ? 'bg-accent/10 border border-accent' : 'bg-sunken'}`}
+                aria-current={here ? 'page' : undefined}
+              >
+                <div className="flex items-baseline gap-2">
+                  <span className="font-semibold text-sm min-w-0 truncate">{row.name}</span>
+                  <span className="text-xs text-ink-soft shrink-0 ml-auto tabular-nums">
+                    {fromKey(from).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                  </span>
+                </div>
+                <p className="text-xs text-ink-soft mt-0.5">
+                  {outcome === 'running'
+                    ? `Week ${weeksRun(row, today())} of ${row.weeks} · running`
+                    : `${weeksRun(row, today())} of ${row.weeks} weeks · ${OUTCOME_WORD[outcome]}`}
+                </p>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
+export function FinishPage({ params }: { params?: { id?: string } } = {}) {
   const entries = useMetrics((s) => s.entries);
   const metricsReady = useMetrics((s) => s.hydrated);
   const loadMetrics = useMetrics((s) => s.load);
@@ -43,20 +104,46 @@ export function FinishPage() {
   const units = useSettings((s) => s.units);
   const activeProgramId = useProfile((s) => s.activeProgramId);
   const startDates = useProfile((s) => s.startDates);
+  const blocks = useProfile((s) => s.blocks);
 
   useEffect(() => {
     if (!metricsReady) void loadMetrics();
   }, [metricsReady, loadMetrics]);
 
-  const program = activeProgramId ? getProgram(activeProgramId) : undefined;
-  const startDate = activeProgramId ? startDates[activeProgramId] : undefined;
-
-  const end = useMemo(
-    () => (program && startDate ? blockEnd({ program, startDate, entries, today: today() }) : null),
-    [program, startDate, entries],
+  const history = useMemo(() => sortBlocks(blocks), [blocks]);
+  const asked = params?.id ? decodeURIComponent(params.id) : null;
+  // The block asked for, or the most recent one when the url names none.
+  // A url naming a block the history does not have is answered as a missing
+  // record, like every other `:id` route: quietly showing a *different*
+  // block than the one asked for is the worse failure.
+  const chosen = useMemo(
+    () => (asked === null ? (history[0] ?? null) : findBlock(history, asked)),
+    [history, asked],
   );
 
+  const end = useMemo(() => {
+    if (chosen === null) {
+      // No history at all: fall back to the live program, which is what a
+      // climber who started one before this version kept records has.
+      const live = activeProgramId ? getProgram(activeProgramId) : undefined;
+      const from = activeProgramId ? startDates[activeProgramId] : undefined;
+      return live && from ? blockEnd({ program: live, startDate: from, entries, today: today() }) : null;
+    }
+    const program = programForRecord(chosen);
+    if (!program) return null;
+    return blockEnd({ program, startDate: chosen.startDate, entries, today: today(), record: chosen });
+  }, [chosen, activeProgramId, startDates, entries]);
+
   if (!metricsReady || !profileReady) return <PageSkeleton />;
+
+  if (asked !== null && chosen === null) {
+    return (
+      <RecordNotFound what="That block" backTo="/finish" backLabel="Block review">
+        It may have been started on a device whose backup you have not restored, or the link may
+        be older than the history.
+      </RecordNotFound>
+    );
+  }
 
   if (end === null) {
     return (
@@ -65,9 +152,11 @@ export function FinishPage() {
         <PageHeader title="Block review" />
         <PageGrid>
           <EmptyState>
-            No program is running, so there is no block to review. Start one and this page fills in
-            as it goes.
+            {chosen === null
+              ? 'No program has been run yet, so there is no block to review. Start one and this page fills in as it goes.'
+              : `${chosen.name} ran from ${chosen.startDate}, and the app no longer has the program itself — so there is nothing left to measure it against.`}
           </EmptyState>
+          <BlockHistory history={history} current={chosen} />
         </PageGrid>
       </>
     );
@@ -166,6 +255,8 @@ export function FinishPage() {
             </ul>
           </Card>
         )}
+
+        <BlockHistory history={history} current={chosen} />
 
         <Card title="Or start from your own numbers">
           <p className="text-sm text-ink-soft mb-3 leading-relaxed">

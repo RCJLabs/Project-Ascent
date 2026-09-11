@@ -5,6 +5,8 @@ import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
 import { today } from '@/engine/dates';
 import { readBaseline, type BaselineAnswers } from '@/engine/onboarding';
+import { closeBlock, openBlock, reconstructBlocks, type BlockRecord } from '@/engine/blocks';
+import { getProgram } from '@/content/programs';
 import { pruneOverrides, withOverride, type WeekOverrides } from '@/engine/reschedule';
 import type { WeekPlan } from '@/engine/scheduler';
 import { DEFAULT_PALETTE, type AvatarPalette } from '@/engine/avatar';
@@ -62,8 +64,22 @@ export const STATUS_LABEL: Record<InjuryStatus, { label: string; blurb: string }
 export interface ProfileState {
   hydrated: boolean;
   activeProgramId: string | null;
-  /** programId → ISO date the program was started. */
+  /**
+   * programId → ISO date the program was started.
+   *
+   * The live block's start, and only that. It cannot hold a history — one
+   * entry per program, overwritten on a restart — which is what `blocks`
+   * below is for (PLAN.md M87). Kept because every screen reads the running
+   * block through it and `blocks` is the record of what has been run.
+   */
   startDates: Record<string, string>;
+  /**
+   * Every block the climber has run, newest last. See engine/blocks.ts.
+   *
+   * Exactly one row is open at a time, and the open row is the same block
+   * `activeProgramId` and `startDates` describe.
+   */
+  blocks: BlockRecord[];
   /** programId → chosen track, for programs that have them. */
   tracks: Record<string, string>;
   /** programId → the weekly plan the climber committed to. */
@@ -116,6 +132,7 @@ const KEY = 'active-plan';
 interface Persisted {
   activeProgramId: string | null;
   startDates: Record<string, string>;
+  blocks: BlockRecord[];
   tracks: Record<string, string>;
   plans: Record<string, WeekPlan>;
   weekOverrides: Record<string, WeekOverrides>;
@@ -134,6 +151,7 @@ function snapshot(s: ProfileState): Persisted {
   return {
     activeProgramId: s.activeProgramId,
     startDates: s.startDates,
+    blocks: s.blocks,
     tracks: s.tracks,
     plans: s.plans,
     weekOverrides: s.weekOverrides,
@@ -177,6 +195,7 @@ export const useProfile = create<ProfileState>((set, get) => ({
   hydrated: false,
   activeProgramId: null,
   startDates: {},
+  blocks: [],
   tracks: {},
   plans: {},
   weekOverrides: {},
@@ -213,9 +232,16 @@ export const useProfile = create<ProfileState>((set, get) => ({
   startProgram: (programId, plan, trackId, restart = false) => {
     const s = get();
     const keepStart = !restart && s.startDates[programId];
+    const startDate = keepStart ? s.startDates[programId]! : today();
+    const program = getProgram(programId);
     set({
       activeProgramId: programId,
-      startDates: { ...s.startDates, [programId]: keepStart ? s.startDates[programId]! : today() },
+      startDates: { ...s.startDates, [programId]: startDate },
+      // Opening a block closes whatever was open, so picking this one up
+      // again mid-run re-opens the same row rather than adding a second
+      // (PLAN.md M87). Without a resolvable program there is nothing to
+      // write down — name and length are snapshots taken here.
+      blocks: program ? openBlock(s.blocks, { program, startDate, trackId }, today()) : s.blocks,
       tracks: trackId ? { ...s.tracks, [programId]: trackId } : s.tracks,
       plans: { ...s.plans, [programId]: plan },
     });
@@ -244,7 +270,7 @@ export const useProfile = create<ProfileState>((set, get) => ({
   },
 
   stopProgram: () => {
-    set({ activeProgramId: null });
+    set({ activeProgramId: null, blocks: closeBlock(get().blocks, today(), 'stopped') });
     void save(snapshot(get()));
   },
 
@@ -310,6 +336,26 @@ function readInjury(injury: Injury): Injury {
   };
 }
 
+/**
+ * The block history, or one reconstructed from what came before it.
+ *
+ * Every climber who used the app before M87 has `startDates` and no
+ * `blocks`, and throwing that away would make the history start today for
+ * someone who has trained for a year. `reconstructBlocks` marks every row it
+ * builds, so nothing reports a reconstructed block as finished or abandoned
+ * — the old shape does not know.
+ */
+function readBlocks(value: Partial<Persisted>): BlockRecord[] {
+  if (Array.isArray(value.blocks) && value.blocks.length > 0) return value.blocks;
+  return reconstructBlocks({
+    startDates: value.startDates ?? {},
+    activeProgramId: value.activeProgramId ?? null,
+    nameFor: (id) => getProgram(id)?.name,
+    weeksFor: (id) => getProgram(id)?.weeks,
+    ...(value.tracks ? { tracks: value.tracks } : {}),
+  });
+}
+
 export async function hydrateProfile(): Promise<void> {
   try {
     const db = await getDb();
@@ -319,6 +365,7 @@ export async function hydrateProfile(): Promise<void> {
       hydrated: true,
       activeProgramId: value.activeProgramId ?? null,
       startDates: value.startDates ?? {},
+      blocks: readBlocks(value),
       tracks: value.tracks ?? {},
       plans: value.plans ?? {},
       weekOverrides: value.weekOverrides ?? {},

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Session } from '@/db/sessions';
 import type { PersonalRecord } from './derive';
+import type { BlockRecord } from './blocks';
 import {
   availableYears,
   changes,
@@ -329,5 +330,68 @@ describe('describeYear dates', () => {
     const line = describeYear(review).find((l) => l.includes('quiet stretch'));
     expect(line).toContain('June');
     expect(line).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  });
+});
+
+describe('the blocks a year held (PLAN.md M87)', () => {
+  const block = (patch: Partial<BlockRecord>): BlockRecord => ({
+    id: 'a#2026-01-04',
+    programId: 'a',
+    name: 'Iron Grip',
+    startDate: '2026-01-04',
+    weeks: 12,
+    endedAt: '2026-03-28',
+    ...patch,
+  });
+
+  const year = (blocks: BlockRecord[]) =>
+    reviewYear(
+      { sessions: [session('2026-02-02')], records: [], blocks, today: '2026-12-31' },
+      2026,
+    );
+
+  it('keeps only the ones started inside the range', () => {
+    const review = year([
+      block({}),
+      block({ id: 'b#2025-06-01', startDate: '2025-06-01', endedAt: '2025-08-23' }),
+      block({ id: 'c#2027-01-03', startDate: '2027-01-03', endedAt: null }),
+    ]);
+    expect(review.blocks.map((b) => b.startDate)).toEqual(['2026-01-04']);
+  });
+
+  it('says nothing about blocks when there were none', () => {
+    expect(describeYear(year([])).join(' ')).not.toContain('block');
+  });
+
+  it('names them, and counts the ones run to the end', () => {
+    const said = describeYear(
+      year([
+        block({}),
+        block({ id: 'b#2026-05-03', name: 'Peak Performance', startDate: '2026-05-03', endedAt: '2026-06-01' }),
+      ]),
+    ).join(' ');
+    // Chronological: the year reads forwards, though the history list is
+    // newest-first.
+    expect(said).toContain('2 blocks started: Iron Grip and Peak Performance');
+    expect(said).toContain('1 run to the end');
+  });
+
+  it('agrees with itself about one', () => {
+    const said = describeYear(year([block({})])).join(' ');
+    expect(said).toContain('One block started: Iron Grip');
+    expect(said).toContain('All run to the end');
+  });
+
+  it('does not count a reconstructed block as finished', () => {
+    const said = describeYear(year([block({ reconstructed: true })])).join(' ');
+    expect(said).toContain('One block started');
+    expect(said).not.toContain('run to the end');
+  });
+
+  it('names the same program once when it was run twice', () => {
+    const said = describeYear(
+      year([block({}), block({ id: 'a#2026-06-07', startDate: '2026-06-07', endedAt: '2026-08-29' })]),
+    ).join(' ');
+    expect(said).toContain('2 blocks started: Iron Grip.');
   });
 });

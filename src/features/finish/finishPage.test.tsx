@@ -10,6 +10,7 @@ import { addDays, daysBetween, startOfWeek, today } from '@/engine/dates';
 import { blockWindow } from '@/engine/plan';
 import { planFromLayout } from '@/engine/scheduler';
 import { useProfile } from '@/store/profile';
+import type { BlockRecord } from '@/engine/blocks';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { FinishPage } from './FinishPage';
 import { HomePage } from '@/features/home/HomePage';
@@ -58,7 +59,7 @@ describe('the finish page', () => {
   it('says there is nothing to review with no program', async () => {
     await hydrate();
     renderAt('/finish', <FinishPage />);
-    expect(screen.getByText(/No program is running/)).toBeTruthy();
+    expect(screen.getByText(/No program has been run yet/)).toBeTruthy();
   });
 
   it('shows the block while it is still running', async () => {
@@ -149,5 +150,130 @@ describe('home, once the block has run out', () => {
     running(addDays(today(), -14));
     renderAt('/', <HomePage />);
     expect(screen.queryByText(/has run its course/)).toBeNull();
+  });
+});
+
+/**
+ * A past block is reachable (PLAN.md M87).
+ *
+ * The whole point of keeping a history: before this, the block you
+ * finished last week became invisible the moment you started the next one,
+ * because every screen read `activeProgramId`.
+ */
+describe('the blocks you have run', () => {
+  const row = (patch: Partial<BlockRecord>): BlockRecord => ({
+    id: 'iron_grip#2026-01-04',
+    programId: 'iron_grip',
+    name: 'Iron Grip',
+    startDate: '2026-01-04',
+    weeks: 12,
+    endedAt: '2026-03-28',
+    ...patch,
+  });
+
+  function withHistory(blocks: BlockRecord[], active: string | null = null) {
+    useProfile.setState({
+      activeProgramId: active,
+      startDates: {},
+      plans: {},
+      blocks,
+    });
+  }
+
+  it('shows no list with only one block', async () => {
+    await hydrate();
+    withHistory([row({})]);
+    renderAt('/finish', <FinishPage />);
+    expect(screen.queryByText('Blocks you have run')).toBeNull();
+  });
+
+  it('lists them newest first once there is more than one', async () => {
+    await hydrate();
+    withHistory([
+      row({}),
+      row({ id: `peak_performance#${today()}`, programId: 'peak_performance', name: 'Peak Performance', startDate: today(), endedAt: null }),
+    ]);
+    renderAt('/finish', <FinishPage />);
+    const names = [...screen.getByText('Blocks you have run').closest('section, div')!.querySelectorAll('a')].map(
+      (a) => a.textContent,
+    );
+    expect(names[0]).toContain('Peak Performance');
+    expect(names[1]).toContain('Iron Grip');
+  });
+
+  it('opens the block the url names rather than the newest', async () => {
+    await hydrate();
+    withHistory([
+      row({}),
+      row({ id: `peak_performance#${today()}`, programId: 'peak_performance', name: 'Peak Performance', startDate: today(), endedAt: null }),
+    ]);
+    renderAt('/finish/iron_grip%232026-01-04', <FinishPage params={{ id: 'iron_grip%232026-01-04' }} />);
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Iron Grip');
+  });
+
+  it('says what became of each one', async () => {
+    // The open block starts this week, so it is genuinely inside its
+    // weeks — a fixture dated in the past reads as completed now, which is
+    // the fix: an open row whose window has expired is not running.
+    await hydrate();
+    withHistory([
+      row({ endedAt: '2026-02-01' }),
+      row({ id: `peak_performance#${today()}`, programId: 'peak_performance', name: 'Peak Performance', startDate: today(), endedAt: null }),
+    ]);
+    renderAt('/finish', <FinishPage />);
+    const list = screen.getByText('Blocks you have run').closest('section, div')!;
+    expect(list.textContent).toContain('left early');
+    expect(list.textContent).toContain('running');
+  });
+
+  it('does not claim to know how a reconstructed block ended', async () => {
+    await hydrate();
+    withHistory([
+      row({ reconstructed: true }),
+      row({ id: `peak_performance#${today()}`, programId: 'peak_performance', name: 'Peak Performance', startDate: today(), endedAt: null }),
+    ]);
+    renderAt('/finish', <FinishPage />);
+    const list = screen.getByText('Blocks you have run').closest('section, div')!;
+    expect(list.textContent).toContain('no record of how it ended');
+    expect(list.textContent).not.toContain('ran to the end');
+  });
+
+  it('answers a url naming a block it does not have as a missing record', async () => {
+    // Quietly showing a different block than the one asked for is the
+    // worse failure, and every other `:id` route in the app says so.
+    await hydrate();
+    withHistory([row({})]);
+    renderAt('/finish/gone%23nope', <FinishPage params={{ id: 'gone%23nope' }} />);
+    expect(screen.getByText(/That block/)).toBeTruthy();
+    expect(screen.queryByText('Iron Grip')).toBeNull();
+  });
+
+  it('says so when the block ran a program the app no longer has', async () => {
+    await hydrate();
+    withHistory([row({ id: 'deleted#2026-01-04', programId: 'deleted', name: 'A Fork I Deleted' })]);
+    renderAt('/finish', <FinishPage />);
+    expect(screen.getByText(/no longer has the program itself/)).toBeTruthy();
+  });
+});
+
+describe('an open block whose weeks have run out', () => {
+  it('is not still described as running', async () => {
+    // Found in a browser: "Week 12 of 12 · running" against a block that
+    // had ended four weeks earlier. Nothing closes a row when its window
+    // expires — it stays open until the climber starts something else.
+    await hydrate();
+    useProfile.setState({
+      activeProgramId: 'iron_grip',
+      startDates: {},
+      plans: {},
+      blocks: [
+        { id: 'iron_grip#2026-01-04', programId: 'iron_grip', name: 'Iron Grip', startDate: '2026-01-04', weeks: 12, endedAt: null },
+        { id: 'base_camp#2025-06-01', programId: 'base_camp', name: 'Base Camp', startDate: '2025-06-01', weeks: 12, endedAt: '2025-08-23' },
+      ],
+    });
+    renderAt('/finish', <FinishPage />);
+    const list = screen.getByText('Blocks you have run').closest('section, div')!;
+    expect(list.textContent).not.toContain('running');
+    expect(list.textContent).toContain('ran to the end');
   });
 });

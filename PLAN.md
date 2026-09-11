@@ -3072,20 +3072,47 @@ a kept one.
 
 **The large one.**
 
-- **M87 — The training history the app does not keep.** `profile.startDates` is
-  `Record<programId, string>` — **one date per program** — and `startProgram` overwrites it
-  on a restart (`profile.ts:218`). Nothing anywhere records that a block *happened*. The
-  consequences compound: run Iron Grip twice and the first block is gone; switch programs
-  and M85's `/finish` can no longer describe the one you just finished, because it reads
-  the *active* program; M84's block report has no previous block to compare against; and
-  the year review counts sessions and grades but cannot say "you ran three blocks this
-  year". A climber two years in has no record of what they have actually trained.
-  Several steps, and they have to land in this order: a `blocks` store (program, start,
-  end, the plan and track it ran with); writing a row on start, restart and switch, with a
-  migration that turns today's `startDates` into rows so existing climbers keep their
-  current block; `/finish` reading a *past* block by id rather than only the live one; a
-  history page listing them; and the year review gaining the one line it cannot currently
-  say. Feeds M88 and M91.
+- **M87 — The training history the app does not keep.** *Done, in the five steps proposed,
+  with the loss sharpened into two different losses.*
+  The premise held and reading the code split it. A **restart** overwrites `startDates`
+  and destroys the earlier run outright. A **switch** does not: the old date survives in
+  the record and becomes unreachable, because every screen that reads a block reads
+  `activeProgramId`. Two failures, one shape.
+  **`engine/blocks.ts` records a block when it opens and closes it when it stops being the
+  one you are running.** Every transition that opens a block also ends one, so `openBlock`
+  does both and leaving two rows open is not expressible. `name` and `weeks` are snapshots
+  and deliberately break the derive-don't-store rule: M56's length adaptation is a single
+  current value per program, so a block run over eight weeks would silently become twelve
+  the day the same program was set back to full length. What a block *was* is not
+  derivable from the present.
+  **`endedAt` is not the end of the window, and that is the point.** The window has always
+  been derivable; whether the climber stayed is not. A block abandoned in week six and one
+  run to its last day have identical windows.
+  **The migration keeps what the old shape knows and refuses to invent the rest.** Rows are
+  rebuilt from `startDates`, each closed where the *next* block began — the one thing the
+  old shape genuinely tells you — and every one is marked `reconstructed`, so `outcomeOf`
+  returns `unknown` rather than reporting a block as finished or abandoned. An empty stored
+  history is treated as unknown rather than as none, because a profile saved from default
+  state before its first hydrate writes one.
+  **`/finish` now reads any block**, `/finish/:id`, with a list of every block run beneath
+  it. A url naming a block the history does not have is answered as a missing record — the
+  `notFound` guard caught a first draft that quietly fell back to the newest instead, and
+  the guard was right: showing a different block than the one asked for is the worse
+  failure. **The year review gained its line**: *"2 blocks started: Iron Grip and Peak
+  Performance. 1 run to the end."*
+  Thirty-four mutations, thirty-two killed. One survivor was a redundant sort inside
+  `activeBlock` — the one-open-row rule is held at the write side, where it can be — and it
+  was deleted; the other wanted the empty-history test above.
+  **The browser found the real bug, and it is M85's fault one level up.** The history read
+  *"Iron Grip — Week 12 of 12 · running"* against a block that had ended four weeks
+  earlier, because `endedAt === null` means "still the active program", not "still inside
+  its weeks" — nothing closes a row when a window simply expires. `outcomeOf` takes the
+  date now and a block past its last week reads as completed. Verified in both themes
+  against a profile seeded in the pre-M87 shape, which is the only way to test a migration
+  honestly. 2,580 tests pass.
+  *Worth knowing:* `startDates` stays. It is the live block's start and every screen reads
+  the running block through it; `blocks` is the record of what has been run, and the open
+  row always describes the same block. Feeds M88 and M91.
 
 **The app itself.**
 

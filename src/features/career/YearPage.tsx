@@ -23,6 +23,7 @@ import { PageHeader } from '@/ui/PageHeader';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { yearCard } from '@/ui/shareCard';
 import { BadParameter } from '@/ui/RecordNotFound';
+import { useProfile } from '@/store/profile';
 
 /**
  * A year, summarised.
@@ -54,6 +55,7 @@ function YearReview({ year: requested }: { year?: string }) {
   const params = { year: requested };
   const byDate = useSessions((s) => s.byDate);
   const display = useSettings((s) => s.display);
+  const blocks = useProfile((s) => s.blocks);
   const [, navigate] = useLocation();
 
   const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
@@ -63,8 +65,8 @@ function YearReview({ year: requested }: { year?: string }) {
 
   const review = useMemo(() => {
     const state = deriveClimberState(sessions);
-    return reviewYear({ sessions, records: state.personalRecords, display }, year);
-  }, [sessions, display, year]);
+    return reviewYear({ sessions, records: state.personalRecords, display, blocks }, year);
+  }, [sessions, display, year, blocks]);
 
   const lines = describeYear(review);
   const rows = changes(review);

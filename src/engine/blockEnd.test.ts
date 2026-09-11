@@ -5,7 +5,8 @@ import type { Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import { addDays } from './dates';
 import { blockWindow } from './plan';
-import { blockEnd, describeBlockEnd } from './blockEnd';
+import { blockEnd, describeBlockEnd, programForRecord } from './blockEnd';
+import type { BlockRecord } from './blocks';
 
 /**
  * The end of a block (PLAN.md M85).
@@ -119,5 +120,78 @@ describe('the retest you owe', () => {
     const result = end([], addDays(LAST, 1), mode);
     expect(result.report).toBeNull();
     expect(result.owed).toEqual([]);
+  });
+});
+
+describe('describing a past block (PLAN.md M87)', () => {
+  const row = (patch: Partial<BlockRecord> = {}): BlockRecord => ({
+    id: `iron_grip#${START}`,
+    programId: 'iron_grip',
+    name: 'Iron Grip',
+    startDate: START,
+    weeks: IRON_GRIP.weeks,
+    endedAt: LAST,
+    ...patch,
+  });
+
+  const forRow = (r: BlockRecord) =>
+    blockEnd({ program: IRON_GRIP, startDate: r.startDate, entries: [], today: addDays(LAST, 30), record: r });
+
+  it('reads the outcome from the record, not from the calendar', () => {
+    expect(forRow(row()).outcome).toBe('completed');
+    expect(forRow(row({ endedAt: addDays(LAST, -40) })).outcome).toBe('left');
+    expect(forRow(row({ reconstructed: true })).outcome).toBe('unknown');
+  });
+
+  it('does not tell a climber who walked away that it ran out on them', () => {
+    const text = describeBlockEnd(forRow(row({ endedAt: addDays(START, 20) })));
+    // Twenty days past a Monday start is day 21 of the block's week, which
+    // is the start of week four.
+    expect(text).toContain('You left Iron Grip after 4 of its 12 weeks');
+    expect(text).toContain('not a verdict');
+    expect(text).not.toContain('ran out');
+  });
+
+  it('admits it does not know how a reconstructed block ended', () => {
+    const text = describeBlockEnd(forRow(row({ reconstructed: true })));
+    expect(text).toContain('no record of how it ended');
+    expect(text).not.toContain('ran out');
+  });
+
+  it('still says it ran out when the climber was on it at the end', () => {
+    expect(describeBlockEnd(forRow(row()))).toContain('ran out');
+  });
+
+  it('assumes the live block ran out rather than was left', () => {
+    // Without a record there is nothing to say otherwise, and the live
+    // block is by definition one the climber is still on.
+    expect(blockEnd({ program: IRON_GRIP, startDate: START, entries: [], today: addDays(LAST, 1) }).outcome).toBe('completed');
+    expect(blockEnd({ program: IRON_GRIP, startDate: START, entries: [], today: LAST }).outcome).toBe('running');
+  });
+});
+
+describe('the program a past block ran', () => {
+  it('is the written one when the block ran it at full length', async () => {
+    await loadPrograms();
+    const found = programForRecord({
+      id: 'x', programId: 'iron_grip', name: 'Iron Grip', startDate: START, weeks: IRON_GRIP.weeks, endedAt: LAST,
+    });
+    expect(found!.weeks).toBe(IRON_GRIP.weeks);
+  });
+
+  it('is adapted back to the length the block actually ran', async () => {
+    // M56 stores one length per program, so the current setting would
+    // describe an eight-week block as twelve.
+    await loadPrograms();
+    const found = programForRecord({
+      id: 'x', programId: 'iron_grip', name: 'Iron Grip', startDate: START, weeks: 8, endedAt: LAST,
+    });
+    expect(found!.weeks).toBe(8);
+  });
+
+  it('is null for a program the app no longer has', () => {
+    expect(programForRecord({
+      id: 'x', programId: 'deleted_fork', name: 'Gone', startDate: START, weeks: 12, endedAt: LAST,
+    })).toBeNull();
   });
 });

@@ -35,6 +35,8 @@ import { deriveCareer, type CareerMilestone } from './career';
 import type { PersonalRecord } from './derive';
 import { daysBetween, startOfWeek, today as todayKey } from './dates';
 import { gradeOrdinal, type GradeDisplay } from './grades';
+import { outcomeOf, sortBlocks, type BlockRecord } from './blocks';
+import { joinCapped } from './phrase';
 
 export interface Totals {
   sessions: number;
@@ -64,6 +66,13 @@ export interface Gap {
 export interface Review {
   from: string;
   to: string;
+  /**
+   * Blocks that started inside the range, newest first (PLAN.md M87).
+   *
+   * Keyed on the start rather than the end: a block is a thing you *began*,
+   * and one straddling New Year belongs to the year you committed to it.
+   */
+  blocks: BlockRecord[];
   totals: Totals;
   /** The matching slice of the previous year, or null when there is none. */
   previous: Totals | null;
@@ -89,6 +98,8 @@ export interface ReviewInput {
   records: PersonalRecord[];
   display?: GradeDisplay;
   today?: string;
+  /** Blocks run, for the one line this could never say (PLAN.md M87). */
+  blocks?: readonly BlockRecord[];
 }
 
 const EMPTY = (): Totals => ({
@@ -209,6 +220,7 @@ export function reviewRange(input: ReviewInput, from: string, to: string): Revie
     firsts: career.achieved.filter((m) => m.date >= from && m.date <= to),
     bestWeek,
     longestGap: longestGap(sorted, from, to),
+    blocks: sortBlocks(input.blocks ?? []).filter((b) => b.startDate >= from && b.startDate <= to),
   };
 }
 
@@ -363,6 +375,18 @@ export function describeYear(review: YearReview): string[] {
       from === to
         ? `The longest quiet stretch ran ${review.longestGap.days} days in ${from}.`
         : `The longest quiet stretch ran ${review.longestGap.days} days, from ${from} to ${to}.`,
+    );
+  }
+
+  if (review.blocks.length > 0) {
+    const done = review.blocks.filter((b) => outcomeOf(b, review.to) === 'completed').length;
+    // Chronological here, though `review.blocks` is newest-first for the
+    // history list: a year reads forwards — you did this, then that.
+    const unique = [...new Set([...review.blocks].reverse().map((b) => b.name))];
+    out.push(
+      `${review.blocks.length === 1 ? 'One block' : `${review.blocks.length} blocks`} started: ${joinCapped(unique, 3)}${
+        done > 0 ? `. ${done === review.blocks.length ? 'All' : done} run to the end.` : '.'
+      }`,
     );
   }
 

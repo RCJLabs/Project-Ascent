@@ -183,6 +183,7 @@ function Shell() {
           <Route path="/ascent" component={AscentPage} />
           <Route path="/train" component={TrainPage} />
           <Route path="/find" component={FinderPage} />
+          <Route path="/finish/:id" component={FinishPage} />
           <Route path="/finish" component={FinishPage} />
           <Route path="/build/:id/session/:typeId" component={SessionEditorPage} />
           <Route path="/build/:id" component={BuilderPage} />
