@@ -12,11 +12,23 @@ import { describe, expect, it } from 'vitest';
  */
 
 const read = (path: string) => readFileSync(path, 'utf8');
+
 const walk = (dir: string): string[] =>
   readdirSync(dir).flatMap((entry) => {
     const path = join(dir, entry);
     return statSync(path).isDirectory() ? walk(path) : [path];
   });
+
+/** Every feature component, for the scans below. reuses the `walk` above. */
+const FEATURE_FILES = walk('src/features')
+  .filter((p) => p.endsWith('.tsx') && !p.endsWith('.test.tsx'))
+  .map((path) => ({ path, source: read(path) }));
+
+/** A line that is only a comment. Prose about a delete is not a delete. */
+function isComment(line: string): boolean {
+  const t = line.trim();
+  return t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || t.startsWith('{/*');
+}
 
 describe('a bad record does not take the page', () => {
   it('wraps the routes in a boundary', () => {
@@ -97,6 +109,68 @@ describe('a delete can be undone', () => {
     ];
     const missing = sites.filter((path) => !read(path).includes('offerUndo('));
     expect(missing).toEqual([]);
+  });
+
+  /**
+   * Every destructive call in the features layer has an undo beside it, or
+   * a reason written down here (PLAN.md M79).
+   *
+   * The three-file list above was the net for the deletes that lose the
+   * most; this is the net for the rest. It was written after an inventory
+   * found the builder's delete already covered and three real losses that
+   * were not — a photo with its beta, an assessment result, a session
+   * template — none of which were on the list the milestone started from.
+   * A destructive call is one that removes a record or wipes a field a
+   * climber wrote; the offer has to follow within a dozen lines, which is
+   * where every one of the fourteen sites puts it.
+   */
+  const DESTRUCTIVE =
+    /\b(removeInjury|deleteMedia|clearSnapshot)\(|\bremove\((?!\))|setMarks\([^)]*, \[\]\)|requirements\.filter\(|climbs: before\.filter|projectAttempts: before\.filter/;
+
+  /** Sites that destroy without an offer, each with the reason it may. */
+  const ALLOWED: Record<string, string> = {
+    'src/features/finder/FinderPage.tsx':
+      'a chip that toggles an injury on and off — tapping it again is the undo',
+    'src/features/onboarding/WelcomePage.tsx':
+      'the same toggle, on the first-run screen',
+    'src/features/settings/SettingsPage.tsx#clearSnapshot':
+      'clearing the import restore point is the climber saying they are done with undo',
+  };
+
+  it('offers undo within reach of every destructive call, or says why not', () => {
+    const misses: string[] = [];
+    let sites = 0;
+    for (const { path, source } of FEATURE_FILES) {
+      const lines = source.split('\n');
+      lines.forEach((line, i) => {
+        if (isComment(line) || !DESTRUCTIVE.test(line)) return;
+        sites += 1;
+        const window = lines.slice(i, i + 12).join('\n');
+        if (window.includes('offerUndo(')) return;
+        // A button that calls a local `remove` is covered by the offer that
+        // `remove` makes after its write — the photo delete works that way,
+        // so the store call and the offer sit together in one function.
+        const local = /\bremove\(/.test(line) && /async function remove\([\s\S]*?offerUndo\([\s\S]*?\n  \}/.test(source);
+        if (local) return;
+        const fn = /clearSnapshot/.test(line) ? '#clearSnapshot' : '';
+        if (ALLOWED[path + fn] !== undefined || ALLOWED[path] !== undefined) return;
+        misses.push(`${path}:${i + 1}  ${line.trim().slice(0, 70)}`);
+      });
+    }
+    expect(misses).toEqual([]);
+    // A scan that matches nothing passes for the wrong reason.
+    expect(sites).toBeGreaterThanOrEqual(14);
+  });
+
+  it('keeps every allowance pointing at a line that still exists', () => {
+    // An allowance for a call that has since gone is a hole waiting for the
+    // next destructive line in that file to fall through.
+    for (const key of Object.keys(ALLOWED)) {
+      const [path, fn] = key.split('#');
+      const source = read(path!);
+      const probe = fn === 'clearSnapshot' ? /clearSnapshot\(/ : DESTRUCTIVE;
+      expect(probe.test(source), key).toBe(true);
+    }
   });
 
   it('restores into the store, not just the database', () => {

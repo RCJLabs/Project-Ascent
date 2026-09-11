@@ -12,6 +12,7 @@ import {
   type InjurySeverity,
   type InjuryStatus,
 } from '@/store/profile';
+import { offerUndo } from '@/store/undo';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -34,6 +35,7 @@ export function InjuryPage({ params }: { params: { id: string } }) {
   const hydrated = useProfile((s) => s.hydrated);
   const updateInjury = useProfile((s) => s.updateInjury);
   const removeInjury = useProfile((s) => s.removeInjury);
+  const restoreInjury = useProfile((s) => s.restoreInjury);
   const [, navigate] = useLocation();
   const [draft, setDraft] = useState('');
 
@@ -175,7 +177,11 @@ export function InjuryPage({ params }: { params: { id: string } }) {
           <Button
             variant="outline"
             onClick={() => {
-              removeInjury(injury.id);
+              // Whole record back on undo — notes and return ticks included
+              // — not a fresh injury with a new id (PLAN.md M79).
+              const healed = injury;
+              removeInjury(healed.id);
+              offerUndo(`${healed.side && healed.part !== 'back' ? `${healed.side} ` : ''}${healed.part} injury`, async () => restoreInjury(healed));
               navigate('/climber');
             }}
           >

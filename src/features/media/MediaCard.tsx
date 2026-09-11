@@ -21,6 +21,7 @@ import { Input } from '@/ui/Field';
 import { IconButton } from '@/ui/IconButton';
 import { Card } from '@/ui/Card';
 import { useDialog } from '@/ui/useDialog';
+import { offerUndo } from '@/store/undo';
 import { MarkPad } from './PhotoMarks';
 
 /**
@@ -98,9 +99,18 @@ export function MediaCard({
   }
 
   async function remove(id: string) {
+    // The record is held here, blob and marks included, so putting it back
+    // is one write — which is what makes this undoable at all (PLAN.md M79).
+    const gone = items.find((i) => i.id === id);
     await deleteMedia(id);
     setItems(await listMedia(owner));
     setViewing(null);
+    if (gone) {
+      offerUndo(gone.caption || 'Photo', async () => {
+        await updateMedia(gone);
+        setItems(await listMedia(owner));
+      });
+    }
   }
 
   async function caption(item: MediaRecord, text: string) {
@@ -236,7 +246,12 @@ export function MediaCard({
             setColor={setColor}
             marks={marks}
             onUndo={() => void setMarks(open, marks.slice(0, -1))}
-            onClear={() => void setMarks(open, [])}
+            onClear={() => {
+              const wiped = marks;
+              void setMarks(open, []).then(() =>
+                offerUndo('Beta on this photo', () => setMarks(open, wiped)),
+              );
+            }}
           />
 
           <div className="flex gap-2 mt-3">

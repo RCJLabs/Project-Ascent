@@ -85,7 +85,9 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
   }
 
   const progress = objectiveProgress(objective, skillInput);
-  const edit = (patch: Partial<Objective>) => void save({ ...objective, ...patch });
+  // Returns the write, so an undo that calls it resolves when the store has
+  // actually changed — the bar announces "restored" on that promise.
+  const edit = (patch: Partial<Objective>) => save({ ...objective, ...patch });
   const planning = objective.status === 'planning' || objective.status === 'training';
 
   return (
@@ -178,9 +180,13 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
                     )}
                   </div>
                   <IconButton
-                    onClick={() =>
-                      edit({ requirements: objective.requirements.filter((r) => r.id !== m.id) })
-                    }
+                    onClick={() => {
+                      // A requirement can carry the climber's own "why"; the
+                      // whole list goes back, order included (PLAN.md M79).
+                      const before = objective.requirements;
+                      void edit({ requirements: before.filter((r) => r.id !== m.id) });
+                      offerUndo(m.measurement.detail, () => edit({ requirements: before }));
+                    }}
                     label={`Remove: ${m.measurement.detail}`}
                   >
                     <Trash2 size={14} />

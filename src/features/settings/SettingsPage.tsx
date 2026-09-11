@@ -27,6 +27,7 @@ import { Input } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 import { readingProblems } from '@/db/sound';
 import { downloadFile } from '@/lib/download';
+import { offerUndo } from '@/store/undo';
 
 const GEAR: { value: Equipment; label: string }[] = [
   { value: 'wall', label: 'Climbing wall' },
@@ -551,6 +552,7 @@ function TemplatesCard() {
   const load = useTemplates((s) => s.load);
   const rename = useTemplates((s) => s.rename);
   const remove = useTemplates((s) => s.remove);
+  const restore = useTemplates((s) => s.restore);
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
 
@@ -608,7 +610,15 @@ function TemplatesCard() {
                   >
                     Rename
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => void remove(t.id)} className="text-danger">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const gone = t;
+                      void remove(gone.id).then(() => offerUndo(gone.name, () => restore(gone)));
+                    }}
+                    className="text-danger"
+                  >
                     Delete
                   </Button>
                 </>

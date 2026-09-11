@@ -105,6 +105,8 @@ export interface ProfileState {
   addInjury: (part: BodyPart, note?: string) => void;
   updateInjury: (id: string, patch: Partial<Injury>) => void;
   removeInjury: (id: string) => void;
+  /** Put a removed injury back whole — id, notes, checklist — for an undo (PLAN.md M79). */
+  restoreInjury: (injury: Injury) => void;
   rememberWarmup: (ids: string[]) => void;
   setAvatarPalette: (patch: Partial<AvatarPalette>) => void;
 }
@@ -273,6 +275,13 @@ export const useProfile = create<ProfileState>((set, get) => ({
 
   removeInjury: (id) => {
     set({ injuries: get().injuries.filter((i) => i.id !== id) });
+    void save(snapshot(get()));
+  },
+
+  restoreInjury: (injury) => {
+    // Whole record, not a fresh one: `addInjury` would mint a new id and
+    // lose the notes and the return-to-climbing ticks the climber wrote.
+    set({ injuries: [...get().injuries.filter((i) => i.id !== injury.id), injury] });
     void save(snapshot(get()));
   },
 

@@ -2718,14 +2718,39 @@ commit.
   entry through the engines; each is a fraction of what the programs were, and none was
   measured here.
 
-- **M79 — Undo wherever it destroys.** `store/undo.ts` holds one offer and it is wired to
-  deleting a session, a project and an objective. Four destructive actions have no way back,
-  all seen while building the last block: **Mark healed** on an injury (M76 wired the
-  navigation, not an undo), **Clear** on a photo's beta (M71), a tally row bumped to zero in
-  gym mode (M74), and the builder's **Danger zone**. Add the offer to each, and a
-  source-scanning test that every store action named `remove`, `delete` or `clear` on user
-  data has an `offerUndo` beside its call site — the ninety-five-bare-buttons lesson,
-  applied to loss.
+- **M79 — Undo wherever it destroys.** *Done, from an inventory rather than from memory.*
+  The proposal named four undo-less deletes. One was wrong — the builder's Danger zone has
+  offered undo since M49 — and a grep of every destructive call in the features layer found
+  **three real losses the proposal missed**, each bigger than any it named: deleting a
+  photo (with its beta drawn on it, since M71), deleting an assessment result, and deleting
+  a session template. None had a way back.
+  Nine sites now offer one: mark an injury healed; delete a photo; clear a photo's beta;
+  delete a result; delete a template; remove an objective requirement; take a tally row to
+  zero in gym mode and in the logger; take a project burn to zero. **Every restore puts the
+  whole record back**, which needed two store additions — `restoreInjury` and the
+  templates' `restore` — because the existing `addInjury` and `save` mint fresh records and
+  would have lost the injury's notes and return-to-climbing ticks, and the template's id
+  and use count. A mutation that swapped the whole-record restore for the fresh one was
+  killed by the note going missing.
+  **Not every minus is a loss.** A count going 4→3 offers nothing; only a row that *went*
+  does, because the bar replaces itself and an offer for every tap would bury the one that
+  matters. Three destructive calls are allowed to stay undo-less, with the reason written
+  beside each: the finder's and the welcome screen's injury chips are toggles, so tapping
+  again *is* the undo; and clearing the import restore point is the climber saying they
+  are done with undo.
+  **The guard is a scan, not a list.** `safety.test.ts` used to check three files for the
+  word `offerUndo`. It now walks every feature component for a destructive call — a store
+  remove, a media delete, a field wiped — and requires the offer within a dozen lines, or
+  inside the local function the button calls (the photo delete's shape), or a written
+  allowance. It found its own false positive on the first run and was taught the third
+  case rather than exempting the file, which would also have exempted Clear-beta.
+  One real bug on the way: the objective page's `edit` returned `void` from an async save,
+  so its undo resolved — and the bar would have announced "restored" — before the store
+  had changed. It returns the write now. Fourteen mutations, fourteen killed, including
+  both ways of blinding the guard. 2,235 tests pass. Verified in a browser: a deleted
+  photo comes back with its beta; a healed injury comes back with its note, on the climber
+  page it was healed from.
+
 - **M80 — Data health, on one page.** The app already knows a lot about its own state and
   says it in five places or nowhere: `readingProblems()` reports records dropped or repaired
   at the read boundary (Settings, "Your data"); `sweepOrphanMedia()` exists and nothing

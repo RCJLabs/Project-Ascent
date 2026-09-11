@@ -14,6 +14,7 @@ import { keepAwake, releaseAwake } from '@/lib/wakeLock';
 import { clearRest, loadRest, saveRest } from '@/lib/timerState';
 
 import { announce } from '@/ui/Announce';
+import { offerUndo } from '@/store/undo';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { CHIP_LINK, Chip } from '@/ui/Chip';
@@ -191,7 +192,18 @@ function GymSession({
                 key={climb.id}
                 climb={climb}
                 label={gradeLabel(climb.scale, climb.grade)}
-                onBump={(by) => patch({ climbs: bump(session.climbs, climb.id, by) })}
+                onBump={(by) => {
+                  const before = session.climbs;
+                  const after = bump(before, climb.id, by);
+                  patch({ climbs: after });
+                  // Only a row that went, not every minus: the offer bar
+                  // replaces itself, and a count going 4→3 is not a loss.
+                  if (after.length < before.length) {
+                    offerUndo(`${gradeLabel(climb.scale, climb.grade)} ${climbOutcome(climb)}`, async () =>
+                      patch({ climbs: before }),
+                    );
+                  }
+                }}
               />
             ))}
           </ul>

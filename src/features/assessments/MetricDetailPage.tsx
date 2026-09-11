@@ -10,6 +10,7 @@ import { useSettings } from '@/store/settings';
 import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
 import { IconButton } from '@/ui/IconButton';
+import { offerUndo } from '@/store/undo';
 import { ProgressionLine } from '@/ui/charts/Charts';
 import { ResultForm } from './AssessmentsPage';
 import { RecordNotFound } from '@/ui/RecordNotFound';
@@ -22,6 +23,7 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
   const hydrated = useMetrics((s) => s.hydrated);
   const load = useMetrics((s) => s.load);
   const remove = useMetrics((s) => s.remove);
+  const record = useMetrics((s) => s.record);
 
   useEffect(() => {
     if (!hydrated) void load();
@@ -117,7 +119,14 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
                     </span>
                   )}
                   <IconButton
-                    onClick={() => void remove(metric.id, entry.date)}
+                    onClick={() => {
+                      // `record` is an upsert keyed on metric and day, so the
+                      // deleted entry goes back exactly as it was (PLAN.md M79).
+                      const gone = entry;
+                      void remove(metric.id, gone.date).then(() =>
+                        offerUndo(`${metric.label} result from ${shortLabel(gone.date)}`, () => record(gone)),
+                      );
+                    }}
                     label={`Delete the ${shortLabel(entry.date)} result`}
                   >
                     <Trash2 size={14} />

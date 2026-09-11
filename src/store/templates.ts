@@ -23,6 +23,8 @@ export interface TemplatesState {
   save: (session: Session, name?: string, sessionTypeName?: string) => Promise<Template>;
   rename: (id: string, name: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  /** Put a removed template back as it was, for an undo (PLAN.md M79). */
+  restore: (template: Template) => Promise<void>;
   use: (id: string) => Promise<void>;
 }
 
@@ -69,6 +71,14 @@ export const useTemplates = create<TemplatesState>((set, get) => ({
 
   remove: async (id) => {
     const next = get().templates.filter((t) => t.id !== id);
+    await persist(next);
+    set({ templates: next });
+  },
+
+  restore: async (template) => {
+    // `save` builds a template from a session; this puts the record itself
+    // back, so the name, the use count and the id survive the round trip.
+    const next = [template, ...get().templates.filter((t) => t.id !== template.id)];
     await persist(next);
     set({ templates: next });
   },

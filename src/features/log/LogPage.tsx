@@ -38,7 +38,7 @@ import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } fro
 import { V_GRADES, YDS_GRADES, displayGrade, type GradeScale } from '@/engine/grades';
 import type { Climb, ProjectAttempt, Session } from '@/db/sessions';
 import type { AttemptOutcome } from '@/db/projects';
-import { OUTCOME_HIGH_POINT } from '@/engine/projects';
+import { OUTCOME_HIGH_POINT, OUTCOME_LABEL } from '@/engine/projects';
 import { useXp } from '@/store/game';
 import { useProjects } from '@/store/projects';
 import { useSkillEffects } from '@/store/skills';
@@ -59,6 +59,7 @@ import {useGradeLabel} from '@/ui/useGrade';
 import { alreadySaved, applyTemplate, rankTemplates, suggestName } from '@/engine/templates';
 import { canMerge, describeSession } from '@/engine/sessionEdit';
 import { concerning, injuryPolicy } from '@/engine/injury';
+import { climbOutcome } from '@/engine/gym';
 import {
   FINGER_ANSWERS,
   FINGER_CHIP,
@@ -525,12 +526,17 @@ function SessionEditor({
 
   function bump(climb: Climb, by: number) {
     const next = climb.count + by;
-    patch({
-      climbs:
-        next <= 0
-          ? session.climbs.filter((c) => c.id !== climb.id)
-          : session.climbs.map((c) => (c.id === climb.id ? { ...c, count: next } : c)),
-    });
+    if (next <= 0) {
+      // The row goes, and a mis-tap on the minus should not cost a re-entry
+      // through the grade picker (PLAN.md M79).
+      const before = session.climbs;
+      patch({ climbs: before.filter((c) => c.id !== climb.id) });
+      offerUndo(`${gradeLabel(climb.scale, climb.grade)} ${climbOutcome(climb)}`, async () =>
+        patch({ climbs: before }),
+      );
+      return;
+    }
+    patch({ climbs: session.climbs.map((c) => (c.id === climb.id ? { ...c, count: next } : c)) });
   }
 
   const blocks = type && day?.phase ? prescriptionFor(type, day.phase, trackId) : [];
@@ -1230,12 +1236,20 @@ function ProjectBurnsCard({
       return;
     }
     const count = existing.count + by;
+    if (count <= 0) {
+      // A burn row taken to zero can come back, high point and note with it
+      // (PLAN.md M79). The whole list goes back, so order survives too.
+      const before = attempts;
+      onChange({ ...session, projectAttempts: before.filter((a) => a !== existing) });
+      const name = projects.find((p) => p.id === projectId)?.name ?? 'Project';
+      offerUndo(`${name} · ${OUTCOME_LABEL[outcome]}`, async () =>
+        onChange({ ...session, projectAttempts: before }),
+      );
+      return;
+    }
     onChange({
       ...session,
-      projectAttempts:
-        count <= 0
-          ? attempts.filter((a) => a !== existing)
-          : attempts.map((a) => (a === existing ? { ...a, count } : a)),
+      projectAttempts: attempts.map((a) => (a === existing ? { ...a, count } : a)),
     });
   }
 
