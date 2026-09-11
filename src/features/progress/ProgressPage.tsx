@@ -14,7 +14,8 @@ import { buildHeatGrid, describeConsistency } from '@/engine/consistency';
 import { describeTrend, loadTrend } from '@/engine/loadTrend';
 import { describeTissue, tissueLoad } from '@/engine/tissueLoad';
 import { compareBlocks, describeBlocks } from '@/engine/blockCompare';
-import { today } from '@/engine/dates';
+import { checkInHistory, describeCheckIns, type CheckInHistory } from '@/engine/checkIns';
+import { fromKey, today } from '@/engine/dates';
 import { availableYears } from '@/engine/yearReview';
 import { deriveClimberState } from '@/engine/derive';
 import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
@@ -29,11 +30,48 @@ import { PageHeader } from '@/ui/PageHeader';
 import { TrainingState } from './TrainingState';
 import { LoadBars, ProgressionLine, PyramidBars } from '@/ui/charts/Charts';
 import { ConsistencyBody } from '@/ui/charts/ConsistencyGrid';
+import { CheckInStrip } from '@/ui/charts/CheckInStrip';
 import { LoadTrendLine } from '@/ui/charts/LoadTrendLine';
 import { TissueBars, TissueNote } from '@/ui/charts/TissueBars';
 import { BlockCompareTable } from '@/ui/charts/BlockCompare';
 import { ZONE } from '@/ui/loadZone';
 
+
+/**
+ * The sessions that went past the ceiling the check-in suggested.
+ *
+ * The strip above is a picture — marks land where the dates put them and
+ * can sit a pixel apart — so this is where a day is reachable at full size.
+ * Only the sessions that went over are listed: a list of every check-in
+ * would bury the four that are worth opening under thirty that are not.
+ */
+function OverCapList({ history }: { history: CheckInHistory }) {
+  const over = history.days.filter((d) => d.over !== null && d.over > 0);
+  if (over.length === 0) return null;
+  return (
+    <ul className="grid grid-cols-1 gap-1 mt-3 border-t border-line pt-3">
+      {[...over].reverse().map((day) => (
+        <li key={day.sessionId}>
+          <Link
+            href={`/log/${day.date}`}
+            className="flex items-baseline justify-between gap-3 text-sm py-1"
+          >
+            <span className="font-semibold">
+              {fromKey(day.date).toLocaleDateString(undefined, {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+              })}
+            </span>
+            <span className="text-ink-soft shrink-0 tabular-nums">
+              RPE {day.rpe} against a ceiling of {day.cap}
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 /** Entry point into the journal, counting what there is to read. */
 function JournalCard() {
@@ -246,6 +284,7 @@ export function ProgressPage() {
   const heat = useMemo(() => buildHeatGrid({ sessions }), [sessions]);
   const trend = useMemo(() => loadTrend({ sessions, to: today() }), [sessions]);
   const block = useMemo(() => compareBlocks({ sessions, to: today() }), [sessions]);
+  const checkIns = useMemo(() => checkInHistory({ sessions, to: today() }), [sessions]);
   // The scan reads the record; the drill a session ran and the exercises its
   // program prescribed live in the catalogue, so they are fetched here and
   // handed in. Without them a program session counts only what was ticked.
@@ -370,6 +409,22 @@ export function ProgressPage() {
           <LoadTrendLine trend={trend} />
           <p className="text-sm text-ink-soft mt-2 leading-relaxed">{describeTrend(trend)}</p>
         </Card>
+
+        {/* Placed after the load cards, because every sentence in it is
+            about the sessions those cards are counting — and before the
+            grade cards, which are about a different question entirely. */}
+        {checkIns.answered > 0 && (
+          <Card title="How you were feeling">
+            <CheckInStrip history={checkIns} />
+            <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeCheckIns(checkIns)}</p>
+            <OverCapList history={checkIns} />
+            <p className="text-xs text-ink-soft mt-3 leading-relaxed">
+              The ceiling is a suggestion the check-in made before the session; the RPE is what you
+              logged after. Nothing records which you entered first, so a check-in answered at the
+              end of a session will read as though it had been followed.
+            </p>
+          </Card>
+        )}
 
         <Wide className="flex gap-2">
           {(['V', 'YDS'] as GradeScale[]).map((s) => (

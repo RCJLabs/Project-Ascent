@@ -2847,12 +2847,45 @@ commit.
 
 **Progress tracking.**
 
-- **M82 — The check-in as a series.** M72 stores `checkIn` on every session it was answered
-  for and **nothing reads it back** — not the progress page, not the year review, not the
-  consistency grid. Plot fingers and sleep as marks along the training-load line so a run of
-  "barely slept" sits next to the spike it preceded, and show whether the effort ceiling was
-  respected: the RPE logged against the cap the check-in suggested. Derived only, and honest
-  about being a handful of dots until there is a block of them.
+- **M82 — The check-in as a series.** *Done, on a different chart from the one proposed.*
+  The premise held: `checkIn` is written by the log page and read back by the same day's log
+  page and nowhere else. You could tell the app your fingers were sore forty times and it
+  would never once mention it.
+  **The proposed shape did not.** "Marks along the training-load line" was measured rather
+  than argued about: `LoadTrendLine` gives 288 units to 90 days — 3.2 a day, from its own
+  constants — and the proposal wants two categorical dimensions on that axis. The consistency
+  grid is tighter still at 4.5px cells, and its doc comment already explains that it is a
+  picture rather than a control because targets that size fail WCAG 2.5.8. So the strip is its
+  own, over the same window, and carries a mark only for a day that was **answered** — a dozen
+  marks rather than ninety slots, which is a density that reads. Positioned by date and not by
+  index, because three answers in one week and three across three months are the one thing the
+  picture exists to tell apart.
+  **Coverage is stated before anything else.** "You stayed under the ceiling every time" over
+  three sessions is a sentence that means nothing, so every figure is reported against how
+  many sessions it could have come from: *"Answered on 12 of 40 sessions in the last three
+  months."* The denominator excludes rest days, which are shown a recovery checklist and never
+  asked, and drafts, which were never finished being asked.
+  **The ceiling is reconstructed, not stored, and that is exact.** `readinessFor(checkIn).cap`
+  depends on the two answers alone — `context` moves the advice and the test deferral, never
+  the ceiling — so the number read back is the one the climber was shown. The sessions that
+  went past it are listed by date and linked to their log, which is also where the strip's
+  promise to be a picture gets paid: a mark can sit a pixel from its neighbour, so the day is
+  reachable at full size underneath.
+  **The effort comparison is gated and says so.** Mean RPE on the flagged days against the
+  clear ones — RPE because `readiness.ts` nominates perceived effort as the instrument, "the
+  same hang that was a 6 last week is an 8 today" — but nothing is printed until there are four
+  on each side, and the sentence that does print ends "which is few enough that one hard
+  session moves it".
+  **What the card admits it cannot know**, in its own fine print: nothing records whether the
+  check-in was answered before the session or after it, so a check-in filled in at the end
+  will read as though it had been followed.
+  Twenty-six mutations, twenty-five killed. The survivor was a weak test of mine, not weak
+  code: the opacity check took a minimum across both rows, so raising only the *fingers* tone
+  left the sleep row quiet enough to pass. Rewritten per row, and three further mutations on
+  the other tones confirmed it. Two browser findings, both mine: the strip shipped with three
+  colours and nothing naming them, and the "Sleep" row caption sat close enough to the date
+  beneath it to scan as one phrase. Verified in both themes. 2,367 tests pass, and the new
+  derivation is in the perf budget.
 - **M83 — Conversion, over time.** `PyramidRow.conversion` — sends over tries per grade —
   exists and is drawn once, as a snapshot in the pyramid. The grade-progression chart plots
   the hardest send per week; nothing plots how *efficiently* a grade is sent, and that is

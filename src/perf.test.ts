@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { Session } from '@/db/sessions';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveCareer } from '@/engine/career';
+import { checkInHistory } from '@/engine/checkIns';
 import { deriveClimberState } from '@/engine/derive';
 import { deriveStats } from '@/engine/stats';
 import { clearXpCache, deriveXp } from '@/engine/xp';
@@ -116,6 +117,9 @@ describe('ten years of logs stays cheap', () => {
       ['altimeter', 20, () => deriveAltimeter(sessions)],
       ['career', 20, () => deriveCareer({ sessions, records: state.personalRecords })],
       ['stats', 10, () => deriveStats({ state, metrics: [], projects: [] })],
+      // Windowed to 90 days, so what this measures is the O(n) scan that
+      // finds them — which is the part that grows with the log.
+      ['checkIns', 20, () => checkInHistory({ sessions, to: sessions[sessions.length - 1]!.date })],
     ];
     const over = budgets
       .map(([name, budget, fn]) => ({ name, budget, ms: median(fn) }))
