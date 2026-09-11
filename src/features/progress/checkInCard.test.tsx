@@ -6,6 +6,7 @@ import { resetDbForTests } from '@/db/db';
 import { newSession, putSession } from '@/db/sessions';
 import { addDays, today } from '@/engine/dates';
 import type { CheckIn } from '@/engine/readiness';
+import type { RestChecklist } from '@/db/sessions';
 import { fireEvent } from '@testing-library/react';
 import { useSettings } from '@/store/settings';
 import { hydrate, renderAt, reset } from '@/test/render';
@@ -148,5 +149,94 @@ describe('the conversion card on the progress page', () => {
     await hydrate();
     renderAt('/progress', <ProgressPage />);
     expect(screen.getByText(/too few to read/)).toBeTruthy();
+  });
+});
+
+
+/**
+ * The rest-day ticks reach the page (PLAN.md M94).
+ *
+ * `engine/restHabits.test.ts` proves the reading. This proves the app looks
+ * at it — which is the whole milestone: four booleans collected on every
+ * rest day of every block, and every reader that ever touched them
+ * collapsed all four into one bit.
+ */
+describe('the rest card on the progress page', () => {
+  const NONE: RestChecklist = { hydration: false, mobility: false, zone1: false, sleep: false };
+
+  /** `n` rest days, a week apart, each ticking `items`. */
+  async function restedOn(items: (keyof RestChecklist)[], n: number, offset = 0): Promise<void> {
+    const checklist = { ...NONE };
+    for (const item of items) checklist[item] = true;
+    for (let i = 0; i < n; i++) {
+      const date = addDays(today(), -((offset + i) * 7));
+      await putSession({
+        ...newSession(date, 0),
+        completed: true,
+        rewarded: true,
+        climbs: [],
+        restChecklist: { ...checklist },
+      });
+    }
+  }
+
+  it('reads the ticks one at a time', async () => {
+    await restedOn(['hydration', 'sleep'], 8);
+    await hydrate();
+    renderAt('/progress', <ProgressPage />);
+    expect(await screen.findByText('How you rest')).toBeTruthy();
+    const row = screen.getByText('hydration').closest('div')!;
+    expect(row.textContent).toMatch(/8 of 8/);
+  });
+
+  it('shows the items never ticked, as zero', async () => {
+    await restedOn(['hydration'], 8);
+    await hydrate();
+    renderAt('/progress', <ProgressPage />);
+    await screen.findByText('How you rest');
+    expect(screen.getByText('mobility').closest('div')!.textContent).toMatch(/0 of 8/);
+  });
+
+  /**
+   * The denominator is the rest days that recorded something, not every
+   * rest day: a blank checklist is not a failed one.
+   */
+  it('counts the rows against the rest days that said anything', async () => {
+    await restedOn(['hydration'], 6);
+    await restedOn([], 4, 6);
+    await hydrate();
+    renderAt('/progress', <ProgressPage />);
+    await screen.findByText('How you rest');
+    expect(screen.getByText('hydration').closest('div')!.textContent).toMatch(/6 of 6/);
+  });
+
+  it('stays away on too few rest days', async () => {
+    await restedOn(['hydration'], 3);
+    await hydrate();
+    renderAt('/progress', <ProgressPage />);
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.queryByText('How you rest')).toBeNull();
+  });
+
+  /**
+   * A rest day logged without the checklist is still a rest day. A card
+   * that appeared to say "0 of 4, ten times over" would turn "I did not
+   * fill in a form" into "I did not recover".
+   */
+  it('stays away when the checklist was never used', async () => {
+    await restedOn([], 10);
+    await hydrate();
+    renderAt('/progress', <ProgressPage />);
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.queryByText('How you rest')).toBeNull();
+  });
+
+  it('names the one you skip most often', async () => {
+    await restedOn(['hydration', 'mobility', 'zone1', 'sleep'], 2);
+    await restedOn(['hydration', 'mobility', 'zone1'], 6, 2);
+    await hydrate();
+    renderAt('/progress', <ProgressPage />);
+    await screen.findByText('How you rest');
+    expect(screen.getByText(/Sleep is the one you skip most often/)).toBeTruthy();
   });
 });

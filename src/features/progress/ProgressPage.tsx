@@ -15,6 +15,7 @@ import { describeTrend, loadTrend } from '@/engine/loadTrend';
 import { describeTissue, tissueLoad } from '@/engine/tissueLoad';
 import { compareBlocks, describeBlocks } from '@/engine/blockCompare';
 import { checkInHistory, describeCheckIns, type CheckInHistory } from '@/engine/checkIns';
+import { describeRestHabits, restHabits } from '@/engine/restHabits';
 import { conversionTrend, describeConversion, drawable } from '@/engine/conversion';
 import { FIELD_DAYS, fieldSeries } from '@/engine/sessionFields';
 import { addDays, fromKey, today } from '@/engine/dates';
@@ -289,6 +290,9 @@ export function ProgressPage() {
   const trend = useMemo(() => loadTrend({ sessions, to: today() }), [sessions]);
   const block = useMemo(() => compareBlocks({ sessions, to: today() }), [sessions]);
   const checkIns = useMemo(() => checkInHistory({ sessions, to: today() }), [sessions]);
+  // What the rest-day ticks say, which nothing had ever read one at a time
+  // (PLAN.md M94).
+  const rest = useMemo(() => restHabits({ sessions, to: today() }), [sessions]);
   const conversion = useMemo(
     () => conversionTrend({ sessions, scale, to: today() }),
     [sessions, scale],
@@ -439,6 +443,31 @@ export function ProgressPage() {
               Your programs ask these on the session types that want them, so a question only
               appears here on the days it was put to you. Nothing is filled in for the days it
               was not.
+            </p>
+          </Card>
+        )}
+
+        {/* Beside the check-in card, not inside it: both are long-window
+            readings of something logged per session, and a rest day is the
+            one kind of day the check-in never asks about (PLAN.md M94).
+            No chart — four shares is a list, and drawing it would be a
+            picture of four numbers you can already read. */}
+        {describeRestHabits(rest) !== null && (
+          <Card title="How you rest">
+            <dl className="grid grid-cols-1 gap-1.5">
+              {rest.items.map((item) => (
+                <div key={item.item} className="flex items-baseline gap-2 text-sm">
+                  <dt className="flex-1 min-w-0 capitalize">{item.noun}</dt>
+                  <dd className="shrink-0 text-ink-soft tabular-nums">
+                    {item.ticked} of {rest.answered}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeRestHabits(rest)}</p>
+            <p className="text-xs text-ink-soft mt-3 leading-relaxed">
+              Counted over rest days that recorded something. A rest day logged without the
+              checklist is still a rest day and is not counted against you here.
             </p>
           </Card>
         )}

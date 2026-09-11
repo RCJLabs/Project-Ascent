@@ -72,14 +72,8 @@ import {
   type ReadinessCall,
 } from '@/engine/readiness';
 import { describeParts, drillConflict, exerciseConflict, exerciseLoads } from '@/engine/bodyLoad';
+import { REST_ITEMS } from '@/engine/restHabits';
 import { BadParameter } from '@/ui/RecordNotFound';
-
-const REST_ITEMS = [
-  { key: 'hydration', label: 'Hydration' },
-  { key: 'mobility', label: 'Mobility' },
-  { key: 'zone1', label: 'Walking / Zone 1' },
-  { key: 'sleep', label: 'Sleep 8+ hrs' },
-] as const;
 
 function rid(): string {
   return Math.random().toString(36).slice(2, 9);

@@ -3342,14 +3342,39 @@ a kept one.
 
 **Programs.**
 
-- **M94 — What the rest day was actually spent on.** The purest instance of the pattern in
-  the codebase. `RestChecklist` stores four booleans — hydration, mobility, zone 1, sleep —
-  and **every one of its six readers checks only `!== undefined`**, to decide whether the
-  session was a rest day at all (`derive.ts:155`, `derive.ts:536`, `review.ts:102`,
-  `economy.ts:222`, `coach.ts:298`, `templates.ts:57`). The four ticks themselves have never
-  been read by anything. A climber ticks them on every rest day of every block, and the app
-  has never once looked at what they ticked — while `readiness.ts` asks separately about
-  sleep and the coach has rules about recovery.
+- **M94 — What the rest day was actually spent on.** *Done, and the milestone is wrong
+  twice — once in a way that matters.*
+  **"Six readers" is twelve**, across as many files. Minor.
+  **"The four ticks have never been read by anything" is false.** `challenges.ts` counts
+  rest days where all four are ticked, and `sessionEdit.ts` ORs them field by field on a
+  merge. What is true, and is the whole finding restated: **no individual tick has ever
+  been distinguished from another.** `Object.values(...).every(Boolean)` collapses four
+  different recovery behaviours into one bit, so a climber who hydrates on every rest day
+  and has never once ticked mobility looks exactly like one who does the reverse.
+  Ninety days, like the check-in history, and for the same reason: a week holds one or two
+  rest days and a habit is not visible in two. The card sits beside "How you were feeling"
+  — both are long-window readings of something logged per session, and a rest day is the
+  one kind of day the check-in never asks about. **No chart**: four shares is a list, and
+  drawing it would be a picture of four numbers already legible as numbers.
+  **Nothing scolds.** The denominator is rest days that recorded *something*, not every
+  rest day, and a climber who logs rest days and never ticks anything is told nothing at
+  all — turning "I did not fill in a form" into "I did not recover" is the failure mode
+  this feature had to avoid.
+  **A design hole my own fixture found:** with two items tied at zero, naming one as "the
+  one that gets skipped" is a half-truth about the other. So `skipped` is a list, empty when
+  every item clears half and empty when three or four tie at the bottom — where the rows
+  say it better than a sentence naming almost everything. **And a copy fix from the
+  browser**: "the one that usually gets skipped" claims a uniqueness the rule does not
+  check, since a second item can be under half too. It now says "the one you skip most
+  often", which is true however many others are low.
+  Twenty-two mutations, all killed after a second pass. Four survived the first, all weak
+  fixtures of mine, and two were worth the trouble: the tie rule was quietly doing the work
+  of *both* the share rule and the minimum-days rule, so a fixture with three items at the
+  bottom could not tell any of the three conditions apart.
+  Verified in both themes. 2,785 tests pass.
+  **Shipped red, and fixed on the way in:** M93 went out with a `tsc --noEmit` failure in
+  its drift test — vitest does not typecheck, the suite was green, and the last typecheck
+  in that milestone ran before the file existed.
 - **M95 — The two programs nobody can start.** `content/programs/drafts/` holds Trip Prep
   and Two-Day Week: structurally complete, validating against the same rules the builder
   enforces, covered by `drafts.test.ts`, and deliberately out of `PROGRAMS` until *"the
