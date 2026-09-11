@@ -3159,15 +3159,44 @@ a kept one.
   every session. A trip is a run of consecutive outdoor days with a place and a name, and
   it is the unit climbers actually remember a year in — the year review's "days on real
   rock" is the closest the app comes and it is a count, not a story.
-- **M89 — Injury load, counted before you get to the gym.** `bodyLoad.sessionConflicts` is
-  written, documented, unit-tested, and **called by nothing**. Its own doc comment states
-  the case better than I can: *"A program-wide count is what makes the warning worth
-  reading: 'four exercises here load your elbow' is a decision, 'this one does' is a
-  shrug."* The shrug is what ships — `exerciseConflict` is called per exercise inside
-  today's session list (`LogPage.tsx:737`), so a climber with a logged elbow finds out one
-  row at a time, mid-session, after they have already travelled to the wall. The count
-  belongs where the decision is made: on the day before, on the calendar, and on the
-  program page.
+- **M89 — Injury load, counted before you get to the gym.** *Done.* The premise held:
+  `sessionConflicts` appeared in its own file and its own test and nowhere else, while
+  `exerciseConflict` shipped per line inside the logger.
+  **Measuring it changed the case from an argument to a number.** Across all eleven
+  programs there are 121 session-type × phase combinations. For an elbow, 32 of them
+  conflict and **all 32 have two or more** conflicting exercises; a shoulder peaks at
+  fifteen. So wherever the per-line flag fires at all, the one-at-a-time shape is wrong.
+  For a hip only one of sixteen reaches two, which is the other half of the requirement:
+  the sentence has to read properly at one, and it does.
+  **The audit missed that `sessionConflicts` cannot see the drill.** It scans
+  `type.blocks`, and the drill is not in a block — on Iron Grip's Climbing Session the
+  drill is the *only* thing that loads a pulley, so a count built on `sessionConflicts`
+  alone would have reported zero there, which is a silence a climber cannot check. Hence
+  `dayLoad`, which reads a whole planned day, and `describeDayLoad`, which counts the
+  exercises and names the drill as the drill: *"1 exercise and the drill load your back
+  and knee"*. It takes the shape of a planned day rather than importing one, so
+  `bodyLoad.ts` stays clear of `plan.ts`.
+  **Two of the three places the milestone proposed were argued against and dropped.** Not
+  the calendar grid: a month of forty-pixel cells already encodes moving and preview state
+  in borders and tints, and this is the same density argument that kept M82 and M83 off it.
+  Not the program detail page: that is where you *choose* a program, not where you decide
+  about a session. It went instead to **Home's Today card** — the decision, made before you
+  travel — and to the weekly review's **Next week** list, which is seven rows rather than a
+  grid and is literally the days ahead.
+  **A repetition I introduced and removed:** the first version put an `sr-only` *"loading
+  your elbow"* on every row, which is exactly the repetition the caption below the list
+  exists to prevent — for screen-reader users only. The badge now speaks the whole sentence
+  once per row, the visible caption names the part once, and the bare number is
+  `aria-hidden`.
+  **Two pieces of dead code deleted:** an identity mapping in `describeParts`
+  (`p === 'pulley' ? 'pulley' : p`), and a guard of my own hiding the count on a finished
+  block — an over day prescribes nothing, so the count is already zero and no mutation
+  could kill it.
+  Twenty-two mutations, twenty-two killed. Verified in both themes: today read *2 exercises
+  load your elbow* in week 4 and next Monday read *4*, which is not a bug — week 5 leaves
+  The Anvil for The Hammer, and the count is a phase change showing up as a number before
+  the climber walks into it. A week of counting costs 0.067 ms and does not grow with the
+  log, so it gets no budget line. 2,644 tests pass.
 - **M90 — Why the dose does not change.** M33 added `ExerciseBlock.constantDose` for blocks
   that genuinely run the same sets and reps for twelve weeks, with the explicit reasoning
   that such a block *"has to say so out loud rather than reading as an oversight"*. Twelve

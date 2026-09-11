@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { Link } from 'wouter';
 import {
+  AlertTriangle,
   CalendarDays,
   Check,
   ChevronRight,
@@ -16,7 +17,9 @@ import { getProgram } from '@/content/programs';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { TEST_REASON_LABEL } from '@/engine/assessments';
 
+import { dayLoad, describeDayLoad } from '@/engine/bodyLoad';
 import { deriveClimberState } from '@/engine/derive';
+import { concerning, injuryPolicy } from '@/engine/injury';
 
 import { BoardCard } from '@/features/challenges/BoardPage';
 import { ReviewCard } from '@/features/review/ReviewPage';
@@ -43,6 +46,7 @@ export function HomePage() {
   const startDates = useProfile((s) => s.startDates);
   const plans = useProfile((s) => s.plans);
   const weekOverrides = useProfile((s) => s.weekOverrides);
+  const injuries = useProfile((s) => s.injuries);
   const byDate = useSessions((s) => s.byDate);
   const hydrated = useSessions((s) => s.hydrated);
   const load = useSessions((s) => s.load);
@@ -59,6 +63,13 @@ export function HomePage() {
   const day = program && startDate && plan ? plannedDay(program, startDate, plan, date, overrides) : undefined;
   const logged = byDate[date] ?? [];
   const done = logged.some((s) => s.completed);
+
+  // Counted here rather than in the logger, because this is the screen you
+  // read before you leave the house (PLAN.md M89). The per-exercise flags
+  // in the session are still there; they arrive too late to change a
+  // decision about the day.
+  const hurt = useMemo(() => concerning(injuryPolicy(injuries)), [injuries]);
+  const loadNote = useMemo(() => (day ? describeDayLoad(dayLoad(day, hurt)) : null), [day, hurt]);
 
   return (
     <>
@@ -127,6 +138,17 @@ export function HomePage() {
               <p className="text-sm text-ink-soft mb-3">
                 Nothing planned — no program is running. Log whatever you climb and it still counts
                 toward everything.
+              </p>
+            )}
+
+            {/* Only while the day is still a decision: once the session
+                is logged the warning is a verdict on something already
+                climbed. A finished block needs no guard — it prescribes
+                nothing, so there is nothing to count. */}
+            {loadNote && !done && (
+              <p className="text-warn text-xs mb-3 flex items-start gap-1.5">
+                <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                <span>{loadNote}. Each one is marked in the session.</span>
               </p>
             )}
 

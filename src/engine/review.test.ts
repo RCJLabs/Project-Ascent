@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { BodyPart } from '@/content/warmups';
 import { getProgram } from '@/content/programs';
 import { newProject } from '@/db/projects';
 import { newSession, type Session } from '@/db/sessions';
@@ -204,7 +205,7 @@ describe('the coaching note', () => {
   it('always produces exactly one note, with all three fields', () => {
     const cases: Session[][] = [[], baseline(), [...baseline(), session(THIS_WEEK, { warmup: true })]];
     for (const sessions of cases) {
-      for (const injuries of [[], ['elbow']]) {
+      for (const injuries of [[], ['elbow'] as BodyPart[]]) {
         const n = note(sessions, { injuries });
         expect(n.headline.length).toBeGreaterThan(0);
         expect(n.body.length).toBeGreaterThan(20);

@@ -7,6 +7,8 @@ import {
   describeParts,
   drillConflict,
   exerciseConflict,
+  dayLoad,
+  describeDayLoad,
   partsInText,
   scanText,
   sessionConflicts,
@@ -173,5 +175,95 @@ describe('wording', () => {
     expect(describeParts(['elbow', 'shoulder'])).toBe('your elbow and shoulder');
     expect(describeParts(['fingers', 'elbow', 'shoulder'])).toBe('your fingers, elbow and shoulder');
     expect(describeParts([])).toBe('');
+  });
+});
+
+/**
+ * The count, where the decision is made (PLAN.md M89).
+ *
+ * `sessionConflicts` reads a session type's blocks and nothing else, so it
+ * cannot see the drill — which is a real piece of a day and, in several
+ * programs, the piece that torques a knee.
+ */
+describe('what a whole planned day loads', () => {
+  const type: SessionType = {
+    id: 'fp', name: 'Finger power', icon: '', description: '',
+    blocks: [
+      { id: 'hb', name: 'Hangboard', perPhase: { p1: { rationale: '', exercises: [ex('Max Hangs'), ex('Min Edge')] } } },
+      { id: 'core', name: 'Core', perPhase: { p1: { rationale: '', exercises: [ex('Plank')] } } },
+    ],
+  };
+  const heels: Drill = {
+    id: 'h', name: 'Heel practice', description: 'Work heel hooks on steep ground.', duration: '20 min',
+    focus: 'Footwork', category: 'technique', discipline: 'both', level: 'V0-V17',
+    equipment: ['wall'], sources: [],
+  };
+
+  it('counts the exercises the session prescribes', () => {
+    expect(dayLoad({ sessionType: type, phase: { id: 'p1' } }, ['fingers']).conflicts).toHaveLength(2);
+  });
+
+  it('counts the drill, which the session type does not carry', () => {
+    const withDrill = dayLoad({ sessionType: type, phase: { id: 'p1' }, drill: heels }, ['fingers', 'knee']);
+    expect(withDrill.conflicts).toHaveLength(3);
+    expect(withDrill.conflicts.filter((c) => c.kind === 'drill').map((c) => c.exercise)).toEqual([
+      'Heel practice',
+    ]);
+  });
+
+  it('counts a drill on a day that prescribes no session', () => {
+    expect(dayLoad({ drill: heels }, ['knee']).conflicts).toHaveLength(1);
+  });
+
+  // A rest day resolves to nothing on its own: no session type, no drill.
+  it('finds nothing in a day with nothing in it', () => {
+    expect(dayLoad({}, ['fingers']).conflicts).toEqual([]);
+    expect(dayLoad({}, ['fingers']).parts).toEqual([]);
+  });
+
+  it('finds nothing when nothing is hurt', () => {
+    expect(dayLoad({ sessionType: type, phase: { id: 'p1' }, drill: heels }, []).conflicts).toEqual([]);
+  });
+
+  // Without a phase there is no prescription to read, and guessing one
+  // would report a day's load from a block it is not in.
+  it('reads no exercises for a day outside the program’s weeks', () => {
+    expect(dayLoad({ sessionType: type }, ['fingers']).conflicts).toEqual([]);
+  });
+
+  it('names each hurt part once, however many lines load it', () => {
+    expect(dayLoad({ sessionType: type, phase: { id: 'p1' } }, ['fingers', 'pulley']).parts).toEqual([
+      'fingers',
+      'pulley',
+    ]);
+  });
+
+  describe('said out loud', () => {
+    const say = (day: Parameters<typeof dayLoad>[0], injured: Parameters<typeof dayLoad>[1]) =>
+      describeDayLoad(dayLoad(day, injured));
+
+    it('says nothing when nothing clashes', () => {
+      expect(say({}, ['fingers'])).toBeNull();
+    });
+
+    it('counts, because the count is what makes it a decision', () => {
+      expect(say({ sessionType: type, phase: { id: 'p1' } }, ['fingers'])).toBe(
+        '2 exercises load your fingers',
+      );
+    });
+
+    it('agrees with itself when only one line clashes', () => {
+      expect(say({ sessionType: type, phase: { id: 'p1' } }, ['back'])).toBe('1 exercise loads your back');
+    });
+
+    it('calls the drill the drill rather than an exercise', () => {
+      expect(say({ drill: heels }, ['knee'])).toBe('the drill loads your knee');
+    });
+
+    it('adds the drill to the count without losing the verb', () => {
+      expect(say({ sessionType: type, phase: { id: 'p1' }, drill: heels }, ['back', 'knee'])).toBe(
+        '1 exercise and the drill load your back and knee',
+      );
+    });
   });
 });

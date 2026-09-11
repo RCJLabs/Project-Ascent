@@ -11,6 +11,7 @@
  * before the feature existed.
  */
 
+import type { BodyPart } from '@/content/warmups';
 import type { Program } from '@/content/types';
 import type { Session } from '@/db/sessions';
 import type { Project } from '@/db/projects';
@@ -18,6 +19,7 @@ import { weeklyChallenges, type Challenge } from './challenges';
 import { addDays, daysBetween, startOfWeek, today as todayKey } from './dates';
 import { buildLoadIndex, deriveClimberState, loadStateAt, sessionLoad, type AcwrZone } from './derive';
 import { sessionHeight } from './altimeter';
+import { dayLoad, type DayLoad } from './bodyLoad';
 import { DEFAULT_DISPLAY, displayGrade, maxGrade, type GradeDisplay, type GradeScale } from './grades';
 import { plannedDay } from './plan';
 import type { WeekPlan } from './scheduler';
@@ -43,6 +45,13 @@ export interface PlannedSlot {
   label: string;
   icon: string;
   isRest: boolean;
+  /**
+   * What that day loads of what is hurt (PLAN.md M89). Empty when nothing
+   * does, or when nothing is hurt. The whole reading rather than a count,
+   * so the number on a row and the part named under the list cannot drift
+   * apart.
+   */
+  load: DayLoad;
 }
 
 export interface WeekReview {
@@ -93,7 +102,12 @@ export interface ReviewInput {
   plan?: WeekPlan | undefined;
   projects?: Project[];
   xp?: XpState;
-  injuries?: string[];
+  /**
+   * The parts the climber has recorded. Typed as body parts rather than
+   * strings because the week ahead is now scanned for what loads them, not
+   * only named in a coaching note (PLAN.md M89).
+   */
+  injuries?: BodyPart[];
   /** Notation to write grades in. Defaults to the stored ladders. */
   display?: GradeDisplay;
   today?: string;
@@ -335,6 +349,7 @@ function nextWeekLayout(input: ReviewInput, weekEnd: string): PlannedSlot[] {
   const { program, startDate, plan } = input;
   if (!program || !startDate || !plan) return [];
 
+  const injured = input.injuries ?? [];
   const slots: PlannedSlot[] = [];
   for (let i = 1; i <= 7; i++) {
     const date = addDays(weekEnd, i);
@@ -344,6 +359,7 @@ function nextWeekLayout(input: ReviewInput, weekEnd: string): PlannedSlot[] {
       label: day.sessionType?.name ?? 'Rest',
       icon: day.sessionType?.icon ?? '🔋',
       isRest: day.isRest || !day.sessionType,
+      load: dayLoad(day, injured),
     });
   }
   return slots;

@@ -175,6 +175,12 @@ function firstConflict(findings: LoadFinding[], injured: readonly BodyPart[]): L
 }
 
 export interface SessionConflict {
+  /**
+   * Which part of the day this is. The drill is not an exercise and does
+   * not sit in a block, so a sentence that counts them together has to be
+   * able to tell them apart.
+   */
+  kind: 'exercise' | 'drill';
   /** Block name, or undefined for the session type itself. */
   block?: string;
   exercise: string;
@@ -199,7 +205,7 @@ export function sessionConflicts(
     if (!prescription) continue;
     for (const exercise of prescription.exercises) {
       const finding = exerciseConflict(exercise, injured);
-      if (finding) out.push({ block: block.name, exercise: exercise.name, finding });
+      if (finding) out.push({ kind: 'exercise', block: block.name, exercise: exercise.name, finding });
     }
   }
   return out;
@@ -207,8 +213,62 @@ export function sessionConflicts(
 
 /** "your elbow", "your left pulley and your elbow". */
 export function describeParts(parts: readonly BodyPart[]): string {
-  const names = parts.map((p) => (p === 'pulley' ? 'pulley' : p));
-  if (names.length === 0) return '';
-  if (names.length === 1) return `your ${names[0]}`;
-  return `your ${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return `your ${parts[0]}`;
+  return `your ${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;
+}
+
+export interface DayLoad {
+  /** Every piece of the day that loads an injured part. */
+  conflicts: SessionConflict[];
+  /** The injured parts those pieces load, without repeats. */
+  parts: BodyPart[];
+}
+
+/**
+ * What a whole planned day loads, counted (PLAN.md M89).
+ *
+ * `sessionConflicts` reads a session type's blocks and stops there, which
+ * leaves out the one piece of a day that is not in a block: the drill. A
+ * day-level count that quietly missed it would be the wrong number in the
+ * one place where the number is the entire point.
+ *
+ * Takes the shape of a planned day rather than importing one, so this
+ * module stays clear of `plan.ts` and the week arithmetic that belongs
+ * there. A rest day resolves to nothing on its own — every rest session
+ * type in the catalog carries no blocks and no drill — so there is no
+ * special case for one here.
+ */
+export function dayLoad(
+  day: { sessionType?: SessionType; phase?: { id: string }; drill?: Drill },
+  injured: readonly BodyPart[],
+): DayLoad {
+  const conflicts: SessionConflict[] = [];
+  if (day.sessionType && day.phase) {
+    conflicts.push(...sessionConflicts(day.sessionType, day.phase.id, injured));
+  }
+  if (day.drill) {
+    const finding = drillConflict(day.drill, injured);
+    if (finding) conflicts.push({ kind: 'drill', exercise: day.drill.name, finding });
+  }
+  return { conflicts, parts: [...new Set(conflicts.flatMap((c) => c.finding.parts))] };
+}
+
+/**
+ * "3 exercises load your elbow", "the drill loads your knee".
+ *
+ * Null when nothing conflicts, so a caller renders nothing without checking
+ * a length. The count is the whole sentence: a climber deciding whether
+ * today is worth the drive needs a number, not a reason — the reasons are
+ * already beside each line once they are there.
+ */
+export function describeDayLoad(load: DayLoad): string | null {
+  if (load.conflicts.length === 0) return null;
+  const exercises = load.conflicts.filter((c) => c.kind === 'exercise').length;
+  const drill = load.conflicts.some((c) => c.kind === 'drill');
+  const pieces: string[] = [];
+  if (exercises > 0) pieces.push(`${exercises} ${exercises === 1 ? 'exercise' : 'exercises'}`);
+  if (drill) pieces.push('the drill');
+  const plural = pieces.length > 1 || exercises > 1;
+  return `${pieces.join(' and ')} ${plural ? 'load' : 'loads'} ${describeParts(load.parts)}`;
 }

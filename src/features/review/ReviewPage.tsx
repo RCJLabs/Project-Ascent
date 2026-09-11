@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   ArrowLeft,
   Check,
   ChevronRight,
@@ -10,7 +11,8 @@ import {
 } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { addDays, fromKey, shortLabel, startOfWeek, today as todayKey } from '@/engine/dates';
-import { buildReview, type NoteTone, type WeekReview } from '@/engine/review';
+import { describeDayLoad, describeParts } from '@/engine/bodyLoad';
+import { buildReview, type NoteTone, type PlannedSlot, type WeekReview } from '@/engine/review';
 import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { weekCard } from '@/ui/shareCard';
@@ -187,23 +189,57 @@ export function ReviewPage() {
           </dl>
         </Card>
 
-        {review.nextWeek.length > 0 && (
-          <Card title="Next week">
-            <ul className="grid grid-cols-1 gap-1.5">
-              {review.nextWeek.map((slot) => (
-                <li key={slot.date} className="flex items-baseline gap-2.5 text-sm">
-                  <span className="text-xs text-ink-soft w-10 shrink-0">
-                    {fromKey(slot.date).toLocaleDateString(undefined, { weekday: 'short' })}
-                  </span>
-                  <span className="shrink-0">{slot.icon}</span>
-                  <span className={slot.isRest ? 'text-ink-soft' : 'font-semibold'}>{slot.label}</span>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        )}
+        {review.nextWeek.length > 0 && <NextWeek slots={review.nextWeek} />}
       </PageGrid>
     </>
+  );
+}
+
+/**
+ * The week ahead, with what it loads of what is hurt (PLAN.md M89).
+ *
+ * A list rather than the calendar grid on purpose: a month of forty-pixel
+ * cells already carries moving and preview state in its borders and tints,
+ * and a third signal there would collide with both. Seven rows have room
+ * for a number.
+ *
+ * The parts are named once under the list, not on every row — five rows
+ * each ending "load your elbow" is the same sentence read five times.
+ */
+function NextWeek({ slots }: { slots: PlannedSlot[] }) {
+  const parts = [...new Set(slots.flatMap((s) => s.load.parts))];
+
+  return (
+    <Card title="Next week">
+      <ul className="grid grid-cols-1 gap-1.5">
+        {slots.map((slot) => (
+          <li key={slot.date} className="flex items-baseline gap-2.5 text-sm">
+            <span className="text-xs text-ink-soft w-10 shrink-0">
+              {fromKey(slot.date).toLocaleDateString(undefined, { weekday: 'short' })}
+            </span>
+            <span className="shrink-0">{slot.icon}</span>
+            <span className={slot.isRest ? 'text-ink-soft' : 'font-semibold'}>{slot.label}</span>
+            {slot.load.conflicts.length > 0 && (
+              <span className="text-warn text-xs flex items-center gap-1 ml-auto shrink-0 tabular-nums">
+                <AlertTriangle size={12} aria-hidden="true" />
+                {/* The caption below carries the part for a reader who can
+                    see the whole card at once. Someone hearing the rows in
+                    order has not reached it yet, so the badge says the
+                    sentence in full rather than a bare number. */}
+                <span aria-hidden="true">{slot.load.conflicts.length}</span>
+                <span className="sr-only">{describeDayLoad(slot.load)}</span>
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      {parts.length > 0 && (
+        <p className="text-xs text-ink-soft mt-3 flex items-start gap-1.5">
+          <AlertTriangle size={12} className="text-warn shrink-0 mt-0.5" />
+          <span>Counts what that day loads of {describeParts(parts)}.</span>
+        </p>
+      )}
+    </Card>
   );
 }
 
