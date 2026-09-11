@@ -56,6 +56,7 @@ import { announce } from '@/ui/Announce';
 import { Term } from '@/ui/Term';
 import { TimerSheet } from '@/ui/TimerSheet';
 import {useGradeLabel} from '@/ui/useGrade';
+import { gradeDisagreements } from '@/engine/sessionFields';
 import { alreadySaved, applyTemplate, rankTemplates, suggestName } from '@/engine/templates';
 import { canMerge, describeSession } from '@/engine/sessionEdit';
 import { concerning, injuryPolicy } from '@/engine/injury';
@@ -1105,6 +1106,7 @@ function FieldsCard({
   onChange: (session: Session) => void;
 }) {
   const display = useSettings((s) => s.display);
+  const gradeLabel = useGradeLabel();
   const specs = (type?.fields ?? []).map(getField).filter((f): f is FieldSpec => f !== undefined);
   if (specs.length === 0) return null;
 
@@ -1117,8 +1119,32 @@ function FieldsCard({
     });
   };
 
+  // Where a typed grade and the session's own climbs disagree (PLAN.md
+  // M88). Reported here rather than on a progress page because this is the
+  // one screen where either side can still be corrected.
+  const clashes = gradeDisagreements(session);
+
   return (
     <Card title="This session">
+      {clashes.length > 0 && (
+        <ul className="grid grid-cols-1 gap-2 mb-3">
+          {clashes.map((clash) => (
+            <li
+              key={clash.spec.id}
+              className="flex items-start gap-2 text-xs leading-relaxed bg-sunken rounded-xl p-3"
+            >
+              <AlertTriangle size={14} className="text-warn shrink-0 mt-0.5" aria-hidden />
+              <span>
+                You put <strong>{gradeLabel(clash.scale, clash.said)}</strong> for
+                {' '}{clash.spec.label.toLowerCase()}, and the hardest in the climbs below is{' '}
+                <strong>{gradeLabel(clash.scale, clash.logged)}</strong>. Both can be true — the
+                hardest thing you touched is not always one you counted — but only the climbs
+                reach your grades and records.
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="grid grid-cols-1 gap-3">
         {specs.map((spec) => {
           const value = session.fields?.[spec.id];

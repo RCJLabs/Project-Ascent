@@ -81,3 +81,69 @@ describe('a session type that asks for more', () => {
     expect(screen.queryByText('This session')).toBeNull();
   });
 });
+
+/**
+ * A typed grade against the session's own climbs (PLAN.md M88).
+ *
+ * Six of the eleven programs ask a session type for "Hardest sent" — and
+ * the app derives exactly that from the climbs logged in the same session,
+ * for the pyramid, the progression chart and the records. The typed answer
+ * feeds none of them, and nothing had ever checked the two agree.
+ */
+async function performance(fields: Record<string, string>, climbs: unknown[]): Promise<void> {
+  await reset();
+  const program = getProgram('iron_grip')!;
+  const type = program.sessionTypes.find((t) => (t.fields ?? []).includes('hardestGradeSent'))!;
+  await putSession({
+    ...newSession(DATE, 0, { completed: false }),
+    programId: program.id,
+    sessionTypeId: type.id,
+    fields,
+    climbs,
+  } as never);
+  await hydrate();
+  useProfile.setState({
+    activeProgramId: program.id,
+    startDates: { [program.id]: DATE },
+    plans: { [program.id]: {} },
+    weekOverrides: {},
+    adaptations: {},
+  });
+  renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+}
+
+const sent = (grade: string) => ({ id: grade, grade, scale: 'V', count: 1, result: 'send' });
+
+describe('when the typed grade and the climbs disagree', () => {
+  it('says so, on the screen where either can be fixed', async () => {
+    await performance({ hardestGradeSent: 'V7' }, [sent('V5')]);
+    expect(screen.getByText(/the hardest in the climbs below is/)).toBeTruthy();
+  });
+
+  it('names both grades', async () => {
+    await performance({ hardestGradeSent: 'V7' }, [sent('V5')]);
+    const notice = screen.getByText(/the hardest in the climbs below is/).closest('li')!;
+    expect(notice.textContent).toContain('V7');
+    expect(notice.textContent).toContain('V5');
+  });
+
+  it('says which side reaches the grades and records', async () => {
+    await performance({ hardestGradeSent: 'V7' }, [sent('V5')]);
+    expect(screen.getByText(/only the climbs reach your grades and records/)).toBeTruthy();
+  });
+
+  it('allows that both can be true rather than calling it an error', async () => {
+    await performance({ hardestGradeSent: 'V7' }, [sent('V5')]);
+    expect(screen.getByText(/Both can be true/)).toBeTruthy();
+  });
+
+  it('stays quiet when they agree', async () => {
+    await performance({ hardestGradeSent: 'V5' }, [sent('V5')]);
+    expect(screen.queryByText(/the hardest in the climbs below is/)).toBeNull();
+  });
+
+  it('stays quiet when no climbs were logged', async () => {
+    await performance({ hardestGradeSent: 'V7' }, []);
+    expect(screen.queryByText(/the hardest in the climbs below is/)).toBeNull();
+  });
+});

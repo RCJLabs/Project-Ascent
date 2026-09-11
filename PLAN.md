@@ -3116,17 +3116,49 @@ a kept one.
 
 **The app itself.**
 
-- **M88 — The answers the logger asks for and nothing reads.** Exactly M82's shape, one
-  layer down and larger. `content/fields.ts` declares sixteen `FieldId`s, twenty-two
-  session types across the catalogue name them, and `session.fields` is written by
-  `LogPage.tsx:1124` and read back by `LogPage.tsx:1112` — **the same screen, the same
-  day, and nowhere else.** The file's own header says a question the content asks and the
-  app never renders is a promise the content cannot keep; M70 kept the first half of that
-  promise by rendering the inputs, and the answers still go nowhere. Three of them are
-  worth real surfaces: `pumpLevel` is a 1-10 scale collected every route session and never
-  plotted; `location` is asked on every outdoor session and the app has no venue concept at
-  all (the catalogue deferred out of M70); `sessionNumber` is literally labelled "Day of the
-  trip" and nothing in the app knows what a trip is.
+- **M88 — The answers the logger asks for and nothing reads.** *Done, and split — the audit
+  said this was closer to three milestones than one and measuring it proved that right.*
+  The premise held exactly: sixteen field ids, and `session.fields` written and read by the
+  same screen on the same day and nowhere else.
+  **Counting the declarations changed the shape of the work.** `sessionVolume` is asked by
+  **seven of eleven programs**, `attemptsToday` by nine session types, `pumpLevel` by five —
+  and `hardestGradeAttempted` and `hardestGradeSent` by **six programs each**, which is the
+  finding the audit missed. Those two are not a missing reading. **The app already derives
+  the hardest grade of a session from the climbs logged in that same session**, for the
+  pyramid, the progression chart and the personal records; the typed answer feeds none of
+  them, renders in a card of its own, and nothing had ever checked the two agree. A climber
+  can log V5s and type V7 and the app will carry both without comment.
+  So this milestone did two things. **The quantities are a series** — a dot per answer, never
+  a line, because a field is only asked on the session types that declare it and joining two
+  points a month apart would draw a trend across a gap where nothing was asked. A 1-10 scale
+  is drawn against its own ends and every other field against its own range: "Climbs done"
+  between 18 and 24 is a flat line on a zero axis and a real spread on its own. **And the
+  grade fields are reconciled** — in the logger, the one screen where either side can still
+  be changed, and reported rather than corrected: the hardest thing you touched is not
+  always a climb you counted, so the app says what it sees and names which side reaches
+  your records.
+  Twenty-seven mutations, twenty-one killed. Six survivors, five of them weak tests of mine
+  and each worth knowing: the text fixtures were non-numeric, so `Number.isFinite` was doing
+  the work of the kind check and a climber typing "12" for the twelfth bolt would have been
+  plotted as a quantity; the two-ladder test had the V-grade numerically higher, so the
+  scale guard was invisible; the off-ladder test had a real grade beside it; and the pump
+  test had a single answer, so its axis could not be told from any other. The sixth was a
+  redundant blank-string check that `canonicalGrade` already does, and was deleted.
+  **Two browser findings**, one of them mine and a real bug: a series whose answers are all
+  the same number rendered two axis lines with **the same React key**, because `hi` and `lo`
+  are equal there — one line now, and the hidden duplicate is gone. The other was copy:
+  "5 typical burns" put the adjective on the unit rather than the number.
+  Verified in both themes. 2,623 tests pass, and the new derivation is in the perf budget.
+  **Split out, because they are different milestones and not smaller ones:**
+- **M88b — Where you climbed.** `location` is asked by six session types across two
+  programs and stored as free text. The app has no venue concept at all: no crag, no gym,
+  nothing that groups sessions by place or says "you have climbed at the Works forty
+  times". This is the catalogue deferred out of M70 and it is a data model, not a card.
+- **M88c — The trip.** `sessionNumber` is labelled **"Day of the trip"**, asked by four
+  session types, and nothing in the app knows what a trip is. Outdoor Climbing asks it on
+  every session. A trip is a run of consecutive outdoor days with a place and a name, and
+  it is the unit climbers actually remember a year in — the year review's "days on real
+  rock" is the closest the app comes and it is a count, not a story.
 - **M89 — Injury load, counted before you get to the gym.** `bodyLoad.sessionConflicts` is
   written, documented, unit-tested, and **called by nothing**. Its own doc comment states
   the case better than I can: *"A program-wide count is what makes the warning worth

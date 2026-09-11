@@ -16,7 +16,8 @@ import { describeTissue, tissueLoad } from '@/engine/tissueLoad';
 import { compareBlocks, describeBlocks } from '@/engine/blockCompare';
 import { checkInHistory, describeCheckIns, type CheckInHistory } from '@/engine/checkIns';
 import { conversionTrend, describeConversion, drawable } from '@/engine/conversion';
-import { fromKey, today } from '@/engine/dates';
+import { FIELD_DAYS, fieldSeries } from '@/engine/sessionFields';
+import { addDays, fromKey, today } from '@/engine/dates';
 import { availableYears } from '@/engine/yearReview';
 import { deriveClimberState } from '@/engine/derive';
 import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
@@ -33,6 +34,7 @@ import { LoadBars, ProgressionLine, PyramidBars } from '@/ui/charts/Charts';
 import { ConsistencyBody } from '@/ui/charts/ConsistencyGrid';
 import { CheckInStrip } from '@/ui/charts/CheckInStrip';
 import { ConversionGrid } from '@/ui/charts/ConversionGrid';
+import { FieldSeriesChart } from '@/ui/charts/FieldSeriesChart';
 import { LoadTrendLine } from '@/ui/charts/LoadTrendLine';
 import { TissueBars, TissueNote } from '@/ui/charts/TissueBars';
 import { BlockCompareTable } from '@/ui/charts/BlockCompare';
@@ -291,6 +293,7 @@ export function ProgressPage() {
     () => conversionTrend({ sessions, scale, to: today() }),
     [sessions, scale],
   );
+  const answered = useMemo(() => fieldSeries({ sessions, to: today() }), [sessions]);
   // The scan reads the record; the drill a session ran and the exercises its
   // program prescribed live in the catalogue, so they are fetched here and
   // handed in. Without them a program session counts only what was ticked.
@@ -415,6 +418,30 @@ export function ProgressPage() {
           <LoadTrendLine trend={trend} />
           <p className="text-sm text-ink-soft mt-2 leading-relaxed">{describeTrend(trend)}</p>
         </Card>
+
+        {/* The logger's own extra questions, which until M88 were asked on
+            twenty-two session types and read by nothing. Beside the
+            check-in card because it is the same kind of thing: what you
+            told the app, given back to you. */}
+        {answered.length > 0 && (
+          <Card title="What you told the logger">
+            <div className="grid grid-cols-1 gap-4">
+              {answered.map((series) => (
+                <FieldSeriesChart
+                  key={series.spec.id}
+                  series={series}
+                  from={addDays(today(), -(FIELD_DAYS - 1))}
+                  to={today()}
+                />
+              ))}
+            </div>
+            <p className="text-xs text-ink-soft mt-3 leading-relaxed">
+              Your programs ask these on the session types that want them, so a question only
+              appears here on the days it was put to you. Nothing is filled in for the days it
+              was not.
+            </p>
+          </Card>
+        )}
 
         {/* Placed after the load cards, because every sentence in it is
             about the sessions those cards are counting — and before the

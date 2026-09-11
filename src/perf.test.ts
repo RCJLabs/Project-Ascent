@@ -9,6 +9,7 @@ import { deriveCareer } from '@/engine/career';
 import { checkInHistory } from '@/engine/checkIns';
 import { conversionTrend } from '@/engine/conversion';
 import { blockReport } from '@/engine/blockReport';
+import { fieldSeries } from '@/engine/sessionFields';
 import { deriveClimberState } from '@/engine/derive';
 import { deriveStats } from '@/engine/stats';
 import { clearXpCache, deriveXp } from '@/engine/xp';
@@ -144,6 +145,7 @@ describe('ten years of logs stays cheap', () => {
       // finds them — which is the part that grows with the log.
       ['checkIns', 20, () => checkInHistory({ sessions, to: sessions[sessions.length - 1]!.date })],
       ['conversion', 25, () => conversionTrend({ sessions, scale: 'V', to: sessions[sessions.length - 1]!.date })],
+      ['fieldSeries', 20, () => fieldSeries({ sessions, to: sessions[sessions.length - 1]!.date })],
       // Ten years of metric entries against one twelve-week battery: the
       // cost is the scan per assessment, which grows with the log.
       ['blockReport', 20, () => blockReport({
