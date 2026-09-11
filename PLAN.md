@@ -2625,6 +2625,116 @@ something that already exists; six are new. Nothing here is committed.*
   the climber page, open it, mark it healed, land back on the climber; Settings mentions
   nothing.
 
+**Ten more, from a second audit (M77–M86).** Brief: one that is large and has several
+steps; three about the app itself; one about The Ascent; three about progress tracking;
+two about programs. Every one below was checked against the code before it was written
+down — the last audit produced four proposals that were wrong because they listed
+directories instead of reading files, and each of those had to be withdrawn in its own
+commit.
+
+**The large one.**
+
+- **M77 — The guides and the programs agree.** *Four steps, and the coach's calls at each.*
+  `guides/accuracy.test.ts` already reports the debt and it is the biggest known one in the
+  app: **eight of nine program guides disagree with their program about which weeks are
+  deloads**, two outright (Peak Performance's table says week 5, the program schedules 4;
+  The Siege's says 8, the program schedules 11); **three guides prescribe exercises their
+  program never schedules**, in starred "non-negotiable" blocks; and the **seven scheduled
+  deload weeks with no guide row** carried since M58. (1) Deloads: per program, decide which
+  side is right and fix the loser — proposed default is that the *schedule* wins, because
+  the flag is what the calendar marks and what stops a dip in load reading as detraining.
+  (2) Orphans: Band Face Pulls, Wide-Grip Pull-Ups, Hanging Windshield Wipers, the delt
+  raises — either into a block or out of the guide, no third option, because a starred
+  exercise the session screen never hands over is a promise the content cannot keep.
+  (3) The seven silent deload weeks get their guide row. (4) The test stops *reporting* and
+  starts *failing*: every row it lists today becomes an assertion, so the agreement cannot
+  drift again. Large because it is content, and content is where the app's own tests have
+  found the most wrong.
+
+**The app itself.**
+
+- **M78 — Programs stop shipping eagerly.** Measured: the first-load chunk is **239.5 KB
+  gzipped against a 260 KB budget** — 92% of the headroom gone. The reason is two lines:
+  `store/profile.ts` and `store/programs.ts` import `@/content/programs` at module level to
+  register adaptations and custom programs, which drags all eleven programs — five thousand
+  lines of prescriptions — into the bundle before the home page can draw. The guides are
+  already lazy, which is why "Week 8 Deload" is *not* in the eager chunk and "The Anvil"
+  is. A light catalogue (id, name, stage, weeks, grade range, kind) stays eager; bodies go
+  behind `import()`. *Caveat before promising:* `getProgram` is synchronous at roughly
+  twenty call sites, so the honest first step is to count them and measure what a
+  preload-after-hydrate saves, not to assume the split is free.
+- **M79 — Undo wherever it destroys.** `store/undo.ts` holds one offer and it is wired to
+  deleting a session, a project and an objective. Four destructive actions have no way back,
+  all seen while building the last block: **Mark healed** on an injury (M76 wired the
+  navigation, not an undo), **Clear** on a photo's beta (M71), a tally row bumped to zero in
+  gym mode (M74), and the builder's **Danger zone**. Add the offer to each, and a
+  source-scanning test that every store action named `remove`, `delete` or `clear` on user
+  data has an `offerUndo` beside its call site — the ninety-five-bare-buttons lesson,
+  applied to loss.
+- **M80 — Data health, on one page.** The app already knows a lot about its own state and
+  says it in five places or nowhere: `readingProblems()` reports records dropped or repaired
+  at the read boundary (Settings, "Your data"); `sweepOrphanMedia()` exists and nothing
+  invokes it on a schedule; `staleSessions()` finds sessions left open; `storagePressure()`
+  knows when eviction is near; the import snapshot can be restored or cleared. One page
+  that lists every store's count, every shape problem by store, orphan photos and their
+  bytes, open sessions older than a day, and a single "tidy up" that runs the sweeps and
+  says what it did. Nothing new is derived — it is the app's existing self-knowledge,
+  finally in one place a climber can read before a backup rather than after a loss.
+
+**The Ascent.**
+
+- **M81 — Replay, which the engine was built for and nothing uses.** `engine/ascent/game.ts`
+  opens with the property: *"a seed plus a sequence of inputs reproduces a run exactly on
+  any device at any frame rate."* `AscentRecords` stores two numbers per mode and a daily
+  total — **no inputs are kept, so the property is unused**. Record the input tape of the
+  best run (lane changes by tick — ticks, not wall time, so it is tiny and exact), keep it
+  beside the record, and draw it as a ghost on the daily wall so a climber races their own
+  best on the same wall everyone else got. The proof is the test: replay the tape and
+  assert the metres match to the unit, which is the determinism claim finally held to
+  something.
+
+**Progress tracking.**
+
+- **M82 — The check-in as a series.** M72 stores `checkIn` on every session it was answered
+  for and **nothing reads it back** — not the progress page, not the year review, not the
+  consistency grid. Plot fingers and sleep as marks along the training-load line so a run of
+  "barely slept" sits next to the spike it preceded, and show whether the effort ceiling was
+  respected: the RPE logged against the cap the check-in suggested. Derived only, and honest
+  about being a handful of dots until there is a block of them.
+- **M83 — Conversion, over time.** `PyramidRow.conversion` — sends over tries per grade —
+  exists and is drawn once, as a snapshot in the pyramid. The grade-progression chart plots
+  the hardest send per week; nothing plots how *efficiently* a grade is sent, and that is
+  the number that moves before the max grade does. Per-grade conversion per block, with the
+  four-weeks-against-four comparison (M28) gaining a line: "V5 went from one in six to one in
+  two." `projectHistory` (M69) already does this for projects; this is the same idea for the
+  ladder.
+- **M84 — The block's numbers, on one chart.** Programs declare `assessments: MetricId[]`
+  and M67 knows which weeks are baseline, phase and final tests; the builder's Benchmarks
+  card even says the retests exist "so the strength curve has something to draw" — and each
+  metric is drawn alone, on its own page. A block report: for every assessment the program
+  asked for, baseline against final with the phase tests between, normalised so a hang in
+  seconds and a pull-up count share one axis, and the plain sentence: which of the numbers
+  this block was trying to move actually moved. Feeds M85.
+
+**Programs.**
+
+- **M85 — When the block ends.** There is no code for the last week: `plan.ts`, Home and the
+  profile store have nothing for "finished", the `final` test reason (M67) marks a week and
+  ties to nothing, and `nextPrograms` — authored on every program with a reason each — is
+  surfaced only on the catalogue detail page, where a climber mid-block never looks.
+  `Program.graduation` exists as a string and is read by nothing found. A block-end screen:
+  did you finish it, what moved (M84), the retest you owe, the graduation line, and the
+  authored next programs with their reasons — with the finder pre-filled from the log
+  rather than asked again.
+- **M86 — Entry standards the app can check.** Six programs print an entry-requirements
+  table as prose the app cannot read — Iron Grip's is "V5+, Dead Hang 60+ seconds, 15+
+  strict push-ups". `Program.prerequisites` exists for exactly this, `finder.ts` already
+  reads `prerequisites.metrics` and turns a miss into a blocker or a caution, and `dead_hang`
+  and `max_pushups` are registered metrics. Convert each table row into a checkable
+  threshold, so the finder blocks and cautions from the climber's own numbers and the
+  program page can say "you meet two of three, and here is the one to log." Distinct from
+  M77 step 2: that reconciles prose with the schedule; this turns prose into data.
+
 - **M12 — Ship.** *Parked.* TWA packaging + assetlinks, Play internal testing, store
   listing. Blocked on two facts only the author has — the app name and the package id —
   and set aside deliberately rather than waiting on them: everything above can be built
