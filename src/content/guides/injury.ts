@@ -48,7 +48,7 @@ export const INJURY: Guide = {
       content: [
         { kind: 'p', text: 'If you are already injured, your priority shifts from performance to structural integrity.' },
         { kind: 'list', items: [
-          '**Log it:** Mark it under Settings, with a severity and a side. That changes what your warmups load, what the program finder recommends, which bounties you are offered and what the logger flags — not just what you are told.',
+          '**Log it:** Mark it on your climber page, with a severity and a side. That changes what your warmups load, what the program finder recommends, which bounties you are offered and what the logger flags — not just what you are told.',
           '**Loading:** Tendons respond to load, and complete rest is not automatically the right answer — but what load, and when, depends on what is actually wrong with yours. That is a question for a physiotherapist, not for this app or the internet.',
           '**Deload:** If your ACWR is in the Danger zone when an injury occurs, it\'s a clear sign your body couldn\'t handle the recent volume.',
           '**Sleep:** Tendons have poor blood flow and are slow to remodel. Sleep is the recovery input with the least argument behind it and the one most climbers cut first.',

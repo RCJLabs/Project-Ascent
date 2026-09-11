@@ -82,11 +82,11 @@ export const APP: Guide = {
         {
           kind: 'list',
           items: [
-            '**Your climber** — tap the avatar on Home. Stats, level, vitality, rank.',
+            '**Your climber** — tap the avatar on Home. Stats, level, vitality, rank, and anything that hurts.',
             '**Skill trees** — from the climber page. Every node unlocks from real training.',
             "**Coach's Corner** — standing observations about your training, from Home.",
             '**The weekly review** — Sunday, and any past week you want to reread.',
-            '**Settings** — themes, grade scales, sound, equipment, injuries, backups, and these guides.',
+            '**Settings** — themes, grade scales, sound, equipment, backups, and these guides.',
           ],
         },
       ],
@@ -392,7 +392,7 @@ export const APP: Guide = {
       content: [
         {
           kind: 'p',
-          text: 'Mark it under Settings with a part, a side, a severity and whether you are managing it or coming back from it. That one entry changes the app everywhere:',
+          text: 'Mark it on your climber page with a part, a side, a severity and whether you are managing it or coming back from it. That one entry changes the app everywhere:',
         },
         {
           kind: 'list',

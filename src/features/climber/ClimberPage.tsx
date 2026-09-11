@@ -51,6 +51,7 @@ import { ShareButton } from '@/features/share/ShareSheet';
 import { AchievementsCard, CareerLinkCard } from './AchievementsCard';
 import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
+import { InjuriesCard } from '@/features/injury/InjuriesCard';
 import { Card } from '@/ui/Card';
 import { SelectableCard, Swatch } from '@/ui/Chip';
 import { Meter } from '@/ui/Meter';
@@ -164,6 +165,10 @@ export function ClimberPage() {
         <CareerLinkCard />
 
         <VitalityCard vitality={vitality} />
+        {/* What hurts, next to what it costs (PLAN.md M76). Moved here from
+            Settings, which is for changing the app and not for saying
+            something about yourself. */}
+        <InjuriesCard />
 
         <AppearanceCard palette={palette} />
 

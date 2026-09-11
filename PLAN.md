@@ -2613,6 +2613,18 @@ something that already exists; six are new. Nothing here is committed.*
   export with different semantics. And the file is a snapshot, not a subscription: there is
   no URL for a calendar to poll, because there is no server to poll it.
 
+- **M76 — Injuries live with the climber.** *Done.* The injuries card sat in Settings between
+  the equipment list and the backup export — the page you go to for changing the app, not
+  for saying something about yourself. An injury is a fact about the climber: it drains
+  vitality on the climber page two cards up, it filters warmups and the finder, it flags
+  lines in the logger. So the card moved under Vitality, next to the cost it causes. The
+  record, the store and the detail page are unchanged; only the doorway moved, and every
+  way back with it — the detail page's parent, its not-found link, and where "Mark healed"
+  lands. Search finds it under the climber now, the app guide says so, and the injury
+  guide's "mark it under Settings" was corrected. Verified in a browser: add Fingers from
+  the climber page, open it, mark it healed, land back on the climber; Settings mentions
+  nothing.
+
 - **M12 — Ship.** *Parked.* TWA packaging + assetlinks, Play internal testing, store
   listing. Blocked on two facts only the author has — the app name and the package id —
   and set aside deliberately rather than waiting on them: everything above can be built

@@ -42,7 +42,7 @@ export function InjuryPage({ params }: { params: { id: string } }) {
   if (!hydrated) return <PageSkeleton title="Injury" />;
   if (!injury) {
     return (
-      <RecordNotFound what="That injury record" backTo="/settings" backLabel="Back to settings">
+      <RecordNotFound what="That injury record" backTo="/climber" backLabel="Back to your climber">
         Recovered injuries are cleared from the tracker.
       </RecordNotFound>
     );
@@ -176,7 +176,7 @@ export function InjuryPage({ params }: { params: { id: string } }) {
             variant="outline"
             onClick={() => {
               removeInjury(injury.id);
-              navigate('/settings');
+              navigate('/climber');
             }}
           >
             Mark healed

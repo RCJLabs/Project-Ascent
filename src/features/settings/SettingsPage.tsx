@@ -6,20 +6,13 @@ import { previewFile, type ImportPreview } from '@/db/importPreview';
 import { clearSnapshot, readSnapshot, restoreSnapshot, takeSnapshot } from '@/db/snapshot';
 import { ImportPreviewCard, UndoImportCard } from './ImportPreviewCard';
 import { mediaBytes } from '@/db/media';
-import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
 import { displayGrade } from '@/engine/grades';
 import { formatBytes, storagePressure } from '@/engine/offline';
 import { useAppUpdate } from '@/store/appUpdate';
 import { unlock } from '@/lib/cues';
 import { hydrateAll } from '@/store';
-import {
-  SEVERITY_LABEL,
-  STATUS_LABEL,
-  useProfile,
-  type InjurySeverity,
-  type InjuryStatus,
-} from '@/store/profile';
+import { useProfile } from '@/store/profile';
 import { rankTemplates } from '@/engine/templates';
 import { useTemplates } from '@/store/templates';
 import { TEXT_SCALE, useSettings, type TextSize, type ThemePreference } from '@/store/settings';
@@ -41,18 +34,6 @@ const GEAR: { value: Equipment; label: string }[] = [
   { value: 'campus', label: 'Campus board' },
   { value: 'gym', label: 'Weights & bands' },
   { value: 'weight', label: 'Added weight' },
-];
-
-const PARTS: { value: BodyPart; label: string }[] = [
-  { value: 'fingers', label: 'Fingers' },
-  { value: 'pulley', label: 'Pulley' },
-  { value: 'wrist', label: 'Wrist' },
-  { value: 'elbow', label: 'Elbow' },
-  { value: 'shoulder', label: 'Shoulder' },
-  { value: 'back', label: 'Back' },
-  { value: 'hip', label: 'Hip' },
-  { value: 'knee', label: 'Knee' },
-  { value: 'ankle', label: 'Ankle' },
 ];
 
 /** Enough rungs to tell the two notations apart at a glance. */
@@ -127,9 +108,6 @@ export function SettingsPage() {
   }, []);
   const equipment = useProfile((s) => s.equipment);
   const setEquipment = useProfile((s) => s.setEquipment);
-  const injuries = useProfile((s) => s.injuries);
-  const addInjury = useProfile((s) => s.addInjury);
-  const updateInjury = useProfile((s) => s.updateInjury);
   const markExported = useProfile((s) => s.markExported);
   const [pendingImport, setPendingImport] = useState<{
     /** The file itself, re-read on confirm. Photos are bytes now, not text. */
@@ -409,80 +387,6 @@ export function SettingsPage() {
                 </Chip>
               );
             })}
-          </div>
-        </Card>
-
-        <Card title="Injuries">
-          <p className="text-sm text-ink-soft mb-3 leading-relaxed">
-            How bad it is decides what happens: something you are healing is kept out of your
-            warmups and blocked in the finder, while a niggle — or a part you are deliberately
-            loading again — is flagged beside the exercises that load it, and left to you.
-          </p>
-          {injuries.length > 0 && (
-            <ul className="grid grid-cols-1 gap-2 mb-3">
-              {injuries.map((injury) => (
-                <li key={injury.id} className="bg-sunken rounded-xl px-3 py-2.5">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="min-w-0">
-                      <span className="font-semibold text-sm capitalize">{injury.part}</span>
-                      <span className="text-xs text-ink-soft ml-2">since {injury.since}</span>
-                    </div>
-                    <Link
-                      href={`/injury/${injury.id}`}
-                      className="text-sm font-semibold text-accent shrink-0 py-1.5"
-                    >
-                      Open
-                    </Link>
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5 mb-1.5">
-                    {(Object.keys(SEVERITY_LABEL) as InjurySeverity[]).map((level) => (
-                      <Chip
-                        key={level}
-                        active={injury.severity === level}
-                        onClick={() => updateInjury(injury.id, { severity: level })}
-                        className="text-xs"
-                      >
-                        {SEVERITY_LABEL[level].label}
-                      </Chip>
-                    ))}
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5">
-                    {(Object.keys(STATUS_LABEL) as InjuryStatus[]).map((state) => (
-                      <Chip
-                        key={state}
-                        active={injury.status === state}
-                        onClick={() => updateInjury(injury.id, { status: state })}
-                        className="text-xs"
-                      >
-                        {STATUS_LABEL[state].label}
-                      </Chip>
-                    ))}
-                    {injury.part !== 'back' &&
-                      (['left', 'right', 'both'] as const).map((side) => (
-                        <Chip
-                          key={side}
-                          active={injury.side === side}
-                          onClick={() =>
-                            updateInjury(injury.id, { side: injury.side === side ? undefined : side })
-                          }
-                          className="text-xs capitalize"
-                        >
-                          {side}
-                        </Chip>
-                      ))}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="flex flex-wrap gap-2">
-            {PARTS.filter((p) => !injuries.some((i) => i.part === p.value)).map((p) => (
-              <Chip key={p.value} active={false} onClick={() => addInjury(p.value)}>
-                + {p.label}
-              </Chip>
-            ))}
           </div>
         </Card>
 

@@ -73,7 +73,7 @@ export const ROUTES: RouteMeta[] = [
   { path: '/projects/:id', title: 'Project', parent: '/projects' },
 
   // Climber
-  { path: '/climber', title: 'Your climber', parent: '/', group: 'Climber', keywords: ['stats', 'level', 'avatar', 'vitality', 'rank'] },
+  { path: '/climber', title: 'Your climber', parent: '/', group: 'Climber', keywords: ['stats', 'level', 'avatar', 'vitality', 'rank', 'injuries', 'injury'] },
   { path: '/skills', title: 'Skill trees', parent: '/climber', group: 'Climber', keywords: ['unlock', 'nodes', 'power', 'tension'] },
   { path: '/altimeter', title: 'The altimeter', parent: '/', group: 'Climber', keywords: ['height', 'feet', 'everest', 'metres'] },
   { path: '/coach', title: "Coach's Corner", parent: '/', group: 'Climber', keywords: ['tips', 'advice', 'observations'] },
@@ -85,7 +85,7 @@ export const ROUTES: RouteMeta[] = [
   // A section of one, which is where a search hit on the prose lands.
   { path: '/guides/:id/:section', title: 'Guide', parent: '/guides' },
   { path: '/glossary', title: 'Glossary', parent: '/settings', group: 'Reference', keywords: ['terms', 'jargon', 'what does', 'definition'] },
-  { path: '/injury/:id', title: 'Injury', parent: '/settings' },
+  { path: '/injury/:id', title: 'Injury', parent: '/climber' },
 
   // Play
   { path: '/ascent', title: 'The Ascent', parent: '/', group: 'Play', keywords: ['game', 'minigame', 'free solo'] },
