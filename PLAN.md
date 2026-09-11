@@ -3303,15 +3303,42 @@ a kept one.
   ordering case where `reverse()` happened to equal the sort, an untested missing-id path,
   and an empty strip that rendered an empty flex box with a top margin under every note.
   Verified in both themes. 2,726 tests pass.
-- **M93 — The baseline goes stale.** M85 fixed the narrow half of this: the finder now
-  takes grades from the log where the log is ahead. The rest of `BaselineAnswers` —
-  `experience`, `goal`, `daysPerWeek` — is answered once at first run and **never asked
-  again**, and there is no screen on which to change it. A climber who answered "coming
-  back" eighteen months and three blocks ago is still described that way to every
-  recommendation the app makes. Derivable signals exist for two of the three (`daysPerWeek`
-  against what the log shows, `experience` against history and grade), so the honest shape
-  is the app noticing the drift and asking, not silently overwriting an answer the climber
-  gave about themselves.
+- **M93 — The baseline goes stale.** *Done, and the milestone was wrong about the blast
+  radius in a way that changed the whole shape of the fix.*
+  It says a stale baseline feeds "every recommendation the app makes". **It does not.**
+  `baseline` has exactly one reader — `FinderPage` — and there it only seeds the form's
+  chips; the finder runs on the chips, not on the record. So no new settings screen was
+  needed, and building one would have been answering a problem the app does not have.
+  **The real harm is sharper than the one described.** The finder asks the same five
+  questions the baseline holds and **threw every answer away**: `run()` built its input,
+  ran, and discarded it. A climber who corrected "coming back" to "intermediate" on Tuesday
+  was asked the stale question again on Friday, and every time after. The fix is four lines
+  — the finder keeps what it is told — and it is the whole first half of this milestone.
+  **Drift is measured against the recent log, not a timestamp.** The question is not "has
+  this changed since you said it" but "does it match what you are doing now", which needs no
+  new stored field and gives the same answer in every realistic case.
+  **Two of the three answers have a signal and one does not.** `daysPerWeek` the log can
+  check outright. `experience` can be checked in **one direction only**: "new" and "coming
+  back" are claims about a *phase* and stop being true on their own, while a climber calling
+  themselves intermediate when the app disagrees is a coaching judgement about grades and
+  years — the app second-guessing that from a row count would be worse than silence. `goal`
+  is an intention and nothing here pretends the log has a view.
+  Nothing is ever overwritten: the stored answer stays selected, the observation sits beside
+  it, and the note disappears the moment the chip moves rather than arguing with a choice
+  just made. **Two numbers are mine and are labelled as mine** — two days out before it is
+  worth saying, and 24 sessions over 8 weeks before a phase has ended.
+  **The tests caught a bug the write-back introduced**, which is the best argument for the
+  suite in this milestone: persisting the answers made the finder's auto-run effect fire a
+  *second* time, replacing the result the climber had just asked for with one rebuilt from
+  the stored baseline — which does not carry the weeks they have. The effect now marks
+  itself before it checks for a baseline. And a consequence worth stating: the auto-run is
+  **skipped entirely when there is drift**, because it exists so a climber who has just
+  answered is not asked twice, and handing them a recommendation built on answers the app
+  has itself flagged as out of date is the opposite of that.
+  One false sentence of my own, caught before it shipped: the experience note said "since
+  then the log has…", and the span is measured from the first logged session, which the app
+  cannot know to be after the answer.
+  Twenty-three mutations, all killed. Verified in both themes. 2,754 tests pass.
 
 **Programs.**
 

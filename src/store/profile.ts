@@ -4,7 +4,7 @@ import { registerAdaptations } from '@/content/programs';
 import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
 import { today } from '@/engine/dates';
-import { readBaseline, type BaselineAnswers } from '@/engine/onboarding';
+import { EMPTY_BASELINE, readBaseline, type BaselineAnswers } from '@/engine/onboarding';
 import { closeBlock, openBlock, reconstructBlocks, type BlockRecord } from '@/engine/blocks';
 import { getProgram } from '@/content/programs';
 import { pruneOverrides, withOverride, type WeekOverrides } from '@/engine/reschedule';
@@ -103,6 +103,8 @@ export interface ProfileState {
   /** What the climber told us on day one, so the finder never asks twice. */
   baseline: BaselineAnswers | null;
   completeOnboarding: (baseline: BaselineAnswers | null) => void;
+  /** Keep what the finder was told, which used to be thrown away (M93). */
+  updateBaseline: (patch: Partial<BaselineAnswers>) => void;
   /** Coach tip id → the triggering fact that was waved away. */
   dismissedTips: Record<string, string>;
   dismissTip: (id: string, signature: string) => void;
@@ -211,6 +213,24 @@ export const useProfile = create<ProfileState>((set, get) => ({
 
   completeOnboarding: (baseline) => {
     set({ baseline, onboardedAt: new Date().toISOString() });
+    void save(snapshot(get()));
+  },
+
+  /**
+   * Keep what the climber just told the finder (PLAN.md M93).
+   *
+   * The finder asks the same five questions the baseline holds and used to
+   * discard every answer, so correcting "coming back" to "intermediate"
+   * lasted exactly as long as the page did. `onboardedAt` is deliberately
+   * not touched: it records when onboarding finished, and `App.tsx` reads
+   * it to decide whether a climber has ever been through the flow.
+   *
+   * Merges rather than replaces, and starts from the empty baseline when
+   * there is none — a climber who skipped onboarding has no record to
+   * patch, and the finder's answers are a better one than nothing.
+   */
+  updateBaseline: (patch) => {
+    set({ baseline: { ...(get().baseline ?? EMPTY_BASELINE), ...patch } });
     void save(snapshot(get()));
   },
 

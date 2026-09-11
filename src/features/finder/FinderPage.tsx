@@ -6,6 +6,13 @@ import { useGradeOptions } from '@/ui/useGrade';
 import { PageSkeleton } from '@/ui/Skeleton';
 import { findProgram, type Experience, type FinderInput, type FinderResult, type Goal, type Recommendation } from '@/engine/finder';
 import { finderInputFrom, gradesFromLog, type BaselineAnswers } from '@/engine/onboarding';
+import {
+  baselineDrift,
+  describeDaysDrift,
+  describeExperienceDrift,
+} from '@/engine/baselineDrift';
+import type { Session } from '@/db/sessions';
+import { today } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { useSessions } from '@/store/sessions';
 import { injuryPolicy } from '@/engine/injury';
@@ -149,15 +156,27 @@ export function FinderPage() {
   // layout collapses and snaps back a frame later — which reads as a fault
   // rather than as loading (PLAN.md M22).
   if (!hydrated || !metricsReady || !sessionsReady) return <PageSkeleton title="Find my program" />;
-  return <FinderForm baseline={baseline} grades={logged} />;
+  return <FinderForm baseline={baseline} grades={logged} sessions={sessions} />;
+}
+
+/** What the log says, beside an answer that no longer matches it. */
+function Note({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-xs text-ink-soft mt-3 flex items-start gap-1.5">
+      <AlertTriangle size={12} className="text-warn shrink-0 mt-0.5" />
+      <span>{children}</span>
+    </p>
+  );
 }
 
 function FinderForm({
   baseline,
   grades,
+  sessions,
 }: {
   baseline: BaselineAnswers | null;
   grades: { boulderGrade: string; sportGrade: string };
+  sessions: Session[];
 }) {
   const gradeOptions = useGradeOptions();
   // Seeded from the first-run baseline where there is one: these are the same
@@ -188,6 +207,27 @@ function FinderForm({
   const metrics = useMetrics((s) => s.entries);
   const display = useSettings((s) => s.display);
   const setIntentWeeks = useIntent((s) => s.setWeeksAvailable);
+  const updateBaseline = useProfile((s) => s.updateBaseline);
+
+  /**
+   * Where what you said stops matching what you do (PLAN.md M93).
+   *
+   * Measured against the *stored* answer, not against the chips — the note
+   * is about the record the app has been carrying, and it has to stop
+   * being shown the moment the climber changes the chip rather than
+   * arguing with a selection they just made.
+   */
+  const drift = useMemo(
+    () =>
+      baseline === null
+        ? { days: null, experience: null }
+        : baselineDrift({
+            stated: { experience: baseline.experience, daysPerWeek: baseline.daysPerWeek },
+            sessions,
+            today: today(),
+          }),
+    [baseline, sessions],
+  );
 
   const toggleInjury = (part: BodyPart) => {
     const existing = storedInjuries.find((i) => i.part === part);
@@ -201,8 +241,21 @@ function FinderForm({
   // so "Change my answers" is not bounced straight back to the result.
   const autoRan = useRef(false);
   useEffect(() => {
-    if (autoRan.current || !baseline) return;
+    // Marked before the baseline is checked, not after (PLAN.md M93). The
+    // page waits for every store before this form mounts, so the first run
+    // of this effect sees the real answer — and once M93 made the finder
+    // write its answers back, a version that only marked itself on the
+    // baseline path would fire *again* the moment a climber pressed Find,
+    // replacing the result they had just asked for with one built from the
+    // stored baseline, which does not carry the weeks they have.
+    if (autoRan.current) return;
     autoRan.current = true;
+    if (!baseline) return;
+    // And not when the log has stopped agreeing with the stored answers
+    // (PLAN.md M93). The auto-run exists so a climber who has just answered
+    // is not asked twice; handing them a recommendation built on answers
+    // the app has itself flagged as out of date is the opposite of that.
+    if (drift.days || drift.experience) return;
     setResult(
       findProgram({
         ...finderInputFrom(baseline, equipment, blocking, metrics),
@@ -214,7 +267,7 @@ function FinderForm({
         display,
       }),
     );
-  }, [baseline, equipment, blocking, metrics, display, grades]);
+  }, [baseline, equipment, blocking, metrics, display, grades, drift]);
 
   function run() {
     // Carried to the start screen, which is the only place it can be acted
@@ -235,6 +288,10 @@ function FinderForm({
       injuries: blocking,
       comingOffBreak: experience === 'returning',
     };
+    // Keep it. The finder asks the five questions the baseline holds and
+    // used to throw every answer away, so a correction made here lasted
+    // exactly as long as the page did (PLAN.md M93).
+    updateBaseline({ discipline, experience, goal, daysPerWeek, boulderGrade, sportGrade });
     setResult(findProgram(input));
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
   }
@@ -324,6 +381,14 @@ function FinderForm({
               </Chip>
             ))}
           </div>
+          {/* Offered, never applied: the stored answer stays selected until
+              the climber changes it themselves. This is something they said
+              about themselves and the app's evidence is a count of rows
+              (PLAN.md M93). Hidden once the chip has moved, so it stops
+              arguing with a selection just made. */}
+          {drift.experience && experience === drift.experience.stated && (
+            <Note>{describeExperienceDrift(drift.experience)}</Note>
+          )}
         </Card>
 
         <Card title="What do you climb?">
@@ -403,6 +468,9 @@ function FinderForm({
               </Chip>
             ))}
           </div>
+          {drift.days && daysPerWeek === drift.days.stated && (
+            <Note>{describeDaysDrift(drift.days)}</Note>
+          )}
         </Card>
 
         <Card title="What can you train on?">

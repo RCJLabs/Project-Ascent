@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { putMetricEntry } from '@/db/metrics';
 import { newSession, putSession } from '@/db/sessions';
 import { FinderPage } from './FinderPage';
+import { useProfile } from '@/store/profile';
 import { hydrate, renderAt } from '@/test/render';
 
 /**
@@ -52,6 +53,10 @@ describe('the finder page', () => {
  */
 describe('the grades the finder starts from', () => {
   it('offers the hardest grade in the log', async () => {
+    // The form, specifically — and the finder now keeps what it is told
+    // (PLAN.md M93), so an earlier test in this shared database has left a
+    // baseline behind and the page would auto-run straight to a result.
+    useProfile.setState({ baseline: null });
     await putSession({
       ...newSession('2026-08-01', 0),
       completed: true,
