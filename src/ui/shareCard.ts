@@ -18,6 +18,7 @@ import type { AvatarConfig } from '@/engine/avatar';
 import { fromKey, shortLabel } from '@/engine/dates';
 import type { ProjectSummary } from '@/engine/projects';
 import type { WeekReview } from '@/engine/review';
+import type { YearReview } from '@/engine/yearReview';
 import type { XpState } from '@/engine/xp';
 import { CLIMBER_VIEWBOX, climberShapes, shapeToSvg } from './climberShapes';
 import { RIDGE } from './MountainMeter';
@@ -241,6 +242,40 @@ export function weekCard(review: WeekReview): CardContent {
       { label: 'Load', value: String(review.load) },
     ],
     footnote: review.acwr === null ? undefined : `Acute:chronic ${review.acwr.toFixed(2)}`,
+  };
+}
+
+/**
+ * The year, on a card (PLAN.md M68).
+ *
+ * Seven things in this app could already be shared — a record, a project, a
+ * week, the altimeter, the day's wall, an achievement, a rank — and the one
+ * page a climber would actually show someone could not be. A year of
+ * training is the artefact worth showing.
+ *
+ * Says whether the year is finished. "412 sessions" in September is a
+ * different sentence from "412 sessions" in January, and a card that leaves
+ * that out is a card that overstates.
+ */
+export function yearCard(review: YearReview): CardContent {
+  const { totals } = review;
+  const hardest = review.hardestBoulder ?? review.hardestRoute;
+  return {
+    eyebrow: review.complete ? String(review.year) : `${review.year} so far`,
+    headline: `${totals.sessions} ${totals.sessions === 1 ? 'session' : 'sessions'}`,
+    ...(hardest ? { subhead: `Hardest: ${hardest.grade}` } : {}),
+    stats: [
+      { label: 'Hours', value: String(Math.round(totals.hours)) },
+      { label: 'Sends', value: String(totals.sends) },
+      { label: 'Feet', value: totals.feet.toLocaleString() },
+      { label: 'Outdoor', value: String(totals.outdoorDays) },
+    ],
+    // `month` is `YYYY-MM`; the card wants the name of it.
+    ...(review.busiest
+      ? {
+          footnote: `Busiest month: ${fromKey(`${review.busiest.month}-01`).toLocaleDateString(undefined, { month: 'long' })}`,
+        }
+      : {}),
   };
 }
 

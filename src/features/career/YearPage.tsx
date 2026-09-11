@@ -20,6 +20,8 @@ import { Card } from '@/ui/Card';
 import { Select } from '@/ui/Field';
 import { IconButton } from '@/ui/IconButton';
 import { PageHeader } from '@/ui/PageHeader';
+import { ShareButton } from '@/features/share/ShareSheet';
+import { yearCard } from '@/ui/shareCard';
 import { BadParameter } from '@/ui/RecordNotFound';
 
 /**
@@ -77,6 +79,11 @@ function YearReview({ year: requested }: { year?: string }) {
       <PageHeader
         title={String(year)}
         subtitle={review.complete ? 'The year in review' : 'The year so far'}
+        action={
+          review.totals.sessions > 0 ? (
+            <ShareButton content={yearCard(review)} filename={`ascent-${year}.png`} />
+          ) : undefined
+        }
       />
 
       <PageGrid>
