@@ -7,6 +7,7 @@
  * (AUDIT.md §8.3). Here a day is always zero or more records.
  */
 
+import type { FieldId } from '@/content/types';
 import type { GradeScale } from '@/engine/grades';
 import type { AttemptOutcome } from './projects';
 import { getDb } from './db';
@@ -73,6 +74,16 @@ export interface Session {
   /** Exercise names marked done, e.g. by finishing their protocol timer. */
   completedExercises?: string[];
   climbs: Climb[];
+  /**
+   * Answers to the extra questions this session type asks (PLAN.md M70).
+   *
+   * Keyed by `FieldId`, and sparse: a field the climber left alone is
+   * absent rather than empty, so a session never claims a zero it was not
+   * given. Which fields are asked comes from the program, never from here —
+   * the answers outlive a program change, which is why they are stored by
+   * id rather than by position.
+   */
+  fields?: Partial<Record<FieldId, string | number>>;
   projectAttempts?: ProjectAttempt[];
   restChecklist?: RestChecklist;
   notes?: string;

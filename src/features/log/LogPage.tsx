@@ -3,6 +3,8 @@ import { Link, useLocation } from 'wouter';
 import { AlertTriangle, ArrowLeft, Check, Clock, Copy, Flame, Plus, RotateCw, Sparkles, Timer, Trash2, TrendingUp, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
+import { SCALE_MAX, getField, type FieldSpec } from '@/content/fields';
+import type { FieldId, SessionType } from '@/content/types';
 import { addDays, fromKey, isDateKey, shortLabel, today } from '@/engine/dates';
 import { clearTimerState, loadTimerState, saveTimerState } from '@/lib/timerState';
 import { ClimbEntry, RepeatLast, type Outcome } from './ClimbEntry';
@@ -33,7 +35,7 @@ import {
 } from '@/engine/live';
 import { plannedDay, prescriptionFor } from '@/engine/plan';
 import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
-import {type GradeScale} from '@/engine/grades';
+import { V_GRADES, YDS_GRADES, displayGrade, type GradeScale } from '@/engine/grades';
 import type { Climb, ProjectAttempt, Session } from '@/db/sessions';
 import type { AttemptOutcome } from '@/db/projects';
 import { OUTCOME_HIGH_POINT } from '@/engine/projects';
@@ -47,7 +49,7 @@ import { parseCount } from '@/content/types';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
-import {Checkbox, Input, TextArea} from '@/ui/Field';
+import { Checkbox, Input, Select, TextArea } from '@/ui/Field';
 import { Chip } from '@/ui/Chip';
 import { IconButton } from '@/ui/IconButton';
 import { announce } from '@/ui/Announce';
@@ -662,6 +664,8 @@ function SessionEditor({
             )}
           </Card>
 
+          <FieldsCard session={session} type={type} onChange={onChange} />
+
           <ProjectBurnsCard session={session} onChange={onChange} />
 
           {blocks.length > 0 && (
@@ -928,6 +932,124 @@ const OUTCOMES: { value: AttemptOutcome; label: string }[] = [
  * are all derived from it (engine/projects.ts). Logging a send here is what
  * flips the project to sent — via reconciliation, once, on the next write.
  */
+/**
+ * The extra questions this session type asks (PLAN.md M70).
+ *
+ * Nine programs declare `fields` on their session types and nothing ever
+ * rendered one: Outdoor Climbing asks every session where it happened, how
+ * many attempts and what the high point was, and the logger never put any of
+ * it on screen. A question the content asks and the app never shows is a
+ * promise the content cannot keep.
+ *
+ * Sparse on purpose — clearing an answer removes it rather than storing an
+ * empty string, so a session never claims a blank it was not given.
+ */
+function FieldsCard({
+  session,
+  type,
+  onChange,
+}: {
+  session: Session;
+  type?: SessionType;
+  onChange: (session: Session) => void;
+}) {
+  const display = useSettings((s) => s.display);
+  const specs = (type?.fields ?? []).map(getField).filter((f): f is FieldSpec => f !== undefined);
+  if (specs.length === 0) return null;
+
+  const set = (id: FieldId, value: string | number | undefined) => {
+    const { [id]: _dropped, ...rest } = session.fields ?? {};
+    const fields = value === undefined || value === '' ? rest : { ...rest, [id]: value };
+    onChange({
+      ...session,
+      ...(Object.keys(fields).length > 0 ? { fields } : { fields: undefined }),
+    });
+  };
+
+  return (
+    <Card title="This session">
+      <div className="grid grid-cols-1 gap-3">
+        {specs.map((spec) => {
+          const value = session.fields?.[spec.id];
+          if (spec.kind === 'scale') {
+            return (
+              <div key={spec.id}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-sm text-ink-soft">{spec.label}</span>
+                  <span className="font-bold">{value ?? '—'}</span>
+                </div>
+                <div className="grid grid-cols-10 gap-1">
+                  {Array.from({ length: SCALE_MAX }, (_, i) => i + 1).map((n) => (
+                    <Chip
+                      key={n}
+                      active={value === n}
+                      onClick={() => set(spec.id, value === n ? undefined : n)}
+                      className="justify-center text-center px-0 text-xs"
+                    >
+                      {n}
+                    </Chip>
+                  ))}
+                </div>
+                {spec.ends && (
+                  <div className="flex justify-between text-2xs text-ink-soft mt-1">
+                    <span>{spec.ends[0]}</span>
+                    <span>{spec.ends[1]}</span>
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          if (spec.kind === 'grade') {
+            const ladder = spec.scale === 'route' ? YDS_GRADES : V_GRADES;
+            return (
+              <label key={spec.id} className="text-sm block">
+                <span className="block text-ink-soft mb-1">{spec.label}</span>
+                <Select
+                  value={String(value ?? '')}
+                  onChange={(e) => set(spec.id, e.target.value || undefined)}
+                >
+                  <option value="">—</option>
+                  {ladder.map((g) => (
+                    <option key={g} value={g}>
+                      {displayGrade(spec.scale === 'route' ? 'YDS' : 'V', g, display)}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+            );
+          }
+
+          return (
+            <label key={spec.id} className="text-sm block">
+              <span className="block text-ink-soft mb-1">
+                {spec.label}
+                {spec.unit ? ` (${spec.unit})` : ''}
+              </span>
+              <Input
+                type={spec.kind === 'number' ? 'number' : 'text'}
+                {...(spec.kind === 'number' ? { inputMode: 'numeric' as const } : {})}
+                value={String(value ?? '')}
+                {...(spec.placeholder ? { placeholder: spec.placeholder } : {})}
+                onChange={(e) =>
+                  set(
+                    spec.id,
+                    e.target.value === ''
+                      ? undefined
+                      : spec.kind === 'number'
+                        ? Number(e.target.value)
+                        : e.target.value,
+                  )
+                }
+              />
+            </label>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
 function ProjectBurnsCard({
   session,
   onChange,

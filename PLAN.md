@@ -2312,11 +2312,30 @@ something that already exists; six are new. Nothing here is committed.*
 
 **Six that are new.**
 
-- **M70 — Your gym, as data.** The app knows programs and sessions but not *where* you
-  climb: the boards, circuits, set dates and named problems that a real training week is
-  made of. A local catalogue — walls, angles, circuits, problems with grades and set dates —
-  that sessions can reference. It makes "I did the blue circuit again" a record rather than
-  a note, and it is the foundation M71 and M69 both get better on.
+- **M70 — ~~Your gym, as data~~ → The questions the programs already ask.** *Done, with
+  the scope corrected.* The proposal assumed a session could reference a venue. It could not
+  reference anything: nine programs declare `fields` on their session types — **twenty-four
+  declarations, sixteen distinct ids, sixty-two references, `location` among them six
+  times** — and nothing in the app read one of them. Outdoor Climbing asks every session
+  where it happened, how many attempts and what the high point was; the logger never put any
+  of it on screen. A question the content asks and the app never renders is a promise the
+  content cannot keep, and building a venue catalogue on top of that would have added a
+  second way to say where you climbed while the declared one stayed dead.
+  `content/fields.ts` defines all sixteen — a label, a kind the logger can render, a unit or
+  a placeholder where one helps — and a test reads the `FieldId` union straight out of
+  `types.ts` rather than repeating it, so a new id cannot be added without a definition.
+  `Session.fields` stores the answers, sparse: clearing one removes the key rather than
+  storing a blank, and the last one leaving takes the whole bag with it, so a session never
+  claims a zero it was not given.
+  **A copy bug that shipped for exactly one browser run**: the logger rendered "Day of the
+  trip (of the trip)", because the label and the unit said the same thing. Three fields had
+  the same fault. There is now a test that a unit never repeats a word of its own label.
+  Six mutations, six killed — the last only once the test stopped asking whether the value
+  was undefined and started asking whether the *key* was there, which a structured clone
+  preserves either way.
+  *The venue catalogue is not built.* What it needed first is: sessions can now record where
+  they happened, in free text. Turning that text into a catalogue of walls, circuits and set
+  dates is a separate milestone, and a better one for having somewhere to attach to.
 
 - **M71 — Draw the beta on the photo.** M53 made photos first-class. The next thing a
   climber does with a project photo is mark it: this foot, that hold, the reachy move.
