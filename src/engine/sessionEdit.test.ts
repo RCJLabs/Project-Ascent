@@ -86,7 +86,7 @@ describe('merging', () => {
   const b = session({
     id: '2026-03-04#1', rpe: 4, durationMin: 60, warmup: false, notes: 'Evening was flat',
     climbs: [{ id: 'c2', grade: 'V2', scale: 'V', count: 8, result: 'send' }],
-    completedExercises: ['Pull-Ups'],
+    exercises: [{ name: 'Pull-Ups' }],
   });
 
   it('keeps the first session’s identity', () => {
@@ -130,8 +130,22 @@ describe('merging', () => {
   });
 
   it('unions the exercises without duplicating', () => {
-    const x = session({ completedExercises: ['Pull-Ups', 'Max Hangs'] });
-    expect(mergeSessions(x, b).completedExercises).toEqual(['Pull-Ups', 'Max Hangs']);
+    const x = session({ exercises: [{ name: 'Pull-Ups' }, { name: 'Max Hangs' }] });
+    expect(mergeSessions(x, b).exercises?.map((e) => e.name)).toEqual(['Pull-Ups', 'Max Hangs']);
+  });
+
+  // Merging the two halves of a session logged twice must not throw away the
+  // half that was written down (PLAN.md M98).
+  it('keeps the numbers when one side is only a tick', () => {
+    const ticked = session({ exercises: [{ name: 'Max Hangs' }] });
+    const logged = session({ id: '2026-03-04#1', exercises: [{ name: 'Max Hangs', sets: 5, load: 20 }] });
+    expect(mergeSessions(ticked, logged).exercises).toEqual([{ name: 'Max Hangs', sets: 5, load: 20 }]);
+  });
+
+  it('keeps the kept session\'s numbers when both sides have them', () => {
+    const a2 = session({ exercises: [{ name: 'Max Hangs', load: 20 }] });
+    const b2 = session({ id: '2026-03-04#1', exercises: [{ name: 'Max Hangs', load: 30 }] });
+    expect(mergeSessions(a2, b2).exercises).toEqual([{ name: 'Max Hangs', load: 20 }]);
   });
 
   it('counts the day as outdoors if either half was', () => {

@@ -19,7 +19,8 @@
  * how long you trained is still true; the times you did it are not.
  */
 
-import type { Session } from '@/db/sessions';
+import type { LoggedExercise, Session } from '@/db/sessions';
+import { exerciseKey, hasNumbers } from './exerciseLog';
 import { sessionId } from '@/db/sessions';
 
 export interface MergeCheck {
@@ -58,6 +59,32 @@ export function canMerge(a: Session, b: Session): MergeCheck {
 }
 
 /**
+ * One row per exercise name, keeping the one that says more (PLAN.md M98).
+ *
+ * The name is the key, so the two sides cannot simply be concatenated the
+ * way climbs are. `a` is the session being kept and wins a genuine
+ * disagreement — but a bare tick is not a disagreement, it is the absence of
+ * one, so numbers on either side beat a tick on the other. Merging the two
+ * halves of a session logged twice should not throw away the half that was
+ * written down.
+ */
+function mergeExercises(a: LoggedExercise[], b: LoggedExercise[]): LoggedExercise[] {
+  const out: LoggedExercise[] = [];
+  const seen = new Map<string, number>();
+  for (const entry of [...a, ...b]) {
+    const key = exerciseKey(entry.name);
+    const at = seen.get(key);
+    if (at === undefined) {
+      seen.set(key, out.length);
+      out.push(entry);
+      continue;
+    }
+    if (!hasNumbers(out[at]!) && hasNumbers(entry)) out[at] = entry;
+  }
+  return out;
+}
+
+/**
  * Fuse `b` into `a`, keeping `a`'s identity.
  *
  * Duration sums and RPE becomes the duration-weighted mean, which is not an
@@ -68,7 +95,7 @@ export function canMerge(a: Session, b: Session): MergeCheck {
 export function mergeSessions(a: Session, b: Session): Session {
   const climbs = [...a.climbs, ...b.climbs];
   const attempts = [...(a.projectAttempts ?? []), ...(b.projectAttempts ?? [])];
-  const exercises = [...new Set([...(a.completedExercises ?? []), ...(b.completedExercises ?? [])])];
+  const exercises = mergeExercises(a.exercises ?? [], b.exercises ?? []);
   const notes = [a.notes, b.notes].map((n) => n?.trim()).filter((n): n is string => Boolean(n));
   const durationMin = sumOrUndefined(a.durationMin, b.durationMin);
 
@@ -77,7 +104,7 @@ export function mergeSessions(a: Session, b: Session): Session {
     ...base,
     climbs,
     ...(attempts.length ? { projectAttempts: attempts } : {}),
-    ...(exercises.length ? { completedExercises: exercises } : {}),
+    ...(exercises.length ? { exercises } : {}),
     ...(durationMin !== undefined ? { durationMin } : {}),
     ...(mergedRpe(a, b) !== undefined ? { rpe: mergedRpe(a, b) } : {}),
     ...(notes.length ? { notes: notes.join('\n\n') } : {}),

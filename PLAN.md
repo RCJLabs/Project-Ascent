@@ -3542,27 +3542,63 @@ committed. M12 stays parked until there is a name.*
 code and should be re-measured before the milestone starts. Six of the last ten had a
 materially wrong premise. Sizes are guesses.*
 
-- **M98 — Log the load, not just the tick.** *Proposed. Size L.*
-  **Premise.** `completedExercises` is `string[]` — a name, ticked. Four readers: the
-  logger, templates (copies the names), tissue load (keyword-scans them), and session
-  merging. The prescription writes the dose in prose — `load: 'BW+15lb'`, `sets: '3-5'` —
-  and the climber can say *done* and nothing else. A block whose entire progression is
-  "add weight" (Iron Grip's max hangs, The Siege's weighted pull-ups) is invisible to the
-  block report: M84 reads `metrics`, which are assessments, tested once a phase. Between
-  tests the app has no idea what you pulled.
-  **Shape.** `session.exercises?: { name; sets?; reps?; load?; hold?; note? }[]` — the
-  climber's numbers, not the prescription's, in the unit M48 chose. Pre-filled from the
-  last session that logged the same exercise name ("last time: 3×5 at +22.5 kg") so the
-  common case is one tap to confirm. A per-exercise series page like `MetricDetailPage`,
-  and the block report draws the working load beside the tested max. `completedExercises`
-  stays: a tick without numbers is still a tick, and nothing that reads it changes.
-  **Never.** Parse a prose dose into a number — "60-70% max" is not a starting value, and
-  a guessed pre-fill is a claim the climber never made. The field starts empty until there
-  is a last time.
-  **Risk.** Logger length. M74's complaint was that the logger is already long; this adds a
-  row per exercise. Mitigation is that the rows exist only for exercises the prescription
-  lists, and the default path — tick, no numbers — costs the same taps as today. Measure it
-  the way M21 did.
+- **M98 — Log the load, not just the tick.** *Done, and the premise was right for a
+  weaker reason than the one I gave it.*
+  **The numbers in the proposal were wrong, and measuring them made the case stronger.**
+  I wrote that this was about blocks "whose entire progression is add weight (Iron Grip's max
+  hangs, The Siege's weighted pull-ups)". Counted: of 553 authored exercises only **62 declare
+  a `load` at all**, and of 68 blocks only **7** change their load text across phases. As a
+  claim about authored doses, "add weight" is rare. The real hole is one the catalogue states
+  in prose and cannot state in data: **eleven phase goals across seven programs** describe a
+  progression the model has no field for — Iron Grip's Hammer phase reads *"Progress added
+  load weekly"* while prescribing `load: '85-90% max added weight'`, one static string for
+  four weeks. M33's `constantDose` says the same thing from the other side, in writing:
+  progression that "lives in intensity, grade choice and session length — dimensions this
+  model has no field for". So the field was missing, not the authoring.
+  **The reader count held exactly**: `completedExercises` had four readers outside tests
+  (the logger, `templates`, `tissueLoad`, `sessionEdit`).
+  **One array, not two.** The proposal kept `completedExercises` and added numbers beside it,
+  which is two sources for "was this done" and a drift waiting to happen — tick, type,
+  untick, and what becomes of the numbers? So presence in `exercises` *is* the tick, and the
+  old field is deprecated and folded in on read, which is the shape `getAscent` settled on in
+  M96. Both read paths migrate; the old key is dropped rather than left beside the new one.
+  **Keyed by name, and measured before trusting it.** A name is the right key for a history —
+  Weighted Pull-Ups in Iron Grip and in The Siege are one line — and the wrong key inside one
+  session if two blocks prescribe the same name. Checked across the catalogue: **zero of 65
+  (session type × phase) pairs repeat a name**, and a content guard now holds that. A custom
+  program that repeats one shares a row, exactly as the tick always did.
+  **Which boxes appear comes from the prescription.** An exercise declaring sets and reps gets
+  two; Max Hangs, declaring sets, hold and load, gets three; a menu line with no dose gets
+  none. Nothing renders until the exercise is ticked, so the untouched path costs what it
+  always did — the direct answer to M74's complaint that the logger is already long.
+  **Nothing is pre-filled from the prose.** `'3-5'` and `'85-90% max added weight'` are not
+  starting values, and turning them into one would write a number nobody did. What is offered
+  is *last time* — the climber's own number — behind a tap, which is the line `templates.ts`
+  draws when it refuses to copy climbs forward.
+  **It never says better.** `blockReport` may, because every `Metric` declares
+  `higherIsBetter`; an exercise line declares nothing, and more reps at less load might be a
+  deload, a phase change or a bad day. `/finish` reports *from → to* per dimension and stops,
+  and a test asserts the card never uses the word.
+  **Load is stored in pounds** for the reason M48 gave — canonical storage is invisible,
+  display is the part that was wrong — so a metric climber types kilograms and reads them
+  back. Zero is bodyweight and different from absent; negative is assisted, and since neither
+  keypad offers a minus sign (which `Input`'s own comment already flagged as unanswered), the
+  sign is a control rather than a character.
+  **Deliberately not built: a browsable per-exercise page.** The two questions a climber
+  actually asks — *what did I do last time* and *did this go up* — are answered at the two
+  moments they ask them, in the logger and on `/finish`. A browsable index of 166 exercise
+  names is M107's problem, not this one. `exerciseIndex` was written for it, shipped used by
+  nothing, and was deleted rather than left as a dead export.
+  Forty-seven mutations, forty-five killed. **Both survivors were real.** One was dead code of
+  mine — an explicit `points.length < 2` guard that `changed.length === 0` already covers,
+  since one reading's first and last are the same reading; deleted. The other was a genuine
+  coverage gap: nothing proved `/finish` respects the block window, because every session in
+  the fixture was inside it. Closed with a reading from before the block, and the new test
+  verified against the mutant.
+  **One browser finding.** At 430px the "Same again" chip took the row and left
+  `Sep 4: 5 × …` — truncating the one line whose whole job is to say what the numbers were.
+  It wraps now. jsdom has no layout and reported the line as present either way.
+  Verified in both themes and both unit systems. 3,016 tests pass.
 
 - **M99 — The clock reaches the circuits and the tests.** *Proposed. Size M.*
   **Premise.** `CircuitFormat` (rounds, work, rest between, rest between rounds) is authored

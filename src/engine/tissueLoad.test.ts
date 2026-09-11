@@ -72,7 +72,7 @@ describe('what a session is taken to load', () => {
   });
 
   it('reads the exercises that were ticked', () => {
-    const load = build([session(TO, { completedExercises: ['Max hangs on a 20mm edge'] })]);
+    const load = build([session(TO, { exercises: [{ name: 'Max hangs on a 20mm edge' }] })]);
     expect(partFor(load, 'fingers').sessions).toBe(1);
     expect(partFor(load, 'knee').sessions).toBe(0);
   });
@@ -107,7 +107,7 @@ describe('how load is attributed', () => {
   it('gives each tissue the whole session, not a slice of it', () => {
     // Dividing would say a session loads your fingers less because it also
     // loaded your shoulder, which is not how a body works.
-    const load = build([session(TO, { rpe: 8, durationMin: 60, completedExercises: ['Pull-ups'] })]);
+    const load = build([session(TO, { rpe: 8, durationMin: 60, exercises: [{ name: 'Pull-ups' }] })]);
     for (const part of ['elbow', 'shoulder', 'back']) {
       expect(partFor(load, part).load).toBeCloseTo(8, 6);
     }
@@ -115,8 +115,8 @@ describe('how load is attributed', () => {
 
   it('adds up across sessions', () => {
     const load = build([
-      session(TO, { rpe: 6, durationMin: 60, completedExercises: ['Max hangs'] }),
-      session(addDays(TO, -2), { rpe: 4, durationMin: 60, completedExercises: ['Max hangs'] }),
+      session(TO, { rpe: 6, durationMin: 60, exercises: [{ name: 'Max hangs' }] }),
+      session(addDays(TO, -2), { rpe: 4, durationMin: 60, exercises: [{ name: 'Max hangs' }] }),
     ]);
     expect(partFor(load, 'fingers').load).toBeCloseTo(10, 6);
     expect(partFor(load, 'fingers').sessions).toBe(2);
@@ -127,7 +127,7 @@ describe('how load is attributed', () => {
     // percentage-of-total would be a number with no meaning.
     const load = build([
       climbing(TO, { rpe: 9, durationMin: 120 }),
-      session(addDays(TO, -1), { rpe: 3, durationMin: 30, completedExercises: ['Heel hook drills'] }),
+      session(addDays(TO, -1), { rpe: 3, durationMin: 30, exercises: [{ name: 'Heel hook drills' }] }),
     ]);
     expect(load.parts[0]!.share).toBe(1);
     expect(partFor(load, 'knee').share).toBeGreaterThan(0);

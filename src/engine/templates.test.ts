@@ -28,7 +28,7 @@ function session(patch: Partial<Session> = {}): Session {
     durationMin: 95,
     warmup: true,
     drillId: 'd1',
-    completedExercises: ['Max Hangs', 'Weighted Pull-Ups'],
+    exercises: [{ name: 'Max Hangs' }, { name: 'Weighted Pull-Ups' }],
     climbs: [{ id: 'c1', grade: 'V6', scale: 'V', count: 4, result: 'send' }],
     notes: 'Felt strong on the crimps.',
     ...patch,
@@ -182,6 +182,6 @@ describe('ordering and duplicates', () => {
     const templates = [createTemplate(session(), 'Finger Power', NOW)];
     expect(alreadySaved(templates, session({ sessionTypeId: 'endurance' }))).toBe(false);
     expect(alreadySaved(templates, session({ mode: 'outdoor' }))).toBe(false);
-    expect(alreadySaved(templates, session({ completedExercises: ['Something else'] }))).toBe(false);
+    expect(alreadySaved(templates, session({ exercises: [{ name: 'Something else' }] }))).toBe(false);
   });
 });

@@ -95,7 +95,7 @@ export const TISSUE_DAYS = 28;
 /** Everything on the record itself that the scan can read. */
 function sessionText(session: Session): string {
   return [
-    ...(session.completedExercises ?? []),
+    ...(session.exercises ?? []).map((e) => e.name),
     session.notes ?? '',
     ...session.climbs.map((climb) => climb.name ?? ''),
   ]

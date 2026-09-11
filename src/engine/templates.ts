@@ -70,7 +70,10 @@ export function bodyFrom(session: Session): TemplateBody {
     ...(session.durationMin !== undefined ? { durationMin: session.durationMin } : {}),
     ...(session.warmup !== undefined ? { warmup: session.warmup } : {}),
     ...(session.drillId ? { drillId: session.drillId } : {}),
-    ...(session.completedExercises?.length ? { exercises: [...session.completedExercises] } : {}),
+    // Names, never numbers (PLAN.md M98). A template is what you intend to
+    // do, and last block's working weight is a claim about a session that
+    // has not happened — the same line this module draws against climbs.
+    ...(session.exercises?.length ? { exercises: session.exercises.map((e) => e.name) } : {}),
     ...(rest ? { rest: true } : {}),
   };
 }

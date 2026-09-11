@@ -37,7 +37,7 @@ import { plannedDay, prescriptionFor } from '@/engine/plan';
 import { prescriptionLine } from '@/engine/prescription';
 import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
 import { V_GRADES, YDS_GRADES, displayGrade, type GradeScale } from '@/engine/grades';
-import type { Climb, ProjectAttempt, Session } from '@/db/sessions';
+import type { Climb, LoggedExercise, ProjectAttempt, Session } from '@/db/sessions';
 import type { AttemptOutcome } from '@/db/projects';
 import { OUTCOME_HIGH_POINT, OUTCOME_LABEL } from '@/engine/projects';
 import { useXp } from '@/store/game';
@@ -45,6 +45,8 @@ import { useProjects } from '@/store/projects';
 import { useSkillEffects } from '@/store/skills';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
+import { lastLogged } from '@/engine/exerciseLog';
+import { ExerciseNumbers } from './ExerciseNumbers';
 import { useTemplates } from '@/store/templates';
 import { parseCount } from '@/content/types';
 import { BackLink } from '@/ui/BackLink';
@@ -407,6 +409,14 @@ function SessionEditor({
   // time". Read from the store rather than passed down: `others` is only
   // this day's sessions, and the last one was almost certainly another day.
   const allByDate = useSessions((s) => s.byDate);
+  const units = useSettings((st) => st.units);
+  // Last time's numbers for every exercise on the card, worked out once
+  // rather than per row (PLAN.md M98).
+  const allSessions = useMemo(() => Object.values(allByDate).flat(), [allByDate]);
+  const lastFor = (name: string) => {
+    const point = lastLogged(allSessions, name, session.date);
+    return point === null ? null : { date: point.date, entry: point.entry };
+  };
   const previousClimbs = useMemo(() => {
     const before = Object.values(allByDate)
       .flat()
@@ -481,13 +491,18 @@ function SessionEditor({
     setTimer({ protocolId: saved.protocolId, name: saved.exerciseName, sets: saved.sets });
   }, [session.id]);
 
-  const doneExercises = session.completedExercises ?? [];
+  // Presence is the tick (PLAN.md M98): an entry here is an exercise that
+  // was done, and its numbers are optional.
+  const loggedExercises = session.exercises ?? [];
+  const entryFor = (name: string) => loggedExercises.find((e) => e.name === name);
   const markExerciseDone = (name: string) =>
     patch({
-      completedExercises: doneExercises.includes(name)
-        ? doneExercises.filter((n) => n !== name)
-        : [...doneExercises, name],
+      exercises: entryFor(name)
+        ? loggedExercises.filter((e) => e.name !== name)
+        : [...loggedExercises, { name }],
     });
+  const patchExercise = (next: LoggedExercise) =>
+    patch({ exercises: loggedExercises.map((e) => (e.name === next.name ? next : e)) });
 
   function addClimb() {
     const name = climbName.trim();
@@ -729,7 +744,8 @@ function SessionEditor({
                   <ul className="grid grid-cols-1 gap-2">
                     {b.entry.exercises.map((ex, i) => {
                       const protocol = ex.protocolId ? getProtocol(ex.protocolId) : undefined;
-                      const isDone = doneExercises.includes(ex.name);
+                      const logged = entryFor(ex.name);
+                      const isDone = logged !== undefined;
                       return (
                         <li
                           key={`${ex.name}-${i}`}
@@ -778,6 +794,15 @@ function SessionEditor({
                                 </div>
                               ) : null;
                             })()}
+                            {logged && (
+                              <ExerciseNumbers
+                                exercise={ex}
+                                entry={logged}
+                                units={units}
+                                last={lastFor(ex.name)}
+                                onChange={patchExercise}
+                              />
+                            )}
                           </div>
                           {protocol?.timer && (
                             <Button
@@ -951,7 +976,7 @@ function SessionEditor({
           }}
           onComplete={() => {
             clearTimerState();
-            if (!doneExercises.includes(timer.name)) markExerciseDone(timer.name);
+            if (entryFor(timer.name) === undefined) markExerciseDone(timer.name);
           }}
         />
       )}

@@ -12,6 +12,7 @@ import {
   type BlockRecord,
 } from '@/engine/blocks';
 import { describeBlock } from '@/engine/blockReport';
+import { describeChange, exerciseMovement } from '@/engine/exerciseLog';
 import { formatEntry } from '@/engine/assessments';
 import { fromKey, today } from '@/engine/dates';
 import { useMetrics } from '@/store/metrics';
@@ -170,6 +171,14 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
     return measured === null ? null : { measured, ownLayout: chosen?.plan !== undefined };
   }, [end, chosen, activeProgramId, startDates, plans, weekOverrides, byDate]);
 
+  // The same window the report covers, read off the block rather than the
+  // report: a block still running has a window and no finished report.
+  const movement = useMemo(() => {
+    if (end === null) return [];
+    const through = today() < end.status.to ? today() : end.status.to;
+    return exerciseMovement(Object.values(byDate).flat(), end.status.from, through);
+  }, [end, byDate]);
+
   if (!metricsReady || !profileReady || !sessionsReady) return <PageSkeleton />;
 
   if (asked !== null && chosen === null) {
@@ -244,6 +253,36 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
                 one it started with.
               </p>
             )}
+          </Card>
+        )}
+
+        {/* What the working numbers did, which the assessments cannot say
+            (PLAN.md M98). An assessment is a handful of readings at phase
+            boundaries; Iron Grip's Hammer phase asks you to "progress added
+            load weekly" and this is the only place that shows whether you
+            did. Never called better or worse: an exercise line declares no
+            `higherIsBetter`, so the app reports from → to and stops. */}
+        {movement.length > 0 && (
+          <Card title="What you were lifting">
+            <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+              Your own numbers, first reading to last, for the {movement.length === 1 ? 'line' : 'lines'} you
+              logged more than once this block.
+            </p>
+            <ul className="grid grid-cols-1 gap-2">
+              {movement.map((row) => (
+                <li key={row.name} className="bg-sunken rounded-xl px-3 py-2.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="font-semibold text-sm min-w-0 truncate">{row.name}</span>
+                    <span className="shrink-0 text-2xs uppercase tracking-wide text-ink-soft">
+                      {row.readings} readings
+                    </span>
+                  </div>
+                  <p className="text-sm text-ink-soft mt-0.5 tabular-nums">
+                    {row.changed.map((c) => describeChange(c, units)).join(' · ')}
+                  </p>
+                </li>
+              ))}
+            </ul>
           </Card>
         )}
 

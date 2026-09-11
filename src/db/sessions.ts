@@ -55,6 +55,41 @@ export interface RestChecklist {
   sleep: boolean;
 }
 
+/**
+ * One line of the prescription, as it was actually done (PLAN.md M98).
+ *
+ * Every number is optional and every one is the climber's, never the
+ * program's. A prescription writes its dose in prose — `'85-90% max added
+ * weight'`, `'3-5'` — and parsing that into a starting value would put a
+ * number in the log that nobody ever did. The fields start empty and stay
+ * empty until someone types in them.
+ *
+ * One row per exercise rather than one per set. "3x5, 3x5, 3x3" is a real
+ * session and this cannot hold it; `note` can, in words. A per-set table is
+ * a different control and a much longer logger, and the dimension the
+ * programs actually ask to progress — the load — is the same on every set.
+ */
+export interface LoggedExercise {
+  name: string;
+  /** Sets completed. */
+  sets?: number;
+  /** Reps per set, where they were the same. */
+  reps?: number;
+  /**
+   * Added weight, in pounds.
+   *
+   * Imperial for the same reason every metric is (PLAN.md M48): which unit a
+   * number is stored in is invisible, and which it is shown in is a display
+   * concern. Zero is bodyweight — a real answer, and different from absent.
+   * Negative is assisted, which is how a climber works toward their first
+   * one-arm anything.
+   */
+  load?: number;
+  /** Hold, in seconds. */
+  hold?: number;
+  note?: string;
+}
+
 export interface Session {
   id: string;
   date: string;
@@ -72,7 +107,23 @@ export interface Session {
   warmup?: boolean;
   drillId?: string;
   drillDone?: boolean;
-  /** Exercise names marked done, e.g. by finishing their protocol timer. */
+  /**
+   * What was actually done, line by line (PLAN.md M98).
+   *
+   * Presence is the tick: an entry here means the exercise was done, and the
+   * numbers on it are optional. Before this the record was a list of names
+   * and nothing else, so eleven phase goals across seven programs — "Progress
+   * added load weekly", "Add load to the hangboard" — described a progression
+   * the app had nowhere to write down.
+   *
+   * Keyed by the exercise's name, which is how `completedExercises` keyed it
+   * and is the right key for a history: Weighted Pull-Ups in Iron Grip and in
+   * The Siege are the same exercise and deserve one line. A content guard
+   * holds the shipped catalogue to unique names within a session; a custom
+   * program that repeats one shares a row, exactly as the tick always did.
+   */
+  exercises?: LoggedExercise[];
+  /** @deprecated Folded into `exercises` on read (`migrateSession`). Never written. */
   completedExercises?: string[];
   climbs: Climb[];
   /**
@@ -152,6 +203,25 @@ const SESSION_SHAPE: Shape = {
   lists: { climbs: { id: 'string', grade: 'string', scale: 'string' } },
 };
 
+/**
+ * The old tick list, promoted into the new one (PLAN.md M98).
+ *
+ * Every session written before M98 carries `completedExercises: string[]`
+ * and no numbers. A name in that list is an exercise that was done, which is
+ * exactly an entry in `exercises` with nothing filled in — so the old field
+ * is read once, here, and never again.
+ *
+ * Only when there is nothing in `exercises` yet. A session written since
+ * carries its own rows, and a stale `completedExercises` beside them must not
+ * overwrite what was logged (the shape `getAscent` settled on in M96).
+ */
+export function migrateSession(session: Session): Session {
+  const { completedExercises, ...rest } = session;
+  if (rest.exercises?.length) return rest;
+  if (!completedExercises?.length) return rest;
+  return { ...rest, exercises: completedExercises.map((name) => ({ name })) };
+}
+
 export async function listSessions(from?: string, to?: string): Promise<Session[]> {
   const db = await getDb();
   const range =
@@ -161,12 +231,13 @@ export async function listSessions(from?: string, to?: string): Promise<Session[
     SESSION_SHAPE,
   );
   recordReading('sessions', reading);
-  return reading.rows.sort((a, b) => (a.id < b.id ? -1 : 1));
+  return reading.rows.map(migrateSession).sort((a, b) => (a.id < b.id ? -1 : 1));
 }
 
 export async function getSession(id: string): Promise<Session | undefined> {
   const db = await getDb();
-  return (await db.get('sessions', id)) as unknown as Session | undefined;
+  const row = (await db.get('sessions', id)) as unknown as Session | undefined;
+  return row === undefined ? undefined : migrateSession(row);
 }
 
 export async function putSession(session: Session): Promise<Session> {

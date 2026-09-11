@@ -399,3 +399,94 @@ describe('did you do the work', () => {
     expect(screen.queryByText('Did you do the work?')).toBeNull();
   });
 });
+
+/**
+ * What the working numbers did, which the assessments cannot say
+ * (PLAN.md M98).
+ *
+ * Iron Grip's Hammer phase states its goal as "Progress added load weekly".
+ * The block report reads `metrics`, which are tested at phase boundaries a
+ * handful of times a block, so the weight that crept up every week between
+ * them had nowhere to show.
+ */
+describe('what you were lifting', () => {
+  /** Two readings a fortnight apart, inside a block that is still running. */
+  async function lifting(exercises: { name: string; load?: number; sets?: number; reps?: number }[][]) {
+    const start = addDays(today(), -21);
+    for (const [i, entries] of exercises.entries()) {
+      await putSession({
+        ...newSession(addDays(today(), -14 + i * 7), 0, { completed: true }),
+        exercises: entries,
+      } as never);
+    }
+    await hydrate();
+    running(start);
+    renderAt('/finish', <FinishPage />);
+  }
+
+  it('reports the load the climber actually worked at', async () => {
+    await lifting([
+      [{ name: 'Max Hangs', sets: 5, load: 20 }],
+      [{ name: 'Max Hangs', sets: 5, load: 35 }],
+    ]);
+    expect(screen.getByText('What you were lifting')).toBeTruthy();
+    expect(screen.getByText(/load \+20 lbs → \+35 lbs/)).toBeTruthy();
+  });
+
+  // Reporting "sets 5 → 5" beside the load that moved is noise dressed as
+  // a finding.
+  it('says nothing about a dimension that held still', async () => {
+    await lifting([
+      [{ name: 'Max Hangs', sets: 5, load: 20 }],
+      [{ name: 'Max Hangs', sets: 5, load: 35 }],
+    ]);
+    const card = screen.getByText('What you were lifting').closest('section')!;
+    expect(card.textContent).toMatch(/load/);
+    expect(card.textContent).not.toMatch(/sets/);
+  });
+
+  // The card is about this block. A session from before it started is not
+  // evidence about what the block did.
+  it('ignores readings from outside the block window', async () => {
+    const start = addDays(today(), -21);
+    await putSession({
+      ...newSession(addDays(today(), -60), 0, { completed: true }),
+      exercises: [{ name: 'Max Hangs', load: 5 }],
+    } as never);
+    await putSession({
+      ...newSession(addDays(today(), -14), 0, { completed: true }),
+      exercises: [{ name: 'Max Hangs', load: 20 }],
+    } as never);
+    await putSession({
+      ...newSession(addDays(today(), -7), 0, { completed: true }),
+      exercises: [{ name: 'Max Hangs', load: 35 }],
+    } as never);
+    await hydrate();
+    running(start);
+    renderAt('/finish', <FinishPage />);
+    expect(screen.getByText(/load \+20 lbs → \+35 lbs/)).toBeTruthy();
+    expect(screen.queryByText(/\+5 lbs/)).toBeNull();
+  });
+
+  it('stays away when nothing was logged with numbers', async () => {
+    await lifting([[{ name: 'Max Hangs' }], [{ name: 'Max Hangs' }]]);
+    expect(screen.queryByText('What you were lifting')).toBeNull();
+  });
+
+  it('stays away when a line was logged only once', async () => {
+    await lifting([[{ name: 'Max Hangs', load: 20 }], []]);
+    expect(screen.queryByText('What you were lifting')).toBeNull();
+  });
+
+  // An exercise line declares no `higherIsBetter`, so the app reports
+  // from → to and refuses to call a direction good.
+  it('never calls the change better or worse', async () => {
+    await lifting([
+      [{ name: 'Max Hangs', sets: 5, load: 35 }],
+      [{ name: 'Max Hangs', sets: 5, load: 20 }],
+    ]);
+    const card = screen.getByText('What you were lifting').closest('section')!;
+    expect(card.textContent).toMatch(/load \+35 lbs → \+20 lbs/);
+    expect(card.textContent).not.toMatch(/better|worse|dropped|improved/i);
+  });
+});
