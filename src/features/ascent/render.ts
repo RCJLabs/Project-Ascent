@@ -10,6 +10,7 @@
 import type { AvatarConfig } from '@/engine/avatar';
 import { CLIMBER, LANES, LANE_WIDTH, VIEW } from '@/engine/ascent/config';
 import { climberX, isObstacle, screenY, type Entity, type RunState } from '@/engine/ascent/game';
+import { ghostY } from '@/engine/ascent/replay';
 import { createRng, next } from '@/engine/ascent/rng';
 import { POSES, climberShapes, climbingPose, type Shape } from '@/ui/climberShapes';
 
@@ -367,6 +368,63 @@ export interface RenderOptions {
   avatar: AvatarConfig;
   /** Device pixel scale already applied by the caller. */
   scale: number;
+  /**
+   * The day's best run, replayed alongside (PLAN.md M81). Absent when there
+   * is nothing to race.
+   */
+  ghost?: RunState | undefined;
+}
+
+/**
+ * How faint the ghost is.
+ *
+ * Low enough that it never competes with the figure you are steering —
+ * mistaking the ghost for yourself for one lane change is a crash — and
+ * drawn flat in `palette.ink` rather than the avatar's own colours, because
+ * two identical climbers in the same frame is the same mistake made
+ * prettier.
+ */
+const GHOST_ALPHA = 0.38;
+
+/** One colour for every shape, which is what makes it read as a shadow. */
+function flatten(shape: Shape, ink: string): Shape {
+  if (shape.kind === 'polyline') return { ...shape, stroke: ink };
+  if (shape.kind === 'path') {
+    return {
+      ...shape,
+      ...(shape.fill && shape.fill !== 'none' ? { fill: ink } : {}),
+      ...(shape.stroke ? { stroke: ink } : {}),
+    };
+  }
+  return { ...shape, fill: ink };
+}
+
+function drawClimber(
+  ctx: CanvasRenderingContext2D,
+  state: RunState,
+  options: RenderOptions,
+  at: { y: number; alpha: number; ink?: string },
+): void {
+  const scale = (CLIMBER.height * 2.4) / 250;
+  ctx.save();
+  ctx.translate(climberX(state) - (180 * scale) / 2, at.y - (250 * scale) / 2);
+  ctx.scale(scale, scale);
+  ctx.globalAlpha = at.alpha;
+  for (const shape of climberShapes(options.avatar, {
+    showGround: false,
+    colors: {
+      ground: options.palette.rockNear,
+      surface: options.palette.sky,
+      accentGround: options.palette.strata,
+    },
+    // Driven by distance rather than time, so the cadence rises with the
+    // climber's speed and a paused run holds a pose instead of running on
+    // the spot.
+    joints: climbingPose(POSES[options.avatar.pose], state.distance / CLIMB_CYCLE_PX),
+  })) {
+    drawShape(ctx, at.ink === undefined ? shape : flatten(shape, at.ink));
+  }
+  ctx.restore();
 }
 
 export function render(
@@ -410,25 +468,32 @@ export function render(
 
   for (const entity of state.entities) drawEntity(ctx, state, entity, palette);
 
-  // The climber: the player's own avatar, scaled into the lane.
-  const scale = (CLIMBER.height * 2.4) / 250;
-  const x = climberX(state);
-  ctx.save();
-  ctx.translate(x - (180 * scale) / 2, CLIMBER.y - (250 * scale) / 2);
-  ctx.scale(scale, scale);
-  // Blink through the forgiveness window so a save is visible.
-  ctx.globalAlpha = state.invulnMs > 0 && Math.floor(state.timeMs / 90) % 2 === 0 ? 0.35 : 1;
-  for (const shape of climberShapes(options.avatar, {
-    showGround: false,
-    colors: { ground: palette.rockNear, surface: palette.sky, accentGround: palette.strata },
-    // Driven by distance rather than time, so the cadence rises with the
-    // climber's speed and a paused run holds a pose instead of running on
-    // the spot.
-    joints: climbingPose(POSES[options.avatar.pose], state.distance / CLIMB_CYCLE_PX),
-  })) {
-    drawShape(ctx, shape);
+  // The ghost first, so the climber you are steering is never drawn under
+  // it, and only while it is on screen — once it is off the canvas there is
+  // nothing to paint and the check saves a figure's worth of work a frame.
+  //
+  // A *crashed* ghost keeps being drawn, and that is the whole race. Height
+  // in this game is time: the ramp is driven by `timeMs`, and a lane change
+  // costs nothing, so two runs on the same wall climb at exactly the same
+  // rate and sit level however well either is being played. The gap only
+  // opens when one of them stops. So the ghost freezes at the height its
+  // run ended and the live wall carries it down past you — which is the
+  // moment you have beaten your best, said by the picture rather than by a
+  // number that reads +0 m until it happens.
+  const ghost = options.ghost;
+  if (ghost) {
+    const y = ghostY(state, ghost);
+    if (y > -CLIMBER.height && y < VIEW.height + CLIMBER.height) {
+      drawClimber(ctx, ghost, options, { y, alpha: GHOST_ALPHA, ink: palette.ink });
+    }
   }
-  ctx.restore();
+
+  // The climber: the player's own avatar, scaled into the lane.
+  drawClimber(ctx, state, options, {
+    y: CLIMBER.y,
+    // Blink through the forgiveness window so a save is visible.
+    alpha: state.invulnMs > 0 && Math.floor(state.timeMs / 90) % 2 === 0 ? 0.35 : 1,
+  });
 
   if (state.slowmoMs > 0) {
     ctx.fillStyle = 'rgba(90,163,212,0.14)';

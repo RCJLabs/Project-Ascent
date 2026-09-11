@@ -12,6 +12,7 @@
  */
 
 import { getDb } from './db';
+import type { Tape } from '@/engine/ascent/replay';
 import type { AcceptedBounty } from '@/engine/challenges';
 
 export type LedgerSource = 'real' | 'game';
@@ -51,7 +52,22 @@ export interface AscentRecords {
   pureBest: number;
   runs: number;
   /** The best run on today's wall — the one the day's payout is priced on. */
-  daily: { date: string; metres: number; coins: number; mode: 'ascent' | 'freesolo' } | null;
+  daily: {
+    date: string;
+    metres: number;
+    coins: number;
+    mode: 'ascent' | 'freesolo';
+    /**
+     * The inputs that climbed it, so it can be raced (PLAN.md M81).
+     *
+     * On the *daily* record and nowhere else, because the wall is seeded
+     * from the date: the all-time best was climbed on some other day's
+     * wall, and replaying its tape would draw a climber dodging boulders
+     * that are not there. Optional — every record written before M81 has
+     * no tape, and a run recorded past the move cap stores none.
+     */
+    tape?: Tape;
+  } | null;
 }
 
 export const EMPTY_ASCENT: AscentRecords = {

@@ -1,11 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { CLIMBER, VIEW } from '@/engine/ascent/config';
+import { createRun } from '@/engine/ascent/game';
+import { deriveAvatar } from '@/engine/avatar';
 import {
   THEME_UNLOCKS,
   WALL_THEMES,
   buildWall,
   edgeProfile,
   facetLight,
+  render,
   rockOutline,
   themeForHeight,
 } from './render';
@@ -184,5 +188,130 @@ describe('the climber moves', () => {
     for (const path of still) {
       expect(readFileSync(path, 'utf8'), path).not.toContain('climbingPose');
     }
+  });
+});
+
+/**
+ * A canvas that only remembers what it was asked to do.
+ *
+ * `ctx.scale` is called exactly once per climber drawn and nowhere else in
+ * the file, which makes counting it the cheapest way to ask "is the ghost
+ * on screen" without a real canvas or a pixel comparison.
+ */
+// Node has no canvas, and `drawShape` builds a Path2D for every limb.
+(globalThis as { Path2D?: unknown }).Path2D ??= class {
+  constructor(readonly d?: string) {}
+};
+
+function stubCtx() {
+  const held: Record<string, unknown> = {};
+  const calls: Record<string, number> = {};
+  const alphas: number[] = [];
+  /** The y each climber was placed at, in the order they were drawn. */
+  const tops: number[] = [];
+  let pending: number | null = null;
+  const ctx = new Proxy(held, {
+    get(target, prop: string) {
+      if (prop in target) return target[prop];
+      return (...args: unknown[]) => {
+        calls[prop] = (calls[prop] ?? 0) + 1;
+        // `translate` then `scale` is the climber's own pair; every other
+        // translate in the file stands alone.
+        if (prop === 'translate') pending = args[1] as number;
+        else if (prop === 'scale' && pending !== null) {
+          tops.push(pending);
+          pending = null;
+        }
+        return prop === 'measureText' ? { width: args.length } : undefined;
+      };
+    },
+    set(target, prop: string, value: unknown) {
+      target[prop] = value;
+      if (prop === 'globalAlpha') alphas.push(value as number);
+      return true;
+    },
+  }) as unknown as CanvasRenderingContext2D;
+  return { ctx, calls, alphas, tops };
+}
+
+describe('the ghost on the wall', () => {
+  const options = {
+    palette: WALL_THEMES.granite!,
+    wall: buildWall(9),
+    avatar: deriveAvatar({ level: 3, vitality: 'fresh', feet: 0 }),
+    scale: 1,
+  };
+
+  /** Two climbers drawn means the ghost was one of them. */
+  const drawn = (ghost?: ReturnType<typeof createRun>) => {
+    const { ctx, calls, alphas, tops } = stubCtx();
+    render(ctx, createRun({ seed: 9 }), { ...options, ...(ghost ? { ghost } : {}) });
+    return { climbers: calls.scale ?? 0, alphas, tops };
+  };
+
+  it('is not drawn when there is none', () => {
+    expect(drawn().climbers).toBe(1);
+  });
+
+  it('is drawn beside the climber when it is close', () => {
+    const ghost = createRun({ seed: 9 });
+    ghost.distance = 60;
+    expect(drawn(ghost).climbers).toBe(2);
+  });
+
+  it('is fainter than the climber, so the two cannot be confused', () => {
+    const ghost = createRun({ seed: 9 });
+    ghost.distance = 60;
+    const { alphas } = drawn(ghost);
+    expect(alphas.length).toBe(2);
+    // The ghost is drawn first, and the live climber at full strength.
+    expect(alphas[0]).toBeLessThan(0.5);
+    expect(alphas[1]).toBe(1);
+  });
+
+  it('is drawn above the climber when it is ahead on the wall', () => {
+    // The whole point of the second figure: you can see the gap. Pinned to
+    // the climber's own line it would say nothing at all.
+    const ghost = createRun({ seed: 9 });
+    ghost.distance = 90;
+    const { tops } = drawn(ghost);
+    expect(tops.length).toBe(2);
+    // Ghost first, then the live climber. Smaller y is higher up.
+    expect(tops[0]!).toBeLessThan(tops[1]!);
+    expect(tops[1]! - tops[0]!).toBeCloseTo(90, 6);
+  });
+
+  it('is not drawn once it is off the top of the screen', () => {
+    const ghost = createRun({ seed: 9 });
+    ghost.distance = CLIMBER.y + CLIMBER.height + 1;
+    expect(drawn(ghost).climbers).toBe(1);
+  });
+
+  it('is not drawn once it is off the bottom', () => {
+    const { ctx, calls } = stubCtx();
+    const live = createRun({ seed: 9 });
+    live.distance = VIEW.height + CLIMBER.height * 2;
+    render(ctx, live, { ...options, ghost: createRun({ seed: 9 }) });
+    expect(calls.scale ?? 0).toBe(1);
+  });
+
+  it('keeps being drawn after its run ended, until the wall carries it off', () => {
+    // The crashed ghost is the race: two runs on one wall climb at the same
+    // rate, so the gap only opens when one of them stops. It freezes where
+    // it fell and scrolls down past the live climber.
+    const ghost = createRun({ seed: 9 });
+    ghost.distance = 60;
+    ghost.over = true;
+    expect(drawn(ghost).climbers).toBe(2);
+  });
+
+  it('is gone once the wall has carried the fall off the bottom', () => {
+    const { ctx, calls } = stubCtx();
+    const live = createRun({ seed: 9 });
+    live.distance = VIEW.height + CLIMBER.height * 2;
+    const ghost = createRun({ seed: 9 });
+    ghost.over = true;
+    render(ctx, live, { ...options, ghost });
+    expect(calls.scale ?? 0).toBe(1);
   });
 });

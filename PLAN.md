@@ -2795,15 +2795,55 @@ commit.
 
 **The Ascent.**
 
-- **M81 — Replay, which the engine was built for and nothing uses.** `engine/ascent/game.ts`
-  opens with the property: *"a seed plus a sequence of inputs reproduces a run exactly on
-  any device at any frame rate."* `AscentRecords` stores two numbers per mode and a daily
-  total — **no inputs are kept, so the property is unused**. Record the input tape of the
-  best run (lane changes by tick — ticks, not wall time, so it is tiny and exact), keep it
-  beside the record, and draw it as a ghost on the daily wall so a climber races their own
-  best on the same wall everyone else got. The proof is the test: replay the tape and
-  assert the metres match to the unit, which is the determinism claim finally held to
-  something.
+- **M81 — Replay, which the engine was built for and nothing uses.** *Done, with two of the
+  proposal's claims withdrawn and the feature's own design corrected in a browser.*
+  **The determinism property was already tested.** `game.test.ts:63` — "replays the same run
+  from the same seed and inputs" — has held it since it was written, so "the determinism
+  claim finally held to something" was wrong. The real gap is narrower and still worth
+  closing: the property was proven and **nothing a climber could see used it**.
+  **"Keep it beside the record" was also wrong.** The all-time best was climbed on some
+  other day's wall — `dailySeed(dateKey)` — so its tape replays a pattern that is not there
+  today. Only the `daily` record shares a seed with the run you are about to play, and that
+  is where the tape goes.
+  So: `Recorder` writes `[tick, input, …]` pairs off the live frame loop, `replayRun` drives
+  them back through `step(state, TICK_MS)` one tick at a time, and `advanceGhost` walks a
+  second run beside the first. `RunState` gained a counted `ticks` field rather than deriving
+  one from `timeMs / TICK_MS`: `timeMs` accumulates a non-terminating float and a tape that
+  drifts by a tick after twenty minutes replays a different run.
+  **The tape carries its own modifiers.** An afternoon session moves END, END trims the speed
+  ramp; a morning run replayed tonight against tonight's stats would drift off the height it
+  is meant to be showing.
+  **A frame-rate claim I wrote down and then disproved.** The first test asserted a 30 Hz
+  phone and a 144 Hz one record the *same tape*. They do not and cannot: at 33 ms a frame
+  simulates four ticks and never observes the three between, so it cannot put an input on
+  one. What does hold at every frame rate is the part the feature needs — the tape replays
+  the run it recorded, to the metre — and that is what the test says now. The recorder does
+  fold repeated inputs at one tick, which is what the engine already does (`step` overwrites
+  `pendingInput` before any tick consumes it) and stops a 144 Hz player storing twice the
+  tape a 60 Hz one does for the same run.
+  **The browser found the design flaw, not a rendering bug.** The HUD showed a live metre gap
+  against the ghost. It reads **+0 m for the whole race**, because height in this game *is*
+  time — the ramp is driven by `timeMs` and a lane change costs nothing — so two runs on one
+  wall sit exactly level however well either is being played. The gap only opens when one of
+  them stops. So the crashed ghost is no longer hidden: it freezes at the height its run
+  ended and the wall carries it down past you, and the number appears at the moment it starts
+  to mean something. That picture — your best pinned under the boulder that got it, scrolling
+  away below you — is the feature; the number is the caption.
+  Thirty-eight mutations, thirty-three killed on the first pass. All five survivors were
+  addressed rather than argued with: two were guards against a tape that disagrees with its
+  own run (a restored backup can hold one) and now have the tests that hold them — one of
+  them kills by *hanging*, since `step` on a finished run simulates nothing and the tick count
+  never reaches its bound; one was a `daily.mode` check strictly redundant with the tape's own
+  and was deleted; one showed the render test never checked *where* the ghost was drawn; one
+  showed a defensive spread with no observable effect. `isTape` also gained a `MAX_TICKS`
+  bound, because `replayRun` walks one tick at a time and a backup claiming two billion of
+  them would lock the tab.
+  **One pre-existing bug the browser caught**, the M80 family again: the payout card printed
+  *"1 coins"*. 2,328 tests pass.
+  *Worth knowing:* there is one `daily` record, not one per mode, and it is the day's best
+  run overall — so a Free Solo ghost only exists on the rare day a Free Solo run is the best
+  one. Splitting it per mode would change what the day's payout is priced on, which is the
+  economy, not this milestone.
 
 **Progress tracking.**
 

@@ -63,7 +63,12 @@ export function payoutFor(run: DailyRun, restedToday: boolean): AscentPayout {
   const lines: PayoutLine[] = [
     { label: `Best run · ${run.metres.toLocaleString()} m`, units: metresUnits },
   ];
-  if (coinUnits > 0) lines.push({ label: `${Math.round(run.coins)} coins`, units: coinUnits });
+  if (coinUnits > 0) {
+    // One coin is a coin. The same fault M80 wrote `records(n)` for, found
+    // in a browser: the payout card was printing "1 coins".
+    const coins = Math.round(run.coins);
+    lines.push({ label: `${coins} coin${coins === 1 ? '' : 's'}`, units: coinUnits });
+  }
 
   let units = metresUnits + coinUnits;
   if (run.mode === 'freesolo') {

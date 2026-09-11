@@ -89,6 +89,15 @@ export interface RunState {
   modifiers: Modifiers;
 
   timeMs: number;
+  /**
+   * Fixed ticks simulated so far (PLAN.md M81).
+   *
+   * The index a replay tape is keyed on. Counted rather than derived from
+   * `timeMs / TICK_MS`: `timeMs` accumulates a non-terminating float
+   * (1000/120) and a tape that drifts by one tick after twenty minutes
+   * replays a different run.
+   */
+  ticks: number;
   accumulator: number;
   distance: number;
   speed: number;
@@ -136,6 +145,7 @@ export function createRun(options: RunOptions): RunState {
     rng: createRng(options.seed),
     modifiers,
     timeMs: 0,
+    ticks: 0,
     accumulator: 0,
     distance: 0,
     speed: SPEED.base,
@@ -245,6 +255,7 @@ export function step(state: RunState, dtMs: number, input: Input = 0): RunState 
 
 function tick(state: RunState, dt: number): void {
   const seconds = dt / 1000;
+  state.ticks += 1;
 
   // A queued input survives an in-progress lane change and fires the moment
   // it finishes. Dropping it would make the double-tap that crosses two

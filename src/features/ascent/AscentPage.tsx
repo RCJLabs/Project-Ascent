@@ -10,6 +10,14 @@ import {
   type Mode,
   type RunState,
 } from '@/engine/ascent/game';
+import {
+  Recorder,
+  advanceGhost,
+  createGhost,
+  ghostGap,
+  tapeToRace,
+  type Ghost,
+} from '@/engine/ascent/replay';
 import { payoutFor, wallNumber, type AscentPayout } from '@/engine/ascent/rewards';
 import { dailySeed } from '@/engine/ascent/rng';
 import { deriveAltimeter } from '@/engine/altimeter';
@@ -57,7 +65,21 @@ interface Hud {
   saves: number;
   slowmo: boolean;
   pure: boolean;
+  /**
+   * Metres climbed past the day's best, once that run has ended.
+   *
+   * Null until then, and null all run when there is no ghost. Height here
+   * is time — the ramp is driven by `timeMs` and a lane change costs
+   * nothing — so two runs on one wall sit exactly level until one of them
+   * stops. A gap shown while both are climbing would read +0 m for the
+   * whole race and mean nothing; this appears at the moment it starts to.
+   */
+  past: number | null;
 }
+
+const EMPTY_HUD: Hud = {
+  metres: 0, coins: 0, lives: 1, saves: 0, slowmo: false, pure: true, past: null,
+};
 
 export function AscentPage() {
   const byDate = useSessions((s) => s.byDate);
@@ -74,7 +96,7 @@ export function AscentPage() {
 
   const [phase, setPhase] = useState<Phase>('menu');
   const [mode, setMode] = useState<Mode>('ascent');
-  const [hud, setHud] = useState<Hud>({ metres: 0, coins: 0, lives: 1, saves: 0, slowmo: false, pure: true });
+  const [hud, setHud] = useState<Hud>(EMPTY_HUD);
   const [payout, setPayout] = useState<AscentPayout | null>(null);
   const [newBest, setNewBest] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -83,6 +105,9 @@ export function AscentPage() {
   const runRef = useRef<RunState | null>(null);
   const frameRef = useRef<number>(0);
   const inputRef = useRef<Input>(0);
+  /** The inputs of the run in progress, kept so the day's best can be raced. */
+  const recorderRef = useRef<Recorder | null>(null);
+  const ghostRef = useRef<Ghost | null>(null);
 
   useEffect(() => {
     if (!hydrated) void loadGame();
@@ -161,16 +186,34 @@ export function AscentPage() {
       else cueGameOver();
 
       setPhase('over');
+      const date = todayKey();
+      // A tab left open past midnight finishes a run on yesterday's wall
+      // under today's date. The height still counts; the tape does not,
+      // because it would replay a pattern nobody can race today.
+      const onTodaysWall = seed === dailySeed(date);
+      const tape = onTodaysWall ? recorderRef.current?.take(run) : undefined;
       void recordRun({
         mode: run.mode,
         metres: climbed,
         coins: run.coins,
         pure: run.pure,
-        date: todayKey(),
+        date,
         rested: derived.restedToday,
+        ...(tape ? { tape } : {}),
       }).then(setPayout);
     },
-    [recordRun, derived.restedToday],
+    [recordRun, derived.restedToday, seed],
+  );
+
+  /**
+   * The day's best in a given mode, if it left a tape on this wall.
+   *
+   * Takes the mode rather than reading the `mode` state: on the menu that
+   * state is whatever was played last, and both buttons are on screen.
+   */
+  const raceable = useCallback(
+    (which: Mode) => tapeToRace(records.daily, { date: todayKey(), mode: which, seed }),
+    [records.daily, seed],
   );
 
   const start = useCallback(
@@ -181,11 +224,15 @@ export function AscentPage() {
       beatRef.current = records.best[chosen];
       runRef.current = createRun({ mode: chosen, seed, modifiers });
       inputRef.current = 0;
+      recorderRef.current = new Recorder(seed, chosen, modifiers);
+      const tape = raceable(chosen);
+      ghostRef.current = tape ? createGhost(tape) : null;
       setPayout(null);
       setNewBest(false);
+      setHud(EMPTY_HUD);
       setPhase('playing');
     },
-    [seed, modifiers, records.best],
+    [seed, modifiers, records.best, raceable],
   );
 
   // The loop. React never re-renders per frame — the HUD is refreshed on a
@@ -211,9 +258,17 @@ export function AscentPage() {
       const dt = now - last;
       last = now;
 
+      // Recorded before the step, at the tick the run is about to simulate:
+      // that is when the engine is handed the input, and a tape keyed on
+      // the tick that eventually consumed it would replay the engine's own
+      // decision back at itself.
+      recorderRef.current?.at(run.ticks, inputRef.current);
       step(run, dt, inputRef.current);
       inputRef.current = 0;
-      render(ctx, run, { palette: theme, wall, avatar, scale });
+
+      const ghost = ghostRef.current;
+      if (ghost) advanceGhost(ghost, run.ticks);
+      render(ctx, run, { palette: theme, wall, avatar, scale, ghost: ghost?.state });
 
       // Events accumulate across every tick this frame simulated, so a magnet
       // can hand back a dozen coins at once. Only the first few sound, as an
@@ -240,6 +295,7 @@ export function AscentPage() {
           saves: run.saves,
           slowmo: run.slowmoMs > 0,
           pure: run.pure,
+          past: ghost?.state.over ? -ghostGap(run, ghost.state) : null,
         });
       }
 
@@ -247,6 +303,7 @@ export function AscentPage() {
         setHud({
           metres: metres(run), coins: Math.round(run.coins), lives: 0,
           saves: run.saves, slowmo: false, pure: run.pure,
+          past: ghost?.state.over ? -ghostGap(run, ghost.state) : null,
         });
         finish(run);
         return;
@@ -300,6 +357,14 @@ export function AscentPage() {
           <div className="flex items-center gap-3 text-sm">
             <span className="font-black text-xl tabular-nums">{hud.metres.toLocaleString()} m</span>
             <span className="text-ink-soft tabular-nums">◎ {hud.coins}</span>
+            {hud.past !== null && (
+              <span
+                className="tabular-nums font-semibold text-positive"
+                title="Past your best run today"
+              >
+                +{Math.max(0, hud.past).toLocaleString()} m
+              </span>
+            )}
             <span className="ml-auto flex items-center gap-2 text-ink-soft">
               {Array.from({ length: hud.lives }, (_, i) => (
                 <Heart key={i} size={14} className="text-danger" fill="currentColor" />
@@ -330,6 +395,12 @@ export function AscentPage() {
                 Climb an endless wall. Tap either side of the screen — or use the arrow keys — to
                 switch lanes. Rocks end the run; the small fast ones are the ones that get you.
               </p>
+              {raceable('ascent') && (
+                <p className="text-sm text-ink-soft leading-relaxed mb-3">
+                  Your best run today climbs it with you — a faint second climber on the same wall,
+                  making the same moves. {records.daily?.metres.toLocaleString()} m to beat.
+                </p>
+              )}
               <Button size="lg" className="w-full" onClick={() => start('ascent')}>
                 <Play size={18} /> Climb
               </Button>
@@ -341,6 +412,8 @@ export function AscentPage() {
                 {freeSoloUnlocked
                   ? 'Unlocked.'
                   : `Reach ${FREE_SOLO_UNLOCK.toLocaleString()} m on the normal wall to unlock it.`}
+                {raceable('freesolo') &&
+                  ` Today's best Free Solo runs beside you — ${records.daily?.metres.toLocaleString()} m to beat.`}
               </p>
               <Button
                 variant="outline"

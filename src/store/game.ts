@@ -16,6 +16,7 @@ import {
   type Wallet,
 } from '@/db/game';
 import type { Mode } from '@/engine/ascent/game';
+import type { Tape } from '@/engine/ascent/replay';
 import { payoutFor, type AscentPayout } from '@/engine/ascent/rewards';
 import type { BountySpec, Challenge, AcceptedBounty } from '@/engine/challenges';
 import { today } from '@/engine/dates';
@@ -43,6 +44,8 @@ export interface GameState {
     pure: boolean;
     date: string;
     rested: boolean;
+    /** The inputs, so the day's best can be raced (PLAN.md M81). */
+    tape?: Tape;
   }) => Promise<AscentPayout | null>;
   /** Append a game-lane award. The id is the idempotency guard, and the
    *  cap is applied on write so a bad caller cannot inflate the economy. */
@@ -89,12 +92,17 @@ export const useGame = create<GameState>((set, get) => ({
     set({ ledger: await appendLedger(capped) });
   },
 
-  recordRun: async ({ mode, metres, coins, pure, date, rested }) => {
+  recordRun: async ({ mode, metres, coins, pure, date, rested, tape }) => {
     const current = get().ascent;
     const today = current.daily?.date === date ? current.daily : null;
     // The day is priced on its best run, so a worse one changes nothing.
+    // The tape goes with it, and only with it: a better run that brought no
+    // tape — one past the move cap, or finished on yesterday's wall —
+    // leaves the record with none rather than inheriting the old run's
+    // inputs, which would put a ghost on the wall claiming a height it
+    // never climbed.
     const daily =
-      today === null || metres > today.metres ? { date, metres, coins, mode } : today;
+      today === null || metres > today.metres ? { date, metres, coins, mode, tape } : today;
 
     set({
       ascent: await putAscent({

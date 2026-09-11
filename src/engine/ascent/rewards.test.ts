@@ -17,6 +17,13 @@ describe('the daily payout', () => {
     expect(payout.xp).toBe(0);
   });
 
+  it('counts one coin as a coin', () => {
+    // The payout card printed "1 coins" until a browser run showed it.
+    const labels = (coins: number) => payoutFor(run({ metres: 600, coins }), false).lines.map((l) => l.label);
+    expect(labels(1)).toContain('1 coin');
+    expect(labels(2)).toContain('2 coins');
+  });
+
   it('scales with height and with coins, and names both', () => {
     const short = payoutFor(run({ metres: 1_000 }), false);
     const long = payoutFor(run({ metres: 4_000 }), false);
