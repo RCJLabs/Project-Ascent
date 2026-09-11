@@ -3,14 +3,13 @@ import { useDialog } from './useDialog';
 import { Pause, Play, RotateCcw, SkipForward, Volume2, VolumeX, X } from 'lucide-react';
 import { announce } from './Announce';
 import { IconButton } from './IconButton';
-import type { Protocol, ProtocolTimer } from '@/content/types';
 import {
   buildTimer,
   formatClock,
   positionAt,
   segmentStartMs,
-  workLabel,
   type SegmentKind,
+  type TimerSubject,
 } from '@/engine/timer';
 import { cueCountdown, cueDone, cueRest, cueSetRest, cueWork, cuesEnabled, setCuesEnabled, unlock } from '@/lib/cues';
 import { keepAwake, releaseAwake } from '@/lib/wakeLock';
@@ -29,21 +28,22 @@ const RING: Record<SegmentKind, string> = {
   setRest: 'stroke-warn',
 };
 
+/**
+ * The interval timer, over anything with intervals (PLAN.md M99).
+ *
+ * It used to take a `Protocol` and read the header, the work word, the hint
+ * and the intervals off it. A circuit has intervals and none of the rest, so
+ * what arrives now is a `TimerSubject` — plain data, built by
+ * `protocolSubject` or `circuitSubject`, and the same shape a reload restores.
+ */
 export function TimerSheet({
-  protocol,
-  sets,
-  exerciseName,
-  override,
+  subject,
   resume,
   onPersist,
   onClose,
   onComplete,
 }: {
-  protocol: Protocol;
-  sets: number;
-  exerciseName: string;
-  /** Week-specific timing that supersedes the protocol's defaults. */
-  override?: Partial<ProtocolTimer>;
+  subject: TimerSubject;
   /** Where a reload left off, if it left off anywhere. */
   resume?: { baseElapsed: number; startedAt: number | null } | undefined;
   /** Called whenever the clock starts, stops or resets, so the owner can
@@ -52,7 +52,8 @@ export function TimerSheet({
   onClose: () => void;
   onComplete?: () => void;
 }) {
-  const plan = useRef(buildTimer({ ...protocol.timer!, ...override }, sets)).current;
+  const plan = useRef(buildTimer(subject.timer, subject.sets)).current;
+  const setWord = subject.setWord.toLowerCase();
 
   const [running, setRunning] = useState(resume?.startedAt != null);
   const [elapsed, setElapsed] = useState(() =>
@@ -100,7 +101,7 @@ export function TimerSheet({
         setRunning(false);
         // Assertive: a cue you hear and a cue you are told are the same
         // information, and both are useless if they arrive after the set.
-        announce(`${protocol.name} complete. ${plan.sets} sets done.`, 'assertive');
+        announce(`${subject.title} complete. ${plan.sets} ${setWord}s done.`, 'assertive');
         onComplete?.();
       }
       return;
@@ -129,7 +130,7 @@ export function TimerSheet({
         cueCountdown();
       }
     }
-  }, [pos.index, pos.remainingMs, pos.done, running, plan, onComplete, protocol.name, pos.segment?.kind, pos.segment?.seconds]);
+  }, [pos.index, pos.remainingMs, pos.done, running, plan, onComplete, subject.title, setWord, pos.segment?.kind, pos.segment?.seconds]);
 
   const start = useCallback(() => {
     unlock();
@@ -170,9 +171,16 @@ export function TimerSheet({
   const sheet = useDialog<HTMLDivElement>(onClose);
 
   const segment = pos.segment;
+  const steps = subject.steps;
   const kind: SegmentKind = segment?.kind ?? 'prepare';
   const label =
-    kind === 'work' ? workLabel(protocol.name) : kind === 'prepare' ? 'Get ready' : kind === 'rest' ? 'Rest' : 'Set rest';
+    kind === 'work'
+      ? subject.workWord
+      : kind === 'prepare'
+        ? 'Get ready'
+        : kind === 'rest'
+          ? 'Rest'
+          : `${subject.setWord} rest`;
   const fraction = segment ? 1 - pos.remainingMs / (segment.seconds * 1000) : 1;
   const circumference = 2 * Math.PI * 46;
 
@@ -183,13 +191,13 @@ export function TimerSheet({
       className="fixed inset-0 z-50 bg-bg flex flex-col outline-none"
       role="dialog"
       aria-modal="true"
-      aria-label={`${protocol.name} timer`}
+      aria-label={`${subject.title} timer`}
     >
       <div className="flex items-center justify-between px-4 py-3 border-b border-line">
         <div className="min-w-0">
-          <div className="font-bold truncate">{protocol.name}</div>
-          {exerciseName !== protocol.name && (
-            <div className="text-xs text-ink-soft truncate">{exerciseName}</div>
+          <div className="font-bold truncate">{subject.title}</div>
+          {subject.subtitle !== undefined && (
+            <div className="text-xs text-ink-soft truncate">{subject.subtitle}</div>
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -240,14 +248,34 @@ export function TimerSheet({
                 <div className="text-6xl font-black tabular-nums leading-none mt-1">
                   {formatClock(pos.remainingMs)}
                 </div>
+                {/* A circuit's reps are different exercises, so the name is
+                    the useful thing rather than "rep 3 of 5" — and during the
+                    rest it is the *next* one, which is what a climber
+                    standing up needs to know. It gets its own line: at 320px
+                    "Round 1 of 2 · Mountain Climbers" wrapped out past the
+                    ring, which a browser showed and jsdom could not. */}
                 {segment && segment.rep > 0 && (
-                  <div className="text-sm text-ink-soft mt-2">
-                    Set {segment.set} of {plan.sets} · rep {segment.rep} of {plan.repsPerSet}
+                  <div className="text-sm text-ink-soft mt-2 px-5 text-center text-balance">
+                    {steps === undefined ? (
+                      `${subject.setWord} ${segment.set} of ${plan.sets} · rep ${segment.rep} of ${plan.repsPerSet}`
+                    ) : (
+                      <>
+                        <span className="block text-xs uppercase tracking-wide">
+                          {subject.setWord} {segment.set} of {plan.sets}
+                        </span>
+                        <span className="block">
+                          {kind === 'work'
+                            ? (steps[segment.rep - 1] ?? `Exercise ${segment.rep}`)
+                            : `Next: ${steps[segment.rep] ?? '—'}`}
+                        </span>
+                      </>
+                    )}
                   </div>
                 )}
                 {segment && segment.rep === 0 && kind === 'setRest' && (
-                  <div className="text-sm text-ink-soft mt-2">
-                    Next: set {segment.set + 1} of {plan.sets}
+                  <div className="text-sm text-ink-soft mt-2 px-4">
+                    Next: {setWord} {segment.set + 1} of {plan.sets}
+                    {steps === undefined ? '' : `, from ${steps[0] ?? '—'}`}
                   </div>
                 )}
               </>
@@ -255,10 +283,8 @@ export function TimerSheet({
           </div>
         </div>
 
-        {!pos.done && (
-          <p className="text-sm text-ink-soft text-center max-w-sm">
-            {protocol.grip ?? protocol.cues[0]}
-          </p>
+        {!pos.done && subject.hint !== undefined && (
+          <p className="text-sm text-ink-soft text-center max-w-sm">{subject.hint}</p>
         )}
 
         <div className="text-xs text-ink-soft tabular-nums">

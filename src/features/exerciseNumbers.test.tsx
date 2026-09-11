@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { getProgram } from '@/content/programs';
 import { getSession, newSession, putSession } from '@/db/sessions';
 import { addDays, today } from '@/engine/dates';
@@ -178,6 +178,52 @@ describe('the load, which is the one the programs ask you to progress', () => {
     await hammer({ exercises: [{ name: HANG, load: -20 }] });
     fireEvent.change(screen.getByLabelText(/Load/), { target: { value: '25' } });
     await waitFor(async () => expect((await stored())?.[0]?.load).toBe(-25));
+  });
+});
+
+/**
+ * The same sheet, over a named protocol (PLAN.md M99).
+ *
+ * M99 generalised `TimerSheet` away from `Protocol` so a circuit could use
+ * it. These hold the protocol side of that: a fingerboard set still says
+ * "Hang" and still counts in sets and reps.
+ */
+describe('the protocol timer the circuit generalisation had to keep', () => {
+  it('opens over the exercise, named by its protocol', async () => {
+    await hammer({ exercises: [{ name: HANG }] });
+    fireEvent.click(within(screen.getByText(HANG).closest('li')!).getByText('Timer'));
+    expect(screen.getByRole('dialog', { name: 'Max Hangs timer' })).toBeTruthy();
+  });
+
+  // A hang is a hang. `workLabel` has always known that and nothing used to
+  // prove the sheet asked it.
+  it('calls the work phase a hang rather than work', async () => {
+    await hammer({ exercises: [{ name: HANG }] });
+    fireEvent.click(within(screen.getByText(HANG).closest('li')!).getByText('Timer'));
+    fireEvent.click(screen.getByLabelText('Skip segment'));
+    // The element, not the sheet's text: the header is "Max Hangs", so a
+    // regex over the whole sheet matches /Hang/ whatever the dial says —
+    // and `\bWork\b` never matches inside "…HangsWork10" either, because
+    // neither side of it is a word boundary. Both directions pass for the
+    // wrong reason, which a mutation found and this fixes.
+    const sheet = within(screen.getByRole('dialog'));
+    expect(sheet.getByText('Hang', { exact: true })).toBeTruthy();
+    expect(sheet.queryByText('Work', { exact: true })).toBeNull();
+  });
+
+  it('counts in sets and reps, not rounds and exercise names', async () => {
+    await hammer({ exercises: [{ name: HANG }] });
+    fireEvent.click(within(screen.getByText(HANG).closest('li')!).getByText('Timer'));
+    fireEvent.click(screen.getByLabelText('Skip segment'));
+    const sheet = screen.getByRole('dialog');
+    expect(sheet.textContent).toMatch(/Set 1 of 5 · rep 1 of 1/);
+    expect(sheet.textContent).not.toMatch(/Round/);
+  });
+
+  it('shows the protocol\'s grip under the dial', async () => {
+    await hammer({ exercises: [{ name: HANG }] });
+    fireEvent.click(within(screen.getByText(HANG).closest('li')!).getByText('Timer'));
+    expect(screen.getByRole('dialog').textContent).toMatch(/20\s?mm/i);
   });
 });
 

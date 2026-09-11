@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { PROTOCOLS } from '@/content/protocols';
-import { buildTimer, formatClock, positionAt, segmentStartMs } from './timer';
+import type { Protocol } from '@/content/types';
+import {
+  buildTimer,
+  circuitSubject,
+  formatClock,
+  positionAt,
+  protocolSubject,
+  readSubject,
+  segmentStartMs,
+} from './timer';
 
 const REPEATERS = PROTOCOLS['repeaters_7_3']!.timer!;
 const MAX_HANGS = PROTOCOLS['max_hangs_10s']!.timer!;
@@ -111,5 +120,134 @@ describe('formatClock', () => {
     expect(formatClock(0)).toBe('0');
     expect(formatClock(65_000)).toBe('1:05');
     expect(formatClock(180_000)).toBe('3:00');
+  });
+});
+
+/**
+ * The sheet's subject (PLAN.md M99).
+ *
+ * The timer used to take a `Protocol` and read six things off it. A circuit
+ * has intervals and none of the rest — no cues, no grip, and reps that are
+ * different exercises rather than repetitions of one — so what it takes now
+ * is plain data, and that data is also what a reload restores.
+ */
+describe('what the sheet is given', () => {
+  const HANGS: Protocol = {
+    id: 'max_hangs_10s',
+    name: 'Max Hangs',
+    description: 'Heavy, short, long rests.',
+    timer: { workSec: 10, restSec: 0, repsPerSet: 1, setRestSec: 180 },
+    grip: 'Half crimp on a 20mm edge.',
+    cues: ['No burn, just tension.'],
+  };
+
+  it('builds a protocol subject from the protocol', () => {
+    const subject = protocolSubject(HANGS, 'Max Hangs', 5);
+    expect(subject).toMatchObject({
+      title: 'Max Hangs',
+      sets: 5,
+      workWord: 'Hang',
+      setWord: 'Set',
+      hint: 'Half crimp on a 20mm edge.',
+    });
+    // Same name twice is one name, not a header repeated under itself.
+    expect(subject?.subtitle).toBeUndefined();
+    expect(subject?.steps).toBeUndefined();
+  });
+
+  it('keeps the exercise name when it differs from the protocol', () => {
+    expect(protocolSubject(HANGS, 'Heavy hangs on the 20', 5)?.subtitle).toBe('Heavy hangs on the 20');
+  });
+
+  it('lets a week-specific override supersede the protocol', () => {
+    expect(protocolSubject(HANGS, 'Max Hangs', 5, { setRestSec: 120 })?.timer.setRestSec).toBe(120);
+  });
+
+  it('falls back to the first cue when there is no grip', () => {
+    const { grip: _drop, ...noGrip } = HANGS;
+    expect(protocolSubject(noGrip, 'x', 2)?.hint).toBe('No burn, just tension.');
+  });
+
+  it('refuses a protocol with no intervals', () => {
+    const { timer: _drop, ...untimed } = HANGS;
+    expect(protocolSubject(untimed, 'x', 2)).toBeNull();
+  });
+
+  it('never builds a subject of no sets', () => {
+    expect(protocolSubject(HANGS, 'x', 0)?.sets).toBe(1);
+  });
+
+  it('builds a circuit subject over the picked exercises', () => {
+    const subject = circuitSubject(
+      { rounds: '2', work: '40-60s', restBetween: '20s' },
+      'Core circuit',
+      ['Plank', 'Hollow Body Hold', 'L-Sit'],
+    );
+    expect(subject).toMatchObject({
+      title: 'Core circuit',
+      subtitle: '3 exercises',
+      sets: 2,
+      workWord: 'Work',
+      setWord: 'Round',
+      steps: ['Plank', 'Hollow Body Hold', 'L-Sit'],
+    });
+    expect(subject?.timer).toEqual({ workSec: 40, restSec: 20, repsPerSet: 3, setRestSec: 0 });
+  });
+
+  it('counts one exercise in the singular', () => {
+    expect(circuitSubject({ rounds: '2', work: '30s' }, 'Core', ['Plank'])?.subtitle).toBe('1 exercise');
+  });
+
+  it('is null where the circuit cannot be read', () => {
+    expect(circuitSubject({ rounds: '3', restBetweenRounds: '60s' }, 'Core', ['Plank'])).toBeNull();
+    expect(circuitSubject({ rounds: '2', work: '30s' }, 'Core', [])).toBeNull();
+  });
+});
+
+/**
+ * Read back rather than cast. `sessionStorage` holds whatever was last
+ * written to it, including a shape from a version of the app that has since
+ * been replaced, and half a restored timer is worse than none.
+ */
+describe('reading a stored subject', () => {
+  const GOOD = {
+    title: 'Core circuit',
+    timer: { workSec: 40, restSec: 20, repsPerSet: 3, setRestSec: 0 },
+    sets: 2,
+    workWord: 'Work',
+    setWord: 'Round',
+    steps: ['Plank', 'L-Sit'],
+    hint: 'Brace, do not sag.',
+  };
+
+  it('accepts a whole one', () => {
+    expect(readSubject(GOOD)).toEqual(GOOD);
+  });
+
+  it('refuses anything that is not an object', () => {
+    for (const bad of [null, undefined, 'x', 42, []]) expect(readSubject(bad)).toBeNull();
+  });
+
+  it('refuses one with no intervals', () => {
+    const { timer: _drop, ...rest } = GOOD;
+    expect(readSubject(rest)).toBeNull();
+    expect(readSubject({ ...GOOD, timer: { workSec: 40 } })).toBeNull();
+  });
+
+  it('refuses one missing a word it draws with', () => {
+    for (const key of ['title', 'workWord', 'setWord']) {
+      const broken: Record<string, unknown> = { ...GOOD };
+      delete broken[key];
+      expect(readSubject(broken), key).toBeNull();
+    }
+    expect(readSubject({ ...GOOD, sets: '2' })).toBeNull();
+  });
+
+  // Optional fields are optional, not required-and-blank.
+  it('drops optional fields it cannot trust, keeping the rest', () => {
+    expect(readSubject({ ...GOOD, steps: [1, 2] })?.steps).toBeUndefined();
+    expect(readSubject({ ...GOOD, subtitle: 7 })?.subtitle).toBeUndefined();
+    expect(readSubject({ ...GOOD, hint: {} })?.hint).toBeUndefined();
+    expect(readSubject({ ...GOOD, hint: {} })?.title).toBe('Core circuit');
   });
 });

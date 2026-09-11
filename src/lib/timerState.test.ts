@@ -6,6 +6,7 @@ import {
   loadTimerState,
   saveTimerState,
 } from './timerState';
+import type { TimerSubject } from '@/engine/timer';
 
 /** vitest runs in node, which has no sessionStorage. */
 class Memory implements Storage {
@@ -18,10 +19,19 @@ class Memory implements Storage {
   setItem(k: string, v: string) { this.map.set(k, v); }
 }
 
-const base = {
-  protocolId: 'max_hangs',
-  exerciseName: 'Max hangs',
+/** The whole subject is stored now, not a protocol id (PLAN.md M99). */
+const SUBJECT: TimerSubject = {
+  title: 'Max Hangs',
+  subtitle: 'Max hangs',
+  timer: { workSec: 10, restSec: 0, repsPerSet: 1, setRestSec: 180 },
   sets: 5,
+  workWord: 'Hang',
+  setWord: 'Set',
+  hint: 'Half crimp on a 20mm edge.',
+};
+
+const base = {
+  subject: SUBJECT,
   sessionId: '2026-09-10#0',
   baseElapsed: 42_000,
   startedAt: null as number | null,
@@ -35,7 +45,8 @@ describe('keeping a timer across a reload', () => {
   it('comes back where it was', () => {
     saveTimerState(base);
     const read = loadTimerState('2026-09-10#0');
-    expect(read?.protocolId).toBe('max_hangs');
+    expect(read?.subject.title).toBe('Max Hangs');
+    expect(read?.subject.timer.setRestSec).toBe(180);
     expect(read?.baseElapsed).toBe(42_000);
   });
 
@@ -56,10 +67,59 @@ describe('keeping a timer across a reload', () => {
   });
 
   it('refuses a record of the wrong shape rather than half-restoring', () => {
-    sessionStorage.setItem('ascent:timer', JSON.stringify({ protocolId: 'x' }));
+    sessionStorage.setItem('ascent:timer', JSON.stringify({ subject: { title: 'x' } }));
     expect(loadTimerState('anything')).toBeNull();
     sessionStorage.setItem('ascent:timer', 'not json');
     expect(loadTimerState('anything')).toBeNull();
+  });
+
+  // The envelope can be perfectly good and the subject still nonsense, and
+  // a sheet drawn from half a subject is worse than no sheet at all.
+  it('refuses a whole record whose subject is broken', () => {
+    sessionStorage.setItem(
+      'ascent:timer',
+      JSON.stringify({
+        subject: { ...SUBJECT, timer: { workSec: 10 } },
+        sessionId: '2026-09-10#0',
+        baseElapsed: 1000,
+        startedAt: null,
+        savedAt: Date.now(),
+      }),
+    );
+    expect(loadTimerState('2026-09-10#0')).toBeNull();
+  });
+
+  // A record written by a version of the app that stored a protocol id has
+  // no intervals in it, and half a timer is worse than none.
+  it('refuses the shape that came before the subject', () => {
+    sessionStorage.setItem(
+      'ascent:timer',
+      JSON.stringify({
+        protocolId: 'max_hangs',
+        exerciseName: 'Max hangs',
+        sets: 5,
+        sessionId: '2026-09-10#0',
+        baseElapsed: 1000,
+        startedAt: null,
+        savedAt: Date.now(),
+      }),
+    );
+    expect(loadTimerState('2026-09-10#0')).toBeNull();
+  });
+
+  it('keeps a circuit\'s steps, so a resume knows which exercise it is on', () => {
+    saveTimerState({
+      ...base,
+      subject: {
+        title: 'Core circuit',
+        timer: { workSec: 40, restSec: 20, repsPerSet: 3, setRestSec: 0 },
+        sets: 2,
+        workWord: 'Work',
+        setWord: 'Round',
+        steps: ['Plank', 'Hollow Body Hold', 'L-Sit'],
+      },
+    });
+    expect(loadTimerState(base.sessionId)?.subject.steps).toEqual(['Plank', 'Hollow Body Hold', 'L-Sit']);
   });
 
   it('can be cleared', () => {

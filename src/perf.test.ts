@@ -219,7 +219,15 @@ describe('the bundle stays small', () => {
     // closely: a first draft set it at 230, and a mutation that leaked 57KB
     // of bodies back into the entry landed at 219 and passed. Headroom a
     // regression can hide in is not headroom.
-    expect(total, `first load is ${total.toFixed(0)}KB gzipped`).toBeLessThan(215);
+    //
+    // 215 → 216 at M99, which measured its own cost before moving the line:
+    // 214.59KB before the circuit timer, 215.45KB after, so 0.86KB for a
+    // parser and a generalised timer subject. The budget moves by what the
+    // feature actually weighs and not a byte more. The real headroom is a
+    // lazy `LogPage` — it is eagerly imported, so everything it touches is
+    // first-load — and that is a perf milestone rather than a side effect of
+    // this one.
+    expect(total, `first load is ${total.toFixed(0)}KB gzipped`).toBeLessThan(216);
   });
 
   it.runIf(built)('keeps every program body out of the entry chunk', () => {

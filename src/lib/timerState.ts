@@ -13,6 +13,8 @@
  * throws on the accessor itself rather than returning null.
  */
 
+import { readSubject, type TimerSubject } from '@/engine/timer';
+
 const KEY = 'ascent:timer';
 const REST_KEY = 'ascent:rest';
 
@@ -20,10 +22,20 @@ const REST_KEY = 'ascent:rest';
 export const TIMER_MAX_AGE_MS = 3 * 3600_000;
 
 export interface TimerState {
-  /** Which protocol is open, and how it was configured. */
-  protocolId: string;
-  exerciseName: string;
-  sets: number;
+  /**
+   * What is on the clock, whole (PLAN.md M99).
+   *
+   * This used to be a `protocolId` plus the two things needed to rebuild the
+   * sheet around it. A circuit has no protocol to point at — it is a block's
+   * authored rounds over the exercises the climber picked — so what is stored
+   * is the subject itself, which is also exactly what the sheet takes.
+   *
+   * The one thing that changes by storing the intervals rather than a
+   * reference: an app update that re-authored a protocol mid-tab would resume
+   * the old timing. That is the better of the two answers anyway — switching a
+   * climber's intervals between set three and set four is not a correction.
+   */
+  subject: TimerSubject;
   /** Which session it belongs to, so it cannot reopen on a different day. */
   sessionId: string;
   /** Milliseconds banked from earlier runs. */
@@ -49,11 +61,10 @@ export function loadTimerState(sessionId: string, now = Date.now()): TimerState 
     const raw = sessionStorage.getItem(KEY);
     if (!raw) return null;
     const state = JSON.parse(raw) as Partial<TimerState>;
+    const subject = readSubject(state.subject);
     if (
-      typeof state.protocolId !== 'string' ||
-      typeof state.exerciseName !== 'string' ||
+      subject === null ||
       typeof state.sessionId !== 'string' ||
-      typeof state.sets !== 'number' ||
       typeof state.baseElapsed !== 'number' ||
       typeof state.savedAt !== 'number'
     ) {
@@ -63,9 +74,7 @@ export function loadTimerState(sessionId: string, now = Date.now()): TimerState 
     if (state.sessionId !== sessionId) return null;
     if (now - state.savedAt > TIMER_MAX_AGE_MS) return null;
     return {
-      protocolId: state.protocolId,
-      exerciseName: state.exerciseName,
-      sets: state.sets,
+      subject,
       sessionId: state.sessionId,
       baseElapsed: state.baseElapsed,
       startedAt: typeof state.startedAt === 'number' ? state.startedAt : null,

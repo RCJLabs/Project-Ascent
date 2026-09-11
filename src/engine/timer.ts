@@ -10,7 +10,8 @@
  * Pure — no React, no audio, no DOM.
  */
 
-import type { ProtocolTimer } from '@/content/types';
+import type { CircuitFormat, Protocol, ProtocolTimer } from '@/content/types';
+import { circuitPlan } from './circuit';
 
 export type SegmentKind = 'prepare' | 'work' | 'rest' | 'setRest';
 
@@ -132,4 +133,120 @@ export const SEGMENT_LABEL: Record<SegmentKind, string> = {
 /** Work-phase wording differs by protocol; hangs "hang", others "work". */
 export function workLabel(protocolName: string): string {
   return /hang|repeater|density|edge/i.test(protocolName) ? 'Hang' : 'Work';
+}
+
+/**
+ * Everything the timer sheet needs, and nothing about where it came from
+ * (PLAN.md M99).
+ *
+ * The sheet used to take a `Protocol` and read six things off it — the name
+ * for the header, the name again for the work word, the grip or first cue for
+ * the hint, the intervals, and "Set n of m". A circuit has intervals and none
+ * of the rest: it has no cues, no grip, and its reps are different exercises
+ * rather than repetitions of one. Faking a `Protocol` for it would be
+ * inventing a named training method that does not exist, which is the kind of
+ * thing `programFile.ts` refuses on the way in.
+ *
+ * So the sheet takes plain data. It is also what gets persisted across a
+ * reload, which collapses two shapes into one: what the sheet needs to draw
+ * and what a resume needs to restore are the same thing.
+ */
+export interface TimerSubject {
+  /** Header line. */
+  title: string;
+  /** Second line, when there is more to say than the title. */
+  subtitle?: string;
+  timer: ProtocolTimer;
+  sets: number;
+  /** What the work phase is called — "Hang" on a fingerboard, else "Work". */
+  workWord: string;
+  /** What one pass through the reps is called: "Set", or "Round". */
+  setWord: string;
+  /** What each rep slot is, when the reps are different exercises. */
+  steps?: string[];
+  /** The line under the dial. */
+  hint?: string;
+}
+
+/** A named protocol, as the sheet sees it. */
+export function protocolSubject(
+  protocol: Protocol,
+  exerciseName: string,
+  sets: number,
+  override?: Partial<ProtocolTimer>,
+): TimerSubject | null {
+  if (!protocol.timer) return null;
+  const hint = protocol.grip ?? protocol.cues[0];
+  return {
+    title: protocol.name,
+    ...(exerciseName !== protocol.name ? { subtitle: exerciseName } : {}),
+    timer: { ...protocol.timer, ...override },
+    sets: Math.max(1, sets),
+    workWord: workLabel(protocol.name),
+    setWord: 'Set',
+    ...(hint === undefined ? {} : { hint }),
+  };
+}
+
+/**
+ * A block run as a circuit, over the exercises the climber picked.
+ *
+ * Null rather than a subject when the prose cannot be read — the caller has
+ * `circuitPlan` for the reason, which it needs anyway to say why the button
+ * is not there.
+ */
+export function circuitSubject(
+  circuit: CircuitFormat,
+  blockName: string,
+  steps: readonly string[],
+): TimerSubject | null {
+  const plan = circuitPlan(circuit, steps.length);
+  if (!plan.ok) return null;
+  return {
+    title: blockName,
+    subtitle: steps.length === 1 ? '1 exercise' : `${steps.length} exercises`,
+    timer: plan.timer,
+    sets: plan.sets,
+    workWord: 'Work',
+    setWord: 'Round',
+    steps: [...steps],
+  };
+}
+
+/**
+ * The record of a subject, as it comes back from storage.
+ *
+ * `sessionStorage` holds whatever was last written to it, including a shape
+ * from a version of the app that has since been replaced, and a half-restored
+ * timer is worse than none — so this is checked rather than cast, the same
+ * rule `sound.ts` applies to every record entering from the database.
+ */
+export function readSubject(raw: unknown): TimerSubject | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+  const t = r['timer'];
+  if (typeof t !== 'object' || t === null) return null;
+  const timer = t as Record<string, unknown>;
+  const numbers = ['workSec', 'restSec', 'repsPerSet', 'setRestSec'] as const;
+  if (numbers.some((k) => typeof timer[k] !== 'number')) return null;
+  if (['title', 'workWord', 'setWord'].some((k) => typeof r[k] !== 'string')) return null;
+  if (typeof r['sets'] !== 'number') return null;
+  const steps = r['steps'];
+  return {
+    title: r['title'] as string,
+    ...(typeof r['subtitle'] === 'string' ? { subtitle: r['subtitle'] } : {}),
+    timer: {
+      workSec: timer['workSec'] as number,
+      restSec: timer['restSec'] as number,
+      repsPerSet: timer['repsPerSet'] as number,
+      setRestSec: timer['setRestSec'] as number,
+    },
+    sets: r['sets'] as number,
+    workWord: r['workWord'] as string,
+    setWord: r['setWord'] as string,
+    ...(Array.isArray(steps) && steps.every((s) => typeof s === 'string')
+      ? { steps: steps as string[] }
+      : {}),
+    ...(typeof r['hint'] === 'string' ? { hint: r['hint'] } : {}),
+  };
 }

@@ -46,6 +46,8 @@ import { useSkillEffects } from '@/store/skills';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { lastLogged } from '@/engine/exerciseLog';
+import { circuitPlan } from '@/engine/circuit';
+import { circuitSubject, protocolSubject, type TimerSubject } from '@/engine/timer';
 import { ExerciseNumbers } from './ExerciseNumbers';
 import { useTemplates } from '@/store/templates';
 import { parseCount } from '@/content/types';
@@ -471,12 +473,10 @@ function SessionEditor({
   // separate selector for it would not survive a phone-width row.
   const [outcome, setOutcome] = useState<Outcome>('send');
   const [climbName, setClimbName] = useState('');
-  const [timer, setTimer] = useState<{
-    protocolId: string;
-    name: string;
-    sets: number;
-    override?: Partial<import('@/content/types').ProtocolTimer>;
-  } | null>(null);
+  // `completes` is the exercise to tick when the clock runs out. A circuit
+  // has none: the exercises it runs are the ones already ticked, which is how
+  // it knew which of a nine-item menu to count (PLAN.md M99).
+  const [timer, setTimer] = useState<{ subject: TimerSubject; completes?: string } | null>(null);
 
   // A timer left running when the page went away comes back where it was —
   // the M19 finding: this was component state and nothing else, so a refresh
@@ -485,10 +485,11 @@ function SessionEditor({
   useEffect(() => {
     const saved = loadTimerState(session.id);
     if (!saved) return;
-    const protocol = getProtocol(saved.protocolId);
-    if (!protocol) return;
     setResume({ baseElapsed: saved.baseElapsed, startedAt: saved.startedAt });
-    setTimer({ protocolId: saved.protocolId, name: saved.exerciseName, sets: saved.sets });
+    setTimer({
+      subject: saved.subject,
+      ...(saved.subject.steps === undefined ? { completes: saved.subject.subtitle ?? saved.subject.title } : {}),
+    });
   }, [session.id]);
 
   // Presence is the tick (PLAN.md M98): an entry here is an exercise that
@@ -719,6 +720,38 @@ function SessionEditor({
               {blocks.map((b) => (
                 <div key={b.blockId} className="mb-3 last:mb-0">
                   <h4 className="text-xs font-bold uppercase tracking-widest text-accent mb-1.5">{b.name}</h4>
+                  {/* The circuit, on the clock (PLAN.md M99). It runs over the
+                      exercises that are ticked, because twelve of the
+                      seventeen authored circuits are menus and which of the
+                      nine you are doing is the climber's choice, not the
+                      program's — so the tick is the pick. */}
+                  {b.entry.circuit &&
+                    (() => {
+                      const picked = b.entry.exercises
+                        .map((e) => e.name)
+                        .filter((name) => entryFor(name) !== undefined);
+                      const plan = circuitPlan(b.entry.circuit!, picked.length);
+                      if (!plan.ok) {
+                        return (
+                          <p className="text-xs text-ink-soft mb-2 leading-relaxed">{plan.because}</p>
+                        );
+                      }
+                      return (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setTimer({
+                              subject: circuitSubject(b.entry.circuit!, b.name, picked)!,
+                            })
+                          }
+                          className="mb-2 text-xs font-bold uppercase tracking-wide text-accent border-accent/40"
+                        >
+                          <Timer size={13} />
+                          Run the circuit
+                        </Button>
+                      );
+                    })()}
                   {/* How the block is meant to be run (PLAN.md M90). The
                       logger had the whole prescription in hand and rendered
                       only the exercise list, so twenty-nine prescriptions
@@ -810,9 +843,8 @@ function SessionEditor({
                               size="sm"
                               onClick={() =>
                                 setTimer({
-                                  protocolId: protocol.id,
-                                  name: ex.name,
-                                  sets: parseCount(ex.sets) ?? 1,
+                                  subject: protocolSubject(protocol, ex.name, parseCount(ex.sets) ?? 1)!,
+                                  completes: ex.name,
                                 })
                               }
                               className="shrink-0 text-xs font-bold uppercase tracking-wide text-accent border-accent/40"
@@ -868,10 +900,13 @@ function SessionEditor({
                     size="sm"
                     onClick={() =>
                       setTimer({
-                        protocolId: protocol.id,
-                        name: day.drill!.name,
-                        sets: day.drill!.timerOverride?.sets ?? 2,
-                        ...(day.drill!.timerOverride ? { override: day.drill!.timerOverride } : {}),
+                        subject: protocolSubject(
+                          protocol,
+                          day.drill!.name,
+                          day.drill!.timerOverride?.sets ?? 2,
+                          day.drill!.timerOverride,
+                        )!,
+                        completes: day.drill!.name,
                       })
                     }
                     className="mt-3 text-accent"
@@ -955,19 +990,10 @@ function SessionEditor({
 
       {timer && (
         <TimerSheet
-          protocol={getProtocol(timer.protocolId)!}
-          sets={timer.sets}
-          {...(timer.override ? { override: timer.override } : {})}
-          exerciseName={timer.name}
+          subject={timer.subject}
           resume={resume}
           onPersist={(state) =>
-            saveTimerState({
-              protocolId: timer.protocolId,
-              exerciseName: timer.name,
-              sets: timer.sets,
-              sessionId: session.id,
-              ...state,
-            })
+            saveTimerState({ subject: timer.subject, sessionId: session.id, ...state })
           }
           onClose={() => {
             clearTimerState();
@@ -976,7 +1002,8 @@ function SessionEditor({
           }}
           onComplete={() => {
             clearTimerState();
-            if (entryFor(timer.name) === undefined) markExerciseDone(timer.name);
+            const name = timer.completes;
+            if (name !== undefined && entryFor(name) === undefined) markExerciseDone(name);
           }}
         />
       )}

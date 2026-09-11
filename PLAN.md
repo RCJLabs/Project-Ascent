@@ -3600,23 +3600,79 @@ materially wrong premise. Sizes are guesses.*
   It wraps now. jsdom has no layout and reported the line as present either way.
   Verified in both themes and both unit systems. 3,016 tests pass.
 
-- **M99 — The clock reaches the circuits and the tests.** *Proposed. Size M.*
-  **Premise.** `CircuitFormat` (rounds, work, rest between, rest between rounds) is authored
-  on blocks, rendered by `prescriptionLine` ("3 rounds · 30s each"), and driven by nothing:
-  `timer.ts` expands a `Protocol` and only a `Protocol`. Gym mode's rest timer is
-  unattached to anything. And the assessments page takes a *number*: `max_hang_20mm_7s` is
-  a procedure (ramp, attempts at rising load, three-minute rests) with `how` and `hint`
-  prose written for onboarding, and the timer that could run it sits one tab over.
-  **Shape.** Two things sharing one expansion. A circuit becomes segments the way a protocol
-  does — work, rest, round rest — with the exercise name in the spoken cue (`lib/cues.ts`),
-  opened from the logger and gym mode. And guided tests for the metrics that *are*
-  procedures: max hang (ramp with "add 2.5 kg" prompts, records the last hold completed),
-  repeaters to failure, max pull-ups, the 4×4 capacity test (which is a circuit), ARC
-  duration and front-lever hold (stopwatches). Each writes a `MetricEntry` with the ramp
-  in `note`.
-  **Never.** Record a result the climber did not confirm on screen. Parse a prose duration
-  loosely — "30-45s" gets a strict shape like `heightFromLabel` had to, and an unparseable
-  one gets no timer and a sentence saying why.
+- **M99 — ~~The clock reaches the circuits and the tests~~ → The clock reaches the
+  circuits.** *Done, with the second half split out as M99b and the reason recorded.*
+  **The premise held on the circuits, exactly.** `CircuitFormat` is authored on **17
+  blocks** across six programs and read by two things that only print it —
+  `prescriptionLine` and the program-file parser — while `timer.ts` expands a `Protocol`
+  and only a `Protocol`. A climber running Base Camp's Engine Room had *"Pick 5 of 9 ·
+  40-60s each · 20s rest · 2 rounds"* on screen and counted all of it in their head.
+  **"Two things sharing one expansion" was wrong, and it is why this split.** A circuit
+  really is a protocol's shape wearing different words — rounds ↔ sets, exercises ↔ reps —
+  and `buildTimer`'s two awkward rules land on it exactly: the rest between exercises goes
+  after the last exercise of a round, the round rest goes after the last round. A **max-hang
+  ramp** is not that shape (it is open-ended, to failure, with an input per attempt) and a
+  **stopwatch** is not that shape at all. Three mechanisms, one of which shares the
+  expansion. They are M99b.
+  **And the stopwatch has a design problem I had not thought about**: you cannot tap *stop*
+  while holding a front lever. A count-up you can hear, or a countdown to a target, is a
+  different feature from "start and stop", and it deserves deciding rather than bolting on.
+  **"Opened from the logger and gym mode" was also wrong.** Gym mode has no prescription,
+  no blocks and no exercises — putting one there would undo the page M74 defined as "the
+  same session with everything else taken away". Logger only.
+  **The substance is the parser, and the measured outcome is 9 of 17.** Authored values
+  include `'40-60s'`, `'1 min'`, `'Minimal'` and `'30-60s or 8-15 reps'`. Nine carry a work
+  time the clock can read. Seven declare none at all — they are rep-based — and one is
+  ambiguous by construction. Those eight get a sentence saying why rather than a guessed
+  duration, which is the rule M96 arrived at the hard way. A test holds the 9/17 split so an
+  authored circuit that stops being runnable is a failure rather than a silent loss.
+  **A range runs at its lower bound**, because "40-60s" is a coach saying "about a minute"
+  and the bottom is the end that does not quietly make the session harder than it was
+  written — with the full range still printed above the button. **"Minimal" becomes no rest
+  segment**, not an invented ten seconds.
+  **The tick is the pick.** Twelve of the seventeen circuits are menus, so which of the nine
+  you are doing is the climber's choice and the timer runs over what M98 already recorded as
+  ticked. That also means finishing a circuit adds nothing to the log: the exercises it ran
+  were already there.
+  **`TimerSheet` stopped being a protocol viewer.** It read six things off a `Protocol`;
+  a circuit has intervals and none of the rest, and faking a `Protocol` would invent a named
+  training method that does not exist. It takes a `TimerSubject` now — plain data — and that
+  collapsed a second problem: what the sheet needs to draw and what a reload needs to restore
+  are the same shape, so `TimerState` stores the subject instead of a protocol id. A record
+  written by the older shape fails validation and resumes nothing, which on `sessionStorage`
+  costs one refresh at worst.
+  **A test found a real ordering bug**: the pick was checked before the program's prose, so a
+  rep-based circuit told you to tick five exercises and then refused anyway. Content first.
+  Forty-two mutations, thirty-nine killed. **All three survivors were real.** Two were
+  untested paths — a valid envelope around a broken subject, and the sheet's use of the work
+  word — and one was untestable until a test drove the clock to completion. The work-word one
+  is worth recording twice: my assertion was `not.toMatch(/\bWork\b/)` over the whole sheet,
+  and `\bWork\b` **cannot** match inside `"…HangsWork10"` because neither side is a word
+  boundary. It passed for the wrong reason in both directions, and the mutation is the only
+  thing that would have told me.
+  **One browser finding:** at 320px "Round 1 of 2 · Mountain Climbers" wrapped out past the
+  dial's ring. The exercise gets its own line now. **And the bundle budget tripped** — 214.59KB
+  before, 215.45KB after, against a 215 limit. The 0.86KB is real, so the budget moved to 216
+  and not a byte further; the actual headroom is a lazy `LogPage`, which is a perf milestone.
+  Verified in both themes at 430px and 320px, including a resume across a reload mid-circuit.
+  3,068 tests pass.
+
+- **M99b — The tests that are procedures, not numbers.** *Proposed, split from M99. Size M.*
+  **Premise.** The assessments page takes a bare number, a grade, or pass/fail.
+  `max_hang_20mm_7s` is not a number, it is a procedure: ramp the load, hang seven seconds,
+  three minutes off, add weight, repeat to failure. The prose describing how lives in
+  `BENCHMARKS` — **eight prompts** with a `how` and a `hint` — and is shown *only during
+  onboarding*, so the page you visit to record the number never explains it, and the timer
+  that could run it sits one tab over.
+  **Three mechanisms, which is why it is its own milestone.** A **ramp** (max hang, weighted
+  pull-up 3RM) is open-ended with an input per attempt. A **circuit** (the 4×4 capacity test)
+  is M99's shape and already runs. A **stopwatch** (ARC duration, front-lever hold, dead hang)
+  is neither — and cannot be a stopwatch, because nobody taps *stop* mid-front-lever. That
+  one needs a decision first: audible marks counting up, or a countdown to a target you
+  either hold or do not.
+  **Shape.** Move `how` out of onboarding so it reads on `/assessments` too, then guided runs
+  for the metrics that are procedures, each writing a `MetricEntry` with the ramp in `note`.
+  **Never.** Record a result the climber did not confirm on screen.
 
 - **M100 — Unlogged is not untrained.** *Proposed. Size M.*
   **Premise.** The coach's detraining rule prints *"N days since you trained"* from the
