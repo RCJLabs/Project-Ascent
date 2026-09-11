@@ -3680,22 +3680,56 @@ materially wrong premise. Sizes are guesses.*
   or position — verified against the reinstated line.
   Verified in both themes across settings, calendar, climber and search.
 
-- **M99b — The tests that are procedures, not numbers.** *Proposed, split from M99. Size M.*
-  **Premise.** The assessments page takes a bare number, a grade, or pass/fail.
-  `max_hang_20mm_7s` is not a number, it is a procedure: ramp the load, hang seven seconds,
-  three minutes off, add weight, repeat to failure. The prose describing how lives in
-  `BENCHMARKS` — **eight prompts** with a `how` and a `hint` — and is shown *only during
-  onboarding*, so the page you visit to record the number never explains it, and the timer
-  that could run it sits one tab over.
-  **Three mechanisms, which is why it is its own milestone.** A **ramp** (max hang, weighted
-  pull-up 3RM) is open-ended with an input per attempt. A **circuit** (the 4×4 capacity test)
-  is M99's shape and already runs. A **stopwatch** (ARC duration, front-lever hold, dead hang)
-  is neither — and cannot be a stopwatch, because nobody taps *stop* mid-front-lever. That
-  one needs a decision first: audible marks counting up, or a countdown to a target you
-  either hold or do not.
-  **Shape.** Move `how` out of onboarding so it reads on `/assessments` too, then guided runs
-  for the metrics that are procedures, each writing a `MetricEntry` with the ramp in `note`.
-  **Never.** Record a result the climber did not confirm on screen.
+- **M99b — The tests that are procedures, not numbers.** *Done for the seven that are a
+  hold; the ramp is left, with the reason. And the milestone's main claim was wrong.*
+  **"The page you visit to record the number never explains it" is false.**
+  `Metric.description` is set on **30 of 37** metrics and the assessments page renders it in
+  two of its three places — the picker and the add-a-benchmark card. What is actually true is
+  smaller and more specific, and it took reading the page to find: the description was missing
+  from the **expanded row**, which is the one a climber who already tracks a benchmark opens,
+  so the case where you go to record a number you have recorded before was the case with no
+  explanation.
+  **The real finding is a duplication, not an absence.** `BenchmarkPrompt.how` was a second
+  copy of the same prose, written in `onboarding.ts`, shown only during onboarding, and
+  **already drifted** — one wrote "20 mm", the other "20mm". Six of the eight said the same
+  thing twice. The two that did not (`max_pullups`, `weighted_pullup_3rm`) had no description
+  at all, so their only explanation lived in a screen you see once. This is M77's problem in
+  a different corner, and the fix is M77's: one source.
+  **So `how` became `entry`**, carrying only what the registry cannot say — the *typing*
+  convention, "enter 0 if bodyweight is your limit, and a negative number if you take weight
+  off". Which means it belongs wherever the number is typed, and it now appears on the
+  assessments form too: until this, a climber recording a max hang there was never told that
+  zero and negatives were allowed. A test asserts the entry note is not a re-description.
+  **Seven metrics are a stopwatch, derived rather than listed.** `dead_hang`, `lock_off_90`,
+  `core_plank`, `hollow_body`, `front_lever_hold`, `density_hang_bw_20mm` and `arc_duration`
+  fall out of what they already declare — a numeric metric measured in seconds or minutes is
+  a duration — so there is no second table to keep in step. A test pins the seven.
+  **The design question I raised in M99 has an answer, and it is not the one I implied.** I
+  said a stopwatch "cannot be a stopwatch, because nobody taps stop mid-front-lever". They do
+  not have to: you drop off and *then* tap, so the tap is late by a second rather than
+  impossible. Two things keep that honest — a mark you can hear every ten seconds while you
+  are hanging, so the number is not a surprise, and a result that lands in the form as a
+  suggestion you confirm rather than one that saves itself.
+  **Not `TimerSheet`.** That counts down through a plan built in advance and a max hold has
+  no plan. Faking one would draw a ring showing a fraction of a total nobody knows — the same
+  refusal M99 made about faking a `Protocol`.
+  **Left, with the reason: the ramp.** Max hang and weighted-pull-up 3RM are load-to-failure
+  with an input per attempt and a three-minute clock between them. That is a second control
+  and a storage question of its own (does the ramp survive, or only its result?), and folding
+  it in here would have been the mistake M99 split to avoid.
+  Twenty-six mutations, twenty-two killed. **All four survivors were real**, and one corrected
+  this module's own doc comment: I wrote that `core_lever` is excluded because it is
+  `kind: 'text'`, and the mutation showed the unit check already refuses it — its unit is
+  `'level/sec'`, not `'sec'`. The `kind` check is the rule rather than the mechanism, so it is
+  held by a hand-built metric instead. Two were untested paths (the wall clock, and the
+  expanded row) and one was dead code of mine — resets that could never fire, because the
+  sheet has no restart.
+  **Two browser findings.** The copy read *"You will confirm the sec before anything is
+  saved"* — `unitLabel('sec')` in a sentence — which also revealed the whole units dependency
+  was doing nothing, since neither seconds nor minutes convert. And the stop button rendered
+  as a square, which turned out to be an app-wide bug and is **M100b**, fixed in its own
+  commit first so this landed on a correct base.
+  Verified in both themes. 3,101 tests pass.
 
 - **M100 — Unlogged is not untrained.** *Proposed. Size M.*
   **Premise.** The coach's detraining rule prints *"N days since you trained"* from the

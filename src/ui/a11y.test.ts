@@ -83,6 +83,7 @@ describe('modal dialogs', () => {
 
   it('finds the dialogs to check', () => {
     expect(dialogs.map((d) => d.path).sort()).toEqual([
+      'src/features/assessments/HoldTimer.tsx',
       'src/features/media/MediaCard.tsx',
       'src/features/share/ShareSheet.tsx',
       'src/ui/TimerSheet.tsx',

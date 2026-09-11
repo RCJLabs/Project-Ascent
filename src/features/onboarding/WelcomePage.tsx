@@ -271,7 +271,14 @@ export function WelcomePage() {
               if (!metric) return null;
               return (
                 <Card key={b.metricId} title={metric.label}>
-                  <p className="text-sm text-ink-soft mb-3 leading-relaxed">{b.how}</p>
+                  {/* The test is described once, in the registry (PLAN.md
+                      M99b); this page used to carry a second copy that had
+                      already drifted from it. What stays here is the entry
+                      convention, which the registry cannot say. */}
+                  {metric.description && (
+                    <p className="text-sm text-ink-soft mb-2 leading-relaxed">{metric.description}</p>
+                  )}
+                  {b.entry && <p className="text-sm text-ink-soft mb-3 leading-relaxed">{b.entry}</p>}
                   <div className="flex items-center gap-2">
                     <Input
                       value={answers.benchmarks[b.metricId] ?? ''}

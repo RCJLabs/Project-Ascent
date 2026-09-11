@@ -61,6 +61,7 @@ export const METRICS: Record<MetricId, Metric> = {
   weighted_pullup_3rm: {
     id: 'weighted_pullup_3rm',
     label: 'Weighted Pull-Ups 3RM',
+    description: 'Added weight for three strict pull-ups.',
     unit: 'BW+lbs',
     kind: 'number',
     higherIsBetter: true,
@@ -68,6 +69,7 @@ export const METRICS: Record<MetricId, Metric> = {
   max_pullups: {
     id: 'max_pullups',
     label: 'Max Pull-Ups',
+    description: 'Strict pull-ups in one set, chin over the bar.',
     unit: 'reps',
     kind: 'number',
     higherIsBetter: true,

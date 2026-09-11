@@ -61,10 +61,30 @@ export interface BenchmarkPrompt {
   metricId: MetricId;
   /** Asked only when the climber has this to hand. */
   requires?: Equipment;
-  /** The test in plain language, because nobody arrives knowing the ids. */
-  how: string;
+  /**
+   * How to *type* the answer, where the number needs a convention (PLAN.md
+   * M99b).
+   *
+   * This used to be `how`: a second copy of `Metric.description`, written
+   * here and shown only during onboarding. Six of the eight said the same
+   * thing as the registry in slightly different words, and had already
+   * drifted — one wrote "20 mm", the other "20mm". What the registry could
+   * not say was the *entry* rule, and that is the half worth keeping: a
+   * climber typing a max hang on `/assessments` was never told that zero
+   * means bodyweight and that negatives are allowed.
+   *
+   * So the test is described once, in the registry, and this says only what
+   * is true of the box you type into — which means it belongs on the
+   * assessments form too, and now appears there.
+   */
+  entry?: string;
   /** Shown in the empty field, so the expected unit is never a guess. */
   hint: string;
+}
+
+/** The entry convention for a metric, wherever its number is typed. */
+export function entryNote(metricId: MetricId): string | undefined {
+  return BENCHMARKS.find((b) => b.metricId === metricId)?.entry;
 }
 
 /**
@@ -77,36 +97,22 @@ export const BENCHMARKS: BenchmarkPrompt[] = [
   {
     metricId: 'max_hang_20mm_7s',
     requires: 'hangboard',
-    how: 'Added weight for a 7-second half-crimp hang on a 20 mm edge. Enter 0 if bodyweight is your limit, and a negative number if you take weight off.',
+    entry: 'Enter 0 if bodyweight is your limit, and a negative number if you take weight off.',
     hint: '0',
   },
-  { metricId: 'max_pullups', how: 'Strict pull-ups in one set, chin over the bar.', hint: '8' },
-  {
-    metricId: 'weighted_pullup_3rm',
-    requires: 'gym',
-    how: 'Added weight for three strict pull-ups.',
-    hint: '25',
-  },
-  {
-    metricId: 'arc_duration',
-    requires: 'wall',
-    how: 'Longest stretch of continuous easy climbing you can hold without pumping out, in minutes.',
-    hint: '15',
-  },
+  { metricId: 'max_pullups', hint: '8' },
+  { metricId: 'weighted_pullup_3rm', requires: 'gym', hint: '25' },
+  { metricId: 'arc_duration', requires: 'wall', hint: '15' },
   {
     metricId: 'toe_touch',
-    how: 'Straight-leg forward fold: inches from your fingertips to the floor. Enter 0 if you reach it.',
+    entry: 'Enter 0 if you reach the floor. Lower is better, so a smaller number is a better result.',
     hint: '3',
   },
-  {
-    metricId: 'wall_angel',
-    how: 'Back flat against a wall, arms overhead — do your wrists stay touching the wall the whole way? Pass or fail.',
-    hint: 'pass',
-  },
-  { metricId: 'box_jump_height', how: 'Highest box you can land on from a standing jump, in inches.', hint: '24' },
+  { metricId: 'wall_angel', entry: 'Pass or fail.', hint: 'pass' },
+  { metricId: 'box_jump_height', hint: '24' },
   {
     metricId: 'flexibility',
-    how: 'Score your own mobility out of 10, where 1 is "cannot high-step" and 10 is "drop knee, heel hook, anything".',
+    entry: 'Score yourself out of 10, where 1 is "cannot high-step" and 10 is "drop knee, heel hook, anything".',
     hint: '5',
   },
 ];

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { Check, ChevronRight, Plus, X } from 'lucide-react';
+import { Check, ChevronRight, Plus, Timer, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getMetric } from '@/content/metrics';
 import type { Metric, MetricId } from '@/content/types';
@@ -13,6 +13,9 @@ import {
 } from '@/engine/assessments';
 import { blockReport, describeBlock } from '@/engine/blockReport';
 import { shortLabel, today } from '@/engine/dates';
+import { holdTest } from '@/engine/holdTest';
+import { entryNote } from '@/engine/onboarding';
+import { HoldTimer } from './HoldTimer';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
 import { PageGrid } from '@/ui/PageGrid';
 import { useGradeOptions } from '@/ui/useGrade';
@@ -206,6 +209,12 @@ function MetricRow({
       </DisclosureButton>
       {open && (
         <div className="px-3 pb-3">
+          {/* The one place the description was missing: a benchmark already
+              on your list opened straight into a form with no explanation
+              (PLAN.md M99b). */}
+          {metric.description && (
+            <p className="text-xs text-ink-soft mb-1 leading-relaxed">{metric.description}</p>
+          )}
           <ResultForm metric={metric} onDone={onToggle} />
           {status.series.length > 0 && (
             <Link
@@ -229,6 +238,12 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
   const [date, setDate] = useState(today());
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  // Seven of the assessed benchmarks are a hold rather than a number, and
+  // the app's answer was a text box you filled from your phone's clock app
+  // (PLAN.md M99b).
+  const [timing, setTiming] = useState(false);
+  const test = holdTest(metric);
+  const entry = entryNote(metric.id);
 
   async function save(value?: string) {
     const parsed = parseMetricInput(metric, value ?? raw, units);
@@ -286,6 +301,11 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
               className="flex-1 bg-surface"
             />
           )}
+          {test !== null && (
+            <Button size="sm" variant="outline" onClick={() => setTiming(true)}>
+              <Timer size={15} /> Time it
+            </Button>
+          )}
           <Button size="sm" onClick={() => void save()}>
             <Check size={15} /> Save
           </Button>
@@ -310,8 +330,27 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
         />
       </div>
       {error && <p className="text-sm text-danger mt-2">{error}</p>}
+      {/* How to type it, which the registry's description cannot say and
+          which used to exist only during onboarding (PLAN.md M99b). Until
+          this, a climber recording a max hang here was never told that zero
+          means bodyweight and that a negative is allowed. */}
+      {entry !== undefined && <p className="text-xs text-ink-soft mt-2">{entry}</p>}
       {metric.unit && metric.kind === 'number' && (
         <p className="text-xs text-ink-soft mt-2">Measured in {unitLabel(metric.unit, units)}.</p>
+      )}
+      {/* The clock fills the box; it never saves. Nothing here records a
+          result the climber did not confirm on screen. */}
+      {timing && test !== null && (
+        <HoldTimer
+          metric={metric}
+          test={test}
+          onStop={(value) => {
+            setRaw(String(value));
+            setError(null);
+            setTiming(false);
+          }}
+          onClose={() => setTiming(false)}
+        />
       )}
     </div>
   );
