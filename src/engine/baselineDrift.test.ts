@@ -42,7 +42,11 @@ function trainedAt(perWeek: number, weeks: number): Session[] {
   return out;
 }
 
-const drift = (patch: Partial<DriftInput> & { stated?: Partial<DriftInput['stated']> } = {}) =>
+// `Partial<DriftInput>` intersected with a partial `stated` still demands a
+// whole `stated`, which type-checks nowhere and is why M93 shipped red.
+const drift = (
+  patch: { sessions?: Session[]; today?: string; stated?: Partial<DriftInput['stated']> } = {},
+) =>
   baselineDrift({
     stated: { experience: 'intermediate', daysPerWeek: 4, ...patch.stated },
     sessions: patch.sessions ?? [],
