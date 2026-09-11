@@ -9,6 +9,7 @@ import { useGradeLabel, useGradeOptions } from '@/ui/useGrade';
 import { suggestProjects, summariseProject, type ProjectSuggestion } from '@/engine/projects';
 import { ENOUGH, projectHistory } from '@/engine/projectHistory';
 import { useSettings } from '@/store/settings';
+import { VENUE_LIST_ID, VenueOptions, useVenues } from '@/features/venues/useVenues';
 import { useProjects } from '@/store/projects';
 import { useSkillEffects } from '@/store/skills';
 import { useSessions } from '@/store/sessions';
@@ -297,6 +298,8 @@ export function ProjectForm({
   const [grade, setGrade] = useState(initial.grade ?? 'V5');
   const [setting, setSetting] = useState<'indoor' | 'outdoor'>(initial.setting ?? 'indoor');
   const [location, setLocation] = useState(initial.location ?? '');
+  // The places already named anywhere in the app (PLAN.md M88b).
+  const places = useVenues();
   const grades = gradeOptions(scale, scale === 'V' ? V_GRADES : YDS_GRADES);
 
   async function save() {
@@ -369,8 +372,9 @@ export function ProjectForm({
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           placeholder="Camp 4, or the cave"
-          
+          list={VENUE_LIST_ID}
         />
+        <VenueOptions venues={places} />
       </label>
       <div className="flex gap-2">
         <Button disabled={name.trim() === ''} onClick={() => void save()}>

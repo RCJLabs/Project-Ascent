@@ -73,6 +73,7 @@ import {
 } from '@/engine/readiness';
 import { describeParts, drillConflict, exerciseConflict, exerciseLoads } from '@/engine/bodyLoad';
 import { REST_ITEMS } from '@/engine/restHabits';
+import { VENUE_LIST_ID, VenueOptions, useVenues } from '@/features/venues/useVenues';
 import { BadParameter } from '@/ui/RecordNotFound';
 
 function rid(): string {
@@ -1124,6 +1125,9 @@ function FieldsCard({
 }) {
   const display = useSettings((s) => s.display);
   const gradeLabel = useGradeLabel();
+  // Every place already named, so the same crag is typed the same way
+  // (PLAN.md M88b). A grouping over free text is only as good as the text.
+  const places = useVenues();
   const specs = (type?.fields ?? []).map(getField).filter((f): f is FieldSpec => f !== undefined);
   if (specs.length === 0) return null;
 
@@ -1223,6 +1227,7 @@ function FieldsCard({
               <Input
                 type={spec.kind === 'number' ? 'number' : 'text'}
                 {...(spec.kind === 'number' ? { inputMode: 'numeric' as const } : {})}
+                {...(spec.id === 'location' ? { list: VENUE_LIST_ID } : {})}
                 value={String(value ?? '')}
                 {...(spec.placeholder ? { placeholder: spec.placeholder } : {})}
                 onChange={(e) =>
@@ -1240,6 +1245,7 @@ function FieldsCard({
           );
         })}
       </div>
+      <VenueOptions venues={places} />
     </Card>
   );
 }

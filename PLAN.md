@@ -3150,10 +3150,37 @@ a kept one.
   "5 typical burns" put the adjective on the unit rather than the number.
   Verified in both themes. 2,623 tests pass, and the new derivation is in the perf budget.
   **Split out, because they are different milestones and not smaller ones:**
-- **M88b — Where you climbed.** `location` is asked by six session types across two
-  programs and stored as free text. The app has no venue concept at all: no crag, no gym,
-  nothing that groups sessions by place or says "you have climbed at the Works forty
-  times". This is the catalogue deferred out of M70 and it is a data model, not a card.
+- **M88b — Where you climbed.** *Done, and the milestone undercounts the problem.*
+  It names `session.fields.location`. There are **three** independent free-text location
+  strings with no relationship to each other: `session.fields.location`, `Project.location`
+  and `Objective.location`. The app renders all three and groups by none, so a climber who
+  has been to one crag on forty sessions, kept two projects there and set an objective for
+  it has that place written down forty-three times and counted zero.
+  **Derived, not a stored catalogue — deliberately, against the milestone's own framing.**
+  A venue here is a reading of what has been typed: no new store, no migration, no list to
+  curate, and it works on the history a climber already has. A stored catalogue would have
+  been a second copy of a fact the records already hold, which is AUDIT.md §8.3.
+  **The rule that makes it work is on the way in, not the way out.** A grouping over free
+  text is only as good as the text, so all three inputs now offer what has already been
+  typed — a place named on a project is a suggestion in the logger. That is what turns
+  "the works", "The Works" and "the  works" into one place: by never creating them.
+  **The normalisation is deliberately timid**: case and space, nothing else. "The Works" and
+  "Works" stay two places, because the app cannot tell a second gym from a second way of
+  writing the first, and a grouping that guessed would silently merge two real crags that
+  happen to read alike. The card says so in as many words.
+  **A spelling tie is broken by recency**, not alphabetically: a climber who has switched
+  from "the works" to "The Works" is telling the app which one they mean.
+  Twenty-four mutations, all killed after a second pass. One survivor was a field of my own
+  that **nothing rendered** — `Venue.lastVisited` — deleted rather than surfaced, because
+  shipping a never-read field in the milestone about never-read fields would be absurd. The
+  other three were weak fixtures.
+  **Two copy errors the browser caught**, both mine: "Most of your days out are at The
+  Works" reads as outdoors, and The Works is a gym; and the footnote claimed two spellings
+  stay two places directly under a card that had just merged two spellings.
+  **Deferred, and named so it is not mistaken for done:** there is no rename. A climber who
+  typed a crag three ways for six months cannot fix it, because fixing it means a bulk
+  rewrite across three stores with an undo, and that is a milestone rather than a paragraph.
+  Verified in both themes. 2,860 tests pass.
 - **M88c — The trip.** `sessionNumber` is labelled **"Day of the trip"**, asked by four
   session types, and nothing in the app knows what a trip is. Outdoor Climbing asks it on
   every session. A trip is a run of consecutive outdoor days with a place and a name, and

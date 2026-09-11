@@ -19,6 +19,7 @@ import { getProgram } from '@/content/programs';
 import { useSessions } from '@/store/sessions';
 import { useProfile } from '@/store/profile';
 import { LoadTrendLine } from '@/ui/charts/LoadTrendLine';
+import { VENUE_LIST_ID, VenueOptions, useVenues } from '@/features/venues/useVenues';
 import { useObjectives } from '@/store/objectives';
 import { offerUndo } from '@/store/undo';
 import { useProjects } from '@/store/projects';
@@ -64,6 +65,8 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
   const remove = useObjectives((s) => s.remove);
   const projects = useProjects((s) => s.projects);
   const skillInput = useSkillInput();
+  // The places already named anywhere in the app (PLAN.md M88b).
+  const places = useVenues();
   const [, navigate] = useLocation();
   const [adding, setAdding] = useState(false);
 
@@ -260,7 +263,9 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
               onChange={(e) => edit({ location: e.target.value || undefined })}
               placeholder="Yosemite, the cave at the back, anywhere"
               aria-label="Location"
+              list={VENUE_LIST_ID}
             />
+            <VenueOptions venues={places} />
           </label>
           <label className="text-sm block mb-3">
             <span className="block text-ink-soft mb-1">Notes</span>

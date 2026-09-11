@@ -4,6 +4,8 @@ import { ArrowRight, ChevronRight, Mountain, Trophy } from 'lucide-react';
 import { CATEGORY_LABEL, byYear, deriveCareer, type CareerCategory } from '@/engine/career';
 import { fromKey } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
+import { describeVenues } from '@/engine/venues';
+import { useVenues } from '@/features/venues/useVenues';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { PageGrid } from '@/ui/PageGrid';
@@ -34,6 +36,10 @@ export function CareerPage() {
   const byDate = useSessions((s) => s.byDate);
   const display = useSettings((s) => s.display);
   const [filter, setFilter] = useState<CareerCategory | 'all'>('all');
+  // Where the climbing happened (PLAN.md M88b). On Career rather than
+  // Progress: a place is part of the story of a climbing life, not a
+  // reading of this block's load.
+  const places = useVenues();
 
 
   const career = useMemo(() => {
@@ -100,6 +106,31 @@ export function CareerPage() {
         {/* Where the fourteen named days went (PLAN.md M63). They are on the
             climber now, and a page that used to hold them should say so
             rather than let a returning climber hunt. */}
+        {describeVenues(places) !== null && (
+          <Card title="Where you climb">
+            <dl className="grid grid-cols-1 gap-1.5 text-sm">
+              {places
+                .filter((place) => place.days > 0)
+                .slice(0, 8)
+                .map((place) => (
+                  <div key={place.key} className="flex items-baseline gap-2">
+                    <dt className="flex-1 min-w-0 truncate">{place.name}</dt>
+                    <dd className="shrink-0 text-ink-soft tabular-nums">
+                      {place.days === 1 ? '1 day' : `${place.days} days`}
+                      {place.outdoorDays > 0 && ` · ${place.outdoorDays} outside`}
+                    </dd>
+                  </div>
+                ))}
+            </dl>
+            <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeVenues(places)}</p>
+            <p className="text-xs text-ink-soft mt-3 leading-relaxed">
+              Read off what you typed. Capitals and spacing are ignored, so &ldquo;The Works&rdquo;
+              and &ldquo;the works&rdquo; are one place — but &ldquo;Works&rdquo; is another, because
+              the app cannot tell a second gym from a second way of writing the first.
+            </p>
+          </Card>
+        )}
+
         <Card title="Achievements">
           <Link href="/climber" className="flex items-center gap-3">
             <Trophy size={18} className="text-accent shrink-0" />
