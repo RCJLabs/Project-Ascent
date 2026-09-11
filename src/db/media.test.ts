@@ -8,6 +8,7 @@ import {
   moveMediaOwner,
   projectOwner,
   sessionOwner,
+  findOrphanMedia,
   sweepOrphanMedia,
 } from './media';
 
@@ -194,5 +195,39 @@ describe('the owner keys themselves', () => {
     await photo(sessionOwner('a'));
     expect(await deleteMediaFor(sessionOwner('a'))).toBe(2);
     expect(await listMedia(sessionOwner('a'))).toEqual([]);
+  });
+});
+
+/**
+ * Finding orphans is not sweeping them (PLAN.md M80).
+ *
+ * The data page has to say what is there before it offers to delete it, so
+ * the scan was split out of the sweep. Node environment on purpose: a jsdom
+ * blob round-tripped through fake-indexeddb comes back without a `size`, so
+ * the byte count can only be asserted here.
+ */
+describe('finding orphan photos', () => {
+  it('reports them without touching them', async () => {
+    const db = await getDb();
+    await db.put('projects', { id: 'gone', name: 'Deleted' } as never);
+    await addMedia({ ownerId: projectOwner('gone'), blob: blob(), type: 'image/webp', width: 8, height: 6 });
+    await db.delete('projects', 'gone');
+
+    expect((await findOrphanMedia()).ids).toHaveLength(1);
+    expect(await db.count('media'), 'finding them deleted them').toBe(1);
+    // Repeatable, which a scan that destroyed as it went would not be.
+    expect((await findOrphanMedia()).ids).toHaveLength(1);
+  });
+
+  it('measures what they cost', async () => {
+    const db = await getDb();
+    await db.put('projects', { id: 'gone', name: 'Deleted' } as never);
+    await addMedia({ ownerId: projectOwner('gone'), blob: blob(), type: 'image/webp', width: 8, height: 6 });
+    await db.delete('projects', 'gone');
+    expect((await findOrphanMedia()).bytes).toBe(blob().size);
+  });
+
+  it('costs nothing when there are none', async () => {
+    expect(await findOrphanMedia()).toEqual({ ids: [], bytes: 0 });
   });
 });

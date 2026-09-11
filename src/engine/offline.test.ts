@@ -137,3 +137,14 @@ describe('formatBytes', () => {
     expect(formatBytes(1024 ** 4)).toBe('1024 GB');
   });
 });
+
+describe('a byte count that is not a number', () => {
+  it('reads as unknown rather than as NaN (PLAN.md M80)', () => {
+    // One media record whose blob lost its size turned the whole total into
+    // NaN, and the settings page printed "NaN KB".
+    expect(formatBytes(Number.NaN)).toBe('?');
+    expect(formatBytes(Number.POSITIVE_INFINITY)).toBe('?');
+    expect(formatBytes(undefined)).toBe('?');
+    expect(formatBytes(0)).toBe('0 B');
+  });
+});

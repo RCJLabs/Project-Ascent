@@ -19,6 +19,7 @@ import { CareerPage } from '@/features/career/CareerPage';
 import { ClimberPage } from '@/features/climber/ClimberPage';
 import { CoachPage } from '@/features/coach/CoachPage';
 import { FinderPage } from '@/features/finder/FinderPage';
+import { DataPage } from '@/features/data/DataPage';
 import { GlossaryPage } from '@/features/glossary/GlossaryPage';
 import { GymPage } from '@/features/gym/GymPage';
 import { GuideList } from '@/features/guides/GuidePage';
@@ -88,6 +89,7 @@ const PAGES: [string, string, ReactElement][] = [
   ['guide', '/guides/iron_grip', <GuidePage params={{ id: 'iron_grip' }} />],
   ['glossary', '/glossary', <GlossaryPage />],
   ['settings', '/settings', <SettingsPage />],
+  ['data', '/data', <DataPage />],
   ['program', '/train/iron_grip', <ProgramDetailPage params={{ id: 'iron_grip' }} />],
   ['start a program', '/train/iron_grip/start', <StartProgramPage params={{ id: 'iron_grip' }} />],
   ['welcome', '/welcome', <WelcomePage />],

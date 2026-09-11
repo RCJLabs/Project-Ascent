@@ -147,7 +147,10 @@ export function pressureIsUrgent(pressure: Pressure): boolean {
  * "61440.0 MB" in Settings.
  */
 export function formatBytes(bytes: number | undefined): string {
-  if (bytes === undefined) return '?';
+  // `?` for "the browser would not say" — and for a total that arithmetic
+  // turned into NaN, which is the same thing from the reader's side and was
+  // previously printed as "NaN KB" (PLAN.md M80).
+  if (bytes === undefined || !Number.isFinite(bytes)) return '?';
   if (bytes < 1024) return `${bytes} B`;
   const units = ['KB', 'MB', 'GB'];
   let value = bytes / 1024;

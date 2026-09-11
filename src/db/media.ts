@@ -122,7 +122,11 @@ export async function moveMediaOwner(from: string, to: string): Promise<number> 
 }
 
 /**
- * Delete photos whose owner is gone. Returns how many went.
+ * Photos whose owner is gone, and what they cost — without deleting them.
+ *
+ * Split out of the sweep for M80: the data page has to be able to say what
+ * is there before offering to tidy it, and the sweep's own count was being
+ * discarded by its only caller.
  *
  * Deleting an owner does **not** delete its photos, because deleting is
  * undoable (PLAN.md M20) and an undo that brings a project back without its
@@ -130,7 +134,7 @@ export async function moveMediaOwner(from: string, to: string): Promise<number> 
  * record for a while and this collects them later, when there is no longer
  * an undo that could want them.
  */
-export async function sweepOrphanMedia(): Promise<number> {
+export async function findOrphanMedia(): Promise<{ ids: string[]; bytes: number }> {
   const db = await getDb();
   const live = new Set<string>();
   for (const [kind, store] of Object.entries(OWNER_STORES)) {
@@ -140,27 +144,52 @@ export async function sweepOrphanMedia(): Promise<number> {
   // A key cursor over `by-owner`, not `getAll`. The values here are photos:
   // reading them to find out who owns them would pull every blob in the
   // database into memory to decide which handful to delete.
-  const doomed: string[] = [];
+  const ids: string[] = [];
   const scan = db.transaction('media', 'readonly');
   let cursor = await scan.store.index('by-owner').openKeyCursor();
   while (cursor) {
     const owner = String(cursor.key);
     const kind = owner.slice(0, owner.indexOf(':'));
-    if (kind in OWNER_STORES && !live.has(owner)) doomed.push(String(cursor.primaryKey));
+    if (kind in OWNER_STORES && !live.has(owner)) ids.push(String(cursor.primaryKey));
     cursor = await cursor.continue();
   }
   await scan.done;
-  if (doomed.length === 0) return 0;
+
+  // Only the doomed ones are read for their size — usually none, and never
+  // more than a handful, so the reason for the key cursor above still holds.
+  let bytes = 0;
+  for (const id of ids) bytes += sizeOf((await db.get('media', id))?.blob);
+  return { ids, bytes };
+}
+
+export async function sweepOrphanMedia(): Promise<number> {
+  const db = await getDb();
+  const { ids } = await findOrphanMedia();
+  if (ids.length === 0) return 0;
 
   const tx = db.transaction('media', 'readwrite');
-  for (const id of doomed) await tx.store.delete(id);
+  for (const id of ids) await tx.store.delete(id);
   await tx.done;
-  return doomed.length;
+  return ids.length;
+}
+
+/**
+ * A blob's size, or zero.
+ *
+ * `Blob.size` is a number in every browser, and *not* in every record: an
+ * old import can hold something that is not a blob at all, and one of those
+ * turned the whole total into `NaN` — which reached the settings page as
+ * "NaN KB" (found by M80's page showing the same number). One bad photo
+ * should cost its own size, not the count.
+ */
+function sizeOf(blob: Blob | undefined): number {
+  const size = blob?.size;
+  return typeof size === 'number' && Number.isFinite(size) ? size : 0;
 }
 
 /** Total bytes held, so the UI can be honest about what it is costing. */
 export async function mediaBytes(): Promise<number> {
   const db = await getDb();
   const rows = await db.getAll('media');
-  return rows.reduce((sum, r) => sum + r.blob.size, 0);
+  return rows.reduce((sum, r) => sum + sizeOf(r.blob), 0);
 }

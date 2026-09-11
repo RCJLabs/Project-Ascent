@@ -2751,15 +2751,47 @@ commit.
   photo comes back with its beta; a healed injury comes back with its note, on the climber
   page it was healed from.
 
-- **M80 — Data health, on one page.** The app already knows a lot about its own state and
-  says it in five places or nowhere: `readingProblems()` reports records dropped or repaired
-  at the read boundary (Settings, "Your data"); `sweepOrphanMedia()` exists and nothing
-  invokes it on a schedule; `staleSessions()` finds sessions left open; `storagePressure()`
-  knows when eviction is near; the import snapshot can be restored or cleared. One page
-  that lists every store's count, every shape problem by store, orphan photos and their
-  bytes, open sessions older than a day, and a single "tidy up" that runs the sweeps and
-  says what it did. Nothing new is derived — it is the app's existing self-knowledge,
-  finally in one place a climber can read before a backup rather than after a loss.
+- **M80 — Data health, on one page.** *Done, with the premise corrected.* The proposal said
+  the app "knows a lot about its own state and says it in five places or nowhere". Checked,
+  and that is wrong on four counts: `readingProblems()` prints in Settings, `staleSessions()`
+  drives the live bar, `storagePressure()` drives both a shell banner and a Settings card,
+  and the import snapshot has restore and clear buttons. `sweepOrphanMedia()` is not
+  uninvoked either — `App.tsx` runs it at boot.
+  **The real gap is that every one of those is a *warning*.** They appear when something is
+  wrong, which means the only way to learn that nothing is wrong is to notice that nothing
+  appeared — and that is no use at the moment a climber actually wants to know, which is
+  before taking a backup or after importing one. So `/data` gathers the same knowledge and
+  states it either way; when there is nothing to say it says *"Every record is readable, no
+  photos are orphaned, no session is left open, and the browser has room"*, and then admits
+  what it cannot check: whether what you logged was true.
+  Three things in it are genuinely new. **Nothing counted the records** — a per-store count
+  existed only inside an import preview, so the app could not tell you how many sessions it
+  was holding. **The sweep's return value was discarded** by its only caller, so a climber
+  was never told anything had been collected; `findOrphanMedia` is now split out of
+  `sweepOrphanMedia`, reports without deleting, and the tidy-up says what it did. And **the
+  live bar shows stale sessions one at a time** — `staleSessions(...)[0]` — so a climber
+  with three of them fixes one and meets the next; the page lists all of them, each linked
+  to its own log. Verified in a browser with the bar and the card on screen together: the
+  bar says "Saturday's session is still open", the card says Saturday *and* Monday.
+  **A real bug the page surfaced, in code it did not touch.** `mediaBytes()` summed
+  `blob.size` over every photo, and one record whose blob has no readable size turned the
+  whole total into `NaN` — which Settings had been printing as "NaN KB". Both readers guard
+  it now and `formatBytes` refuses a non-finite number, which is the same answer it already
+  gave for "the browser would not say".
+  **And a grammar bug the browser caught**, the same fault as M70's "Day of the trip (of the
+  trip)": *"1 photo belong to something that is gone"*. The count and its verb were written
+  into one template with nothing making them agree. The blunt test written for it —
+  every headline, at one and at two — then found two more of the same in headlines nobody
+  had looked at: "1 records could not be read" and "1 records were read without part of
+  their contents". One `records(n)` helper now owns the count, the verb and the possessive.
+  Twenty mutations, twenty killed, after two survivors were fixed rather than argued with:
+  one exposed that the snapshot exclusion had no test, the other that nothing held
+  `findOrphanMedia` to *not* deleting. 2,281 tests pass.
+  *Worth knowing:* the boot sweep means orphaned photos are mostly a mid-session
+  phenomenon — delete a project and its photos are orphaned until the next launch, which is
+  the window the tidy-up button exists for. *Left alone:* backup age. The coach already owns
+  that rule at thirty days, and the line against saying one thing in two voices is older
+  than this page.
 
 **The Ascent.**
 
