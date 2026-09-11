@@ -3657,6 +3657,29 @@ materially wrong premise. Sizes are guesses.*
   Verified in both themes at 430px and 320px, including a resume across a reload mid-circuit.
   3,068 tests pass.
 
+- **M100b — The focus ring was reshaping every control in the app.** *Done, found while
+  verifying M99b in a browser.*
+  **One line, app-wide.** `.focus-ring` carried `border-radius: inherit` from M14, on the
+  reasonable-looking theory that a focus ring should follow the shape it is drawn around. An
+  outline does that by itself. What the line actually did was **overwrite each element's own
+  radius with its parent's**.
+  **Measured before touching it: 132 of 132.** Every control across ten routes that declared
+  a radius rendered a different one — a `rounded-lg` button at 16px because its card was
+  `rounded-2xl`, and M99b's `rounded-full` stop button as a **square**, because its row was
+  square. That is what put it on screen: a shape that was obviously wrong rather than merely
+  slightly off.
+  **It hid for years for two reasons.** A button inside a rounded card inherits something
+  plausible, so nothing looked broken; and nothing in the suite has a layout engine — jsdom
+  resolves no cascade, so only a real browser could ever have seen it.
+  **Checked for the case that would have justified it**: a `.focus-ring` element with no
+  radius of its own, sitting in a rounded parent, which would now go square. Across nineteen
+  routes there are **zero**. Every one either declares its own radius or sits in a square
+  parent, so removing the line is a pure correction with nothing to trade off.
+  **The rule, in a test**: a shared behaviour class decorates, and geometry belongs to the
+  element. `ui.test.ts` now fails if `.focus-ring` declares a radius, size, spacing, display
+  or position — verified against the reinstated line.
+  Verified in both themes across settings, calendar, climber and search.
+
 - **M99b — The tests that are procedures, not numbers.** *Proposed, split from M99. Size M.*
   **Premise.** The assessments page takes a bare number, a grade, or pass/fail.
   `max_hang_20mm_7s` is not a number, it is a procedure: ramp the load, hang seven seconds,

@@ -69,6 +69,8 @@ const BESPOKE: Record<string, string> = {
     'the game canvas and its overlay controls are their own visual language',
   'src/features/log/ClimbEntry.tsx':
     'the grade strip is a dense scrolling value picker, not a filter — Chip’s tinted-border selection is unreadable at that size, so it fills solid instead',
+  'src/features/assessments/HoldTimer.tsx':
+    'one 80px transport control on a full-screen sheet, matching TimerSheet’s — a Button at that size would be a Button in name only',
 };
 
 describe('feature files use the primitives', () => {
@@ -240,5 +242,40 @@ describe('colour classes name colours that exist', () => {
       }
     }
     expect(offences).toEqual([]);
+  });
+});
+
+/**
+ * A utility may not change the shape of what it is applied to (PLAN.md M99b).
+ *
+ * `.focus-ring` carried `border-radius: inherit` from M14, on the
+ * reasonable-looking theory that a focus ring should follow the shape it is
+ * drawn around. An outline already does that by itself; what the line
+ * actually did was overwrite the element's own radius with its parent's.
+ *
+ * Measured in a browser before it was removed: **132 of 132** controls that
+ * declared a radius across ten pages rendered a different one, most of them
+ * square because their parent was. It survived for years because a button
+ * inside a rounded card inherits something that looks plausible, and because
+ * nothing in the suite has a layout engine — jsdom resolves no cascade, so
+ * only a real browser could see it.
+ *
+ * This is the rule, which a test can hold: a shared behaviour class decorates,
+ * and geometry belongs to the element.
+ */
+describe('the focus ring decorates and nothing more', () => {
+  const css = readFileSync('src/index.css', 'utf8');
+  const block = css.slice(css.indexOf('.focus-ring {'), css.indexOf('}', css.indexOf('.focus-ring {')));
+
+  it('finds the rule to check', () => {
+    expect(block).toContain('outline');
+  });
+
+  it('sets no geometry of its own', () => {
+    const geometry = ['border-radius', 'width', 'height', 'padding', 'margin', 'display', 'position'];
+    const declared = geometry.filter((property) =>
+      new RegExp(`^\\s*${property}\\s*:`, 'm').test(block),
+    );
+    expect(declared).toEqual([]);
   });
 });

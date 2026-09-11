@@ -135,7 +135,17 @@
    `:focus-visible`, not `:focus`, so a mouse click does not leave a ring
    behind — but a keyboard tab always does. */
 .focus-ring {
-  /* The colour is set here, not on :focus-visible, so it never *changes*.
+  /* This carried `border-radius: inherit` until M99b, on the reasonable-looking
+     theory that a focus ring should follow the shape it is drawn around. It
+     does that by itself — an outline already follows the element's own
+     border-radius — and what the line actually did was **overwrite the
+     element's shape with its parent's**. Measured across ten pages before
+     removing it: 132 of 132 controls that declared a radius rendered a
+     different one, most of them 0px because the parent was square. It was
+     invisible for years because a button inside a rounded card inherits a
+     radius that looks plausible. `ui.test.ts` holds the rule now.
+
+     The colour is set here, not on :focus-visible, so it never *changes*.
      Tailwind's `transition-colors` includes outline-color, which meant the
      ring animated in from currentColor — measurably: sampled immediately
      after a Tab it read white on a primary button, and only settled to the
@@ -144,7 +154,6 @@
      Only the width changes now, and width is not a transitioned property. */
   outline: 0 solid var(--c-accent-strong);
   outline-offset: 2px;
-  border-radius: inherit;
 }
 
 .focus-ring:focus-visible {
