@@ -20,11 +20,13 @@
  */
 
 import type {
+  CircuitFormat,
   Exercise,
   ExerciseBlock,
   Phase,
   PhasePrescription,
   Program,
+  SelectionRule,
   SessionType,
 } from '@/content/types';
 import type { Issue } from './customProgram';
@@ -190,4 +192,30 @@ export function describeBlock(block: ExerciseBlock, phaseId: string): string {
   const more = p.exercises.length > 3 ? ` +${p.exercises.length - 3}` : '';
   const pick = p.selection ? `Pick ${p.selection.pick} · ` : '';
   return `${pick}${names}${more}`;
+}
+
+/**
+ * How a prescription is meant to be run: "Pick 1 of 6 · 30s each · 3 rounds"
+ * (PLAN.md M90).
+ *
+ * Empty when the block is a plain list of everything, which is most of
+ * them — a caller renders nothing rather than a line saying nothing.
+ *
+ * `poolSize` is what the climber is actually looking at, not what the block
+ * declares. The two differ when a track filter has removed rows, and "Pick 1
+ * of 6" above four rows is worse than no line at all.
+ */
+export function prescriptionLine(
+  selection: SelectionRule | undefined,
+  circuit: CircuitFormat | undefined,
+  poolSize: number,
+): string {
+  const parts: string[] = [];
+  if (selection) parts.push(`Pick ${selection.pick} of ${poolSize}`);
+  if (!circuit) return parts.join(' · ');
+  if (circuit.work) parts.push(`${circuit.work} each`);
+  if (circuit.restBetween) parts.push(`${circuit.restBetween} rest`);
+  parts.push(`${circuit.rounds} ${circuit.rounds === '1' ? 'round' : 'rounds'}`);
+  if (circuit.restBetweenRounds) parts.push(`${circuit.restBetweenRounds} between rounds`);
+  return parts.join(' · ');
 }

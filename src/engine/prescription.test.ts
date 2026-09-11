@@ -9,6 +9,7 @@ import {
   describeBlock,
   newBlock,
   phasePrescription,
+  prescriptionLine,
   reconcilePhases,
   reconcileProgramPhases,
   setPrescription,
@@ -224,5 +225,46 @@ describe('summarising a block', () => {
     const block = newBlock('Core', phases, []);
     expect(describeBlock(block, 'a')).toBe('Nothing prescribed');
     expect(describeBlock(setPrescription(block, 'a', { mergedInto: 'Push' }), 'a')).toBe('Folded into Push');
+  });
+});
+
+/**
+ * How a block is meant to be run, said out loud (PLAN.md M90).
+ *
+ * The logger had the selection rule and the circuit format in hand and
+ * rendered neither, so a menu of six with "pick one" written on it arrived
+ * as a checklist of six.
+ */
+describe('the line that says how to run a block', () => {
+  it('says how many of the list to pick', () => {
+    expect(prescriptionLine({ pick: 1 }, undefined, 6)).toBe('Pick 1 of 6');
+  });
+
+  // The pool is what the climber can see. A track filter removes rows, and
+  // "Pick 1 of 6" above four of them is worse than saying nothing.
+  it('counts the rows actually on screen', () => {
+    expect(prescriptionLine({ pick: 1 }, undefined, 4)).toBe('Pick 1 of 4');
+  });
+
+  it('lays out a circuit', () => {
+    expect(
+      prescriptionLine(undefined, { rounds: '3', work: '30s', restBetween: '15s', restBetweenRounds: '2 min' }, 5),
+    ).toBe('30s each · 15s rest · 3 rounds · 2 min between rounds');
+  });
+
+  it('agrees with itself about one round', () => {
+    expect(prescriptionLine(undefined, { rounds: '1' }, 3)).toBe('1 round');
+    expect(prescriptionLine(undefined, { rounds: '2' }, 3)).toBe('2 rounds');
+  });
+
+  // A block can be both, and the two facts are independent.
+  it('says both when a block is a menu run in rounds', () => {
+    expect(prescriptionLine({ pick: 3 }, { rounds: '4' }, 9)).toBe('Pick 3 of 9 · 4 rounds');
+  });
+
+  // Most blocks are a plain list of everything. A line saying nothing is
+  // worse than no line: it makes the ones that mean something ordinary.
+  it('says nothing about a block that is just its list', () => {
+    expect(prescriptionLine(undefined, undefined, 4)).toBe('');
   });
 });

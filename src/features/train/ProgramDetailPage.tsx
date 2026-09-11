@@ -6,7 +6,7 @@ import { guideSummaryFor } from '@/content/guides/summary';
 import { getMetric } from '@/content/metrics';
 import { getProtocol } from '@/content/protocols';
 import { getProgram } from '@/content/programs';
-import type { CircuitFormat, Exercise, Phase, SelectionRule, SessionType, TrackId } from '@/content/types';
+import type { Exercise, Phase, SessionType, TrackId } from '@/content/types';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -15,6 +15,7 @@ import { Term } from '@/ui/Term';
 import { PageHeader } from '@/ui/PageHeader';
 import { RecordNotFound } from '@/ui/RecordNotFound';
 import { displayRange } from '@/engine/grades';
+import { prescriptionLine } from '@/engine/prescription';
 import { useSettings } from '@/store/settings';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -51,21 +52,6 @@ function ExerciseRow({ ex }: { ex: Exercise }) {
       </div>
     </li>
   );
-}
-
-function formatLine(
-  selection: SelectionRule | undefined,
-  circuit: CircuitFormat | undefined,
-  poolSize: number,
-): string {
-  const parts: string[] = [];
-  if (selection) parts.push(`Pick ${selection.pick} of ${poolSize}`);
-  if (!circuit) return parts.join(' · ');
-  if (circuit.work) parts.push(`${circuit.work} each`);
-  if (circuit.restBetween) parts.push(`${circuit.restBetween} rest`);
-  parts.push(`${circuit.rounds} ${circuit.rounds === '1' ? 'round' : 'rounds'}`);
-  if (circuit.restBetweenRounds) parts.push(`${circuit.restBetweenRounds} between rounds`);
-  return parts.join(' · ');
 }
 
 function SessionTypeCard({
@@ -108,15 +94,41 @@ function SessionTypeCard({
             ) : (
               <div className="bg-sunken rounded-xl p-3">
                 {(entry.selection || entry.circuit) && (
-                  <p className="text-2xs font-bold uppercase tracking-wide text-ink-soft mb-2.5 pb-2.5 border-b border-line">
-                    {formatLine(entry.selection, entry.circuit, entry.exercises.length)}
-                  </p>
+                  <div className="mb-2.5 pb-2.5 border-b border-line">
+                    <p className="text-2xs font-bold uppercase tracking-wide text-ink-soft">
+                      {prescriptionLine(entry.selection, entry.circuit, shown.length)}
+                    </p>
+                    {/* How to choose, which is the part that moves from
+                        phase to phase in a menu whose dose does not
+                        (PLAN.md M90). Eighteen prescriptions carry one and
+                        nothing had ever rendered it. */}
+                    {entry.selection?.note && (
+                      <p className="text-sm text-ink-soft mt-1.5">{entry.selection.note}</p>
+                    )}
+                  </div>
                 )}
                 <ul className="grid grid-cols-1 gap-2.5">
                   {shown.map((ex, i) => (
                     <ExerciseRow key={`${ex.name}-${i}`} ex={ex} />
                   ))}
                 </ul>
+                {/* Below the dose, because that is where the question forms
+                    (PLAN.md M90). M33 required this sentence of any block
+                    that runs an identical dose for the whole program, on the
+                    grounds that such a block "has to say so out loud rather
+                    than reading as an oversight" — and then nothing rendered
+                    it, so the block went on reading as an oversight. */}
+                {block.constantDose && (
+                  <p className="text-xs text-ink-soft leading-relaxed mt-3 pt-3 border-t border-line">
+                    {/* Not "Same all 12 weeks": two of the four authored
+                        reasons open with "Same", and the label stuttered
+                        into them. The sentence carries the duration. */}
+                    <span className="font-bold uppercase tracking-wide text-2xs">
+                      Unchanged by design ·{' '}
+                    </span>
+                    {block.constantDose}
+                  </p>
+                )}
               </div>
             )}
           </div>

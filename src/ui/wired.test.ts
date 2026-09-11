@@ -79,6 +79,72 @@ describe('every UI primitive is used', () => {
   });
 });
 
+/**
+ * Every authored field of a prescription reaches a screen (PLAN.md M90).
+ *
+ * The unused-export check above cannot see this class of bug, because the
+ * field is not an export — it is content. `PhasePrescription.selection` was
+ * "used": one screen read `selection.pick`. Nothing read `selection.note`,
+ * so eighteen authored lines of pick advice went nowhere, and nothing read
+ * `circuit` or `selection` in the logger at all, so twenty-nine
+ * prescriptions rendered a menu as a checklist — six cues on screen where
+ * the program asks for one.
+ *
+ * So the check has to go a level deeper than the field: a leaf at a time,
+ * by the name it is read by. The list is maintained by hand, which is the
+ * cost of catching a field that type-checks, lints and ships while saying
+ * nothing.
+ */
+/**
+ * A screen, or something a screen imports. Scoping this to `src/features`
+ * alone fails honestly-rendered fields the moment the formatting moves into
+ * a helper, which is exactly what M90 did with `prescriptionLine`. One hop,
+ * and no further: a field read only by a helper that nothing imports is
+ * still a field that reaches nobody.
+ */
+const SCREENS = SOURCES.filter((f) => {
+  if (f.path.startsWith('src/features')) return true;
+  const specifier = f.path.replace(/^src\//, '@/').replace(/\.tsx?$/, '');
+  return SOURCES.some(
+    (other) => other.path.startsWith('src/features') && other.source.includes(specifier),
+  );
+});
+
+/** Every screen-side file that reads a name. */
+const readers = (name: string): string[] =>
+  SCREENS.filter((f) => new RegExp(`\\b${name}\\b`).test(f.source)).map((f) => f.path);
+
+/**
+ * The assertion itself, named so the self-check below runs the same one.
+ * A weakened assertion here fails there, which is the only way a check
+ * nothing else checks can be held to anything.
+ *
+ * A leaf can be read through a destructure or a rename, so the last segment
+ * is what to look for — `circuit.work` is read as `work` once `circuit` is
+ * in hand.
+ */
+function expectRendered(leaf: string): void {
+  const seen = readers(leaf.split('.').at(-1)!);
+  expect(seen, `${leaf} is authored in the catalogue and rendered nowhere`).not.toEqual([]);
+}
+
+describe('every authored prescription field reaches a screen', () => {
+  const LEAVES = [
+    'rationale',
+    'exercises',
+    'mergedInto',
+    'selection.pick',
+    'selection.note',
+    'circuit.rounds',
+    'circuit.work',
+    'circuit.restBetween',
+    'circuit.restBetweenRounds',
+    'constantDose',
+  ];
+
+  it.each(LEAVES)('%s is read somewhere a climber can see it', (leaf) => expectRendered(leaf));
+});
+
 describe('the check itself works', () => {
   it('would notice a name nothing mentions', () => {
     // A test that cannot fail is the thing it is meant to prevent.
@@ -87,5 +153,16 @@ describe('the check itself works', () => {
 
   it('does not count the declaring file as a caller', () => {
     expect(callers('recordCard', 'src/ui/shareCard.ts')).not.toContain('src/ui/shareCard.ts');
+  });
+
+  // The prescription scan is a test checking content, which means nothing
+  // else checks it. Both of its halves have to be able to fail.
+  it('would notice a prescription field nothing reads', () => {
+    expect(() => expectRendered('aFieldNothingRenders')).toThrow();
+  });
+
+  it('does not treat every file in the tree as a screen', () => {
+    expect(SCREENS.length).toBeLessThan(SOURCES.length);
+    expect(SCREENS.map((f) => f.path)).not.toContain('src/main.tsx');
   });
 });

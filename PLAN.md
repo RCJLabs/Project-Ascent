@@ -3197,13 +3197,46 @@ a kept one.
   The Anvil for The Hammer, and the count is a phase change showing up as a number before
   the climber walks into it. A week of counting costs 0.067 ms and does not grow with the
   log, so it gets no budget line. 2,644 tests pass.
-- **M90 — Why the dose does not change.** M33 added `ExerciseBlock.constantDose` for blocks
-  that genuinely run the same sets and reps for twelve weeks, with the explicit reasoning
-  that such a block *"has to say so out loud rather than reading as an oversight"*. Twelve
-  blocks across the catalogue now carry that explanation — Cruiser's Technique Focus writes
-  four lines about intensity, grade choice and session length carrying the progression
-  instead — and **nothing renders it**. So the field added to stop a block reading as an
-  oversight is itself invisible, and the block still reads as an oversight.
+- **M90 — What a block asks of you, not just what is in it.** *Done — and the milestone as
+  written was both wrong on its numbers and far too small.*
+  **The count was wrong.** It claimed twelve blocks carry a `constantDose` explanation.
+  **Four do**, all in The Cruiser, plus two in the unshipped Two-Day Week draft. The twelve
+  is from `types.ts`, and it is how many blocks were *found* running a flat dose in M33;
+  most were fixed and four were kept and explained.
+  **Measuring the four turned up the real bug.** Their exercises and dosage are identical
+  across all three phases, but their `selection.note` changes in every one — *"Bias toward
+  ARC for the first three weeks"* → *"Rotate the harder protocols in"* → *"Choose the
+  protocol that best matches your project"*. The page renders `selection.pick` and **drops
+  the note**. So the endurance block's own explanation for its flat dose — *"the pick advice
+  is where that lives"* — pointed straight at a field the page was throwing away.
+  **And the logger was worse.** `prescriptionFor` hands it the whole prescription and it
+  rendered only the exercise list: no pick rule, no note, no circuit format. Across the
+  catalogue that is **29 of 163 prescriptions showing a menu as a checklist**, 17 with a
+  circuit format dropped and 18 with pick advice dropped. Cruiser's Technique Focus puts
+  **six cues on screen where the program asks for one**; Base Camp's core circuit shows nine
+  and asks for three. A climber doing what the screen showed was doing several times the
+  session, on the one surface whose whole job is saying what to do today.
+  So this shipped three things, in that order of importance: the logger says how a block is
+  run, both pages pass on the pick advice, and `constantDose` renders under the dose it
+  explains — below the box, because that is where the question forms.
+  **The wiring guard is the durable part.** M88, M89 and M90 were all the same bug — content
+  authored, type-checked, shipped and never rendered — and the existing unused-export check
+  cannot see it, because a content field is not an export. `wired.test.ts` now walks the
+  leaves of a prescription by name. Scoping it to `src/features` failed honestly-rendered
+  fields the moment formatting moved into a helper, so it allows one import hop and no more.
+  Seventeen mutations, sixteen killed. **The one survivor is honest and stays:** the pool
+  count is now the rows actually on screen rather than what the block declares, and no
+  mutation can kill that, because no block in the catalogue has track-tagged exercises
+  inside a menu. It is a guard against a bug that does not exist yet rather than a fix for
+  one that does, and it is not extra code — only which of two variables gets passed.
+  The other three survivors were all in the new guard, which is a test, and nothing tests a
+  test. Two were closed with self-checks; the third — quietly weakening the assertion —
+  needed the assertion pulled into a named function that the self-check runs too, so
+  weakening it there fails here.
+  **One limitation kept rather than hidden:** the program builder cannot author a
+  `selection.note` at all — it edits `pick` and nothing else — so a climber writing their
+  own menu still cannot say how to choose from it.
+  Verified in both themes. 2,669 tests pass.
 
 **Progress tracking.**
 

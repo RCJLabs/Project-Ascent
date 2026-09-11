@@ -34,6 +34,7 @@ import {
   isStale,
 } from '@/engine/live';
 import { plannedDay, prescriptionFor } from '@/engine/plan';
+import { prescriptionLine } from '@/engine/prescription';
 import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
 import { V_GRADES, YDS_GRADES, displayGrade, type GradeScale } from '@/engine/grades';
 import type { Climb, ProjectAttempt, Session } from '@/db/sessions';
@@ -708,6 +709,28 @@ function SessionEditor({
               {blocks.map((b) => (
                 <div key={b.blockId} className="mb-3 last:mb-0">
                   <h4 className="text-xs font-bold uppercase tracking-widest text-accent mb-1.5">{b.name}</h4>
+                  {/* How the block is meant to be run (PLAN.md M90). The
+                      logger had the whole prescription in hand and rendered
+                      only the exercise list, so twenty-nine prescriptions
+                      showed a menu as a checklist — Cruiser's technique
+                      block put six cues on screen when the program asks for
+                      one, and a climber doing all six is doing six times the
+                      session. The count is of the rows actually shown, which
+                      is what a track filter leaves behind. */}
+                  {(() => {
+                    const line = prescriptionLine(b.entry.selection, b.entry.circuit, b.entry.exercises.length);
+                    if (!line && !b.entry.selection?.note) return null;
+                    return (
+                      <div className="mb-2">
+                        {line && (
+                          <p className="text-2xs font-bold uppercase tracking-wide text-ink-soft">{line}</p>
+                        )}
+                        {b.entry.selection?.note && (
+                          <p className="text-xs text-ink-soft mt-0.5">{b.entry.selection.note}</p>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <ul className="grid grid-cols-1 gap-2">
                     {b.entry.exercises.map((ex, i) => {
                       const protocol = ex.protocolId ? getProtocol(ex.protocolId) : undefined;
