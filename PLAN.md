@@ -3240,15 +3240,39 @@ a kept one.
 
 **Progress tracking.**
 
-- **M91 — Did you do the work?** The app places specific session *types* on specific days
-  and never once asks which of them happened. `session.planned` is read by exactly one
-  function, and it is `sessionEdit.ts:85` merging two records. `review.adherence` exists but
-  counts sessions against a *weekly number*, not against the plan's own placements — it
-  cannot tell four climbing sessions from four skipped Finger Protocols. Every input is
-  already there: `plannedDay` for any date, and logged sessions carrying `sessionTypeId`.
-  "You did 9 of 12 Finger Protocol sessions and 4 of 12 Power Endurance" is the sentence a
-  block report should open with, and it is the other half of M84 — which numbers moved,
-  against which work actually happened.
+- **M91 — Did you do the work?** *Done.* The premise held exactly: `session.planned` had one
+  reader, `sessionEdit.ts:85` merging two records, and `review.adherence` is
+  `sessions ÷ weekly target` — a count against a number, which cannot tell four climbing
+  sessions from four skipped Finger Protocols.
+  **The week is the unit, not the day.** A climber who moves Tuesday's session to Wednesday
+  did the work, and scoring the date would call that two misses — a number about a diary
+  rather than about training. So each week is asked what it placed and what it got, by type,
+  and a part-finished week counts only its elapsed days, because a measure that says you are
+  behind every Sunday through Saturday is a measure people learn to ignore.
+  **One week never pays for another.** Three Finger Protocols in a week that asked for two is
+  two done and one extra, not three done — otherwise a double Tuesday settles a missed
+  Friday and the number stops meaning anything. Sessions logged by hand are counted
+  separately rather than dropped: "you did less than the plan asked" would be a lie told to
+  someone who was training the whole time.
+  **The layout had to be snapshotted, which the milestone did not anticipate.** A block
+  record already remembered the program's name and length; it did not remember the week
+  layout, so a climber who rearranges their week would have had every earlier block
+  re-scored against a layout it never ran. `BlockRecord.plan` now records it at
+  `openBlock`, and a block that predates that says so on the page rather than passing a
+  guess off as a measurement.
+  **A sentence of mine went false and is fixed.** M85's block-end copy read *"Whether you
+  trained every week of it is between you and the log — what the app can say is which of
+  the numbers moved"*. The card directly beneath it now answers that question, so both the
+  "ran out" and the "you left" wordings were rewritten to point at it.
+  Twenty-two mutations, all killed — but only after a second pass. Six survived the first,
+  and **one of those was a mutant I wrote wrong** (a dead `if (false) continue` appended
+  after the real check, which mutated nothing); the other five were weak tests of mine, each
+  worth knowing: the truncation test checked only the "and N more" tail, so a sentence
+  listing all four types *and* the tail still passed; nothing asserted `openBlock` writes
+  the layout down; the block-snapshot test gave the record the same layout as the live plan,
+  so it could not tell which of the two was read; and no test ever logged a type the plan
+  never placed, so the breakdown's filter was free.
+  Verified in both themes. 2,696 tests pass.
 - **M92 — The retrospectives have no pictures in them.** Photos attach to sessions and
   projects, M30 gave them captions and M71 let you draw beta on them — and `MediaCard` is
   mounted in exactly two places, the session logger and the project detail page. Neither

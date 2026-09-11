@@ -138,10 +138,10 @@ export function describeBlockEnd(end: BlockEnd): string {
   // and nothing else (PLAN.md M87).
   if (end.outcome === 'left' && end.record) {
     const weeks = weeksRun(end.record, end.record.endedAt ?? status.to);
-    return `You left ${program.name} after ${weeks} of its ${end.record.weeks} weeks. That is a fact about the calendar and not a verdict — what the app can say is which of the numbers moved while you were on it.`;
+    return `You left ${program.name} after ${weeks} of its ${end.record.weeks} weeks. That is a fact about the calendar and not a verdict — below is which of its sessions happened, and which of the numbers moved while you were on it.`;
   }
   if (end.outcome === 'unknown') {
     return `${program.name} started ${status.from}, and the app has no record of how it ended — it was already running before this version kept a history. The numbers below are whatever was measured inside its weeks.`;
   }
-  return `${program.name} ran out ${when}. Whether you trained every week of it is between you and the log — what the app can say is which of the numbers moved, and what it has written down about what comes next.`;
+  return `${program.name} ran out ${when}. Below is which of its sessions happened, which of the numbers moved, and what it has written down about what comes next.`;
 }

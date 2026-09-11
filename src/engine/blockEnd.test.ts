@@ -51,7 +51,11 @@ describe('where the block is', () => {
     // arrives here too. Saying they finished it would be making it up.
     const text = describeBlockEnd(end([], addDays(LAST, 1)));
     expect(text).not.toMatch(/congratulat|well done|nice work|finished it/i);
-    expect(text).toContain('between you and the log');
+    // It used to say "whether you trained every week of it is between you
+    // and the log", which stopped being true the moment M91 counted the
+    // sessions in the card below it.
+    expect(text).not.toMatch(/between you and the log/);
+    expect(text).toContain('which of its sessions happened');
   });
 });
 

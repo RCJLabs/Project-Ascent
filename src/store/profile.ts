@@ -241,7 +241,7 @@ export const useProfile = create<ProfileState>((set, get) => ({
       // again mid-run re-opens the same row rather than adding a second
       // (PLAN.md M87). Without a resolvable program there is nothing to
       // write down — name and length are snapshots taken here.
-      blocks: program ? openBlock(s.blocks, { program, startDate, trackId }, today()) : s.blocks,
+      blocks: program ? openBlock(s.blocks, { program, startDate, plan, trackId }, today()) : s.blocks,
       tracks: trackId ? { ...s.tracks, [programId]: trackId } : s.tracks,
       plans: { ...s.plans, [programId]: plan },
     });

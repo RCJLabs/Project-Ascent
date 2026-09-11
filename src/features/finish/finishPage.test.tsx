@@ -4,6 +4,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { screen } from '@testing-library/react';
 import { resetDbForTests } from '@/db/db';
 import { putMetricEntry } from '@/db/metrics';
+import { newSession, putSession } from '@/db/sessions';
 import { loadPrograms } from '@/content/programs';
 import { IRON_GRIP } from '@/content/programs/catalogue';
 import { addDays, daysBetween, startOfWeek, today } from '@/engine/dates';
@@ -275,5 +276,126 @@ describe('an open block whose weeks have run out', () => {
     const list = screen.getByText('Blocks you have run').closest('section, div')!;
     expect(list.textContent).not.toContain('running');
     expect(list.textContent).toContain('ran to the end');
+  });
+});
+
+
+/**
+ * Which of the sessions the plan placed actually happened (PLAN.md M91).
+ *
+ * The engine's arithmetic is in engine/adherence.test.ts. These are about
+ * the two things that make it a report rather than a number: it reaches the
+ * page the block is reviewed on, and it says when it is scoring a block
+ * against a layout that block never ran.
+ */
+describe('did you do the work', () => {
+  const MONDAY = 1;
+
+  /** A completed session of `typeId` in the given week of the block. */
+  async function logged(start: string, week: number, typeId: string, index = 0): Promise<void> {
+    const date = addDays(blockWindow(IRON_GRIP, start).from, (week - 1) * 7 + MONDAY);
+    await putSession({
+      ...newSession(date, index, { completed: true }),
+      programId: 'iron_grip',
+      sessionTypeId: typeId,
+    } as never);
+  }
+
+  it('counts the placements against what was logged', async () => {
+    const { start } = endedBlock(1);
+    await logged(start, 1, 'fp');
+    await hydrate();
+    running(start);
+    renderAt('/finish', <FinishPage />);
+    expect(screen.getByText('Did you do the work?')).toBeTruthy();
+    // Iron Grip's own layout, twelve weeks, and one session logged.
+    expect(screen.getByText(/of \d+ Finger Protocol/)).toBeTruthy();
+  });
+
+  it('breaks it down by the session type the plan placed', async () => {
+    const { start } = endedBlock(1);
+    await hydrate();
+    running(start);
+    renderAt('/finish', <FinishPage />);
+    const row = screen.getByText('Finger Protocol + Engine').closest('div')!;
+    // Iron Grip's own layout places it twice a week, so twelve weeks is
+    // twenty-four sessions, not twelve.
+    expect(row.textContent).toMatch(/0 of 24/);
+  });
+
+  /**
+   * A block recorded before M91 has no layout of its own, and scoring it
+   * against today's is a guess. Saying which was used is the difference
+   * between a measurement and a claim.
+   */
+  it('says when it is using today’s layout rather than the block’s', async () => {
+    const { start } = endedBlock(1);
+    await hydrate();
+    running(start);
+    renderAt('/finish', <FinishPage />);
+    expect(screen.getByText(/this block ran before the app kept the one it started with/)).toBeTruthy();
+  });
+
+  /**
+   * Deliberately a *different* layout from the live one: a block whose
+   * snapshot matches today's plan cannot tell you which of the two was
+   * read.
+   */
+  it('scores a block against its own layout, not today’s', async () => {
+    const { start } = endedBlock(1);
+    await hydrate();
+    running(start); // Iron Grip's own layout: two Finger Protocols a week.
+    const row: BlockRecord = {
+      id: `iron_grip#${start}`,
+      programId: 'iron_grip',
+      name: IRON_GRIP.name,
+      startDate: start,
+      weeks: IRON_GRIP.weeks,
+      plan: { 1: 'fp' }, // One a week, so twelve rather than twenty-four.
+      endedAt: null,
+    };
+    useProfile.setState({ blocks: [row] });
+    renderAt('/finish', <FinishPage />);
+    expect(screen.getByText('Did you do the work?')).toBeTruthy();
+    const fp = screen.getByText('Finger Protocol + Engine').closest('div')!;
+    expect(fp.textContent).toMatch(/0 of 12/);
+    expect(screen.queryByText(/before the app kept the one it started with/)).toBeNull();
+  });
+
+  // A session of a type the plan never placed is extra, not a row in a
+  // breakdown of what the plan asked for.
+  it('leaves a type the plan never placed out of the breakdown', async () => {
+    const { start } = endedBlock(1);
+    await logged(start, 1, 'perf');
+    await hydrate();
+    running(start);
+    useProfile.setState({
+      blocks: [
+        {
+          id: `iron_grip#${start}`,
+          programId: 'iron_grip',
+          name: IRON_GRIP.name,
+          startDate: start,
+          weeks: IRON_GRIP.weeks,
+          plan: { 1: 'fp' },
+          endedAt: null,
+        },
+      ],
+    });
+    renderAt('/finish', <FinishPage />);
+    expect(screen.getByText('Finger Protocol + Engine')).toBeTruthy();
+    expect(screen.queryByText('Climbing Session')).toBeNull();
+  });
+
+  it('says nothing at all when no plan placed anything', async () => {
+    const { start } = endedBlock(1);
+    await hydrate();
+    useProfile.setState({
+      activeProgramId: 'iron_grip',
+      startDates: { iron_grip: start },
+      plans: { iron_grip: {} },
+    });
+    renderAt('/finish', <FinishPage />);
+    expect(screen.queryByText('Did you do the work?')).toBeNull();
   });
 });

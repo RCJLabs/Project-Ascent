@@ -60,6 +60,22 @@ describe('opening a block', () => {
   it('leaves no track key when there is none', () => {
     expect('trackId' in openBlock([], { program: IRON, startDate: '2026-01-04' }, '2026-01-04')[0]!).toBe(false);
   });
+
+  /**
+   * The week layout, for the same reason as the name and the length
+   * (PLAN.md M91): adherence is measured against what the plan placed, and
+   * a climber who rearranges their week would otherwise have every earlier
+   * block re-scored against a layout it never ran.
+   */
+  it('writes down the week layout it started with', () => {
+    const plan = { 1: 'fp', 3: 'perf' } as const;
+    const rows = openBlock([], { program: IRON, startDate: '2026-01-04', plan }, '2026-01-04');
+    expect(rows[0]!.plan).toEqual(plan);
+  });
+
+  it('leaves the layout off rather than inventing an empty one', () => {
+    expect('plan' in openBlock([], { program: IRON, startDate: '2026-01-04' }, '2026-01-04')[0]!).toBe(false);
+  });
 });
 
 describe('only one block is ever open', () => {

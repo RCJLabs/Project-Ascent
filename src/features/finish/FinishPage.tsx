@@ -16,6 +16,8 @@ import { formatEntry } from '@/engine/assessments';
 import { fromKey, today } from '@/engine/dates';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
+import { useSessions } from '@/store/sessions';
+import { blockAdherence, describeAdherence } from '@/engine/adherence';
 import { useSettings } from '@/store/settings';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
@@ -105,10 +107,19 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
   const activeProgramId = useProfile((s) => s.activeProgramId);
   const startDates = useProfile((s) => s.startDates);
   const blocks = useProfile((s) => s.blocks);
+  const plans = useProfile((s) => s.plans);
+  const weekOverrides = useProfile((s) => s.weekOverrides);
+  const byDate = useSessions((s) => s.byDate);
+  const sessionsReady = useSessions((s) => s.hydrated);
+  const loadSessions = useSessions((s) => s.load);
 
   useEffect(() => {
     if (!metricsReady) void loadMetrics();
   }, [metricsReady, loadMetrics]);
+
+  useEffect(() => {
+    if (!sessionsReady) void loadSessions();
+  }, [sessionsReady, loadSessions]);
 
   const history = useMemo(() => sortBlocks(blocks), [blocks]);
   const asked = params?.id ? decodeURIComponent(params.id) : null;
@@ -134,7 +145,32 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
     return blockEnd({ program, startDate: chosen.startDate, entries, today: today(), record: chosen });
   }, [chosen, activeProgramId, startDates, entries]);
 
-  if (!metricsReady || !profileReady) return <PageSkeleton />;
+  /**
+   * Which of the sessions the plan placed actually happened (PLAN.md M91).
+   *
+   * The layout comes from the block's own snapshot where there is one. For
+   * a block that ran before the app kept one, today's layout is the only
+   * layout there is — so the card says which it used rather than presenting
+   * a guess as a measurement.
+   */
+  const adherence = useMemo(() => {
+    const programId = chosen?.programId ?? activeProgramId;
+    if (end === null || !programId) return null;
+    const startDate = chosen?.startDate ?? startDates[programId];
+    const plan = chosen?.plan ?? plans[programId];
+    if (!startDate || !plan) return null;
+    const measured = blockAdherence({
+      program: end.program,
+      startDate,
+      plan,
+      overrides: weekOverrides[programId],
+      sessions: Object.values(byDate).flat(),
+      today: today(),
+    });
+    return measured === null ? null : { measured, ownLayout: chosen?.plan !== undefined };
+  }, [end, chosen, activeProgramId, startDates, plans, weekOverrides, byDate]);
+
+  if (!metricsReady || !profileReady || !sessionsReady) return <PageSkeleton />;
 
   if (asked !== null && chosen === null) {
     return (
@@ -181,6 +217,35 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
         <Card>
           <p className="text-sm leading-relaxed">{describeBlockEnd(end)}</p>
         </Card>
+
+        {adherence !== null && describeAdherence(adherence.measured) !== null && (
+          <Card title="Did you do the work?">
+            <p className="text-sm leading-relaxed mb-3">{describeAdherence(adherence.measured)}</p>
+            <dl className="grid grid-cols-1 gap-1.5">
+              {adherence.measured.types
+                .filter((t) => t.planned > 0)
+                .map((t) => (
+                  <div key={t.typeId} className="flex items-baseline gap-2 text-sm">
+                    <span className="shrink-0">{t.icon}</span>
+                    <dt className="flex-1 min-w-0 truncate">{t.name}</dt>
+                    <dd
+                      className={`shrink-0 font-semibold tabular-nums ${
+                        t.done >= t.planned ? 'text-positive' : t.done * 2 < t.planned ? 'text-warn' : ''
+                      }`}
+                    >
+                      {t.done} of {t.planned}
+                    </dd>
+                  </div>
+                ))}
+            </dl>
+            {!adherence.ownLayout && (
+              <p className="text-xs text-ink-soft mt-3 leading-relaxed">
+                Measured against your current week layout — this block ran before the app kept the
+                one it started with.
+              </p>
+            )}
+          </Card>
+        )}
 
         {report !== null && report.comparable.length + report.results.length > 0 && (
           <Card title="What moved">

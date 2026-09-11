@@ -35,6 +35,7 @@
 
 import type { Program } from '@/content/types';
 import { addDays, startOfWeek } from './dates';
+import type { WeekPlan } from './scheduler';
 
 /** Why a block stopped being the one you are running. */
 export type BlockEndReason = 'ran-out' | 'switched' | 'restarted' | 'stopped';
@@ -49,6 +50,16 @@ export interface BlockRecord {
   startDate: string;
   /** Weeks it was set to run, adaptation included. */
   weeks: number;
+  /**
+   * The week layout this block was started with (PLAN.md M91).
+   *
+   * Snapshotted for the same reason as `name` and `weeks`: adherence is a
+   * comparison against what the plan placed, and a climber who rearranges
+   * their week would otherwise have every earlier block re-scored against a
+   * layout it never ran. Absent on rows recorded before this, which is a
+   * fact the page has to say out loud rather than paper over.
+   */
+  plan?: WeekPlan;
   trackId?: string;
   /** The day it stopped being the active program. Null while it still is. */
   endedAt: string | null;
@@ -111,7 +122,7 @@ export function findBlock(rows: readonly BlockRecord[], id: string): BlockRecord
  */
 export function openBlock(
   rows: readonly BlockRecord[],
-  entry: { program: Program; startDate: string; trackId?: string | undefined },
+  entry: { program: Program; startDate: string; plan?: WeekPlan | undefined; trackId?: string | undefined },
   today: string,
 ): BlockRecord[] {
   const open = activeBlock(rows);
@@ -125,6 +136,7 @@ export function openBlock(
     name: entry.program.name,
     startDate: entry.startDate,
     weeks: entry.program.weeks,
+    ...(entry.plan ? { plan: entry.plan } : {}),
     ...(entry.trackId ? { trackId: entry.trackId } : {}),
     endedAt: null,
   };
