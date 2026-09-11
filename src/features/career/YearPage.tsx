@@ -26,6 +26,7 @@ import { BadParameter } from '@/ui/RecordNotFound';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
 import { pickPhotos } from '@/engine/photos';
+import { describeTrips, realTrips, tripName, trips } from '@/engine/trips';
 import { PhotoTile, useMediaOwners } from '@/features/media/Thumbnails';
 
 /**
@@ -88,6 +89,12 @@ function YearReview({ year: requested }: { year?: string }) {
 
   // Twelve, spread across the months that have any: the grid is a year and
   // not a fortnight (PLAN.md M92).
+  // The year's trips (PLAN.md M88c). "Days on real rock" is a count; this
+  // is what those days were.
+  const outings = useMemo(
+    () => realTrips(trips({ sessions, from: review.from, to: review.to })),
+    [sessions, review.from, review.to],
+  );
   const photos = useMemo(
     () => pickPhotos({ owners, sessions, projects, from: review.from, to: review.to, limit: 12 }),
     [owners, sessions, projects, review.from, review.to],
@@ -186,6 +193,35 @@ function YearReview({ year: requested }: { year?: string }) {
                     />
                   )}
                 </div>
+              </Card>
+            )}
+
+            {outings.length > 0 && (
+              <Card title="Trips">
+                <ul className="grid grid-cols-1 gap-2.5">
+                  {outings
+                    .slice()
+                    .sort((a, b) => b.from.localeCompare(a.from))
+                    .map((trip) => (
+                      <li key={trip.from} className="flex items-baseline gap-2 text-sm">
+                        <span className="flex-1 min-w-0 truncate font-semibold">{tripName(trip)}</span>
+                        <span className="shrink-0 text-ink-soft tabular-nums">
+                          {trip.days} days ·{' '}
+                          {fromKey(trip.from).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </span>
+                      </li>
+                    ))}
+                </ul>
+                <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeTrips(outings)}</p>
+                {outings.some((trip) => !trip.numbered) && (
+                  <p className="text-xs text-ink-soft mt-3 leading-relaxed">
+                    Outdoor days close together are read as one trip. Numbering the days on the
+                    session — &ldquo;day of the trip&rdquo; — says where one starts instead.
+                  </p>
+                )}
               </Card>
             )}
 

@@ -212,3 +212,65 @@ describe('waiting until it is on screen', () => {
     expect(await screen.findByAltText('The crux')).toBeTruthy();
   });
 });
+
+
+/**
+ * The trip (PLAN.md M88c).
+ *
+ * `engine/trips.test.ts` proves the grouping. These prove the year review
+ * shows it — "days on real rock" is a count, and this is what those days
+ * were.
+ */
+describe('the year in trips', () => {
+  async function outdoorOn(dates: string[], location?: string): Promise<void> {
+    for (const [i, date] of dates.entries()) {
+      await putSession({
+        ...newSession(date, i, { completed: true }),
+        mode: 'outdoor',
+        rpe: 7,
+        durationMin: 240,
+        ...(location ? { fields: { location } } : {}),
+      } as never);
+    }
+    await hydrate();
+  }
+
+  it('names the trip and how long it was', async () => {
+    await outdoorOn([`${YEAR}-06-05`, `${YEAR}-06-06`, `${YEAR}-06-07`], 'Stanage');
+    renderAt(`/year/${YEAR}`, <YearPage params={{ year: String(YEAR) }} />);
+    expect(await screen.findByText('Trips')).toBeTruthy();
+    expect(screen.getByText('Stanage')).toBeTruthy();
+    expect(screen.getByText(/One trip, 3 days out\./)).toBeTruthy();
+  });
+
+  // One outdoor day is a day out, not a trip.
+  it('stays away from a year of single days', async () => {
+    await outdoorOn([`${YEAR}-06-05`, `${YEAR}-08-20`], 'Stanage');
+    renderAt(`/year/${YEAR}`, <YearPage params={{ year: String(YEAR) }} />);
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.queryByText('Trips')).toBeNull();
+  });
+
+  it('says when the grouping was its own guess', async () => {
+    await outdoorOn([`${YEAR}-06-05`, `${YEAR}-06-06`], 'Stanage');
+    renderAt(`/year/${YEAR}`, <YearPage params={{ year: String(YEAR) }} />);
+    await screen.findByText('Trips');
+    expect(screen.getByText(/Numbering the days on the session/)).toBeTruthy();
+  });
+
+  it('stays quiet about that when the days were numbered', async () => {
+    for (const [i, date] of [`${YEAR}-06-05`, `${YEAR}-06-06`].entries()) {
+      await putSession({
+        ...newSession(date, 0, { completed: true }),
+        mode: 'outdoor',
+        rpe: 7,
+        durationMin: 240,
+        fields: { location: 'Stanage', sessionNumber: i + 1 },
+      } as never);
+    }
+    await hydrate();
+    renderAt(`/year/${YEAR}`, <YearPage params={{ year: String(YEAR) }} />);
+    await screen.findByText('Trips');
+    expect(screen.queryByText(/Numbering the days on the session/)).toBeNull();
+  });
+});

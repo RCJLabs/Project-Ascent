@@ -3181,11 +3181,33 @@ a kept one.
   typed a crag three ways for six months cannot fix it, because fixing it means a bulk
   rewrite across three stores with an undo, and that is a milestone rather than a paragraph.
   Verified in both themes. 2,860 tests pass.
-- **M88c — The trip.** `sessionNumber` is labelled **"Day of the trip"**, asked by four
-  session types, and nothing in the app knows what a trip is. Outdoor Climbing asks it on
-  every session. A trip is a run of consecutive outdoor days with a place and a name, and
-  it is the unit climbers actually remember a year in — the year review's "days on real
-  rock" is the closest the app comes and it is a count, not a story.
+- **M88c — The trip.** *Done.* The premise held: `sessionNumber` is labelled "Day of the
+  trip", declared by four of Outdoor Climbing's five session types, and read by nothing but
+  the generic field renderer M70 built.
+  **The climber's answer is the authority and the calendar is the fallback**, which is the
+  only honest way to use the field. A session marked day one *starts* a trip, full stop —
+  that is what the label means. Where nobody numbered anything, outdoor days close together
+  are taken as one trip, which is a guess, and the card says which of the two it used rather
+  than presenting both the same way.
+  **Two rest days inside a trip do not end it.** A trip with bad weather in the middle is
+  still a trip, and two consecutive weekends are two trips to everyone I have climbed with.
+  **My number**, and the one thing here most likely to be wrong for someone else.
+  **A gap still splits a numbered trip**: a stale "day 4" fifteen days later is a forgotten
+  field, not a fortnight in Spain.
+  **Derived, like M88b, and with the same cost stated.** No stored trip, so nothing to
+  curate and it works on history — but a trip cannot be *named*, because a name is not
+  derivable from anything. A trip is known by where it was, and a climber who wants to call
+  it "Font '26" has nowhere to write that. Places are grouped on M88b's venue rule, so one
+  crag typed two ways is one crag.
+  Twenty-four mutations, all killed after a second pass. Three survived the first, and **one
+  was a mutant I wrote wrong** — a rewritten condition that was logically identical to the
+  original, the same mistake as M91's. The other two were ties in my fixtures: two trips of
+  equal length cannot tell the longest from the shortest, and two places cannot tell a
+  capped list from an uncapped one.
+  **One thing the browser fixed:** a road trip read "Burbage North and Stanage" when it
+  started at Stanage. Equally-visited places now sort by the day you got to them, because a
+  road trip reads as the order you drove it.
+  Verified in both themes. 2,891 tests pass.
 - **M89 — Injury load, counted before you get to the gym.** *Done.* The premise held:
   `sessionConflicts` appeared in its own file and its own test and nowhere else, while
   `exerciseConflict` shipped per line inside the logger.
