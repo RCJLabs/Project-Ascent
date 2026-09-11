@@ -169,17 +169,12 @@ describe('which weeks are deloads', () => {
    * Deload weeks the guide has no row for, so the derived mark has nowhere
    * to land and the reader is never told.
    *
-   * The mechanism closes the gap for six of the nine. These three need a
-   * week table written, which is authoring rather than plumbing: Lockdown
-   * and Iron Grip have no week-by-week table at all, and The Long Game and
-   * The Cruiser stop theirs partway through the block.
+   * Empty, and it stays empty (PLAN.md M77). It used to carry seven weeks
+   * across four guides — Lockdown and Iron Grip had no week table at all,
+   * The Long Game and The Cruiser stopped theirs partway — and each of those
+   * guides now has a row for every week the program runs.
    */
-  const NO_ROW_TO_MARK: Record<string, number[]> = {
-    lockdown: [4, 8],
-    iron_grip: [4, 8],
-    the_long_game: [8],
-    the_cruiser: [8, 12],
-  };
+  const NO_ROW_TO_MARK: Record<string, number[]> = {};
 
   it('reaches the reader wherever the guide has a week to put it on', () => {
     const gaps: Record<string, number[]> = {};
@@ -204,15 +199,90 @@ describe('which weeks are deloads', () => {
 /**
  * Exercises a guide prescribes that its program never schedules.
  *
- * The guide's armour blocks are marked non-negotiable and starred. If the
- * program does not carry them, the session screen will never hand one over
- * and the only place they exist is prose the climber has to remember.
+ * Empty, and it stays empty (PLAN.md M77). The seven it used to list were
+ * not missing from their programs — every one was there under another
+ * spelling: the guide's "Band Face Pulls" was the program's "Face Pulls
+ * (Band)", "Wide-Grip Pull-Ups" was "Wide Pull-Ups", "Hanging Windshield
+ * Wipers" was "Wipers (bent-knee)". The programs now use one name per
+ * movement, and `RETIRED_NAMES` below keeps the old spellings from coming
+ * back.
  */
-const EXERCISE_GAPS: Record<string, string[]> = {
-  ground_zero: ['Band Face Pulls', 'Front Delt Raises', 'Side Delt Raises'],
-  lockdown: ['Band Face Pulls', 'Hanging Windshield Wipers', 'Wide-Grip Pull-Ups'],
-  the_long_game: ['Band Face Pulls'],
+const EXERCISE_GAPS: Record<string, string[]> = {};
+
+/**
+ * One movement, one name, across every program and guide.
+ *
+ * The catalogue had "Face Pulls" in four programs, "Band Face Pulls" in
+ * four and "Face Pulls (Band)" in one — and every guide said "Band Face
+ * Pulls", so the gap check reported three programs missing an exercise all
+ * three had. A general rule cannot be written for this ("Wide Pull-Ups" and
+ * "Wide-Grip Pull-Ups" share no normal form a machine would trust), so it is
+ * a list: the spellings that were retired, and what replaced each. The
+ * glossary was the tie-breaker wherever it had an entry.
+ */
+const RETIRED_NAMES: Record<string, string> = {
+  'Face Pulls': 'Band Face Pulls',
+  'Wide Pull-Ups': 'Wide-Grip Pull-Ups',
+  'Windshield Wipers': 'Hanging Windshield Wipers',
+  Wipers: 'Hanging Windshield Wipers',
+  'Side Delt Raises': 'Side/Front Delt Raises',
+  'Front Delt Raises': 'Side/Front Delt Raises',
 };
+
+describe('one movement, one name', () => {
+  /** "Wipers (bent-knee)" is a variant of "Wipers"; the qualifier is kit or progression. */
+  const bare = (name: string) => name.replace(/\([^)]*\)/g, '').trim();
+
+  it('uses no retired spelling in any program', () => {
+    const found: string[] = [];
+    for (const program of PROGRAMS) {
+      for (const type of program.sessionTypes) {
+        for (const block of type.blocks ?? []) {
+          for (const phase of Object.values(block.perPhase ?? {})) {
+            for (const exercise of phase.exercises ?? []) {
+              const retired = RETIRED_NAMES[bare(exercise.name)];
+              if (retired) found.push(`${program.id}: "${exercise.name}" → ${retired}`);
+            }
+          }
+        }
+      }
+    }
+    expect(found).toEqual([]);
+  });
+
+  it('uses no retired spelling in any guide', () => {
+    const found: string[] = [];
+    for (const { program, guide } of PAIRS) {
+      for (const block of blocks(guide)) {
+        if (block.kind !== 'exercises') continue;
+        for (const item of block.items) {
+          const head = bare(item.split(':')[0] ?? '');
+          const retired = RETIRED_NAMES[head];
+          if (retired) found.push(`${program.id}: "${head}" → ${retired}`);
+        }
+      }
+    }
+    expect(found).toEqual([]);
+  });
+
+  it('retires nothing the catalogue still needs', () => {
+    // Every replacement is a name some program actually prescribes, so the
+    // list points at real movements rather than at spellings nobody uses.
+    const names = new Set<string>();
+    for (const program of PROGRAMS) {
+      for (const type of program.sessionTypes) {
+        for (const block of type.blocks ?? []) {
+          for (const phase of Object.values(block.perPhase ?? {})) {
+            for (const exercise of phase.exercises ?? []) names.add(bare(exercise.name));
+          }
+        }
+      }
+    }
+    for (const canonical of new Set(Object.values(RETIRED_NAMES))) {
+      expect(names.has(canonical), canonical).toBe(true);
+    }
+  });
+});
 
 describe('exercises the guide prescribes', () => {
   /** "Weighted Pull-Ups: 3×8" → "Weighted Pull-Ups". Prose lines give ''. */

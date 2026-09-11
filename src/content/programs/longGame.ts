@@ -16,7 +16,7 @@ const CORE_POOL: Exercise[] = [
   { name: 'Dead Bugs', reps: '12' },
   { name: 'Hollow Body', hold: '20-30s' },
   { name: 'Knee Raises', reps: '8-10' },
-  { name: 'Windshield Wipers', reps: '8 per side' },
+  { name: 'Hanging Windshield Wipers', reps: '8 per side' },
 ];
 
 /**
@@ -31,14 +31,14 @@ const CORE_POOL_LONG: Exercise[] = [
   { name: 'Dead Bugs', reps: '15' },
   { name: 'Hollow Body', hold: '30-40s' },
   { name: 'Knee Raises', reps: '10-12' },
-  { name: 'Windshield Wipers', reps: '10 per side' },
+  { name: 'Hanging Windshield Wipers', reps: '10 per side' },
 ];
 
 const ARMOR: Exercise[] = [
   { name: 'Wrist Extensor Curls', sets: '3', reps: '15' },
   { name: 'Finger Extensions', sets: '3', reps: '15' },
   { name: 'Band External Rotations', sets: '2', reps: '12 per arm' },
-  { name: 'Face Pulls', sets: '2', reps: '15' },
+  { name: 'Band Face Pulls', sets: '2', reps: '15' },
 ];
 
 /**

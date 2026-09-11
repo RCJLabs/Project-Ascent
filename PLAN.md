@@ -2634,22 +2634,52 @@ commit.
 
 **The large one.**
 
-- **M77 — The guides and the programs agree.** *Four steps, and the coach's calls at each.*
-  `guides/accuracy.test.ts` already reports the debt and it is the biggest known one in the
-  app: **eight of nine program guides disagree with their program about which weeks are
-  deloads**, two outright (Peak Performance's table says week 5, the program schedules 4;
-  The Siege's says 8, the program schedules 11); **three guides prescribe exercises their
-  program never schedules**, in starred "non-negotiable" blocks; and the **seven scheduled
-  deload weeks with no guide row** carried since M58. (1) Deloads: per program, decide which
-  side is right and fix the loser — proposed default is that the *schedule* wins, because
-  the flag is what the calendar marks and what stops a dip in load reading as detraining.
-  (2) Orphans: Band Face Pulls, Wide-Grip Pull-Ups, Hanging Windshield Wipers, the delt
-  raises — either into a block or out of the guide, no third option, because a starred
-  exercise the session screen never hands over is a promise the content cannot keep.
-  (3) The seven silent deload weeks get their guide row. (4) The test stops *reporting* and
-  starts *failing*: every row it lists today becomes an assertion, so the agreement cannot
-  drift again. Large because it is content, and content is where the app's own tests have
-  found the most wrong.
+- **M77 — The guides and the programs agree.** *Done — and two of its four steps were
+  already done before it started.* The proposal quoted the guide-verification paragraph
+  above: eight guides disagreeing with their program about deloads, six printing entry
+  tables the app could not read. **Both had been fixed by M34 and M35** — the deload mark is
+  derived from `deloadWeeks` now and a guide cannot state one, and every entry table is
+  `prerequisites` the finder reads. `accuracy.test.ts` said so in its own comments; the
+  proposal was written from the audit's prose without checking whether later milestones
+  had answered it, which is the exact mistake the audit's preamble warned about. That also
+  withdraws **M86** as written: the standards it proposed making checkable already are.
+  What remained was the test's two allow-lists, and one of them was not content debt at
+  all. **`EXERCISE_GAPS` — "seven exercises three guides prescribe that their programs
+  never schedule" — was seven spellings.** Every one was in its program under another
+  name: the guide's "Band Face Pulls" was Ground Zero's `Face Pulls (Band)` and Lockdown's
+  `Face Pulls`; "Wide-Grip Pull-Ups" was `Wide Pull-Ups`; "Hanging Windshield Wipers" was
+  `Wipers (bent-knee)`; the guide's two delt-raise lines were the program's one
+  `Side/Front Delt Raises`. Across the catalogue one movement had three names — "Face Pulls"
+  in four programs, "Band Face Pulls" in four, "Face Pulls (Band)" in one — and the check
+  only saw the guide-versus-program half of it. So: **one name per movement, everywhere.**
+  The glossary broke every tie it had an entry for (`Wide-Grip Pull-Ups`, `Hanging
+  Windshield Wipers`, `Side/Front Delt Raises`), the guides' unanimous `Band Face Pulls`
+  broke the other. Fourteen program entries across five programs renamed; two guide lines
+  changed — the delt pair merged to the glossary's single movement, and Lockdown's wipers
+  dose corrected from "3×10 total" to the program's "3×8 per side", which the dose audit
+  could not have caught until the name resolved. A `RETIRED_NAMES` test now scans every
+  program and every guide for the old spellings, and says why a general rule cannot be
+  written for this.
+  **`NO_ROW_TO_MARK` — seven deload weeks with no guide row — was real, and was authoring.**
+  Lockdown and Iron Grip had no week table at all; The Long Game's Phase 2 laid its weeks
+  out as columns; The Cruiser's block cycle stopped at week 4 of a repeating twelve. Each
+  has a row for every week the program runs now, with cells taken from the program's own
+  phase descriptions rather than written fresh — and the deload rows say what the
+  programs do not: *cut the sets by a third to a half, keep the load.* That is a coaching
+  call and the one thing here the author should read; the programs schedule the week and
+  prescribe no dose for it.
+  Both allow-lists are empty and the comments say they stay so, which is the fourth step:
+  the test no longer reports the debt, it fails on it. Eight mutations, eight killed — a
+  retired spelling returning to a program or a guide, a qualifier hiding one, a deload row
+  removed, the cruiser table stopping at week 4, a week table's header no longer saying
+  "Week", the wipers dose drifting back, and a program dropping a starred exercise.
+  The units test caught a slip on the way: the first draft of Iron Grip's table wrote
+  "+2.5 lbs" into prose, which is the imperial-in-prose count that test pins. Verified in a
+  browser with each section opened: Iron Grip and Lockdown twelve rows with 4 and 8
+  marked, The Long Game's new Phase 2 table with 8, The Cruiser's twelve with 8 and 12.
+  *What it does not settle:* whether "a third to a half" is the deload the coach wants,
+  and the seven other `Face Pulls`-style near-duplicates that may exist for movements no
+  guide happens to name — the retired list only knows the ones this found.
 
 **The app itself.**
 
@@ -2726,14 +2756,9 @@ commit.
   did you finish it, what moved (M84), the retest you owe, the graduation line, and the
   authored next programs with their reasons — with the finder pre-filled from the log
   rather than asked again.
-- **M86 — Entry standards the app can check.** Six programs print an entry-requirements
-  table as prose the app cannot read — Iron Grip's is "V5+, Dead Hang 60+ seconds, 15+
-  strict push-ups". `Program.prerequisites` exists for exactly this, `finder.ts` already
-  reads `prerequisites.metrics` and turns a miss into a blocker or a caution, and `dead_hang`
-  and `max_pushups` are registered metrics. Convert each table row into a checkable
-  threshold, so the finder blocks and cautions from the climber's own numbers and the
-  program page can say "you meet two of three, and here is the one to log." Distinct from
-  M77 step 2: that reconciles prose with the schedule; this turns prose into data.
+- **M86 — ~~Entry standards the app can check~~.** *Withdrawn in M77.* Already done by M35:
+  `accuracy.test.ts` asserts that every guide printing an entry table has `prerequisites`
+  the finder reads, and it passes empty. Proposed from stale audit prose.
 
 - **M12 — Ship.** *Parked.* TWA packaging + assetlinks, Play internal testing, store
   listing. Blocked on two facts only the author has — the app name and the package id —

@@ -110,7 +110,7 @@ export const GROUND_ZERO: Program = {
                 'Add load to the newly-activated stabilizers. Face Pulls become a permanent fixture — they never leave the program. Pull to forehead, rotate to "double bicep."',
               exercises: [
                 {
-                  name: 'Face Pulls (Band)',
+                  name: 'Band Face Pulls',
                   sets: '3',
                   reps: '15',
                   notes: 'Pull to the forehead and rotate into a double-bicep position.',
@@ -122,7 +122,7 @@ export const GROUND_ZERO: Program = {
               rationale:
                 'Peak load for the shoulder complex. Hanging Scapular Shrugs are the foundation for pull-ups — engage and depress the shoulder blades before any arm bend.',
               exercises: [
-                { name: 'Face Pulls (Band)', sets: '3', reps: '15' },
+                { name: 'Band Face Pulls', sets: '3', reps: '15' },
                 {
                   name: 'Scapular Shrugs (Hanging)',
                   sets: '3',

@@ -372,8 +372,7 @@ export const GROUND_ZERO: Guide = {
           name: 'THE PUSH — Complex',
           items: [
             'Push-Up to Plank: 3×10. Minimize hip rotation.',
-            'Side Delt Raises: 3×12. Light weight.',
-            'Front Delt Raises: 3×12. Thumbs up.',
+            'Side/Front Delt Raises: 3×12. Light weight; thumbs up on the front raises.',
           ],
         },
         {

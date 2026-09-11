@@ -178,6 +178,17 @@ export const THE_LONG_GAME: Guide = {
         { kind: 'note', text: 'Phase 1: never feel pumped. Phase 2: feel pumped — and keep climbing.' },
         { kind: 'h', text: 'Performance: Working Your Project' },
         { kind: 'p', text: '1–2 routes at redpoint limit (~5.11–5.12). Attempt 1: full route, note every issue. Attempts 2–3: isolate crux. Attempt 4+: link crux→top, bottom→crux, then full send. Rest 5–8 min between burns.' },
+        { kind: 'h', text: 'Weekly Focus' },
+        {
+          kind: 'table',
+          head: ['Week', 'Endurance', 'Performance'],
+          rows: [
+            [ '5', 'Linked Laps 3–4 sets. Pump Clock: find your onset time.', 'Attempt 1 on the project: full route, note every issue.'],
+            [ '6', '4×4 Routes ★ 3–4 sets. Rest 4 min between.', 'Attempts 2–3: isolate the crux.'],
+            [ '7', 'Linked Laps + Pump Clock. Extend the window 20–30%.', 'Link crux→top, then bottom→crux.'],
+            [ '8 (Deload)', 'Reduce to 2 sets. Easy ARC 2×10 min.', 'Attempt 4+: a full-send burn only if the links are clean.'],
+          ],
+        },
       ],
     },
     {

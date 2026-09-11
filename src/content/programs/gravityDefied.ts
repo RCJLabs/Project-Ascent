@@ -16,7 +16,7 @@ const PHASE = { mechanics: 'mechanics', advanced: 'advanced', flight: 'flight' }
  *  for doing it changes. */
 const ARMOR: Exercise[] = [
   { name: 'Band External Rotations', sets: '2', reps: '12 per arm', load: 'Light' },
-  { name: 'Face Pulls', sets: '2', reps: '15' },
+  { name: 'Band Face Pulls', sets: '2', reps: '15' },
   { name: 'Finger Extensions', sets: '2', reps: '15', load: 'Band or rubber ring' },
   { name: 'Wrist Extensor Curls', sets: '2', reps: '15' },
 ];

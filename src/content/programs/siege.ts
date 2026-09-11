@@ -271,7 +271,7 @@ export const THE_SIEGE: Program = {
                 { name: 'Finger Extensions', sets: '3', reps: '15' },
                 { name: 'Hammer Curls', sets: '3', reps: '12' },
                 { name: 'Band External Rotations', sets: '2', reps: '12 per arm' },
-                { name: 'Face Pulls', sets: '2', reps: '15' },
+                { name: 'Band Face Pulls', sets: '2', reps: '15' },
               ],
             },
             [PHASE.link]: {
@@ -282,7 +282,7 @@ export const THE_SIEGE: Program = {
                 { name: 'Finger Extensions', sets: '3', reps: '15' },
                 { name: 'Hammer Curls', sets: '3', reps: '12' },
                 { name: 'Band External Rotations', sets: '3', reps: '12 per arm' },
-                { name: 'Face Pulls', sets: '3', reps: '15' },
+                { name: 'Band Face Pulls', sets: '3', reps: '15' },
               ],
             },
             [PHASE.send]: {
@@ -293,7 +293,7 @@ export const THE_SIEGE: Program = {
                 { name: 'Finger Extensions', sets: '3', reps: '15' },
                 { name: 'Hammer Curls', sets: '3', reps: '12' },
                 { name: 'Band External Rotations', sets: '3', reps: '12 per arm' },
-                { name: 'Face Pulls', sets: '3', reps: '15' },
+                { name: 'Band Face Pulls', sets: '3', reps: '15' },
               ],
             },
           },

@@ -19,7 +19,7 @@ const ARMOR_A: Exercise[] = [
   { name: 'Wrist Extensor Curls', sets: '2', reps: '15', load: 'Light' },
   { name: 'Finger Extensions', sets: '2', reps: '15', load: 'Band or rubber ring' },
   { name: 'Band External Rotations', sets: '2', reps: '12 per arm' },
-  { name: 'Face Pulls', sets: '2', reps: '15' },
+  { name: 'Band Face Pulls', sets: '2', reps: '15' },
 ];
 
 /**
@@ -253,7 +253,7 @@ export const LOCKDOWN: Program = {
               rationale:
                 'Wide grip puts the lats in a more challenging mechanical position than standard grip — trains pulling strength you can’t build on a narrower bar. 3 seconds down is the work; the up-phase is just getting you back to the top.',
               exercises: [
-                { name: 'Wide Pull-Ups', sets: '3', reps: '6-8', notes: 'Three seconds down on every rep.' },
+                { name: 'Wide-Grip Pull-Ups', sets: '3', reps: '6-8', notes: 'Three seconds down on every rep.' },
               ],
             },
             [PHASE.intensification]: {
@@ -261,7 +261,7 @@ export const LOCKDOWN: Program = {
                 'Same exercise, same tempo. If 6-8 reps is comfortable, add 5-10 lbs with a weight belt rather than adding reps — this is a strength block, not hypertrophy. Rest 2-3 min between sets.',
               exercises: [
                 {
-                  name: 'Wide Pull-Ups',
+                  name: 'Wide-Grip Pull-Ups',
                   sets: '3',
                   reps: '6-8',
                   load: '+5-10 lbs if 6-8 reps is comfortable',
@@ -274,7 +274,7 @@ export const LOCKDOWN: Program = {
               rationale:
                 'Maintain. Pull-up volume is already high between lock-offs and any on-wall projecting — don’t add stress here. Keep form strict; if reps 7-8 are ugly, cap the set at 6.',
               exercises: [
-                { name: 'Wide Pull-Ups', sets: '3', reps: '6-8', notes: 'Cap the set at 6 if the last reps get ugly.' },
+                { name: 'Wide-Grip Pull-Ups', sets: '3', reps: '6-8', notes: 'Cap the set at 6 if the last reps get ugly.' },
               ],
             },
           },
@@ -318,7 +318,7 @@ export const LOCKDOWN: Program = {
                 'Static core drills mirror steep, static climbing demands. Compression Planks: squeeze something between your hands the whole set. RKC Plank: maximum full-body clench for 20 seconds — 15s of max tension beats 60s of lazy holding. Wipers: hanging bar, bent knees, rotate slowly side-to-side.',
               exercises: [
                 { name: 'Compression Planks', sets: '3', hold: '20s', notes: 'Squeeze something between your hands throughout.' },
-                { name: 'Wipers (bent-knee)', sets: '3', reps: '8 per side' },
+                { name: 'Hanging Windshield Wipers (bent-knee)', sets: '3', reps: '8 per side' },
                 { name: 'RKC Plank', sets: '3', hold: '20s', notes: 'Maximum full-body clench.' },
               ],
             },
@@ -327,7 +327,7 @@ export const LOCKDOWN: Program = {
                 'Progressions. Compression Planks become long-lever (hands reach further from shoulders). Wipers progress to straight-legged for maximum compression demand. RKC drops to 15s but intensity goes up — clench so hard you shake. Every rep should feel like the hardest contraction you can produce.',
               exercises: [
                 { name: 'Compression Planks (long-lever)', sets: '3', hold: '25s' },
-                { name: 'Wipers (straight-leg)', sets: '3', reps: '8 per side' },
+                { name: 'Hanging Windshield Wipers (straight-leg)', sets: '3', reps: '8 per side' },
                 { name: 'RKC Plank', sets: '3', hold: '15s', notes: 'Max effort — clench hard enough to shake.' },
               ],
             },
@@ -336,7 +336,7 @@ export const LOCKDOWN: Program = {
                 'Top-end. Weighted vest on Compression Planks (5-10 lbs). Ankle weights on Wipers (3-5 lbs). Graduation-level core tension — what limit-level static climbing actually demands. Skip vest/weights if form breaks; loaded core work with poor form is an injury pipeline.',
               exercises: [
                 { name: 'Compression Planks', sets: '3', hold: '20s', load: 'Weighted vest, 5-10 lbs' },
-                { name: 'Wipers', sets: '3', reps: '8 per side', load: 'Ankle weights, 3-5 lbs' },
+                { name: 'Hanging Windshield Wipers', sets: '3', reps: '8 per side', load: 'Ankle weights, 3-5 lbs' },
                 { name: 'RKC Plank', sets: '3', hold: '15s', notes: 'Max effort.' },
               ],
             },

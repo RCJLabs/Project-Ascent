@@ -55,7 +55,7 @@ export const THE_CRUISER: Guide = {
     {
       title: 'The Block Cycle',
       content: [
-        { kind: 'p', text: 'The Cruiser runs in repeating **4-week blocks**: 3 weeks work + 1 week deload. No end date. Every 3 blocks (12 weeks), run a Self-Assessment Checkpoint. ✓' },
+        { kind: 'p', text: 'The Cruiser runs in repeating **4-week blocks**: 3 weeks work + 1 week deload. No end date. Every 3 blocks (12 weeks), run a Self-Assessment Checkpoint. All three blocks of one cycle are laid out below; the shape repeats. ✓' },
         {
           kind: 'table',
           head: [
@@ -70,6 +70,14 @@ export const THE_CRUISER: Guide = {
             [ '2', 'Work', '100%', 'RPE 5-8', 'Maintain or slightly increase load.'],
             [ '3', 'Work', '100%', 'RPE 6-8', 'Push the top end. Highest effort of the block.'],
             [ '4', 'Deload', '60%', 'RPE 4-6', 'Reduced volume. No limit climbing. Tendons recover. ✓'],
+            [ '5', 'Work', '100%', 'RPE 5-8', 'Block 2. Volume sessions bias slightly harder.'],
+            [ '6', 'Work', '100%', 'RPE 6-8', 'Let the grade creep toward your true limit. Rotate in the harder endurance protocols.'],
+            [ '7', 'Work', '100%', 'RPE 6-8', 'Movement should feel tighter than Block 1. Reassess your strength track at the boundary.'],
+            [ '8', 'Deload', '60%', 'RPE 4-6', 'Reduced volume. No limit climbing. ✓'],
+            [ '9', 'Work', '100%', 'RPE 6-9', 'Block 3. Open a short performance window on one or two projects.'],
+            [ '10', 'Work', '100%', 'RPE 6-9', 'Real burns in good conditions. Volume and Endurance days run short and easy.'],
+            [ '11', 'Work', '100%', 'RPE 6-9', 'Endurance work that matches the project. Protect recovery.'],
+            [ '12', 'Deload', '60%', 'RPE 4-6', 'Final deload and the Self-Assessment Checkpoint. Retest, then decide what comes next.'],
           ],
         },
         { kind: 'note', text: 'The deload is not optional. Tendons adapt 5-10x slower than muscles. Your muscles will always feel ready before your connective tissue is. The deload is where adaptation happens. ✓' },
