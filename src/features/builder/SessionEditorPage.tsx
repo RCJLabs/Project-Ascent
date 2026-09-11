@@ -279,14 +279,16 @@ function BlockCard({
       {p.selection && (
         <div className="flex items-center gap-2 text-sm mb-3">
           <span className="text-ink-soft">Pick</span>
+          <span className="w-16 shrink-0 inline-block">
           <Input
             type="number"
             min={1}
             value={p.selection.pick}
             onChange={(e) => set({ selection: { ...p.selection!, pick: Math.max(1, Number(e.target.value) || 1) } })}
             aria-label="How many to pick"
-            className={`${small} w-16`}
+            className={small}
           />
+          </span>
           <span className="text-ink-soft">of {p.exercises.length}</span>
         </div>
       )}

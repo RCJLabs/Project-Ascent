@@ -424,14 +424,21 @@ function Row<T extends string>({
 
 function NumberBox({ value, label, onChange }: { value: number; label: string; onChange: (n: number) => void }) {
   return (
-    <Input
-      type="number"
-      min={1}
-      value={value}
-      aria-label={label}
-      onChange={(e) => onChange(Math.max(1, Number(e.target.value) || 1))}
-      className="w-16 bg-surface border border-line rounded-lg px-2 py-1.5 text-sm"
-    />
+    // A sized wrapper: `Input` sets `w-full`, so the `w-16` that used to sit
+    // here was a coin flip on Tailwind's emit order rather than a width
+    // (PLAN.md M102). The border and background it also carried were a
+    // second copy of the control's own styling.
+    <span className="w-16 shrink-0">
+      <Input
+        type="number"
+        min={1}
+        value={value}
+        aria-label={label}
+        onChange={(e) => onChange(Math.max(1, Number(e.target.value) || 1))}
+        className="bg-surface"
+        size="compact"
+      />
+    </span>
   );
 }
 

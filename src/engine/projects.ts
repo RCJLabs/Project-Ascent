@@ -53,6 +53,30 @@ export function highPointOf(attempt: ProjectAttempt): number | null {
   return attempt.highPoint ?? OUTCOME_HIGH_POINT[attempt.outcome];
 }
 
+/**
+ * Where a burn began, on the same scale (PLAN.md M102).
+ *
+ * The ground unless the climber said otherwise, which is what every burn
+ * logged before `from` existed meant. `worked` is the exception and returns
+ * null: rehearsing moves is not a burn from anywhere, and calling it a
+ * ground-up attempt would invent a link nobody made.
+ */
+export function startOf(attempt: ProjectAttempt): number | null {
+  if (attempt.outcome === 'worked') return attempt.from ?? null;
+  return attempt.from ?? 0;
+}
+
+/**
+ * The stretch a burn actually covered in one go, or null when it covered
+ * none — a rehearsal, or a burn that ended where it started.
+ */
+export function linkOf(attempt: ProjectAttempt): { from: number; to: number } | null {
+  const to = highPointOf(attempt);
+  const from = startOf(attempt);
+  if (to === null || from === null || to <= from) return null;
+  return { from, to };
+}
+
 export interface AttemptRecord extends ProjectAttempt {
   sessionId: string;
   date: string;
@@ -88,8 +112,22 @@ export interface ProjectSummary {
   lastDate: string | null;
   /** Days since the last burn — the staleness pill. Null with no attempts. */
   daysSinceLast: number | null;
-  /** Best percentage reached, ignoring `worked`. */
+  /**
+   * Best percentage reached **from the ground**, ignoring `worked`.
+   *
+   * Ground-up since M102, which is what this number was always taken to
+   * mean and was not: a burn started at the midpoint could report 90% on a
+   * climb the climber had never linked past halfway.
+   */
   highPoint: number | null;
+  /**
+   * The longest single link, and where it ran (PLAN.md M102).
+   *
+   * The number that decides a redpoint. A climber with 0-60% from the
+   * ground and 55-100% from above has covered the whole climb and linked
+   * none of it, and until this the app could not tell that from a send.
+   */
+  bestLink: { from: number; to: number } | null;
   bestOutcome: AttemptOutcome | null;
   sendDate: string | null;
   /** Best high point per day, for the progression line. */
@@ -104,13 +142,21 @@ export function summariseProject(
   const attempts = attemptsFor(projectId, sessions);
   const byDay = new Map<string, number>();
   let highPoint: number | null = null;
+  let bestLink: { from: number; to: number } | null = null;
   let bestOutcome: AttemptOutcome | null = null;
   let burns = 0;
 
   for (const attempt of attempts) {
     burns += Math.max(1, attempt.count);
+    const link = linkOf(attempt);
+    if (link !== null && (bestLink === null || link.to - link.from > bestLink.to - bestLink.from)) {
+      bestLink = link;
+    }
     const hp = highPointOf(attempt);
-    if (hp !== null) {
+    // Ground-up only. A burn that started halfway says nothing about how far
+    // this climber can get from the bottom, which is what the number on the
+    // card has always been read as (PLAN.md M102).
+    if (hp !== null && startOf(attempt) === 0) {
       if (highPoint === null || hp > highPoint) highPoint = hp;
       const day = byDay.get(attempt.date);
       if (day === undefined || hp > day) byDay.set(attempt.date, hp);
@@ -133,6 +179,7 @@ export function summariseProject(
     lastDate,
     daysSinceLast: lastDate === null ? null : Math.max(0, daysBetween(lastDate, today)),
     highPoint,
+    bestLink,
     bestOutcome,
     sendDate: send?.date ?? null,
     highPointByDay: [...byDay.entries()].map(([date, value]) => ({ date, value })),

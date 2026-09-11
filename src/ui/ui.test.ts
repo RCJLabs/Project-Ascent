@@ -217,6 +217,13 @@ describe('the primitives are safe to use', () => {
 describe('overriding a component from the outside', () => {
   const OWNED: { component: string; prop: string; pattern: RegExp }[] = [
     { component: 'SelectableCard', prop: 'padded', pattern: /\bp-\d/ },
+    // `Input` sets `w-full`, so a width beside it is a coin flip rather than
+    // a width — which is how M102's "From %" box rendered full-width on its
+    // own line. There is no prop for this one: a control that should not
+    // fill its row goes in a sized wrapper, as `ExerciseNumbers` does.
+    // Not `min-w-*` or `max-w-*`: those constrain a flex child rather than
+    // arguing with `w-full`, and they are how a control shares a row.
+    { component: 'Input', prop: 'a sized wrapper around it', pattern: /(?<![\w-])w-(?!full\b)[\d[]/ },
   ];
 
   it('does not try to win a padding argument through className', () => {

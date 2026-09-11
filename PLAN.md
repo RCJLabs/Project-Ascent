@@ -3914,19 +3914,50 @@ materially wrong premise. Sizes are guesses.*
   Verified in a browser in both themes, on a block barely done and a block fully done.
   3,155 tests pass.
 
-- **M102 — Links, not just high points.** *Proposed. Size M.*
-  **Premise.** A burn is `worked | fell-low | fell-mid | fell-high | fell-crux | send` with
-  a `highPoint` percentage. That is one number from the ground. Redpointing is done in
-  overlapping links — top-out from the crux, ground to the crux, then the join — and the
-  app cannot store a link, so "What they cost" (M69) can count burns and never say the one
-  thing that decides a send: *you have never linked through move seven from below*.
-  **Shape.** An optional section map on a project — named sections or move numbers, the
-  climber's choice — and a burn may record a link `from → to`. Derived: the coverage
-  picture (a bar per section, the longest overlap, the gap), on the project page and in
-  "What they cost". The M71 beta drawing gets a section marker, so the picture and the
-  photo agree.
-  **Never.** Predict the send. Below two links it draws nothing; `projectHistory` set the
-  rule that a small sample is an anecdote and is labelled as one.
+- **M102 — Links, not just high points.** *Done, refusing the section map, and the
+  premise was missing a third record of the same thing.*
+  **The premise held and undercounted.** A burn stores an outcome and a `highPoint`
+  percentage, and a redpoint is decided by *links* rather than one number from the ground.
+  What it did not say is that the app already records how far you got **three** ways: the
+  five-step outcome, the explicit percentage, and `session.fields.highPoint` — a **text**
+  field asking for "the move, bolt or hold you reached", declared by seven session types
+  across five programs and read by nothing but the generic renderer.
+  **So the section map is refused.** A named-section vocabulary would have been a *fourth*
+  way to say how far you got, and the percentage scale it would have competed with is already
+  used in four places — the stat, the progression line, the coach, the projects list. Three
+  milestones this session went wrong by adding a second way to say something the record
+  already said; adding a fourth would have needed a section editor and a per-burn picker for
+  data almost nobody enters.
+  **One optional number instead: `from`, on the scale already in use.** Absent means the
+  ground, which is what every burn logged before this meant — so no record changes meaning
+  and the common case still costs nothing. `worked` is the exception and has no start, because
+  rehearsing moves is not a burn from anywhere.
+  **It fixed a live bug rather than only adding a feature.** `summary.highPoint` was the best
+  percentage reached *by any burn*, so working the top half and logging "fell at the crux"
+  reported **90% on a climb never linked past halfway**. It is ground-up now, and the stat is
+  labelled "From the ground" so the number says which question it answers. `bestLink` is the
+  new one — the longest single stretch climbed in one go, which is the number that decides the
+  send.
+  **It predicts nothing**, and the card says so in as many words: *"The send is the join, and
+  the app will not guess how close it is."* It appears only where it says something the
+  ground-up number does not.
+  **A copy fix the measurement turned up**: a projecting session rendered two controls called
+  "High point" meaning different measurements. The session question is "The move you reached"
+  now — the coach can overrule the wording.
+  **Not touched, deliberately**: `projectHistory` (M69). Links are the state of one project;
+  that module reports what projects *cost* per grade, and a link is not a cost.
+  Twenty-two mutations, nineteen killed. **All three survivors were weak fixtures of mine**,
+  not code: a day with only one ground-up burn could not test "keep the day's best", the
+  longer link sat second so "keep the last" passed, and the field-label test ran on a session
+  that renders no fields at all — vacuous, the M100 lesson again.
+  **The browser found the trap for the third time this session.** `Input` sets `w-full`, so the
+  `w-24` on the "From %" box was a coin flip on Tailwind's emit order rather than a width, and
+  it rendered full-width on its own line. The fix is a sized wrapper, as `ExerciseNumbers`
+  already does — and the guard for it **already existed**: `ui.test.ts`'s `OWNED` table, written
+  for M30's padding bug, needed one row. Adding it found **two more instances** that had been
+  shipping, in the builder and the session editor, one of them also carrying a second copy of
+  the control's own border and background.
+  Verified in both themes. 3,178 tests pass.
 
 - **M103 — The injury as a series.** *Proposed. Size M.*
   **Premise.** `Injury` is part, since, severity, status, side, a checklist and your own

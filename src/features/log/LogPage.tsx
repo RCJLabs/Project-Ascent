@@ -1356,6 +1356,25 @@ function ProjectBurnsCard({
 
   // Burn notes are the fourth thing the journal reads, so they have to be
   // writable somewhere — here, beside the burn they describe.
+  /**
+   * Where the burn started (PLAN.md M102).
+   *
+   * Blank is the ground, which is what every burn logged before this meant
+   * and what nearly every burn is — so the common case still costs nothing.
+   */
+  function startAt(attempt: ProjectAttempt, raw: string) {
+    const typed = raw.trim() === '' ? undefined : Number(raw);
+    if (typed !== undefined && !Number.isFinite(typed)) return;
+    onChange({
+      ...session,
+      projectAttempts: attempts.map((a) =>
+        a === attempt
+          ? { ...a, from: typed === undefined ? undefined : Math.max(0, Math.min(100, typed)) }
+          : a,
+      ),
+    });
+  }
+
   function note(attempt: ProjectAttempt, text: string) {
     onChange({
       ...session,
@@ -1410,12 +1429,34 @@ function ProjectBurnsCard({
                           −
                         </IconButton>
                       </span>
+                      {/* Only where there is a link to describe: a rehearsal
+                          starts nowhere in particular, and a send from the
+                          ground is the whole climb by definition. */}
+                      {/* A sized wrapper, not a width on the control: `Input`
+                          sets `w-full` itself, and a `w-24` beside it is a
+                          coin flip on Tailwind's emit order rather than a
+                          width. The browser showed it as a full-width box on
+                          its own line; M100 hit the same trap twice. */}
+                      {a.outcome !== 'worked' && a.outcome !== 'send' && (
+                        <span className="w-24 shrink-0">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={a.from ?? ''}
+                            onChange={(e) => startAt(a, e.target.value)}
+                            placeholder="From %"
+                            aria-label={`Where the ${a.outcome} burns started, as a percentage`}
+                            size="compact"
+                          />
+                        </span>
+                      )}
                       <Input
                         value={a.note ?? ''}
                         onChange={(e) => note(a, e.target.value)}
                         placeholder="What happened?"
                         aria-label={`Note about the ${a.outcome} burns`}
-                        className="flex-1 min-w-32" size="compact"
+                        className="flex-1 min-w-24" size="compact"
                       />
                     </li>
                   ))}

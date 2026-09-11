@@ -5,7 +5,9 @@ import {
   applyPatch,
   attemptsFor,
   highPointOf,
+  linkOf,
   reconcileProjects,
+  startOf,
   suggestProjects,
   summariseProject,
 } from './projects';
@@ -219,5 +221,118 @@ describe('suggestProjects', () => {
     });
     const nonsense = [tried('2026-09-01', 'Ghost', 'V99'), tried('2026-09-05', 'Ghost', 'V99')];
     expect(suggestProjects([unnamed, ...nonsense], [])).toEqual([]);
+  });
+});
+
+/**
+ * Links, not just high points (PLAN.md M102).
+ *
+ * A redpoint is decided by links: you top out from the crux, you get from
+ * the ground to the crux, and the send is the join. The app stored only
+ * where a burn *ended*, so a climber who had covered the whole climb in two
+ * overlapping halves and linked none of it looked, on the card, like someone
+ * at 90%.
+ */
+describe('where a burn started', () => {
+  const burn = (patch: Partial<ProjectAttempt>): ProjectAttempt => ({
+    id: 'a', projectId: 'p', outcome: 'fell-high', count: 1, ...patch,
+  });
+
+  // Every burn logged before `from` existed was a burn from the ground, and
+  // reading them any other way would rewrite the past.
+  it('is the ground unless the climber said otherwise', () => {
+    expect(startOf(burn({}))).toBe(0);
+    expect(startOf(burn({ outcome: 'send' }))).toBe(0);
+    expect(startOf(burn({ from: 40 }))).toBe(40);
+  });
+
+  // Rehearsing moves is not a burn from anywhere, and calling it a ground-up
+  // attempt would invent a link nobody made.
+  it('is unknown for a rehearsal', () => {
+    expect(startOf(burn({ outcome: 'worked' }))).toBeNull();
+    expect(startOf(burn({ outcome: 'worked', from: 60 }))).toBe(60);
+  });
+
+  it('reads a link off the two ends', () => {
+    expect(linkOf(burn({ from: 30, highPoint: 80 }))).toEqual({ from: 30, to: 80 });
+    expect(linkOf(burn({ outcome: 'fell-high' }))).toEqual({ from: 0, to: 75 });
+  });
+
+  it('is no link when it covered nothing', () => {
+    expect(linkOf(burn({ outcome: 'worked' }))).toBeNull();
+    expect(linkOf(burn({ from: 80, highPoint: 80 }))).toBeNull();
+    expect(linkOf(burn({ from: 90, highPoint: 80 }))).toBeNull();
+  });
+});
+
+describe('a project covered in halves', () => {
+  /** 0-40% from the ground, then 30-100% from above. Never linked. */
+  const halves = [
+    session('2026-03-01', [
+      { id: 'a1', projectId: 'p1', outcome: 'fell-low', count: 3, highPoint: 40 },
+      { id: 'a2', projectId: 'p1', outcome: 'fell-crux', count: 2, from: 30, highPoint: 100 },
+    ]),
+  ];
+
+  // The number on the card has always been read as "how far I get from the
+  // bottom", and a burn started halfway said nothing about that.
+  it('reports the high point from the ground only', () => {
+    expect(summariseProject('p1', halves).highPoint).toBe(40);
+  });
+
+  it('reports the longest single link', () => {
+    expect(summariseProject('p1', halves).bestLink).toEqual({ from: 30, to: 100 });
+  });
+
+  it('keeps the progression line ground-up too', () => {
+    expect(summariseProject('p1', halves).highPointByDay).toEqual([{ date: '2026-03-01', value: 40 }]);
+  });
+
+  it('has no link at all before anything was climbed', () => {
+    const rehearsed = [session('2026-03-01', [
+      { id: 'a1', projectId: 'p1', outcome: 'worked', count: 4 },
+    ])];
+    expect(summariseProject('p1', rehearsed).bestLink).toBeNull();
+    expect(summariseProject('p1', rehearsed).highPoint).toBeNull();
+  });
+
+  /**
+   * The longest link is the longest, not the highest — and not the last.
+   *
+   * Both orders, because a first version put the longer link second and a
+   * mutation that simply kept the newest one passed.
+   */
+  it('prefers the longer link over the one that reaches further', () => {
+    const longerFirst = [session('2026-03-01', [
+      { id: 'a1', projectId: 'p1', outcome: 'fell-high', count: 1, from: 0, highPoint: 65 },
+      { id: 'a2', projectId: 'p1', outcome: 'fell-crux', count: 1, from: 70, highPoint: 100 },
+    ])];
+    expect(summariseProject('p1', longerFirst).bestLink).toEqual({ from: 0, to: 65 });
+
+    const longerLast = [session('2026-03-02', [
+      { id: 'b1', projectId: 'p1', outcome: 'fell-crux', count: 1, from: 70, highPoint: 100 },
+      { id: 'b2', projectId: 'p1', outcome: 'fell-high', count: 1, from: 0, highPoint: 65 },
+    ])];
+    expect(summariseProject('p1', longerLast).bestLink).toEqual({ from: 0, to: 65 });
+  });
+
+  // The line is one point per day, and the point is the day's best — which a
+  // mutation dropping the comparison survived, because no fixture had two
+  // ground-up burns on one day.
+  it('keeps the best ground-up burn of a day, not the last', () => {
+    const day = [session('2026-03-01', [
+      { id: 'a1', projectId: 'p1', outcome: 'fell-high', count: 1, highPoint: 80 },
+      { id: 'a2', projectId: 'p1', outcome: 'fell-low', count: 1, highPoint: 20 },
+    ])];
+    expect(summariseProject('p1', day).highPointByDay).toEqual([{ date: '2026-03-01', value: 80 }]);
+  });
+
+  it('leaves an ordinary ground-up project reading exactly as before', () => {
+    const plain = [session('2026-03-01', [
+      { id: 'a1', projectId: 'p1', outcome: 'fell-high', count: 4 },
+    ])];
+    const summary = summariseProject('p1', plain);
+    expect(summary.highPoint).toBe(75);
+    expect(summary.bestLink).toEqual({ from: 0, to: 75 });
   });
 });

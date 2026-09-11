@@ -86,7 +86,10 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
           <div className="grid grid-cols-4 gap-2 text-center">
             <Stat label="Burns" value={String(summary.burns)} />
             <Stat label="Days" value={String(summary.days)} />
-            <Stat label="High point" value={summary.highPoint === null ? '—' : `${summary.highPoint}%`} />
+            <Stat
+              label="From the ground"
+              value={summary.highPoint === null ? '—' : `${summary.highPoint}%`}
+            />
             <Stat
               label="Last burn"
               value={summary.daysSinceLast === null ? '—' : summary.daysSinceLast === 0 ? 'today' : `${summary.daysSinceLast}d`}
@@ -107,6 +110,24 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
             </p>
           )}
         </Card>
+
+        {/* The number that decides a redpoint (PLAN.md M102). A climber with
+            0-60% from the ground and 55-100% from above has covered the whole
+            climb and linked none of it, and only this can tell that from a
+            send. Shown when it says something the ground-up number does not. */}
+        {summary.bestLink !== null && summary.bestLink.from > 0 && project.status !== 'sent' && (
+          <Card title="Longest link">
+            <p className="text-2xl font-black tabular-nums">
+              {summary.bestLink.from}% → {summary.bestLink.to}%
+            </p>
+            <p className="text-sm text-ink-soft mt-1.5 leading-relaxed">
+              {summary.highPoint === null
+                ? 'Nothing linked from the ground yet.'
+                : `From the ground you have reached ${summary.highPoint}%.`}{' '}
+              The send is the join, and the app will not guess how close it is.
+            </p>
+          </Card>
+        )}
 
         {points.length >= 2 && (
           <Card title="High point">
@@ -141,8 +162,12 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
                     {OUTCOME_LABEL[a.outcome]}
                     {a.count > 1 ? ` ×${a.count}` : ''}
                   </span>
-                  <span className="text-xs font-bold tabular-nums text-ink-soft">
-                    {highPointOf(a) === null ? '' : `${highPointOf(a)}%`}
+                  <span className="text-xs font-bold tabular-nums text-ink-soft shrink-0">
+                    {highPointOf(a) === null
+                      ? ''
+                      : a.from
+                        ? `${a.from}→${highPointOf(a)}%`
+                        : `${highPointOf(a)}%`}
                   </span>
                 </li>
               ))}

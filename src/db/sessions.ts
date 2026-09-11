@@ -43,6 +43,19 @@ export interface ProjectAttempt {
   /** Percentage of the climb reached. Absent for `worked`, which is
    *  rehearsal rather than a redpoint burn. */
   highPoint?: number;
+  /**
+   * Where the burn started, on the same percentage scale (PLAN.md M102).
+   *
+   * A redpoint is decided by *links*, not by a single number from the
+   * ground: you top out from the crux, you get from the ground to the crux,
+   * and the send is the join. Without this the app stored only where a burn
+   * ended, so working the top half and logging "fell at the crux" reported a
+   * 90% high point on a climb that had never been linked past halfway.
+   *
+   * Absent means the ground, for anything but `worked` — which is what every
+   * burn logged before this meant, so no record changes meaning.
+   */
+  from?: number;
   /** Burns of this kind in this session. */
   count: number;
   note?: string;

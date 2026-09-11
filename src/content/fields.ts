@@ -44,7 +44,11 @@ export const FIELDS: Record<FieldId, FieldSpec> = {
   routesCompleted: { id: 'routesCompleted', label: 'Routes completed', kind: 'number' },
   pitches: { id: 'pitches', label: 'Pitches', kind: 'number' },
   attemptsToday: { id: 'attemptsToday', label: 'Attempts', kind: 'number', unit: 'burns' },
-  highPoint: { id: 'highPoint', label: 'High point', kind: 'text', placeholder: 'The move, bolt or hold you reached' },
+  // Renamed from "High point" in M102. A projecting session renders this
+  // beside the burn card, whose own high point is a *percentage* — so the
+  // log page carried two controls called the same thing meaning different
+  // measurements. This one names a feature; that one is how far up.
+  highPoint: { id: 'highPoint', label: 'The move you reached', kind: 'text', placeholder: 'The move, bolt or hold' },
   projectName: { id: 'projectName', label: 'Project', kind: 'text', placeholder: 'What you were working' },
   routeName: { id: 'routeName', label: 'Route', kind: 'text', placeholder: 'What you climbed' },
   pumpLevel: { id: 'pumpLevel', label: 'Pump', kind: 'scale', ends: ['Fresh', 'Wrecked'] },
