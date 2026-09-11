@@ -1,6 +1,7 @@
 import { ACWR_BOUNDS } from '@/engine/derive';
 import { fromKey, shortLabel } from '@/engine/dates';
 import { trendCeiling, type LoadTrend } from '@/engine/loadTrend';
+import { WEEK_LABEL, type PeakPlan } from '@/engine/peak';
 
 /**
  * The acute:chronic ratio over time, with the bands it is judged against
@@ -20,6 +21,13 @@ import { trendCeiling, type LoadTrend } from '@/engine/loadTrend';
  * **Gaps stay gaps.** Before three weeks of history there is no ratio, and
  * drawing a zero there would tell a climber they were detraining during a
  * period the app knows nothing about.
+ *
+ * **The plan, when there is one (M73), is drawn dashed and on the far side
+ * of a divider.** Same axis and same bands, because the whole value of
+ * seeing it here is watching the planned ramp stay inside the strip the
+ * history is judged against — but never the same stroke: one of these lines
+ * is what happened and the other is what was suggested, and a reader who
+ * cannot tell them apart has been handed a forecast.
  */
 
 const W = 320;
@@ -53,13 +61,21 @@ function gridValues(y: (value: number) => number): number[] {
   return kept.sort((a, b) => a - b);
 }
 
-export function LoadTrendLine({ trend }: { trend: LoadTrend }) {
+export function LoadTrendLine({ trend, plan }: { trend: LoadTrend; plan?: PeakPlan }) {
+  const weeks = plan?.weeks ?? [];
+  // No allowance made for the plan: `trendCeiling` already floors at the
+  // danger band plus headroom, and a planned week never reaches it — the
+  // build weeks are held under the top of the sweet spot by construction.
+  // A max() over the plan here was code no mutation could kill.
   const ceiling = trendCeiling(trend);
   const plotW = W - PAD_L - PAD_R;
   const plotH = H - PAD_T - PAD_B;
 
-  const x = (i: number) =>
-    PAD_L + (trend.points.length <= 1 ? 0 : (i / (trend.points.length - 1)) * plotW);
+  // The axis carries the history in days and the plan in weeks, at seven
+  // days to the week, so a planned week is as wide on screen as a lived one.
+  const today = trend.points.length - 1;
+  const span = Math.max(1, today + weeks.length * 7);
+  const x = (i: number) => PAD_L + (i / span) * plotW;
   const y = (value: number) => PAD_T + plotH - Math.min(1, value / ceiling) * plotH;
 
   // One path per unbroken run of known values. A single path across a gap
@@ -93,7 +109,11 @@ export function LoadTrendLine({ trend }: { trend: LoadTrend }) {
         viewBox={`0 0 ${W} ${H}`}
         className="w-full h-auto block"
         role="img"
-        aria-label={`Acute to chronic load ratio over the last ${trend.points.length} days`}
+        aria-label={
+          weeks.length > 0
+            ? `Acute to chronic load ratio over the last ${trend.points.length} days, and the ${weeks.length} planned weeks after it`
+            : `Acute to chronic load ratio over the last ${trend.points.length} days`
+        }
       >
         {/* One opacity for both themes, chosen against the dark one. At 0.1
             the caution and danger bands were all but invisible on a dark
@@ -139,6 +159,44 @@ export function LoadTrendLine({ trend }: { trend: LoadTrend }) {
           />
         ))}
 
+        {weeks.length > 0 && lastKnown?.acwr != null && (
+          <>
+            <line
+              x1={x(today)}
+              y1={PAD_T}
+              x2={x(today)}
+              y2={PAD_T + plotH}
+              className="stroke-ink-soft"
+              strokeWidth={1}
+              strokeDasharray="2 2"
+            />
+            <path
+              d={[{ i: today, acwr: lastKnown.acwr }, ...weeks.map((w, n) => ({ i: today + (n + 1) * 7, acwr: w.acwr }))]
+                .map((p, n) => `${n === 0 ? 'M' : 'L'}${x(p.i).toFixed(1)},${y(p.acwr).toFixed(1)}`)
+                .join(' ')}
+              className="fill-none stroke-viz-2"
+              strokeWidth={2}
+              strokeDasharray="4 3"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            {/* An easy week sits under the band on purpose, so it is marked
+                rather than left looking like the plan falls apart at the end. */}
+            {weeks.map((week, n) =>
+              week.kind === 'taper' || week.kind === 'deload' ? (
+                <circle
+                  key={week.ends}
+                  cx={x(today + (n + 1) * 7)}
+                  cy={y(week.acwr)}
+                  r={3}
+                  className="fill-surface stroke-viz-2"
+                  strokeWidth={2}
+                />
+              ) : null,
+            )}
+          </>
+        )}
+
         {/* Where the climber stands today, ringed in the surface colour so
             it separates from the line and the band behind it. */}
         {lastKnown?.acwr != null && (
@@ -155,7 +213,11 @@ export function LoadTrendLine({ trend }: { trend: LoadTrend }) {
           {shortLabel(trend.from)}
         </text>
         <text x={W - PAD_R} y={H - 4} textAnchor="end" className="fill-ink-soft" style={{ fontSize: 9 }}>
-          {last ? shortLabel(last.date) : ''}
+          {weeks.length > 0
+            ? shortLabel(weeks[weeks.length - 1]!.ends)
+            : last
+              ? shortLabel(last.date)
+              : ''}
         </text>
       </svg>
 
@@ -174,13 +236,25 @@ export function LoadTrendLine({ trend }: { trend: LoadTrend }) {
           <span className="inline-block size-2 rounded-[2px] bg-danger/40 mr-1" aria-hidden />
           above {ACWR_BOUNDS.cautionTo} spiking
         </li>
+        {weeks.length > 0 && (
+          <li>
+            {/* Wide enough for the dashes to read as dashes. At 12px the
+                gaps fell between the rendered pixels and the key for "this
+                one is dashed" was drawn solid. */}
+            <span className="inline-block w-5 border-t-2 border-dashed border-viz-2 mr-1 align-middle" aria-hidden />
+            dashed: the plan, not what happened
+          </li>
+        )}
       </ul>
 
       {/* The numbers, weekly rather than daily: ninety rows is not an
           alternative to a chart, it is a wall. */}
       <div className="sr-only">
         <table>
-          <caption>Acute to chronic load ratio, one reading a week</caption>
+          <caption>
+            Acute to chronic load ratio, one reading a week
+            {weeks.length > 0 ? ', then the planned weeks' : ''}
+          </caption>
           <thead>
             <tr>
               <th scope="col">Week ending</th>
@@ -201,6 +275,16 @@ export function LoadTrendLine({ trend }: { trend: LoadTrend }) {
                   <td>{point.acwr === null ? 'not enough history' : point.acwr.toFixed(2)}</td>
                 </tr>
               ))}
+            {weeks.map((week) => (
+              <tr key={week.ends}>
+                <th scope="row">
+                  {fromKey(week.ends).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                </th>
+                <td>
+                  {week.acwr.toFixed(2)} — planned, {WEEK_LABEL[week.kind].toLowerCase()}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

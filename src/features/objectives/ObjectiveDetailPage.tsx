@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ArrowRight, CircleCheck, Plus, Target, Trash2 } from 'lucide-react';
 import { DRILL_CATEGORIES } from '@/content/drills';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
-import { fromKey } from '@/engine/dates';
+import { fromKey, today } from '@/engine/dates';
 import {
   describeProgress,
   newRequirementId,
@@ -13,13 +13,19 @@ import {
   type ObjectiveStatus,
 } from '@/engine/objectives';
 import type { SkillRequirement } from '@/engine/skills';
+import { WEEK_LABEL, describePeak, keepsFitness, peakPlan, type PeakPlan } from '@/engine/peak';
+import { loadTrend } from '@/engine/loadTrend';
+import { getProgram } from '@/content/programs';
+import { useSessions } from '@/store/sessions';
+import { useProfile } from '@/store/profile';
+import { LoadTrendLine } from '@/ui/charts/LoadTrendLine';
 import { useObjectives } from '@/store/objectives';
 import { offerUndo } from '@/store/undo';
 import { useProjects } from '@/store/projects';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
-import { Chip } from '@/ui/Chip';
+import { CHIP_LINK, Chip } from '@/ui/Chip';
 import { IconButton } from '@/ui/IconButton';
 import { Meter } from '@/ui/Meter';
 import { Input, Select, TextArea } from '@/ui/Field';
@@ -80,6 +86,7 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
 
   const progress = objectiveProgress(objective, skillInput);
   const edit = (patch: Partial<Objective>) => void save({ ...objective, ...patch });
+  const planning = objective.status === 'planning' || objective.status === 'training';
 
   return (
     <>
@@ -113,6 +120,8 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
           />
           <p className="text-sm text-ink-soft leading-relaxed">{describeProgress(progress)}</p>
         </Card>
+
+        {objective.targetDate && planning && <RunwayCard target={objective.targetDate} />}
 
         {progress.weakest && (
           <Card title="Furthest away">
@@ -378,4 +387,99 @@ function RequirementFields({
       // trees' vocabulary and have no sensible editor here yet.
       return null;
   }
+}
+
+/**
+ * The weeks between here and the trip (PLAN.md M73).
+ *
+ * A prescription, not a forecast, and the copy is held to that: it says what
+ * the weeks should weigh and never what the trip will be like. It is also
+ * recomputed from scratch every time it is looked at, so a week that did not
+ * go to plan is not a failure the app remembers — it is just a different
+ * starting point for the same question.
+ */
+function RunwayCard({ target }: { target: string }) {
+  const byDate = useSessions((s) => s.byDate);
+  const hydrated = useSessions((s) => s.hydrated);
+  const load = useSessions((s) => s.load);
+  const activeProgramId = useProfile((s) => s.activeProgramId);
+  const startDates = useProfile((s) => s.startDates);
+
+  useEffect(() => {
+    if (!hydrated) void load();
+  }, [hydrated, load]);
+
+  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const program = activeProgramId ? getProgram(activeProgramId) : undefined;
+  const startDate = activeProgramId ? startDates[activeProgramId] : undefined;
+
+  const plan = useMemo(
+    () => peakPlan({ sessions, target, ...(program ? { program } : {}), ...(startDate ? { startDate } : {}) }),
+    [sessions, target, program, startDate],
+  );
+  // Six weeks of history rather than the usual ninety days: the plan can add
+  // twelve weeks to the far end, and a chart squeezing four months of past
+  // against three of future is unreadable at either end.
+  const trend = useMemo(() => loadTrend({ sessions, to: today(), days: HISTORY_DAYS }), [sessions]);
+
+  if (plan.withheld !== null) {
+    return (
+      <Card title="The runway">
+        <p className="text-sm text-ink-soft leading-relaxed">{describePeak(plan)}</p>
+        {plan.withheld === 'too-far' && (
+          <Link href="/find" className={`${CHIP_LINK} mt-3`}>
+            Find a program <ArrowRight size={14} className="ml-1" />
+          </Link>
+        )}
+      </Card>
+    );
+  }
+
+  return (
+    <Card title="The runway">
+      <p className="text-sm leading-relaxed mb-3">{describePeak(plan)}</p>
+      <LoadTrendLine trend={trend} plan={plan} />
+      <WeekTable plan={plan} />
+      {!keepsFitness(plan) && (
+        <p className="text-xs text-ink-soft mt-2 leading-relaxed">
+          Too short to build in, so the baseline goes down rather than up. That is the cost of
+          a late start, not a mistake in the plan.
+        </p>
+      )}
+      <p className="text-xs text-ink-soft mt-2 leading-relaxed">
+        Loads are what the app counts from your own sessions — effort times time. This is
+        recomputed from where you actually are, so a week that went differently changes the
+        plan rather than breaking it.
+      </p>
+    </Card>
+  );
+}
+
+/** Six weeks back, so the plan has room on the same axis. */
+const HISTORY_DAYS = 42;
+
+function WeekTable({ plan }: { plan: PeakPlan }) {
+  return (
+    <table className="w-full text-sm mt-3">
+      <caption className="sr-only">Target load for each week up to the trip</caption>
+      <thead>
+        <tr className="text-2xs uppercase tracking-widest text-ink-soft">
+          <th scope="col" className="text-left font-bold py-1">Week</th>
+          <th scope="col" className="text-left font-bold py-1">Shape</th>
+          <th scope="col" className="text-right font-bold py-1">Of your usual</th>
+        </tr>
+      </thead>
+      <tbody>
+        {plan.weeks.map((week) => (
+          <tr key={week.ends} className="border-t border-line">
+            <th scope="row" className="text-left font-normal text-ink-soft py-1.5">
+              {fromKey(week.ends).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+            </th>
+            <td className="py-1.5">{WEEK_LABEL[week.kind]}</td>
+            <td className="py-1.5 text-right font-bold tabular-nums">{Math.round(week.ofNow * 100)}%</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }

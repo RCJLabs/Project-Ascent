@@ -2440,11 +2440,66 @@ something that already exists; six are new. Nothing here is committed.*
   session but nothing reads the series yet; a run of "barely slept" against the load chart
   is the obvious next thing and is not built.
 
-- **M73 — Plan the peak, not just the block.** M46 gave the app ACWR; M56 and M57 gave it
-  time available. The next step is projecting *forward*: given a trip date, what the next
-  weeks' load should look like to arrive fresh and not detrained, drawn as a line the
-  climber can follow. Everything needed is already computed — this is the same maths run in
-  the other direction.
+- **M73 — Plan the peak, not just the block.** *Done, and it is not the same maths run in
+  the other direction.* The proposal said it was. Backwards — which is what M25 drew — the
+  loads are known and the ratio falls out. Forwards the ratio is a *constraint* and the
+  loads are the unknown, and there are two goals pulling opposite ways: arriving **fresh**
+  means the last week weighs less than the baseline, and arriving **not detrained** means
+  the baseline is at least as high as it is now. A taper satisfies the first by violating
+  the second unless the weeks before it built the room to spend. So it is a shape — build,
+  hold, taper — not an inversion.
+  **It does not own the trip date.** `Objective` already has `kind: 'trip'` and a
+  `targetDate`, and its own doc comment describes exactly that: *"a trip you have booked"*.
+  A second place to say when you are going would be a second place for it to be wrong, so
+  the runway card reads the objective and adds no new record at all.
+  **The rule it had to answer to.** `engine/objectives.ts` says of the same objective's
+  progress line: *"no projection that has not been earned"*. The altimeter's version of
+  that rule is the one followed — it **does** project an ETA, and withholds below three
+  weeks of history and a measured pace. Two things keep this inside it. It projects a
+  *prescription*, never an outcome: what the weeks should weigh, and nothing about whether
+  the trip will go well. And it withholds entirely without a baseline, using the identical
+  gate the ratio itself applies — three weeks of calendar and six days carrying load inside
+  the window, because three weeks with two sessions in it produces arithmetic, not a
+  baseline.
+  **The finding.** A taper reads as *detraining* to the same bands that judge a training
+  week: it lands at about 0.62, and 0.8 is the floor of the sweet spot. The app already
+  half-knew this — `deriveLoad` calls a low ratio during a *planned* deload 'optimal'
+  rather than 'detraining' — and the projection needed the same treatment. The chart marks
+  every easy week with a hollow ring and the table names it, so a dip that was the entire
+  point does not read as the plan falling apart at the end.
+  **The ramp is slower than the model would allow, on purpose.** A sustained ramp of `r`
+  settles at `4 / (1 + 1/r + 1/r² + 1/r³)`, which reaches 1.3 at about 1.22 a week — so the
+  famous ten-percent rule is *conservative* against the app's own maths, and the app keeps
+  it anyway. A plan that runs along the edge of the band has nowhere to put a week that
+  went harder than intended. There is a **total** cap as well as a rate cap, at 1.5× the
+  starting baseline: the ratio limits the rate and says nothing about the total, and eight
+  weeks compounding at ten percent is more than double, which is not a number any app
+  should hand anybody.
+  **It respects the program's deloads instead of laying its own on top** — and inserts its
+  own only where there is no program to defer to, because twelve weeks without one was
+  producing seven identical weeks at the ceiling, which is not a plan, it is a wall. Never
+  in the week before the taper: two easy weeks back to back is the taper starting early by
+  accident. Past twelve weeks it refuses outright and hands over to the finder, which
+  already asks how many weeks you have (M57) — that far out is a training block, not a peak.
+  **Two mutation survivors deleted code rather than gaining a test.** A `Math.min(ceiling,
+  …)` on the build step that `weekKind` had already made unreachable — it calls a week a
+  hold precisely when the next step would clear the ceiling — and a `Math.max` in the chart
+  taking the plan's ratios into the y scale, which can never beat `trendCeiling`'s own
+  floor of the danger band plus headroom. A third survivor found a **weak test**: the
+  program-deload check passed with the program ignored, because the fallback deload lands
+  in the same window. Rewritten against Peak Performance, whose deloads on weeks 5 and 9
+  are not multiples of the fallback interval, so a deload on that week can only have come
+  from the program.
+  Twenty mutations, twenty killed. Verified in a browser at phone width against twelve
+  weeks of logged sessions and a trip six weeks out: build 110, 121, 133, deload 93, build
+  146, taper 81 percent of the usual week, the plan drawn dashed on the far side of a
+  divider with hollow rings on both easy weeks, and both refusals — the twelve-week ceiling
+  with its link to the finder, and the missing baseline — rendering instead of the card.
+  *What it does not do:* the plan is not written into the log. A taper week the climber
+  actually trains carries `deload: true` only if a *program* put it there, so after the
+  fact the history chart will call that week detraining — the same contradiction, arriving
+  from the other side. And nothing tells you the trip is coming; you have to open the
+  objective.
 
 - **M74 — Gym mode.** Logging mid-session means chalky hands, a phone on a mat and forty
   seconds between burns. A stripped screen — one-tap grade tally, attempt and send, a rest
