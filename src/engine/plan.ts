@@ -16,6 +16,7 @@ import {
   type Program,
   type SessionType,
 } from '@/content/types';
+import { testWeeks, type TestReason } from './assessments';
 import { dayOfWeek, programWeek } from './dates';
 import { effectivePlan, type WeekOverrides } from './reschedule';
 import type { WeekPlan } from './scheduler';
@@ -28,6 +29,12 @@ export interface PlannedDay {
   sessionType?: SessionType;
   drill?: Drill;
   isDeload: boolean;
+  /**
+   * Set when this week is one the program expects a test in, and why
+   * (PLAN.md M67). A week-level fact, like `isDeload`, so every screen that
+   * already reads a day gets it without being told.
+   */
+  test?: TestReason;
   /** The plan puts nothing here, or puts a rest session here. */
   isRest: boolean;
 }
@@ -48,6 +55,7 @@ export function plannedDay(
 
   const drillId = week !== null && sessionType?.drillsByWeek ? sessionType.drillsByWeek[week] : undefined;
   const drill = drillId ? getDrill(drillId) : undefined;
+  const test = week === null ? undefined : testWeeks(program).find((t) => t.week === week);
 
   return {
     date,
@@ -56,6 +64,7 @@ export function plannedDay(
     ...(sessionType ? { sessionType } : {}),
     ...(drill ? { drill } : {}),
     isDeload: week !== null && (program.deloadWeeks ?? []).includes(week),
+    ...(test ? { test: test.why } : {}),
     isRest: !sessionType || sessionType.isRest === true,
   };
 }

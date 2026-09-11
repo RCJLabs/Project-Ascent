@@ -2253,11 +2253,32 @@ something that already exists; six are new. Nothing here is committed.*
   is a snapshot, and the question it cannot answer is whether this year's base is wider than
   last year's. Same data, a second axis.
 
-- **M67 — Put the assessments on the calendar.** Every program declares its `assessments`,
-  and nothing ever schedules one. The coach nags when a benchmark goes stale, which is the
-  app noticing after the fact. Testing weeks belong on the plan — at the start, at the phase
-  boundaries and at the end — so a climber arrives at them instead of being told they are
-  late.
+- **M67 — Put the assessments on the calendar.** *Done.* Every program declares its
+  `assessments` and nothing ever put one on a date. The app already knew when a test was
+  *due* — no baseline, a new phase since the last one, or eight weeks stale — but a climber
+  only met that by visiting the assessments page, or afterwards, from the coach telling them
+  they were late.
+  `testWeeks(program)` names the weeks, and deliberately names **the weeks the existing
+  rules already key off**, so the calendar and the assessments page cannot disagree: week
+  one, because a block without a before has no after; the first week of every later phase,
+  which is exactly when `assessmentStatus` starts reporting `phase`; and the last week,
+  which is the after. Logging modes are left alone — no periodisation, no finish line, so a
+  test week in one would be a date chosen by nothing.
+  It rides on `PlannedDay` beside `isDeload`, so every screen that already reads a day gets
+  it. The calendar marks the week; Home says which kind of test week it is and links to the
+  battery. A shortened program tests at *its* phase boundaries, not the written one's — a
+  six-week Gravity Defied tests in weeks 1, 3, 5 and 6.
+  **A rule of mine that was wrong within the hour.** The first version suppressed the test
+  marker on a deload week, on the grounds that two markers in one square is a mess. That
+  lost **Peak Performance both of its mid-block tests**: it deloads on weeks 5 and 9, which
+  are the two weeks its phases start. A deload is also the week a climber is freshest to
+  test in, which makes it the last week to stay quiet. Both markers show now.
+  **And one on Home.** The note first went inside the training-day branch, so it appeared on
+  Monday and vanished on Tuesday. A test wants you fresh: the rest day in a test week is the
+  best day to be told, not the one day the app says nothing. It sits outside the branch.
+  Eight mutations, eight killed. Verified in a browser: the week of the 6th shows `DL` and
+  `T` together, and Home reads "Week 5 of 12 · Intensify · Deload week · Test week" with the
+  reason under it.
 
 - **M68 — Share more than an achievement.** `ShareSheet` and `achievementCard` exist and
   are wired to exactly one thing. The weekly review, the year in review and a hard send are

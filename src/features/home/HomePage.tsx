@@ -1,8 +1,19 @@
 import { useEffect, useMemo } from 'react';
 import { Link } from 'wouter';
-import { CalendarDays, Check, Clock, Gamepad2, MessageSquare, Settings, Sparkles } from 'lucide-react';
+import {
+  CalendarDays,
+  Check,
+  ChevronRight,
+  Clock,
+  Gamepad2,
+  MessageSquare,
+  Ruler,
+  Settings,
+  Sparkles,
+} from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { deriveAltimeter } from '@/engine/altimeter';
+import { TEST_REASON_LABEL } from '@/engine/assessments';
 
 import { deriveClimberState } from '@/engine/derive';
 
@@ -87,6 +98,7 @@ export function HomePage() {
                   Week {day.week} of {program!.weeks}
                   {day.phase ? ` · ${day.phase.name}` : ''}
                   {day.isDeload ? ' · Deload week' : ''}
+                  {day.test !== undefined ? ' · Test week' : ''}
                 </p>
                 {day.drill && (
                   <div className="bg-sunken rounded-xl p-3 mb-3">
@@ -99,13 +111,29 @@ export function HomePage() {
               </>
             ) : day ? (
               <p className="text-sm text-ink-soft mb-3">
-                Rest day{day.week ? ` · week ${day.week}` : ''}. Recovery is training.
+                Rest day{day.week ? ` · week ${day.week}` : ''}
+                {day.test !== undefined ? ' · Test week' : ''}. Recovery is training.
               </p>
             ) : (
               <p className="text-sm text-ink-soft mb-3">
                 Nothing planned — no program is running. Log whatever you climb and it still counts
                 toward everything.
               </p>
+            )}
+            {/* Outside the training-day branch on purpose (PLAN.md M67): a
+                test wants you fresh, so the rest day in a test week is the
+                best day to be told, not the one day the app stays quiet. */}
+            {day?.test !== undefined && (
+              <Link
+                href="/assessments"
+                className="focus-ring flex items-center gap-2 bg-sunken rounded-xl p-3 mb-3"
+              >
+                <Ruler size={16} className="text-accent shrink-0" />
+                <span className="flex-1 min-w-0 text-xs leading-relaxed">
+                  {TEST_REASON_LABEL[day.test]}
+                </span>
+                <ChevronRight size={16} className="text-ink-soft shrink-0" />
+              </Link>
             )}
             <Link
               href={`/log/${date}`}

@@ -279,8 +279,20 @@ export function CalendarPage() {
               ) : (
                 <span className="text-sm leading-none text-ink-soft/40">·</span>
               )}
-              {day?.isDeload && inMonth && (
-                <span className="text-2xs font-bold uppercase text-warn leading-none">DL</span>
+              {/* Both, when a week is both (PLAN.md M67). Suppressing the
+                  test marker on a deload week sounded tidy and lost Peak
+                  Performance *both* of its mid-block tests: it deloads on
+                  weeks 5 and 9, which are the two weeks its phases start.
+                  A deload is also the week you are freshest to test in. */}
+              {inMonth && (day?.isDeload || day?.test !== undefined) && (
+                <span className="flex items-center gap-0.5 leading-none">
+                  {day?.isDeload && (
+                    <span className="text-2xs font-bold uppercase text-warn leading-none">DL</span>
+                  )}
+                  {day?.test !== undefined && (
+                    <span className="text-2xs font-bold uppercase text-accent leading-none">T</span>
+                  )}
+                </span>
               )}
             </>
           );
@@ -331,6 +343,7 @@ export function CalendarPage() {
             <>
               <span>{program.sessionTypes.find((t) => !t.isRest)?.icon} Planned session</span>
               <span className="text-warn font-bold">DL — deload week</span>
+              <span className="text-accent font-bold">T — assessment week</span>
             </>
           )}
         </div>
