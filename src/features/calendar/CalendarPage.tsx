@@ -1,12 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { AlertTriangle, BookOpen, ChevronLeft, ChevronRight, Move, X } from 'lucide-react';
+import { AlertTriangle, BookOpen, CalendarPlus, ChevronLeft, ChevronRight, Move, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
-import type { DayOfWeek } from '@/content/types';
+import type { DayOfWeek, Program } from '@/content/types';
+import {
+  DEFAULT_ALARM_MINUTES,
+  calendarFilename,
+  scheduleEvents,
+  timesAreKnown,
+  usualSession,
+} from '@/engine/calendar';
+import { icsCalendar } from '@/lib/ics';
+import { downloadFile } from '@/lib/download';
+import type { WeekPlan } from '@/engine/scheduler';
 import { addDays, dayOfWeek, fromKey, monthGrid, monthLabel, shortLabel, startOfWeek, today } from '@/engine/dates';
 import { plannedDay } from '@/engine/plan';
 import { summarise } from '@/engine/injury';
-import { effectivePlan, previewMove, type MovePreview } from '@/engine/reschedule';
+import { effectivePlan, previewMove, type MovePreview, type WeekOverrides } from '@/engine/reschedule';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';
@@ -336,6 +346,10 @@ export function CalendarPage() {
         })}
       </div>
 
+      {planning && (
+        <SubscribeCard program={program} startDate={startDate} plan={plan} overrides={overrides} />
+      )}
+
       <Card className="mt-4">
         <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-ink-soft">
           <span>✅ Logged</span>
@@ -349,5 +363,82 @@ export function CalendarPage() {
         </div>
       </Card>
     </>
+  );
+}
+
+/**
+ * The plan, as a file the climber's own calendar can hold (PLAN.md M75).
+ *
+ * This is what M75 became after local notifications turned out to be
+ * unbuildable in a PWA with no server — see `lib/ics.ts`. The reminding is
+ * handed to the thing that is already good at it.
+ *
+ * On the calendar page rather than in Settings, because it is a fact about
+ * the plan and not about the data. The download itself is `lib/download.ts`,
+ * shared with the backup export rather than written out twice.
+ */
+function SubscribeCard({
+  program,
+  startDate,
+  plan,
+  overrides,
+}: {
+  program: Program;
+  startDate: string;
+  plan: WeekPlan;
+  overrides?: WeekOverrides;
+}) {
+  const byDate = useSessions((s) => s.byDate);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const usual = useMemo(() => usualSession(sessions), [sessions]);
+  const events = useMemo(
+    () => scheduleEvents({ program, startDate, plan, overrides, from: today(), usual }),
+    [program, startDate, plan, overrides, usual],
+  );
+
+  const known = timesAreKnown(usual);
+  const at = `${String(Math.floor(usual.startMinute / 60)).padStart(2, '0')}:${String(
+    usual.startMinute % 60,
+  ).padStart(2, '0')}`;
+
+  function save() {
+    const text = icsCalendar(events, { name: `Project Ascent · ${program.name}` });
+    // `text/calendar` is what makes a phone offer to add it to a calendar
+    // rather than opening it as a text file.
+    downloadFile(new Blob([text], { type: 'text/calendar;charset=utf-8' }), calendarFilename(program));
+    setMessage(
+      `${events.length} session${events.length === 1 ? '' : 's'} exported. Open the file on your phone to add them.`,
+    );
+  }
+
+  return (
+    <Card title="Put it in your calendar" className="mt-4">
+      <p className="text-sm text-ink-soft leading-relaxed mb-3">
+        {events.length === 0
+          ? 'Nothing left in this program to export.'
+          : `The remaining ${events.length} session${events.length === 1 ? '' : 's'}, as a calendar file with a reminder ${DEFAULT_ALARM_MINUTES / 60} hours before each one. Your phone does the reminding, so it works with the app closed.`}
+      </p>
+      {events.length > 0 && (
+        <>
+          <p className="text-xs text-ink-soft leading-relaxed mb-3">
+            {known
+              ? `Timed at ${at} for ${usual.durationMinutes} minutes, which is the middle of what you have been logging.`
+              : `Timed at ${at} for ${usual.durationMinutes} minutes — a guess, because there is not enough in the log yet to read your usual hour off. Start a few sessions live and export again.`}{' '}
+            Exporting again after changing the plan updates the same events rather than adding a
+            second copy of them.
+          </p>
+          <Button size="sm" variant="outline" onClick={save}>
+            <CalendarPlus size={15} /> Download the schedule
+          </Button>
+        </>
+      )}
+      {message && (
+        <p className="text-sm text-positive mt-2" role="status">
+          {message}
+        </p>
+      )}
+    </Card>
   );
 }

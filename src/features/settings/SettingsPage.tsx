@@ -33,6 +33,7 @@ import { THEMES as PALETTES } from '@/ui/themes';
 import { Input } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 import { readingProblems } from '@/db/sound';
+import { downloadFile } from '@/lib/download';
 
 const GEAR: { value: Equipment; label: string }[] = [
   { value: 'wall', label: 'Climbing wall' },
@@ -168,13 +169,10 @@ export function SettingsPage() {
     // The old single-JSON form base64'd every picture, which cost a third of
     // their size in the file and several copies of it in memory.
     const { bytes, file } = await exportArchive({ media: withMedia });
-    const blob = new Blob([bytes as BlobPart], { type: 'application/zip' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `project-ascent-backup-${file.exportedAt.slice(0, 10)}.zip`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(
+      new Blob([bytes as BlobPart], { type: 'application/zip' }),
+      `project-ascent-backup-${file.exportedAt.slice(0, 10)}.zip`,
+    );
     markExported();
     setMessage(
       withMedia && file.media?.length

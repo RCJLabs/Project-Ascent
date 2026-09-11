@@ -2552,11 +2552,66 @@ something that already exists; six are new. Nothing here is committed.*
   between burns. And there is no way in from Home — only from a session that is already
   running.
 
-- **M75 — Remind me it is a training day.** The one honest use of notifications in an app
-  with no server: a local reminder on a scheduled session day. *Riskiest of the fifteen —
-  scheduled local notifications are unreliable across browsers and the TWA wrapper, so this
-  needs a spike before it is a milestone. If it cannot be made dependable, it should not
-  ship at all: a reminder that fires sometimes is worse than none.*
+- **M75 — ~~Remind me it is a training day~~ → Put it in your calendar.** *Done, as the
+  other thing.* The proposal flagged itself as the riskiest of the fifteen and it was
+  right, but for a stronger reason than "unreliable": **nothing in a PWA can be running at
+  the moment a reminder is due.** Notification Triggers — the one web API that ever took a
+  future timestamp — never shipped past an origin trial. Web Push works and needs a push
+  server, which is the single thing this rebuild exists to not have. A service worker is
+  spun up for an event and killed, so a `setTimeout` for tomorrow evening dies in seconds.
+  And the TWA does not rescue it: a Trusted Web Activity is a browser tab in a native
+  shell, not a process with an alarm clock. What is left is "fire it next time the app
+  opens", which reminds you about training at the moment you opened the training app.
+  So the reminding is handed to the thing that is already good at it. **`lib/ics.ts` writes
+  the plan as an iCalendar file and the climber's own phone does the rest** — no server, no
+  permission that can be revoked, identical on iOS and Android, and it keeps working with
+  the app closed for a month. Written by hand like `lib/zip.ts`, for the same reason: the
+  format is small, a dependency is not, and the parts that actually break are the parts a
+  library would hide.
+  **The three that actually break.** Lines fold at 75 **octets**, not characters — a grade
+  is one character and the ✋ on a session type is three, so a character count writes an
+  illegal file while looking comfortably short; and the fold walks code points, because
+  splitting a surrogate pair leaves half a character either side of a CRLF that nothing can
+  rejoin. CRLF everywhere including the last line, which is the commonest reason a
+  hand-written `.ics` is refused without explanation. And TEXT escaping for `\`, `;`, `,`
+  and newline — **but not the colon**, which is only special in a parameter and would put a
+  backslash in front of every "Week 5: Hangboard" a climber reads.
+  **Times are floating**, with no `Z` and no `TZID`. RFC 5545 calls this form 1 and it means
+  "whatever the local time is wherever this is read", which is exactly right for a training
+  reminder: UTC would move the session by an hour every time the clocks changed, and a
+  `TZID` needs a VTIMEZONE block carrying the climber's transition rules for the life of the
+  program. The end of an event is computed in minutes and days rather than by adding to a
+  `Date`, because adding ninety minutes across a daylight-saving boundary moves the end
+  relative to the start.
+  **The hour is earned, not guessed.** The app has never been told when anybody trains, and
+  a calendar full of events at the wrong time is worse than no calendar — so the start and
+  the length are the **median** of what has actually been logged (a start time only exists
+  on a session that was started live), rounded to the quarter hour because 18:07 is false
+  precision, and refusing a length `live.ts` would not record either. Below three readings
+  the card says it is guessing rather than quietly using 6pm.
+  **Exporting twice does not leave two of everything.** The UID is the date plus the
+  program, so the same day is the same event however the plan has changed — re-exporting
+  rewrites it in place. *That is a property of the file; whether a given client honours it
+  is the client's decision, and Apple Calendar asks where Google updates.*
+  Twenty-five mutations, twenty-five killed — including one that survived twice before the
+  test was fixed: the surrogate-pair check was asserting a round trip through `TextEncoder`,
+  which quietly replaces a lone surrogate with U+FFFD and therefore agrees with anything.
+  It checks the string for unpaired surrogates now. `escapeText` also shipped with the exact
+  bug its own test then repeated — `'\;'` in JavaScript is just `';'` — so the expectations
+  are `String.raw` throughout.
+  Verified twice over. In a browser at phone width: a twelve-week Iron Grip block with four
+  training days a week, six sessions logged live at 19:00, exported as
+  `project-ascent-iron-grip.ics` — 18 events, timed at 19:00 for 75 minutes, read off the
+  log rather than defaulted. And the downloaded bytes were then checked against the spec by
+  hand (307 CRLF lines, zero bare newlines, no line over 75 octets, balanced blocks, 18
+  unique UIDs, nothing dated before today) **and parsed by a real iCalendar library**, which
+  reported floating datetimes, a `-PT2H` display alarm on every event, and 75-minute
+  durations throughout.
+  *What it does not do:* removing an event. A day that stops being a training day is simply
+  absent from the next export, and the stale event stays in the calendar — cancelling it
+  properly needs a `STATUS:CANCELLED` VEVENT and a `METHOD:CANCEL` file, which is a second
+  export with different semantics. And the file is a snapshot, not a subscription: there is
+  no URL for a calendar to poll, because there is no server to poll it.
 
 - **M12 — Ship.** *Parked.* TWA packaging + assetlinks, Play internal testing, store
   listing. Blocked on two facts only the author has — the app name and the package id —

@@ -22,6 +22,14 @@ if (typeof window !== 'undefined') {
   Element.prototype.setPointerCapture = () => {};
   Element.prototype.releasePointerCapture = () => {};
   Element.prototype.hasPointerCapture = () => false;
+  // jsdom implements neither navigation nor downloads, so clicking the
+  // anchor `lib/download.ts` creates logs "Not implemented: navigation to
+  // another Document" on every export test. Nothing listens for that click
+  // but the browser, so a no-op for download anchors is the whole fix.
+  const anchorClick = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+    if (!this.hasAttribute('download')) anchorClick.call(this);
+  };
   if (!window.matchMedia) {
     window.matchMedia = (query: string) =>
       ({
