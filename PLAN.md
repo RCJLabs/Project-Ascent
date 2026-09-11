@@ -2886,13 +2886,42 @@ commit.
   colours and nothing naming them, and the "Sleep" row caption sat close enough to the date
   beneath it to scan as one phrase. Verified in both themes. 2,367 tests pass, and the new
   derivation is in the perf budget.
-- **M83 — Conversion, over time.** `PyramidRow.conversion` — sends over tries per grade —
-  exists and is drawn once, as a snapshot in the pyramid. The grade-progression chart plots
-  the hardest send per week; nothing plots how *efficiently* a grade is sent, and that is
-  the number that moves before the max grade does. Per-grade conversion per block, with the
-  four-weeks-against-four comparison (M28) gaining a line: "V5 went from one in six to one in
-  two." `projectHistory` (M69) already does this for projects; this is the same idea for the
-  ladder.
+- **M83 — Conversion, over time.** *Done, refusing the shape the proposal asked for.*
+  The premise held, with one correction: `conversion` is read in *two* places, not one — the
+  pyramid card and the plateau verdict's evidence ("3 sent from 18 tries") — and both are
+  all-time snapshots. The gap is real: nothing had a time dimension, so the number that moves
+  *before* the max grade does was invisible.
+  **The proposed home for it was wrong, on three counts.** "The four-weeks-against-four
+  comparison gaining a line" would put it in `changesBetween`, which builds a uniform `Change`
+  over `keyof Totals`: flat counts with `percent` as the delta. Conversion is *per grade*, so
+  it is many rows and not one. It is a *ratio*, so `percent` would report a percent change of
+  a percentage — 17% to 50% is "+194%", the most misleading number this codebase could print.
+  And over four weeks the denominators are tiny: the proposal's own example sentence, *"one in
+  six to one in two"*, is a two-try sample being reported as a doubling.
+  **So it is a series with a gate, and the gate is the feature.** Six twenty-eight-day blocks,
+  and a block with fewer than six tries at a grade is drawn as a gap — the rule `loadTrend`
+  already sets, for the same reason: zero is a real reading (eight tries, nothing sent) and
+  must not look like a month you did not touch that grade. Every figure in the prose is
+  printed as the count it came from — *"14 from 28 then, 0 from 42 now"* — never as a bare
+  rate, because one in two from two tries and one in two from twenty are different claims.
+  `projectHistory`'s `ENOUGH` set this pattern; the threshold here is on *tries* rather than
+  sends because a single logged row carries a count.
+  **A fall is reported as readily as a rise**, and the copy says why: conversion dropping at a
+  grade is what stepping up to a new limit project looks like, and a module that only reported
+  improvements would call that silence.
+  Twenty-six mutations, twenty-two killed on the first pass. All four survivors were weak
+  tests of mine, not weak code, and each exposed something worth knowing: the ladder lookup
+  masks the scale check unless a record disagrees with itself (`{scale: 'YDS', grade: 'V5'}`,
+  which a restored backup can hold); "the grade that moved furthest" also happened to be first
+  in sort order, so taking the first passed; and two page tests used only default settings, so
+  a grid that ignored the scale chip and one that ignored the Font/French setting were both
+  invisible. All four now have tests that separate the two things.
+  **Two browser findings, both mine.** A grade tried but never six times in one block drew a
+  row of six empty cells, which is not a finding — those grades are left out of the grid and
+  named in the sentence instead, with their try count, which is the same fact as a finding.
+  And the first wording of that sentence ran the name into the number: *"V7 5 tries in six
+  months"*. Verified in both themes. 2,416 tests pass, and the new derivation is in the perf
+  budget.
 - **M84 — The block's numbers, on one chart.** Programs declare `assessments: MetricId[]`
   and M67 knows which weeks are baseline, phase and final tests; the builder's Benchmarks
   card even says the retests exist "so the strength curve has something to draw" — and each

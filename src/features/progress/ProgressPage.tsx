@@ -15,6 +15,7 @@ import { describeTrend, loadTrend } from '@/engine/loadTrend';
 import { describeTissue, tissueLoad } from '@/engine/tissueLoad';
 import { compareBlocks, describeBlocks } from '@/engine/blockCompare';
 import { checkInHistory, describeCheckIns, type CheckInHistory } from '@/engine/checkIns';
+import { conversionTrend, describeConversion, drawable } from '@/engine/conversion';
 import { fromKey, today } from '@/engine/dates';
 import { availableYears } from '@/engine/yearReview';
 import { deriveClimberState } from '@/engine/derive';
@@ -31,6 +32,7 @@ import { TrainingState } from './TrainingState';
 import { LoadBars, ProgressionLine, PyramidBars } from '@/ui/charts/Charts';
 import { ConsistencyBody } from '@/ui/charts/ConsistencyGrid';
 import { CheckInStrip } from '@/ui/charts/CheckInStrip';
+import { ConversionGrid } from '@/ui/charts/ConversionGrid';
 import { LoadTrendLine } from '@/ui/charts/LoadTrendLine';
 import { TissueBars, TissueNote } from '@/ui/charts/TissueBars';
 import { BlockCompareTable } from '@/ui/charts/BlockCompare';
@@ -285,6 +287,10 @@ export function ProgressPage() {
   const trend = useMemo(() => loadTrend({ sessions, to: today() }), [sessions]);
   const block = useMemo(() => compareBlocks({ sessions, to: today() }), [sessions]);
   const checkIns = useMemo(() => checkInHistory({ sessions, to: today() }), [sessions]);
+  const conversion = useMemo(
+    () => conversionTrend({ sessions, scale, to: today() }),
+    [sessions, scale],
+  );
   // The scan reads the record; the drill a session ran and the exercises its
   // program prescribed live in the catalogue, so they are fetched here and
   // handed in. Without them a program session counts only what was ticked.
@@ -457,6 +463,17 @@ export function ProgressPage() {
             </p>
           )}
         </Card>
+
+        {/* After the pyramid, which shows this same ratio as one all-time
+            number per grade. The series is what that number cannot say. */}
+        {drawable(conversion).length > 0 && (
+          <Card title="Sends per try, block by block">
+            <ConversionGrid trend={conversion} label={gradeLabel} />
+            <p className="text-sm text-ink-soft mt-3 leading-relaxed">
+              {describeConversion(conversion, display)}
+            </p>
+          </Card>
+        )}
 
         <Card title="Grade pyramid">
           {rows.length > 0 ? (
