@@ -9,12 +9,15 @@ import type { Program, ProgramId, ProgramStage } from '../types';
 export const PLANNED_PROGRAM_IDS: readonly ProgramId[] = [
   'ground_zero',
   'base_camp',
+  // The two M58 drafted and M95 shipped, once the coach had read them.
+  'two_day_week',
   'gravity_defied',
   'lockdown',
   'iron_grip',
   'peak_performance',
   'the_long_game',
   'the_siege',
+  'trip_prep',
   'the_cruiser',
   'general_training',
   'outdoor_climbing',

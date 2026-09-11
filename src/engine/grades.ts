@@ -167,7 +167,14 @@ export function displayRange(
   if (range.label !== undefined) return range.label;
   const lo = displayGrade(range.scale, range.min, display);
   const hi = displayGrade(range.scale, range.max, display);
-  return lo === hi ? lo : `${lo}-${hi}`;
+  if (lo === hi) return lo;
+  // A range that runs to the top of the ladder is open-ended, and "V3-V17"
+  // reads as a band with a ceiling rather than as "V3 and up" (PLAN.md M95).
+  // Derived rather than authored, so it still follows the display
+  // preference — a label spelling the grade could not.
+  const ladder = range.scale === 'V' ? V_GRADES : YDS_GRADES;
+  if (range.max === ladder[ladder.length - 1] && range.min !== ladder[0]) return `${lo}+`;
+  return `${lo}-${hi}`;
 }
 
 /** Which notation a ladder is currently being read in. */

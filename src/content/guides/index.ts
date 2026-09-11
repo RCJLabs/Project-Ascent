@@ -11,6 +11,8 @@ import { OUTDOOR } from './outdoor';
 import { PEAK_PERFORMANCE } from './peakPerformance';
 import { NEW_TO_CLIMBING } from './starting';
 import { THE_SIEGE } from './siege';
+import { TRIP_PREP } from './tripPrep';
+import { TWO_DAY_WEEK } from './twoDayWeek';
 import type { Guide } from './types';
 
 export type { Guide, GuideBlock, GuideSection } from './types';
@@ -24,12 +26,14 @@ export const GUIDES: Guide[] = [
   APP,
   GROUND_ZERO,
   BASE_CAMP,
+  TWO_DAY_WEEK,
   GRAVITY_DEFIED,
   LOCKDOWN,
   IRON_GRIP,
   PEAK_PERFORMANCE,
   THE_LONG_GAME,
   THE_SIEGE,
+  TRIP_PREP,
   THE_CRUISER,
   OUTDOOR,
   INJURY,

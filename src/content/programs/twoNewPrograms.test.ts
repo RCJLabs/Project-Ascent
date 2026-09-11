@@ -1,56 +1,65 @@
 import { describe, expect, it } from 'vitest';
-import { PROGRAMS } from '..';
+import { PROGRAMS } from '.';
+import { TRIP_PREP, TWO_DAY_WEEK } from './catalogue';
 import { validateProgram } from '@/engine/customProgram';
 import { layoutsFor, planFromLayout, sessionPriority, validateWeek } from '@/engine/scheduler';
 import { adaptProgram, lengthsFor } from '@/engine/adapt';
 import { getMetric } from '@/content/metrics';
-import { DRAFT_PROGRAMS, TRIP_PREP, TWO_DAY_WEEK } from '.';
+import { guideFor } from '@/content/guides';
 
 /**
- * A draft has to be shippable, and has to be unshipped (PLAN.md M58).
+ * The two programs M58 drafted and M95 shipped.
  *
- * These run the same checks the app runs on a program a climber writes, plus
- * the ones the catalogue's own tests would apply the moment one of these is
- * added to `PROGRAMS`. The point is that shipping is a two-line change and
- * not a debugging session.
+ * They were written, validated and deliberately kept out of `PROGRAMS`
+ * until the person who coaches had read them — a program in the catalogue
+ * is a coaching prescription, not a structure that validates. These are the
+ * checks that were written while they were drafts, kept and inverted: they
+ * now hold the two things each program exists to be, and the holes in the
+ * catalogue they were written to fill.
  */
 
-describe('the drafts are not shipped', () => {
-  it('is in no catalogue, so nothing can recommend or start one', () => {
-    for (const draft of DRAFT_PROGRAMS) {
-      expect(PROGRAMS.map((p) => p.id), draft.id).not.toContain(draft.id);
+const NEW = [TWO_DAY_WEEK, TRIP_PREP];
+
+describe('both are shipped', () => {
+  it('is in the catalogue, so the finder can recommend one', () => {
+    for (const draft of NEW) {
+      expect(PROGRAMS.map((p) => p.id), draft.id).toContain(draft.id);
     }
   });
 
-  it('does not collide with a shipped id', () => {
-    const shipped = new Set(PROGRAMS.map((p) => p.id));
-    for (const draft of DRAFT_PROGRAMS) expect(shipped.has(draft.id), draft.id).toBe(false);
+  it('has the guide a shipped program needs', () => {
+    for (const draft of NEW) expect(guideFor(draft.id), draft.id).toBeDefined();
+  });
+
+  it('uses an id no other program uses', () => {
+    const ids = PROGRAMS.map((p) => p.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
 
 describe('the drafts would be valid if they were', () => {
   it('passes the same validation a written program does', () => {
-    for (const draft of DRAFT_PROGRAMS) {
+    for (const draft of NEW) {
       const errors = validateProgram(draft).filter((i) => i.level === 'error');
       expect(errors, draft.id).toEqual([]);
     }
   });
 
   it('names only metrics the app actually has', () => {
-    for (const draft of DRAFT_PROGRAMS) {
+    for (const draft of NEW) {
       for (const id of draft.assessments) expect(getMetric(id), `${draft.id}/${id}`).toBeDefined();
     }
   });
 
   it('points its progression graph at programs that exist', () => {
     const ids = new Set(PROGRAMS.map((p) => p.id));
-    for (const draft of DRAFT_PROGRAMS) {
+    for (const draft of NEW) {
       for (const next of draft.nextPrograms) expect(ids.has(next.id), `${draft.id} → ${next.id}`).toBe(true);
     }
   });
 
   it('prescribes every phase in every block', () => {
-    for (const draft of DRAFT_PROGRAMS) {
+    for (const draft of NEW) {
       const phases = draft.phases.map((p) => p.id);
       for (const type of draft.sessionTypes) {
         for (const block of type.blocks ?? []) {
@@ -65,7 +74,7 @@ describe('the drafts would be valid if they were', () => {
   // The rule M33 put on the catalogue: a block that prescribes the same dose
   // in every phase has to say why, and one that says why must not change.
   it('changes something at every phase boundary, or says why not', () => {
-    for (const draft of DRAFT_PROGRAMS) {
+    for (const draft of NEW) {
       for (const type of draft.sessionTypes) {
         for (const block of type.blocks ?? []) {
           const doses = draft.phases.map((p) => JSON.stringify(block.perPhase[p.id]?.exercises ?? []));
@@ -87,7 +96,7 @@ describe('the drafts would be valid if they were', () => {
   });
 
   it('runs on its own recommended layout without breaking its own rules', () => {
-    for (const draft of DRAFT_PROGRAMS) {
+    for (const draft of NEW) {
       if (!draft.recommendedLayout) continue;
       const violations = validateWeek(draft, planFromLayout(draft.recommendedLayout));
       expect(violations.filter((v) => v.severity === 'error'), draft.id).toEqual([]);
@@ -95,7 +104,7 @@ describe('the drafts would be valid if they were', () => {
   });
 
   it('can be laid out on any number of days without breaking a hard rule', () => {
-    for (const draft of DRAFT_PROGRAMS) {
+    for (const draft of NEW) {
       for (const days of [1, 2, 3, 4, 5]) {
         for (const layout of layoutsFor(draft, { daysPerWeek: days })) {
           const errors = validateWeek(draft, planFromLayout(layout)).filter((v) => v.severity === 'error');
@@ -106,7 +115,7 @@ describe('the drafts would be valid if they were', () => {
   });
 
   it('adapts to every length it would offer', () => {
-    for (const draft of DRAFT_PROGRAMS) {
+    for (const draft of NEW) {
       for (const weeks of lengthsFor(draft)) {
         const out = adaptProgram(draft, weeks);
         const errors = validateProgram(out).filter((i) => i.level === 'error');
@@ -122,9 +131,34 @@ describe('what each draft is for', () => {
   it('gives a two-day climber a program that asks for two days', () => {
     const perWeek = TWO_DAY_WEEK.constraints.find((c) => c.kind === 'sessions-per-week');
     expect(perWeek).toMatchObject({ min: 2 });
-    for (const program of PROGRAMS) {
-      const shipped = program.constraints.find((c) => c.kind === 'sessions-per-week');
-      if (shipped?.kind === 'sessions-per-week') expect(shipped.min, program.id).toBeGreaterThan(2);
+    // The hole it was written to fill: onboarding offers two days a week,
+    // and before this the lowest anything asked for was three, so every
+    // recommendation a two-day climber saw carried a caution.
+    const lowest = Math.min(
+      ...PROGRAMS.flatMap((p) => {
+        const rule = p.constraints.find((c) => c.kind === 'sessions-per-week');
+        return rule?.kind === 'sessions-per-week' ? [rule.min] : [];
+      }),
+    );
+    expect(lowest).toBe(2);
+  });
+
+  /**
+   * The coach's call (PLAN.md M95). The first draft spent one of the two
+   * days on strength, so a two-day climber climbed once a week for twelve
+   * weeks; both committed days climb now, and the strength work rides with
+   * them.
+   */
+  it('spends both committed days on climbing', () => {
+    const committed = TWO_DAY_WEEK.sessionTypes.filter((t) => (t.priority ?? 99) <= 2);
+    expect(committed.map((t) => t.id)).toEqual(['climb', 'build']);
+    for (const type of committed) {
+      expect(type.blocks?.[0]?.name, type.id).toBe('Climbing');
+    }
+    // And the work that used to own a day still happens once a week.
+    const blocks = committed.flatMap((t) => (t.blocks ?? []).map((b) => b.id));
+    for (const id of ['fingers', 'pull', 'protect']) {
+      expect(blocks.filter((b) => b === id), id).toHaveLength(1);
     }
   });
 
@@ -134,12 +168,27 @@ describe('what each draft is for', () => {
     expect(Object.values(oneDay!.slots)).toEqual(['climb']);
   });
 
-  it('is shorter than anything the catalogue ships', () => {
+  it('is the shortest block the catalogue ships', () => {
     expect(TRIP_PREP.weeks).toBe(4);
     for (const program of PROGRAMS) {
-      if (program.kind === 'mode') continue;
+      if (program.kind === 'mode' || program.id === TRIP_PREP.id) continue;
       expect(program.weeks, program.id).toBeGreaterThan(TRIP_PREP.weeks);
     }
+  });
+
+  /**
+   * The coach's call (PLAN.md M95). A four-week block resolves its test
+   * weeks to weeks 1 and 4 — and week 4 is the taper, which exists to keep
+   * a climber *off* a maximum effort. So it measures nothing.
+   */
+  it('asks for no test, because its last week is a taper', () => {
+    expect(TRIP_PREP.assessments).toEqual([]);
+  });
+
+  // Above beginner, on the coach's call: a taper only means something when
+  // there is a season's worth of form to protect.
+  it('starts above beginner', () => {
+    expect(TRIP_PREP.gradeRange.min).toBe('V3');
   });
 
   // A four-week block whose last week is a taper must not also carry a

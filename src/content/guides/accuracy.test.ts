@@ -335,7 +335,16 @@ describe('exercises the guide prescribes', () => {
         .flatMap((b) => (b.kind === 'exercises' ? b.items.map(prescribed) : []))
         .every((n) => n === ''),
     ).map((p) => p.program.id);
-    expect(unchecked.sort()).toEqual(['base_camp', 'outdoor_climbing', 'the_siege']);
+    // Two Days a Week and Trip Prep name no exercises in prose at all: the
+    // programs carry the doses and a guide restating them would be a second
+    // place for one to be wrong (PLAN.md M95).
+    expect(unchecked.sort()).toEqual([
+      'base_camp',
+      'outdoor_climbing',
+      'the_siege',
+      'trip_prep',
+      'two_day_week',
+    ]);
   });
 });
 

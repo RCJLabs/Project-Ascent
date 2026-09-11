@@ -549,7 +549,9 @@ describe('weeks available', () => {
 
   it('says so when a program is written longer than the time there is', () => {
     const rushed = recommend(input({ goal: 'fingers', weeksAvailable: 6 }));
-    for (const rec of rushed) {
+    // Trip Prep is four weeks and fits in six, which is the whole reason it
+    // exists (PLAN.md M95) — it has nothing to be cautioned about.
+    for (const rec of rushed.filter((r) => r.program.weeks > 6)) {
       expect(rec.cautions.join(' '), rec.program.id).toMatch(/Written as 12 weeks — you would run it over 6/);
     }
   });
@@ -565,8 +567,12 @@ describe('weeks available', () => {
 
   it('counts a program that fits as a reason to pick it', () => {
     const roomy = recommend(input({ goal: 'fingers', weeksAvailable: 16 }));
-    for (const rec of roomy) {
+    for (const rec of roomy.filter((r) => r.program.weeks === 12)) {
       expect(rec.reasons.join(' '), rec.program.id).toMatch(/Runs in 12 of your 16 weeks/);
+    }
+    // And the four-week one says the same thing about its own length.
+    for (const rec of roomy.filter((r) => r.program.weeks === 4)) {
+      expect(rec.reasons.join(' '), rec.program.id).toMatch(/Runs in 4 of your 16 weeks/);
     }
     expect(recommend(input({ weeksAvailable: 12 }))[0]!.reasons.join(' ')).toMatch(
       /Runs exactly your 12 weeks/,

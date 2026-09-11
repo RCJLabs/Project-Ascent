@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { FIELDS, SCALE_MAX, getField } from './fields';
 import { PROGRAMS } from './programs';
-import { DRAFT_PROGRAMS } from './programs/drafts';
+
 import type { FieldId } from './types';
 
 /**
@@ -38,7 +38,7 @@ describe('the field registry', () => {
   });
 
   it('defines every field the catalogue actually asks for', () => {
-    for (const program of [...PROGRAMS, ...DRAFT_PROGRAMS]) {
+    for (const program of PROGRAMS) {
       for (const type of program.sessionTypes) {
         for (const id of type.fields ?? []) {
           expect(getField(id), `${program.id}/${type.id}/${id}`).toBeDefined();

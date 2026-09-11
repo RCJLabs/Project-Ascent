@@ -32,7 +32,7 @@ export const APP: Guide = {
         { kind: 'quote', text: 'A training log that keeps score honestly, and a climber that grows out of it.' },
         {
           kind: 'p',
-          text: 'It is three things at once. A **training log** — sessions, climbs, projects, assessments, notes. A **program runner** — eleven programs, a finder to pick one, a calendar that places the weeks. And a **character** that grows out of the log rather than beside it: levels, stats, skill trees, an altimeter and a career timeline, all derived from what you actually did.',
+          text: 'It is three things at once. A **training log** — sessions, climbs, projects, assessments, notes. A **program runner** — thirteen programs, a finder to pick one, a calendar that places the weeks. And a **character** that grows out of the log rather than beside it: levels, stats, skill trees, an altimeter and a career timeline, all derived from what you actually did.',
         },
         {
           kind: 'p',
@@ -126,7 +126,7 @@ export const APP: Guide = {
       content: [
         {
           kind: 'p',
-          text: 'Eleven of them: nine structured blocks, most twelve weeks across three or four phases, plus two log-only modes for when you are not running a block. Each block has a guide in this list explaining why it is built the way it is.',
+          text: 'Thirteen of them: eleven structured blocks, most twelve weeks across three or four phases, plus two log-only modes for when you are not running a block. Each block has a guide in this list explaining why it is built the way it is.',
         },
         { kind: 'h', text: 'Finding one' },
         {

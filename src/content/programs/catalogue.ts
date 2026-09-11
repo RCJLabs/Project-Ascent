@@ -10,9 +10,11 @@ import { OUTDOOR_CLIMBING } from './outdoorClimbing';
 import { THE_CRUISER } from './cruiser';
 import { THE_SIEGE } from './siege';
 import { PEAK_PERFORMANCE } from './peakPerformance';
+import { TRIP_PREP } from './tripPrep';
+import { TWO_DAY_WEEK } from './twoDayWeek';
 
 /**
- * The eleven program bodies, in catalog order (PLAN.md M78).
+ * The thirteen program bodies, in catalog order (PLAN.md M78, M95).
  *
  * This module is the only place they are imported statically, and the app
  * reaches it through `import()` alone — from `loadPrograms` in index.ts.
@@ -26,8 +28,8 @@ import { PEAK_PERFORMANCE } from './peakPerformance';
  * built entry chunk for a body's own words.
  */
 export const CATALOGUE: Program[] = [
-  GROUND_ZERO, BASE_CAMP, GRAVITY_DEFIED, LOCKDOWN, IRON_GRIP, THE_LONG_GAME,
-  PEAK_PERFORMANCE, THE_SIEGE, THE_CRUISER, GENERAL_TRAINING, OUTDOOR_CLIMBING,
+  GROUND_ZERO, BASE_CAMP, TWO_DAY_WEEK, GRAVITY_DEFIED, LOCKDOWN, IRON_GRIP, THE_LONG_GAME,
+  PEAK_PERFORMANCE, THE_SIEGE, TRIP_PREP, THE_CRUISER, GENERAL_TRAINING, OUTDOOR_CLIMBING,
 ];
 
-export { BASE_CAMP, GRAVITY_DEFIED, GROUND_ZERO, IRON_GRIP, LOCKDOWN, GENERAL_TRAINING, OUTDOOR_CLIMBING, PEAK_PERFORMANCE, THE_CRUISER, THE_LONG_GAME, THE_SIEGE };
+export { BASE_CAMP, GRAVITY_DEFIED, GROUND_ZERO, IRON_GRIP, LOCKDOWN, GENERAL_TRAINING, OUTDOOR_CLIMBING, PEAK_PERFORMANCE, THE_CRUISER, THE_LONG_GAME, THE_SIEGE, TRIP_PREP, TWO_DAY_WEEK };

@@ -21,7 +21,7 @@
  * of work.
  */
 
-import type { Program } from '../../types';
+import type { Program } from '../types';
 
 const PHASE = { sharpen: 'sharpen', taper: 'taper' } as const;
 
@@ -32,7 +32,13 @@ export const TRIP_PREP: Program = {
   kind: 'program',
   stage: 'style',
   discipline: 'both',
-  gradeRange: { scale: 'V', min: 'V0', max: 'V17', label: 'All Levels' },
+  // Above beginner, on the coach's call (PLAN.md M95). A taper only means
+  // something when there is a season's worth of form to protect, and a
+  // climber in their first months is better served by a block that builds
+  // something than by four weeks of sharpening not very much.
+  // No `label`: an authored one would spell a grade, and a spelled grade
+  // ignores the climber's Font/French preference. `displayRange` derives it.
+  gradeRange: { scale: 'V', min: 'V3', max: 'V17' },
   weeks: 4,
   equipment: ['wall'],
   helpfulEquipment: ['hangboard'],
@@ -60,7 +66,9 @@ export const TRIP_PREP: Program = {
         'Three weeks of specific, hard, short sessions. The climbing looks like the trip: the angle, the hold type, the length of the climbs. Volume stays moderate because there is no time to recover from a big week and no benefit to trying.',
       goals: [
         'Climb at the angle and on the hold type the trip demands',
-        'Two hard sessions a week, no more',
+        // A cap, not a target: the recommended week places one, and a
+        // second is allowed for a climber who recovers well.
+        'No more than two hard sessions a week',
         'Rehearse the whole day, not just the moves — pacing, rests, shoes on and off',
         'Finish week 3 tired but not broken',
       ],
@@ -172,6 +180,13 @@ export const TRIP_PREP: Program = {
         },
       ],
     },
+    {
+      id: 'rest',
+      name: 'Rest / Recovery',
+      icon: '🔋',
+      description: 'Part of the taper, not a gap in it. Four weeks out, rest is the training.',
+      isRest: true,
+    },
   ],
 
   deloadWeeks: [],
@@ -188,7 +203,16 @@ export const TRIP_PREP: Program = {
     { kind: 'not-day-before', sessionTypeId: 'fp', before: 'proj', note: 'Never hang the day before the session that matters.' },
     { kind: 'max-per-week', sessionTypeId: 'proj', count: 2, note: 'Two hard sessions a week at most — four weeks is not long enough to recover from three.' },
   ],
-  assessments: ['max_hang_20mm_7s'],
+  /**
+   * Nothing, on the coach's call (PLAN.md M95).
+   *
+   * A four-week block resolves its test weeks to week 1 and **week 4** —
+   * and week 4 is the taper, whose own goals say "no new edge, no new
+   * exercise, no first attempts". The app would have put a test-week
+   * banner in the one week this program exists to keep a climber off a
+   * maximum effort. A taper is not a measuring block.
+   */
+  assessments: [],
   nextPrograms: [
     { id: 'base_camp', reason: 'After the trip, if it showed you the basics need work.' },
     { id: 'iron_grip', reason: 'After the trip, if it was your fingers that ran out.' },

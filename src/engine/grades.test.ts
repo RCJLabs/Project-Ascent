@@ -4,6 +4,7 @@ import {
   canonicalGrade,
   compareGrades,
   displayGrade,
+  displayRange,
   gradeOrdinal,
   isValidGrade,
   maxGrade,
@@ -141,5 +142,36 @@ describe('parsing either notation', () => {
     expect(new Set(vLabels.map((l) => l.toLowerCase())).size).toBe(vLabels.length);
     const ydsLabels = [...YDS_GRADES, ...YDS_GRADES.map((g) => displayGrade('YDS', g, font))];
     expect(new Set(ydsLabels.map((l) => l.toLowerCase())).size).toBe(ydsLabels.length);
+  });
+});
+
+/**
+ * A range with no ceiling (PLAN.md M95).
+ *
+ * Trip Prep is the first program whose range runs to the top of the ladder
+ * without starting at the bottom, and "V3-V17" reads as a band with a
+ * ceiling rather than as "V3 and up".
+ */
+describe('a range that runs to the top of the ladder', () => {
+  it('reads as open-ended', () => {
+    expect(displayRange({ scale: 'V', min: 'V3', max: 'V17' }, DEFAULT_DISPLAY)).toBe('V3+');
+  });
+
+  it('follows the display preference, which a written label could not', () => {
+    expect(displayRange({ scale: 'V', min: 'V3', max: 'V17' }, { boulder: 'Font', route: 'YDS' })).toBe('6A+');
+  });
+
+  it('does the same on the route ladder', () => {
+    expect(displayRange({ scale: 'YDS', min: '5.12a', max: '5.15d' }, DEFAULT_DISPLAY)).toBe('5.12a+');
+  });
+
+  // Bottom to top is not "V0 and up", it is every grade there is — and the
+  // programs that span it say so with an editorial label instead.
+  it('leaves a range that spans the whole ladder as a range', () => {
+    expect(displayRange({ scale: 'V', min: 'V0', max: 'V17' }, DEFAULT_DISPLAY)).toBe('V0-V17');
+  });
+
+  it('leaves a range with a real ceiling alone', () => {
+    expect(displayRange({ scale: 'V', min: 'V3', max: 'V6' }, DEFAULT_DISPLAY)).toBe('V3-V6');
   });
 });

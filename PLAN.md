@@ -3424,13 +3424,38 @@ a kept one.
   **Shipped red, and fixed on the way in:** M93 went out with a `tsc --noEmit` failure in
   its drift test — vitest does not typecheck, the suite was green, and the last typecheck
   in that milestone ran before the file existed.
-- **M95 — The two programs nobody can start.** `content/programs/drafts/` holds Trip Prep
-  and Two-Day Week: structurally complete, validating against the same rules the builder
-  enforces, covered by `drafts.test.ts`, and deliberately out of `PROGRAMS` until *"the
-  person who coaches has read them"*. That is the right gate and it has not moved since
-  M58. **This one is blocked on you, not on me** — the code change is the two lines the
-  draft index promises, and what it needs first is a coach's read. Worth naming as a
-  milestone so it stops being a file nobody opens.
+- **M95 — The two programs nobody can start.** *Done. The coach read them, and the
+  catalogue is thirteen programs.*
+  **The calls, as made:** Two Days a Week spends **both** committed days on climbing; Trip
+  Prep asks for **no test**; its taper is **one week, the last**; Two Days deloads **once, at
+  week 8**; the doses stand as drafted; and Trip Prep starts at **V3**.
+  **The first call restructured the program.** The draft spent one of the two days on
+  strength, so a two-day climber climbed *once a week for twelve weeks*. Both days climb
+  now — and the strength work did not become optional, because a climber with two days will
+  not do a third. It moved *into* the sessions: fingers on the hard day, pull and prehab on
+  the volume day. Every weekly dose is unchanged; climbing went from once a week to twice.
+  **Shipping was not the two lines M58 promised, and the reason is worth keeping.**
+  `drafts.test.ts` ran `validateProgram` — the rules the *builder* enforces on a climber's
+  own program — and the catalogue runs `validateCatalog`, which is stricter. Both drafts
+  failed it on the same rule the moment they were added: **no rest session type**. A draft
+  that validates against the wrong validator is a draft that looks ready and is not.
+  Seven more checks broke on contact, every one of them a guard doing its job: the catalogue
+  count in the app guide, the summary index that mirrors the guides, the grade-range rule
+  that forbids an authored *"V3 and up"* because a spelled grade cannot follow a Font
+  preference, the guide-accuracy rule that wants a table row for every deload week, the
+  test-week rules that assumed every block measures something, and two finder tests that
+  assumed every program is twelve weeks.
+  **One real improvement fell out of it.** Trip Prep is the first program whose range runs
+  to the top of the ladder without starting at the bottom, and it displayed as *"V3-V17"* —
+  a band with a ceiling. `displayRange` now renders an open-topped range as **"V3+"**, and
+  in Font as **"6A+"**, which is the whole point of deriving it rather than writing it.
+  **The guides are deliberately short** — five or six sections each rather than the ten to
+  thirteen of the ported ones. They explain the programs; they do not restate the doses,
+  because the programs carry those and a guide repeating them is a second place for one to
+  be wrong. `accuracy.test.ts` records both as prescribing no exercises in prose, which is
+  a fact about them and not an omission.
+  Verified in both themes: the finder now answers a two-day climber with **"Two Days a Week
+  — Fits 2 days a week"**, which is the hole M58 wrote the program to fill. 2,901 tests pass.
 
 **The Ascent.**
 

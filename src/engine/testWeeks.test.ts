@@ -13,7 +13,23 @@ import type { Program } from '@/content/types';
  * were late.
  */
 
-const structured = PROGRAMS.filter((p) => p.kind !== 'mode');
+/**
+ * Blocks that measure something. Trip Prep is the one that does not, on the
+ * coach's call (PLAN.md M95): a four-week block resolves its test weeks to
+ * weeks 1 and 4, week 4 is its taper, and a taper exists to keep a climber
+ * off a maximum effort. A program with no assessments has no test weeks by
+ * construction — the rules below are about where tests land, not about
+ * whether every block has to have them.
+ */
+const structured = PROGRAMS.filter((p) => p.kind !== 'mode' && p.assessments.length > 0);
+
+describe('a block that measures nothing', () => {
+  it('is asked for no test weeks at all', () => {
+    const measureless = PROGRAMS.filter((p) => p.kind !== 'mode' && p.assessments.length === 0);
+    expect(measureless.map((p) => p.id)).toEqual(['trip_prep']);
+    for (const program of measureless) expect(testWeeks(program), program.id).toEqual([]);
+  });
+});
 
 describe('which weeks are test weeks', () => {
   it('starts every block with a baseline', () => {

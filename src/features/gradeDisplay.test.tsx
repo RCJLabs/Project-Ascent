@@ -69,7 +69,17 @@ describe('reading the catalogue in Font', () => {
     // The structural half: a label kept as prose is a label that cannot
     // follow a preference, so only the editorial ones keep one.
     const authored = PROGRAMS.filter((p) => p.gradeRange.label !== undefined).map((p) => p.gradeRange.label);
-    expect(authored.sort()).toEqual(['All Levels', 'All Levels', 'All Levels', 'Pre-Climbing']);
+    // Two Days a Week keeps "All Levels" — it is about the week you have,
+    // not the grade you climb. Trip Prep has none: its range starts above
+    // beginner and a spelled grade would ignore the display preference
+    // (PLAN.md M95).
+    expect(authored.sort()).toEqual([
+      'All Levels',
+      'All Levels',
+      'All Levels',
+      'All Levels',
+      'Pre-Climbing',
+    ]);
   });
 });
 

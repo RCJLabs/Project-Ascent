@@ -330,9 +330,9 @@ describe('the app guide counts what the app has', () => {
 
   it('counts the programs correctly, blocks and modes apart', () => {
     const modes = PROGRAMS.filter((p) => p.kind === 'mode');
-    expect(PROGRAMS).toHaveLength(11);
+    expect(PROGRAMS).toHaveLength(13);
     expect(modes).toHaveLength(2);
-    expect(allText).toContain('Eleven of them: nine structured blocks');
+    expect(allText).toContain('Thirteen of them: eleven structured blocks');
     expect(allText).toContain('two log-only modes');
   });
 
