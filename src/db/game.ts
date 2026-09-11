@@ -45,36 +45,66 @@ export interface Wallet {
   owned?: string[];
 }
 
+/** The best run on one day's wall, as the app recorded it (PLAN.md M96). */
+export interface ClimbedDay {
+  date: string;
+  metres: number;
+  coins: number;
+  mode: 'ascent' | 'freesolo';
+  /**
+   * The inputs that climbed it, so it can be raced (PLAN.md M81).
+   *
+   * Kept on the newest day and pruned from the rest: the wall is seeded
+   * from the date, so replaying an older day's tape would draw a climber
+   * dodging boulders that are not there — and a year of tapes is a hundred
+   * times the bytes of a year of heights. Optional — every record written
+   * before M81 has no tape, and a run past the move cap stores none.
+   */
+  tape?: Tape;
+  recovered?: false;
+}
+
+/**
+ * A day read back out of a rewards-ledger label rather than recorded
+ * (PLAN.md M96).
+ *
+ * A separate shape rather than a record with optional fields, because it
+ * genuinely knows less: the label carried a height and nothing else. Making
+ * `coins` and `mode` optional everywhere would push that one day's
+ * ignorance into every reader as a `?? 0`.
+ */
+export interface RecoveredDay {
+  date: string;
+  metres: number;
+  recovered: true;
+}
+
+export type DayRecord = ClimbedDay | RecoveredDay;
+
 export interface AscentRecords {
   /** Best height in metres, per mode. */
   best: { ascent: number; freesolo: number };
   /** Best run with no power-up touched. */
   pureBest: number;
   runs: number;
-  /** The best run on today's wall — the one the day's payout is priced on. */
-  daily: {
-    date: string;
-    metres: number;
-    coins: number;
-    mode: 'ascent' | 'freesolo';
-    /**
-     * The inputs that climbed it, so it can be raced (PLAN.md M81).
-     *
-     * On the *daily* record and nowhere else, because the wall is seeded
-     * from the date: the all-time best was climbed on some other day's
-     * wall, and replaying its tape would draw a climber dodging boulders
-     * that are not there. Optional — every record written before M81 has
-     * no tape, and a run recorded past the move cap stores none.
-     */
-    tape?: Tape;
-  } | null;
+  /**
+   * The best run on each day's wall, oldest first (PLAN.md M96).
+   *
+   * Before this there was one `daily` record and it was overwritten every
+   * day, so a game built on "everyone gets the same wall, and a score is
+   * comparable" kept nothing to compare. The single record survives below
+   * only so an old one can be migrated.
+   */
+  days: DayRecord[];
+  /** @deprecated Migrated into `days` on read. Never written. */
+  daily?: DayRecord | null;
 }
 
 export const EMPTY_ASCENT: AscentRecords = {
   best: { ascent: 0, freesolo: 0 },
   pureBest: 0,
   runs: 0,
-  daily: null,
+  days: [],
 };
 
 const ASCENT_KEY = 'ascent';
@@ -130,7 +160,14 @@ export async function putBounties(bounties: AcceptedBounty[]): Promise<AcceptedB
 export async function getAscent(): Promise<AscentRecords> {
   const db = await getDb();
   const record = await db.get('game', ASCENT_KEY);
-  return { ...EMPTY_ASCENT, ...((record?.value as Partial<AscentRecords> | undefined) ?? {}) };
+  const stored = { ...EMPTY_ASCENT, ...((record?.value as Partial<AscentRecords> | undefined) ?? {}) };
+  // The one day the old shape kept, promoted into the history (PLAN.md
+  // M96). Only when there is no history yet: a record written since carries
+  // its own days and the stale `daily` beside it must not overwrite them.
+  if (stored.days.length === 0 && stored.daily) {
+    return { ...stored, days: [stored.daily], daily: null };
+  }
+  return { ...stored, daily: null };
 }
 
 export async function putAscent(records: AscentRecords): Promise<AscentRecords> {

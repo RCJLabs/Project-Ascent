@@ -22,7 +22,7 @@ import { payoutFor, wallNumber, type AscentPayout } from '@/engine/ascent/reward
 import { dailySeed } from '@/engine/ascent/rng';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveAvatar } from '@/engine/avatar';
-import { today as todayKey } from '@/engine/dates';
+import { addDays, daysBetween, today as todayKey } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { deriveStats } from '@/engine/stats';
 import { deriveVitality } from '@/engine/vitality';
@@ -48,6 +48,7 @@ import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { dailyWallCard } from '@/ui/shareCard';
+import { ascentHistory, dayRun, describeAscent, type AscentHistory } from '@/engine/ascent/history';
 import { THEME_UNLOCKS, buildWall, render, themeForHeight } from './render';
 
 /** Free Solo is the hard mode, and it has to be earned. */
@@ -90,6 +91,16 @@ export function AscentPage() {
   const xp = useXp();
   const skills = useSkills();
   const records = useGame((s) => s.ascent);
+  /** Today's wall, and only today's: the tape is seeded from the date. */
+  // The days behind today (PLAN.md M96).
+  const history = useMemo(() => ascentHistory({ days: records.days, to: todayKey() }), [records.days]);
+  const today = useMemo(
+    () => {
+      const day = dayRun(records.days, todayKey());
+      return day !== null && day.recovered !== true ? day : null;
+    },
+    [records.days],
+  );
   const recordRun = useGame((s) => s.recordRun);
   const hydrated = useGame((s) => s.hydrated);
   const loadGame = useGame((s) => s.load);
@@ -212,8 +223,8 @@ export function AscentPage() {
    * state is whatever was played last, and both buttons are on screen.
    */
   const raceable = useCallback(
-    (which: Mode) => tapeToRace(records.daily, { date: todayKey(), mode: which, seed }),
-    [records.daily, seed],
+    (which: Mode) => tapeToRace(today, { date: todayKey(), mode: which, seed }),
+    [today, seed],
   );
 
   const start = useCallback(
@@ -398,7 +409,7 @@ export function AscentPage() {
               {raceable('ascent') && (
                 <p className="text-sm text-ink-soft leading-relaxed mb-3">
                   Your best run today climbs it with you — a faint second climber on the same wall,
-                  making the same moves. {records.daily?.metres.toLocaleString()} m to beat.
+                  making the same moves. {today?.metres.toLocaleString()} m to beat.
                 </p>
               )}
               <Button size="lg" className="w-full" onClick={() => start('ascent')}>
@@ -413,7 +424,7 @@ export function AscentPage() {
                   ? 'Unlocked.'
                   : `Reach ${FREE_SOLO_UNLOCK.toLocaleString()} m on the normal wall to unlock it.`}
                 {raceable('freesolo') &&
-                  ` Today's best Free Solo runs beside you — ${records.daily?.metres.toLocaleString()} m to beat.`}
+                  ` Today's best Free Solo runs beside you — ${today?.metres.toLocaleString()} m to beat.`}
               </p>
               <Button
                 variant="outline"
@@ -427,7 +438,7 @@ export function AscentPage() {
 
             <Card title={`Today's payout`}>
               <TodayPayout
-                daily={records.daily?.date === todayKey() ? records.daily : null}
+                daily={today}
                 rested={derived.restedToday}
               />
             </Card>
@@ -438,15 +449,20 @@ export function AscentPage() {
                 <Row label="Best Free Solo" value={`${records.best.freesolo.toLocaleString()} m`} />
                 <Row label="Best pure run" value={`${records.pureBest.toLocaleString()} m`} />
                 <Row label="Runs" value={String(records.runs)} />
-                {records.daily?.date === todayKey() && (
-                  <Row label="Today's wall" value={`${records.daily.metres.toLocaleString()} m`} />
-                )}
+                {today && <Row label="Today's wall" value={`${today.metres.toLocaleString()} m`} />}
               </dl>
               <p className="text-xs text-ink-soft mt-3">
                 Everyone gets the same wall each day — the pattern comes from the date, so a score is
                 comparable without anything leaving your phone.
               </p>
             </Card>
+
+            {describeAscent(history) !== null && (
+              <Card title="The month behind you">
+                <DayBars history={history} />
+                <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeAscent(history)}</p>
+              </Card>
+            )}
 
             <Card title="Walls">
               <ul className="grid grid-cols-1 gap-1.5 text-sm">
@@ -640,5 +656,44 @@ function TodayPayout({
           : 'Beat it and the payout is re-priced. A logged rest day pays ×1.5.'}
       </p>
     </>
+  );
+}
+
+/**
+ * A bar per day of the last month, and a gap for a wall you did not climb
+ * (PLAN.md M96).
+ *
+ * A gap rather than a zero-height bar: not climbing a wall and climbing
+ * nought metres of it are different days, and drawing them the same is the
+ * mistake the consistency grid records for its own rest days.
+ */
+function DayBars({ history }: { history: AscentHistory }) {
+  const peak = Math.max(1, ...history.days.map((d) => d.metres));
+  const span = daysBetween(history.from, history.to) + 1;
+  const byDate = new Map(history.days.map((d) => [d.date, d]));
+
+  return (
+    <div
+      className="flex items-end gap-0.5 h-20"
+      role="img"
+      aria-label={`${history.played} of the last ${span} daily walls climbed, best ${history.best?.metres ?? 0} metres`}
+    >
+      {Array.from({ length: span }, (_, i) => {
+        const date = addDays(history.from, i);
+        const day = byDate.get(date);
+        return (
+          <div key={date} className="flex-1 flex items-end h-full">
+            {day ? (
+              <div
+                className="w-full rounded-sm bg-accent"
+                style={{ height: `${Math.max(6, (day.metres / peak) * 100)}%` }}
+              />
+            ) : (
+              <div className="w-full rounded-sm bg-sunken" style={{ height: '6%' }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }

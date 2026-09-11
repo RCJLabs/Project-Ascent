@@ -3385,14 +3385,33 @@ a kept one.
 
 **The Ascent.**
 
-- **M96 — The day's wall is thrown away.** `AscentRecords.daily` holds **one** record, and
-  it is overwritten every day. The game tells the climber that everyone gets the same wall
-  and that "a score is comparable without anything leaving your phone" — and then keeps no
-  history to compare. What survives is an accident: the ledger writes one `ascent:${date}`
-  entry per day whose *label* reads "The Ascent · 1,063 m", so the numbers exist only as
-  text inside a string written for a rewards feed. Reading a metre count back out of a
-  label is the kind of thing this codebase calls a smell everywhere else. A daily series —
-  scores, streak, the walls you skipped — from a record that stores the number as a number.
+- **M96 — The day's wall is thrown away.** *Done.* The premise held exactly: one `daily`
+  record, overwritten every day, in a game whose own copy says a score is comparable
+  because everyone gets the same wall.
+  **The label really was the only survivor, and it is read exactly once.** `heightFromLabel`
+  parses "The Ascent · 1,063 m" back into a number on first load and writes the result down
+  as a number; nothing reads that label again. The parser is deliberately strict — groups of
+  ASCII digits joined by separators and nothing else — because `toLocaleString` on a whole
+  number produces grouping separators and nothing else, so a comma or a full stop is
+  equally fine and a locale with its own digits yields nothing rather than a number invented
+  from a string.
+  **A recovered day is its own type, not a record with optional fields.** It genuinely knows
+  less: the label carried a height and no mode, no coins, no tape. Making those optional on
+  the shared shape would have pushed one day's ignorance into every reader as a `?? 0`, so
+  `DayRecord` is a union of `ClimbedDay` and `RecoveredDay` and the narrowing is enforced
+  instead of defended. A real recording replaces a recovered day outright, even a lower one
+  — keeping the parsed height beside the new run's tape would put a ghost on the wall
+  claiming a climb that never happened.
+  **Tapes are pruned to the newest day** at write time, not read time: the wall is seeded
+  from the date so an older tape is unraceable anyway, and a year of tapes is a hundred
+  times the bytes of a year of heights.
+  **The browser found the last thing wrong with it.** The chart drew a month and counted
+  every day before the climber's first wall as one they had skipped. The window now stops at
+  the first wall climbed — the same clamp M93 needed, for the same reason — so a climber
+  four days in reads "2 of the last 4 walls" rather than a month with twenty-six invented
+  misses in it. A skipped day is a gap, never a zero-height bar: not climbing a wall and
+  climbing nought metres of one are different days.
+  Twenty-nine mutations, all killed. Verified in both themes. 2,827 tests pass.
 
 **Two findings that did not survive the check**, recorded so they are not proposed again:
 

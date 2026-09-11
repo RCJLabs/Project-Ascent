@@ -17,6 +17,7 @@ import {
 } from '@/db/game';
 import type { Mode } from '@/engine/ascent/game';
 import type { Tape } from '@/engine/ascent/replay';
+import { dayRun, recordDay, recoverDays } from '@/engine/ascent/history';
 import { payoutFor, type AscentPayout } from '@/engine/ascent/rewards';
 import type { BountySpec, Challenge, AcceptedBounty } from '@/engine/challenges';
 import { today } from '@/engine/dates';
@@ -81,7 +82,12 @@ export const useGame = create<GameState>((set, get) => ({
         listBounties(),
         getAscent(),
       ]);
-      set({ ledger, wallet, bounties, ascent, hydrated: true });
+      // The heights the old shape left in ledger labels, read back into
+      // numbers exactly once (PLAN.md M96).
+      const days = recoverDays(ascent.days, ledger);
+      const recovered = days.length === ascent.days.length ? ascent : { ...ascent, days };
+      if (recovered !== ascent) await putAscent(recovered);
+      set({ ledger, wallet, bounties, ascent: recovered, hydrated: true });
     } catch {
       set({ hydrated: true });
     }
@@ -94,22 +100,22 @@ export const useGame = create<GameState>((set, get) => ({
 
   recordRun: async ({ mode, metres, coins, pure, date, rested, tape }) => {
     const current = get().ascent;
-    const today = current.daily?.date === date ? current.daily : null;
-    // The day is priced on its best run, so a worse one changes nothing.
-    // The tape goes with it, and only with it: a better run that brought no
-    // tape — one past the move cap, or finished on yesterday's wall —
-    // leaves the record with none rather than inheriting the old run's
-    // inputs, which would put a ghost on the wall claiming a height it
-    // never climbed.
-    const daily =
-      today === null || metres > today.metres ? { date, metres, coins, mode, tape } : today;
+    // The day is priced on its best run, so a worse one changes nothing —
+    // and the day is kept rather than overwritten (PLAN.md M96).
+    const run = { date, metres, coins, mode, ...(tape ? { tape } : {}) };
+    const days = recordDay(current.days, run);
+    // The day's kept record, which is `run` unless an earlier run today was
+    // better. Never a recovered day: `recordDay` replaces one of those with
+    // the real recording outright.
+    const kept = dayRun(days, date);
+    const daily = kept !== null && kept.recovered !== true ? kept : run;
 
     set({
       ascent: await putAscent({
         best: { ...current.best, [mode]: Math.max(current.best[mode], metres) },
         pureBest: pure ? Math.max(current.pureBest, metres) : current.pureBest,
         runs: current.runs + 1,
-        daily,
+        days,
       }),
     });
 
