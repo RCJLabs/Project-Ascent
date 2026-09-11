@@ -217,14 +217,19 @@ function detraining({ state, sessions }: CoachInput, today: string): Tip | null 
   // fewer. Silence there means "stopped", not "fine", so read the gap itself
   // rather than trusting a null to mean nothing is wrong.
   if (away !== null && away >= LAYOFF_DAYS) {
+    // The app cannot tell "did not train" from "did not log", and it used to
+    // assert the first: "24 days since you trained", to a climber who may
+    // have climbed through every one of them (PLAN.md M100). The advice
+    // underneath is still the right advice for the reading that is true, so
+    // it stays — behind the sentence the log actually supports.
     return {
       id: 'detraining',
       signature: away >= 60 ? 'long' : away >= 28 ? 'month' : 'fortnight',
       tone: 'caution',
       weight: 58,
-      headline: `${away} days since you trained`,
-      body: 'Finger strength holds for a while and everything else does not. Come back at about two-thirds of the volume you left on and give it a fortnight before judging anything — the first sessions back always feel worse than the fitness actually is.',
-      action: { label: 'Plan the week', href: '/calendar' },
+      headline: `${away} days since you logged anything`,
+      body: 'If you have been training and not writing it down, mark those days on the calendar and everything here follows. If you have actually been off: finger strength holds for a while and everything else does not, so come back at about two-thirds of the volume you left on and give it a fortnight before judging anything — the first sessions back always feel worse than the fitness actually is.',
+      action: { label: 'Mark the days you trained', href: '/calendar' },
     };
   }
 

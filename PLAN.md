@@ -3731,6 +3731,126 @@ materially wrong premise. Sizes are guesses.*
   commit first so this landed on a correct base.
   Verified in both themes. 3,101 tests pass.
 
+- **M100 — Unlogged is not untrained.** *Done, and the shape it proposed was already
+  built.*
+  **The premise held where it matters and was wrong in its detail.** The coach really did
+  print *"24 days since you trained"* from the newest completed session, to a climber who may
+  have climbed through every one of those days. But of the six readers it named as treating a
+  gap in the log as a gap in training, **two do not**: `staleSessions` is about a session left
+  *running* — `startedAt` with no `endedAt` — and `comingOffBreak` is the climber answering
+  "returning" in the finder, a stated answer rather than a read of the log.
+  **The `sketch: true` flag was not needed, and this was measured rather than argued.** The
+  proposal wanted a new kind of session that counts for consistency and the streak, carries no
+  load, and closes the gap. Against a fixture of eight weeks of training followed by three
+  unlogged weeks, filling the gap with plain **bare completed sessions** — a thing the app has
+  always been able to hold — moves every one: sessions 24 → 34, streak 0 → 10 weeks, longest
+  gap 24 days → 3 days, ACWR still `null` because `sessionLoad` is RPE × hours and both are
+  absent, the detraining tip gone and a streak tip in its place. A flag would have been a
+  second way to say what the record already says, which is what M98 refused and M99b had to
+  undo.
+  **So what was actually missing is three things, and none of them is a field.**
+  *One*, the app said the wrong sentence: the tip now reads "N days since you **logged
+  anything**", carries both readings, and keeps the real detraining advice behind the one that
+  is true. *Two*, marking days was possible and tedious — a navigation and a tap each, through
+  a page built for a whole session — so the calendar gets a picker: tap the days, one confirm,
+  no program required, undo for the lot. *Three*, once it is cheap, nothing distinguished a
+  marked day from a logged one, so "34 days · 2.9 a week" would quietly become a number built
+  partly on assertions. The consistency summary now ends "· 5 of them marked without detail".
+  **Bareness is derived, never flagged.** A stored flag can be contradicted by its own record —
+  mark a day a sketch, then log six climbs on it. Reading it off the session cannot: the moment
+  a day carries anything, it stops being bare.
+  **The coaching call, stated rather than made quietly.** A bare completed day already pays the
+  full session base — 300 XP, measured — and this milestone makes that one tap instead of
+  three. Left as it is: a marked day is a claim about real training exactly like every other
+  logged session, and the app has never policed honesty (you can log a V15 you did not send).
+  If the coach wants marked days to pay nothing, it is a one-line change and the reasoning
+  should be theirs.
+  Thirty-two mutations, thirty-one killed. The survivor was **a badly-written mutation of
+  mine** — an unused `let n = 0` that mutated nothing, the M91 mistake again; two real forms of
+  the same day-versus-session confusion were both killed.
+  **Three browser findings, each invisible to jsdom.** The undo bar read *"5 days marked
+  deleted"*, because every undoable action before this was a delete and the bar appended the
+  verb itself; offers carry their own verb now. And the picked day was **invisible twice over**:
+  first its border, then its background, each losing a Tailwind emit-order coin flip to the
+  shell's own classes — the trap `Field.tsx` already records for type sizes. The cell emitted up
+  to three background classes and now emits exactly one, which also removes the same coin flip
+  that was latent between the logged tint and the in-month fill. A test holds both.
+  Verified in both themes. 3,133 tests pass.
+
+- **M100b — The focus ring was reshaping every control in the app.** *Done, found while
+  verifying M99b in a browser.*
+  **One line, app-wide.** `.focus-ring` carried `border-radius: inherit` from M14, on the
+  reasonable-looking theory that a focus ring should follow the shape it is drawn around. An
+  outline does that by itself. What the line actually did was **overwrite each element's own
+  radius with its parent's**.
+  **Measured before touching it: 132 of 132.** Every control across ten routes that declared
+  a radius rendered a different one — a `rounded-lg` button at 16px because its card was
+  `rounded-2xl`, and M99b's `rounded-full` stop button as a **square**, because its row was
+  square. That is what put it on screen: a shape that was obviously wrong rather than merely
+  slightly off.
+  **It hid for years for two reasons.** A button inside a rounded card inherits something
+  plausible, so nothing looked broken; and nothing in the suite has a layout engine — jsdom
+  resolves no cascade, so only a real browser could ever have seen it.
+  **Checked for the case that would have justified it**: a `.focus-ring` element with no
+  radius of its own, sitting in a rounded parent, which would now go square. Across nineteen
+  routes there are **zero**. Every one either declares its own radius or sits in a square
+  parent, so removing the line is a pure correction with nothing to trade off.
+  **The rule, in a test**: a shared behaviour class decorates, and geometry belongs to the
+  element. `ui.test.ts` now fails if `.focus-ring` declares a radius, size, spacing, display
+  or position — verified against the reinstated line.
+  Verified in both themes across settings, calendar, climber and search.
+
+- **M99b — The tests that are procedures, not numbers.** *Done for the seven that are a
+  hold; the ramp is left, with the reason. And the milestone's main claim was wrong.*
+  **"The page you visit to record the number never explains it" is false.**
+  `Metric.description` is set on **30 of 37** metrics and the assessments page renders it in
+  two of its three places — the picker and the add-a-benchmark card. What is actually true is
+  smaller and more specific, and it took reading the page to find: the description was missing
+  from the **expanded row**, which is the one a climber who already tracks a benchmark opens,
+  so the case where you go to record a number you have recorded before was the case with no
+  explanation.
+  **The real finding is a duplication, not an absence.** `BenchmarkPrompt.how` was a second
+  copy of the same prose, written in `onboarding.ts`, shown only during onboarding, and
+  **already drifted** — one wrote "20 mm", the other "20mm". Six of the eight said the same
+  thing twice. The two that did not (`max_pullups`, `weighted_pullup_3rm`) had no description
+  at all, so their only explanation lived in a screen you see once. This is M77's problem in
+  a different corner, and the fix is M77's: one source.
+  **So `how` became `entry`**, carrying only what the registry cannot say — the *typing*
+  convention, "enter 0 if bodyweight is your limit, and a negative number if you take weight
+  off". Which means it belongs wherever the number is typed, and it now appears on the
+  assessments form too: until this, a climber recording a max hang there was never told that
+  zero and negatives were allowed. A test asserts the entry note is not a re-description.
+  **Seven metrics are a stopwatch, derived rather than listed.** `dead_hang`, `lock_off_90`,
+  `core_plank`, `hollow_body`, `front_lever_hold`, `density_hang_bw_20mm` and `arc_duration`
+  fall out of what they already declare — a numeric metric measured in seconds or minutes is
+  a duration — so there is no second table to keep in step. A test pins the seven.
+  **The design question I raised in M99 has an answer, and it is not the one I implied.** I
+  said a stopwatch "cannot be a stopwatch, because nobody taps stop mid-front-lever". They do
+  not have to: you drop off and *then* tap, so the tap is late by a second rather than
+  impossible. Two things keep that honest — a mark you can hear every ten seconds while you
+  are hanging, so the number is not a surprise, and a result that lands in the form as a
+  suggestion you confirm rather than one that saves itself.
+  **Not `TimerSheet`.** That counts down through a plan built in advance and a max hold has
+  no plan. Faking one would draw a ring showing a fraction of a total nobody knows — the same
+  refusal M99 made about faking a `Protocol`.
+  **Left, with the reason: the ramp.** Max hang and weighted-pull-up 3RM are load-to-failure
+  with an input per attempt and a three-minute clock between them. That is a second control
+  and a storage question of its own (does the ramp survive, or only its result?), and folding
+  it in here would have been the mistake M99 split to avoid.
+  Twenty-six mutations, twenty-two killed. **All four survivors were real**, and one corrected
+  this module's own doc comment: I wrote that `core_lever` is excluded because it is
+  `kind: 'text'`, and the mutation showed the unit check already refuses it — its unit is
+  `'level/sec'`, not `'sec'`. The `kind` check is the rule rather than the mechanism, so it is
+  held by a hand-built metric instead. Two were untested paths (the wall clock, and the
+  expanded row) and one was dead code of mine — resets that could never fire, because the
+  sheet has no restart.
+  **Two browser findings.** The copy read *"You will confirm the sec before anything is
+  saved"* — `unitLabel('sec')` in a sentence — which also revealed the whole units dependency
+  was doing nothing, since neither seconds nor minutes convert. And the stop button rendered
+  as a square, which turned out to be an app-wide bug and is **M100b**, fixed in its own
+  commit first so this landed on a correct base.
+  Verified in both themes. 3,101 tests pass.
+
 - **M100 — Unlogged is not untrained.** *Proposed. Size M.*
   **Premise.** The coach's detraining rule prints *"N days since you trained"* from the
   newest completed session. Vitality, the streak, the consistency grid, the ratio's

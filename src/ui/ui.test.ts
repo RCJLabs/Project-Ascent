@@ -82,14 +82,50 @@ describe('feature files use the primitives', () => {
     expect(offences).toEqual([]);
   });
 
+  /**
+   * Every bespoke button carries the ring, however it gets it.
+   *
+   * This counted `<button` against `focus-ring` and required the second to
+   * be at least the first, which is a proxy rather than the rule — and it
+   * punishes the right way to write two buttons that look alike. M100 added
+   * a second calendar cell sharing the `shell` string the first already
+   * used: correct, and one ring for two buttons.
+   *
+   * So the measure follows the rule instead. A button is covered if its own
+   * attributes say `focus-ring`, or if they name a binding this file
+   * declares with `focus-ring` in it.
+   */
   it('gives the exceptions a focus ring anyway', () => {
     const offences: string[] = [];
     for (const [path, reason] of Object.entries(BESPOKE)) {
       const file = FEATURE_FILES.find((f) => f.path === path);
       expect(file, `listed exception no longer exists: ${path} (${reason})`).toBeDefined();
-      const buttons = (file?.source.match(/<button/g) ?? []).length;
-      const rings = (file?.source.match(/focus-ring/g) ?? []).length;
-      if (buttons > rings) offences.push(`${path}: ${buttons} buttons, ${rings} rings`);
+      const source = file?.source ?? '';
+
+      const ringed = new Set(
+        [...source.matchAll(/\bconst\s+([A-Za-z_$][\w$]*)\s*=[^;]*?focus-ring/gs)].map(
+          (m) => m[1] as string,
+        ),
+      );
+
+      // The opening tag, scanned rather than matched: a regex that stops at
+      // the first `>` stops inside `onClick={() => …}`, which cut every tag
+      // short of its `className` and reported two false offences.
+      for (const start of [...source.matchAll(/<button\b/g)].map((m) => m.index!)) {
+        let depth = 0;
+        let end = start;
+        while (end < source.length) {
+          const c = source[end];
+          if (c === '{') depth += 1;
+          else if (c === '}') depth -= 1;
+          else if (c === '>' && depth === 0) break;
+          end += 1;
+        }
+        const tag = source.slice(start, end);
+        const covered =
+          tag.includes('focus-ring') || [...ringed].some((name) => new RegExp(`\\b${name}\\b`).test(tag));
+        if (!covered) offences.push(`${path}: a <button> with no focus ring`);
+      }
     }
     expect(offences).toEqual([]);
   });

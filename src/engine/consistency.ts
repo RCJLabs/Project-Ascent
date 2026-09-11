@@ -1,4 +1,5 @@
 import type { Session } from '@/db/sessions';
+import { coverage, describeCoverage } from './thinLog';
 import { addDays, fromKey, startOfWeek, today as todayKey } from './dates';
 import { sessionLoad } from './derive';
 
@@ -63,6 +64,15 @@ export interface HeatGrid {
   thresholds: [number, number, number];
   /** Days with anything logged, rest included. */
   loggedDays: number;
+  /**
+   * How many of those hold nothing but the fact that you turned up
+   * (PLAN.md M100).
+   *
+   * Reported because marking a day trained is one tap from the calendar now,
+   * and a rate built partly on assertions should say so — the coverage rule
+   * `checkIns` states before any of its own numbers.
+   */
+  bareDays: number;
   /** Days in the window up to the end day, so a rate can be honest. */
   elapsedDays: number;
   /** Longest run with nothing logged, counted from the first logged day. */
@@ -214,6 +224,9 @@ export function buildHeatGrid(input: HeatInput): HeatGrid {
     to,
     thresholds,
     loggedDays,
+    // Counted from the sessions rather than from the grid: a day is bare only
+    // when everything on it is, which the per-day totals cannot say.
+    bareDays: coverage(input.sessions, from, to).bare,
     elapsedDays,
     longestGap,
     longestStreak,
@@ -239,5 +252,7 @@ export function describeConsistency(grid: HeatGrid): string {
   if (grid.longestGap > 0) {
     parts.push(`longest gap ${grid.longestGap} day${grid.longestGap === 1 ? '' : 's'}`);
   }
+  const thin = describeCoverage({ days: grid.loggedDays, bare: grid.bareDays });
+  if (thin !== null) parts.push(thin);
   return `${parts.join(' · ')}.`;
 }

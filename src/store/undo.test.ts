@@ -5,7 +5,7 @@ beforeEach(() => useUndo.setState({ offer: null }));
 
 describe('the undo offer', () => {
   it('stands for a while, then does not', () => {
-    const offer = { label: 'x', at: 1000, run: async () => {} };
+    const offer = { label: 'x', verb: 'deleted', at: 1000, run: async () => {} };
     expect(offerIsLive(offer, 1000)).toBe(true);
     expect(offerIsLive(offer, 1000 + UNDO_WINDOW_MS - 1)).toBe(true);
     expect(offerIsLive(offer, 1000 + UNDO_WINDOW_MS)).toBe(false);
@@ -36,5 +36,24 @@ describe('the undo offer', () => {
     offerUndo('x', async () => {});
     useUndo.getState().clear();
     expect(useUndo.getState().offer).toBeNull();
+  });
+});
+
+/**
+ * What happened to it, in the past tense (PLAN.md M100).
+ *
+ * Every undoable action was a delete until marking days trained, so
+ * `UndoBar` printed "deleted" itself — and the first create it was asked to
+ * describe read "5 days marked deleted".
+ */
+describe('what the offer says happened', () => {
+  it('is a delete unless the caller says otherwise', () => {
+    offerUndo('Tuesday’s session', async () => {});
+    expect(useUndo.getState().offer?.verb).toBe('deleted');
+  });
+
+  it('takes the caller’s word for an action that is not one', () => {
+    offerUndo('3 days', async () => {}, 'marked');
+    expect(useUndo.getState().offer).toMatchObject({ label: '3 days', verb: 'marked' });
   });
 });

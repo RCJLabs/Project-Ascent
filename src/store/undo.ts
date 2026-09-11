@@ -20,6 +20,15 @@ export const UNDO_WINDOW_MS = 15_000;
 export interface UndoOffer {
   /** Names what would come back, e.g. "Tuesday's session". */
   label: string;
+  /**
+   * What happened to it, in the past tense (PLAN.md M100).
+   *
+   * Every undoable action was a delete until marking days trained, so the
+   * bar printed "deleted" itself — and the first thing it was asked to say
+   * about a *create* read "5 days marked deleted". The default keeps every
+   * caller that came before unchanged.
+   */
+  verb: string;
   /** When it was offered, so it can expire. */
   at: number;
   run: () => Promise<void>;
@@ -28,13 +37,14 @@ export interface UndoOffer {
 interface UndoState {
   offer: UndoOffer | null;
   /** Replaces any standing offer: the newest mistake is the live one. */
-  offerUndo: (label: string, run: () => Promise<void>) => void;
+  offerUndo: (label: string, run: () => Promise<void>, verb?: string) => void;
   clear: () => void;
 }
 
 export const useUndo = create<UndoState>((set) => ({
   offer: null,
-  offerUndo: (label, run) => set({ offer: { label, at: Date.now(), run } }),
+  offerUndo: (label, run, verb = 'deleted') =>
+    set({ offer: { label, verb, at: Date.now(), run } }),
   clear: () => set({ offer: null }),
 }));
 
@@ -45,6 +55,6 @@ export function offerIsLive(offer: UndoOffer | null, now: number): boolean {
 }
 
 /** Callable from anywhere, including outside React. */
-export function offerUndo(label: string, run: () => Promise<void>): void {
-  useUndo.getState().offerUndo(label, run);
+export function offerUndo(label: string, run: () => Promise<void>, verb?: string): void {
+  useUndo.getState().offerUndo(label, run, verb);
 }

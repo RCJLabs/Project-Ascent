@@ -165,8 +165,27 @@ describe('load drifting down', () => {
     expect(deriveClimberState(stopped, { today: TODAY }).load.acwr).toBeNull();
 
     const tip = tips({ sessions: stopped }).find((t) => t.id === 'detraining');
-    expect(tip?.headline).toContain('days since you trained');
+    expect(tip?.headline).toContain('days since you logged anything');
     expect(tip?.signature).toBe('fortnight');
+  });
+
+  /**
+   * What the log supports, not what the app would like to conclude
+   * (PLAN.md M100).
+   *
+   * A gap in the log is either a gap in training or a gap in logging, and
+   * the app cannot tell which. It used to assert the first — "24 days since
+   * you trained" — to a climber who may have climbed through every one of
+   * them.
+   */
+  it('does not claim the climber stopped training', () => {
+    const stopped = steady(12).filter((s) => s.date < back(20));
+    const tip = tips({ sessions: stopped }).find((t) => t.id === 'detraining')!;
+    expect(tip.headline).not.toMatch(/since you trained/);
+    // Both readings, and the advice that belongs to the true one.
+    expect(tip.body).toMatch(/not writing it down/);
+    expect(tip.body).toMatch(/two-thirds of the volume/);
+    expect(tip.action?.href).toBe('/calendar');
   });
 
   it('grows its signature with the layoff, so a dismissal does not last forever', () => {

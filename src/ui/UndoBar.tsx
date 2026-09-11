@@ -30,7 +30,7 @@ export function UndoBar() {
   // Announced rather than only drawn: a climber using a screen reader has no
   // other way to know an offer appeared, and it is gone in fifteen seconds.
   useEffect(() => {
-    if (offer) announce(`${offer.label} deleted. Undo is available.`);
+    if (offer) announce(`${offer.label} ${offer.verb}. Undo is available.`);
   }, [offer]);
 
   if (!offer || !offerIsLive(offer, now)) return null;
@@ -43,7 +43,7 @@ export function UndoBar() {
       role="status"
     >
       <span className="text-sm flex-1 min-w-0 truncate">
-        <span className="font-semibold">{offer.label}</span> deleted
+        <span className="font-semibold">{offer.label}</span> {offer.verb}
       </span>
       <span className="text-xs text-ink-soft tabular-nums" aria-hidden>
         {left}s

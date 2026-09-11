@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { AlertTriangle, BookOpen, CalendarPlus, ChevronLeft, ChevronRight, Move, X } from 'lucide-react';
+import { AlertTriangle, BookOpen, CalendarPlus, CheckCheck, ChevronLeft, ChevronRight, Move, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import type { DayOfWeek, Program } from '@/content/types';
 import {
@@ -18,7 +18,9 @@ import { plannedDay } from '@/engine/plan';
 import { summarise } from '@/engine/injury';
 import { effectivePlan, previewMove, type MovePreview, type WeekOverrides } from '@/engine/reschedule';
 import { useProfile } from '@/store/profile';
+import type { Session } from '@/db/sessions';
 import { useSessions } from '@/store/sessions';
+import { offerUndo } from '@/store/undo';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { IconButton } from '@/ui/IconButton';
@@ -65,6 +67,43 @@ export function CalendarPage() {
   const [moving, setMoving] = useState<string | null>(null);
   const [rearranging, setRearranging] = useState(false);
   const thisWeek = startOfWeek(today());
+
+  /**
+   * Days being marked as trained-but-unlogged (PLAN.md M100).
+   *
+   * Not gated on having a program, unlike rearranging: the climber this is
+   * for is the one who has been away from the app, and a program running or
+   * not has nothing to do with whether they were climbing.
+   */
+  const [marking, setMarking] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const create = useSessions((st) => st.create);
+  const removeSession = useSessions((st) => st.remove);
+
+  const togglePicked = (date: string) =>
+    setPicked((current) => {
+      const next = new Set(current);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
+      return next;
+    });
+
+  async function markPicked(): Promise<void> {
+    const dates = [...picked].sort();
+    const made: Session[] = [];
+    for (const date of dates) made.push(await create(date, { completed: true }));
+    setPicked(new Set());
+    setMarking(false);
+    // Marking a fortnight in one tap is a lot of records to have made by
+    // accident, which is exactly when undo earns its keep (PLAN.md M79).
+    offerUndo(
+      `${dates.length} day${dates.length === 1 ? '' : 's'}`,
+      async () => {
+        for (const session of made) await removeSession(session);
+      },
+      'marked',
+    );
+  }
 
   const days = useMemo(() => monthGrid(year, month), [year, month]);
 
@@ -211,6 +250,22 @@ export function CalendarPage() {
         </Card>
       )}
 
+      {marking && (
+        <Card className="mb-3">
+          <h3 className="font-bold text-sm mb-1">Days you trained but did not log</h3>
+          <p className="text-sm text-ink-soft leading-relaxed">
+            Tap the days you climbed. They count for your streak and your consistency, and they
+            carry no training load, because you have not said how hard or how long they were. The
+            app marks them as having no detail wherever it reports a number built on them.
+          </p>
+          {picked.size > 0 && (
+            <Button size="sm" className="mt-3" onClick={() => void markPicked()}>
+              <CheckCheck size={15} /> Mark {picked.size} day{picked.size === 1 ? '' : 's'} trained
+            </Button>
+          )}
+        </Card>
+      )}
+
       <div className="flex items-center justify-between mb-3">
         <IconButton onClick={() => shift(-1)} label="Previous month">
           <ChevronLeft size={20} />
@@ -221,13 +276,28 @@ export function CalendarPage() {
         </IconButton>
       </div>
 
-      <div className="flex justify-end mb-2">
+      <div className="flex justify-end gap-2 mb-2">
+        <Button
+          size="sm"
+          variant={marking ? 'primary' : 'ghost'}
+          onClick={() => {
+            setMarking(!marking);
+            setPicked(new Set());
+            setRearranging(false);
+            setMoving(null);
+            setPending(null);
+          }}
+        >
+          <CheckCheck size={14} /> {marking ? 'Done' : 'Mark days'}
+        </Button>
         {planning && (
         <Button
           size="sm"
           variant={rearranging ? 'primary' : 'ghost'}
           onClick={() => {
             setRearranging(!rearranging);
+            setMarking(false);
+            setPicked(new Set());
             setMoving(null);
             setPending(null);
           }}
@@ -263,19 +333,56 @@ export function CalendarPage() {
           const pickable =
             planning && rearranging && !moving && Boolean(planned) && !done && startOfWeek(date) >= thisWeek;
 
-          const tone = isSource
-            ? 'border-accent bg-accent/25'
-            : landing
-              ? preview.blocking.length > 0
-                ? 'border-danger/60 bg-danger/10'
-                : preview.introduced.length > 0
-                  ? 'border-warn/60 bg-warn/10'
-                  : 'border-positive/60 bg-positive/10'
-              : pickable
-                ? 'border-accent/60 bg-accent/5'
-                : isToday
-                  ? 'border-accent'
-                  : 'border-line';
+          // Folded into `tone` rather than appended to the shell: both set a
+          // border colour and a background, and appending left the two
+          // fighting on Tailwind's emit order rather than on class order —
+          // so a picked day rendered exactly like an unpicked one. A browser
+          // showed that; jsdom has no cascade and the `aria-pressed` test
+          // passed either way. `Field.tsx` records the same trap.
+          const chosen = marking && picked.has(date);
+          const edge = chosen
+            ? 'border-accent'
+            : isSource
+              ? 'border-accent'
+              : landing
+                ? preview.blocking.length > 0
+                  ? 'border-danger/60'
+                  : preview.introduced.length > 0
+                    ? 'border-warn/60'
+                    : 'border-positive/60'
+                : pickable
+                  ? 'border-accent/60'
+                  : isToday
+                    ? 'border-accent'
+                    : 'border-line';
+
+          /**
+           * Exactly one background class, chosen here rather than stacked.
+           *
+           * This cell used to emit up to three — a state tint, the
+           * in-month fill, and the logged tint — and which one you saw came
+           * down to the order Tailwind happened to emit them in rather than
+           * the order they were written. M100's picked day was invisible
+           * because of it, and the `done` and in-month pair had the same
+           * coin flip latent. `Field.tsx` records the trap for type sizes.
+           */
+          const fill = chosen
+            ? 'bg-accent/30'
+            : isSource
+              ? 'bg-accent/25'
+              : landing
+                ? preview.blocking.length > 0
+                  ? 'bg-danger/10'
+                  : preview.introduced.length > 0
+                    ? 'bg-warn/10'
+                    : 'bg-positive/10'
+                : pickable
+                  ? 'bg-accent/5'
+                  : done
+                    ? 'bg-accent/15'
+                    : inMonth
+                      ? 'bg-surface'
+                      : 'bg-transparent';
 
           const body = (
             <>
@@ -307,9 +414,28 @@ export function CalendarPage() {
             </>
           );
 
-          const shell = `focus-ring aspect-square rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-colors ${tone} ${
-            inMonth ? 'bg-surface' : 'bg-transparent opacity-40'
-          } ${done && !landing && !isSource ? 'bg-accent/15' : ''}`;
+          const shell = `focus-ring aspect-square rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-colors ${edge} ${fill}${
+            inMonth ? '' : ' opacity-40'
+          }`;
+
+          // Marking turns the grid into a picker (PLAN.md M100). Only days
+          // that are past and empty: you cannot have trained tomorrow, and a
+          // day that is already logged is already answered.
+          if (marking) {
+            const selectable = date <= today() && logged.length === 0;
+            return (
+              <button
+                key={date}
+                className={shell}
+                disabled={!selectable}
+                aria-pressed={chosen}
+                aria-label={`${chosen ? 'Unmark' : 'Mark'} ${shortLabel(date)} as trained`}
+                onClick={() => togglePicked(date)}
+              >
+                {body}
+              </button>
+            );
+          }
 
           // While a move is in progress the whole grid becomes targets, so
           // navigating away by accident is impossible.
