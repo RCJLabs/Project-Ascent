@@ -3,10 +3,12 @@ import { Link } from 'wouter';
 import { Check, Lightbulb, Plus, X } from 'lucide-react';
 import { ACTIVE_CAP, type Project } from '@/db/projects';
 import type { Session } from '@/db/sessions';
-import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
+import { V_GRADES, YDS_GRADES, displayGrade, type GradeScale } from '@/engine/grades';
 import { PageGrid } from '@/ui/PageGrid';
 import { useGradeLabel, useGradeOptions } from '@/ui/useGrade';
 import { suggestProjects, summariseProject, type ProjectSuggestion } from '@/engine/projects';
+import { ENOUGH, projectHistory } from '@/engine/projectHistory';
+import { useSettings } from '@/store/settings';
 import { useProjects } from '@/store/projects';
 import { useSkillEffects } from '@/store/skills';
 import { useSessions } from '@/store/sessions';
@@ -118,6 +120,8 @@ export function ProjectsPage() {
           </Card>
         )}
 
+        <CostCard projects={projects} sessions={sessions} />
+
         {shelved.length > 0 && (
           <Card title="Shelved">
             <ul className="grid grid-cols-1 gap-2">
@@ -129,6 +133,73 @@ export function ProjectsPage() {
         )}
       </PageGrid>
     </>
+  );
+}
+
+/**
+ * What the projects have cost (PLAN.md M69).
+ *
+ * Every attempt was stored and nothing ever read them together, so a climber
+ * could see one project's history and never "how do I send". Counts of what
+ * happened, not advice about it — and quiet where there is too little to
+ * mean anything.
+ */
+function CostCard({ projects, sessions }: { projects: Project[]; sessions: Session[] }) {
+  const display = useSettings((s) => s.display);
+  const history = useMemo(() => projectHistory(projects, sessions), [projects, sessions]);
+  if (history.sent.length === 0) return null;
+
+  const stale = history.openest[0];
+  return (
+    <Card title="What they cost">
+      {history.overall ? (
+        <p className="text-sm leading-relaxed">
+          Across {history.overall.sends} sends, a project takes you{' '}
+          <strong>{history.overall.burns} burns</strong> over{' '}
+          <strong>{history.overall.sessions} {history.overall.sessions === 1 ? 'session' : 'sessions'}</strong>
+          {history.overall.span > 0 && <> and {history.overall.span} days</>}. Middle values, so one
+          epic does not move them.
+        </p>
+      ) : (
+        <p className="text-sm text-ink-soft leading-relaxed">
+          {history.sent.length} sent so far. {ENOUGH} is where these numbers start meaning
+          something rather than describing one climb.
+        </p>
+      )}
+
+      {history.byGrade.length > 0 && (
+        <ul className="grid grid-cols-1 gap-2 mt-3">
+          {history.byGrade.map((row) => (
+            <li key={`${row.scale}:${row.grade}`} className="flex items-baseline gap-2 text-sm">
+              <span className="font-semibold w-14 shrink-0">
+                {displayGrade(row.scale, row.grade, display)}
+              </span>
+              <span className="flex-1 min-w-0 text-ink-soft">
+                {row.burns} burns · {row.sessions} {row.sessions === 1 ? 'session' : 'sessions'}
+                {row.span > 0 ? ` · ${row.span} days` : ''}
+              </span>
+              <span className={`text-xs shrink-0 ${row.solid ? 'text-ink-soft' : 'text-warn'}`}>
+                {row.sends} {row.sends === 1 ? 'send' : 'sends'}
+                {row.solid ? '' : '*'}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {history.byGrade.some((row) => !row.solid) && (
+        <p className="text-xs text-warn mt-2 leading-relaxed">
+          * Fewer than {ENOUGH} sends at that grade — one climb, not a pattern.
+        </p>
+      )}
+
+      {stale !== undefined && stale.days >= 30 && (
+        <p className="text-xs text-ink-soft mt-3 leading-relaxed">
+          {stale.name} has sat {stale.days} days since its last burn.
+          {history.shelved > 0 && ` ${history.shelved} shelved.`}
+        </p>
+      )}
+    </Card>
   );
 }
 

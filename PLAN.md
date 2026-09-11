@@ -2280,15 +2280,35 @@ something that already exists; six are new. Nothing here is committed.*
   `T` together, and Home reads "Week 5 of 12 · Intensify · Deload week · Test week" with the
   reason under it.
 
-- **M68 — Share more than an achievement.** `ShareSheet` and `achievementCard` exist and
-  are wired to exactly one thing. The weekly review, the year in review and a hard send are
-  all things a climber would show someone. *Weakest of the six: it is polish, and an offline
-  app's sharing story is a rendered image and a system sheet, which is what it already has.*
+- **M68 — Share more than an achievement.** *Done, and nine tenths of it was already
+  there.* The proposal said `ShareSheet` and `achievementCard` "exist and are wired to
+  exactly one thing". Wrong, and wrong the same way M66 was: `shareCard.ts` holds **seven**
+  card builders — a record, a project, a week, the altimeter, the day's Ascent wall, an
+  achievement, a rank — and every one of them is already wired to a page. Reading the
+  exports would have taken a minute.
+  What was actually missing is the one page a climber would show someone: **the year in
+  review**. `yearCard` is the eighth, and it says whether the year is finished — "412
+  sessions" in September is a different sentence from the same words in January, and a card
+  that leaves it out overstates. Offered only once there is a year to show, because a card
+  of zeroes is worse than no card.
+  Four mutations, four killed.
 
-- **M69 — What your projects actually cost.** Projects carry every attempt, and nothing
-  reads them in aggregate. Attempts-to-send by grade, sessions-to-send, how long a project
-  sits before it goes, and what the sends have in common — that is a climber's own history
-  telling them how they send, which no generic advice can.
+- **M69 — What your projects actually cost.** *Done.* Every attempt on every project was
+  stored and nothing ever read them together, so a climber could see one project's history
+  and never "how do I send" — a question their own log answers and no generic advice can.
+  `engine/projectHistory.ts` counts, per sent project, the burns and the sessions and the
+  days it took, up to *and including* the send: a project climbed again afterwards must not
+  read as having taken forty burns. Grouped by grade, it reports the **middle** value rather
+  than the mean, so one epic does not move the number.
+  **It is descriptive and stays descriptive.** The proposal also wanted "what your sends
+  have in common", and that is where a module like this starts inventing coaching out of a
+  handful of data points. It does not. It reports counts, says how many sends they came
+  from, marks any grade with fewer than three as one climb rather than a pattern, and stays
+  silent overall until there are three. The card carries the asterisk and the sentence
+  explaining it.
+  Eight mutations, eight killed. Verified in a browser against four sends: "Across 4 sends,
+  a project takes you 12 burns over 3 sessions and 17 days", with V5 solid at three sends
+  and V6 flagged at one.
 
 **Six that are new.**
 
