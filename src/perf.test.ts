@@ -203,7 +203,7 @@ describe('the bundle stays small', () => {
   const dist = 'dist/assets';
   const built = existsSync(dist);
 
-  it.runIf(built)('keeps the first load under 216.8KB gzipped', () => {
+  it.runIf(built)('keeps the first load under 216.9KB gzipped', () => {
     const html = readFileSync('dist/index.html', 'utf8');
     const entry = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)?.[1];
     expect(entry, 'no entry chunk in index.html').toBeDefined();
@@ -242,7 +242,15 @@ describe('the bundle stays small', () => {
     // nothing at all, and the page's JSX, tone table and icons were
     // first-load along with it. Splitting the hook into its own module gave
     // 1.20KB back and made the lazy boundary real. Net: 215.71 → 216.75.
-    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(216.8);
+    //
+    // 216.8 → 216.9 at M105, which is the number worth noticing: a CSV
+    // parser, a row-to-session mapper and a preview card cost **0.07KB** of
+    // first load, because `SettingsPage` is lazy and — unlike `CoachPage`
+    // before M104 — nothing eager imports out of it. The engine lands in
+    // the settings chunk where it is used. That is what the boundary is
+    // for, and the difference between the two milestones is the whole
+    // argument for keeping it real.
+    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(216.9);
   });
 
   it.runIf(built)('keeps every program body out of the entry chunk', () => {

@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { APP_VERSION } from '@/version';
 import { exportArchive, hasRealData, importAll, readBackupFile, SCHEMA_VERSION } from '@/db';
 import { previewFile, type ImportPreview } from '@/db/importPreview';
 import { clearSnapshot, readSnapshot, restoreSnapshot, takeSnapshot } from '@/db/snapshot';
 import { ImportPreviewCard, UndoImportCard } from './ImportPreviewCard';
+import { SpreadsheetImportCard, pendingFrom, type CsvPending } from './SpreadsheetImportCard';
+import { CsvError, parseCsv } from '@/engine/csv';
+import type { Session } from '@/db/sessions';
+import { useSessions } from '@/store/sessions';
 import { mediaBytes } from '@/db/media';
 import type { Equipment } from '@/content/types';
 import { displayGrade } from '@/engine/grades';
@@ -104,6 +108,16 @@ export function SettingsPage() {
   const [snapshot, setSnapshot] = useState<{ takenAt: string; replacedWith: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const csvRef = useRef<HTMLInputElement>(null);
+  const [csv, setCsv] = useState<CsvPending | null>(null);
+  const byDate = useSessions((s) => s.byDate);
+  // Every session key already in the log, so an imported day never lands on
+  // one the climber wrote here. Memoised on the store rather than rebuilt
+  // per keystroke in the preview.
+  const occupiedIds = useMemo(
+    () => new Set(Object.values(byDate).flat().map((s) => s.id)),
+    [byDate],
+  );
 
   useEffect(() => {
     void refreshStorage();
@@ -175,6 +189,61 @@ export function SettingsPage() {
       setMessage(e instanceof Error ? e.message : 'Import failed.', true);
     } finally {
       if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
+  /**
+   * A spreadsheet, read but not written (PLAN.md M105).
+   *
+   * Parsing happens here so a file the app cannot read fails before any
+   * preview is drawn; everything after this is the climber correcting a
+   * column mapping over rows already in hand.
+   */
+  async function handleCsvPicked(files: FileList | null) {
+    const file = files?.[0];
+    if (!file) return;
+    try {
+      const table = parseCsv(await file.text());
+      if (table.length < 2) {
+        setMessage('That file has a header and no rows under it.', true);
+        return;
+      }
+      setCsv(pendingFrom(file.name, table));
+    } catch (e) {
+      setMessage(e instanceof CsvError ? e.message : 'That file could not be read as a spreadsheet.', true);
+    } finally {
+      if (csvRef.current) csvRef.current.value = '';
+    }
+  }
+
+  async function confirmCsv(sessions: Session[]) {
+    setBusy(true);
+    try {
+      // The same restore point the backup import takes, for the same
+      // reason — and only where there is something to restore.
+      if (await hasRealData()) await takeSnapshot(`${sessions.length} days from a spreadsheet`);
+      await importAll(
+        {
+          app: 'project-ascent',
+          schemaVersion: SCHEMA_VERSION,
+          appVersion: APP_VERSION,
+          exportedAt: new Date().toISOString(),
+          // Only sessions. A spreadsheet of climbs says nothing about a
+          // program, a project or a metric, and a merge that wrote empty
+          // arrays over them would be a replace wearing another word.
+          data: { meta: [], sessions, profile: [], programs: [], projects: [], metrics: [], game: [] },
+        },
+        'merge',
+      );
+      await hydrateAll();
+      setSnapshot(await readSnapshot());
+      setMessage(`${sessions.length} day${sessions.length === 1 ? '' : 's'} imported. You can undo this below.`);
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Import failed.', true);
+    } finally {
+      setBusy(false);
+      setCsv(null);
+      void refreshStorage();
     }
   }
 
@@ -412,6 +481,13 @@ export function SettingsPage() {
             <Button variant="outline" onClick={() => fileRef.current?.click()}>
               Import backup
             </Button>
+            {/* Your climbing before this app (PLAN.md M105). Next to the
+                backup import because it is the same question — "I have
+                history, can it come in?" — and a climber looking for one
+                will look here for the other. */}
+            <Button variant="outline" onClick={() => csvRef.current?.click()}>
+              Import a spreadsheet
+            </Button>
             <Link href="/data" className={CHIP_LINK}>
               What is stored
             </Link>
@@ -421,6 +497,13 @@ export function SettingsPage() {
               accept="application/zip,.zip,application/json,.json"
               hidden
               onChange={(e) => void handleFilePicked(e.target.files)}
+            />
+            <Input
+              ref={csvRef}
+              type="file"
+              accept="text/csv,text/tab-separated-values,.csv,.tsv,.txt"
+              hidden
+              onChange={(e) => void handleCsvPicked(e.target.files)}
             />
           </div>
         </Card>
@@ -432,6 +515,17 @@ export function SettingsPage() {
             busy={busy}
             onImport={(mode) => void confirmImport(mode)}
             onCancel={() => setPendingImport(null)}
+          />
+        )}
+
+        {csv && (
+          <SpreadsheetImportCard
+            pending={csv}
+            occupied={occupiedIds}
+            busy={busy}
+            onChange={setCsv}
+            onImport={(sessions) => void confirmCsv(sessions)}
+            onCancel={() => setCsv(null)}
           />
         )}
 

@@ -217,13 +217,24 @@ describe('the primitives are safe to use', () => {
 describe('overriding a component from the outside', () => {
   const OWNED: { component: string; prop: string; pattern: RegExp }[] = [
     { component: 'SelectableCard', prop: 'padded', pattern: /\bp-\d/ },
-    // `Input` sets `w-full`, so a width beside it is a coin flip rather than
-    // a width — which is how M102's "From %" box rendered full-width on its
-    // own line. There is no prop for this one: a control that should not
+    // `CONTROL` sets `w-full`, so a width beside it is a coin flip rather
+    // than a width — which is how M102's "From %" box rendered full-width on
+    // its own line. There is no prop for this one: a control that should not
     // fill its row goes in a sized wrapper, as `ExerciseNumbers` does.
     // Not `min-w-*` or `max-w-*`: those constrain a flex child rather than
     // arguing with `w-full`, and they are how a control shares a row.
-    { component: 'Input', prop: 'a sized wrapper around it', pattern: /(?<![\w-])w-(?!full\b)[\d[]/ },
+    //
+    // **All three, not just `Input`.** M102 added this row for the component
+    // that happened to have the bug, and `Select` and `TextArea` share the
+    // same `CONTROL` string — so M105's column mapper set `w-40` on a
+    // `Select`, lost the coin flip, and rendered six full-width dropdowns
+    // with every column name squeezed to nothing beside them. The guard was
+    // looking at the component instead of at the cause.
+    ...(['Input', 'Select', 'TextArea'] as const).map((component) => ({
+      component,
+      prop: 'a sized wrapper around it',
+      pattern: /(?<![\w-])w-(?!full\b)[\d[]/,
+    })),
   ];
 
   it('does not try to win a padding argument through className', () => {

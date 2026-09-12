@@ -4064,22 +4064,71 @@ materially wrong premise. Sizes are guesses.*
   The fourth was a real gap at the consolidation boundary, on a rule that no longer exists.
   Verified in both themes at 430px. 3,235 tests pass.
 
-- **M105 — Bring your history.** *Proposed. Size L.*
-  **Premise.** Onboarding says *"your altimeter starts at zero"*. M87 recovered block
-  history from the app's own records, but a climber with five years in a spreadsheet — or
-  an export from the app they are leaving — starts with an empty pyramid, a career page
-  with one entry, and an eight-week wait before the ratio says anything. There is no CSV
-  in the codebase, in either direction.
-  **Shape.** `/data` gains *Import a spreadsheet*: CSV with date, grade, result, count,
-  mode, place, notes; columns mapped by header guess and confirmed; a preview like
-  `ImportPreviewCard`; rows become sessions (one per day) tagged `imported: 'csv'`;
-  M20's snapshot before, M54's undo after. Grades go through `parseGrade`, so Font and
-  French come in; anything else is refused row by row with a reason. And the reverse:
-  sessions, climbs, attempts and metrics as CSVs inside M53's archive.
-  **Decision to make up front.** Imported sessions arrive `rewarded: true` — they pay no
-  XP, because five years paid out at once is the level-100-on-day-one the audit cut — but
-  they count for stats, the career, the pyramid and the altimeter, because height is a
+- **M105 — Bring your history.** *Done, import half. Export split out as M105b.*
+  **Premise held, in the part that mattered.** There is no CSV anywhere in the codebase, in
+  either direction, and onboarding really does tell a climber with five years in a
+  spreadsheet that their altimeter starts at zero. Two details in the shape were wrong:
+  `/data` is M80's data-*health* page, not where import lives — that is Settings, next to
+  the backup import, where a climber looking for one will look for the other. And there is
+  no `place` on a session: a location is `fields.location`, which is what `venues.ts`
+  already reads, so an imported crag joins the venue grouping for free.
+  **The finding the milestone was wrong about.** *"Grades go through `parseGrade`, so Font
+  and French come in"* cannot work on a bare grade string. Measured:
+  `6A → V3 and 5.10a`, `7c → V9 and 5.12c`, `8A → V11 and 5.13a`. **Every** Font grade
+  collides with a French one — they share the number-plus-letter shape and `parseGrade`
+  matches case-insensitively — so `7c` in a spreadsheet is either a V9 boulder or a 5.12c
+  route and nothing in the cell says which. `V…` and `5.…` name their own scale and are
+  read on sight; everything else takes the discipline from a column if the file has one and
+  from one chip if it does not, and a file with neither has those rows refused **by name**
+  rather than silently filed as boulders.
+  **Built.** `engine/csv.ts` — RFC 4180 plus the three deviations every real export emits:
+  a BOM, bare CR endings, and a semicolon or tab separator in locales where the comma is a
+  decimal point. Caps that **refuse rather than truncate**, because half a file reporting
+  success is worse than none — including an unterminated quote, which otherwise swallows
+  every separator to the end of the file and comes back as one long cell that looks like
+  data. `engine/importCsv.ts` — header guessing the climber confirms, dates in five
+  spellings, and one session per day. `SpreadsheetImportCard` — the preview *is* the
+  confirm step, so the numbers move as the mapping is corrected and a wrong guess is free.
+  Refusals carry a line and a reason: "412 imported, 9 skipped" is a number nobody can act
+  on. The whole snapshot → merge → undo path is M20's and M54's, reused unchanged.
+  **Two correctness bugs my own tests caught.** `Date.parse` reads **the 30th of February
+  as the 2nd of March** rather than refusing it — the same silent month-shift the
+  day-first rule exists to prevent, arriving by another door. Numeric dates now go through
+  explicit patterns only, and a written month has to come back on the day that was
+  written. And an import is a **merge**: `${date}#0` would have overwritten a session the
+  climber logged in the app on a day their spreadsheet also covers — data loss inside the
+  one operation that promises not to lose any. Imported days take the first free index.
+  **And one the browser caught, which is the third time for this trap.** The column mapper
+  set `w-40` on a `Select`, lost the coin flip against `CONTROL`'s `w-full`, and rendered
+  **six identical full-width dropdowns with every column name squeezed to nothing** — the
+  mapping UI was unusable and every test passed. M102 added an `OWNED` row for this and
+  named `Input`, the component that happened to have the bug; `Select` and `TextArea` share
+  the same `CONTROL` string and were never checked. The guard now covers all three. It
+  found this and nothing else, so no other instance was shipping.
+  **Decided up front and kept.** Imported sessions arrive `rewarded: true` — they pay no
+  XP, because five years cashed out at once is the level-100-on-day-one the audit cut — and
+  they count for every stat, the career, the pyramid and the altimeter, because height is a
   fact about climbing and XP is pacing for a game.
+  **Measured, not asserted.** 83 mutations over five rounds: 20 on the parser, 35 on the
+  mapper, 28 on the card and the page. Six of the UI survivors came from **one** missing
+  fixture — a log that already had something in it — which is also what left merge-versus-
+  replace, the restore point and the undo card untested.
+  **Budget.** 216.8 → 216.9KB, and the number worth noticing is **0.07KB**: a parser, a
+  mapper and a preview card cost almost nothing on first load, because `SettingsPage` is
+  lazy and nothing eager imports out of it. M104's one coach rule cost 1.75KB for exactly
+  the opposite reason.
+  Verified in both themes at 430px. 3,323 tests pass.
+
+- **M105b — The same history, back out.** *Proposed. Size S–M.*
+  **Premise.** M105 wrote `csv.ts` with `toCsv` and `csvCell` already in it, tested and
+  round-tripped, and shipped nothing that calls them. The archive is one JSON file: fine
+  for a restore, useless to a climber who wants their sessions in a spreadsheet, and the
+  app's whole offline argument rests on the data being *theirs*.
+  **Shape.** Sessions, climbs, project attempts and metrics as four CSVs inside M53's
+  archive, beside `backup.json` rather than instead of it. Column sets that M105's importer
+  can read back, which is a property a test can hold: export, import, compare.
+  **Never.** A second source of truth. The archive restores from `backup.json`; the CSVs
+  are for the climber and for other software, and the importer treats them as foreign.
 
 - **M106 — Indoor and outdoor are two ladders, and the app draws one.** *Proposed. Size M.*
   **Premise.** `GradeTally` is per scale. `session.mode` is read for outdoor *days* (career,

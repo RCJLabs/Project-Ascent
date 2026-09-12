@@ -163,6 +163,17 @@ export interface Session {
   /** A planned deload week — excluded from training-load maths. */
   deload?: boolean;
   /**
+   * Where this session came from, when it was not logged in the app
+   * (PLAN.md M105).
+   *
+   * Absent for everything the climber logged here, which is the common
+   * case and the one worth keeping cheap. Set on a row built from a
+   * spreadsheet, so an import can be told apart from a history afterwards
+   * — by the climber reading their own calendar, and by an undo that has
+   * to know what it put there.
+   */
+  imported?: 'csv';
+  /**
    * When the session was started live, as wall-clock time. Present only for
    * sessions started on their own day; logging Tuesday on Thursday has no
    * clock to run. See engine/live.ts.
