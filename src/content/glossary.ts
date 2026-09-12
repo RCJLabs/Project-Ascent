@@ -26,6 +26,8 @@
  * disagrees at the margins; the point is that this app tells one story.
  */
 
+import { termKey } from './glossaryTerms';
+
 export type GlossaryCategory =
   | 'Term'
   | 'Grade'
@@ -302,10 +304,15 @@ export const GLOSSARY: GlossaryEntry[] = [
   { term: 'Visualization', category: 'Concept', definition: 'Mentally rehearsing the entire climb before leaving the ground. See every hand and foot placement in sequence to prime your nervous system.' },
 ];
 
-/** Normalised lookup key: exact term, case and surrounding space aside. */
-function key(term: string): string {
-  return term.trim().toLowerCase();
-}
+/**
+ * Normalisation comes from `glossaryTerms.ts` rather than living here.
+ *
+ * That module answers "is this a term?" without the definitions (M116), and
+ * if it normalised differently from this one the two would disagree about
+ * what counts as the same word — `<Term>` would render a button and then
+ * find nothing behind it, which is the apology its first rule forbids.
+ */
+const key = termKey;
 
 const BY_KEY = new Map(GLOSSARY.map((entry) => [key(entry.term), entry]));
 

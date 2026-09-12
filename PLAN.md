@@ -5101,6 +5101,48 @@ entry above.)*
   its nine cards and the climb entry, warm revisits fetch no new JS, nothing overflows, no
   page errors. 3,808 tests pass.
 
+- **M116 — The glossary splits, and M115's one regression closes.** *Done.*
+  **The premise was M115's own measurement rather than a guess.** Splitting the logger out
+  made the first load 44.81KB lighter and made one path worse: a cold start straight to the
+  logger pulls twenty chunks, and **13.99KB of them were the glossary** — every one of 208
+  definitions, loaded so a single `<Term>` could ask whether an exercise name has one.
+  **Weighed before it was split.** The terms are 2,886 raw bytes and 1,657 gzipped; the
+  definitions are 29,302 and 11,761. So the question costs a tenth of the answer, and only
+  the question has to be asked eagerly.
+  **`content/glossaryTerms.ts` holds the keys, and it is generated.** A hand-maintained
+  second list of 208 strings is a second thing to keep in step; `npm run glossary` writes it
+  from `glossary.ts`, the file is committed so nothing runs at build time, and the test
+  fails if it is stale and says which command fixes it. The test calls the script's own
+  extractor rather than reimplementing the regex, because a second copy would go on passing
+  while the one that writes the file broke.
+  **One normalisation, moved rather than copied.** `termKey` lives in the keys module and
+  `glossary.ts` imports it. If the two normalised differently, a name could render as a
+  button and find nothing behind it — which is the "apology" `Term`'s first rule exists to
+  forbid, and the rule now spans a module boundary where one function used to hold it. Four
+  tests hold the halves together from both directions, and a fifth asserts `glossary.ts` has
+  not grown its own `key` again.
+  **`Term` asks synchronously and fetches on the tap.** The underline is decided from the
+  keys; `import('@/content/glossary')` runs when someone actually taps. A definition already
+  in memory opens without a fetch, so a second tap does not flicker, and a failed import
+  closes the button rather than opening it onto nothing.
+  **Measured.** The logger navigation is **51.27 → 39.05KB**. Boot-plus-logger is
+  260.56 → **248.36KB**, against **254.12KB** before M115 — so the path M115 made 6.44KB
+  worse is now **5.76KB better**, and every other path keeps M115's 44.81KB. First load is
+  unchanged at 174.06: all of this is on lazy routes.
+  **Measured, not asserted.** 8 mutations, 8 killed — a key dropped, a key with no entry
+  added, the two normalisations pulled apart in either direction, the extractor narrowed so
+  it silently finds fewer terms, its empty-result guard removed, and `Term` reverted to a
+  static import or to no fetch at all.
+  **And the sanity no-op was killed, which was my mistake rather than a fault.** I changed a
+  word in a comment inside `glossaryTerms.ts` — a *generated* file the staleness check
+  compares byte for byte, so a comment there is load-bearing. Re-run on hand-written code it
+  survives, as it should. Worth recording because "the no-op survived" is the check that the
+  battery is not simply failing everything, and it only means that if the no-op is really in
+  a file where comments are free.
+  Verified in a browser in both themes at 430px: three terms on a program page, the tap
+  fetches `glossary-*.js` exactly once, a second tap closes and fetches nothing, a third
+  reopens from memory, no overflow, no page errors. 3,823 tests pass.
+
 **Coaching calls — ten settled (M113), one open (M107b).** Nine judgements the app was making on the coach's
 behalf, each stated at its milestone rather than made quietly, and a tenth the review itself
 turned up. Every site was tagged so the list could be regenerated with

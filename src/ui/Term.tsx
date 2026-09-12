@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { lookup } from '@/content/glossary';
+import { hasGlossaryTerm } from '@/content/glossaryTerms';
 
 /**
  * An exercise or drill name that carries its own definition.
@@ -16,17 +16,57 @@ import { lookup } from '@/content/glossary';
  *    with no affordance, rather than a button that opens an apology.
  * 2. **Tap, not hover.** This is a phone app. A definition that only
  *    appears on hover does not exist.
+ *
+ * ## The definition arrives on the tap (PLAN.md M116)
+ *
+ * Deciding whether to underline a word needs the *keys*; only an open
+ * definition needs the text. Importing `lookup` meant importing all 208
+ * definitions — **13.99KB gzipped** — on every page that renders a single
+ * term, which M115 measured arriving on the logger's navigation. The
+ * question is answered from `glossaryTerms.ts` (1.7KB) and the answer is
+ * fetched when someone asks for it.
+ *
+ * **The underline never lies.** `hasGlossaryTerm` and `lookup` share one
+ * normalisation, so a name that renders as a button always has something
+ * behind it — rule 1 above, held across a module boundary now rather than
+ * inside one function. If the fetch itself fails, the button closes again
+ * rather than opening onto nothing.
  */
 export function Term({ name, className = '' }: { name: string; className?: string }) {
-  const entry = lookup(name);
+  const known = hasGlossaryTerm(name);
+  const [definition, setDefinition] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
-  if (entry === undefined) return <span className={className}>{name}</span>;
+  if (!known) return <span className={className}>{name}</span>;
+
+  async function toggle() {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    // Opened first when it is already here, so a second tap on a term
+    // someone has read before costs nothing and does not flicker.
+    if (definition !== null) {
+      setOpen(true);
+      return;
+    }
+    try {
+      const { lookup } = await import('@/content/glossary');
+      const entry = lookup(name);
+      if (entry === undefined) return;
+      setDefinition(entry.definition);
+      setOpen(true);
+    } catch {
+      // Offline with a cold cache is the only way here, and the honest
+      // response is the word as it was rather than an error about a
+      // dictionary.
+    }
+  }
 
   return (
     <>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => void toggle()}
         aria-expanded={open}
         className={`focus-ring text-left underline decoration-dotted decoration-ink-soft underline-offset-4 ${className}`}
       >
@@ -34,9 +74,9 @@ export function Term({ name, className = '' }: { name: string; className?: strin
       </button>
       {/* `w-full` matters: dropped into a flex row of badges, the definition
           has to claim its own line rather than sit beside them. */}
-      {open && (
+      {open && definition !== null && (
         <span className="block w-full text-xs text-ink-soft leading-relaxed mt-1 border-l-2 border-line pl-2.5">
-          {entry.definition}
+          {definition}
         </span>
       )}
     </>

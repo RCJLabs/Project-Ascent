@@ -463,9 +463,17 @@ describe('the bundle stays small', () => {
     // start, for everyone — against 6.44KB once, on a first-ever visit that
     // goes straight to the logger before the precache lands.
     //
-    // The 20-chunk fan-out is the next thing to look at rather than a
-    // footnote: 13.99KB of it is the glossary, pulled in by one `<Term>` on
-    // an exercise name so it can ask whether that name has a definition.
+    // The 20-chunk fan-out was the next thing to look at rather than a
+    // footnote: 13.99KB of it was the glossary, pulled in by one `<Term>` on
+    // an exercise name so it could ask whether that name has a definition.
+    //
+    // **M116 fixed it and the regression above went with it.** The keys live
+    // in `content/glossaryTerms.ts` (1.57KB, generated) and the definitions
+    // load on the tap that asks for one, so the logger navigation is
+    // 51.27 → **39.05KB** and boot-plus-logger is 260.56 → **248.36KB** —
+    // against **254.12KB** before M115 made the logger lazy at all. The path
+    // this comment recorded as 6.44KB worse is now 5.76KB better, and every
+    // other path keeps the 44.81KB.
     const app = readFileSync('src/App.tsx', 'utf8');
     const eager = [...app.matchAll(/^import \{([^}]+)\} from '@\/(features\/[^']+)'/gm)].map(
       (m) => m[2],
