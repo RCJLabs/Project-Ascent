@@ -5328,8 +5328,11 @@ read by seven pages as display. A separate tab is moving, not gating.*
   459 → 387) and the button arrived ~300ms later cold (888 → 592) and ~220ms later warm
   (608 → 387), behind 32 script requests against 3. The premise — shell first, body a moment
   later — was simply false for this page. The table is in `perf.test.ts` beside the budget it
-  moved: **174.1 → 203.4**, measured 202.42KB. Two things M115 and M116 bought stay
-  bought: nothing *else* eager imports the logger, and the glossary is still a tap away.
+  moved: **174.1 → 203.4**, measured 203.22KB (corrected in M119: the 202.42 first written
+  here was a Python gzip of the same files, and the test's own Node gzip reads them 0.8KB
+  larger; the budget was checked against the test's number and was never wrong). Two things
+  M115 and M116 bought stay bought: nothing *else* eager imports the logger, and the glossary
+  is still a tap away.
   **A 9KB win nobody was looking for.** Before the logger came back, first load fell 174.04
   → 165.13: Home had imported `BoardCard` from `BoardPage.tsx`, and so carried the whole
   board page in the entry chunk. It is on the Game tab now, lazily.
@@ -5415,16 +5418,59 @@ read by seven pages as display. A separate tab is moving, not gating.*
   search to satisfy the route table's own rules; and a session started and marked complete
   on Home showing *Session logged.*, one small `+300 XP` line, the arithmetic folded behind
   *How it was counted* and unfolding on the tap. No overflow, no page errors.
-  **Budget.** 203.4 → 204.4, measured 202.43 → 203.43KB: the reward card's fold put
-  `ui/Disclosure` on the boot path, and the route table gained the keywords that make "level",
-  "kit" and "vitality" find something.
+  **Budget.** 203.4 → 204.4, measured 203.22 → 203.43KB — 0.21KB, not the 1.0 first written
+  here (corrected in M119; the "before" was a Python gzip and the "after" the test's Node
+  gzip): the reward card's fold put `ui/Disclosure` on the boot path, and the route table
+  gained the keywords that make "level", "kit" and "vitality" find something.
   3,886 tests pass.
-- **M119 — Progress in three views (M2).** *Proposed.*
-  A segmented control at the top of Progress — **This block · Grades · Body**, plus **All**,
-  which is today's page — with the choice persisted in settings. Cards are assigned, not
-  rewritten; the history links (career, year, assessments, journal) sit under whichever
-  view they belong to. *Risk: two or three cards fit two views. Judgement calls, noted at
-  the card.*
+- **M119 — Progress in three views (M2).** *Done.*
+  **The assignment.** Twenty-odd cards on one page, and a climber who opened it to ask one
+  question scrolled past the answers to two others. The cards are the ones the page always
+  had; each is assigned to the question it answers. **This block** is how the training is
+  going right now: training state, consistency, training load, the block against the four
+  weeks before, where the ratio has been, what the logger asked, the journal. **Grades** is
+  what is being climbed: the Boulder/Routes chips, grade progression, sends per try, the
+  pyramid, the walls, personal records, records on rock — and the career and the year in
+  review, because a milestone is a send or a day and the year is counted in them. **Body**
+  is how the climber is: Your body (M118's card), what has been loaded per part, the
+  check-ins, the rest habits, the assessments. **All** is the page as it was, in the order it
+  was, so M63's "career above the charts" still holds where the charts are. The stat strip
+  and the picker sit above every view; the empty page (nothing logged) shows no picker,
+  because there is nothing to split.
+  **Two calls worth naming.** "What you have been loading" is per body part and went to Body
+  rather than This block, though it is a 28-day reading like the load cards — the question it
+  answers is "what have I been asking of my fingers", not "how is the block going". The
+  journal went to This block rather than Grades: it is what the climber wrote about the
+  sessions the block is counting.
+  **Remembered on the device, beside the theme.** The view is a `DeviceSettings` field, so it
+  survives a reload and never enters a backup — which view of a page you left open is a fact
+  about this phone, not about the climber (M60's rule). A stored value that is not one of the
+  four falls back to This block. The default is This block, not All: the point of the
+  milestone is the split, and All is the way back rather than the way in.
+  **Tests state their view.** Seven test files render Progress for one card each; each now
+  sets the view that card lives on, rather than relying on a default that happens to include
+  it. One file tests two cards on two views and opens the whole page, and says so.
+  **Measured, not asserted.** 17 mutations, 16 killed plus the sanity no-op that must survive
+  (the two view selectors reordered): the gate opened to every view and shut on All, the
+  picker removed and its tap disconnected, the career, the body card, the tissue chart, the
+  check-ins, the pyramid, the journal and the assessments each sent to the wrong view, the
+  stat strip gated to one view, the choice not written to the device, not read back, and
+  read back without validation, and the guide's Progress row losing the views. **That last
+  one survived its first run** — nothing read the row's words — and the guide test now
+  requires the row to name all four.
+  **In a browser, both themes, 430px and 1280px.** The page opens on This block with
+  six cards; Grades shows eight, Body four, All the eighteen the page had, in its old order;
+  the picker's pressed state follows the tap; Body chosen, the page reloaded, and it opens
+  on Body with the device record carrying `progressView: "body"` beside the theme. No
+  overflow, no page errors.
+  **Budget.** Unchanged at 204.4, measured 203.43 → 203.48KB. **And a correction to the
+  record.** M117 set its budget from a Python gzip of the built files (202.42) and M118 read
+  the test's own Node gzip (203.43), so the M118 entry above claimed a 1.0KB cost that was
+  0.21KB. The M117 commit was rebuilt in a worktree and measured with the test's function:
+  203.22. Both entries are corrected in place, and every figure from here on is the test's.
+  The budgets were never wrong — each was checked by the test against its own number — only
+  the deltas quoted in prose were.
+  3,895 tests pass.
 - **M120 — Quick log, full log (M4).** *Proposed, and the largest engineering item.*
   The logger opens as **Climbs · Effort · Complete**; everything else folds behind "More",
   and the fold remembers itself. `hardestAttempted`, `hardestSent` and `sessionVolume`

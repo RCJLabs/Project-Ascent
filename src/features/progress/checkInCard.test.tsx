@@ -39,6 +39,11 @@ async function log(daysAgo: number, patch: Partial<Parameters<typeof putSession>
 beforeEach(async () => {
   globalThis.indexedDB = new IDBFactory();
   resetDbForTests();
+  // This file tests two cards on two views — the check-in on Body, the
+  // conversion grid on Grades (PLAN.md M119) — so it opens the whole page.
+  // Written to the device record rather than set on the store, because
+  // `reset()` below hydrates and would read the record over the top of it.
+  localStorage.setItem('project-ascent:device', JSON.stringify({ progressView: 'all' }));
   reset();
 });
 

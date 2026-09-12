@@ -5,6 +5,7 @@ import { getSession, newSession, putSession, type Session } from '@/db/sessions'
 import { hydrate, renderAt, reset } from '@/test/render';
 import { LogPage } from '@/features/log/LogPage';
 import { ProgressPage } from '@/features/progress/ProgressPage';
+import { useSettings } from '@/store/settings';
 
 /**
  * Style on a climb (PLAN.md M108).
@@ -149,6 +150,8 @@ describe('what the progress page makes of it', () => {
     await reset();
     for (const s of sessions) await putSession(s as never);
     await hydrate();
+    // The walls card lives on the Grades view (PLAN.md M119).
+    useSettings.setState({ progressView: 'grades' });
     renderAt('/progress', <ProgressPage />);
     await screen.findByText('Grade pyramid');
   }

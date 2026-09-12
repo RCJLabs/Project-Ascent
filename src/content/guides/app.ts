@@ -74,7 +74,7 @@ export const APP: Guide = {
             ['Home', "Today's session — what is planned, the button that starts it, and the log once it has. The coach, the week and your program sit under it."],
             ['Train', 'The program catalogue, the finder, your own programs, objectives, and projects.'],
             ['Calendar', 'The plan across weeks, and where you move sessions around.'],
-            ['Progress', 'Grades, training load, the journal, assessments, career and the year in review.'],
+            ['Progress', 'Three views of the log — This block, Grades, Body — and All for the whole page. Training load, grades, the journal, assessments, your body, career and the year in review.'],
             ['Game', 'Your climber, the level, the altimeter, the board, skill trees, achievements, and The Ascent.'],
           ],
         },

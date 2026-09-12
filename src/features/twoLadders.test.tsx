@@ -4,6 +4,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { newSession, putSession, type Climb, type Session } from '@/db/sessions';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { ProgressPage } from '@/features/progress/ProgressPage';
+import { useSettings } from '@/store/settings';
 
 /**
  * Two ladders, on the page that draws grades (PLAN.md M106).
@@ -35,6 +36,8 @@ async function page(sessions: Session[]) {
   await reset();
   for (const s of sessions) await putSession(s as never);
   await hydrate();
+  // The pyramid lives on the Grades view (PLAN.md M119).
+  useSettings.setState({ progressView: 'grades' });
   renderAt('/progress', <ProgressPage />);
   await screen.findByText('Grade pyramid');
 }

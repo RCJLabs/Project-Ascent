@@ -383,7 +383,8 @@ describe('the bundle stays small', () => {
     // purpose, and measured this time.** Home *is* today's session now, so
     // the boot path is the logger by definition. The M115 split was still
     // tried — heading eager, body behind a `lazy()`, 165.13KB of first
-    // load — against a static import at 202.98KB, seven cold and seven
+    // load — against a static import at 202.98KB (both Python gzip; this
+    // function read the shipped build at 203.22), seven cold and seven
     // warm starts each, the page's own clock stamped by a MutationObserver
     // the first time the day heading and the session button appeared:
     //
@@ -402,7 +403,19 @@ describe('the bundle stays small', () => {
     // M115 and M116 bought stay bought: nothing *else* eager imports the
     // logger, and the glossary is still a tap away rather than a boot cost.
     //
-    // **203.4 → 204.4 at M118**, measured 202.43 → 203.43: the reward
+    // **Unchanged at M119**, measured 203.43 → 203.48: the view field in
+    // `settings.ts` and the picker's route through the entry chunk.
+    //
+    // **A correction to the two notes below (M119).** M117's "202.42" and
+    // M118's "202.43 →" were a Python gzip of the same files; the "→ 203.43"
+    // was this function's Node gzip. The two compressors differ by about
+    // 0.8KB on this input, so the M118 delta read as 1.0KB when it was
+    // 0.21KB. Rebuilt from the M117 commit and measured here: **203.22**.
+    // The budgets themselves were never wrong — each was checked by this
+    // test against its own number — only the deltas quoted in prose were.
+    // Every figure in this file from here on is this function's.
+    //
+    // **203.4 → 204.4 at M118**, measured 203.22 → 203.43: the reward
     // card's fold (`ui/Disclosure` was not on the boot path before) and
     // the search keywords for `/game` and `/body` in the route table.
     //

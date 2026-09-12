@@ -32,6 +32,9 @@ async function log(daysAgo: number, fields: Record<string, string | number>) {
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
   resetDbForTests();
+  // The logger's answers live on the This block view (PLAN.md M119) —
+  // the default, stated rather than relied on.
+  localStorage.setItem('project-ascent:device', JSON.stringify({ progressView: 'block' }));
   reset();
 });
 

@@ -30,7 +30,7 @@ import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
 import { useMetrics } from '@/store/metrics';
 import { useProjects } from '@/store/projects';
 import { useProfile } from '@/store/profile';
-import { useSettings } from '@/store/settings';
+import { useSettings, type ProgressView } from '@/store/settings';
 import { useSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
@@ -341,6 +341,40 @@ function RecordList({
   );
 }
 
+/**
+ * Progress in three views (PLAN.md M119).
+ *
+ * Twenty-odd cards on one page, and a climber who opened it to ask one
+ * question scrolled past the answers to two others. The cards are the same;
+ * each is assigned to the question it answers. **This block** is how the
+ * training is going right now — state, consistency, load, the block against
+ * the one before, what the logger asked. **Grades** is what is being
+ * climbed — progression, sends per try, the pyramid, the walls, the
+ * records, the career, the year. **Body** is how the climber is — vitality
+ * and injuries, what has been loaded, the check-ins, the rest habits, the
+ * assessments. **All** is the page as it was, in the order it was.
+ *
+ * The choice is remembered on the device, beside the theme.
+ */
+const VIEWS: { id: ProgressView; label: string }[] = [
+  { id: 'block', label: 'This block' },
+  { id: 'grades', label: 'Grades' },
+  { id: 'body', label: 'Body' },
+  { id: 'all', label: 'All' },
+];
+
+function ViewPicker({ view, onPick }: { view: ProgressView; onPick: (view: ProgressView) => void }) {
+  return (
+    <div role="group" aria-label="View" className="flex gap-2 flex-wrap">
+      {VIEWS.map(({ id, label }) => (
+        <Chip key={id} active={view === id} onClick={() => onPick(id)}>
+          {label}
+        </Chip>
+      ))}
+    </div>
+  );
+}
+
 export function ProgressPage() {
   const gradeLabel = useGradeLabel();
   const display = useSettings((s) => s.display);
@@ -349,6 +383,10 @@ export function ProgressPage() {
   const load = useSessions((s) => s.load);
   const activeProgramId = useProfile((s) => s.activeProgramId);
   const [scale, setScale] = useState<GradeScale>('V');
+  const view = useSettings((s) => s.progressView);
+  const setView = useSettings((s) => s.setProgressView);
+  /** Whether a card assigned to `to` is on the screen in this view. */
+  const on = (to: Exclude<ProgressView, 'all'>) => view === 'all' || view === to;
   /** Which ladder the pyramid is drawing (PLAN.md M106). */
   const [onWhat, setOnWhat] = useState<'all' | 'indoor' | 'outdoor'>('all');
 
@@ -447,26 +485,33 @@ export function ProgressPage() {
           </Card>
         </Wide>
 
+        <Wide>
+          <ViewPicker view={view} onPick={setView} />
+        </Wide>
+
         {/* Above the charts, not below them (PLAN.md M63). These were the
             last two cards on a page with seven charts on it, which is a
             place nobody scrolls to twice. What happened comes before how it
-            is going. */}
-        <CareerCard />
-        <YearCard />
-        <BodyCard />
+            is going. Under Grades since M119: a milestone is a send or a
+            day, and the year is counted in them. */}
+        {on('grades') && <CareerCard />}
+        {on('grades') && <YearCard />}
+        {on('body') && <BodyCard />}
 
-        <TrainingState state={state} sessions={sessions} program={program} scale={scale} />
+        {on('block') && <TrainingState state={state} sessions={sessions} program={program} scale={scale} />}
 
         {/* Wide, always. Fifty-three weeks squeezed into half a column is a
             smear — the whole point is that a fortnight off is visible as a
             hole, and at 4px a cell that reads only at full width. */}
-        <Wide>
-          <Card title="Consistency">
-            <ConsistencyBody grid={heat} summary={describeConsistency(heat)} />
-          </Card>
-        </Wide>
+        {on('block') && (
+          <Wide>
+            <Card title="Consistency">
+              <ConsistencyBody grid={heat} summary={describeConsistency(heat)} />
+            </Card>
+          </Wide>
+        )}
 
-        <Card title="Training load">
+        {on('block') && <Card title="Training load">
           <div className="flex items-start gap-3 mb-3">
             <zone.Icon size={20} style={{ color: zone.color }} className="shrink-0 mt-0.5" aria-hidden />
             <div className="min-w-0">
@@ -492,41 +537,50 @@ export function ProgressPage() {
           <p className="text-xs text-ink-soft mt-2">
             Last 28 days. Load is session RPE × hours. Deload days are shown in orange.
           </p>
-        </Card>
+        </Card>}
 
         {/* The only card here that is not about the present. Placed above
             the tissue and trend cards because "am I training more than I
             was?" is the question a climber opens this page with. */}
-        <Card title="Against the four weeks before">
-          <BlockCompareTable compare={block} />
-          <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeBlocks(block)}</p>
-          {block.before !== null && (
-            <p className="text-xs text-ink-soft mt-2 leading-relaxed">
-              Up is not better and down is not worse — a deload block is supposed to show as a
-              decline, and so is the month after a trip.
-            </p>
-          )}
-        </Card>
+        {on('block') && (
+          <Card title="Against the four weeks before">
+            <BlockCompareTable compare={block} />
+            <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeBlocks(block)}</p>
+            {block.before !== null && (
+              <p className="text-xs text-ink-soft mt-2 leading-relaxed">
+                Up is not better and down is not worse — a deload block is supposed to show as a
+                decline, and so is the month after a trip.
+              </p>
+            )}
+          </Card>
+        )}
 
-        <Card title="What you have been loading">
-          <TissueBars load={tissue} />
-          <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeTissue(tissue)}</p>
-          <TissueNote load={tissue} />
-        </Card>
+        {/* Under Body: it is per part of one, and the question it answers
+            is "what have I been asking of my fingers", not "how is the
+            block going". */}
+        {on('body') && (
+          <Card title="What you have been loading">
+            <TissueBars load={tissue} />
+            <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeTissue(tissue)}</p>
+            <TissueNote load={tissue} />
+          </Card>
+        )}
 
         {/* The ratio the card above states as one number, as a trajectory.
             0.99 arrived-from-1.6 and 0.99 arrived-from-0.6 are opposite
             situations with the same reading (PLAN.md M25). */}
-        <Card title="Where the ratio has been">
-          <LoadTrendLine trend={trend} />
-          <p className="text-sm text-ink-soft mt-2 leading-relaxed">{describeTrend(trend)}</p>
-        </Card>
+        {on('block') && (
+          <Card title="Where the ratio has been">
+            <LoadTrendLine trend={trend} />
+            <p className="text-sm text-ink-soft mt-2 leading-relaxed">{describeTrend(trend)}</p>
+          </Card>
+        )}
 
         {/* The logger's own extra questions, which until M88 were asked on
             twenty-two session types and read by nothing. Beside the
             check-in card because it is the same kind of thing: what you
             told the app, given back to you. */}
-        {answered.length > 0 && (
+        {on('block') && answered.length > 0 && (
           <Card title="What you told the logger">
             <div className="grid grid-cols-1 gap-4">
               {answered.map((series) => (
@@ -551,7 +605,7 @@ export function ProgressPage() {
             one kind of day the check-in never asks about (PLAN.md M94).
             No chart — four shares is a list, and drawing it would be a
             picture of four numbers you can already read. */}
-        {describeRestHabits(rest) !== null && (
+        {on('body') && describeRestHabits(rest) !== null && (
           <Card title="How you rest">
             <dl className="grid grid-cols-1 gap-1.5">
               {rest.items.map((item) => (
@@ -574,7 +628,7 @@ export function ProgressPage() {
         {/* Placed after the load cards, because every sentence in it is
             about the sessions those cards are counting — and before the
             grade cards, which are about a different question entirely. */}
-        {checkIns.answered > 0 && (
+        {on('body') && checkIns.answered > 0 && (
           <Card title="How you were feeling">
             <CheckInStrip history={checkIns} />
             <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeCheckIns(checkIns)}</p>
@@ -587,15 +641,17 @@ export function ProgressPage() {
           </Card>
         )}
 
-        <Wide className="flex gap-2">
-          {(['V', 'YDS'] as GradeScale[]).map((s) => (
-            <Chip key={s} active={scale === s} onClick={() => setScale(s)}>
-              {s === 'V' ? 'Boulder' : 'Routes'}
-            </Chip>
-          ))}
-        </Wide>
+        {on('grades') && (
+          <Wide className="flex gap-2">
+            {(['V', 'YDS'] as GradeScale[]).map((s) => (
+              <Chip key={s} active={scale === s} onClick={() => setScale(s)}>
+                {s === 'V' ? 'Boulder' : 'Routes'}
+              </Chip>
+            ))}
+          </Wide>
+        )}
 
-        <Card title="Grade progression">
+        {on('grades') && <Card title="Grade progression">
           {points.some((p) => p.ordinal !== null) ? (
             <>
               <ProgressionLine
@@ -617,11 +673,11 @@ export function ProgressPage() {
               No {scale === 'V' ? 'boulder' : 'route'} sends logged in the last twelve weeks.
             </p>
           )}
-        </Card>
+        </Card>}
 
         {/* After the pyramid, which shows this same ratio as one all-time
             number per grade. The series is what that number cannot say. */}
-        {drawable(conversion).length > 0 && (
+        {on('grades') && drawable(conversion).length > 0 && (
           <Card title="Sends per try, block by block">
             <ConversionGrid trend={conversion} label={gradeLabel} />
             <p className="text-sm text-ink-soft mt-3 leading-relaxed">
@@ -630,7 +686,7 @@ export function ProgressPage() {
           </Card>
         )}
 
-        <Card title="Grade pyramid">
+        {on('grades') && <Card title="Grade pyramid">
           {/* Two ladders, and the app drew one (PLAN.md M106). The toggle
               only appears once there is something on rock to toggle to —
               three buttons where two do the same thing is not a choice. */}
@@ -669,9 +725,9 @@ export function ProgressPage() {
                 : 'Nothing logged on this scale yet.'}
             </p>
           )}
-        </Card>
+        </Card>}
 
-        {angleSaid !== null && (
+        {on('grades') && angleSaid !== null && (
           <Card title="The walls you climb on">
             <p className="text-sm leading-relaxed">{angleSaid}</p>
             {byAngle.sides.length > 0 && (
@@ -694,10 +750,10 @@ export function ProgressPage() {
           </Card>
         )}
 
-        <AssessmentsCard />
-        <JournalCard />
+        {on('body') && <AssessmentsCard />}
+        {on('block') && <JournalCard />}
 
-        {state.personalRecords.length > 0 && (
+        {on('grades') && state.personalRecords.length > 0 && (
           <Card title="Personal records">
             <RecordList records={state.personalRecords} gradeLabel={gradeLabel} showMode />
           </Card>
@@ -707,7 +763,7 @@ export function ProgressPage() {
             A climber who sends V7 indoors and V5 outside has one record up
             there — V7 — and no row at all for rock. Rock has its own
             ladder, so it gets its own list. */}
-        {state.outdoorRecords.length > 0 && (
+        {on('grades') && state.outdoorRecords.length > 0 && (
           /* "Records on rock" rather than "On rock": M106's grade pyramid
              already has an On rock chip, and two different things wearing
              one name on the same page is worse than a longer title. */

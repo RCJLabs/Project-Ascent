@@ -8,6 +8,7 @@ import { BodyPage } from '@/features/body/BodyPage';
 import { GamePage } from '@/features/game/GamePage';
 import { ProgressPage } from '@/features/progress/ProgressPage';
 import { ACHIEVEMENT_COUNT } from '@/engine/achievements';
+import { useSettings } from '@/store/settings';
 
 /**
  * Where a climber looks for what they have done (PLAN.md M63).
@@ -67,6 +68,9 @@ describe('the career', () => {
   // It was the second-to-last card on a page with seven charts above it.
   it('comes before the charts on Progress, not after them', async () => {
     await seedSessions();
+    // On the whole page (PLAN.md M119); the Grades view has no charts of
+    // load to come before.
+    useSettings.setState({ progressView: 'all' });
     const { container } = renderAt('/progress', <ProgressPage />);
     const text = container.textContent ?? '';
     const career = text.indexOf('Career');

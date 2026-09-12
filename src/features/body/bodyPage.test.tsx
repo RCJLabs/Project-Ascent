@@ -7,6 +7,7 @@ import { hydrate, renderAt, reset } from '@/test/render';
 import { parentOf } from '@/ui/routes';
 import { ProgressPage } from '@/features/progress/ProgressPage';
 import { BodyPage } from './BodyPage';
+import { useSettings } from '@/store/settings';
 
 /**
  * The training half of the old climber page (PLAN.md M118).
@@ -28,6 +29,7 @@ describe('your body', () => {
     await reset();
     await hydrate();
     useProfile.setState({ injuries: [] });
+    useSettings.setState({ progressView: 'body' });
     renderAt('/progress', <ProgressPage />);
     await screen.findByRole('heading', { level: 1, name: 'Progress' });
     let card = screen.getByText('Your body').closest('section')!;
@@ -36,6 +38,7 @@ describe('your body', () => {
 
     await putSession(newSession('2026-01-05', 0, { completed: true }));
     await hydrate();
+    useSettings.setState({ progressView: 'body' });
     useProfile.setState({
       injuries: [{ id: 'i1', part: 'elbow', severity: 'niggle', status: 'active', since: '2026-01-01' }],
     });

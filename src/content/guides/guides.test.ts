@@ -320,6 +320,17 @@ describe('the app guide quotes real numbers', () => {
     expect(allText).toContain('Your body');
   });
 
+  it('names the three views of Progress', () => {
+    // M119 split the page; a guide that still lists its cards as one page
+    // sends a climber looking for the pyramid on the view that has the
+    // load charts.
+    const table = tableAfter('Tab');
+    const progress = table?.rows.find((r) => r[0] === 'Progress')?.[1] ?? '';
+    for (const view of ['This block', 'Grades', 'Body', 'All']) {
+      expect(progress, `the Progress row does not name ${view}`).toContain(view);
+    }
+  });
+
   it('names only tabs that exist', () => {
     const table = tableAfter('Tab');
     expect(table?.rows.map((r) => r[0])).toEqual([

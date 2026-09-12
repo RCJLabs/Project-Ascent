@@ -5,6 +5,7 @@ import { loadPrograms } from '@/content/programs';
 import { newSession, putSession, type Session } from '@/db/sessions';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { ProgressPage } from '@/features/progress/ProgressPage';
+import { useSettings } from '@/store/settings';
 
 /**
  * What you have done on rock (PLAN.md M112d).
@@ -34,6 +35,8 @@ async function progressWith(sessions: Session[]): Promise<void> {
   await reset();
   for (const s of sessions) await putSession(s);
   await hydrate();
+  // The records live on the Grades view (PLAN.md M119).
+  useSettings.setState({ progressView: 'grades' });
   renderAt('/progress', <ProgressPage />);
 }
 

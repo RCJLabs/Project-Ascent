@@ -42,6 +42,8 @@ export interface SettingsState {
   units: UnitSystem;
   /** Timer beeps, game sounds and haptics. */
   cues: boolean;
+  progressView: ProgressView;
+  setProgressView: (view: ProgressView) => void;
   setTheme: (theme: ThemePreference) => void;
   setThemeId: (id: string) => void;
   setTextSize: (size: TextSize) => void;
@@ -74,11 +76,19 @@ interface ClimberSettings {
   units: UnitSystem;
 }
 
+/** Which of Progress's views is showing (PLAN.md M119). */
+export type ProgressView = 'block' | 'grades' | 'body' | 'all';
+const PROGRESS_VIEWS: readonly ProgressView[] = ['block', 'grades', 'body', 'all'];
+
 interface DeviceSettings {
   theme: ThemePreference;
   themeId: string;
   textSize: TextSize;
   cues: boolean;
+  /** Device-side like the theme: which view of a page you left open is a
+   *  fact about this phone, not about the climber, and has no place in a
+   *  backup. */
+  progressView: ProgressView;
 }
 
 function climberSettings(state: SettingsState): ClimberSettings {
@@ -91,6 +101,7 @@ function deviceSettings(state: SettingsState): DeviceSettings {
     themeId: state.themeId,
     textSize: state.textSize,
     cues: state.cues,
+    progressView: state.progressView,
   };
 }
 
@@ -129,6 +140,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
   // flip if the audience says otherwise.
   units: 'imperial',
   cues: true,
+  progressView: 'block',
+  setProgressView: (view) => {
+    set({ progressView: view });
+    writeDevice(deviceSettings(get()));
+  },
   setTheme: (theme) => {
     set({ theme });
     applyTheme(theme, get().themeId);
@@ -193,6 +209,9 @@ export async function hydrateSettings(): Promise<void> {
         device.theme === 'light' || device.theme === 'dark' || device.theme === 'system'
           ? device.theme
           : 'system',
+      progressView: PROGRESS_VIEWS.includes(device.progressView as ProgressView)
+        ? (device.progressView as ProgressView)
+        : 'block',
     };
 
     useSettings.setState({
