@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { addMedia, mediaOwners } from '@/db/media';
 import { ACCEPTED, ImageError, prepareImage, type PreparedImage } from '@/lib/image';
 import { attachTargets, describeEmpty, type Target } from '@/engine/attach';
+import { takeSharedPhoto } from '@/lib/sharedPhoto';
 import { today } from '@/engine/dates';
 import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
@@ -37,6 +38,8 @@ export function AttachPage() {
   const projectsReady = useProjects((s) => s.hydrated);
 
   const [prepared, setPrepared] = useState<PreparedImage | null>(null);
+  /** Whether a photo arrived by share rather than by the file picker. */
+  const [shared, setShared] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [counts, setCounts] = useState<Map<string, number> | null>(null);
   const [busy, setBusy] = useState(false);
@@ -60,6 +63,32 @@ export function AttachPage() {
     return () => URL.revokeObjectURL(preview);
   }, [preview]);
 
+  /**
+   * A photo shared into the app lands here (PLAN.md M111b).
+   *
+   * The worker caught the `share_target` POST, left the file in a cache and
+   * redirected here; this takes it. Unconditional rather than behind a flag
+   * in the URL: `launch_handler` is `focus-existing`, so a share can arrive
+   * at a tab that is already open and whose hash the redirect merely
+   * changes — and a page that only looked when it saw `?shared` would miss
+   * exactly that case. The take is one-shot, so looking costs one cache
+   * miss and cannot double-file anything.
+   */
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      const file = await takeSharedPhoto();
+      if (!live || file === null) return;
+      setShared(true);
+      await accept(file);
+    })();
+    return () => {
+      live = false;
+    };
+    // Once, on mount. `accept` closes over setters, which are stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
   const targets = useMemo(
     () => attachTargets({ sessions, projects, counts: counts ?? new Map(), today: today() }),
@@ -67,9 +96,14 @@ export function AttachPage() {
   );
   const empty = describeEmpty(targets, sessions.length > 0);
 
-  async function onPicked(files: FileList | null) {
-    const file = files?.[0];
-    if (!file) return;
+  /**
+   * Prepare one file and hold it, wherever it came from.
+   *
+   * Shared photos and picked ones go through exactly this — the share is a
+   * different doorway, not a different photo, and a second copy of the
+   * resize-and-report path is how the two would drift.
+   */
+  async function accept(file: File): Promise<void> {
     setBusy(true);
     setError(null);
     setLanded(null);
@@ -85,11 +119,18 @@ export function AttachPage() {
       setError(e instanceof ImageError ? e.message : 'That photo could not be read.');
     } finally {
       setBusy(false);
-      // Cleared so choosing the same file twice fires a change event. Without
-      // it, a climber who picks the wrong photo, goes back and picks it again
-      // gets nothing at all.
-      if (fileRef.current) fileRef.current.value = '';
     }
+  }
+
+  async function onPicked(files: FileList | null) {
+    const file = files?.[0];
+    if (!file) return;
+    setShared(false);
+    await accept(file);
+    // Cleared so choosing the same file twice fires a change event. Without
+    // it, a climber who picks the wrong photo, goes back and picks it again
+    // gets nothing at all.
+    if (fileRef.current) fileRef.current.value = '';
   }
 
   async function attach(target: Target) {
@@ -131,7 +172,7 @@ export function AttachPage() {
               />
               <div className="min-w-0">
                 <p className="text-sm text-ink-soft leading-relaxed">
-                  Ready. Choose where it goes below.
+                  {shared ? 'Shared to Ascent. Choose where it goes below.' : 'Ready. Choose where it goes below.'}
                 </p>
                 <Button
                   variant="ghost"

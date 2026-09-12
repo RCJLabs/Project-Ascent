@@ -48,7 +48,24 @@ export default defineConfig({
         // affected, so the symptom is not a broken TWA: it is being unable to
         // check the thing by hand, which is how it went unnoticed until the
         // domain was live (PLAN.md M12).
-        navigateFallbackDenylist: [/^\/\.well-known\//],
+        navigateFallbackDenylist: [
+          /^\/\.well-known\//,
+          // The share target (PLAN.md M111b). Workbox's own router only
+          // matches GET, so a POST here would already fall past it — but
+          // `navigateFallback` is the one rule that answers *every*
+          // navigation with the shell, and a share is a navigation. Denied
+          // explicitly rather than relying on the method check two layers
+          // down, which is the kind of thing a workbox upgrade changes.
+          /^\/share-target$/,
+        ],
+        // The one custom handler, imported into the generated worker rather
+        // than replacing it (PLAN.md M111b). `injectManifest` would hand
+        // this file the precache and update logic M19 settled — prompt
+        // rather than autoUpdate, never hand over mid-session — and
+        // re-deriving that by hand to add one `fetch` listener is a bug on
+        // somebody else's deploy. This goes above everything workbox
+        // writes and changes none of it.
+        importScripts: ['/share-target.js'],
       },
       manifest: {
         id: BASE,
@@ -103,6 +120,21 @@ export default defineConfig({
             },
           },
         ],
+        // A photo shared from the camera roll (PLAN.md M111b). `POST`
+        // rather than `GET`, because a file cannot travel in a query
+        // string — which is the whole reason this needs a service-worker
+        // handler and why M111 refused the entry until there was a screen
+        // for the file to land on.
+        share_target: {
+          action: `${BASE}share-target`,
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            // Named `photo`, matching `share-target.js`. Images only: the
+            // media store holds photos and M50 refused video.
+            files: [{ name: 'photo', accept: ['image/*'] }],
+          },
+        },
         // One instance. Opening a file while the app is already running
         // brings that window forward rather than starting a second copy
         // over the same database.

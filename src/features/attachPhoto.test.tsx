@@ -30,6 +30,7 @@ vi.mock('@/lib/image', async () => {
 });
 
 const { AttachPage } = await import('@/features/media/AttachPage');
+const { SHARE_KEY } = await import('@/lib/sharedPhoto');
 
 const TODAY = today();
 
@@ -44,6 +45,10 @@ async function page(
   opts: { sessions?: Session[]; projects?: number; seedMedia?: () => Promise<void> } = {},
 ) {
   stubUrls();
+  // Only the share tests stub `caches`; everywhere else it must be absent,
+  // or a leftover stub from one file's earlier test silently feeds a photo
+  // into a later one.
+  if (!('caches' in globalThis)) vi.stubGlobal('caches', undefined);
   await reset();
   const db = await getDb();
   await db.clear('media');
@@ -252,6 +257,81 @@ describe('a destination that is full', () => {
     await choose(view);
     const session = destinations().find((b) => /Today/.test(b.textContent ?? ''))!;
     expect(session.hasAttribute('disabled')).toBe(false);
+  });
+});
+
+/**
+ * A photo shared into the app (PLAN.md M111b).
+ *
+ * The worker puts the file in a cache and redirects here; the page takes it
+ * on mount. `caches` is stubbed because jsdom has no Cache API — what is
+ * being tested is the handover, not the browser's storage.
+ */
+describe('a photo that arrived by share', () => {
+  function stubShare(entry: Response | null): { entries: Map<string, Response> } {
+    const entries = new Map<string, Response>();
+    if (entry) entries.set(SHARE_KEY, entry);
+    vi.stubGlobal('caches', {
+      open: async () => ({
+        match: async (k: string) => entries.get(k),
+        delete: async (k: string) => entries.delete(k),
+        put: async () => undefined,
+      }),
+    });
+    return { entries };
+  }
+
+  const png = () => new Response('bytes', { headers: { 'content-type': 'image/png' } });
+
+  it('is waiting when the page opens', async () => {
+    stubShare(png());
+    const view = await page({ projects: 1 });
+    expect(await screen.findByAltText(/about to attach/i)).toBeTruthy();
+    expect(view).toBeTruthy();
+  });
+
+  it('says it came from a share rather than a picker', async () => {
+    stubShare(png());
+    await page({ projects: 1 });
+    expect(await screen.findByText(/Shared to Ascent/i)).toBeTruthy();
+  });
+
+  it('unlocks the destinations without a file being picked', async () => {
+    stubShare(png());
+    await page({ projects: 1 });
+    await screen.findByAltText(/about to attach/i);
+    await waitFor(() => expect(destinations()[0]?.hasAttribute('disabled')).toBe(false));
+  });
+
+  it('files where it is told, like any other photo', async () => {
+    stubShare(png());
+    await page({ projects: 1 });
+    await screen.findByAltText(/about to attach/i);
+    fireEvent.click(destinations().find((b) => /Project 0/.test(b.textContent ?? ''))!);
+    await waitFor(async () => expect(await listMedia(projectOwner('p0'))).toHaveLength(1));
+  });
+
+  it('is taken from the cache, so a reopen does not re-offer it', async () => {
+    const { entries } = stubShare(png());
+    await page({ projects: 1 });
+    await screen.findByAltText(/about to attach/i);
+    expect(entries.has(SHARE_KEY), 'the share is still sitting in the cache').toBe(false);
+  });
+
+  it('leaves the page as normal when nothing was shared', async () => {
+    stubShare(null);
+    await page({ projects: 1 });
+    await screen.findByText('Where it goes');
+    expect(screen.queryByAltText(/about to attach/i)).toBeNull();
+    expect(screen.getByText(/Choose a photo first/i)).toBeTruthy();
+  });
+
+  it('does not claim a share when the photo was picked by hand', async () => {
+    stubShare(null);
+    const view = await page({ projects: 1 });
+    await choose(view);
+    expect(screen.queryByText(/Shared to Ascent/i)).toBeNull();
+    expect(screen.getByText(/^Ready\./)).toBeTruthy();
   });
 });
 

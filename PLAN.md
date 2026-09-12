@@ -4643,11 +4643,8 @@ entry above.)*
   M107 paid 0.17KB for two routes, so this is the going rate.
   Verified in a browser in both themes at 430px, with the real canvas pipeline rather than
   the jsdom stub. 3,805 tests pass.
-  **Still to do, and the caveat stands.** A `share_target` with `method: POST` needs the app
-  to own its service worker (`injectManifest`, or `importScripts` over `generateSW`), which
-  touches the offline guarantee M19 spent a milestone getting right. Then the manifest
-  entry, pointing at `/attach`. The landing place exists now, so that work has somewhere to
-  deliver to — which was the whole point of doing it in this order.
+  **The second half is done too (M111c below).** The landing place existing first is what
+  made it a small change rather than a redesign.
 
 - **M112 — The cooldown, from what today actually loaded.** *Done, and the premise was
   wrong in six ways.*
@@ -5142,6 +5139,57 @@ entry above.)*
   Verified in a browser in both themes at 430px: three terms on a program page, the tap
   fetches `glossary-*.js` exactly once, a second tap closes and fetches nothing, a third
   reopens from memory, no overflow, no page errors. 3,823 tests pass.
+
+- **M111c — Share a photo into the app.** *Done, and the risky half was smaller than the
+  caveat feared.*
+  **Why it was second.** A `share_target` with `method: POST` is delivered to the *service
+  worker* as a POST navigation; nothing in the page can see it. `generateSW` writes the
+  whole worker and takes no custom handlers, so the two ways to add one are to own the
+  worker (`injectManifest`) or to have workbox import a script into the one it generates.
+  M111b named the offline guarantee as the risk and deferred accordingly.
+  **`importScripts`, not `injectManifest`, and that is the whole of the risk management.**
+  M19's contract — precache the entire shell, `registerType: 'prompt'`, never hand over
+  mid-session — *is* workbox's generated code. Owning the worker would mean re-deriving all
+  of it by hand to add one `fetch` listener, which is a bug that appears on somebody else's
+  deploy. `public/share-target.js` goes in above everything workbox writes and changes none
+  of it. A test asserts the config still says `prompt` and does not select `injectManifest`.
+  **The photo goes in a cache, not the database.** A worker can open IndexedDB, and writing
+  straight to `media` would be fewer moving parts — it would also skip `prepareImage`, so a
+  twelve-megapixel photo would land at full size in a store capped at eight per owner, and
+  skip the question `/attach` exists to ask. The worker catches the file and gets out of the
+  way; `lib/sharedPhoto.ts` takes it, one-shot, the same rule `lib/launchFile.ts` follows.
+  **Deleted before the body is read, not after.** A truncated blob would otherwise leave the
+  entry behind to fail again on every future visit — a share that poisons the page.
+  **The page looks unconditionally rather than for a flag in the URL.** `launch_handler` is
+  `focus-existing`, so a share can arrive at a tab that is already open and whose hash the
+  redirect merely changes; a page that only looked when it saw `?shared` would miss exactly
+  that case. One cache miss is the cost, and the take cannot double-file.
+  **Two duplications, both held by tests.** The worker is plain JavaScript in `public/` and
+  cannot import from `src`, so the cache name, the key and the action path exist twice — and
+  `sharedPhoto.test.ts` reads both files and compares them, the same shape M116 used for the
+  glossary keys. It also checks the manifest's form-field name against the one the worker
+  reads, which is the pairing with no other symptom than a photo that never arrives.
+  **Denied the navigation fallback explicitly.** Workbox's router only matches GET, so a
+  POST would already fall past it — but `navigateFallback` is the rule that answers *every*
+  navigation with the shell, and a share is a navigation. Relying on a method check two
+  layers down is the kind of thing a workbox upgrade changes.
+  **Measured, not asserted.** 14 mutations, 13 killed plus the sanity no-op: the import
+  removed, the denial removed, the manifest action and form field renamed, the worker's
+  cache and key renamed, its method filter and filename encoding removed, the take turned
+  into a read, the delete moved after the read, a failure made to throw, the page stopped
+  looking, and a picked photo made to claim it was shared.
+  **The end-to-end is the real verification**, because none of the above proves a worker
+  intercepts anything. In a browser with a live service worker, both themes: a real
+  multipart POST navigation to `/share-target` is caught, redirects to `#/attach`, the photo
+  is waiting and labelled as shared, it files to a project, and reopening `/attach`
+  afterwards does **not** re-offer it.
+  **And the guarantee the caveat was about, checked rather than assumed.** Offline with the
+  network cut: 98 precached entries, home, `/today`, `/attach`, `/train`, `/progress` and
+  `/glossary` all render, and tapping a term still opens its definition — M116's lazy
+  glossary import served from the precache. No page errors.
+  **Budget.** First load unchanged at 174.06KB. `share-target.js` is 1.66KB and is loaded by
+  the worker, never by the page.
+  3,852 tests pass.
 
 **Coaching calls — ten settled (M113), one open (M107b).** Nine judgements the app was making on the coach's
 behalf, each stated at its milestone rather than made quietly, and a tenth the review itself
