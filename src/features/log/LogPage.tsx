@@ -1677,7 +1677,7 @@ function useSessionMilestones(session: Session, detail: SessionXp | undefined): 
     );
     return sessionMilestones({
       session,
-      records: recordsInReward(detail.reward.awards, session.date),
+      records: recordsInReward(detail.reward.awards, session.date, session.mode),
       earlierSessions: earlier.length,
       earlierOutdoor: earlier.filter((s) => s.mode === 'outdoor').length,
       levelBefore: detail.levelBefore,

@@ -102,10 +102,10 @@ describe('reviewRange', () => {
 
   it('reports the hardest send of each kind inside the range', () => {
     const records: PersonalRecord[] = [
-      { scale: 'V', grade: 'V4', date: '2025-11-01' },
-      { scale: 'V', grade: 'V6', date: '2026-04-01' },
-      { scale: 'V', grade: 'V5', date: '2026-02-01' },
-      { scale: 'YDS', grade: '5.11c', date: '2026-07-01' },
+      { scale: 'V', grade: 'V4', date: '2025-11-01', mode: 'indoor' },
+      { scale: 'V', grade: 'V6', date: '2026-04-01', mode: 'indoor' },
+      { scale: 'V', grade: 'V5', date: '2026-02-01', mode: 'indoor' },
+      { scale: 'YDS', grade: '5.11c', date: '2026-07-01', mode: 'indoor' },
     ];
     const review = reviewRange(
       { sessions: monthly(2026, [1]), records, today: '2026-12-31' },

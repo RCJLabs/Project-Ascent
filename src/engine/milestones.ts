@@ -1,4 +1,4 @@
-import type { Session } from '@/db/sessions';
+import type { Session, SessionMode } from '@/db/sessions';
 import type { GradeScale } from './grades';
 import { displayGrade, type GradeDisplay } from './grades';
 import type { PersonalRecord } from './derive';
@@ -89,11 +89,15 @@ export interface MilestoneInput {
 export function recordsInReward(
   awards: readonly { id: string }[],
   date: string,
+  mode: SessionMode,
 ): PersonalRecord[] {
   return awards.flatMap((award) => {
     const match = /^pr-(V|YDS)-(.+)$/.exec(award.id);
     if (!match) return [];
-    return [{ scale: match[1] as GradeScale, grade: match[2]!, date }];
+    // The mode comes from the session rather than the award id, which
+    // carries only the ladder and the grade. A record set on rock is a
+    // different claim from the same grade indoors (PLAN.md M112d).
+    return [{ scale: match[1] as GradeScale, grade: match[2]!, date, mode }];
   });
 }
 

@@ -54,7 +54,7 @@ describe('an ordinary session', () => {
 describe('what counts', () => {
   it('names a grade record', () => {
     const found = sessionMilestones(
-      input({ records: [{ scale: 'V', grade: 'V7', date: '2026-09-10' }] }),
+      input({ records: [{ scale: 'V', grade: 'V7', date: '2026-09-10', mode: 'indoor' }] }),
     );
     expect(found[0]?.kind).toBe('grade-pr');
     expect(found[0]?.headline).toBe('First V7');
@@ -64,7 +64,7 @@ describe('what counts', () => {
   it('reads a grade in the notation the climber chose', () => {
     const found = sessionMilestones(
       input({
-        records: [{ scale: 'V', grade: 'V7', date: '2026-09-10' }],
+        records: [{ scale: 'V', grade: 'V7', date: '2026-09-10', mode: 'indoor' }],
         display: { ...DEFAULT_DISPLAY, boulder: 'Font' },
       }),
     );
@@ -123,7 +123,7 @@ describe('which one leads', () => {
     // app's own arithmetic.
     const found = sessionMilestones(
       input({
-        records: [{ scale: 'V', grade: 'V7', date: '2026-09-10' }],
+        records: [{ scale: 'V', grade: 'V7', date: '2026-09-10', mode: 'indoor' }],
         projectsSent: [{ name: 'A boulder', grade: 'V6', scale: 'V' }],
         earlierSessions: 0,
         levelBefore: 3,
@@ -147,7 +147,7 @@ describe('which one leads', () => {
 
   it('keeps a stable order whatever order the inputs arrive in', () => {
     const a = kinds({
-      records: [{ scale: 'V', grade: 'V7', date: '2026-09-10' }],
+      records: [{ scale: 'V', grade: 'V7', date: '2026-09-10', mode: 'indoor' }],
       earlierSessions: 0,
       levelBefore: 1,
       levelAfter: 2,
@@ -156,7 +156,7 @@ describe('which one leads', () => {
       levelBefore: 1,
       levelAfter: 2,
       earlierSessions: 0,
-      records: [{ scale: 'V', grade: 'V7', date: '2026-09-10' }],
+      records: [{ scale: 'V', grade: 'V7', date: '2026-09-10', mode: 'indoor' }],
     });
     expect(a).toEqual(b);
   });
@@ -166,8 +166,8 @@ describe('which one leads', () => {
     const found = sessionMilestones(
       input({
         records: [
-          { scale: 'V', grade: 'V7', date: '2026-09-10' },
-          { scale: 'YDS', grade: '5.12a', date: '2026-09-10' },
+          { scale: 'V', grade: 'V7', date: '2026-09-10', mode: 'indoor' },
+          { scale: 'YDS', grade: '5.12a', date: '2026-09-10', mode: 'indoor' },
         ],
       }),
     );
@@ -178,7 +178,7 @@ describe('which one leads', () => {
 describe('what is worth sharing', () => {
   it('offers a card for a thing the climber did', () => {
     const found = sessionMilestones(
-      input({ records: [{ scale: 'V', grade: 'V7', date: '2026-09-10' }] }),
+      input({ records: [{ scale: 'V', grade: 'V7', date: '2026-09-10', mode: 'indoor' }] }),
     );
     expect(found[0]?.shareable).toBe(true);
   });
@@ -201,7 +201,7 @@ describe('what a screen reader hears', () => {
     // "412 XP earned" told a climber nothing about having just climbed the
     // hardest thing they ever have.
     const found = sessionMilestones(
-      input({ records: [{ scale: 'V', grade: 'V7', date: '2026-09-10' }] }),
+      input({ records: [{ scale: 'V', grade: 'V7', date: '2026-09-10', mode: 'indoor' }] }),
     );
     const text = announcementFor(found, 412);
     expect(text.indexOf('First V7')).toBeLessThan(text.indexOf('412'));
@@ -213,7 +213,7 @@ describe('what a screen reader hears', () => {
 
   it('says how many others there were', () => {
     const found = sessionMilestones(
-      input({ records: [{ scale: 'V', grade: 'V7', date: '2026-09-10' }], earlierSessions: 0 }),
+      input({ records: [{ scale: 'V', grade: 'V7', date: '2026-09-10', mode: 'indoor' }], earlierSessions: 0 }),
     );
     expect(announcementFor(found, 10)).toMatch(/1 more/);
   });
@@ -221,7 +221,7 @@ describe('what a screen reader hears', () => {
   it('congratulates nobody', () => {
     // The fact is enough, and the app does not know what the session cost.
     const found = sessionMilestones(
-      input({ records: [{ scale: 'V', grade: 'V7', date: '2026-09-10' }] }),
+      input({ records: [{ scale: 'V', grade: 'V7', date: '2026-09-10', mode: 'indoor' }] }),
     );
     for (const milestone of found) {
       expect(`${milestone.headline} ${milestone.detail}`).not.toMatch(
@@ -232,19 +232,28 @@ describe('what a screen reader hears', () => {
 });
 
 describe('reading the records back out of the reward', () => {
+  it('carries the mode the session was in', () => {
+    // The award id holds the ladder and the grade and nothing else, so the
+    // mode has to come from the session. A record set on rock is a
+    // different claim from the same grade indoors.
+    const onRock = recordsInReward([{ id: 'pr-V-V5' }], '2026-09-10', 'outdoor');
+    expect(onRock).toEqual([{ scale: 'V', grade: 'V5', date: '2026-09-10', mode: 'outdoor' }]);
+  });
+
   it('finds each one', () => {
     const found = recordsInReward(
       [{ id: 'session' }, { id: 'pr-V-V7' }, { id: 'pr-YDS-5.12a' }, { id: 'send-1' }],
       '2026-09-10',
+      'indoor',
     );
     expect(found).toEqual([
-      { scale: 'V', grade: 'V7', date: '2026-09-10' },
-      { scale: 'YDS', grade: '5.12a', date: '2026-09-10' },
+      { scale: 'V', grade: 'V7', date: '2026-09-10', mode: 'indoor' },
+      { scale: 'YDS', grade: '5.12a', date: '2026-09-10', mode: 'indoor' },
     ]);
   });
 
   it('finds none in an ordinary session', () => {
-    expect(recordsInReward([{ id: 'session' }, { id: 'warmup' }], '2026-09-10')).toEqual([]);
+    expect(recordsInReward([{ id: 'session' }, { id: 'warmup' }], '2026-09-10', 'indoor')).toEqual([]);
   });
 
   it('matches the id the economy actually writes', () => {

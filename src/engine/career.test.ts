@@ -123,8 +123,8 @@ describe('deriveCareer counters', () => {
 describe('deriveCareer grades', () => {
   it('turns every personal best into a dated first', () => {
     const records: PersonalRecord[] = [
-      { scale: 'V', grade: 'V4', date: '2026-01-05' },
-      { scale: 'V', grade: 'V5', date: '2026-03-02' },
+      { scale: 'V', grade: 'V4', date: '2026-01-05', mode: 'indoor' },
+      { scale: 'V', grade: 'V5', date: '2026-03-02', mode: 'indoor' },
     ];
     const state = deriveCareer({ sessions: run('2026-01-01', 3), records, today: '2026-04-01' });
     const grades = state.achieved.filter((m) => m.category === 'grade');
@@ -132,7 +132,7 @@ describe('deriveCareer grades', () => {
   });
 
   it('reads the grade the way the climber has asked to read it', () => {
-    const records: PersonalRecord[] = [{ scale: 'V', grade: 'V5', date: '2026-01-05' }];
+    const records: PersonalRecord[] = [{ scale: 'V', grade: 'V5', date: '2026-01-05', mode: 'indoor' }];
     const state = deriveCareer({
       sessions: run('2026-01-01', 3),
       records,
@@ -200,7 +200,7 @@ describe('deriveCareer ordering', () => {
   it('puts the newest first', () => {
     const state = deriveCareer({
       sessions: run('2026-01-01', 30),
-      records: [{ scale: 'V', grade: 'V4', date: '2026-01-20' }],
+      records: [{ scale: 'V', grade: 'V4', date: '2026-01-20', mode: 'indoor' }],
       today: '2026-02-01',
     });
     const dates = state.achieved.map((m) => m.date);
@@ -210,7 +210,7 @@ describe('deriveCareer ordering', () => {
   it('puts a day’s real news above its counters', () => {
     const state = deriveCareer({
       sessions: run('2026-01-01', 10),
-      records: [{ scale: 'V', grade: 'V4', date: '2026-01-10' }],
+      records: [{ scale: 'V', grade: 'V4', date: '2026-01-10', mode: 'indoor' }],
       today: '2026-02-01',
     });
     const sameDay = state.achieved.filter((m) => m.date === '2026-01-10');

@@ -4679,6 +4679,42 @@ entry above.)*
   Verified in a browser in both themes at 430px: *"Block 1 of 3 on the way to Spain trip"*,
   with Iron Grip named and the authored successors still below it.
 
+- **M112d — What you have done on rock.** *Done, and the premise understated what existed.*
+  **Premise held on the hole and was wrong about the ground.** M106's note said "a first on
+  rock needs a first-send date per mode, which `ladders` does not track" — true — and that
+  the career page's `outdoor` category "counts **days** outdoors rather than grades", also
+  true: it is a `Set` of dates labelled *Rock*. What it did not say is that **M106 had
+  already built per-mode ladders**, and the grade pyramid already carries an
+  *Everything / Indoors / On rock* toggle. The hole was only ever the *records* list.
+  **The thing the note missed, and the reason this is not a filter.** Tagging each record
+  with its mode is useless on its own: a climber who sends **V7 indoors and V5 outside** has
+  exactly one overall record — V7 — and filtering that by mode leaves nothing at all. Rock
+  needs its own running best and its own progression, which is what `outdoorRecords` is.
+  Measured in a browser on a real log: overall reads *5.10a, V7, V6, V4*; on rock reads
+  *5.10a, V5, V4, V3* — three grades the overall list can never show.
+  **`PersonalRecord` gained a `mode`**, which a climb does not carry and a session does. That
+  threaded through `recordsInReward`, which rebuilds records from award ids: the id holds the
+  ladder and the grade and nothing else, so the mode comes from the session at the call site.
+  **A `seen` set went with it.** The record rule was `!seen.has(grade) && ord > bestBefore`,
+  and the first half could never change the answer — a grade sent before is one the running
+  best already covers. Deleted.
+  **Named "Records on rock", not "On rock",** because M106's pyramid chip already owns that
+  label and two different things wearing one name on the same page is worse than a longer
+  title. The test that found it is the one that now holds it.
+  **The qualifier earns its place or is absent.** "first sent **on rock**" appears only in
+  the overall list and only on an outdoor record — on an indoor one it would be wrong, and
+  inside the rock card, where every row is outdoors, it would be noise.
+  **Refused: indoor-only records.** Symmetric, and weaker. The overall list *is* the indoor
+  one for nearly every climber, and "my hardest ever" and "my hardest on rock" are the two
+  numbers climbers actually quote. A third list would be a row nobody reads.
+  **Measured, not asserted.** 19 mutations across two rounds, 16 killed. Two real survivors,
+  both fixtures too weak to see the bug: a single shared outdoor best across both ladders
+  (the ordinals **overlap numerically** — V10 is 10 and so is 5.11a — so the fixture only
+  bites with V10 then 5.9), and the card's `.reverse()`, which needs more than six records
+  before showing the oldest six is visibly wrong.
+  **Budget.** 218.7 → 218.8KB, measured 218.64 → 218.71.
+  Verified in a browser in both themes at 430px.
+
 **Open coaching calls.** Nine judgements the app is currently making on the coach's
 behalf, each one stated at its milestone rather than made quietly, none of them settled.
 Every site is tagged so this list can be regenerated with `grep -n '\*\*COACH' PLAN.md`

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newSession, type Session } from '@/db/sessions';
 import { addDays, startOfWeek } from './dates';
 import { deriveClimberState } from './derive';
+import { gradeOrdinal } from './grades';
 
 const TODAY = '2026-09-13'; // a Sunday
 
@@ -50,8 +51,8 @@ describe('deriveClimberState', () => {
       { today: TODAY },
     );
     expect(state.personalRecords).toEqual([
-      { scale: 'V', grade: 'V4', date: '2026-09-01' },
-      { scale: 'V', grade: 'V5', date: '2026-09-08' },
+      { scale: 'V', grade: 'V4', date: '2026-09-01', mode: 'indoor' },
+      { scale: 'V', grade: 'V5', date: '2026-09-08', mode: 'indoor' },
     ]);
   });
 
@@ -206,5 +207,104 @@ describe('streaks and consistency', () => {
     expect(state.load.acwr).toBeNull();
     expect(state.streakWeeks).toBe(0);
     expect(state.warmupRate).toBe(0);
+  });
+});
+
+describe('what you have done on rock', () => {
+  const rock = (date: string, grades: string[]) =>
+    session(date, { mode: 'outdoor', climbs: grades.map((g) => climb(g)) });
+  const plastic = (date: string, grades: string[]) =>
+    session(date, { mode: 'indoor', climbs: grades.map((g) => climb(g)) });
+
+  it('keeps a ladder of its own', () => {
+    // The reason this is not a filter over `personalRecords`. Sending V7
+    // indoors and V5 outside leaves one overall record — V7 — and filtering
+    // that by mode gives a climber nothing at all about rock.
+    const state = deriveClimberState(
+      [plastic('2026-09-01', ['V7']), rock('2026-09-05', ['V5'])],
+      { today: TODAY },
+    );
+    expect(state.personalRecords.map((r) => r.grade)).toEqual(['V7']);
+    expect(state.outdoorRecords.map((r) => r.grade)).toEqual(['V5']);
+  });
+
+  it('walks up as the outdoor grades do', () => {
+    const state = deriveClimberState(
+      [rock('2026-09-01', ['V3']), rock('2026-09-05', ['V4']), rock('2026-09-08', ['V6'])],
+      { today: TODAY },
+    );
+    expect(state.outdoorRecords.map((r) => r.grade)).toEqual(['V3', 'V4', 'V6']);
+  });
+
+  it('ignores an indoor send between two outdoor ones', () => {
+    // A gym V8 does not raise the bar for what counts as a record on rock.
+    const state = deriveClimberState(
+      [rock('2026-09-01', ['V3']), plastic('2026-09-05', ['V8']), rock('2026-09-08', ['V4'])],
+      { today: TODAY },
+    );
+    expect(state.outdoorRecords.map((r) => r.grade)).toEqual(['V3', 'V4']);
+  });
+
+  it('does not count a repeat or an easier day', () => {
+    const state = deriveClimberState(
+      [rock('2026-09-01', ['V4']), rock('2026-09-05', ['V4']), rock('2026-09-08', ['V2'])],
+      { today: TODAY },
+    );
+    expect(state.outdoorRecords.map((r) => r.grade)).toEqual(['V4']);
+  });
+
+  it('does not count an attempt', () => {
+    const state = deriveClimberState(
+      [session('2026-09-01', { mode: 'outdoor', climbs: [climb('V6', 1, 'attempt')] })],
+      { today: TODAY },
+    );
+    expect(state.outdoorRecords).toEqual([]);
+  });
+
+  it('keeps the two ladders apart', () => {
+    // The ordinals overlap numerically — V10 is 10 and so is 5.11a — so a
+    // single shared best silently swallows the weaker ladder. V10 then 5.9
+    // (ordinal 5) is the case that exposes it: sharing a best would leave
+    // the first outdoor route unrecorded.
+    expect(gradeOrdinal('V', 'V10')).toBeGreaterThan(gradeOrdinal('YDS', '5.9'));
+
+    const state = deriveClimberState(
+      [rock('2026-09-01', ['V10']), rock('2026-09-05', ['5.9'])],
+      { today: TODAY },
+    );
+    expect(state.outdoorRecords.map((r) => [r.scale, r.grade])).toEqual([
+      ['V', 'V10'],
+      ['YDS', '5.9'],
+    ]);
+  });
+
+  it('emits them oldest first, which the page relies on', () => {
+    // The card reverses and caps at six. That only shows the newest if this
+    // order is chronological, so the two are a pair.
+    const state = deriveClimberState(
+      ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7'].map((g, i) =>
+        rock(addDays('2026-08-01', i * 2), [g]),
+      ),
+      { today: TODAY },
+    );
+    expect(state.outdoorRecords.map((r) => r.grade)).toEqual([
+      'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7',
+    ]);
+  });
+
+  it('is empty for a climber who has never been outside', () => {
+    const state = deriveClimberState([plastic('2026-09-01', ['V5'])], { today: TODAY });
+    expect(state.outdoorRecords).toEqual([]);
+  });
+
+  it('says where every overall record was set', () => {
+    const state = deriveClimberState(
+      [rock('2026-09-01', ['V4']), plastic('2026-09-05', ['V6'])],
+      { today: TODAY },
+    );
+    expect(state.personalRecords.map((r) => [r.grade, r.mode])).toEqual([
+      ['V4', 'outdoor'],
+      ['V6', 'indoor'],
+    ]);
   });
 });

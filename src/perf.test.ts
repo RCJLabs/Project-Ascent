@@ -293,7 +293,12 @@ describe('the bundle stays small', () => {
     // `CalendarPage` is a lazy route, so `blockOn`, `soonestSeason` and the
     // wiring all land in its own chunk. What reaches the entry chunk is
     // whatever rollup hoists as shared.
-    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(218.7);
+    //
+    // 218.7 → 218.8 at M112d, measured 218.64 → 218.71, so 0.07KB for the
+    // rock ladder. `derive.ts` is entry-chunk by definition — everything
+    // reads `ClimberState` — so this is the cost of the accumulator itself.
+    // The card is on the lazy progress route.
+    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(218.8);
   });
 
   it.runIf(built)('keeps every program body out of the entry chunk', () => {

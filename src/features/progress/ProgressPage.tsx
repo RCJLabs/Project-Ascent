@@ -20,7 +20,7 @@ import { conversionTrend, describeConversion, drawable } from '@/engine/conversi
 import { FIELD_DAYS, fieldSeries } from '@/engine/sessionFields';
 import { addDays, fromKey, today } from '@/engine/dates';
 import { availableYears } from '@/engine/yearReview';
-import { deriveClimberState } from '@/engine/derive';
+import { deriveClimberState, type PersonalRecord } from '@/engine/derive';
 import { ANGLE_LABEL, angles, describeAngles } from '@/engine/angles';
 import { describeLadders, ladders } from '@/engine/ladders';
 import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
@@ -261,6 +261,47 @@ function catalogueWords(session: Session): string {
     for (const block of type.blocks ?? []) words.push(block.name);
   }
   return words.join(' ');
+}
+
+/**
+ * A record list, once (PLAN.md M112d).
+ *
+ * Two of these now — every record, and the ones set on rock — and a second
+ * copy of the rows is a second place for the date format to drift.
+ */
+function RecordList({
+  records,
+  gradeLabel,
+  showMode = false,
+}: {
+  records: readonly PersonalRecord[];
+  gradeLabel: (scale: PersonalRecord['scale'], grade: string) => string;
+  showMode?: boolean;
+}) {
+  return (
+    <ul className="grid grid-cols-1 gap-2">
+      {[...records]
+        .reverse()
+        .slice(0, 6)
+        .map((pr) => (
+          <li
+            key={`${pr.scale}-${pr.grade}`}
+            className="flex items-baseline justify-between gap-3 text-sm"
+          >
+            <span className="font-bold">{gradeLabel(pr.scale, pr.grade)}</span>
+            <span className="text-ink-soft">
+              {/* "on rock" only where it distinguishes anything. The list
+                  below is all outdoors and saying so on every row is noise. */}
+              {showMode && pr.mode === 'outdoor' ? 'first sent on rock ' : 'first sent '}
+              {new Date(`${pr.date}T00:00`).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+              })}
+            </span>
+          </li>
+        ))}
+    </ul>
+  );
 }
 
 export function ProgressPage() {
@@ -619,22 +660,23 @@ export function ProgressPage() {
 
         {state.personalRecords.length > 0 && (
           <Card title="Personal records">
-            <ul className="grid grid-cols-1 gap-2">
-              {[...state.personalRecords]
-                .reverse()
-                .slice(0, 6)
-                .map((pr) => (
-                  <li key={`${pr.scale}-${pr.grade}`} className="flex items-baseline justify-between gap-3 text-sm">
-                    <span className="font-bold">{gradeLabel(pr.scale, pr.grade)}</span>
-                    <span className="text-ink-soft">
-                      first sent {new Date(`${pr.date}T00:00`).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </span>
-                  </li>
-                ))}
-            </ul>
+            <RecordList records={state.personalRecords} gradeLabel={gradeLabel} showMode />
+          </Card>
+        )}
+
+        {/* Its own card, not a filter over the one above (PLAN.md M112d).
+            A climber who sends V7 indoors and V5 outside has one record up
+            there — V7 — and no row at all for rock. Rock has its own
+            ladder, so it gets its own list. */}
+        {state.outdoorRecords.length > 0 && (
+          /* "Records on rock" rather than "On rock": M106's grade pyramid
+             already has an On rock chip, and two different things wearing
+             one name on the same page is worse than a longer title. */
+          <Card title="Records on rock">
+            <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+              The same progression, counting only what you climbed outside.
+            </p>
+            <RecordList records={state.outdoorRecords} gradeLabel={gradeLabel} />
           </Card>
         )}
       </PageGrid>

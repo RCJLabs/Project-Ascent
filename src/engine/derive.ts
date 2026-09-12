@@ -12,7 +12,7 @@
  */
 
 import { getDrill } from '@/content/drills';
-import type { Climb, Session } from '@/db/sessions';
+import type { Climb, Session, SessionMode } from '@/db/sessions';
 import { gradeOrdinal, maxGrade, type GradeScale } from './grades';
 import { addDays, daysBetween, startOfWeek, today as todayKey } from './dates';
 
@@ -91,6 +91,8 @@ export interface PersonalRecord {
   scale: GradeScale;
   grade: string;
   date: string;
+  /** Where it was set. A session carries the mode; a climb does not. */
+  mode: SessionMode;
 }
 
 export interface ClimberState {
@@ -111,6 +113,16 @@ export interface ClimberState {
   warmupRate: number;
   totalMinutes: number;
   personalRecords: PersonalRecord[];
+  /**
+   * The same progression, counting only what was climbed on rock
+   * (PLAN.md M112d).
+   *
+   * Not a filter over `personalRecords`, and that is the whole point: a
+   * climber who sends V7 indoors and V5 outside has one record above — V7 —
+   * and filtering it by mode leaves nothing at all. Rock has its own ladder
+   * and this walks it separately.
+   */
+  outdoorRecords: PersonalRecord[];
   /** Distinct days logged outdoors. */
   outdoorDays: number;
   /** Sends by ascent style, for technique credit. */
@@ -160,8 +172,11 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
   const sport = emptyTally();
   const sessionsByType: Record<string, number> = {};
   const personalRecords: PersonalRecord[] = [];
-  const seenBoulder = new Set<string>();
-  const seenSport = new Set<string>();
+  // Rock keeps its own running best, because the overall one is dominated by
+  // whichever surface the climber does most — for nearly everyone, plastic.
+  const outdoorRecords: PersonalRecord[] = [];
+  let bestOutdoorBoulder = -1;
+  let bestOutdoorSport = -1;
 
   let restSessions = 0;
   let drillsCompleted = 0;
@@ -227,13 +242,30 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
       if (climb.result === 'send') {
         if (climb.style === 'onsight') onsight += climb.count;
         else if (climb.style === 'flash') flash += climb.count;
-        // First send of a grade on its own ladder is a personal record.
-        const seen = climb.scale === 'V' ? seenBoulder : seenSport;
-        if (!seen.has(climb.grade)) {
-          seen.add(climb.grade);
-          const ord = gradeOrdinal(climb.scale, climb.grade);
-          if (ord > bestBefore) {
-            personalRecords.push({ scale: climb.scale, grade: climb.grade, date: session.date });
+        // A send that beat the best so far on its own ladder. A `seen` set
+        // stood beside this and could not change the answer: a grade sent
+        // before is a grade the running best already covers, so `ord >
+        // bestBefore` excludes every repeat on its own.
+        const ord = gradeOrdinal(climb.scale, climb.grade);
+        if (ord > bestBefore) {
+          personalRecords.push({
+            scale: climb.scale,
+            grade: climb.grade,
+            date: session.date,
+            mode: session.mode,
+          });
+        }
+        if (session.mode === 'outdoor') {
+          const bestOutdoor = climb.scale === 'V' ? bestOutdoorBoulder : bestOutdoorSport;
+          if (ord > bestOutdoor) {
+            if (climb.scale === 'V') bestOutdoorBoulder = ord;
+            else bestOutdoorSport = ord;
+            outdoorRecords.push({
+              scale: climb.scale,
+              grade: climb.grade,
+              date: session.date,
+              mode: 'outdoor',
+            });
           }
         }
       }
@@ -266,6 +298,7 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
     warmupRate: nonRest === 0 ? 0 : warmups / nonRest,
     totalMinutes,
     personalRecords,
+    outdoorRecords,
   };
 }
 
