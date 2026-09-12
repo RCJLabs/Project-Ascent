@@ -203,7 +203,7 @@ describe('the bundle stays small', () => {
   const dist = 'dist/assets';
   const built = existsSync(dist);
 
-  it.runIf(built)('keeps the first load under 216.9KB gzipped', () => {
+  it.runIf(built)('keeps the first load under 217.1KB gzipped', () => {
     const html = readFileSync('dist/index.html', 'utf8');
     const entry = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)?.[1];
     expect(entry, 'no entry chunk in index.html').toBeDefined();
@@ -250,7 +250,12 @@ describe('the bundle stays small', () => {
     // the settings chunk where it is used. That is what the boundary is
     // for, and the difference between the two milestones is the whole
     // argument for keeping it real.
-    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(216.9);
+    //
+    // 216.9 → 217.1 at M107, measured: 216.88 → 217.05, so 0.17KB for a
+    // browsable drill library. Both its pages are lazy; what lands on first
+    // load is two rows in the route table, which is eager because search
+    // reads it, and two `lazy()` wrappers in `App.tsx`.
+    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(217.1);
   });
 
   it.runIf(built)('keeps every program body out of the entry chunk', () => {

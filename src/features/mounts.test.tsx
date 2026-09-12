@@ -22,6 +22,8 @@ import { CoachPage } from '@/features/coach/CoachPage';
 import { FinderPage } from '@/features/finder/FinderPage';
 import { DataPage } from '@/features/data/DataPage';
 import { GlossaryPage } from '@/features/glossary/GlossaryPage';
+import { DrillsPage } from '@/features/drills/DrillsPage';
+import { DrillPage } from '@/features/drills/DrillPage';
 import { GymPage } from '@/features/gym/GymPage';
 import { GuideList } from '@/features/guides/GuidePage';
 import { GuidePage } from '@/features/guides/GuidePage';
@@ -92,6 +94,7 @@ const PAGES: [string, string, ReactElement][] = [
   ['guides', '/guides', <GuideList />],
   ['guide', '/guides/iron_grip', <GuidePage params={{ id: 'iron_grip' }} />],
   ['glossary', '/glossary', <GlossaryPage />],
+  ['drills', '/drills', <DrillsPage />],
   ['settings', '/settings', <SettingsPage />],
   ['data', '/data', <DataPage />],
   ['program', '/train/iron_grip', <ProgramDetailPage params={{ id: 'iron_grip' }} />],
@@ -105,6 +108,7 @@ const WITH_RECORDS: [string, string, ReactElement][] = [
   ['custom program', '/build/nope', <BuilderPage params={{ id: 'nope' }} />],
   ['session editor', '/build/nope/session/nope', <SessionEditorPage params={{ id: 'nope', typeId: 'nope' }} />],
   ['injury', '/injury/nope', <InjuryPage params={{ id: 'nope' }} />],
+  ['drill', '/drills/nope', <DrillPage params={{ id: 'nope' }} />],
   ['objective', '/objectives/nope', <ObjectiveDetailPage params={{ id: 'nope' }} />],
 ];
 

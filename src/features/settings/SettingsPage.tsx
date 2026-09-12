@@ -559,6 +559,20 @@ export function SettingsPage() {
               →
             </span>
           </Link>
+          {/* The library has always been here and never had a front door
+              (PLAN.md M107). */}
+          <Link href="/drills" className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">Drills</p>
+              <p className="text-xs text-ink-soft mt-0.5">
+                Every drill the programs prescribe, how to run each one, and how many times you
+                have actually done it.
+              </p>
+            </div>
+            <span className="text-ink-soft shrink-0" aria-hidden>
+              →
+            </span>
+          </Link>
           <Link href="/glossary" className="flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold">Glossary</p>

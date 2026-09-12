@@ -4217,20 +4217,58 @@ materially wrong premise. Sizes are guesses.*
   **Budget.** Unchanged at 216.9KB — 216.88 measured.
   Verified in both themes at 430px. 3,378 tests pass.
 
-- **M107 — The drill library, with the coach's cues.** *Proposed. Size L, mostly content.*
-  **Premise.** 138 drills, reachable from a program's week and from search (they are
-  indexed) — but never browsed, and never with the climber's own history beside them.
-  `Drill` has description, duration, focus, level and equipment. `Protocol` has `cues`
-  and `safety`; `Drill` has neither. A drill is a paragraph.
-  **Shape.** `/drills`, browsable by category, equipment, level and discipline; a page per
-  drill with what it trains, how to run it, `cues`, `faults` (what going wrong looks
-  like), which programs use it, and — derived — *your* history with it: sessions where
-  `drillId` matches, done rate, last done. Authoring: `cues?: string[]`, `faults?:
-  string[]` on `Drill`, written by the coach, with a content guard that every drill in a
-  shipped program carries at least two cues.
-  **Caveat.** This is days of writing, not hours of code, and it is the part only the
-  coach can do. The page without the cues is a list; the cues without the page are
-  unread. Both or neither.
+- **M107 — The drill library, browsable.** *Done, the page. The cues are M107b and they
+  are yours to write.*
+  **The premise is wrong in the way that decides the milestone.** M107 says *"a drill is a
+  paragraph"* and rules **both or neither** — no page until cues and faults exist for all
+  144. Read, the paragraphs are not stubs. *"Rule: once a foot is placed on a hold, it does
+  NOT move until you step to the next hold. No readjusting, no pivoting, no 'just a nudge.'
+  … If you catch yourself adjusting, downclimb and restart."* That is a method **and** a
+  fault correction, already written, in `description`. What the library lacks is not words —
+  it is **a way in and a mirror**, and both are code. So the page ships now and the cues
+  land into a page that exists rather than into nothing.
+  **Also 144, not 138**, and the escape hatch is not there: only **11** drills carry a
+  `protocolId`, and all 11 point at the *same* protocol, so "cues come free from the
+  protocols" would have covered 11 entries.
+  **Built.** `/drills`, grouped by category — `GlossaryPage` settled that shape for a long
+  reference list, and the first flat version ran to **nineteen thousand pixels** in a
+  browser. `/drills/:id` with the method as instructions, what it needs, which programs
+  prescribe it, and the protocol's cues for the 11 that are a named method.
+  `engine/drillHistory.ts` is the part that existed nowhere: `drillId` and `drillDone` have
+  been written since the beginning and are read by the challenges, the plateau diagnosis and
+  the derived category counts — none of which ever says *"this came up six times and you did
+  it twice."* Prescribed, not merely logged: a drill you were given and skipped is the
+  interesting row.
+  **A feature built and then removed on a measurement.** The page had an equipment filter,
+  defaulting on, justified by a comment saying the library is *"mostly unavailable to
+  someone with a wall and nothing else."* Counted: **all 144 drills list `wall`** and
+  exactly **three** ask for anything more. The filter separated three entries out of 144 —
+  and a climber who had not listed a wall would have opened the library to **zero drills**.
+  The browser is what showed it: a subtitle reading "141 of 144" under a control built for a
+  problem that does not exist.
+  **Two pieces of unreachable code, found by mutation.** A `DrillRecord.rate` field read by
+  nothing, and a `given === 0` branch inside `describeRecord` — a row exists only because a
+  session carried the drill, so `given` is never zero and that case is the *absence* of the
+  row. Both mutations changed nothing, which is how they were found.
+  **Measured, not asserted.** 29 mutations. Three survivors: the two dead branches above,
+  and one real gap — nothing tested that the "this keeps not happening" reading stays quiet
+  for a climber who *has* done the drill.
+  **Budget.** 216.9 → 217.1KB, measured 216.88 → 217.05, so 0.17KB. Both pages are lazy;
+  what lands is two rows in the eager route table and two `lazy()` wrappers.
+  Verified in both themes at 430px. 3,418 tests pass.
+
+- **M107b — The coach's cues and faults.** *Proposed. Size L, and entirely content.*
+  **Premise.** M107 settled that the descriptions already carry the method, so this is not
+  rescue work — it is the next layer: `cues?: string[]` and `faults?: string[]` on `Drill`,
+  the short imperatives a coach says at the wall and the shapes of going wrong, which no
+  paragraph can carry without becoming an essay.
+  **Shape.** The fields, a renderer on `/drills/:id` beside the protocol cues that already
+  render there, and a content guard holding every drill in a *shipped program* to at least
+  two cues.
+  **Why it is not started.** The fields are worth nothing empty — an optional field nothing
+  writes and nothing reads is the exact shape of code deleted twice in this session — so
+  they land **with** the words, in one milestone, when the coach has written them. 144
+  drills, and only Evan can write them.
 
 - **M108 — Style on a climb.** *Proposed. Size M.*
   **Premise.** `Climb` is grade, scale, count, result, `style` (onsight/flash/redpoint) and

@@ -55,6 +55,8 @@ const GuideList = lazy(() => import('@/features/guides/GuidePage').then((m) => (
 const GuidePage = lazy(() => import('@/features/guides/GuidePage').then((m) => ({ default: m.GuidePage })));
 const SearchPage = lazy(() => import('@/features/search/SearchPage').then((m) => ({ default: m.SearchPage })));
 const GlossaryPage = lazy(() => import('@/features/glossary/GlossaryPage').then((m) => ({ default: m.GlossaryPage })));
+const DrillsPage = lazy(() => import('@/features/drills/DrillsPage').then((m) => ({ default: m.DrillsPage })));
+const DrillPage = lazy(() => import('@/features/drills/DrillPage').then((m) => ({ default: m.DrillPage })));
 
 import { sweepOrphanMedia } from '@/db/media';
 import { hydrateAll } from '@/store';
@@ -214,6 +216,8 @@ function Shell() {
           <Route path="/guides/:id" component={GuidePage} />
           <Route path="/guides" component={GuideList} />
           <Route path="/glossary" component={GlossaryPage} />
+          <Route path="/drills/:id" component={DrillPage} />
+          <Route path="/drills" component={DrillsPage} />
           <Route path="/data" component={DataPage} />
           <Route path="/settings" component={SettingsPage} />
           <Route>
