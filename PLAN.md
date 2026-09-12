@@ -2148,7 +2148,7 @@ something that already exists; six are new. Nothing here is committed.*
   **Prices come from the real rate.** A coin is a quarter of an XP point, which the first
   pass got wrong by a factor of four — 1,200 / 2,500 / 5,000 / 8,000 lands them at roughly
   levels 7, 10, 14 and 18. One number each, meant to be retuned.
-  **Three capstone labels changed and are the coach's to confirm:** "the Slate kit" →
+  **COACH: three capstone labels changed and are the coach's to confirm.** "the Slate kit" →
   Anchor, "the Granite kit" → Weathered, "the Alpine kit" → Summit. They had to change,
   because each named a kit that was already free; the names themselves are a judgement.
   What was *not* built: no seasons, and no titles beyond the ranks that already exist. And
@@ -2199,16 +2199,17 @@ something that already exists; six are new. Nothing here is committed.*
   Camp, Gravity Defied and The Long Game — a one-day week now keeps the climbing session
   rather than the strength one. *Iron Grip keeps the climbing day over the fingerboard*,
   which the program itself argues for by protecting it ("never hang the day before hard
-  climbing"). Both of those I would defend. **Lockdown is the one I would not**: the
+  climbing"). Both of those I would defend. **COACH: Lockdown is the one I would not**: the
   proposal puts the technique climbing day above "Session A: Static Power", which is the
   program's named centrepiece, and a two-day week that drops Session A is not a static
-  power block. **The Cruiser's four climbing days score within a point of each other**, so
+  power block. **COACH: The Cruiser's four climbing days score within a point of each other**, so
   a one-day week now keeps Performance where it used to keep Volume & Flow. **Peak
   Performance ties** Max Intensity with Projecting, and declaration order stands.
   **An authoring finding the tuning surfaced.** With the climbing day ranked first, Iron
   Grip's Friday-Saturday-Sunday week fills as *Performance, Performance, Fingers* — legal,
   because the program spaces the fingerboard and nothing else. It has no rule against two
-  hard climbing days back to back. That is the program's to decide, not the scheduler's.
+  hard climbing days back to back. **COACH: that is the program's to decide, not the
+  scheduler's.**
   Six mutations, six killed, after two rules that no shipped program exercises — the
   protection lift and the optional penalty — were moved onto fixtures rather than left as
   rules nobody checks. A third, an explicit tie-break, was deleted: `sort` has been required
@@ -2665,8 +2666,8 @@ commit.
   out as columns; The Cruiser's block cycle stopped at week 4 of a repeating twelve. Each
   has a row for every week the program runs now, with cells taken from the program's own
   phase descriptions rather than written fresh — and the deload rows say what the
-  programs do not: *cut the sets by a third to a half, keep the load.* That is a coaching
-  call and the one thing here the author should read; the programs schedule the week and
+  programs do not: *cut the sets by a third to a half, keep the load.* **COACH: that is a coaching
+  call and the one thing here the author should read**; the programs schedule the week and
   prescribe no dose for it.
   Both allow-lists are empty and the comments say they stay so, which is the fourth step:
   the test no longer reports the debt, it fails on it. Eight mutations, eight killed — a
@@ -3215,7 +3216,7 @@ a kept one.
   that is what the label means. Where nobody numbered anything, outdoor days close together
   are taken as one trip, which is a guess, and the card says which of the two it used rather
   than presenting both the same way.
-  **Two rest days inside a trip do not end it.** A trip with bad weather in the middle is
+  **COACH: two rest days inside a trip do not end it.** A trip with bad weather in the middle is
   still a trip, and two consecutive weekends are two trips to everyone I have climbed with.
   **My number**, and the one thing here most likely to be wrong for someone else.
   **A gap still splits a numbered trip**: a stale "day 4" fifteen days later is a forgotten
@@ -3759,7 +3760,7 @@ materially wrong premise. Sizes are guesses.*
   **Bareness is derived, never flagged.** A stored flag can be contradicted by its own record —
   mark a day a sketch, then log six climbs on it. Reading it off the session cannot: the moment
   a day carries anything, it stops being bare.
-  **The coaching call, stated rather than made quietly.** A bare completed day already pays the
+  **COACH: the call, stated rather than made quietly.** A bare completed day already pays the
   full session base — 300 XP, measured — and this milestone makes that one tap instead of
   three. Left as it is: a marked day is a claim about real training exactly like every other
   logged session, and the app has never policed honesty (you can log a V15 you did not send).
@@ -3943,7 +3944,7 @@ materially wrong premise. Sizes are guesses.*
   ground-up number does not.
   **A copy fix the measurement turned up**: a projecting session rendered two controls called
   "High point" meaning different measurements. The session question is "The move you reached"
-  now — the coach can overrule the wording.
+  now — **COACH: the coach can overrule the wording.**
   **Not touched, deliberately**: `projectHistory` (M69). Links are the state of one project;
   that module reports what projects *cost* per grade, and a link is not a cost.
   Twenty-two mutations, nineteen killed. **All three survivors were weak fixtures of mine**,
@@ -4504,6 +4505,36 @@ materially wrong premise. Sizes are guesses.*
   coach.
   **Never.** Claim it prevents anything. The copy says what it is: five minutes the
   program's own prose keeps asking for.
+
+**Open coaching calls.** Eight judgements the app is currently making on the coach's
+behalf, each one stated at its milestone rather than made quietly, none of them settled.
+Every site is tagged `**COACH` so this list can be regenerated with `grep -n '\*\*COACH' PLAN.md`
+rather than remembered. They are cheap to answer and they compound: each is a place the app
+says something in the coach's voice that the coach has not endorsed.
+
+1. **M64 — three capstone kit names.** "the Slate kit" → **Anchor**, "the Granite kit" →
+   **Weathered**, "the Alpine kit" → **Summit**. They had to change (each named a kit that
+   was already free); the names themselves are a judgement.
+2. **M64 — Lockdown's session order.** The derivation puts the technique climbing day above
+   *Session A: Static Power*, the program's named centrepiece. A two-day week that drops
+   Session A is not a static power block. The one ordering I would not defend.
+3. **M64 — The Cruiser's one-day week.** Its four climbing days score within a point of each
+   other, so a one-day week now keeps **Performance** where it used to keep **Volume & Flow**.
+4. **M64 — Iron Grip, two hard climbing days back to back.** A Friday–Saturday–Sunday week
+   fills as *Performance, Performance, Fingers*. Legal: the program spaces the fingerboard
+   and nothing else. Whether it should have a rule against that is the program's to decide.
+5. **M77 — the deload dose.** The guides' deload rows say *cut the sets by a third to a half,
+   keep the load* — written because the programs schedule the week and prescribe no dose for
+   it. Whether that is the deload the coach wants is unsettled.
+6. **M88c — what ends a trip.** Two rest days inside a trip do not end it; three do. Stated
+   as *my number*, and the one most likely to be wrong for someone else.
+7. **M100 — what a marked day is worth.** A bare completed day pays the full **300 XP**
+   session base, and this milestone made that one tap instead of three. Left as it is,
+   because the app has never policed honesty — but if marked days should pay less, it is a
+   one-line change and the reasoning should be the coach's.
+8. **M102 — the projecting session's label.** A projecting session rendered two controls both
+   called "High point" meaning different measurements; the session question is **"The move
+   you reached"** now. The wording is overrulable.
 
 **Considered and left out, with the reason, so they are not re-proposed:**
 - *Race a ghost on the Daily Wall* — already ships (`createGhost`, `tapeToRace`, M81).
