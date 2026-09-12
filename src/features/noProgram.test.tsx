@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { newSession, putSession } from '@/db/sessions';
 import { today } from '@/engine/dates';
-import { hydrate, renderAt } from '@/test/render';
+import { hydrate, renderAt, reset } from '@/test/render';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { HomePage } from '@/features/home/HomePage';
 
@@ -61,13 +61,22 @@ describe('with no active program', () => {
     expect(view.container.querySelector('a[href="#/find"]')).not.toBeNull();
   });
 
-  it('home offers a way to log today', async () => {
-    const day = await logged();
+  it('home shows today, logged or not', async () => {
+    await logged();
+    // Home *is* today's log (PLAN.md M117): with a session already logged
+    // the front door shows the session itself — the editor's own cards —
+    // rather than a route to it.
     const view = renderAt('/', <HomePage />);
-    await view.findByRole('heading', { level: 1 });
-    expect(
-      view.container.querySelector(`a[href="#/log/${day}"]`),
-      'the front door has no route to the logger',
-    ).not.toBeNull();
+    await view.findByText('Effort', { selector: 'h2' });
+    expect(view.container.textContent ?? '').toMatch(/Add another session today/);
+  });
+
+  it('home offers to log a session when nothing is', async () => {
+    await reset();
+    await putSession({ ...newSession('2026-01-06', 0), completed: true, climbs: [] });
+    await hydrate();
+    const view = renderAt('/', <HomePage />);
+    await view.findByRole('button', { name: /Log a session/ });
+    expect(view.container.textContent ?? '').toMatch(/no program is running/);
   });
 });

@@ -6,7 +6,7 @@ import { getSession, newSession, putSession } from '@/db/sessions';
 import { addDays, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
-import { LogPage } from '@/features/log/LogPage';
+import { DayBody } from '@/features/log/LogPage';
 
 /**
  * The clock reaches the circuits (PLAN.md M99).
@@ -38,7 +38,7 @@ async function engineRoom(exercises: { name: string }[] = []): Promise<void> {
     weekOverrides: {},
     adaptations: {},
   });
-  renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+  renderAt('/', <DayBody date={DATE} />);
 }
 
 /** Three of the nine on Base Camp's core menu. */
@@ -148,7 +148,7 @@ describe('a circuit the clock cannot read', () => {
       weekOverrides: {},
       adaptations: {},
     });
-    renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+    renderAt('/', <DayBody date={DATE} />);
   }
 
   // A guessed duration would be the `heightFromLabel` mistake: it is better

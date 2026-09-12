@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { Search as SearchIcon, X } from 'lucide-react';
 import { DRILLS } from '@/content/drills';
@@ -19,11 +19,16 @@ import { EmptyState } from '@/ui/EmptyState';
 import { CHIP_LINK } from '@/ui/Chip';
 import { Input } from '@/ui/Field';
 import { IconButton } from '@/ui/IconButton';
-import { PageHeader } from '@/ui/PageHeader';
 import { browsable } from '@/ui/routes';
 
 /**
- * One place to find anything.
+ * One place to find anything (PLAN.md M16, a sheet since M117).
+ *
+ * The body of the search — the field, the results, the browse list — with
+ * no frame of its own. `SearchSheet` puts it in a dialog over whatever
+ * page the climber was on; there is no search *page* any more, because a
+ * search is a detour rather than a destination, and a route for it was a
+ * tab's worth of chrome for a text field.
  *
  * The index is built here rather than kept anywhere: everything it covers
  * is already in memory, walking it costs a few milliseconds, and an index
@@ -177,25 +182,28 @@ function useIndex(): SearchItem[] {
   }, [byDate, projects, objectives, custom, display]);
 }
 
-export function SearchPage() {
+/**
+ * The field is focused by the sheet, not here — and the order matters.
+ *
+ * A child's effects run before its parent's. When this focused its own
+ * field on mount, `useDialog` in the sheet ran afterwards, recorded the
+ * already-focused *field* as the element to hand focus back to, and then
+ * moved focus to the dialog container as its contract says. Measured in a
+ * browser: the sheet opened with nothing typeable focused, and Escape
+ * returned focus to an input that no longer existed — to the body. The
+ * sheet focuses the field after its dialog effect has run, so the opener
+ * it records is the button that was actually pressed.
+ */
+export function SearchBody() {
   const [query, setQuery] = useState('');
   const index = useIndex();
   const field = useRef<HTMLInputElement>(null);
-
-  // The point of a search page is searching, so it opens ready to type.
-  // Only on a pointer-less first render — stealing focus on every keystroke
-  // would fight the climber.
-  useEffect(() => {
-    field.current?.focus();
-  }, []);
 
   const results = useMemo(() => search(index, query), [index, query]);
   const groups = groupResults(results);
 
   return (
     <>
-      <PageHeader title="Search" subtitle={`${index.length.toLocaleString()} things, all on this device.`} />
-
       <div className="relative mb-3">
         <SearchIcon
           size={16}
@@ -206,7 +214,7 @@ export function SearchPage() {
           ref={field}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="A term, a program, a project, a day"
+          placeholder={`Search ${index.length.toLocaleString()} things`}
           aria-label="Search everything"
           className="pl-9 pr-12"
         />

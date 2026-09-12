@@ -7,7 +7,7 @@ import { dayOfWeek, today } from '@/engine/dates';
 import { FINGER_CHIP, FINGER_LABEL, SLEEP_CHIP, SLEEP_LABEL } from '@/engine/readiness';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
-import { LogPage } from '@/features/log/LogPage';
+import { DayBody } from '@/features/log/LogPage';
 import type { BodyPart } from '@/content/warmups';
 
 /**
@@ -62,7 +62,7 @@ async function logging(typeId: string, options: Options = {}): Promise<void> {
         }
       : {}),
   });
-  renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+  renderAt('/', <DayBody date={DATE} />);
 }
 
 const chip = (name: string) => screen.getByRole('button', { name });

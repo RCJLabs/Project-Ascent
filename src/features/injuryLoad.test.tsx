@@ -47,11 +47,20 @@ async function open({ program, typeId, injured, logged = false }: Setup): Promis
   });
 }
 
+/**
+ * Home is the logger (PLAN.md M117), and the warning lives on its
+ * pre-session card. The session button is the last thing that card renders,
+ * so it is the sign the card has arrived — and the sign the negative cases
+ * below need before saying a warning is absent rather than merely late.
+ */
+const bodyUp = (view: { findByRole: (role: string, o: { name: RegExp }) => Promise<HTMLElement> }) =>
+  view.findByRole('button', { name: /Start session|Log a session|Log rest day/ });
+
 describe('the front door, before you travel', () => {
   it('counts what today loads, rather than flagging it one line at a time', async () => {
     await open({ program: 'ground_zero', typeId: 'str', injured: 'elbow' });
     const view = renderAt('/', <HomePage />);
-    await view.findByRole('heading', { level: 1 });
+    await bodyUp(view);
     expect(view.container.textContent ?? '').toMatch(/3 exercises load your elbow/);
   });
 
@@ -63,21 +72,21 @@ describe('the front door, before you travel', () => {
   it('counts the drill, which lives outside the session type’s blocks', async () => {
     await open({ program: 'iron_grip', typeId: 'perf', injured: 'pulley' });
     const view = renderAt('/', <HomePage />);
-    await view.findByRole('heading', { level: 1 });
+    await bodyUp(view);
     expect(view.container.textContent ?? '').toMatch(/the drill loads your pulley/);
   });
 
   it('says nothing when the day leaves the hurt part alone', async () => {
     await open({ program: 'ground_zero', typeId: 'str', injured: 'ankle' });
     const view = renderAt('/', <HomePage />);
-    await view.findByRole('heading', { level: 1 });
+    await bodyUp(view);
     expect(view.container.textContent ?? '').not.toMatch(/load(s)? your|Each one is marked/);
   });
 
   it('says nothing when nothing is hurt', async () => {
     await open({ program: 'ground_zero', typeId: 'str' });
     const view = renderAt('/', <HomePage />);
-    await view.findByRole('heading', { level: 1 });
+    await bodyUp(view);
     // The whole line has to be gone, not merely emptied of its words: an
     // empty warning is still a warning triangle on the front door.
     expect(view.container.textContent ?? '').not.toMatch(/load(s)? your|Each one is marked/);
@@ -88,7 +97,10 @@ describe('the front door, before you travel', () => {
   it('drops it once the session is logged', async () => {
     await open({ program: 'ground_zero', typeId: 'str', injured: 'elbow', logged: true });
     const view = renderAt('/', <HomePage />);
-    await view.findByRole('heading', { level: 1 });
+    // A logged day shows the editor, not the card: wait for something the
+    // editor renders, so the absence below is the card's and not the
+    // chunk's.
+    await view.findByText('Effort', { selector: 'h2' });
     expect(view.container.textContent ?? '').not.toMatch(/3 exercises load your elbow/);
   });
 });

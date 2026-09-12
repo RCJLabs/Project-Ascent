@@ -6,7 +6,7 @@ import { newSession, putSession } from '@/db/sessions';
 import { hydrate, renderAt } from '@/test/render';
 import { JournalPage } from '@/features/journal/JournalPage';
 import { ProjectsPage } from '@/features/projects/ProjectsPage';
-import { SearchPage } from '@/features/search/SearchPage';
+import { SearchSheet } from '@/features/search/SearchSheet';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 
 /**
@@ -58,9 +58,12 @@ describe('one record of the wrong shape', () => {
 
   it('leaves search standing', async () => {
     await seed();
-    const view = renderAt('/search', <SearchPage />);
-    const h1 = await view.findByRole('heading', { level: 1 });
-    expect(h1.textContent).toBe('Search');
+    // A sheet since M117, over whatever page was open; the dialog's own
+    // heading is the sign it rendered rather than the boundary.
+    const view = renderAt('/', <SearchSheet onClose={() => undefined} />);
+    const dialog = await view.findByRole('dialog', { name: 'Search' });
+    expect(dialog.querySelector('h2')?.textContent).toBe('Search');
+    expect(view.container.querySelector('input[aria-label="Search everything"]')).not.toBeNull();
   });
 
   it('still shows the records that are whole', async () => {

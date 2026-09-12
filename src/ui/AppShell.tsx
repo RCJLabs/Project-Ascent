@@ -1,7 +1,8 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { CalendarDays, Dumbbell, Mountain, Search, Target, TrendingUp } from 'lucide-react';
+import { CalendarDays, Dumbbell, Gamepad2, Mountain, Search, Settings, TrendingUp } from 'lucide-react';
 import { Announcer } from './Announce';
+import { IconButton } from './IconButton';
 import { LiveBar, useLiveBanner } from './LiveBar';
 import { DemoBanner } from './DemoBanner';
 import { StorageWarning } from './StorageWarning';
@@ -9,22 +10,36 @@ import { UndoBar } from './UndoBar';
 import { UpdatePrompt } from './UpdatePrompt';
 
 /**
- * Six, not five.
+ * Five, and search is not one of them (PLAN.md M117).
  *
- * Search earns a permanent slot because that is what makes the rest of the
- * app reachable: twenty-six routes behind five tabs meant the glossary, the
- * guides, the career timeline, objectives, the coach, the board and the
- * altimeter were each findable only by knowing which page hid them. One tap
- * to search, one to the result — which is the whole of M16's "done when".
+ * Home is today's session — the thing the app is for, on the screen it
+ * opens to. Train, Calendar and Progress are the three ways of looking at
+ * the training around it, and Game is everything training earns, which
+ * used to be scattered across Home and the climber page. Projects live
+ * under Train now; a project is what a block is for.
+ *
+ * Search had a permanent slot from M16 to M116 because it is what makes
+ * the rest of the app reachable. It still is — it moved to a button in the
+ * header of every page, which keeps "one tap to search, one to the result"
+ * without spending a fifth of the bar on it.
  */
 const TABS = [
   { href: '/', label: 'Home', icon: Mountain },
   { href: '/train', label: 'Train', icon: Dumbbell },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays },
-  { href: '/projects', label: 'Projects', icon: Target },
   { href: '/progress', label: 'Progress', icon: TrendingUp },
-  { href: '/search', label: 'Search', icon: Search },
+  { href: '/game', label: 'Game', icon: Gamepad2 },
 ] as const;
+
+/**
+ * Loaded on the first tap, not on boot. The sheet's index walks the
+ * glossary, every guide's prose, the drills and the metrics — the M116
+ * measurement was 13.99KB for the glossary alone — and none of it is
+ * needed until someone searches.
+ */
+const SearchSheet = lazy(() =>
+  import('@/features/search/SearchSheet').then((m) => ({ default: m.SearchSheet })),
+);
 
 function isActive(href: string, location: string): boolean {
   return href === '/' ? location === '/' : location.startsWith(href);
@@ -48,6 +63,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const banner = useLiveBanner();
   const mainRef = useRef<HTMLElement>(null);
   const navigated = useRef(false);
+  const [searching, setSearching] = useState(false);
+
+  // A result is a navigation, and a sheet still open over the page it
+  // navigated to is a sheet the climber has to close by hand. The sheet
+  // also closes itself on the tap (see `SearchSheet`); this catches the
+  // other ways a location can change underneath it — a back button, a
+  // launcher shortcut into an already-open app.
+  useEffect(() => {
+    setSearching(false);
+  }, [location]);
 
   /**
    * Move focus into the content when the route changes (PLAN.md M14).
@@ -83,7 +108,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-dvh lg:flex">
       {/* Visible only when tabbed to. Without it, every page starts a
           keyboard user at the top of the nav and makes them walk through
-          six tabs to reach the content they navigated to.
+          five tabs to reach the content they navigated to.
 
           It stays an anchor with a real href — that is what assistive
           technology expects a skip link to be, and it still works with
@@ -131,7 +156,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="text-xs text-ink-soft mt-1">Train. Understand. Grow.</p>
         </div>
 
-        <div className="max-w-2xl mx-auto grid grid-cols-6 lg:flex lg:flex-col lg:gap-0.5 lg:px-3 lg:max-w-none">
+        <div className="max-w-2xl mx-auto grid grid-cols-5 lg:flex lg:flex-col lg:gap-0.5 lg:px-3 lg:max-w-none">
           {TABS.map(({ href, label, icon: Icon }) => {
             const active = isActive(href, location);
             return (
@@ -152,6 +177,30 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </div>
 
+        {/* The two controls the phone carries in its header, as sidebar
+            rows here. Hidden below `lg`, so neither pair is in the tab
+            order twice — the same arrangement the banners use. */}
+        <div className="hidden lg:flex lg:flex-col lg:gap-0.5 lg:px-3 lg:mt-3 lg:pt-3 lg:border-t lg:border-line">
+          <button
+            type="button"
+            onClick={() => setSearching(true)}
+            className="focus-ring flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-ink-soft hover:text-ink hover:bg-sunken transition-colors"
+          >
+            <Search size={19} strokeWidth={2} aria-hidden />
+            Search
+          </button>
+          <Link
+            href="/settings"
+            aria-current={isActive('/settings', location) ? 'page' : undefined}
+            className={`focus-ring flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+              isActive('/settings', location) ? 'text-accent bg-accent/10' : 'text-ink-soft hover:text-ink hover:bg-sunken'
+            }`}
+          >
+            <Settings size={19} strokeWidth={2} aria-hidden />
+            Settings
+          </Link>
+        </div>
+
         <div className="hidden lg:block px-3 mt-3 [&>*+*]:mt-2">
           <StorageWarning />
           <UndoBar />
@@ -167,7 +216,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         id="main"
         ref={mainRef}
         tabIndex={-1}
-        className={`flex-1 min-w-0 px-4 pt-6 outline-none lg:px-8 lg:pb-12 ${
+        className={`flex-1 min-w-0 px-4 pt-3 outline-none lg:px-8 lg:pt-6 lg:pb-12 ${
           banner ? 'pb-36' : 'pb-24'
         }`}
       >
@@ -175,10 +224,38 @@ export function AppShell({ children }: { children: ReactNode }) {
             unreadable whatever the window is doing. Wide enough for two
             columns of cards, and no wider. */}
         <div className="max-w-2xl mx-auto lg:max-w-5xl">
+          {/* The phone's header (PLAN.md M117): the name, because Home no
+              longer carries it — Home is a date now — and the two controls
+              that used to be a tab and a gear on the front door. On a wide
+              screen the sidebar already says the name and carries both
+              controls as rows, so this row is gone rather than doubled. */}
+          <div className="flex items-center justify-between mb-2 lg:hidden">
+            <Link href="/" className="focus-ring font-black tracking-tight leading-none rounded-lg py-1">
+              Project Ascent
+            </Link>
+            <div className="flex items-center -mr-2">
+              <IconButton inline={false} label="Search" onClick={() => setSearching(true)}>
+                <Search size={20} />
+              </IconButton>
+              <Link
+                href="/settings"
+                aria-label="Settings"
+                className="focus-ring inline-flex items-center justify-center w-11 h-11 rounded-xl text-ink-soft hover:text-ink"
+              >
+                <Settings size={20} />
+              </Link>
+            </div>
+          </div>
           <DemoBanner />
           {children}
         </div>
       </main>
+
+      {searching && (
+        <Suspense fallback={null}>
+          <SearchSheet onClose={() => setSearching(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

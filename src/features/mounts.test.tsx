@@ -28,6 +28,7 @@ import { DrillPage } from '@/features/drills/DrillPage';
 import { GymPage } from '@/features/gym/GymPage';
 import { GuideList } from '@/features/guides/GuidePage';
 import { GuidePage } from '@/features/guides/GuidePage';
+import { GamePage } from '@/features/game/GamePage';
 import { HomePage } from '@/features/home/HomePage';
 import { InjuryPage } from '@/features/injury/InjuryPage';
 import { JournalPage } from '@/features/journal/JournalPage';
@@ -41,7 +42,6 @@ import { ProgressPage } from '@/features/progress/ProgressPage';
 import { ProjectDetailPage } from '@/features/projects/ProjectDetailPage';
 import { ProjectsPage } from '@/features/projects/ProjectsPage';
 import { ReviewPage } from '@/features/review/ReviewPage';
-import { SearchPage } from '@/features/search/SearchPage';
 import { SessionEditorPage } from '@/features/builder/SessionEditorPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { SkillsPage } from '@/features/skills/SkillsPage';
@@ -75,6 +75,7 @@ const PAGES: [string, string, ReactElement][] = [
   ['review', '/review', <ReviewPage />],
   ['altimeter', '/altimeter', <AltimeterPage />],
   ['ascent', '/ascent', <AscentPage />],
+  ['game', '/game', <GamePage />],
   ['train', '/train', <TrainPage />],
   ['finder', '/find', <FinderPage />],
   ['builder list', '/build', <BuilderList />],
@@ -91,7 +92,6 @@ const PAGES: [string, string, ReactElement][] = [
   ['assessments', '/assessments', <AssessmentsPage />],
   ['benchmark', '/assessments/dead_hang', <MetricDetailPage params={{ id: 'dead_hang' }} />],
   ['projects', '/projects', <ProjectsPage />],
-  ['search', '/search', <SearchPage />],
   ['guides', '/guides', <GuideList />],
   ['guide', '/guides/iron_grip', <GuidePage params={{ id: 'iron_grip' }} />],
   ['glossary', '/glossary', <GlossaryPage />],

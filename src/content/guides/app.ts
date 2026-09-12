@@ -66,27 +66,28 @@ export const APP: Guide = {
     {
       title: 'Getting around',
       content: [
-        { kind: 'p', text: 'Five things live in the bar at the bottom. Everything else is one tap from those.' },
+        { kind: 'p', text: 'Five things live in the bar at the bottom. Everything else is one tap from those, or one search away.' },
         {
           kind: 'table',
           head: ['Tab', 'What is there'],
           rows: [
-            ['Home', 'Today at a glance — your climber, what is planned, the live session bar, and whatever the app currently has to say.'],
-            ['Train', 'The program catalogue, the finder, your own programs, and objectives.'],
+            ['Home', "Today's session — what is planned, the button that starts it, and the log once it has. The coach, the week and your program sit under it."],
+            ['Train', 'The program catalogue, the finder, your own programs, objectives, and projects.'],
             ['Calendar', 'The plan across weeks, and where you move sessions around.'],
-            ['Projects', 'Climbs you are working, with their burns, high points and timelines.'],
             ['Progress', 'Grades, training load, the journal, assessments, career and the year in review.'],
+            ['Game', 'Your climber, the level, the altimeter, the board, skill trees, achievements, and The Ascent.'],
           ],
         },
         { kind: 'h', text: 'Worth knowing where they are' },
         {
           kind: 'list',
           items: [
-            '**Your climber** — tap the avatar on Home. Stats, level, vitality, rank, and anything that hurts.',
-            '**Skill trees** — from the climber page. Every node unlocks from real training.',
-            "**Coach's Corner** — standing observations about your training, from Home.",
+            '**Search** — the magnifier at the top of every screen. A term, a program, a project, a day, a passage from a guide; or browse everything the app has.',
+            '**Your climber** — tap the avatar on Game. Stats, level, vitality, rank, and anything that hurts.',
+            '**Skill trees** — from Game, or from the climber page. Every node unlocks from real training.',
+            "**Coach's Corner** — standing observations about your training, under today's session on Home.",
             '**The weekly review** — Sunday, and any past week you want to reread.',
-            '**Settings** — themes, grade scales, sound, equipment, backups, and these guides.',
+            '**Settings** — the gear beside the magnifier. Themes, grade scales, sound, equipment, backups, and these guides.',
           ],
         },
       ],
@@ -98,7 +99,7 @@ export const APP: Guide = {
         {
           kind: 'list',
           items: [
-            '**Open a day** from the calendar, or tap Today.',
+            '**Open a day** — today is Home; any other day is on the calendar.',
             '**Say what it was** — a program session, or free climbing. Indoors or outdoors.',
             '**Add climbs** — grade, how many, sent or attempted, and the style if you flashed or onsighted it.',
             '**Rate it** — RPE from 1 to 10, and how long it took. These two are what training load is made of, so guessing them roughly is much better than leaving them out.',

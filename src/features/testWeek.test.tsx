@@ -77,14 +77,16 @@ describe('home', () => {
   it('says what the test week is for on a rest day too', async () => {
     await runningInWeek(1);
     renderAt('/', <HomePage />);
-    expect(screen.getByText(/Baseline week/)).toBeTruthy();
-    const link = screen.getByText(/Baseline week/).closest('a')!;
+    const line = await screen.findByText(/Baseline week/, {});
+    const link = line.closest('a')!;
     expect(link.getAttribute('href')).toBe('#/assessments');
   });
 
   it('says nothing on an ordinary week', async () => {
     await runningInWeek(2);
     renderAt('/', <HomePage />);
+    // Wait for the card's button before calling a line absent (M117).
+    await screen.findByRole('button', { name: /Start session|Log a session|Log rest day/ });
     expect(screen.queryByText(/Baseline week|Test week/)).toBeNull();
   });
 });

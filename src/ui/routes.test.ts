@@ -39,6 +39,18 @@ describe('the table matches the router', () => {
       expect(route?.parent, `tab ${tab} should be a root`).toBeNull();
     }
   });
+
+  it('makes every root a tab, and nothing else one', () => {
+    // The other direction (PLAN.md M117). A root is a page with no "back",
+    // which is only right for a page the bar can always reach. `/projects`
+    // was a root while it had a tab; when the tab went the parent had to
+    // change with it, or the page would have been reachable and unable to
+    // say where it was.
+    const shell = readFileSync('src/ui/AppShell.tsx', 'utf8');
+    const tabs = [...shell.matchAll(/href: '([^']+)'/g)].map((m) => m[1] as string).sort();
+    const roots = ROUTES.filter((r) => r.parent === null).map((r) => r.path).sort();
+    expect(roots).toEqual(tabs);
+  });
 });
 
 describe('the hierarchy is sound', () => {

@@ -85,6 +85,7 @@ describe('modal dialogs', () => {
     expect(dialogs.map((d) => d.path).sort()).toEqual([
       'src/features/assessments/HoldTimer.tsx',
       'src/features/media/MediaCard.tsx',
+      'src/features/search/SearchSheet.tsx',
       'src/features/share/ShareSheet.tsx',
       'src/ui/TimerSheet.tsx',
     ]);
@@ -246,11 +247,21 @@ describe('headings', () => {
       // by a real page that simply forgot its heading (PLAN.md M115).
       if (rendersNothing(file.source)) continue;
       const ownH1 = (file.source.match(/<h1[\s>]/g) ?? []).length;
-      const headers = (file.source.match(/<PageHeader/g) ?? []).length;
+      const headers = (file.source.match(/<(?:PageHeader|DayHeading)\b/g) ?? []).length;
       const total = ownH1 + headers;
       if (total === 0) offences.push(`${path}: no h1 and no PageHeader`);
     }
     expect(offences).toEqual([]);
+  });
+
+  it('accepts the two heading components only because each renders an h1', () => {
+    // `PageHeader` and `DayHeading` count as a page's heading above. That
+    // is only sound while each of them actually renders one — a `DayHeading`
+    // that lost its h1 would leave Home and every log day heading-less
+    // while this file kept passing.
+    for (const path of ['src/ui/PageHeader.tsx', 'src/features/log/DayHeading.tsx']) {
+      expect(read(path), `${path} has no h1`).toMatch(/<h1[\s>]/);
+    }
   });
 
   it('would still catch a page that simply forgot its heading', () => {

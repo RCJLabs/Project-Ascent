@@ -5,7 +5,7 @@ import { getProgram } from '@/content/programs';
 import { getSession, newSession, putSession } from '@/db/sessions';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
-import { LogPage } from '@/features/log/LogPage';
+import { DayBody } from '@/features/log/LogPage';
 import { today } from '@/engine/dates';
 
 /**
@@ -35,7 +35,7 @@ async function logging(): Promise<void> {
     weekOverrides: {},
     adaptations: {},
   });
-  renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+  renderAt('/', <DayBody date={DATE} />);
 }
 
 describe('a session type that asks for more', () => {
@@ -77,7 +77,7 @@ describe('a session type that asks for more', () => {
     await putSession(newSession(DATE, 0, { completed: false }));
     await hydrate();
     useProfile.setState({ activeProgramId: null, startDates: {}, plans: {}, weekOverrides: {}, adaptations: {} });
-    renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+    renderAt('/', <DayBody date={DATE} />);
     expect(screen.queryByText('This session')).toBeNull();
   });
 });
@@ -109,7 +109,7 @@ async function performance(fields: Record<string, string>, climbs: unknown[]): P
     weekOverrides: {},
     adaptations: {},
   });
-  renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+  renderAt('/', <DayBody date={DATE} />);
 }
 
 const sent = (grade: string) => ({ id: grade, grade, scale: 'V', count: 1, result: 'send' });

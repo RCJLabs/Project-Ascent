@@ -318,8 +318,8 @@ describe('the app guide quotes real numbers', () => {
       'Home',
       'Train',
       'Calendar',
-      'Projects',
       'Progress',
+      'Game',
     ]);
   });
 });

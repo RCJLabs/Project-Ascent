@@ -240,7 +240,7 @@ describe('the bundle stays small', () => {
    * Every milestone that moves this moves it to just above what it measured;
    * the history is in the comment inside the first test.
    */
-  const BUDGET = 174.1;
+  const BUDGET = 203.4;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -378,6 +378,34 @@ describe('the bundle stays small', () => {
     // rule is that headroom a regression can hide in is not headroom — and
     // 45KB of slack would hide `LogPage` being made eager again by accident,
     // which is precisely the mistake being fixed.
+    //
+    // **174.1 → 203.4 at M117, and the logger is eager again — on
+    // purpose, and measured this time.** Home *is* today's session now, so
+    // the boot path is the logger by definition. The M115 split was still
+    // tried — heading eager, body behind a `lazy()`, 165.13KB of first
+    // load — against a static import at 202.98KB, seven cold and seven
+    // warm starts each, the page's own clock stamped by a MutationObserver
+    // the first time the day heading and the session button appeared:
+    //
+    //   cold, CPU 6×, localhost       heading 583 → 591   button 888 → 592
+    //   warm, CPU 6×, localhost       heading 459 → 387   button 608 → 387
+    //   cold, CPU 4×, 100ms / 4Mbps   heading 416 → 392   button 546 → 392
+    //   warm, CPU 4×, 100ms / 4Mbps   heading 277 → 254   button 369 → 254
+    //
+    // (medians of seven, ms, lazy → eager; 32 script requests against 3.)
+    // The premise of the split was that the shell would paint sooner and
+    // the body a moment later. The first half was false — the heading
+    // painted no earlier, and later when warm — and the second half cost
+    // ~300ms cold and ~220ms warm to the button that is the point of the
+    // page. So the 38KB goes back on the boot path, and the 44.81KB M115
+    // took off it is spent on the one screen that needs it. Two things
+    // M115 and M116 bought stay bought: nothing *else* eager imports the
+    // logger, and the glossary is still a tap away rather than a boot cost.
+    //
+    // 174.04 → 165.13 before the logger came back: Home lost the climber
+    // strip, the altimeter, the arcade card and — the large one — `BoardCard`,
+    // which it imported from `BoardPage.tsx` and so carried the whole board
+    // page in the entry chunk. Those are on the Game tab now, lazily.
     expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(BUDGET);
   });
 
@@ -426,8 +454,10 @@ describe('the bundle stays small', () => {
   });
 
   it.runIf(built)('keeps the heavy routes out of the first load', () => {
+    // `LogPage` was on this list from M115 to M116. Home is the logger now
+    // (M117), so its chunk *is* the entry chunk — see the table below.
     const names = readdirSync(dist).filter((f) => f.endsWith('.js'));
-    for (const split of ['AscentPage', 'BuilderPage', 'GuidePage', 'LogPage', 'SearchPage']) {
+    for (const split of ['AscentPage', 'BuilderPage', 'GuidePage', 'SearchSheet']) {
       expect(names.some((f) => f.startsWith(split)), `${split} is not split out`).toBe(true);
     }
   });
@@ -440,8 +470,14 @@ describe('the bundle stays small', () => {
     // it is a cold-start entry and deferring it would put two chunk loads in
     // front of one navigation. Everything else is a chunk.
     //
-    // **`LogPage` was on this list until M115.** "The logger is what it is
-    // for" read as a reason to keep it eager for five milestones, and the
+    // **`LogPage` was on this list until M115, and Home imports it again
+    // since M117** — not from here, from `HomePage.tsx`, because Home is
+    // the logger now; the eager list below is `App.tsx`'s own imports, and
+    // the budget test above records why that import is back. What follows
+    // is the M115 record, kept because the reasoning still holds for every
+    // route that is *not* the front door.
+    // "The logger is what it is for" read as a reason to keep it eager for
+    // five milestones, and the
     // note above called it the real headroom every time without anyone
     // measuring it. Measured: **44.81KB gzipped** of entry chunk, 218.86 →
     // 174.05.

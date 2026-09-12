@@ -4,7 +4,7 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import { GUIDES } from '@/content/guides';
 import { scoreItem } from '@/engine/search';
 import { renderAt, reset } from '@/test/render';
-import { SearchPage } from '@/features/search/SearchPage';
+import { SearchSheet } from '@/features/search/SearchSheet';
 import { GuidePage } from '@/features/guides/GuidePage';
 
 /**
@@ -39,7 +39,7 @@ function bodyOnlyPhrase(): { phrase: string; guide: string; section: string } {
 
 async function searchFor(query: string) {
   await reset();
-  renderAt('/search', <SearchPage />);
+  renderAt('/', <SearchSheet onClose={() => undefined} />);
   fireEvent.change(screen.getByLabelText('Search everything'), { target: { value: query } });
 }
 

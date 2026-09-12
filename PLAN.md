@@ -5282,3 +5282,130 @@ in the code and are not the same thing.
   always, and that gate is a milestone's worth of thinking, not a coda to this one.
 - *Multi-device sync, notifications, wearables, localisation* — all need a server or a
   translator, and the plan's cut list stands.
+
+### The overhaul (proposed, M117–M123)
+
+*Seven milestones from the UI audit, in dependency order. The brief was the app "incredibly
+streamlined and easy to use — anyone should be able to pick it up": set up a profile in easy
+steps, set up a program easily, start a session, enter climbs. The audit offered five large,
+five medium and five small overhauls; the choices were **L2** (log first), **L4** (the game
+gets its own tab), **M2** (progress in three views), **M4** (quick log, full log), **M5**
+(program overview), **S3**, **S4**, **S5**, with three decisions taken on the plan: **Home is
+the session, and there is no Log tab**; the game is a **tab**, not a toggle; the `.ics` export
+moves to Settings. Each ships to `main` on its own, tested, mutation-checked and looked at in
+a browser, the way everything since M13 has.*
+
+*The coupling check that made L4 safe to plan: the coach (`engine/coach.ts`) never reads the
+game store, and vitality is read by the coach, the injury engine, the avatar, the injuries
+card and the injury page — so vitality is training-side and stays there; the game store is
+read by seven pages as display. A separate tab is moving, not gating.*
+
+- **M117 — Nav and routes: five tabs, Home is the session, search is a sheet.** *Done, and
+  the one performance assumption in it was measured and reversed.*
+  **The shape.** Home · Train · Calendar · Progress · Game. Home *is* today's log: the date,
+  the planned session with everything the old "Today" card said about it (week and phase,
+  the load warning for anything hurt, the block-over and test-week nudges), the one big
+  button, and the editor once it has started; the coach, the weekly review and the program
+  sit under it. Projects moved under Train beside Objectives; the four game cards — the
+  climber strip, the altimeter, the board, the arcade — moved to a `GamePage` hub that also
+  links the skill trees and the achievements. Search left the bar for a button in a header
+  the shell draws on every page (the phone gets the wordmark, search and settings in a row;
+  the sidebar gets search and settings as rows), and opens as a sheet over whatever page was
+  showing rather than as a page of its own — `SearchPage` is `SearchBody` inside
+  `SearchSheet`, and `/search` is gone. `ui/routes.ts` was rewritten root by root; the
+  `Climber` and `Play` groups became `Game`.
+  **One address per day.** Today is `/`; every other day is `/log/:date`. `logHref` in
+  `ui/routes.ts` is the rule, and the day arrows, `/today` and the log page's own bounce
+  (`/log/<today>` redirects home) all read it, so the calendar, the coach's "log today" and
+  a launcher shortcut land on the same screen with the same cards under it.
+  **The logger is eager again, and this time it was measured rather than reasoned about.**
+  M115 took it off the boot path because Home did not need it; Home is the logger now. The
+  split was still built — heading eager, body behind a `lazy()`, 165.13KB of first load —
+  and timed against a static import at 202.98KB, seven cold and seven warm starts each on
+  two profiles (CPU 6× on localhost; CPU 4× with 100ms latency at 4Mbps), the page's own
+  clock stamped the first time the day heading and the session button appeared. The split
+  lost on every number: the heading painted no earlier (583 → 591ms cold, and *later* warm,
+  459 → 387) and the button arrived ~300ms later cold (888 → 592) and ~220ms later warm
+  (608 → 387), behind 32 script requests against 3. The premise — shell first, body a moment
+  later — was simply false for this page. The table is in `perf.test.ts` beside the budget it
+  moved: **174.1 → 203.4**, measured 202.42KB. Two things M115 and M116 bought stay
+  bought: nothing *else* eager imports the logger, and the glossary is still a tap away.
+  **A 9KB win nobody was looking for.** Before the logger came back, first load fell 174.04
+  → 165.13: Home had imported `BoardCard` from `BoardPage.tsx`, and so carried the whole
+  board page in the entry chunk. It is on the Game tab now, lazily.
+  **Two bugs found by the merge.** The logger's own copy of the planned-day derivation
+  memoised without `weekOverrides`, so a week rearranged on the calendar did not reach an
+  already-open log; the one `usePlannedDay` hook the heading, the card and the editor now
+  share includes it, and a test rearranges the week under an open Home. And the old rest-day
+  screen offered only the session-type chips — "Log rest day" on Home led to a page with no
+  rest-day button on it; the button now starts the program's rest type, which is what gives
+  the editor its recovery checklist, and only when the plan actually placed one.
+  **M118's "Home loses four cards" landed here**, because the hub had to exist for the tab
+  to point at something real, and a tab pointing at a placeholder is not a shape worth
+  shipping to `main` for a week.
+  **Measured, not asserted.** 24 mutations, 23 killed plus the sanity no-op that must survive
+  (two independent `const`s reordered in the heading): the sheet's close-on-pick and the
+  shell's close-on-navigation each removed, the today redirect removed, `logHref` and the
+  day arrows each made to bypass the rule, the overrides dropped from the memo, the rest
+  day labelled "Start session", the rest type offered twice, the empty day and the finished
+  block each mishandled, `/projects` made a root again, the Projects card and its back link
+  each removed, the altimeter card removed from Game and a game link put back on Home, the
+  heading's `h1` demoted, the guide's tab renamed, the bar given six columns, the phone's
+  settings link and the field focus each removed, the test-week nudge hidden once a session
+  exists, and the load warning silenced. **One survived its first run and became a test
+  that presses both buttons**: the phone header's search button wired to nothing lived,
+  because the sidebar's button comes first in the DOM and the test pressed `[0]`.
+  **In a browser, both themes, 430px and 1280px.** Every route in the table, both redirects
+  (`/today` and `/log/<today>` land on `/`), the next-day arrow from yesterday landing on
+  Home, Projects with its back link to Train, the Game hub, the editor after the button, the
+  sheet opening from whichever control is visible, a picked result closing it and leaving
+  focus in `main`. No overflow at 430px, no page errors. **Three findings, all fixed before
+  shipping.** The sheet opened with nothing typeable focused, and Escape returned focus to
+  the body: the body's own focus effect ran before the dialog's, so `useDialog` recorded the
+  *field* as the opener and then took focus back to the container. The sheet owns focus now,
+  after its dialog effect, and the test asserts both halves. A day the plan leaves empty read
+  "Rest day" on the card and "Log a session" on the button, beside a "Rest / Recovery" chip;
+  the button logs the program's rest type on such a day now. And the field's placeholder,
+  which had grown a count, truncated at 430px — it is "Search 573 things".
+  3,880 tests pass.
+- **M118 — The game gets its door (L4 + S4).** *Proposed.*
+  `GamePage` exists as of M117 with the four cards Home gave up and links through to the
+  skill trees and the achievements. This finishes it: `ClimberPage` splits into a training
+  half (vitality, injuries, stats — what the coach and the injury engine read; it stays
+  reachable from Home and Progress) and a game half (kit, currency, ranks, the avatar) that
+  lands on the hub; the XP lines on session completion, the weekly review and objectives
+  become one quiet line each rather than a card. `engine/` untouched — the M117 coupling
+  check found the coach never reads the game store, so this is moving display, not gating
+  logic. *Risk: the four display seams. A test per seam that XP still accrues and is still
+  shown somewhere.*
+- **M119 — Progress in three views (M2).** *Proposed.*
+  A segmented control at the top of Progress — **This block · Grades · Body**, plus **All**,
+  which is today's page — with the choice persisted in settings. Cards are assigned, not
+  rewritten; the history links (career, year, assessments, journal) sit under whichever
+  view they belong to. *Risk: two or three cards fit two views. Judgement calls, noted at
+  the card.*
+- **M120 — Quick log, full log (M4).** *Proposed, and the largest engineering item.*
+  The logger opens as **Climbs · Effort · Complete**; everything else folds behind "More",
+  and the fold remembers itself. `hardestAttempted`, `hardestSent` and `sessionVolume`
+  derive from the climb list **per field** against the M70 registry rather than being
+  typed twice. Gym mode becomes the quick view rather than a route of its own. Done as an
+  extraction from the 2,000-line `LogPage.tsx`, not a rewrite. *Risk: the derivation has
+  to agree with what the review and the grades page already compute — the tests for those
+  are the spec.*
+- **M121 — Program overview (M5).** *Proposed.*
+  A program page that fits on one screen: what it is for, how long, what a week looks
+  like, what you need, and one **Read the full guide**; the week-by-week collapses behind
+  "What's in it". The builder reads the program rather than the page, so it is unaffected.
+  *Risk: low.*
+- **M122 — Settings in four groups, and the calendar export moves (S3 + S5).** *Proposed.*
+  Settings becomes **Appearance · Training · Data · About**, the palette goes into a sheet,
+  the Reference card goes (the guides, glossary and drills are one search away and listed
+  under Reference there). The `.ics` export leaves the calendar's header for Settings ›
+  Data, which is where every other "get my data out" already lives. *Risk: none material.*
+- **M123 — Log first (L2).** *Proposed, and deliberately last.*
+  A new install's first screen is one climb entry under General Training, not seven
+  questions. The finder, the baseline and the program catalogue become Home cards with a
+  "not now" that stays dismissed; `useFirstRunRedirect` stops requiring a program. Last on
+  purpose: it is the biggest product bet, and it should land into the already-simplified
+  app so it can be judged cleanly rather than confounded with everything else. *Risk: the
+  coach and the stats start quieter for a new climber — the trade accepted in the audit.*

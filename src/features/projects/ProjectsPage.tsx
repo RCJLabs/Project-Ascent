@@ -17,6 +17,7 @@ import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { EmptyState } from '@/ui/EmptyState';
 import { Input, Select } from '@/ui/Field';
+import { BackLink } from '@/ui/BackLink';
 import { PageHeader } from '@/ui/PageHeader';
 
 export function ProjectsPage() {
@@ -47,6 +48,7 @@ export function ProjectsPage() {
 
   return (
     <>
+      <BackLink />
       <PageHeader
         title="Projects"
         subtitle={active.length > 0 ? `${active.length} of ${cap} active` : 'The climbs you are working'}

@@ -9,7 +9,7 @@ import { newProject, putProject } from '@/db/projects';
 import { dayOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
-import { LogPage } from '@/features/log/LogPage';
+import { DayBody } from '@/features/log/LogPage';
 import { ProjectsPage } from '@/features/projects/ProjectsPage';
 import { CareerPage } from '@/features/career/CareerPage';
 import { VENUE_LIST_ID } from './useVenues';
@@ -56,7 +56,7 @@ async function logger(): Promise<void> {
     adaptations: {},
     injuries: [],
   });
-  renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+  renderAt('/', <DayBody date={DATE} />);
 }
 
 const options = (): string[] =>

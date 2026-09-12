@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation } from 'wouter';
-import { AlertTriangle, ArrowLeft, Check, Clock, Copy, Dumbbell, Flame, Plus, RotateCw, Snowflake, Sparkles, Timer, Trash2, TrendingUp, X } from 'lucide-react';
+import { Link, Redirect } from 'wouter';
+import { AlertTriangle, Check, ChevronRight, Clock, Copy, Dumbbell, Flag, Flame, Plus, RotateCw, Ruler, Snowflake, Sparkles, Timer, Trash2, TrendingUp, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
 import { SCALE_MAX, getField, type FieldSpec } from '@/content/fields';
 import type { FieldId, SessionType } from '@/content/types';
-import { addDays, fromKey, isDateKey, shortLabel, today } from '@/engine/dates';
+import { fromKey, isDateKey, shortLabel, today } from '@/engine/dates';
 import { clearTimerState, loadTimerState, saveTimerState } from '@/lib/timerState';
 import { ClimbEntry, RepeatLast, type Outcome } from './ClimbEntry';
 import { sessionOwner } from '@/db/media';
@@ -33,7 +33,7 @@ import {
   isLive,
   isStale,
 } from '@/engine/live';
-import { plannedDay, prescriptionFor } from '@/engine/plan';
+import { prescriptionFor, type PlannedDay } from '@/engine/plan';
 import { prescriptionLine } from '@/engine/prescription';
 import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
 import type { CooldownPlan } from '@/engine/cooldown';
@@ -85,6 +85,10 @@ import { describeParts, drillConflict, exerciseConflict, exerciseLoads } from '@
 import { REST_ITEMS } from '@/engine/restHabits';
 import { VENUE_LIST_ID, VenueOptions, useVenues } from '@/features/venues/useVenues';
 import { BadParameter } from '@/ui/RecordNotFound';
+import { TEST_REASON_LABEL } from '@/engine/assessments';
+import { dayLoad, describeDayLoad } from '@/engine/bodyLoad';
+import { DayHeading } from './DayHeading';
+import { usePlannedDay } from './usePlannedDay';
 
 function rid(): string {
   return Math.random().toString(36).slice(2, 9);
@@ -96,26 +100,42 @@ function rid(): string {
  * A wrapper rather than an early return inside the page: the page runs
  * twenty-odd hooks off this value, and hooks cannot be skipped. This way the
  * page is never mounted with a date that is not one.
+ *
+ * **Today is Home** (PLAN.md M117), so `/log/<today>` bounces there rather
+ * than rendering a second copy of the same day under a different address —
+ * one with a back link and without the cards Home keeps under the session.
+ * The calendar, the coach and the attach page all still link to
+ * `/log/:date` for every day including today, and this is the one place
+ * that has to know.
  */
 export function LogPage({ params }: { params: { date: string } }) {
   if (!isDateKey(params.date)) {
     return (
-      <BadParameter expected="a date, like 2026-09-10" got={params.date} goTo={`/log/${today()}`} goLabel="Go to today">
+      <BadParameter expected="a date, like 2026-09-10" got={params.date} goTo="/" goLabel="Go to today">
         Dates are written year, month, day, with both the month and the day padded to two digits.
       </BadParameter>
     );
   }
-  return <LogDay date={params.date} />;
+  if (params.date === today()) return <Redirect to="/" replace />;
+  return (
+    <>
+      <BackLink />
+      <DayHeading date={params.date} />
+      <DayBody date={params.date} />
+    </>
+  );
 }
 
-function LogDay({ date }: { date: string }) {
-  const [, navigate] = useLocation();
-
-  const activeProgramId = useProfile((s) => s.activeProgramId);
-  const startDates = useProfile((s) => s.startDates);
-  const plans = useProfile((s) => s.plans);
-  const weekOverrides = useProfile((s) => s.weekOverrides);
-  const tracks = useProfile((s) => s.tracks);
+/**
+ * One day's log, under whatever heading the page put above it.
+ *
+ * Exported because Home renders it for today (PLAN.md M117). The heading
+ * and the back link belong to the page — Home has no back and owns its
+ * own heading — so this starts at the first card.
+ */
+export function DayBody({ date }: { date: string }) {
+  const { program, day, trackId, activeProgramId } = usePlannedDay(date);
+  const injuries = useProfile((s) => s.injuries);
 
   const byDate = useSessions((s) => s.byDate);
   const hydrated = useSessions((s) => s.hydrated);
@@ -129,16 +149,14 @@ function LogDay({ date }: { date: string }) {
     if (!hydrated) void load();
   }, [hydrated, load]);
 
-  const program = activeProgramId ? getProgram(activeProgramId) : undefined;
-  const startDate = activeProgramId ? startDates[activeProgramId] : undefined;
-  const plan = activeProgramId ? plans[activeProgramId] : undefined;
-  const overrides = activeProgramId ? weekOverrides[activeProgramId] : undefined;
-  const trackId = activeProgramId ? tracks[activeProgramId] : undefined;
-
-  const day = useMemo(
-    () => (program && startDate && plan ? plannedDay(program, startDate, plan, date, overrides) : undefined),
-    [program, startDate, plan, date],
-  );
+  // Counted before the session starts, because this is the card you read
+  // before you leave the house (PLAN.md M89). The per-exercise flags in the
+  // session are still there; they arrive too late to change a decision
+  // about the day. Once a session exists the card is gone, and with it the
+  // warning: after the session it is a verdict on something already
+  // climbed.
+  const hurt = useMemo(() => concerning(injuryPolicy(injuries)), [injuries]);
+  const loadNote = useMemo(() => (day ? describeDayLoad(dayLoad(day, hurt)) : null), [day, hurt]);
 
   const sessions = byDate[date] ?? [];
   // A day can hold several sessions — the schema always allowed it, nextIndex
@@ -161,68 +179,125 @@ function LogDay({ date }: { date: string }) {
     });
   }
 
-  const heading = fromKey(date).toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
+  /**
+   * What the one big button does (PLAN.md M117, merged from Home's card).
+   *
+   * A training day starts the planned session. A rest day logs the rest —
+   * the program's rest type, which is what gives the editor its recovery
+   * checklist — whether the plan placed that type on the day or simply left
+   * the day empty: the card above the button calls both "Rest day", and a
+   * button that then said "Log a session" beside a "Rest / Recovery" chip
+   * was the browser's first finding. A program with no rest type, or no
+   * program at all, gets the plain session. A block that has run its course
+   * prescribes nothing, so whatever gets climbed is a session like any
+   * other — and `over` sets `isRest`, which is why it is checked first;
+   * before M85 that combination had Home offering to log a rest day from a
+   * block that ended three weeks ago.
+   */
+  const primary =
+    day === undefined || day.over
+      ? undefined
+      : (day.sessionType ?? program?.sessionTypes.find((t) => t.isRest === true));
+  const label =
+    primary === undefined
+      ? 'Log a session'
+      : primary.isRest === true
+        ? 'Log rest day'
+        : 'Start session';
+  const others = program?.sessionTypes.filter((t) => t.id !== primary?.id) ?? [];
 
   return (
     <>
-      <BackLink />
-
-      <div className="flex items-center justify-between mb-4">
-        <IconButton onClick={() => navigate(`/log/${addDays(date, -1)}`)} label="Previous day">
-          <ArrowLeft size={18} />
-        </IconButton>
-        <div className="text-center">
-          <h1 className="text-xl font-black tracking-tight">{heading}</h1>
-          {day?.week && (
-            <p className="text-sm text-ink-soft">
-              Week {day.week}
-              {day.phase ? ` · ${day.phase.name}` : ''}
-              {day.isDeload ? ' · Deload' : ''}
-            </p>
-          )}
-        </div>
-        <IconButton onClick={() => navigate(`/log/${addDays(date, 1)}`)} label="Next day">
-          <ArrowLeft size={18} className="rotate-180" />
-        </IconButton>
-      </div>
-
       <div className="grid grid-cols-1 gap-3">
+        {/* Two nudges about the week rather than the session, so they stay
+            whether or not one has started — a logged rest day in a test
+            week is still the best day to be told the numbers are due.
+            Outside the training-day branch on purpose (PLAN.md M67), and
+            outside the pre-session card for the same reason. */}
+        {day?.over && (
+          <Link
+            href="/finish"
+            className="focus-ring flex items-center gap-2 bg-surface border border-line rounded-2xl p-3"
+          >
+            <Flag size={16} className="text-accent shrink-0" />
+            <span className="flex-1 min-w-0 text-xs leading-relaxed">
+              See what the block moved, and what {program!.name} says comes after it.
+            </span>
+            <ChevronRight size={16} className="text-ink-soft shrink-0" />
+          </Link>
+        )}
+        {day?.test !== undefined && (
+          <Link
+            href="/assessments"
+            className="focus-ring flex items-center gap-2 bg-surface border border-line rounded-2xl p-3"
+          >
+            <Ruler size={16} className="text-accent shrink-0" />
+            <span className="flex-1 min-w-0 text-xs leading-relaxed">{TEST_REASON_LABEL[day.test]}</span>
+            <ChevronRight size={16} className="text-ink-soft shrink-0" />
+          </Link>
+        )}
+
         {!session && (
           <>
-            {day?.sessionType && !day.isRest ? (
-              <Card>
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-lg leading-none">{day.sessionType.icon}</span>
-                  <h2 className="font-bold">{day.sessionType.name}</h2>
-                </div>
-                <p className="text-sm text-ink-soft mb-3">Planned for today.</p>
-                <Button className="w-full" onClick={() => void startSession(day.sessionType!.id)}>
-                  Start this session
-                </Button>
-              </Card>
-            ) : (
-              <Card>
+            <Card>
+              {day?.sessionType && !day.isRest ? (
+                <>
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span className="text-xl leading-none">{day.sessionType.icon}</span>
+                    <h2 className="font-bold text-lg">{day.sessionType.name}</h2>
+                  </div>
+                  <p className="text-sm text-ink-soft mb-3">
+                    Week {day.week} of {program!.weeks}
+                    {day.phase ? ` · ${day.phase.name}` : ''}
+                    {day.isDeload ? ' · Deload week' : ''}
+                    {day.test !== undefined ? ' · Test week' : ''}
+                  </p>
+                </>
+              ) : day?.over ? (
+                /* Before the rest-day branch, which an over day would
+                   otherwise land in — `over` sets `isRest`, so it would read
+                   as a rest day. And before M85 it read "Week 12 of 12 ·
+                   Test week" instead, every day, forever. */
                 <p className="text-sm text-ink-soft mb-3">
-                  {day?.isRest && day.week ? 'Rest day. Log it to bank the recovery.' : 'Nothing planned.'}
+                  {program!.name} has run its course. Nothing is planned until you pick what is next.
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {program?.sessionTypes.map((t) => (
-                    <Button key={t.id} size="sm" variant="outline" onClick={() => void startSession(t.id)}>
-                      {t.icon} {t.name}
-                    </Button>
-                  ))}
-                  {!program && (
-                    <Button size="sm" onClick={() => void startSession()}>
-                      <Plus size={15} /> Log a session
-                    </Button>
-                  )}
+              ) : day ? (
+                <p className="text-sm text-ink-soft mb-3">
+                  Rest day{day.week ? ` · week ${day.week}` : ''}
+                  {day.test !== undefined ? ' · Test week' : ''}. Recovery is training — log it to
+                  bank it.
+                </p>
+              ) : (
+                <p className="text-sm text-ink-soft mb-3">
+                  Nothing planned — no program is running. Log whatever you climb and it still counts
+                  toward everything.
+                </p>
+              )}
+
+              {loadNote !== null && (
+                <p className="text-warn text-xs mb-3 flex items-start gap-1.5">
+                  <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                  <span>{loadNote}. Each one is marked in the session.</span>
+                </p>
+              )}
+
+              <Button className="w-full" onClick={() => void startSession(primary?.id)}>
+                {primary === undefined && <Plus size={15} />}
+                {label}
+              </Button>
+              {others.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs text-ink-soft mb-1.5">Or a different session</p>
+                  <div className="flex flex-wrap gap-2">
+                    {others.map((t) => (
+                      <Button key={t.id} size="sm" variant="outline" onClick={() => void startSession(t.id)}>
+                        {t.icon} {t.name}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-              </Card>
-            )}
+              )}
+            </Card>
 
             <TemplatePicker date={date} onApplied={() => undefined} />
 
@@ -387,7 +462,7 @@ function WarmupCard({
   onWarmedUp,
 }: {
   session: Session;
-  day: ReturnType<typeof plannedDay> | undefined;
+  day: PlannedDay | undefined;
   onWarmedUp: () => void;
 }) {
   const equipment = useProfile((s) => s.equipment);
@@ -491,7 +566,7 @@ function SessionEditor({
 }: {
   session: Session;
   program: ReturnType<typeof getProgram>;
-  day: ReturnType<typeof plannedDay> | undefined;
+  day: PlannedDay | undefined;
   trackId: string | undefined;
   /** The day's other sessions, which this one can be merged into. */
   others: Session[];

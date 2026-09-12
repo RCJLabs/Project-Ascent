@@ -122,9 +122,9 @@ describe('home, once the block has run out', () => {
     await hydrate();
     running(endedBlock(4).start);
     renderAt('/', <HomePage />);
+    await screen.findByText(/has run its course/, {});
     expect(screen.queryByText(/Week 12 of 12/)).toBeNull();
     expect(screen.queryByText(/Test week/)).toBeNull();
-    expect(screen.getByText(/has run its course/)).toBeTruthy();
     const link = screen.getByText(/what the block moved/i).closest('a');
     expect(link?.getAttribute('href')).toContain('/finish');
   });
@@ -135,14 +135,15 @@ describe('home, once the block has run out', () => {
     await hydrate();
     running(endedBlock(4).start);
     renderAt('/', <HomePage />);
+    await screen.findByRole('button', { name: 'Log a session' });
     expect(screen.queryByText('Log rest day')).toBeNull();
-    expect(screen.getByText('Log a session')).toBeTruthy();
   });
 
   it('does not claim no program is running when one is', async () => {
     await hydrate();
     running(endedBlock(4).start);
     renderAt('/', <HomePage />);
+    await screen.findByText(/has run its course/, {});
     expect(screen.queryByText(/no program is running/)).toBeNull();
   });
 
@@ -150,6 +151,7 @@ describe('home, once the block has run out', () => {
     await hydrate();
     running(addDays(today(), -14));
     renderAt('/', <HomePage />);
+    await screen.findByRole('button', { name: /Start session|Log a session|Log rest day/ });
     expect(screen.queryByText(/has run its course/)).toBeNull();
   });
 });

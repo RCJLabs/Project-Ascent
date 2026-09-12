@@ -6,7 +6,7 @@ import { newSession, putSession } from '@/db/sessions';
 import { dayOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
-import { LogPage } from '@/features/log/LogPage';
+import { DayBody } from '@/features/log/LogPage';
 import { ProgramDetailPage } from '@/features/train/ProgramDetailPage';
 
 /**
@@ -39,7 +39,7 @@ async function logging(programId: string, typeId: string): Promise<void> {
     adaptations: {},
     injuries: [],
   });
-  renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+  renderAt('/', <DayBody date={DATE} />);
 }
 
 describe('a menu, in the logger', () => {

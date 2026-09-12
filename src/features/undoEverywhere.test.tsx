@@ -18,7 +18,7 @@ import { MediaCard } from '@/features/media/MediaCard';
 import { MetricDetailPage } from '@/features/assessments/MetricDetailPage';
 import { ObjectiveDetailPage } from '@/features/objectives/ObjectiveDetailPage';
 import { GymPage } from '@/features/gym/GymPage';
-import { LogPage } from '@/features/log/LogPage';
+import { DayBody } from '@/features/log/LogPage';
 
 /**
  * Undo wherever it destroys (PLAN.md M79).
@@ -210,7 +210,7 @@ describe('a tally row taken to zero', () => {
 
   it('in the logger comes back too', async () => {
     await running();
-    renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+    renderAt('/', <DayBody date={DATE} />);
     fireEvent.click(await screen.findByRole('button', { name: 'One fewer V6' }));
     await waitFor(async () => expect((await getSession(ID))!.climbs).toHaveLength(1));
     expect(offer()?.label).toBe('V6 tried');
@@ -229,7 +229,7 @@ describe('a project burn taken to zero', () => {
     } as never);
     await hydrate();
     useProfile.setState({ activeProgramId: null, startDates: {} });
-    renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+    renderAt('/', <DayBody date={DATE} />);
     const projectsCard = (await screen.findByText('Projects')).closest('section, div') as HTMLElement;
     const minus = within(projectsCard).getAllByRole('button').find((b) => /fewer/.test(b.getAttribute('aria-label') ?? '') || b.textContent === '−')!;
     fireEvent.click(minus);

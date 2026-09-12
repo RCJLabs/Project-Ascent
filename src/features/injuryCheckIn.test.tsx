@@ -5,7 +5,7 @@ import { getSession, newSession, putSession } from '@/db/sessions';
 import { addDays, today } from '@/engine/dates';
 import { useProfile, type Injury } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
-import { LogPage } from '@/features/log/LogPage';
+import { DayBody } from '@/features/log/LogPage';
 import { InjuryPage } from '@/features/injury/InjuryPage';
 
 /**
@@ -33,7 +33,7 @@ async function logging(injuries: Injury[], sessions = [newSession(DATE, 0, { com
   for (const s of sessions) await putSession(s as never);
   await hydrate();
   useProfile.setState({ injuries });
-  renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+  renderAt('/', <DayBody date={DATE} />);
 }
 
 const stored = async () => (await getSession(`${DATE}#0`))?.checkIn;

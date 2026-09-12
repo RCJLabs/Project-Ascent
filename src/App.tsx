@@ -10,11 +10,11 @@ import { WelcomePage } from '@/features/onboarding/WelcomePage';
 /**
  * Every route is its own chunk but the four you cannot defer.
  *
- * Home is where the app opens, the logger is what it is for, onboarding is
- * the first thing a new install shows, and the placeholder is a few lines.
- * Everything else is a tap away at most, and the service worker precaches
- * every chunk — so after the first visit a lazy route is a cache read, and
- * the app is still fully offline.
+ * Home is where the app opens, onboarding is the first thing a new install
+ * shows, `/today` is a launcher shortcut, and the placeholder is a few
+ * lines. Everything else is a tap away at most, and the service worker
+ * precaches every chunk — so after the first visit a lazy route is a cache
+ * read, and the app is still fully offline.
  *
  * It started as six routes split by hand because they carried obvious
  * weight — the canvas game, the 844-line editor, the prose. That left
@@ -54,12 +54,16 @@ const BuilderPage = lazy(() => import('@/features/builder/BuilderPage').then((m)
 const SessionEditorPage = lazy(() => import('@/features/builder/SessionEditorPage').then((m) => ({ default: m.SessionEditorPage })));
 const GuideList = lazy(() => import('@/features/guides/GuidePage').then((m) => ({ default: m.GuideList })));
 const GuidePage = lazy(() => import('@/features/guides/GuidePage').then((m) => ({ default: m.GuidePage })));
-const SearchPage = lazy(() => import('@/features/search/SearchPage').then((m) => ({ default: m.SearchPage })));
+const GamePage = lazy(() => import('@/features/game/GamePage').then((m) => ({ default: m.GamePage })));
 const GlossaryPage = lazy(() => import('@/features/glossary/GlossaryPage').then((m) => ({ default: m.GlossaryPage })));
 const DrillsPage = lazy(() => import('@/features/drills/DrillsPage').then((m) => ({ default: m.DrillsPage })));
 const DrillPage = lazy(() => import('@/features/drills/DrillPage').then((m) => ({ default: m.DrillPage })));
-/** The logger, and by a distance the largest route. 44.81KB gzipped of
- *  first load when it was eager — see `perf.test.ts` (PLAN.md M115). */
+/** The logger, and by a distance the largest route. Lazy here, but Home
+ *  imports its body statically for today (PLAN.md M117 — measured against
+ *  a split, see `perf.test.ts`), so the code is in the entry chunk and this
+ *  `lazy()` costs a wrapper and nothing else. It stays lazy so that a
+ *  future Home that does *not* need the logger gets the split back for
+ *  free. */
 const LogPage = lazy(() => import('@/features/log/LogPage').then((m) => ({ default: m.LogPage })));
 const AttachPage = lazy(() => import('@/features/media/AttachPage').then((m) => ({ default: m.AttachPage })));
 
@@ -265,7 +269,7 @@ function Shell() {
           <Route path="/projects/:id" component={ProjectDetailPage} />
           <Route path="/projects" component={ProjectsPage} />
           <Route path="/injury/:id" component={InjuryPage} />
-          <Route path="/search" component={SearchPage} />
+          <Route path="/game" component={GamePage} />
           <Route path="/guides/:id/:section" component={GuidePage} />
           <Route path="/guides/:id" component={GuidePage} />
           <Route path="/guides" component={GuideList} />

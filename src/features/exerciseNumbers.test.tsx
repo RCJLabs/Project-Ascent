@@ -7,7 +7,7 @@ import { addDays, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';
 import { hydrate, renderAt, reset } from '@/test/render';
-import { LogPage } from '@/features/log/LogPage';
+import { DayBody } from '@/features/log/LogPage';
 
 /**
  * Logging the load, not just the tick (PLAN.md M98).
@@ -48,7 +48,7 @@ async function hammer(patch: Record<string, unknown> = {}, units: 'imperial' | '
     adaptations: {},
   });
   useSettings.setState({ units });
-  renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+  renderAt('/', <DayBody date={DATE} />);
 }
 
 /** Seed an earlier session that logged the same exercise. */
@@ -78,7 +78,7 @@ async function withHistory(entry: Record<string, unknown>): Promise<void> {
     weekOverrides: {},
     adaptations: {},
   });
-  renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+  renderAt('/', <DayBody date={DATE} />);
 }
 
 const stored = async () => (await getSession(`${DATE}#0`))?.exercises;

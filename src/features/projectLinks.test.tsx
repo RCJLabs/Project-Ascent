@@ -6,7 +6,7 @@ import { getSession, newSession, putSession, type ProjectAttempt } from '@/db/se
 import { today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
-import { LogPage } from '@/features/log/LogPage';
+import { DayBody } from '@/features/log/LogPage';
 import { ProjectDetailPage } from '@/features/projects/ProjectDetailPage';
 
 /**
@@ -65,13 +65,13 @@ const stored = async () => (await getSession(`${DATE}#0`))?.projectAttempts;
 describe('logging where a burn started', () => {
   it('asks, once there is a burn to ask about', async () => {
     await project([burn({})]);
-    renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+    renderAt('/', <DayBody date={DATE} />);
     expect(screen.getByLabelText(/Where the fell-high burns started/)).toBeTruthy();
   });
 
   it('keeps what it is given', async () => {
     await project([burn({})]);
-    renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+    renderAt('/', <DayBody date={DATE} />);
     fireEvent.change(screen.getByLabelText(/Where the fell-high burns started/), {
       target: { value: '30' },
     });
@@ -81,13 +81,13 @@ describe('logging where a burn started', () => {
   // Blank is the ground, which is what every burn logged before this meant.
   it('stores nothing when it is left alone', async () => {
     await project([burn({})]);
-    renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+    renderAt('/', <DayBody date={DATE} />);
     expect((await stored())?.[0]).not.toHaveProperty('from');
   });
 
   it('clears back to the ground when emptied', async () => {
     await project([burn({ from: 30 })]);
-    renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+    renderAt('/', <DayBody date={DATE} />);
     const box = screen.getByLabelText(/Where the fell-high burns started/);
     expect((box as HTMLInputElement).value).toBe('30');
     fireEvent.change(box, { target: { value: '' } });
@@ -96,7 +96,7 @@ describe('logging where a burn started', () => {
 
   it('refuses a percentage off the climb', async () => {
     await project([burn({})]);
-    renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+    renderAt('/', <DayBody date={DATE} />);
     fireEvent.change(screen.getByLabelText(/Where the fell-high burns started/), {
       target: { value: '250' },
     });
@@ -107,7 +107,7 @@ describe('logging where a burn started', () => {
   // the whole climb by definition.
   it('does not ask about a rehearsal or a send', async () => {
     await project([burn({ outcome: 'worked' }), burn({ id: 'a2', outcome: 'send', count: 1 })]);
-    renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+    renderAt('/', <DayBody date={DATE} />);
     expect(screen.queryByLabelText(/Where the worked burns started/)).toBeNull();
     expect(screen.queryByLabelText(/Where the send burns started/)).toBeNull();
   });
@@ -126,7 +126,7 @@ describe('logging where a burn started', () => {
    */
   it('qualifies the session question rather than calling it the high point', async () => {
     await projecting([burn({})]);
-    renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
+    renderAt('/', <DayBody date={DATE} />);
     expect(screen.getByLabelText('High point this session')).toBeTruthy();
     expect(screen.queryByLabelText('High point')).toBeNull();
   });

@@ -1,5 +1,5 @@
 /**
- * The app's shape, in one place (PLAN.md M16).
+ * The app's shape, in one place (PLAN.md M16, reshaped in M117).
  *
  * Two problems this solves at once.
  *
@@ -9,11 +9,20 @@
  * point at the wrong parent — or, when a page gained a second way in, to
  * point at a parent you did not come from. Derived from here instead.
  *
- * **Finding anything.** Five tabs and twenty-six routes: the glossary, the
+ * **Finding anything.** Five tabs and forty-odd routes: the glossary, the
  * guides, the career timeline, objectives, the coach, the board and the
  * altimeter are all reachable only by knowing which page hides them. The
- * search page reads this table, so a destination is listed because it
+ * search sheet reads this table, so a destination is listed because it
  * exists rather than because someone remembered to add it.
+ *
+ * ## The five roots (M117)
+ *
+ * Home *is* today's session; Train holds the programs, the finder, the
+ * builder, objectives and projects; Calendar is the month; Progress is the
+ * numbers; Game is everything training earns. Search is not a tab — it is a
+ * button in the shell's header on every page, which is what makes "one tap
+ * to search, one to the result" hold from anywhere without spending a tab
+ * on it.
  */
 
 export interface RouteMeta {
@@ -25,9 +34,9 @@ export interface RouteMeta {
   parent: string | null;
   /** Extra words someone might search for that are not in the title. */
   keywords?: string[];
-  /** Grouping in the search page's browse list. Absent means unlisted —
+  /** Grouping in the search sheet's browse list. Absent means unlisted —
    *  detail routes with an id in them cannot be linked to blind. */
-  group?: 'Train' | 'Log' | 'Progress' | 'Climber' | 'Reference' | 'Play';
+  group?: 'Train' | 'Log' | 'Progress' | 'Game' | 'Reference';
 }
 
 /**
@@ -41,10 +50,8 @@ export const ROUTES: RouteMeta[] = [
   { path: '/', title: 'Home', parent: null },
   { path: '/train', title: 'Train', parent: null },
   { path: '/calendar', title: 'Calendar', parent: null },
-  { path: '/projects', title: 'Projects', parent: null },
   { path: '/progress', title: 'Progress', parent: null },
-
-  { path: '/search', title: 'Search', parent: null },
+  { path: '/game', title: 'Game', parent: null },
 
   // Train
   { path: '/find', title: 'Find my program', parent: '/train', group: 'Train', keywords: ['finder', 'recommend', 'which program'] },
@@ -55,14 +62,16 @@ export const ROUTES: RouteMeta[] = [
   { path: '/build', title: 'Your programs', parent: '/train', group: 'Train', keywords: ['builder', 'write', 'custom', 'fork'] },
   { path: '/build/:id', title: 'Edit a program', parent: '/build' },
   { path: '/build/:id/session/:typeId', title: 'Edit a session', parent: '/build/:id' },
-  { path: '/objectives', title: 'Objectives', parent: '/train', group: 'Train', keywords: ['goal', 'project', 'training for'] },
+  { path: '/objectives', title: 'Objectives', parent: '/train', group: 'Train', keywords: ['goal', 'training for'] },
   { path: '/objectives/:id', title: 'Objective', parent: '/objectives' },
+  { path: '/projects', title: 'Projects', parent: '/train', group: 'Train', keywords: ['project', 'burns', 'high point', 'redpoint', 'working a climb'] },
+  { path: '/projects/:id', title: 'Project', parent: '/projects' },
 
-  // Log
+  // Log. Home is today's session; these are the other ways into a day.
   { path: '/log/:date', title: 'Log', parent: '/calendar' },
-  { path: '/gym', title: 'Gym mode', parent: '/calendar', group: 'Log', keywords: ['tally', 'rest timer', 'at the wall', 'mid-session'] },
-  { path: '/today', title: 'Today', parent: '/calendar', group: 'Log', keywords: ['log a session'] },
-  { path: '/board', title: 'The board', parent: '/', group: 'Log', keywords: ['challenges', 'bounties', 'daily', 'weekly'] },
+  { path: '/today', title: 'Today', parent: '/', group: 'Log', keywords: ['log a session', 'start a session'] },
+  { path: '/gym', title: 'Gym mode', parent: '/', group: 'Log', keywords: ['tally', 'rest timer', 'at the wall', 'mid-session'] },
+  { path: '/attach', title: 'Add a photo', parent: '/', group: 'Log', keywords: ['photo', 'picture', 'image', 'camera', 'attach', 'upload', 'beta shot', 'share'] },
 
   // Progress
   { path: '/journal', title: 'Journal', parent: '/progress', group: 'Progress', keywords: ['notes', 'beta', 'write-up'] },
@@ -71,15 +80,17 @@ export const ROUTES: RouteMeta[] = [
   { path: '/career', title: 'Career', parent: '/progress', group: 'Progress', keywords: ['milestones', 'timeline', 'history'] },
   { path: '/year', title: 'Year in review', parent: '/career', group: 'Progress', keywords: ['annual', 'season', 'recap'] },
   { path: '/year/:year', title: 'Year in review', parent: '/career' },
-  { path: '/review', title: 'Weekly review', parent: '/', group: 'Progress', keywords: ['week', 'recap', 'sunday'] },
-  { path: '/projects/:id', title: 'Project', parent: '/projects' },
+  { path: '/review', title: 'Weekly review', parent: '/progress', group: 'Progress', keywords: ['week', 'recap', 'sunday'] },
+  { path: '/coach', title: "Coach's Corner", parent: '/', group: 'Progress', keywords: ['tips', 'advice', 'observations'] },
 
-  // Climber
-  { path: '/climber', title: 'Your climber', parent: '/', group: 'Climber', keywords: ['stats', 'level', 'avatar', 'vitality', 'rank', 'injuries', 'injury'] },
-  { path: '/skills', title: 'Skill trees', parent: '/climber', group: 'Climber', keywords: ['unlock', 'nodes', 'power', 'tension'] },
-  { path: '/achievements', title: 'Achievements', parent: '/climber', group: 'Climber', keywords: ['badges', 'earned', 'trophies', 'awards'] },
-  { path: '/altimeter', title: 'The altimeter', parent: '/', group: 'Climber', keywords: ['height', 'feet', 'everest', 'metres'] },
-  { path: '/coach', title: "Coach's Corner", parent: '/', group: 'Climber', keywords: ['tips', 'advice', 'observations'] },
+  // Game
+  { path: '/climber', title: 'Your climber', parent: '/game', group: 'Game', keywords: ['stats', 'level', 'avatar', 'vitality', 'rank', 'injuries', 'injury'] },
+  { path: '/skills', title: 'Skill trees', parent: '/climber', group: 'Game', keywords: ['unlock', 'nodes', 'power', 'tension'] },
+  { path: '/achievements', title: 'Achievements', parent: '/climber', group: 'Game', keywords: ['badges', 'earned', 'trophies', 'awards'] },
+  { path: '/altimeter', title: 'The altimeter', parent: '/game', group: 'Game', keywords: ['height', 'feet', 'everest', 'metres'] },
+  { path: '/board', title: 'The board', parent: '/game', group: 'Game', keywords: ['challenges', 'bounties', 'daily', 'weekly'] },
+  { path: '/ascent', title: 'The Ascent', parent: '/game', group: 'Game', keywords: ['game', 'minigame', 'free solo', 'play'] },
+  { path: '/injury/:id', title: 'Injury', parent: '/climber' },
 
   // Reference
   { path: '/settings', title: 'Settings', parent: '/', group: 'Reference', keywords: ['theme', 'backup', 'export', 'grades', 'sound', 'equipment'] },
@@ -91,11 +102,6 @@ export const ROUTES: RouteMeta[] = [
   { path: '/drills', title: 'Drills', parent: '/settings', group: 'Reference', keywords: ['library', 'exercises', 'technique', 'session ideas', 'what to do'] },
   { path: '/drills/:id', title: 'Drill', parent: '/drills' },
   { path: '/data', title: 'Your data', parent: '/settings', group: 'Reference', keywords: ['storage', 'records', 'health', 'orphaned', 'unreadable', 'tidy'] },
-  { path: '/attach', title: 'Add a photo', parent: '/', group: 'Log', keywords: ['photo', 'picture', 'image', 'camera', 'attach', 'upload', 'beta shot', 'share'] },
-  { path: '/injury/:id', title: 'Injury', parent: '/climber' },
-
-  // Play
-  { path: '/ascent', title: 'The Ascent', parent: '/', group: 'Play', keywords: ['game', 'minigame', 'free solo'] },
 ];
 
 const BY_PATH = new Map(ROUTES.map((route) => [route.path, route]));
@@ -127,4 +133,17 @@ export function parentOf(location: string): { href: string; title: string } | nu
 /** Everything worth listing when someone is browsing rather than searching. */
 export function browsable(): RouteMeta[] {
   return ROUTES.filter((route) => route.group !== undefined);
+}
+
+/**
+ * Where a day's log lives (PLAN.md M117).
+ *
+ * Today is Home. Every other day is `/log/:date`. One address per day
+ * rather than two for today, so the day arrows, the calendar, the coach's
+ * "log today" and a launcher shortcut all land on the same screen with the
+ * same cards under it — `LogPage` bounces `/log/<today>` here for the same
+ * reason.
+ */
+export function logHref(date: string, todayKey: string): string {
+  return date === todayKey ? '/' : `/log/${date}`;
 }
