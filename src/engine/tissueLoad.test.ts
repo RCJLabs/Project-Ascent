@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Session } from '@/db/sessions';
+import { partsInText } from './bodyLoad';
 import { addDays } from './dates';
 import {
   ALL_PARTS,
@@ -100,6 +101,26 @@ describe('what a session is taken to load', () => {
     expect(load.sessionCount).toBe(1);
     expect(load.unreadSessions).toBe(1);
     expect(load.parts.every((p) => p.sessions === 0)).toBe(true);
+  });
+});
+
+describe('one session, one count', () => {
+  it('does not charge a tissue twice for naming it', () => {
+    // A climbing session whose notes also say "fingers" reaches the same
+    // tissue from both the text scan and the climbing rule. Counting it
+    // twice doubles that session's load on the chart and puts the busiest
+    // tissue in the wrong place — the number is a comparison, and this is
+    // the one way it silently stops being one.
+    // "crimp" is a word the scan knows; the bare word "fingers" is not, and
+    // a fixture using it proves nothing — the first draft of this test did,
+    // and passed while the duplicate it was meant to catch went straight
+    // through.
+    expect(partsInText('crimp')).toContain('fingers');
+
+    const quiet = build([climbing(TO)]);
+    const wordy = build([climbing(TO, { notes: 'crimp ladders' })]);
+    expect(partFor(wordy, 'fingers').load).toBe(partFor(quiet, 'fingers').load);
+    expect(partFor(wordy, 'fingers').sessions).toBe(1);
   });
 });
 

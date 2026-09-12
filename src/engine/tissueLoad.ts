@@ -103,6 +103,23 @@ function sessionText(session: Session): string {
     .join(' ');
 }
 
+/**
+ * What one session loaded (PLAN.md M112).
+ *
+ * Extracted from `tissueLoad`'s own loop rather than written again. The
+ * cooldown needs exactly this question answered for a single session, and
+ * a second implementation would be a second answer — the chart saying a
+ * session loaded your shoulder while the cooldown ignores it.
+ *
+ * Climbing counts even when nothing was written down, which is the rule
+ * that makes this usable at all: most logged sessions carry no prose.
+ */
+export function sessionParts(session: Session, extraText?: string): BodyPart[] {
+  const scanned = partsInText(`${sessionText(session)} ${extraText ?? ''}`);
+  const climbed = session.climbs.length > 0 ? CLIMBING_PARTS : [];
+  return [...new Set([...scanned, ...climbed])];
+}
+
 export function tissueLoad(input: TissueInput): TissueLoad {
   const days = input.days ?? TISSUE_DAYS;
   const from = addDays(input.to, -(days - 1));
@@ -118,11 +135,7 @@ export function tissueLoad(input: TissueInput): TissueLoad {
     if (session.date < from || session.date > input.to) continue;
     sessionCount += 1;
 
-    const words = `${sessionText(session)} ${input.textFor?.(session) ?? ''}`;
-    const scanned = partsInText(words);
-    // Climbing counts even when nothing was written down.
-    const climbed = session.climbs.length > 0 ? CLIMBING_PARTS : [];
-    const parts = [...new Set([...scanned, ...climbed])];
+    const parts = sessionParts(session, input.textFor?.(session));
 
     if (parts.length === 0) {
       unreadSessions += 1;
