@@ -27,6 +27,9 @@ import { EmptyState } from '@/ui/EmptyState';
 import { PageGrid } from '@/ui/PageGrid';
 import { PageHeader } from '@/ui/PageHeader';
 import { PageSkeleton } from '@/ui/Skeleton';
+import { activeObjectives } from '@/engine/objectives';
+import { nextInSeason, season, soonestSeason } from '@/engine/season';
+import { useObjectives } from '@/store/objectives';
 import { RecordNotFound } from '@/ui/RecordNotFound';
 import { BlockReportChart, BlockReportRest } from '@/ui/charts/BlockReportChart';
 
@@ -128,6 +131,9 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
   // A url naming a block the history does not have is answered as a missing
   // record, like every other `:id` route: quietly showing a *different*
   // block than the one asked for is the worse failure.
+  const objectives = useObjectives((s) => s.objectives);
+  const adaptations = useProfile((s) => s.adaptations);
+
   const chosen = useMemo(
     () => (asked === null ? (history[0] ?? null) : findBlock(history, asked)),
     [history, asked],
@@ -208,6 +214,29 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
   }
 
   const { status, report, graduation, owed, next } = end;
+
+  /**
+   * What the climber already decided (PLAN.md M112c).
+   *
+   * The authored `nextPrograms` below are what the app *advises*, with a
+   * reason each. This is a different claim — it is what they planned — and
+   * on their own page it outranks advice, which is why it sits above.
+   *
+   * Keyed on the block's end date rather than its id, because a season may
+   * name the same program twice and only the dates say which one just ran.
+   */
+  const inSeason = (() => {
+    const objective = soonestSeason(activeObjectives(objectives));
+    if (!objective?.targetDate || !objective.season?.length) return null;
+    const plan = season({
+      programIds: objective.season,
+      targetDate: objective.targetDate,
+      today: today(),
+      adaptations,
+    });
+    const found = nextInSeason(plan, end.program.id, status.to);
+    return found ? { objective, found } : null;
+  })();
   const when = fromKey(status.to).toLocaleDateString(undefined, {
     day: 'numeric',
     month: 'short',
@@ -330,6 +359,43 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
         {graduation !== '' && (
           <Card title="What this block was for">
             <p className="text-sm leading-relaxed">{graduation}</p>
+          </Card>
+        )}
+
+        {inSeason && (
+          <Card title="Next in your season">
+            <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+              Block {inSeason.found.position} of {inSeason.found.total} on the way to{' '}
+              <Link href={`/objectives/${inSeason.objective.id}`} className="underline">
+                {inSeason.objective.name}
+              </Link>
+              .
+            </p>
+            {inSeason.found.next ? (
+              <Link
+                href={`/train/${inSeason.found.next.programId}`}
+                className="focus-ring block bg-sunken rounded-xl p-3"
+              >
+                <div className="flex items-baseline gap-2">
+                  <span className="font-semibold text-sm">{inSeason.found.next.program.name}</span>
+                  <span className="text-xs text-ink-soft shrink-0 ml-auto">
+                    {inSeason.found.next.weeks} weeks
+                  </span>
+                </div>
+                <p className="text-sm text-ink-soft mt-0.5 leading-relaxed">
+                  You planned this one next. Starting it is still your call — the dates move with
+                  whenever you actually begin.
+                </p>
+              </Link>
+            ) : (
+              /* The season is over, which is worth saying rather than
+                 leaving blank. It never reads as a pass or a fail:
+                 `targetDate` is documented as not a deadline that can be
+                 failed, and this is the same date. */
+              <p className="text-sm text-ink-soft leading-relaxed">
+                That was the last block you planned. What comes after it is open.
+              </p>
+            )}
           </Card>
         )}
 

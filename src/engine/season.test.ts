@@ -3,7 +3,7 @@ import type { ProgramId } from '@/content/types';
 import { getProgram } from '@/content/programs';
 import { addDays, daysBetween, startOfWeek } from './dates';
 import { MAX_RUNWAY_WEEKS, peakPlan } from './peak';
-import { MAX_BLOCKS, blockOn, describeSeason, season, soonestSeason, wantsSeason } from './season';
+import { MAX_BLOCKS, blockOn, describeSeason, nextInSeason, season, soonestSeason, wantsSeason } from './season';
 
 /**
  * A season, as a sequence of blocks (PLAN.md M109).
@@ -297,5 +297,85 @@ describe('picking one season out of several', () => {
 
   it('is null when there is nothing at all', () => {
     expect(soonestSeason([])).toBe(null);
+  });
+});
+
+describe('what the climber said they would do next', () => {
+  const built = (ids: string[] = ['base_camp', 'iron_grip', 'the_cruiser']) =>
+    season({ programIds: ids as never, targetDate: '2026-10-04', today: '2026-01-05' });
+
+  it('names the block after the one that ended', () => {
+    const s = built();
+    const found = nextInSeason(s, 'base_camp', s.blocks[0]!.to)!;
+    expect(found.finished.programId).toBe('base_camp');
+    expect(found.next?.programId).toBe(s.blocks[1]!.programId);
+  });
+
+  it('says where in the sequence it sits', () => {
+    const s = built();
+    const found = nextInSeason(s, s.blocks[1]!.programId, s.blocks[1]!.to)!;
+    expect(found.position).toBe(2);
+    expect(found.total).toBe(3);
+  });
+
+  it('has no next after the last block', () => {
+    // The end of the season, which is a thing to say rather than a blank.
+    const s = built();
+    const last = s.blocks[s.blocks.length - 1]!;
+    const found = nextInSeason(s, last.programId, last.to)!;
+    expect(found.next).toBe(null);
+    expect(found.position).toBe(found.total);
+  });
+
+  it('is null for a program the season never named', () => {
+    expect(nextInSeason(built(), 'lockdown', '2026-05-01')).toBe(null);
+  });
+
+  it('is null for a season with no blocks', () => {
+    const empty = season({ programIds: [], targetDate: '2026-10-04', today: '2026-01-05' });
+    expect(nextInSeason(empty, 'base_camp', '2026-05-01')).toBe(null);
+  });
+
+  it('picks the occurrence that actually just ended', () => {
+    // base, power, base, peak is a real season shape. Taking the first
+    // match would send a climber who has just finished the *second* base
+    // block back to the block they ran months ago.
+    const s = built(['base_camp', 'iron_grip', 'base_camp', 'the_cruiser']);
+    const second = s.blocks[2]!;
+    expect(second.programId).toBe('base_camp');
+
+    const found = nextInSeason(s, 'base_camp', second.to)!;
+    expect(found.position).toBe(3);
+    expect(found.next?.programId).toBe('the_cruiser');
+  });
+
+  it('still finds the first occurrence when that is the one that ended', () => {
+    const s = built(['base_camp', 'iron_grip', 'base_camp', 'the_cruiser']);
+    const found = nextInSeason(s, 'base_camp', s.blocks[0]!.to)!;
+    expect(found.position).toBe(1);
+    expect(found.next?.programId).toBe('iron_grip');
+  });
+
+  it('keeps a date in the middle of a block inside that block', () => {
+    // Every other fixture here uses a block's own last day, where the
+    // nearest-edge measure is trivially zero. This is the interesting case:
+    // deep inside a block, where the distance to your own edges is weeks.
+    // It still resolves to that block, because reaching anywhere outside
+    // means crossing its boundary first.
+    const s = built();
+    const first = s.blocks[0]!;
+    const middle = addDays(first.from, Math.floor(daysBetween(first.from, first.to) / 2));
+
+    const found = nextInSeason(s, 'base_camp', middle)!;
+    expect(found.position).toBe(1);
+    expect(found.next?.programId).toBe(s.blocks[1]!.programId);
+  });
+
+  it('copes with a date outside the season entirely', () => {
+    // A block finished late, or a season re-dated since. The nearest window
+    // is still the honest answer.
+    const s = built();
+    const found = nextInSeason(s, 'base_camp', addDays(s.blocks[0]!.from, -90))!;
+    expect(found.position).toBe(1);
   });
 });

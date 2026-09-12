@@ -4643,6 +4643,42 @@ entry above.)*
   Verified in a browser in both themes at 430px, including paging to the month where one
   block hands over to the next.
 
+- **M112c — The block you said you would run next.** *Done, and M112b is what unblocked it.*
+  **The premise was right and had expired.** M109 deferred this because it "wants the season
+  to be reachable from a block rather than from an objective, which is a lookup that does not
+  exist yet". That lookup is `soonestSeason`, built the day before for the calendar — so the
+  reason it was parked had already gone by the time it came up.
+  **What the page was doing.** `/finish` offered the program author's `nextPrograms`, a reason
+  authored per destination, and the finder. Nothing else. So a climber who had planned four
+  blocks and finished the first was asked to choose again, by a page that had been told the
+  answer and forgotten it.
+  **Both cards, in that order.** The authored successors are what the app *advises*; the
+  season is what the climber *decided*. Different claims, and on their own page the decision
+  outranks the advice — so the season card sits above, and a test holds the order and that
+  neither replaces the other.
+  **It never becomes a commitment.** *"Starting it is still your call — the dates move with
+  whenever you actually begin."* A season's dates are derived backwards from the target, not
+  scheduled, and the end of one reads as *"That was the last block you planned. What comes
+  after it is open."* — never as a deadline passed. `targetDate` is documented as not a
+  deadline that can be failed and this is the same date.
+  **A season can name the same program twice** — base, power, base, peak is a real shape — so
+  the occurrence that just ended is found by *date*, not by first match. Taking the first
+  would send a climber who has finished the second base block back to the one they ran months
+  ago.
+  **Measured, not asserted.** 19 mutations across two rounds, 15 killed. **One survivor was
+  a piece of reasoning of mine that was simply wrong.** `nextInSeason` had an `inside ? 0`
+  fast path in its distance measure, and when the mutation killing it survived I argued it
+  was load-bearing — that mid-block, a neighbour's edge would be nearer than your own. It is
+  not: to reach anywhere outside a block you cross its own boundary first, so a date inside
+  one is always nearest to that one. The fast path could never change which block won.
+  Deleted, and the test that was written to defend it now documents the real reason instead.
+  Two further survivors were test gaps (a sent or shelved objective still offering a next
+  block), and one was **a badly-written mutation of mine** that added an unused variable
+  rather than reordering anything — the M91 mistake again.
+  **Budget.** Unchanged: `/finish` is a lazy route.
+  Verified in a browser in both themes at 430px: *"Block 1 of 3 on the way to Spain trip"*,
+  with Iron Grip named and the authored successors still below it.
+
 **Open coaching calls.** Nine judgements the app is currently making on the coach's
 behalf, each one stated at its milestone rather than made quietly, none of them settled.
 Every site is tagged so this list can be regenerated with `grep -n '\*\*COACH' PLAN.md`

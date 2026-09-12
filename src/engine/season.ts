@@ -52,7 +52,7 @@
 import { getProgram } from '@/content/programs';
 import type { Program, ProgramId } from '@/content/types';
 import { adaptProgram } from './adapt';
-import { addDays, startOfWeek } from './dates';
+import { addDays, daysBetween, startOfWeek } from './dates';
 import { MAX_RUNWAY_WEEKS, runwayWeeks } from './peak';
 
 /** Blocks in one season. More is a plan nobody keeps. */
@@ -213,4 +213,56 @@ export function soonestSeason<T extends { targetDate?: string; season?: readonly
   const soonest = withSeason.reduce((a, b) => (a.targetDate! <= b.targetDate! ? a : b));
   const tied = withSeason.filter((o) => o.targetDate === soonest.targetDate);
   return tied.length === 1 ? soonest : null;
+}
+
+export interface SeasonNext {
+  /** The block that just ended, as the season has it. */
+  finished: SeasonBlock;
+  /** The one after it, or null when that was the last. */
+  next: SeasonBlock | null;
+  /** Where it sits in the sequence, 1-based, and how long the sequence is. */
+  position: number;
+  total: number;
+}
+
+/**
+ * What the climber said they would do next (PLAN.md M112c).
+ *
+ * `/finish` offers the program author's successors and the finder, and
+ * before this it offered nothing else — so a climber who had planned four
+ * blocks and finished the first was asked to choose again, by a page that
+ * had been told the answer and forgotten it.
+ *
+ * This is deliberately not a recommendation. The authored `nextPrograms`
+ * carry a reason each and remain what the app *advises*; this is what the
+ * climber already decided, which is a different claim and outranks it on
+ * their own page.
+ *
+ * A season may name the same program twice — base, power, base, peak is a
+ * real shape — so the occurrence that just ended is the one whose window
+ * sits nearest the date it ended on, rather than whichever comes first.
+ */
+export function nextInSeason(s: Season, programId: ProgramId, on: string): SeasonNext | null {
+  // Nearest edge, with no special case for a date inside the window: to
+  // reach anywhere outside a block you cross its own boundary first, so a
+  // date inside one is always nearest to that one. An `inside ? 0` fast path
+  // stood here and no mutation could kill it, because it could never change
+  // which block won.
+  const gap = (block: SeasonBlock) =>
+    Math.min(Math.abs(daysBetween(block.from, on)), Math.abs(daysBetween(block.to, on)));
+
+  let best: { block: SeasonBlock; index: number } | null = null;
+  s.blocks.forEach((block, index) => {
+    if (block.programId !== programId) return;
+    if (best === null || gap(block) < gap(best.block)) best = { block, index };
+  });
+  if (best === null) return null;
+
+  const found: { block: SeasonBlock; index: number } = best;
+  return {
+    finished: found.block,
+    next: s.blocks[found.index + 1] ?? null,
+    position: found.index + 1,
+    total: s.blocks.length,
+  };
 }
