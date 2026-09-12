@@ -203,7 +203,7 @@ describe('the bundle stays small', () => {
   const dist = 'dist/assets';
   const built = existsSync(dist);
 
-  it.runIf(built)('keeps the first load under 216.2KB gzipped', () => {
+  it.runIf(built)('keeps the first load under 216.8KB gzipped', () => {
     const html = readFileSync('dist/index.html', 'utf8');
     const entry = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)?.[1];
     expect(entry, 'no entry chunk in index.html').toBeDefined();
@@ -234,7 +234,15 @@ describe('the bundle stays small', () => {
     // here on purpose — 217 would have handed the next milestone 0.88KB of
     // free space, which is the headroom a regression hides in, three
     // paragraphs above.
-    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(216.2);
+    //
+    // 216.2 → 216.8 at M104, and the interesting half is what it did not
+    // cost. One coach rule reading M91's `blockAdherence` put 1.75KB into
+    // the entry chunk, because `HomePage` imported `useTips` from
+    // `CoachPage.tsx` — so `lazy(CoachPage)` in the router had been buying
+    // nothing at all, and the page's JSX, tone table and icons were
+    // first-load along with it. Splitting the hook into its own module gave
+    // 1.20KB back and made the lazy boundary real. Net: 215.71 → 216.75.
+    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(216.8);
   });
 
   it.runIf(built)('keeps every program body out of the entry chunk', () => {

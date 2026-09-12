@@ -4018,19 +4018,51 @@ materially wrong premise. Sizes are guesses.*
   comment warns regressions hide in.
   Verified in both themes at 430px. 3,224 tests pass.
 
-- **M104 — The coach rules the plan promised.** *Proposed. Size S–M.*
-  **Premise.** §6.6 named the triggers worth keeping: PR reactions, outdoor re-entry,
-  *project-escalation nudges at 5/10/20 attempts, hangboard-gap warnings, missing-domain
-  observations*. The coach has ten rules and none of the last three. The data for all
-  three exists: attempts per project (M69), `daysSinceLoaded('fingers')` against a program
-  that has finger blocks, `drillsByCategory` at zero across a whole block. Two more the
-  log supports and nothing says: warmups skipped (`recentSkippedWarmups` is read only by
-  vitality, which turns it into a posture) and a retest owed (`blockEnd` computes it and
-  shows it once, on `/finish`).
-  **Shape.** Five rules, each with a `signature` so dismissal works, each slotted into the
-  existing weights, each with a fixture that earns it and one that does not.
-  **Never.** Say the same thing the weekly review says. The line between the two is
-  written in `coach.ts` and this has to respect it.
+- **M104 — The coach rules the plan promised.** *Done. Size XS, not S–M — one rule.*
+  **Premise, corrected before a line was written.** The milestone claimed the coach "has
+  ten rules and none of the last three". It has **eleven**, and **two of the three ship
+  already**, in richer form than proposed. `projectBurns` does project escalation at
+  5/10/20/**40**, per project, escalating its own signature, with a body that changes on
+  whether a high point is recorded, capped at two because "two loud projects at once is a
+  to-do list". `missingDomains` does missing-domain observations with **five** domains,
+  each gated on an `after` threshold so a gap is a pattern rather than a coincidence,
+  capped at one because "a list of five things you are not doing reads as an indictment".
+  **The third is not buildable as written.** A hangboard-gap warning on
+  `daysSinceLoaded('fingers')` rests on `CLIMBING_PARTS`, which attributes fingers to
+  *every* climbing session by definition — so "fingers untouched" means "you have not
+  climbed at all", which `detraining` and `LAYOFF_DAYS` already say twice over. Rebuilt
+  as the signal the data supports: **a prescribed session type you are skipping**, from
+  M91's `adherence.TypeAdherence`. The review provably cannot say this — M91's whole
+  premise is that it counts sessions against a weekly *number*, "which cannot tell four
+  climbing sessions from four skipped Finger Protocols".
+  **Three of the five are refused, two of them late.** A retest-owed nag duplicates
+  `staleBenchmarks` and contradicts `blockEnd.ts`, which states the stance outright:
+  *"The retest you owe is derived, not nagged."* That one was refused up front. The other
+  two were **built, tested, mutated, rendered in a browser, and then deleted** — a PR
+  reaction and a warmups-skipped card — because `review.ts` already says both, and
+  `ReviewCard` leads with the review's note **on Home, directly above this board**. The
+  screenshot that settled it shows *"0 of 18 Finger Protocol + Engine sessions"* four
+  cards above *"First V7"*. Shipping the PR rule would have put *"V7 is a new best"*
+  beside it on one screen. So §6.6's *PR reactions* does ship — in the review, which is
+  the correction to my own correction: I had said the coach never sees
+  `state.personalRecords`, which is true and was not the question.
+  **The guard that should have caught it.** `coach.test.ts` had "has no id colliding with
+  a weekly review note", which compares **ids** — and both new rules passed it while
+  colliding on content. Replaced by a test that builds a log with a PR and skipped warmups
+  in it and asserts no coach tip mentions either subject. Mutated by re-inserting both
+  deleted rules: killed both times.
+  **One rule shipped.** `skippedType`: the type furthest behind, named once, with a body
+  that stops restating the headline — which the rendered card caught, not a test.
+  **A lazy boundary that was buying nothing.** The rule costs 1.75KB of first load,
+  because `HomePage` imported `useTips` from `CoachPage.tsx` — so `lazy(CoachPage)` in the
+  router had been doing **nothing at all**, and the page's JSX, tone table and icons were
+  in the entry chunk with it. Splitting the hook into `useTips.ts` gave **1.20KB** back.
+  Budget 216.2 → 216.8, measured: 215.71 → 216.75, net 1.04KB.
+  **Measured, not asserted.** 36 mutations over four rounds. Round one left four survivors
+  and **three of them were no-op mutations I wrote badly** — the M91 and M100 mistake for
+  the third time — so they were rewritten to change behaviour before they meant anything.
+  The fourth was a real gap at the consolidation boundary, on a rule that no longer exists.
+  Verified in both themes at 430px. 3,235 tests pass.
 
 - **M105 — Bring your history.** *Proposed. Size L.*
   **Premise.** Onboarding says *"your altimeter starts at zero"*. M87 recovered block
@@ -4160,5 +4192,10 @@ materially wrong premise. Sizes are guesses.*
 - *More grade systems* (Ewbank, UIAA, British) — table work, cheap, and no one has asked.
   Fold into whichever milestone touches `grades.ts` next.
 - *Post-session debrief* — the notes field and M103's chips cover what it would ask.
+- *A thin top of the pyramid* — "your hardest grade has one send under it, and three is
+  what your own objectives call a level" is a genuine standing observation the review
+  cannot make, and it came out of M104's refused PR rule. Left unbuilt because it needs a
+  gate (the grade below consolidated, the top thin) or it fires for almost everyone almost
+  always, and that gate is a milestone's worth of thinking, not a coda to this one.
 - *Multi-device sync, notifications, wearables, localisation* — all need a server or a
   translator, and the plan's cut list stands.

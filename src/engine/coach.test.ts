@@ -3,9 +3,12 @@ import type { Project } from '@/db/projects';
 import type { Session } from '@/db/sessions';
 import { addDays, today } from './dates';
 import { deriveClimberState } from './derive';
+import type { BlockAdherence, TypeAdherence } from './adherence';
 import {
   BACKUP_INTERVAL_DAYS,
   BURN_RUNGS,
+  SKIPPED_TYPE_PLANNED,
+  SKIPPED_TYPE_RATE,
   DETRAINING_ACWR,
   LAYOFF_DAYS,
   STEEP_ACWR,
@@ -345,6 +348,99 @@ describe('backups', () => {
   });
 });
 
+/**
+ * The three rules §6.6 promised and nobody built (PLAN.md M104).
+ *
+ * Two of the three the milestone named as missing were already here —
+ * `projectBurns` and `missingDomains`, both richer than proposed. What was
+ * genuinely absent is below, and one of the three (the PR reaction) §6.6
+ * named first and M104 forgot.
+ */
+
+const type = (patch: Partial<TypeAdherence> = {}): TypeAdherence => ({
+  typeId: 'fp', name: 'Finger Protocol', icon: 'hand', planned: 8, done: 1, extra: 0, ...patch,
+});
+
+const adherence = (types: TypeAdherence[]): BlockAdherence => ({
+  from: back(56), to: TODAY, through: TODAY, weeks: 8, types,
+  planned: types.reduce((n, t) => n + t.planned, 0),
+  done: types.reduce((n, t) => n + t.done, 0),
+  unplanned: 0,
+});
+
+describe('a session type the plan keeps placing and you keep not doing', () => {
+  const skipped = (types: TypeAdherence[]) => tips({ sessions: steady(10), adherence: adherence(types) });
+
+  it('names the type, the count and the shortfall', () => {
+    const tip = skipped([type({ planned: 8, done: 1 })]).find((t) => t.id === 'skipped-type:fp');
+    expect(tip?.headline).toBe('1 of 8 Finger Protocol sessions');
+  });
+
+  // The headline already carries "1 of 8". A body that repeats it is the
+  // same sentence twice, which is what the rendered card showed.
+  it('does not restate the headline', () => {
+    const list = skipped([type({ planned: 8, done: 1 })]);
+    const tip = list.find((t) => t.id === 'skipped-type:fp')!;
+    expect(tip.body).not.toMatch(/8 times|1 of 8/);
+  });
+
+  it('says something different when it never happened at all', () => {
+    const none = skipped([type({ done: 0 })]).find((t) => t.id.startsWith('skipped-type'));
+    const some = skipped([type({ done: 1 })]).find((t) => t.id.startsWith('skipped-type'));
+    expect(none?.body).not.toBe(some?.body);
+    expect(none?.body).toMatch(/^Not once, in 8 weeks/);
+  });
+
+  // A fortnight that went badly is not a pattern, which is the same gate
+  // `missingDomains` puts on every one of its five.
+  it('waits until the type has been placed enough times to mean it', () => {
+    expect(ids(skipped([type({ planned: SKIPPED_TYPE_PLANNED - 1, done: 0 })]))).not.toContain('skipped-type:fp');
+    expect(ids(skipped([type({ planned: SKIPPED_TYPE_PLANNED, done: 0 })]))).toContain('skipped-type:fp');
+  });
+
+  it('says nothing about a type that is being done', () => {
+    expect(ids(skipped([type({ planned: 8, done: 8 })]))).not.toContain('skipped-type:fp');
+    expect(ids(skipped([type({ planned: 8, done: 5 })]))).not.toContain('skipped-type:fp');
+  });
+
+  it('draws the line where the constant says', () => {
+    const at = Math.floor(8 * SKIPPED_TYPE_RATE);
+    expect(ids(skipped([type({ planned: 8, done: at })]))).toContain('skipped-type:fp');
+    expect(ids(skipped([type({ planned: 8, done: at + 1 })]))).not.toContain('skipped-type:fp');
+  });
+
+  // "You are behind on four things" is the indictment `missingDomains`
+  // refuses to write, for the same reason.
+  it('names one type and not every type', () => {
+    const list = skipped([
+      type({ typeId: 'fp', name: 'Finger Protocol', planned: 6, done: 1 }),
+      type({ typeId: 'pw', name: 'Power', planned: 9, done: 0 }),
+    ]);
+    const named = list.filter((t) => t.id.startsWith('skipped-type'));
+    expect(named).toHaveLength(1);
+    // The one furthest behind, not the first in the list.
+    expect(named[0]!.id).toBe('skipped-type:pw');
+  });
+
+  it('says nothing at all without a block to be behind on', () => {
+    expect(ids(tips({ sessions: steady(10) })).filter((id) => id.startsWith('skipped-type'))).toEqual([]);
+  });
+
+  // `null` and not `undefined`: with no live block `CoachPage` passes null,
+  // and a guard that only checks for undefined reads `.types` off it.
+  it('survives a block that was looked for and not found', () => {
+    expect(() => tips({ sessions: steady(10), adherence: null })).not.toThrow();
+    expect(ids(tips({ sessions: steady(10), adherence: null })).filter((id) => id.startsWith('skipped-type'))).toEqual([]);
+  });
+
+  // Dismissing "you are seven behind" must not cover being nine behind.
+  it('moves its signature when the gap grows', () => {
+    const a = skipped([type({ planned: 8, done: 1 })]).find((t) => t.id === 'skipped-type:fp');
+    const b = skipped([type({ planned: 10, done: 1 })]).find((t) => t.id === 'skipped-type:fp');
+    expect(a!.signature).not.toBe(b!.signature);
+  });
+});
+
 describe('the board as a whole', () => {
   it('puts the loudest first', () => {
     const list = tips({ sessions: steady(10) });
@@ -355,6 +451,33 @@ describe('the board as a whole', () => {
     for (const tip of tips({ sessions: steady(10) })) {
       if (tip.tone !== 'good' && tip.id !== 'late-sessions') expect(tip.action).toBeDefined();
     }
+  });
+
+  /**
+   * The id check below is not enough, and M104 proved it.
+   *
+   * Two rules were written, passed it, and would have shipped: a PR
+   * reaction beside the review's `record` note, and a warmups-skipped
+   * card beside its `warmup` note. Different ids, same fact — and
+   * `ReviewCard` leads with that note on Home, directly above this board,
+   * so both pairs would have rendered on one screen.
+   *
+   * So the guard is about the subjects, not the keys.
+   */
+  it('says nothing about a fact the weekly review owns', () => {
+    // `review.ts` returns exactly one note, from an if/else chain. These
+    // are the subjects in it that a coach rule could plausibly reach for.
+    const sent = session(back(2), {
+      id: 'pr', climbs: [{ id: 'p1', grade: 'V9', scale: 'V', count: 1, result: 'send', style: 'redpoint' }],
+    });
+    const cold = [0, 1, 2].map((i) => session(back(i), { id: `cold${i}`, warmup: false }));
+    const list = tips({ sessions: [...steady(10), sent, ...cold] });
+    const said = list.map((t) => `${t.headline} ${t.body}`).join(' ');
+
+    // The review's `record` note: "First V9".
+    expect(said).not.toMatch(/\bV9\b/);
+    // The review's `warmup` note: "Warmups are slipping".
+    expect(said).not.toMatch(/warmup/i);
   });
 
   it('has no id colliding with a weekly review note', () => {

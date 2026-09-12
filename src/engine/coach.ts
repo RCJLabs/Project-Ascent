@@ -27,6 +27,7 @@ import { daysBetween, today as todayKey } from './dates';
 import type { ClimberState } from './derive';
 import type { Diagnosis } from './plateau';
 import { activeProjects, attemptsFor, highPointOf } from './projects';
+import type { BlockAdherence } from './adherence';
 
 export type TipTone = 'good' | 'neutral' | 'caution';
 
@@ -57,6 +58,14 @@ export interface CoachInput {
   programMetrics?: MetricId[];
   /** ISO date of the last backup export, if there has ever been one. */
   lastExportAt?: string | null;
+  /**
+   * M91's planned-against-done, per session type (PLAN.md M104).
+   *
+   * Passed in already computed, like `diagnosis`, because building it needs
+   * the program, its start date, the week plan and the overrides — four
+   * things the coach has no business holding to write one tip.
+   */
+  adherence?: BlockAdherence | null;
   today?: string;
 }
 
@@ -79,6 +88,14 @@ export const STEEP_ACWR = 1.8;
 /** A gap this long is not a rest week. */
 export const LAYOFF_DAYS = 10;
 
+/** Times a type has to have been placed before skipping it is a pattern
+ *  rather than a fortnight that went badly. */
+export const SKIPPED_TYPE_PLANNED = 4;
+
+/** Done ÷ planned at or under this, and the plan is not being run. */
+export const SKIPPED_TYPE_RATE = 0.5;
+
+
 /** A session that starts this late costs the sleep it needs to pay for. */
 export const LATE_HOUR = 21;
 
@@ -92,6 +109,7 @@ export function buildTips(input: CoachInput): Tip[] {
     detraining(input, today),
     loadSpike(input),
     staleBenchmarks(input, today),
+    skippedType(input),
     ...missingDomains(input),
     lateSessions(input),
     backupNudge(input, today),
@@ -299,6 +317,57 @@ function loadSpike({ state }: CoachInput): Tip | null {
 }
 
 /** A logged rest day is not training, and must not hold off a layoff tip. */
+/**
+ * A session type the plan keeps placing and you keep not doing (PLAN.md M104).
+ *
+ * **The only rule M104 turned out to need.** Of the five it proposed, two
+ * already shipped here (`projectBurns`, `missingDomains`), one was refused
+ * as a third voice on a fact `staleBenchmarks` and `blockEnd` both already
+ * carry, and two — a PR reaction and a warmups-skipped nag — are already
+ * said by `review.ts`, whose note leads the Home card that sits directly
+ * above this board. Two cards on one screen about one fact is what the
+ * line against the weekly review exists to prevent.
+ *
+ * This one the review provably cannot say: M91's premise is that it counts
+ * sessions against a weekly *number*, "which cannot tell four climbing
+ * sessions from four skipped Finger Protocols".
+ *
+ * §6.6 asked for a *hangboard-gap warning*, and the obvious build —
+ * `daysSinceLoaded('fingers')` from `tissueLoad` — does not work. That
+ * module attributes fingers to **every** climbing session by definition
+ * (`CLIMBING_PARTS`), so a fingers gap is a climbing gap, which `detraining`
+ * and the layoff rule already say. What the climber in question is actually
+ * doing is climbing instead of hangboarding, and M91 measures exactly that:
+ * planned against done, per type, over the block.
+ *
+ * One type, the one furthest behind. "You are behind on four things" is the
+ * indictment `missingDomains` refuses to write, for the same reason.
+ */
+function skippedType({ adherence }: CoachInput): Tip | null {
+  if (!adherence) return null;
+  const behind = adherence.types
+    .filter((t) => t.planned >= SKIPPED_TYPE_PLANNED && t.done / t.planned <= SKIPPED_TYPE_RATE)
+    .sort((a, b) => b.planned - b.done - (a.planned - a.done));
+  const worst = behind[0];
+  if (worst === undefined) return null;
+  return {
+    id: `skipped-type:${worst.typeId}`,
+    // The shortfall, so doing one more brings it back rather than leaving a
+    // dismissal to cover a gap that has gone on growing.
+    signature: `${worst.planned - worst.done}`,
+    tone: 'neutral',
+    weight: 65,
+    headline: `${worst.done} of ${worst.planned} ${worst.name} sessions`,
+    // The headline carries the count. The body is for the part a number
+    // cannot say.
+    body:
+      worst.done === 0
+        ? `Not once, in ${adherence.weeks} week${adherence.weeks === 1 ? '' : 's'} of it being on the calendar. A session type nobody does is not a weakness in the program — it is a scheduling problem or a kit problem, and both have answers: move it in the week, or swap the block for one built around what you actually have.`
+        : 'This is the part of the plan doing the least work for you, and it is usually the part that was hardest to fit rather than the part you disagreed with. Move it to the day it would survive, or take it out of the week honestly rather than by accident.',
+    action: { label: 'See this week', href: '/train' },
+  };
+}
+
 function isRestDay(session: Session): boolean {
   return session.restChecklist !== undefined && session.climbs.length === 0;
 }

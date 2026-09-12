@@ -37,7 +37,7 @@ import { LevelBar } from '@/ui/LevelBar';
 import { MountainMeter } from '@/ui/MountainMeter';
 import { PageHeader } from '@/ui/PageHeader';
 import { useClimberAvatar } from '@/ui/useClimberAvatar';
-import { useTips } from '@/features/coach/CoachPage';
+import { useTips } from '@/features/coach/useTips';
 import { formatHeight, heightValue } from '@/engine/units';
 import { useSettings } from '@/store/settings';
 

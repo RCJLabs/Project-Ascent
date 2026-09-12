@@ -1,15 +1,8 @@
-import { useMemo } from 'react';
 import { Link } from 'wouter';
 import { ArrowRight, CircleCheck, Info, RotateCcw, TriangleAlert, X } from 'lucide-react';
-import { getProgram } from '@/content/programs';
-import { buildTips, visibleTips, type Tip, type TipTone } from '@/engine/coach';
-import { deriveClimberState } from '@/engine/derive';
-import { diagnose } from '@/engine/plateau';
-import { useMetrics } from '@/store/metrics';
+import { type Tip, type TipTone } from '@/engine/coach';
+import { useTips } from './useTips';
 import { useProfile } from '@/store/profile';
-import { useProjects } from '@/store/projects';
-import { useSessions } from '@/store/sessions';
-import { useSettings } from '@/store/settings';
 import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
@@ -22,43 +15,6 @@ const TONE: Record<TipTone, { icon: typeof Info; className: string }> = {
   neutral: { icon: Info, className: 'text-accent' },
   caution: { icon: TriangleAlert, className: 'text-warn' },
 };
-
-/** Everything the board needs, derived in one place. */
-export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
-  const byDate = useSessions((s) => s.byDate);
-  const projects = useProjects((s) => s.projects);
-  const metrics = useMetrics((s) => s.entries);
-  const injuries = useProfile((s) => s.injuries);
-  const equipment = useProfile((s) => s.equipment);
-  const activeProgramId = useProfile((s) => s.activeProgramId);
-  const lastExportAt = useProfile((s) => s.lastExportAt);
-  const dismissed = useProfile((s) => s.dismissedTips);
-  const display = useSettings((s) => s.display);
-
-  return useMemo(() => {
-    const sessions = Object.values(byDate).flat();
-    const state = deriveClimberState(sessions);
-    const program = activeProgramId ? getProgram(activeProgramId) : undefined;
-    const all = buildTips({
-      state,
-      sessions,
-      projects,
-      metrics,
-      lastExportAt,
-      diagnosis: diagnose({
-        display,
-        state,
-        sessions,
-        injuries: injuries.map((i) => i.part),
-        equipment,
-        metrics,
-        program,
-      }),
-    });
-    const visible = visibleTips(all, dismissed);
-    return { all, visible, hidden: all.length - visible.length };
-  }, [byDate, projects, metrics, injuries, equipment, activeProgramId, lastExportAt, dismissed, display]);
-}
 
 export function CoachPage() {
   const { visible, hidden } = useTips();
