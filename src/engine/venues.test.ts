@@ -183,3 +183,99 @@ describe('said out loud', () => {
     );
   });
 });
+
+describe('the hardest sent at each place', () => {
+  const at = (place: string, date: string, grades: string[], mode: 'indoor' | 'outdoor' = 'outdoor') =>
+    ({
+      id: `${date}#${place}`,
+      date,
+      completed: true,
+      mode,
+      fields: { location: place },
+      climbs: grades.map((grade, i) => ({
+        id: `${date}-${i}`,
+        grade,
+        scale: grade.startsWith('V') ? ('V' as const) : ('YDS' as const),
+        count: 1,
+        result: 'send' as const,
+      })),
+    }) as never;
+
+  const best = (sessions: unknown[], name: string) =>
+    venues({ sessions: sessions as never }).find((v) => v.name === name)!.best;
+
+  it('reports the hardest boulder', () => {
+    expect(best([at('Stanage', '2026-09-01', ['V3', 'V6', 'V4'])], 'Stanage').V).toBe('V6');
+  });
+
+  it('keeps the two ladders apart', () => {
+    // Grades vary by crag, which is the point of the whole reading — and a
+    // crag with both needs both numbers, not whichever ordinal is larger.
+    const b = best([at('Malham', '2026-09-01', ['V4', '5.12a'])], 'Malham');
+    expect(b.V).toBe('V4');
+    expect(b.YDS).toBe('5.12a');
+  });
+
+  it('is null for a ladder nothing was climbed on', () => {
+    const b = best([at('Stanage', '2026-09-01', ['V3'])], 'Stanage');
+    expect(b.V).toBe('V3');
+    expect(b.YDS).toBe(null);
+  });
+
+  it('does not count an attempt', () => {
+    const session = at('Stanage', '2026-09-01', ['V8']);
+    (session as { climbs: { result: string }[] }).climbs[0]!.result = 'attempt';
+    expect(best([session], 'Stanage').V).toBe(null);
+  });
+
+  it('keeps two places apart', () => {
+    const sessions = [
+      at('Stanage', '2026-09-01', ['V6']),
+      at('Burbage', '2026-09-02', ['V3']),
+    ];
+    expect(best(sessions, 'Stanage').V).toBe('V6');
+    expect(best(sessions, 'Burbage').V).toBe('V3');
+  });
+
+  it('counts a gym as readily as a crag', () => {
+    // A place is almost always one mode or the other, so this is per venue
+    // rather than per mode — and "my best at The Works" is a real question.
+    expect(best([at('The Works', '2026-09-01', ['V5'], 'indoor')], 'The Works').V).toBe('V5');
+  });
+
+  it('collects every session at the place, however it was spelled', () => {
+    // Same crag, two spellings. `venueKey` already folds them and the best
+    // has to fold with them. Asserted on the single folded venue rather
+    // than by name: with one use of each spelling the display name breaks
+    // on *recency*, which is deliberate — a climber who switched from "the
+    // works" to "The Works" is telling the app which one they mean.
+    const list = venues({
+      sessions: [
+        at('Stanage', '2026-09-01', ['V3']),
+        at('stanage', '2026-09-08', ['V7']),
+      ] as never,
+    });
+    expect(list).toHaveLength(1);
+    expect(list[0]!.best.V).toBe('V7');
+  });
+
+  it('survives a record with no climbs array at all', () => {
+    // `Session.climbs` is not optional and real records violate it anyway —
+    // M105b found the spreadsheet writers crashing on exactly this, and
+    // M112e made the rest-day predicate defend against it. The venue scan
+    // reads `climbs` too, and a crash here takes the whole career page.
+    const bare = {
+      id: 'x', date: '2026-09-01', completed: true, mode: 'outdoor',
+      fields: { location: 'Stanage' },
+    } as never;
+    const list = venues({ sessions: [bare] });
+    expect(list).toHaveLength(1);
+    expect(list[0]!.best).toEqual({ V: null, YDS: null });
+    expect(list[0]!.days).toBe(1);
+  });
+
+  it('is null for a place known only from a project', () => {
+    const list = venues({ projects: [{ location: 'Font' }] as never });
+    expect(list.find((v) => v.name === 'Font')!.best).toEqual({ V: null, YDS: null });
+  });
+});

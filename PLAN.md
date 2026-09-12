@@ -4758,6 +4758,39 @@ entry above.)*
   The full suite passed 3,684 → 3,684 across the extraction, which is what a pure
   refactor should look like.
 
+- **M112f — The hardest you have sent at each place.** *Done, and I had called it thinner
+  than it is.*
+  **The premise held exactly.** M106's note said `Venue` "carries sessions, days,
+  `outdoorDays`, projects and objectives, and no grade at all", and it does.
+  **What I got wrong was calling it thin, twice.** I said it was "really a venues change" and
+  would "mostly duplicate what on-rock PRs would give you". Both wrong. There is already a
+  surface — **"Where you climb"** on the career page, name and day count per place — so this
+  is a card to extend rather than a page to invent. And it does not duplicate M112d: an
+  overall outdoor best cannot tell a climber what M112f can, because **grades vary
+  enormously by crag**, and per-venue bests are how outdoor climbers actually calibrate.
+  That is the reason to want it, and it is a better reason than the one the note gave.
+  **Per venue, not per mode.** A place is almost always one or the other — a gym is indoors,
+  a crag is out — so a mode split here would be a distinction without a difference. It
+  reuses `emptyTally`/`addClimb`, the same pair M106's `ladders.ts` uses, so what counts as a
+  send stays defined once.
+  **Beside the name, not in the count column.** The grade is what a climber reads the row
+  for, and the right-hand column was already tight at 430px. Measured in a browser: *Stanage
+  **V6*** · 2 days · 2 outside, *The Depot Sheffield **V7 · 5.11c*** · 2 days.
+  **Measured, not asserted.** 9 mutations, 9 killed after two rounds. Two real survivors,
+  and **the second is the interesting one**. A mutation that labels a route grade on the
+  boulder ladder survived every test, because in the default V/YDS display
+  `displayGrade('V', '5.12a')` returns `'5.12a'` **unchanged** — the wrong scale and the
+  right one print the same string. In Font/French the correct call gives **7b** and the
+  wrong one still gives 5.12a. So it is a real, visible bug *only for a climber reading
+  French notation*, which is exactly the kind that ships; the test asserts in Font/French
+  now. (The bug itself was mine, from an index taken after a filter — with only a route
+  grade left, index 0 is not the boulder ladder.)
+  **The other survivor was M112e's finding again.** The venue scan reads `session.climbs`,
+  and real records exist without one. Guarded, and tested at the engine rather than through
+  a page that could mask the throw.
+  **Budget.** Unchanged: the career page is a lazy route.
+  Verified in a browser in both themes at 430px.
+
 **Open coaching calls.** Nine judgements the app is currently making on the coach's
 behalf, each one stated at its milestone rather than made quietly, none of them settled.
 Every site is tagged so this list can be regenerated with `grep -n '\*\*COACH' PLAN.md`

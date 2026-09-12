@@ -25,6 +25,7 @@
 import type { Session } from '@/db/sessions';
 import type { Project } from '@/db/projects';
 import type { Objective } from './objectives';
+import { addClimb, emptyTally, type GradeTally } from './derive';
 import { joinCapped } from './phrase';
 
 /**
@@ -52,6 +53,16 @@ export interface Venue {
   outdoorDays: number;
   projects: number;
   objectives: number;
+  /**
+   * The hardest sent here, per ladder, or null (PLAN.md M112f).
+   *
+   * Per venue rather than per mode, because a place is almost always one or
+   * the other — a gym is indoors and a crag is out — and because the reason
+   * to want this at all is that **grades vary by crag**. An outdoor climber
+   * calibrates by knowing their best at each place, which an overall
+   * outdoor best cannot tell them.
+   */
+  best: { V: string | null; YDS: string | null };
 }
 
 export interface VenueInput {
@@ -68,6 +79,9 @@ interface Spelling {
 
 interface Tally {
   key: string;
+  /** Built with `addClimb`, so what counts as a send is defined once. */
+  boulder: GradeTally;
+  sport: GradeTally;
   spellings: Map<string, Spelling>;
   sessions: number;
   days: Set<string>;
@@ -94,6 +108,8 @@ export function venues(input: VenueInput): Venue[] {
     }
     const tally: Tally = {
       key,
+      boulder: emptyTally(),
+      sport: emptyTally(),
       spellings: new Map([[spelling, { count: 1, last: on }]]),
       sessions: 0,
       days: new Set(),
@@ -112,6 +128,9 @@ export function venues(input: VenueInput): Venue[] {
     tally.sessions++;
     tally.days.add(session.date);
     if (session.mode === 'outdoor') tally.outdoorDays.add(session.date);
+    for (const climb of session.climbs ?? []) {
+      addClimb(climb.scale === 'V' ? tally.boulder : tally.sport, climb);
+    }
   }
   for (const project of input.projects ?? []) {
     const tally = at(project.location);
@@ -145,6 +164,7 @@ export function venues(input: VenueInput): Venue[] {
         outdoorDays: t.outdoorDays.size,
         projects: t.projects,
         objectives: t.objectives,
+        best: { V: t.boulder.best, YDS: t.sport.best },
       };
     })
     .sort((a, b) => b.days - a.days || b.sessions - a.sessions || a.name.localeCompare(b.name));

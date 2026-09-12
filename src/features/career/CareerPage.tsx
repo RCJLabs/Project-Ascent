@@ -5,6 +5,7 @@ import { CATEGORY_LABEL, byYear, deriveCareer, type CareerCategory } from '@/eng
 import { fromKey } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { describeVenues } from '@/engine/venues';
+import { useGradeLabel } from '@/ui/useGrade';
 import { useVenues } from '@/features/venues/useVenues';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
@@ -39,6 +40,7 @@ export function CareerPage() {
   // Where the climbing happened (PLAN.md M88b). On Career rather than
   // Progress: a place is part of the story of a climbing life, not a
   // reading of this block's load.
+  const gradeLabel = useGradeLabel();
   const places = useVenues();
 
 
@@ -114,7 +116,25 @@ export function CareerPage() {
                 .slice(0, 8)
                 .map((place) => (
                   <div key={place.key} className="flex items-baseline gap-2">
-                    <dt className="flex-1 min-w-0 truncate">{place.name}</dt>
+                    <dt className="flex-1 min-w-0 truncate">
+                      {place.name}
+                      {/* The hardest sent here, beside the name rather than
+                          in the count column: grades vary by crag, so this
+                          is the number a climber reads the row for, and the
+                          column on the right was already tight at 430px
+                          (PLAN.md M112f). */}
+                      {(place.best.V ?? place.best.YDS) !== null && (
+                        <span className="ml-2 text-xs font-bold text-accent">
+                          {/* Paired with its scale before filtering: an
+                              index taken after it labels a route grade as a
+                              boulder the moment a venue has only routes. */}
+                          {([['V', place.best.V], ['YDS', place.best.YDS]] as const)
+                            .filter((pair): pair is readonly ['V' | 'YDS', string] => pair[1] !== null)
+                            .map(([scale, grade]) => gradeLabel(scale, grade))
+                            .join(' · ')}
+                        </span>
+                      )}
+                    </dt>
                     <dd className="shrink-0 text-ink-soft tabular-nums">
                       {place.days === 1 ? '1 day' : `${place.days} days`}
                       {place.outdoorDays > 0 && ` · ${place.outdoorDays} outside`}
