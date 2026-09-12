@@ -21,6 +21,7 @@ import { FIELD_DAYS, fieldSeries } from '@/engine/sessionFields';
 import { addDays, fromKey, today } from '@/engine/dates';
 import { availableYears } from '@/engine/yearReview';
 import { deriveClimberState } from '@/engine/derive';
+import { describeLadders, ladders } from '@/engine/ladders';
 import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
 import { useMetrics } from '@/store/metrics';
 import { useProjects } from '@/store/projects';
@@ -269,6 +270,8 @@ export function ProgressPage() {
   const load = useSessions((s) => s.load);
   const activeProgramId = useProfile((s) => s.activeProgramId);
   const [scale, setScale] = useState<GradeScale>('V');
+  /** Which ladder the pyramid is drawing (PLAN.md M106). */
+  const [onWhat, setOnWhat] = useState<'all' | 'indoor' | 'outdoor'>('all');
 
   useEffect(() => {
     if (!hydrated) void load();
@@ -307,7 +310,18 @@ export function ProgressPage() {
   );
   const projection = useMemo(() => projectGrade(points, scale, display), [points, scale, display]);
   const tally = scale === 'V' ? state.boulder : state.sport;
-  const rows = useMemo(() => pyramid(tally, scale), [tally, scale]);
+  // Indoor and outdoor as two ladders (PLAN.md M106). `state` holds one
+  // tally per scale and has never known which of them was climbed on rock.
+  const twoLadders = useMemo(() => ladders(sessions, scale), [sessions, scale]);
+  const onRock = twoLadders.outdoor.tally.totalSends > 0;
+  // The toggle only shows where there is rock *on this scale*, so switching
+  // scales can hide it while a choice is still in effect — which stranded
+  // the climber on an empty pyramid with no control to get back. What is
+  // not offered is not applied.
+  const onWhich = onRock ? onWhat : 'all';
+  const shown =
+    onWhich === 'indoor' ? twoLadders.indoor.tally : onWhich === 'outdoor' ? twoLadders.outdoor.tally : tally;
+  const rows = useMemo(() => pyramid(shown, scale), [shown, scale]);
   const ladder = scale === 'V' ? V_GRADES : YDS_GRADES;
 
   if (state.completedSessions === 0) {
@@ -532,6 +546,25 @@ export function ProgressPage() {
         )}
 
         <Card title="Grade pyramid">
+          {/* Two ladders, and the app drew one (PLAN.md M106). The toggle
+              only appears once there is something on rock to toggle to —
+              three buttons where two do the same thing is not a choice. */}
+          {onRock && (
+            <>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {([
+                  ['all', 'Everything'],
+                  ['indoor', 'Indoors'],
+                  ['outdoor', 'On rock'],
+                ] as const).map(([value, label]) => (
+                  <Chip key={value} active={onWhich === value} onClick={() => setOnWhat(value)}>
+                    {label}
+                  </Chip>
+                ))}
+              </div>
+              <p className="text-sm leading-relaxed mb-3">{describeLadders(twoLadders, display)}</p>
+            </>
+          )}
           {rows.length > 0 ? (
             <>
               <PyramidBars rows={rows.map((r) => ({ ...r, grade: gradeLabel(scale, r.grade) }))} />
@@ -541,7 +574,15 @@ export function ProgressPage() {
               </p>
             </>
           ) : (
-            <p className="text-sm text-ink-soft">Nothing logged on this scale yet.</p>
+            // Only two cases reach here: nothing at all on this scale, or a
+            // climber who has been on rock and not indoors. There is no
+            // third — the toggle needs an outdoor send to appear, and one
+            // send is one pyramid row.
+            <p className="text-sm text-ink-soft">
+              {onWhich === 'indoor'
+                ? 'Nothing logged indoors on this scale yet.'
+                : 'Nothing logged on this scale yet.'}
+            </p>
           )}
         </Card>
 

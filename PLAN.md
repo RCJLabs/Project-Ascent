@@ -4167,17 +4167,55 @@ materially wrong premise. Sizes are guesses.*
   engine lands in the lazy settings chunk beside the importer.
   Verified in both themes at 430px. 3,353 tests pass.
 
-- **M106 — Indoor and outdoor are two ladders, and the app draws one.** *Proposed. Size M.*
-  **Premise.** `GradeTally` is per scale. `session.mode` is read for outdoor *days* (career,
-  achievements, a challenge), the altimeter's outdoor multiplier, and the trips. Best
-  outdoor grade against best indoor — the gap every climber talks about, the thing Trip
-  Prep exists to close — is computed nowhere and shown nowhere. `progress.ts` does not
-  mention `mode`.
-  **Shape.** Tallies per mode in `derive`; a toggle on the pyramid and the conversion grid;
-  "on rock" rows in personal records; the venue page (M88b) gets a best per venue; Trip
-  Prep's finder reason cites the gap in the climber's own numbers.
-  **Never.** Convert one into the other, or call the gap a problem. Some of it is
-  sandbagging and some of it is fear, and the app cannot tell which.
+- **M106 — Indoor and outdoor are two ladders, and the app draws one.** *Done, the comparison.
+  Three extensions deferred with reasons.*
+  **Premise held, and it is the one that mattered.** `progress.ts` mentions `mode` **zero**
+  times. Eighteen engine modules read `session.mode` — the career page, the achievements, a
+  challenge, the altimeter's outdoor multiplier, the trips — and not one of them puts best
+  on plastic beside best on rock. The comparison every climber makes out loud, and the one
+  Trip Prep exists to close, was computed nowhere.
+  **Built.** `engine/ladders.ts`: two tallies per scale, split by the mode of the session
+  each climb was logged on, with the distinct days each rests on. `describeLadders` states
+  both bests, what each rests on, and the distance between them. The pyramid card on
+  `/progress` gets the sentence and an Everything / Indoors / On rock toggle — which only
+  appears once there is something on rock, because three buttons where two do the same
+  thing is not a choice.
+  **The "Never", held as a test.** No conversion — there is no exchange rate between a gym
+  V6 and a Font 6C, and the whole point is that the ladders are separate. No verdict — some
+  of the gap is a soft gym, some is rock being frightening, some is one outdoor day a year,
+  and the log says which of those it is never. The sentence ends *"What that is about, the
+  log cannot say."*, and a test asserts the rendered card contains none of
+  `equivalent|worth|weak|soft|sandbag|should|problem`.
+  **Coverage first, again.** "Two grades harder indoors" off four outdoor sends is a
+  coincidence with a decimal point. Under `THIN_SENDS` on either side the reading refuses
+  the gap and names the thin side with its count — `conversion.ts`'s house rule, which
+  settled that a thin figure belongs in the sentence rather than hidden.
+  **A de-duplication rather than a second copy.** `deriveClimberState` had the
+  climb-into-tally logic inline, and a per-mode reading needed the same thing. Lifted out as
+  `addClimb`, used by both — and it carried a trap worth recording: `addClimb` moves `best`,
+  and the personal-record check reads `best` **before** the climb goes in. Getting that
+  order wrong stops the app recording personal records at all, silently. The mutation for it
+  is in the battery, and the existing suite killed it.
+  **One defect found by writing the test rather than by reasoning.** The toggle only appears
+  where there is rock *on the scale being drawn*, so switching from boulders to ropes could
+  take the toggle away **while the choice was still in effect** — leaving the climber on an
+  empty pyramid with no control on screen to get out of it. What is not offered is not
+  applied. That also made one branch of the empty-state message unreachable, which is gone.
+  **Deferred, with reasons rather than silently.**
+  *"On rock" rows in personal records* — `state.personalRecords` is first-send-per-grade per
+  scale, and a first on rock needs a first-send date per mode, which `ladders` does not
+  track. It is a record list rather than a comparison, and the career page's `outdoor`
+  category counts **days** outdoors rather than grades, so there is nothing to extend there
+  either. Its own small milestone.
+  *A best per venue* — `Venue` carries sessions, days, `outdoorDays`, projects and
+  objectives, and no grade at all. Real, and a venues change rather than a ladders one.
+  *Trip Prep's finder reason citing the gap* — M101 territory, and it needs a rule about
+  when a gap is worth citing that this milestone deliberately does not have.
+  **Measured, not asserted.** 25 mutations. One survivor, and it was **vacuous in my own
+  test**: on a scale with nothing logged, applying a hidden choice and ignoring it produce
+  the same empty card, so the fixture needed a second ladder with something on it.
+  **Budget.** Unchanged at 216.9KB — 216.88 measured.
+  Verified in both themes at 430px. 3,378 tests pass.
 
 - **M107 — The drill library, with the coach's cues.** *Proposed. Size L, mostly content.*
   **Premise.** 138 drills, reachable from a program's week and from search (they are

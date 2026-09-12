@@ -12,7 +12,7 @@
  */
 
 import { getDrill } from '@/content/drills';
-import type { Session } from '@/db/sessions';
+import type { Climb, Session } from '@/db/sessions';
 import { gradeOrdinal, maxGrade, type GradeScale } from './grades';
 import { addDays, daysBetween, startOfWeek, today as todayKey } from './dates';
 
@@ -24,6 +24,30 @@ export interface GradeTally {
   totalAttempts: number;
   best: string | null;
   bestOrdinal: number;
+}
+
+/**
+ * One climb into a tally (PLAN.md M106).
+ *
+ * Lifted out of `deriveClimberState` so the per-mode ladders can be built
+ * from the same code rather than from a second reading of what a send is.
+ * Note that it moves `best`, so a caller that needs the best *before* this
+ * climb has to read it first — `deriveClimberState` does, for the personal
+ * records.
+ */
+export function addClimb(tally: GradeTally, climb: Climb): void {
+  const bucket = climb.result === 'send' ? tally.sends : tally.attempts;
+  bucket[climb.grade] = (bucket[climb.grade] ?? 0) + climb.count;
+  if (climb.result !== 'send') {
+    tally.totalAttempts += climb.count;
+    return;
+  }
+  tally.totalSends += climb.count;
+  const ord = gradeOrdinal(climb.scale, climb.grade);
+  if (ord > tally.bestOrdinal) {
+    tally.bestOrdinal = ord;
+    tally.best = climb.grade;
+  }
 }
 
 export interface DayLoad {
@@ -102,7 +126,11 @@ export interface ClimberState {
   restedWithin24h: boolean;
 }
 
-const EMPTY_TALLY = (): GradeTally => ({
+/**
+ * A fresh tally. Exported so `ladders.ts` can build the same shape per mode
+ * rather than keeping a second definition of what a tally is.
+ */
+export const emptyTally = (): GradeTally => ({
   sends: {},
   attempts: {},
   totalSends: 0,
@@ -128,8 +156,8 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
     .filter((s) => s.completed)
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
-  const boulder = EMPTY_TALLY();
-  const sport = EMPTY_TALLY();
+  const boulder = emptyTally();
+  const sport = emptyTally();
   const sessionsByType: Record<string, number> = {};
   const personalRecords: PersonalRecord[] = [];
   const seenBoulder = new Set<string>();
@@ -191,10 +219,12 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
 
     for (const climb of session.climbs) {
       const tally = climb.scale === 'V' ? boulder : sport;
-      const bucket = climb.result === 'send' ? tally.sends : tally.attempts;
-      bucket[climb.grade] = (bucket[climb.grade] ?? 0) + climb.count;
+      // Read before the climb goes in: a personal record is a send that beat
+      // the best *so far*, and `addClimb` moves the best. Getting this the
+      // other way round silently stops recording records at all.
+      const bestBefore = tally.bestOrdinal;
+      addClimb(tally, climb);
       if (climb.result === 'send') {
-        tally.totalSends += climb.count;
         if (climb.style === 'onsight') onsight += climb.count;
         else if (climb.style === 'flash') flash += climb.count;
         // First send of a grade on its own ladder is a personal record.
@@ -202,18 +232,9 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
         if (!seen.has(climb.grade)) {
           seen.add(climb.grade);
           const ord = gradeOrdinal(climb.scale, climb.grade);
-          if (ord > tally.bestOrdinal) {
+          if (ord > bestBefore) {
             personalRecords.push({ scale: climb.scale, grade: climb.grade, date: session.date });
           }
-        }
-      } else {
-        tally.totalAttempts += climb.count;
-      }
-      if (climb.result === 'send') {
-        const ord = gradeOrdinal(climb.scale, climb.grade);
-        if (ord > tally.bestOrdinal) {
-          tally.bestOrdinal = ord;
-          tally.best = climb.grade;
         }
       }
     }
