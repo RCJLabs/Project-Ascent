@@ -5042,6 +5042,65 @@ entry above.)*
   Verified in a browser in both themes at 430px: every store zero afterwards, the theme
   untouched, and the app on its welcome screen. 3,759 tests pass.
 
+- **M115 — The logger comes off the boot path.** *Done, and the headline number oversells
+  it — which is the interesting part.*
+  **The premise was five milestones old and nobody had measured it.** `perf.test.ts` has
+  carried a note since M99 saying *"the real headroom is a lazy `LogPage` — it is eagerly
+  imported, so everything it touches is first-load — and that is a perf milestone rather
+  than a side effect of this one."* It got deferred every time, and meanwhile M108 paid
+  0.32KB for a chip row, M110 0.34KB for a banner, and M112 0.64KB for the cooldown card
+  *after* splitting 1.59KB out to avoid paying more. All because `App.tsx` had one static
+  import.
+  **Measured: 44.81KB gzipped of entry chunk**, 218.86 → 174.04. Larger than every increase
+  since M78 put together, from deleting one line.
+  **The mechanism was a six-line component in a two-thousand-line file.** `TodayRedirect`
+  is a redirect — `useLocation`, `navigate`, `return null` — and it was declared inside
+  `LogPage.tsx`, so `import { LogPage, TodayRedirect }` held the logger, the media card,
+  the share sheet, the warmup and circuit engines, the protocol registry and the grade
+  tables in the entry chunk. It lives in `features/log/TodayRedirect.tsx` now, the same
+  split as `db/demoFlag.ts` (M110) and `lib/launchFlag.ts` (M111). **It stays eager on
+  purpose**: `#/today` is one of M111's launcher shortcuts, so deferring it would put two
+  chunk loads in front of one navigation.
+  **Then the browser contradicted the arithmetic, and this is the part worth keeping.** A
+  first draft of the note in `perf.test.ts` claimed a climber who cold-starts and goes
+  straight to the logger now pays `174.05 + 17.76 = 191.81KB`, *"still 27KB better"*.
+  Counted in a real browser, that navigation pulls **twenty chunks and 51.27KB**, not one
+  chunk and 17.73. So: boot 254.12 → 209.29KB, but boot-plus-logger 254.12 → **260.56KB**.
+  **That path is 6.44KB worse, not 27KB better.** The mistake was counting `LogPage`'s own
+  chunk and forgetting everything it imports — which is the exact error the milestone
+  exists to fix, made while fixing it.
+  **And the service worker weakens the byte argument further.** `globPatterns` is
+  `**/*.js`, so every chunk is precached: a first visit fetches the same bytes either way
+  and the split changes the *order* they arrive in rather than the volume.
+  **So it was re-justified on time rather than bytes, measured rather than assumed.** Cold
+  load to first heading, 6× CPU throttling, seven runs each: median **775ms → 727ms**, best
+  case 730 → 672. About 6%, on every cold start, for everyone — against 6.44KB once, on a
+  first-ever visit that goes straight to the logger before the precache lands. Worth it,
+  and a smaller win than the 44.81KB headline reads as.
+  **The budget drops the whole way, and the rule that says so is now a test.** A ceiling
+  cannot notice being *raised* — mutation proved it, by setting the line back to 218.9 and
+  watching everything pass. `leaves no headroom a regression could hide in` asserts the
+  budget sits within 1.5KB of what was actually measured, which is this file's own
+  since-M78 doctrine made checkable rather than repeated in prose.
+  **One guard needed a narrow exemption.** `a11y.test.ts` holds every routed feature module
+  to having an `h1` or a `PageHeader`, and a redirect has neither. Earned rather than
+  listed: `rendersNothing` requires the file to contain no JSX at all, so a real page that
+  merely forgot its heading cannot borrow it, and a test proves the exemption is that
+  narrow.
+  **Measured, not asserted.** 6 mutations, 4 killed on production code and both survivors
+  were mutations of tests rather than of the app — the sanity no-op, and one that deleted
+  an assertion from the new slack check while its companion still passed. Deleting half a
+  test and observing the other half still holds is not a finding.
+  **Left for next time, with the measurement already taken.** That twenty-chunk fan-out:
+  **13.99KB of it is the glossary**, pulled in by a single `<Term>` on an exercise name so
+  it can ask whether that name has a definition. Fixing it would take the logger navigation
+  from 51.27KB to roughly 37, turning this milestone's one regressed path into a win —
+  but `Term` is used across the app and making its lookup async changes tap behaviour
+  everywhere, which is a milestone rather than a coda.
+  Verified in a browser in both themes at 430px: `/today` redirects and the logger renders
+  its nine cards and the climb entry, warm revisits fetch no new JS, nothing overflows, no
+  page errors. 3,808 tests pass.
+
 **Coaching calls — ten settled (M113), one open (M107b).** Nine judgements the app was making on the coach's
 behalf, each stated at its milestone rather than made quietly, and a tenth the review itself
 turned up. Every site was tagged so the list could be regenerated with

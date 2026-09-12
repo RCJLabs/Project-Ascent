@@ -208,6 +208,16 @@ describe('headings', () => {
   const levelsIn = (source: string): number[] =>
     [...source.matchAll(/<h([1-6])[\s>]/g)].map((m) => Number(m[1]));
 
+  /**
+   * A module that renders no markup at all — a redirect rather than a page.
+   *
+   * Deliberately strict: one element anywhere in the file and it is a page
+   * again, which is what stops the exemption being borrowed by something
+   * that merely has an early `return null` while it loads.
+   */
+  const rendersNothing = (source: string): boolean =>
+    !/<[A-Za-z][A-Za-z0-9]*[\s/>]/.test(source) && /return null;/.test(source);
+
   it('gives every routed page exactly one h1', () => {
     // The rule that matters for navigation: land on a route and there is
     // one top-level heading naming where you are. Fragment components like
@@ -229,12 +239,27 @@ describe('headings', () => {
     for (const path of pages) {
       const file = FILES.find((f) => f.path === path);
       if (file === undefined) continue;
+      // A redirect is not a page: it renders nothing and is gone before a
+      // heading could be read. `mounts.test.tsx` skips the same one for the
+      // same reason. Earned rather than listed — the next module to claim
+      // this has to render nothing too, so the exemption cannot be borrowed
+      // by a real page that simply forgot its heading (PLAN.md M115).
+      if (rendersNothing(file.source)) continue;
       const ownH1 = (file.source.match(/<h1[\s>]/g) ?? []).length;
       const headers = (file.source.match(/<PageHeader/g) ?? []).length;
       const total = ownH1 + headers;
       if (total === 0) offences.push(`${path}: no h1 and no PageHeader`);
     }
     expect(offences).toEqual([]);
+  });
+
+  it('would still catch a page that simply forgot its heading', () => {
+    // Without this the exemption above is an unbounded hole: anything with
+    // a `return null` anywhere in it would slip through. `rendersNothing`
+    // requires the file to contain no JSX at all.
+    expect(rendersNothing('return null;')).toBe(true);
+    expect(rendersNothing('if (!ready) return null;\nreturn <div>hi</div>;')).toBe(false);
+    expect(rendersNothing('return <PageHeader title="x" />;')).toBe(false);
   });
 
   it('never skips a heading level inside one component', () => {

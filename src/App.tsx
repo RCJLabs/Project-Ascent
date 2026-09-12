@@ -5,7 +5,7 @@ import { launchedWithFile } from '@/lib/launchFlag';
 import { useHashLocation } from 'wouter/use-hash-location';
 import { HomePage } from '@/features/home/HomePage';
 import { PlaceholderPage } from '@/features/placeholder/PlaceholderPage';
-import { LogPage, TodayRedirect } from '@/features/log/LogPage';
+import { TodayRedirect } from '@/features/log/TodayRedirect';
 import { WelcomePage } from '@/features/onboarding/WelcomePage';
 /**
  * Every route is its own chunk but the four you cannot defer.
@@ -58,6 +58,9 @@ const SearchPage = lazy(() => import('@/features/search/SearchPage').then((m) =>
 const GlossaryPage = lazy(() => import('@/features/glossary/GlossaryPage').then((m) => ({ default: m.GlossaryPage })));
 const DrillsPage = lazy(() => import('@/features/drills/DrillsPage').then((m) => ({ default: m.DrillsPage })));
 const DrillPage = lazy(() => import('@/features/drills/DrillPage').then((m) => ({ default: m.DrillPage })));
+/** The logger, and by a distance the largest route. 44.81KB gzipped of
+ *  first load when it was eager — see `perf.test.ts` (PLAN.md M115). */
+const LogPage = lazy(() => import('@/features/log/LogPage').then((m) => ({ default: m.LogPage })));
 const AttachPage = lazy(() => import('@/features/media/AttachPage').then((m) => ({ default: m.AttachPage })));
 
 import { sweepOrphanMedia } from '@/db/media';

@@ -234,16 +234,28 @@ describe('the bundle stays small', () => {
   const dist = 'dist/assets';
   const built = existsSync(dist);
 
-  it.runIf(built)('keeps the first load under 217.8KB gzipped', () => {
+  /**
+   * The ceiling, named so the slack check below can read it.
+   *
+   * Every milestone that moves this moves it to just above what it measured;
+   * the history is in the comment inside the first test.
+   */
+  const BUDGET = 174.1;
+
+  /** The first load, gzipped: the entry chunk plus every stylesheet. */
+  function firstLoadKb(): number {
     const html = readFileSync('dist/index.html', 'utf8');
     const entry = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)?.[1];
     expect(entry, 'no entry chunk in index.html').toBeDefined();
-
     const js = gzipSync(readFileSync(`${dist}/${entry}`)).length;
     const css = readdirSync(dist)
       .filter((f) => f.endsWith('.css'))
       .reduce((n, f) => n + gzipSync(readFileSync(`${dist}/${f}`)).length, 0);
-    const total = (js + css) / 1024;
+    return (js + css) / 1024;
+  }
+
+  it.runIf(built)('keeps the first load under 217.8KB gzipped', () => {
+    const total = firstLoadKb();
 
     // 260 until M78 moved the program bodies out of the entry chunk, which
     // took it from 239.5KB to 197.7KB. The budget follows the win, and
@@ -349,7 +361,43 @@ describe('the bundle stays small', () => {
     // run *before* `npm run build`, so this check measured the previous
     // milestone's `dist` and passed on it. It is `it.runIf(built)`, which
     // makes a stale artefact look identical to a healthy one. Build first.
-    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(218.9);
+    //
+    // **218.9 → 174.1 at M115**, measured 218.86 → 174.04, so **44.81KB** —
+    // larger than every increase since M78 put together, and it came from
+    // deleting one static import. Five milestones in a row paid entry-chunk
+    // prices because `LogPage` was eager: M108's 0.32KB for a chip row,
+    // M112's 0.64KB for the cooldown card and the 1.59KB split it had to
+    // make to avoid more.
+    //
+    // Read the long note further down before quoting this number: with the
+    // service worker precaching every chunk, it is the order the bytes
+    // arrive in rather than how many there are, and the case for the change
+    // is 48ms of cold start rather than 44.81KB of download.
+    //
+    // The line drops the whole way rather than part of it. This file's own
+    // rule is that headroom a regression can hide in is not headroom — and
+    // 45KB of slack would hide `LogPage` being made eager again by accident,
+    // which is precisely the mistake being fixed.
+    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(BUDGET);
+  });
+
+  it.runIf(built)('leaves no headroom a regression could hide in', () => {
+    /**
+     * The rule this file has stated in prose since M78, made checkable.
+     *
+     * A ceiling cannot notice being *raised*: set `BUDGET` to 300 and the
+     * test above passes forever while catching nothing, which is exactly
+     * what a mutation showed. This is the other half — the budget has to sit
+     * just above what was actually measured, so the next regression hits it
+     * rather than disappearing into slack.
+     *
+     * 1.5KB because that is roughly one milestone's worth of growth: enough
+     * that a small feature does not have to move the line in the same
+     * commit, not enough to swallow a route being made eager by accident.
+     */
+    const slack = BUDGET - firstLoadKb();
+    expect(slack, `the budget has ${slack.toFixed(2)}KB of slack`).toBeLessThan(1.5);
+    expect(slack, 'the budget is already blown').toBeGreaterThan(0);
   });
 
   it.runIf(built)('keeps every program body out of the entry chunk', () => {
@@ -379,26 +427,68 @@ describe('the bundle stays small', () => {
 
   it.runIf(built)('keeps the heavy routes out of the first load', () => {
     const names = readdirSync(dist).filter((f) => f.endsWith('.js'));
-    for (const split of ['AscentPage', 'BuilderPage', 'GuidePage', 'SearchPage']) {
+    for (const split of ['AscentPage', 'BuilderPage', 'GuidePage', 'LogPage', 'SearchPage']) {
       expect(names.some((f) => f.startsWith(split)), `${split} is not split out`).toBe(true);
     }
   });
 
   it('imports only the routes that cannot be deferred', () => {
     // The guard that keeps the split from eroding one convenient static
-    // import at a time. Home is where the app opens, the logger is what it
-    // is for, onboarding is the first screen of a new install, and the
-    // placeholder is a few lines. Everything else is a chunk.
+    // import at a time. Home is where the app opens, onboarding is the first
+    // screen of a new install, the placeholder is a few lines, and
+    // `TodayRedirect` is six — a launcher shortcut points at `#/today`, so
+    // it is a cold-start entry and deferring it would put two chunk loads in
+    // front of one navigation. Everything else is a chunk.
+    //
+    // **`LogPage` was on this list until M115.** "The logger is what it is
+    // for" read as a reason to keep it eager for five milestones, and the
+    // note above called it the real headroom every time without anyone
+    // measuring it. Measured: **44.81KB gzipped** of entry chunk, 218.86 →
+    // 174.05.
+    //
+    // **That headline number oversells it, and the measurements that say so
+    // are worth keeping.** The service worker precaches every chunk
+    // (`globPatterns` is `**/*.js`), so a first visit fetches the same bytes
+    // either way — the split changes the *order* they arrive in, not the
+    // volume. Counting what a cold start actually pulls, boot goes
+    // 254.12 → 209.29KB; but a climber who cold-starts and goes straight to
+    // the logger pulls **20 chunks and 51.27KB** on that navigation, for
+    // 260.56KB against 254.12 before. That path is **6.44KB worse**, not
+    // 27KB better as a first draft of this comment claimed by counting only
+    // `LogPage`'s own 17.73KB chunk.
+    //
+    // What justifies it is the time, measured rather than assumed: cold
+    // load to first heading on a 6× throttled CPU, seven runs each, median
+    // **775ms → 727ms** and best-case 730 → 672. Around 6%, on every cold
+    // start, for everyone — against 6.44KB once, on a first-ever visit that
+    // goes straight to the logger before the precache lands.
+    //
+    // The 20-chunk fan-out is the next thing to look at rather than a
+    // footnote: 13.99KB of it is the glossary, pulled in by one `<Term>` on
+    // an exercise name so it can ask whether that name has a definition.
     const app = readFileSync('src/App.tsx', 'utf8');
     const eager = [...app.matchAll(/^import \{([^}]+)\} from '@\/(features\/[^']+)'/gm)].map(
       (m) => m[2],
     );
     expect(eager.sort()).toEqual([
       'features/home/HomePage',
-      'features/log/LogPage',
+      'features/log/TodayRedirect',
       'features/onboarding/WelcomePage',
       'features/placeholder/PlaceholderPage',
     ]);
+  });
+
+  it('keeps the redirect out of the logger it redirects to', () => {
+    // The mechanism behind the split. `TodayRedirect` used to be declared in
+    // `LogPage.tsx`, so importing it imported 2,000 lines and everything
+    // they touch — the same shape as `db/demoFlag.ts` (M110) and
+    // `lib/launchFlag.ts` (M111). If it moves back, the eager list above
+    // still passes and the 44.81KB comes back silently.
+    const redirect = readFileSync('src/features/log/TodayRedirect.tsx', 'utf8');
+    expect(redirect).not.toMatch(/from '\.\/LogPage'/);
+    expect(readFileSync('src/features/log/LogPage.tsx', 'utf8')).not.toMatch(
+      /export function TodayRedirect/,
+    );
   });
 
   it.runIf(built)('has no single chunk over 780KB', () => {

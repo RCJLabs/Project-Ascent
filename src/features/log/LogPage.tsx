@@ -1160,14 +1160,6 @@ function SessionEditor({
   );
 }
 
-export function TodayRedirect() {
-  const [, navigate] = useLocation();
-  useEffect(() => {
-    navigate(`/log/${today()}`, { replace: true });
-  }, [navigate]);
-  return null;
-}
-
 const OUTCOMES: { value: AttemptOutcome; label: string }[] = [
   { value: 'worked', label: 'Worked' },
   { value: 'fell-low', label: 'Low' },
