@@ -143,15 +143,28 @@ const empty = (runway: number, withheld: WithheldReason): PeakPlan => ({
   withheld,
 });
 
+/**
+ * Whole weeks between a day and a target.
+ *
+ * Weeks are anchored to today rather than counted back from the trip, so
+ * the last one ends within three days of it. Close enough for a week-sized
+ * instruction, and it keeps every week a whole week.
+ *
+ * Exported because `season.ts` has to ask **this** question, not one of its
+ * own: the season card appears exactly where this plan withholds, and two
+ * calculations of "weeks away" disagreeing by one put both cards on screen
+ * together for a week (PLAN.md M109).
+ */
+export function runwayWeeks(target: string, from: string): number {
+  return Math.max(1, Math.round(daysBetween(from, target) / 7));
+}
+
 export function peakPlan(request: PeakRequest): PeakPlan {
   const from = request.from ?? todayKey();
   const days = daysBetween(from, request.target);
   if (days < 0) return empty(0, 'past');
 
-  // Weeks are anchored to today rather than counted back from the trip, so
-  // the last one ends within three days of it. Close enough for a week-sized
-  // instruction, and it keeps every week a whole week.
-  const runway = Math.max(1, Math.round(days / 7));
+  const runway = runwayWeeks(request.target, from);
   if (runway > MAX_RUNWAY_WEEKS) return empty(runway, 'too-far');
 
   const index = buildLoadIndex([...request.sessions]);

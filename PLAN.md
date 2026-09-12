@@ -4320,19 +4320,51 @@ materially wrong premise. Sizes are guesses.*
   in the climb entry is first-load by construction.
   Verified in both themes at 430px. 3,450 tests pass.
 
-- **M109 — A season, as a sequence of blocks.** *Proposed. Size L.*
-  **Premise.** The pieces exist and do not join: `nextPrograms` with a written reason per
-  destination (read on `/finish` since M85), `adapt` for fitting a block into fewer weeks
-  (M56), the peaking shape (M73), an objective with a `targetDate`. A climber cannot lay
-  out *Base Camp → Iron Grip → Trip Prep, ending on the trip* and see it; each block is
-  chosen only when the last one runs out.
-  **Shape.** On the objective, first: a sequence of program ids, start dates *derived*
-  working back from the target, each block adapted where it does not fit, deloads read
-  from each; the calendar draws future blocks as ghost weeks; `/finish` offers the next
-  one as *next in your season*. Stored: the sequence. Derived: every date.
-  **Never.** Place sessions beyond the active block, or mark a season missed. It is an
-  intention, and the objective's own rule already says a season that did not go to plan
-  is a season.
+- **M109 — A season, as a sequence of blocks.** *Done, the sequence. Ghost weeks deferred.*
+  **Premise held, and the app had already written the milestone's own sentence.** Every piece
+  existed and none joined: `nextPrograms` with a reason per destination, `adaptProgram`,
+  `blockWindow`, `Objective.targetDate`. What the premise misses is **where it belongs** —
+  `peak.ts` holds the runway at twelve weeks and past that withholds with:
+  *"More than 12 weeks out is a training block, not a peak. **Pick a program for the first
+  part of it** and come back when the trip is closer."* That is an instruction the app gave
+  and then could not help with, so the seam is exactly there and the two never overlap:
+  **outside twelve weeks the season says which blocks, inside it the runway says how hard
+  each week.** The screenshot shows the two cards stacked, the second doing what the first
+  asks for.
+  **Built.** `Objective.season?: ProgramId[]` — the sequence is stored, every date is derived
+  backwards from the target, because a season is aimed at a date rather than begun on one.
+  A block runs at **the climber's own length**, read from `adaptations`, never invented. A
+  card on the objective page, appearing only where the runway withholds.
+  **It never shortens a block to make the sum work.** Squeezing twelve weeks into seven
+  changes the training, and `StartProgramPage` already makes that the climber's decision with
+  the lengths that program actually supports. The card reports the shortfall and names where
+  the fix lives. And it never marks a season missed — `targetDate` is documented as *"not a
+  deadline that can be failed"*, and this is the same date.
+  **Three calculations of "weeks to the target", which is the finding.** `peak.ts` rounds
+  from *today*; I wrote a week-aligned one for the reading and a third for the gate. Two
+  consequences, both caught by mutation and both real: the season card appeared **a week
+  before** the runway withheld, putting both on screen together; and the sentence read
+  *"24 weeks against 16 weeks to the day. That is **7** weeks more than there is room for"* —
+  arithmetic a reader checks in their head. `runwayWeeks` is now exported from `peak.ts` and
+  is the only measure; the shortfall is the subtraction of the two numbers the sentence
+  states. A test sweeps twenty weeks asserting the season appears exactly where the peak plan
+  withholds, and another asserts `weeks − runway === over − slack`.
+  **One piece of dead code.** A guard refusing a season for a date already gone —
+  `runwayWeeks` floors at one, so a past target can never clear the seam and the guard could
+  never fire.
+  **Deferred, with reasons.** *Ghost weeks on the calendar* — the calendar draws the active
+  block's placed sessions, and drawing future blocks means either placing sessions beyond it
+  (which the milestone's own "Never" forbids) or inventing a second kind of week the calendar
+  does not have. Worth doing, and it is a calendar change rather than a season one.
+  *`/finish` offering the next block as "next in your season"* — small and clean, but it wants
+  the season to be reachable from a block rather than from an objective, which is a lookup
+  that does not exist yet.
+  **Measured, not asserted.** 29 mutations. Five survivors: the two measure disagreements
+  above, a block span nothing checked (both ends moved together, so "butts against the next"
+  still passed), a cap test using a program id that does not exist so the cap was never
+  exercised, and a card that would have offered a program already in the sequence.
+  **Budget.** Unchanged at 217.4KB — 217.34 measured, the objective page being lazy.
+  Verified in both themes at 430px. 3,489 tests pass.
 
 - **M110 — A demo climber, for the screenshots and the videos.** *Proposed. Size M.*
   **Premise.** §9.3 closed multi-profile with "better served by a sample-data mode".

@@ -34,6 +34,7 @@
  * paying them to tick a return-to-climbing box.
  */
 
+import type { ProgramId } from '@/content/types';
 import type { GradeScale } from './grades';
 import { measure, type Measurement, type SkillInput, type SkillRequirement } from './skills';
 import { daysBetween, today as todayKey } from './dates';
@@ -62,6 +63,14 @@ export interface Objective {
    * to plan is a season, not a failure state.
    */
   targetDate?: string;
+  /**
+   * Blocks you mean to run before it, in order (PLAN.md M109).
+   *
+   * The sequence is stored; every date is derived from it and the target,
+   * working backwards. Absent on an objective inside the peak runway, where
+   * `peak.ts` answers a different and better question.
+   */
+  season?: ProgramId[];
   requirements: ObjectiveRequirement[];
   /** A tracked project, when the objective is something you are already on. */
   projectId?: string;

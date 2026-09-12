@@ -20,6 +20,8 @@ import { useSessions } from '@/store/sessions';
 import { useProfile } from '@/store/profile';
 import { LoadTrendLine } from '@/ui/charts/LoadTrendLine';
 import { VENUE_LIST_ID, VenueOptions, useVenues } from '@/features/venues/useVenues';
+import { wantsSeason } from '@/engine/season';
+import { SeasonCard } from './SeasonCard';
 import { useObjectives } from '@/store/objectives';
 import { offerUndo } from '@/store/undo';
 import { useProjects } from '@/store/projects';
@@ -127,6 +129,16 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
         </Card>
 
         {objective.targetDate && planning && <RunwayCard target={objective.targetDate} />}
+        {/* The two halves of planning a date, and the seam is the one
+            `peak.ts` already drew: outside twelve weeks the season says
+            which blocks, inside it the runway says how hard each week
+            (PLAN.md M109). */}
+        {objective.targetDate && planning && wantsSeason(objective.targetDate, today()) && (
+          <SeasonCard
+            objective={objective}
+            onChange={(season) => void save({ ...objective, season })}
+          />
+        )}
 
         {progress.weakest && (
           <Card title="Furthest away">
