@@ -177,3 +177,40 @@ export function wantsSeason(targetDate: string, today: string): boolean {
   // mutation removing it changed nothing, which is how it was found.
   return runwayWeeks(targetDate, today) > MAX_RUNWAY_WEEKS;
 }
+
+/**
+ * Which block of the season covers a date, or null (PLAN.md M112b).
+ *
+ * The calendar needs this to draw a season it is not running yet. Nothing
+ * here places a session — a ghost is a band over a date range, which is why
+ * `SeasonBlock` already carries `from` and `to` and no days at all. The
+ * "Never" above holds: this answers *which block*, and the calendar draws a
+ * colour, and at no point does either invent a session.
+ */
+export function blockOn(s: Season, date: string): SeasonBlock | null {
+  return s.blocks.find((b) => b.from <= date && date <= b.to) ?? null;
+}
+
+/**
+ * The one season a screen that can only show one should show.
+ *
+ * Nothing caps objectives and none of them is primary, so a climber can
+ * carry several with a sequence on each. The soonest target wins, because
+ * that is the one whose blocks are running now — a season for next autumn
+ * cannot be the one the calendar is drawing this month.
+ *
+ * Ties go to neither: two objectives on the same date is a climber who has
+ * not decided, and picking one for them would draw a season they never
+ * chose over the one they meant.
+ */
+export function soonestSeason<T extends { targetDate?: string; season?: readonly ProgramId[] }>(
+  objectives: readonly T[],
+): T | null {
+  const withSeason = objectives.filter(
+    (o) => o.targetDate !== undefined && (o.season?.length ?? 0) > 0,
+  );
+  if (withSeason.length === 0) return null;
+  const soonest = withSeason.reduce((a, b) => (a.targetDate! <= b.targetDate! ? a : b));
+  const tied = withSeason.filter((o) => o.targetDate === soonest.targetDate);
+  return tied.length === 1 ? soonest : null;
+}

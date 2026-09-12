@@ -3,7 +3,7 @@ import type { ProgramId } from '@/content/types';
 import { getProgram } from '@/content/programs';
 import { addDays, daysBetween, startOfWeek } from './dates';
 import { MAX_RUNWAY_WEEKS, peakPlan } from './peak';
-import { describeSeason, MAX_BLOCKS, season, wantsSeason } from './season';
+import { MAX_BLOCKS, blockOn, describeSeason, season, soonestSeason, wantsSeason } from './season';
 
 /**
  * A season, as a sequence of blocks (PLAN.md M109).
@@ -224,5 +224,78 @@ describe('when a season is the question at all', () => {
     // Far enough back that its *distance* clears the seam: a season is
     // about a date ahead, and the sign is the whole question.
     expect(wantsSeason(addDays(TODAY, -180), TODAY)).toBe(false);
+  });
+});
+
+describe('which block covers a date', () => {
+  const built = () =>
+    season({
+      programIds: ['base_camp', 'iron_grip'],
+      targetDate: '2026-06-07',
+      today: '2026-01-05',
+    });
+
+  it('finds the block a date falls in', () => {
+    const s = built();
+    const first = s.blocks[0]!;
+    expect(blockOn(s, first.from)?.programId).toBe(first.programId);
+    expect(blockOn(s, first.to)?.programId).toBe(first.programId);
+  });
+
+  it('includes both ends, so no day falls between two blocks', () => {
+    // The blocks butt against each other: the day after one ends is the day
+    // the next begins. An exclusive bound at either end leaves a one-day
+    // hole in the middle of a season.
+    const s = built();
+    const [a, b] = [s.blocks[0]!, s.blocks[1]!];
+    expect(addDays(a.to, 1)).toBe(b.from);
+    expect(blockOn(s, a.to)?.programId).toBe(a.programId);
+    expect(blockOn(s, b.from)?.programId).toBe(b.programId);
+  });
+
+  it('is null outside the season entirely', () => {
+    const s = built();
+    expect(blockOn(s, addDays(s.blocks[0]!.from, -1))).toBe(null);
+    expect(blockOn(s, addDays(s.blocks[s.blocks.length - 1]!.to, 1))).toBe(null);
+  });
+
+  it('is null for a season with no blocks', () => {
+    expect(blockOn(season({ programIds: [], targetDate: '2026-06-07', today: '2026-01-05' }), '2026-03-01')).toBe(null);
+  });
+});
+
+describe('picking one season out of several', () => {
+  const obj = (targetDate?: string, season?: string[]) =>
+    ({ targetDate, season }) as { targetDate?: string; season?: string[] };
+
+  it('takes the soonest target', () => {
+    const near = obj('2026-04-01', ['base_camp']);
+    const far = obj('2026-11-01', ['iron_grip']);
+    expect(soonestSeason([far, near])).toBe(near);
+  });
+
+  it('ignores an objective with a date and no sequence', () => {
+    const dated = obj('2026-02-01', []);
+    const real = obj('2026-09-01', ['base_camp']);
+    expect(soonestSeason([dated, real])).toBe(real);
+  });
+
+  it('ignores a sequence with no date', () => {
+    // Every date in a season is derived backwards from the target. Without
+    // one there is nothing to derive and nothing to draw.
+    expect(soonestSeason([obj(undefined, ['base_camp'])])).toBe(null);
+  });
+
+  it('draws nothing when two are tied', () => {
+    // A climber with two objectives on the same date has not decided which
+    // season they are running. Choosing for them puts a season on the
+    // calendar that they never picked.
+    const a = obj('2026-05-01', ['base_camp']);
+    const b = obj('2026-05-01', ['iron_grip']);
+    expect(soonestSeason([a, b])).toBe(null);
+  });
+
+  it('is null when there is nothing at all', () => {
+    expect(soonestSeason([])).toBe(null);
   });
 });
