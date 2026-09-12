@@ -1,12 +1,34 @@
 import { useEffect, useRef } from 'react';
 import { Copy, Plus } from 'lucide-react';
-import type { Climb } from '@/db/sessions';
+import type { Climb, RopeStyle, WallAngle } from '@/db/sessions';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
 import { Button } from '@/ui/Button';
 import { Chip } from '@/ui/Chip';
 import { useGradeOptions } from '@/ui/useGrade';
 
 export type Outcome = 'onsight' | 'flash' | 'send' | 'attempt';
+
+/**
+ * The angle chips, and the one rule that keeps them from being creep
+ * (PLAN.md M108).
+ *
+ * Nothing is selected by default and nothing has to be. The default path —
+ * pick a grade, tap Add — costs exactly the taps it costs today, which is
+ * the condition the milestone set on itself and a test holds. Tapping an
+ * angle is sticky for the rest of the session, because a climber on a
+ * spray wall is on it for an hour.
+ */
+export const ANGLES: { value: WallAngle; label: string }[] = [
+  { value: 'slab', label: 'Slab' },
+  { value: 'vertical', label: 'Vert' },
+  { value: 'overhang', label: 'Steep' },
+  { value: 'roof', label: 'Roof' },
+];
+
+export const ROPE_STYLES: { value: RopeStyle; label: string }[] = [
+  { value: 'lead', label: 'Lead' },
+  { value: 'toprope', label: 'Top rope' },
+];
 
 /**
  * What "same as last time" carries over: a climb, minus the name.
@@ -46,17 +68,25 @@ export function ClimbEntry({
   scale,
   grade,
   outcome,
+  angle,
+  ropeStyle,
   onScale,
   onGrade,
   onOutcome,
+  onAngle,
+  onRopeStyle,
   onAdd,
 }: {
   scale: GradeScale;
   grade: string;
   outcome: Outcome;
+  angle: WallAngle | null;
+  ropeStyle: RopeStyle | null;
   onScale: (scale: GradeScale) => void;
   onGrade: (grade: string) => void;
   onOutcome: (outcome: Outcome) => void;
+  onAngle: (angle: WallAngle | null) => void;
+  onRopeStyle: (style: RopeStyle | null) => void;
   onAdd: () => void;
 }) {
   const gradeOptions = useGradeOptions();
@@ -123,6 +153,36 @@ export function ClimbEntry({
           </button>
         ))}
       </div>
+
+      {/* Tapping the selected chip again clears it, so "I did not say" is
+          reachable after "I did" without a fifth chip for nothing. */}
+      <div className="flex flex-wrap gap-1.5 mb-2" role="group" aria-label="Angle (optional)">
+        {ANGLES.map((a) => (
+          <Chip
+            key={a.value}
+            active={angle === a.value}
+            onClick={() => onAngle(angle === a.value ? null : a.value)}
+          >
+            {a.label}
+          </Chip>
+        ))}
+      </div>
+
+      {/* Only on a rope: a boulder has no lead and the common case should
+          not pay a row for a question that cannot apply to it. */}
+      {scale === 'YDS' && (
+        <div className="flex flex-wrap gap-1.5 mb-2" role="group" aria-label="Lead or top rope (optional)">
+          {ROPE_STYLES.map((r) => (
+            <Chip
+              key={r.value}
+              active={ropeStyle === r.value}
+              onClick={() => onRopeStyle(ropeStyle === r.value ? null : r.value)}
+            >
+              {r.label}
+            </Chip>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-1.5">
         {OUTCOMES.map((o) => (

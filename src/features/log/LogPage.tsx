@@ -37,7 +37,7 @@ import { plannedDay, prescriptionFor } from '@/engine/plan';
 import { prescriptionLine } from '@/engine/prescription';
 import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
 import { V_GRADES, YDS_GRADES, displayGrade, type GradeScale } from '@/engine/grades';
-import type { Climb, LoggedExercise, ProjectAttempt, Session } from '@/db/sessions';
+import type { Climb, LoggedExercise, ProjectAttempt, RopeStyle, Session, WallAngle } from '@/db/sessions';
 import type { AttemptOutcome } from '@/db/projects';
 import { OUTCOME_HIGH_POINT, OUTCOME_LABEL } from '@/engine/projects';
 import { useXp } from '@/store/game';
@@ -477,6 +477,10 @@ function SessionEditor({
   // One control instead of two: style is part of how a climb went, and a
   // separate selector for it would not survive a phone-width row.
   const [outcome, setOutcome] = useState<Outcome>('send');
+  // Sticky for the session, like the grade: a climber on a spray wall is on
+  // it for an hour, and nothing is selected until they say so (PLAN.md M108).
+  const [angle, setAngle] = useState<WallAngle | null>(null);
+  const [ropeStyle, setRopeStyle] = useState<RopeStyle | null>(null);
   const [climbName, setClimbName] = useState('');
   // `completes` is the exercise to tick when the clock runs out. A circuit
   // has none: the exercises it runs are the ones already ticked, which is how
@@ -514,14 +518,21 @@ function SessionEditor({
     const name = climbName.trim();
     const result: Climb['result'] = outcome === 'attempt' ? 'attempt' : 'send';
     const style = outcome === 'onsight' || outcome === 'flash' ? outcome : undefined;
+    // Only a rope has a lead (PLAN.md M108).
+    const rope = scale === 'YDS' && ropeStyle ? ropeStyle : undefined;
     // A named climb never merges into an unnamed tally — the name is what
     // makes project auto-suggest possible — and nor do two different styles.
+    // Angle and rope style join the key for the same reason: two V5s on
+    // different walls are two rows, or the angle they were logged with is
+    // whichever one happened to be tapped first.
     const existing = session.climbs.find(
       (c) =>
         c.grade === grade &&
         c.scale === scale &&
         c.result === result &&
         c.style === style &&
+        c.angle === (angle ?? undefined) &&
+        c.ropeStyle === rope &&
         (c.name ?? '') === name,
     );
     const climbs = existing
@@ -535,6 +546,8 @@ function SessionEditor({
             count: 1,
             result,
             ...(style ? { style } : {}),
+            ...(angle ? { angle } : {}),
+            ...(rope ? { ropeStyle: rope } : {}),
             ...(name ? { name } : {}),
           } as Climb,
         ];
@@ -670,9 +683,13 @@ function SessionEditor({
               scale={scale}
               grade={grade}
               outcome={outcome}
+              angle={angle}
+              ropeStyle={ropeStyle}
               onScale={setScale}
               onGrade={setGrade}
               onOutcome={setOutcome}
+              onAngle={setAngle}
+              onRopeStyle={setRopeStyle}
               onAdd={addClimb}
             />
 

@@ -21,6 +21,7 @@ import { FIELD_DAYS, fieldSeries } from '@/engine/sessionFields';
 import { addDays, fromKey, today } from '@/engine/dates';
 import { availableYears } from '@/engine/yearReview';
 import { deriveClimberState } from '@/engine/derive';
+import { ANGLE_LABEL, angles, describeAngles } from '@/engine/angles';
 import { describeLadders, ladders } from '@/engine/ladders';
 import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
 import { useMetrics } from '@/store/metrics';
@@ -322,6 +323,10 @@ export function ProgressPage() {
   const shown =
     onWhich === 'indoor' ? twoLadders.indoor.tally : onWhich === 'outdoor' ? twoLadders.outdoor.tally : tally;
   const rows = useMemo(() => pyramid(shown, scale), [shown, scale]);
+  // What you avoid (PLAN.md M108). Silent until climbs carry an angle,
+  // which is most logs — the question is new and nothing is inferred.
+  const byAngle = useMemo(() => angles(sessions, scale), [sessions, scale]);
+  const angleSaid = describeAngles(byAngle, display);
   const ladder = scale === 'V' ? V_GRADES : YDS_GRADES;
 
   if (state.completedSessions === 0) {
@@ -585,6 +590,29 @@ export function ProgressPage() {
             </p>
           )}
         </Card>
+
+        {angleSaid !== null && (
+          <Card title="The walls you climb on">
+            <p className="text-sm leading-relaxed">{angleSaid}</p>
+            {byAngle.sides.length > 0 && (
+              <ul className="grid grid-cols-1 gap-2 mt-3">
+                {byAngle.sides.map((side) => (
+                  <li
+                    key={side.angle}
+                    className="flex items-baseline justify-between gap-3 bg-sunken rounded-xl px-3 py-2"
+                  >
+                    <span className="text-sm font-semibold">{ANGLE_LABEL[side.angle]}</span>
+                    <span className="text-xs text-ink-soft">
+                      {side.tally.best === null
+                        ? `${side.tally.totalAttempts} tried, none sent`
+                        : `${gradeLabel(scale, side.tally.best)} · ${side.tally.totalSends} sent`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        )}
 
         <AssessmentsCard />
         <JournalCard />

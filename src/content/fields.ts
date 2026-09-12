@@ -54,6 +54,18 @@ export const FIELDS: Record<FieldId, FieldSpec> = {
   pumpLevel: { id: 'pumpLevel', label: 'Pump', kind: 'scale', ends: ['Fresh', 'Wrecked'] },
   location: { id: 'location', label: 'Where', kind: 'text', placeholder: 'The gym, the crag, the boulder' },
   sessionNumber: { id: 'sessionNumber', label: 'Day of the trip', kind: 'number' },
+  /**
+   * @deprecated Retired at M108 and asked by no session type.
+   *
+   * It requested "Onsight, flash, redpoint, toprope" as free text on one
+   * session type of one program — three of which `Climb.style` has always
+   * stored structurally, and the fourth of which is `Climb.ropeStyle` since
+   * M108. Asking it again in prose was two places for one fact, and the
+   * prose one was per *session*, so a day with four routes got one answer.
+   *
+   * The entry stays so answers already written keep a label and a shape;
+   * nothing renders an input for it.
+   */
   clipStyle: { id: 'clipStyle', label: 'Style', kind: 'text', placeholder: 'Onsight, flash, redpoint, toprope' },
   waterDepth: { id: 'waterDepth', label: 'Water depth', kind: 'number', unit: 'ft' },
   gearNotes: { id: 'gearNotes', label: 'Gear', kind: 'text', placeholder: 'What the rack needed' },

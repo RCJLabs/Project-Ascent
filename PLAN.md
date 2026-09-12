@@ -4270,22 +4270,55 @@ materially wrong premise. Sizes are guesses.*
   they land **with** the words, in one milestone, when the coach has written them. 144
   drills, and only Evan can write them.
 
-- **M108 — Style on a climb.** *Proposed. Size M.*
-  **Premise.** `Climb` is grade, scale, count, result, `style` (onsight/flash/redpoint) and
-  a name. No angle, no lead-versus-top-rope, no board. "Technique: breadth of grades and
-  styles" in the stat table means ascent styles. A coach's first question — *what do you
-  avoid?* — has no data, and the answer is usually "slab" or "roofs" and the app cannot
-  say. Board climbing (Kilter, Moon, Tension) is seventeen mentions in drill and program prose and
-  not an `Equipment`. And the session field `clipStyle` asks for onsight/flash/redpoint in
-  free text, which `Climb.style` already stores structurally — two places for one fact.
-  **Shape.** Optional chips on a climb: angle (slab, vert, overhang, roof); lead or
-  top-rope on ropes; and `board` as an `Equipment` plus a board session type in General
-  Training. Derived: a pyramid per angle, "your slab best is two grades under your
-  overhang best", a coach rule for the avoided angle, and a weekly challenge that targets
-  it — the generator already picks the weakest drill category, same shape. Retire
-  `clipStyle` in favour of the structured field. Default: absent. Nothing inferred.
-  **Caveat.** Chip creep in the logger. A test that the default path — grade, send — costs
-  exactly the taps it costs today.
+- **M108 — Style on a climb.** *Done, the angle and the rope. The board is refused.*
+  **Premise held on four of five claims.** `Climb` really was grade, scale, count, result,
+  ascent style and a name; "breadth of grades and styles" in the Technique stat really does
+  mean *ascent* styles; and `clipStyle` really is a **free-text** field asking "Onsight,
+  flash, redpoint, toprope" — three of which `Climb.style` already stored structurally.
+  **The fifth is wrong by a factor of four.** Board climbing is *"seventeen mentions in
+  drill and program prose"*. Counted: **four** — one Kilter, one MoonBoard, one System
+  Board, one Tension Board. The sixty other hits are `hangboard` and `fingerboard`. So
+  `board` as an `Equipment` is **refused**: a new equipment value touches the warmup
+  generator, the builder's picker, the settings card and every drill's equipment array, and
+  it would be carrying four lines of prose.
+  **Built.** `Climb.angle?` (slab / vertical / overhang / roof) and `Climb.ropeStyle?` (lead
+  / top-rope), both optional and both absent by default — an absent angle is a climber who
+  did not answer, never a vertical one. `engine/angles.ts` reads the shape, reusing the
+  `addClimb` accumulator M106 extracted rather than writing a third copy of it. A card on
+  `/progress` states coverage, then the two ends and the rungs between them.
+  **The caveat, met on its own terms.** *"A test that the default path — grade, send —
+  costs exactly the taps it costs today."* It does: one tap on Add, and a test asserts the
+  stored climb carries no angle and no rope style. Angle and rope add **rows**, not taps —
+  one row on boulders, two on ropes, and the rope row appears only on the rope scale because
+  a boulder has no lead. Tapping a selected chip clears it, so *"I did not say"* is reachable
+  after *"I did"* without a fifth chip that exists to mean nothing. The angle is sticky for
+  the session, because a climber on a spray wall is on it for an hour. Both angle and rope
+  style join the climb merge key, or two V5s on different walls become one row with whichever
+  angle was tapped first.
+  **And it never calls a gap a weakness.** Which end is the problem and which is just where
+  this climber climbs is a judgement about a person; the angle nobody logs is as likely to
+  be the one their gym does not have. The sentence says so, and a test holds the card free of
+  `weak|avoid|should|work on|problem|worst` — which **caught my own first draft**, where the
+  sentence read "whether that is a weakness or just where you climb".
+  **`clipStyle` retired.** Removed from `outdoor_sport`, the one session type of the one
+  program that asked it. The registry entry stays, deprecated, so answers already written
+  keep a label — but nothing renders an input for it. The retirement only became honest with
+  this milestone: before `ropeStyle` there was nowhere structured for *toprope* to go.
+  **Deferred, with reasons.** A coach rule for the angle nobody climbs, and a weekly
+  challenge that targets it. Both are real and both want data that does not exist yet — the
+  question is new, so every log in the world currently answers it nowhere, and a rule that
+  fires on four tagged climbs is the thing `ENOUGH` exists to prevent. Worth building once
+  there is a season of tagged climbs to test against.
+  **Measured, not asserted.** 31 mutations. Three survivors, all test gaps: nothing tested
+  the coverage gate at exactly `ENOUGH`, nothing stopped an angle with no send from becoming
+  one of the two ends, and nothing added two climbs differing only in rope style.
+  **One thing the rendered card caught**: the body ended on the card's own title — "nothing
+  about the walls you climb on" under a heading reading "The walls you climb on". It names
+  the real confound now.
+  **Budget.** 217.1 → 217.4KB, measured 217.05 → 217.37, so 0.32KB — the largest move since
+  M104, and for the same reason: `LogPage` and `GymPage` are eagerly imported, so a chip row
+  in the climb entry is first-load by construction.
+  Verified in both themes at 430px. 3,450 tests pass.
 
 - **M109 — A season, as a sequence of blocks.** *Proposed. Size L.*
   **Premise.** The pieces exist and do not join: `nextPrograms` with a written reason per

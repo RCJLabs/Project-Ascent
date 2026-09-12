@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { Check, Minus, Plus, X } from 'lucide-react';
-import type { Climb, Session } from '@/db/sessions';
+import type { Climb, RopeStyle, Session, WallAngle } from '@/db/sessions';
 import { today } from '@/engine/dates';
 import { REST_PRESETS, bump, climbOutcome, gymSummary, restLabel, restRemaining } from '@/engine/gym';
 import { elapsedMs, formatClock, runningSession } from '@/engine/live';
@@ -301,12 +301,24 @@ function AddClimb({
   const [scale, setScale] = useState<Climb['scale']>('V');
   const [grade, setGrade] = useState('V3');
   const [outcome, setOutcome] = useState<Outcome>('send');
+  // Gym mode logs the same climb as the logger does, so it asks the same
+  // optional questions (PLAN.md M108) — and they cost the same nothing.
+  const [angle, setAngle] = useState<WallAngle | null>(null);
+  const [ropeStyle, setRopeStyle] = useState<RopeStyle | null>(null);
 
   function add() {
     const result: Climb['result'] = outcome === 'attempt' ? 'attempt' : 'send';
     const style = outcome === 'onsight' || outcome === 'flash' ? outcome : undefined;
+    const rope = scale === 'YDS' && ropeStyle ? ropeStyle : undefined;
     const existing = session.climbs.find(
-      (c) => c.grade === grade && c.scale === scale && c.result === result && c.style === style && !c.name,
+      (c) =>
+        c.grade === grade &&
+        c.scale === scale &&
+        c.result === result &&
+        c.style === style &&
+        c.angle === (angle ?? undefined) &&
+        c.ropeStyle === rope &&
+        !c.name,
     );
     onAdd(
       existing
@@ -320,6 +332,8 @@ function AddClimb({
               count: 1,
               result,
               ...(style ? { style } : {}),
+              ...(angle ? { angle } : {}),
+              ...(rope ? { ropeStyle: rope } : {}),
             } as Climb,
           ],
     );
@@ -331,9 +345,13 @@ function AddClimb({
         scale={scale}
         grade={grade}
         outcome={outcome}
+        angle={angle}
+        ropeStyle={ropeStyle}
         onScale={setScale}
         onGrade={setGrade}
         onOutcome={setOutcome}
+        onAngle={setAngle}
+        onRopeStyle={setRopeStyle}
         onAdd={add}
       />
       <Button size="sm" variant="ghost" className="w-full" onClick={onCancel}>

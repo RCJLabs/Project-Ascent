@@ -61,7 +61,7 @@ export const OUTDOOR_CLIMBING: Program = {
       icon: '🧗',
       description:
         'Sport climbing on real rock. Buddy-check before every lead; note clip stances as part of the beta.',
-      fields: ['location', 'sessionNumber', 'attemptsToday', 'highPoint', 'clipStyle'],
+      fields: ['location', 'sessionNumber', 'attemptsToday', 'highPoint'],
     },
     {
       id: 'outdoor_trad',

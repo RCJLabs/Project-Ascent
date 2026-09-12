@@ -19,6 +19,30 @@ export type SessionMode = 'indoor' | 'outdoor';
 export type ClimbResult = 'send' | 'attempt';
 export type AscentStyle = 'onsight' | 'flash' | 'redpoint';
 
+/**
+ * The wall's angle, which decides what a climb asks of you (PLAN.md M108).
+ *
+ * A coach's first question is *what do you avoid?*, and the answer is
+ * almost always an angle — slab and roofs are different sports played on
+ * the same grade ladder. Nothing in the record could answer it: a `Climb`
+ * was grade, scale, count, result, ascent style and a name.
+ *
+ * Four, not a protractor. "Vertical-ish" is the useful unit, and a climber
+ * logging on a phone between goes will not pick from eight.
+ */
+export type WallAngle = 'slab' | 'vertical' | 'overhang' | 'roof';
+
+/**
+ * Lead or top-rope, on a rope.
+ *
+ * The same route is a different climb on each, and the app had the question
+ * written down in exactly one place: `clipStyle`, a **free-text** field on
+ * one session type of one program, whose placeholder asks for "Onsight,
+ * flash, redpoint, toprope" — three of which `Climb.style` already stores
+ * structurally, and the fourth of which is this.
+ */
+export type RopeStyle = 'lead' | 'toprope';
+
 export interface Climb {
   id: string;
   grade: string;
@@ -26,6 +50,14 @@ export interface Climb {
   count: number;
   result: ClimbResult;
   style?: AscentStyle;
+  /**
+   * The wall's angle. Absent means the climber did not say, which is not
+   * the same as vertical — nothing is inferred, and every reading that
+   * counts angles states how much of the log said nothing.
+   */
+  angle?: WallAngle;
+  /** Lead or top-rope. Only asked on a rope; absent means unsaid. */
+  ropeStyle?: RopeStyle;
   name?: string;
 }
 

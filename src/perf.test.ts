@@ -203,7 +203,7 @@ describe('the bundle stays small', () => {
   const dist = 'dist/assets';
   const built = existsSync(dist);
 
-  it.runIf(built)('keeps the first load under 217.1KB gzipped', () => {
+  it.runIf(built)('keeps the first load under 217.4KB gzipped', () => {
     const html = readFileSync('dist/index.html', 'utf8');
     const entry = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)?.[1];
     expect(entry, 'no entry chunk in index.html').toBeDefined();
@@ -255,7 +255,13 @@ describe('the bundle stays small', () => {
     // browsable drill library. Both its pages are lazy; what lands on first
     // load is two rows in the route table, which is eager because search
     // reads it, and two `lazy()` wrappers in `App.tsx`.
-    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(217.1);
+    //
+    // 217.1 → 217.4 at M108, measured 217.05 → 217.37, so 0.32KB — the
+    // largest move since M104 and for the same reason: `LogPage` and
+    // `GymPage` are eagerly imported, so a chip row in the climb entry is
+    // first-load by construction. The lazy `LogPage` the note above calls
+    // the real headroom is still the answer, and still a perf milestone.
+    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(217.4);
   });
 
   it.runIf(built)('keeps every program body out of the entry chunk', () => {
