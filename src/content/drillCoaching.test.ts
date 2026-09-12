@@ -10,16 +10,17 @@ import { DRILL_COACHING } from './drillCoaching';
  *
  * ## Why this is a count and not a rule
  *
- * 144 drills' worth of coaching cannot be written in one sitting, and a
- * half-written side table is how content debt becomes invisible: the
- * library would ship with twelve drills coached and a hundred and
- * thirty-two silently bare, and nothing would ever say so.
+ * It was written while the library was half coached, and a half-written
+ * side table is how content debt becomes invisible: twelve drills coached,
+ * a hundred and thirty-two silently bare, and nothing saying so. `WRITTEN`
+ * is a pinned list of the source programs whose drills are done, and these
+ * tests hold the claim from both ends.
  *
- * So `WRITTEN` is a pinned list of the source programs whose drills are
- * done. Adding a source to it is a claim, and these tests hold the claim:
- * removing coaching from a drill in a listed source fails, adding a source
- * without writing its coaching fails, and the remaining count is asserted
- * rather than hidden so the size of the job is always on screen.
+ * **All seven sources are listed now and `left` is 0**, so what the count
+ * does has changed rather than ended. It stopped being a plan that shrinks
+ * and became a floor: a drill added to any program arrives uncoached, lands
+ * in a listed source, and fails here — which is the only reason the next
+ * drill cannot ship bare.
  *
  * It is the shape `guides/accuracy.test.ts` uses for guide debt, for the
  * same reason: a list that shrinks is a plan, and an allow-list that grows
@@ -156,10 +157,9 @@ describe('the coaching stays off the boot path', () => {
 
 describe('the size of what is left', () => {
   it('reports it rather than hiding it', () => {
-    // Not a threshold — a statement. The number goes down as sources are
-    // written, and this line is where it is read off. It fails only if the
-    // library has been coached and this file was not updated to say so,
-    // which is the one direction that would leave the plan lying.
+    // Not a threshold — a statement, and at `left: 0` it is the check that
+    // a new drill cannot arrive uncoached: adding one to any program moves
+    // this number and fails here before anything else notices.
     expect({ done: coached.length, left: DRILLS.length - coached.length }).toEqual({
       done: 144,
       left: 0,
