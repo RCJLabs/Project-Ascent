@@ -4602,6 +4602,47 @@ entry above.)*
   a shoulder injury produces *"fingers and elbow"* with the shoulder stretches named as
   left out.
 
+- **M112b — The season the calendar was not drawing.** *Done.*
+  **Premise held, and was incomplete in the way that mattered.** M109's deferred note said
+  ghost weeks meant "placing sessions beyond the active block (which the milestone's own
+  *Never* forbids) or inventing a second kind of week". Both true — the `Never` reads
+  *"Place sessions beyond the active block, or mark a season missed"* — but it missed the
+  thing that actually shaped this.
+  **Three corrections from measuring.** `engine/calendar.ts` **is not the calendar**; it is
+  the ICS export engine, and the grid is `CalendarPage` reading `plannedDay`. The
+  vocabulary **already existed**: `PlannedDay` carries `over?` and a null `week`, so the
+  calendar already knew a date was outside the block and simply drew nothing there. And the
+  season **runs on a different clock** — `season()` dates blocks backwards from the target
+  and never reads `activeProgramId` or its start date, so its "running" block is an
+  *intention* while the calendar's is a *fact*, and the two can overlap. That settled the
+  design: **ghosts fill only what the running block leaves empty.** An intention never draws
+  over a fact, and the `Never` holds by construction because a ghost is a band over a date
+  range with no session in it.
+  **The complication nobody had noticed.** A season hangs off an **objective**, nothing caps
+  objectives and none of them is primary — so a climber can carry several at once and the
+  calendar has to choose. `soonestSeason` takes the nearest target, and **refuses on a
+  tie**: two objectives on the same date is a climber who has not decided, and choosing for
+  them draws a season they never picked.
+  **A failing test found a real defect.** `planning` needs a *committed weekly plan* as well
+  as a program and a start date, so a climber who had started a block but not committed a
+  week got ghosts over the block they were actually running. The window is a fact either
+  way; only the sessions inside it are unscheduled. `blockWindow` is the measure now.
+  **Measured, not asserted.** 22 mutations across two rounds, 20 killed. One survivor was
+  **code no mutation could kill** — a `day.week === null` clause beside the window check,
+  where both take their length from the same `program` object and could never disagree —
+  deleted. The other two were the window's own ends: nothing tested the first or last day
+  of a running block, which are exactly the two days an off-by-one would ghost.
+  **The browser found what jsdom could not, again.** The first build shaded **thirty-five of
+  thirty-five cells** in `bg-sunken` — two percent off the page background — and read as
+  "the calendar is broken" rather than as a season. A block is eight to twelve weeks, so a
+  whole month is usually inside one and a single flat tint says nothing. The blocks
+  alternate now, and the day a block begins carries its own border, so the hand-off is a
+  change you can see. Both tints sit **below** `done` at `/15` and clear of `pickable` at
+  `/5`: an intention must never read as stronger than a day that actually happened.
+  **Budget.** 218.6 → 218.7KB, measured 218.57 → 218.64.
+  Verified in a browser in both themes at 430px, including paging to the month where one
+  block hands over to the next.
+
 **Open coaching calls.** Nine judgements the app is currently making on the coach's
 behalf, each one stated at its milestone rather than made quietly, none of them settled.
 Every site is tagged so this list can be regenerated with `grep -n '\*\*COACH' PLAN.md`

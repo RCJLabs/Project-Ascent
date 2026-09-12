@@ -14,7 +14,10 @@ import { icsCalendar } from '@/lib/ics';
 import { downloadFile } from '@/lib/download';
 import type { WeekPlan } from '@/engine/scheduler';
 import { addDays, dayOfWeek, fromKey, monthGrid, monthLabel, shortLabel, startOfWeek, today } from '@/engine/dates';
-import { plannedDay } from '@/engine/plan';
+import { blockWindow, plannedDay } from '@/engine/plan';
+import { activeObjectives } from '@/engine/objectives';
+import { blockOn, season, soonestSeason } from '@/engine/season';
+import { useObjectives } from '@/store/objectives';
 import { summarise } from '@/engine/injury';
 import { effectivePlan, previewMove, type MovePreview, type WeekOverrides } from '@/engine/reschedule';
 import { useProfile } from '@/store/profile';
@@ -106,6 +109,46 @@ export function CalendarPage() {
   }
 
   const days = useMemo(() => monthGrid(year, month), [year, month]);
+
+  /**
+   * The season this calendar is drawing as ghosts (PLAN.md M112b).
+   *
+   * Only one, and `soonestSeason` says which: a season hangs off an
+   * objective, nothing caps objectives, and none of them is primary, so a
+   * climber can carry several at once. A tie draws nothing rather than
+   * picking one for them.
+   *
+   * The season runs on its own clock — `season()` dates blocks backwards
+   * from the target and never reads the active program or its start date —
+   * which is exactly why the ghosts below only fill days the real block
+   * leaves empty. An intention never draws over a fact.
+   */
+  const objectives = useObjectives((s) => s.objectives);
+  const adaptations = useProfile((s) => s.adaptations);
+  /**
+   * The active block's own dates, whether or not a week is committed.
+   *
+   * `planning` needs a *weekly plan* as well as a program and a start date,
+   * so a climber who has started a block but not committed a week gets no
+   * planned days at all — and ghosts would then shade the block they are
+   * actually running. The window is a fact either way; only the sessions
+   * inside it are unscheduled.
+   */
+  const running = useMemo(
+    () => (program && startDate ? blockWindow(program, startDate) : null),
+    [program, startDate],
+  );
+
+  const ghostSeason = useMemo(() => {
+    const chosen = soonestSeason(activeObjectives(objectives));
+    if (!chosen?.targetDate || !chosen.season?.length) return null;
+    return season({
+      programIds: chosen.season,
+      targetDate: chosen.targetDate,
+      today: today(),
+      adaptations,
+    });
+  }, [objectives, adaptations]);
 
   // Landings are only meaningful inside the moving day's own week; a session
   // cannot move to another week without changing which week it belongs to.
@@ -307,6 +350,30 @@ export function CalendarPage() {
         )}
       </div>
 
+      {/* The tint says *when*; this says *which*. Per-cell labels do not fit
+          seven columns on a phone, and a session icon on a ghost day would
+          be exactly the placed session M109 forbids. */}
+      {ghostSeason && ghostSeason.blocks.length > 0 && (
+        <p className="text-xs text-ink-soft mb-2 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <span>
+            Shaded days are your season:{' '}
+            {ghostSeason.blocks.map((b, i) => (
+              <span key={`${b.programId}-${i}`}>
+                {i > 0 && ' \u2192 '}
+                <span
+                  className={`inline-block align-middle w-2.5 h-2.5 rounded-sm mr-1 ${
+                    i % 2 === 0 ? 'bg-accent/30' : 'bg-accent/10'
+                  }`}
+                  aria-hidden="true"
+                />
+                <span className={b.when === 'running' ? 'font-semibold text-ink' : undefined}>{b.program.name}</span>
+              </span>
+            ))}
+            . Nothing is scheduled there yet.
+          </span>
+        </p>
+      )}
+
       <div className="grid grid-cols-7 gap-1 mb-1">
         {DAY_INITIALS.map((d, i) => (
           <div key={i} className="text-center text-2xs font-bold uppercase text-ink-soft py-1">
@@ -324,6 +391,35 @@ export function CalendarPage() {
           const isToday = date === today();
           const planned = day !== null && day.sessionType && !day.isRest;
           const preview = previews?.[date];
+          // Outside the running block's window and nowhere else. Both ends
+          // inclusive: the block's last day is still the block's.
+          //
+          // A `day.week === null` check stood here too and no mutation could
+          // kill it — `blockWindow` and `plannedDay` both take their length
+          // from the same `program` object, so they describe the same window
+          // and the second test could never disagree with the first.
+          const inRunningBlock =
+            running !== null && running.from <= date && date <= running.to;
+          const ghost = ghostSeason && !inRunningBlock ? blockOn(ghostSeason, date) : null;
+          // Which block, not just that there is one. A season is eight to
+          // twelve weeks a block, so a whole month is usually inside one and
+          // a single tint says nothing you could not have guessed — the
+          // first build shaded thirty-five of thirty-five cells in a grey two
+          // percent off the page and read as "the calendar is broken".
+          // Alternating puts the boundary on screen, which is the thing
+          // worth knowing.
+          // The day a block begins, which is the information. A single tint
+          // over a whole month says nothing — the first build shaded
+          // thirty-five of thirty-five cells in a grey two percent off the
+          // page and read as "the calendar is broken". The boundary is what
+          // a climber is looking for, so that is what gets the emphasis.
+          const ghostStarts = ghost !== null && ghost.from === date;
+          // Alternating, so the hand-off from one block to the next is a
+          // change you can see rather than a border you have to find. Both
+          // sit below `done` at /15: an intention must never read as
+          // stronger than a day that actually happened, and neither lands
+          // on `pickable` at /5.
+          const ghostBand = ghost ? ghostSeason!.blocks.indexOf(ghost) % 2 : -1;
           const isSource = moving === date;
           const landing = previews !== null && preview !== undefined && !isSource;
           // Before a pick, a planned day that has not been logged is
@@ -354,7 +450,9 @@ export function CalendarPage() {
                   ? 'border-accent/60'
                   : isToday
                     ? 'border-accent'
-                    : 'border-line';
+                    : ghostStarts
+                      ? 'border-accent/50'
+                      : 'border-line';
 
           /**
            * Exactly one background class, chosen here rather than stacked.
@@ -380,9 +478,13 @@ export function CalendarPage() {
                   ? 'bg-accent/5'
                   : done
                     ? 'bg-accent/15'
-                    : inMonth
-                      ? 'bg-surface'
-                      : 'bg-transparent';
+                    : ghost
+                      ? ghostBand === 0
+                        ? 'bg-accent/10'
+                        : 'bg-accent/3'
+                      : inMonth
+                        ? 'bg-surface'
+                        : 'bg-transparent';
 
           const body = (
             <>

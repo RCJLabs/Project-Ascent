@@ -287,7 +287,13 @@ describe('the bundle stays small', () => {
     // scanner behind `sessionParts` dragged in after them. Loading both on
     // the tap gave **1.59KB** back and put them in a 1.72KB chunk of their
     // own. What is left is the card.
-    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(218.6);
+    //
+    // 218.6 → 218.7 at M112b, measured 218.57 → 218.64, so 0.07KB for the
+    // season on the calendar. Almost nothing, and for the usual reason:
+    // `CalendarPage` is a lazy route, so `blockOn`, `soonestSeason` and the
+    // wiring all land in its own chunk. What reaches the entry chunk is
+    // whatever rollup hoists as shared.
+    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(218.7);
   });
 
   it.runIf(built)('keeps every program body out of the entry chunk', () => {
