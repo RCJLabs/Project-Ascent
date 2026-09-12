@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { AlertTriangle, ArrowLeft, Check, Clock, Copy, Dumbbell, Flame, Plus, RotateCw, Sparkles, Timer, Trash2, TrendingUp, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Check, Clock, Copy, Dumbbell, Flame, Plus, RotateCw, Snowflake, Sparkles, Timer, Trash2, TrendingUp, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
 import { SCALE_MAX, getField, type FieldSpec } from '@/content/fields';
@@ -36,6 +36,7 @@ import {
 import { plannedDay, prescriptionFor } from '@/engine/plan';
 import { prescriptionLine } from '@/engine/prescription';
 import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
+import type { CooldownPlan } from '@/engine/cooldown';
 import { V_GRADES, YDS_GRADES, displayGrade, type GradeScale } from '@/engine/grades';
 import type { Climb, LoggedExercise, ProjectAttempt, RopeStyle, Session, WallAngle } from '@/db/sessions';
 import type { AttemptOutcome } from '@/db/projects';
@@ -278,6 +279,105 @@ function LogDay({ date }: { date: string }) {
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * The five minutes the app's own guide already asked for (PLAN.md M112).
+ *
+ * Below Effort rather than above it, because what it is weighted toward is
+ * read out of the session — climbs, notes, exercises — and a card that
+ * offered itself before any of that was entered would be offering a generic
+ * one. It is not shown on a rest day at all: the branch it sits in is the
+ * one for days that had a session.
+ */
+function CooldownCard({ session }: { session: Session }) {
+  const injuries = useProfile((s) => s.injuries);
+  const [built, setBuilt] = useState<{ plan: CooldownPlan; because: string | null } | null>(null);
+
+  /**
+   * Loaded on the tap, not on the page.
+   *
+   * `LogPage` is one of the four routes that cannot be deferred, so anything
+   * it imports is in the entry chunk of every cold start. The twelve
+   * stretches and their prose cost **2.23KB gzipped** measured there, for a
+   * card most visits never open — and `sessionParts` drags the whole
+   * keyword scanner in behind it. The sentence is computed here too, so
+   * nothing from either module is needed at render.
+   */
+  async function build(seed?: number) {
+    const [{ describeCooldown, generateCooldown }, { sessionParts }] = await Promise.all([
+      import('@/engine/cooldown'),
+      import('@/engine/tissueLoad'),
+    ]);
+    const plan = generateCooldown({
+      loaded: sessionParts(session),
+      // The same policy the warmup uses: what load should stay off.
+      injuries: injuryPolicy(injuries).excluded,
+      ...(seed !== undefined ? { seed } : {}),
+    });
+    setBuilt({ plan, because: describeCooldown(plan) });
+  }
+
+  return (
+    <Card title="Cooldown">
+      {!built ? (
+        <>
+          <p className="text-sm text-ink-soft mb-3">
+            Light stretches, three to five minutes, weighted toward what this session actually worked.
+          </p>
+          <Button variant="outline" className="w-full" onClick={() => void build()}>
+            <Snowflake size={16} /> Build me a cooldown
+          </Button>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-ink-soft">
+              {Math.round(built.plan.totalSeconds / 60)} min · {built.plan.exercises.length} stretches
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void build(Math.floor(Math.random() * 1_000_000))}
+              className="text-accent"
+            >
+              <RotateCw size={14} /> Swap
+            </Button>
+          </div>
+
+          {/* Null when there is nothing true to say, rather than a caption. */}
+          {built.because && <p className="text-sm text-ink-soft mb-3">{built.because}</p>}
+
+          {built.plan.injuryFilterRelaxed && (
+            <p className="text-sm flex gap-2 items-start mb-3">
+              <AlertTriangle size={14} className="text-warn shrink-0 mt-0.5" />
+              Everything here works something you have injured. Go gently, or skip it.
+            </p>
+          )}
+
+          <ol className="grid grid-cols-1 gap-2 mb-3">
+            {built.plan.exercises.map((e, i) => (
+              <li key={e.id} className="bg-sunken rounded-xl p-3">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs font-bold text-ink-soft">{i + 1}</span>
+                  <span className="font-semibold text-sm flex-1">{e.name}</span>
+                  <span className="text-xs text-ink-soft">{e.seconds}s</span>
+                </div>
+                <p className="text-sm text-ink-soft mt-1 leading-relaxed">{e.description}</p>
+              </li>
+            ))}
+          </ol>
+
+          {built.plan.excluded.length > 0 && (
+            <p className="text-xs text-ink-soft">
+              Left out because of your injuries:{' '}
+              {[...new Set(built.plan.excluded.map((x) => x.exercise.name))].join(', ')}.
+            </p>
+          )}
+        </>
+      )}
+    </Card>
   );
 }
 
@@ -988,6 +1088,8 @@ function SessionEditor({
               {session.warmup ? '✓ Warmed up' : 'Did you warm up?'}
             </Chip>
           </Card>
+
+          <CooldownCard session={session} />
         </>
       )}
 

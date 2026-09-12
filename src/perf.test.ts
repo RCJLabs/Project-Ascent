@@ -279,7 +279,15 @@ describe('the bundle stays small', () => {
     // M110 made for the demo flag: two lines in the entry chunk, everything
     // behind them loaded when a file actually arrives. What is left is the
     // hook, the flag, and one line in the redirect.
-    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(218.0);
+    //
+    // 218.0 → 218.6 at M112, measured 217.93 → 218.57, so 0.64KB for the
+    // cooldown card. It first measured **220.16**: `LogPage` is one of the
+    // four routes that cannot be deferred, so the twelve stretches and their
+    // prose were in the entry chunk of every cold start, with the keyword
+    // scanner behind `sessionParts` dragged in after them. Loading both on
+    // the tap gave **1.59KB** back and put them in a 1.72KB chunk of their
+    // own. What is left is the card.
+    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(218.6);
   });
 
   it.runIf(built)('keeps every program body out of the entry chunk', () => {

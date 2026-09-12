@@ -4544,26 +4544,73 @@ materially wrong premise. Sizes are guesses.*
   **Caveat.** The service-worker switch touches the offline guarantee, which M19 spent a
   milestone getting right. It is the risky half, and it is second for that reason.
 
-- **M112 — The cooldown, from what today actually loaded.** *Proposed. Size M, half
-  content.*
-  **Premise.** The warmup generator is a four-stage funnel over 26 exercises and it is the
-  best small thing in the app. There is no counterpart at the other end. "Cooldown",
-  "prehab" and "antagonist" appear in ten programs' prose and in nothing that runs;
-  tissue load can say *your fingers took every session this week* and then the sentence
-  ends.
-  **Shape.** A second funnel: filter by equipment, weight toward what *this session*
-  loaded (tissue load, per session rather than per window), fold in the return-to-
-  climbing steps for any active injury, fill to five minutes, run on the timer. Lands on
-  the log page after Effort and in gym mode's rest screen. Content: a cooldown and prehab
-  set the size of the warmup set, tagged with what each one *unloads*, written by the
-  coach.
-  **Never.** Claim it prevents anything. The copy says what it is: five minutes the
-  program's own prose keeps asking for.
+- **M112 — The cooldown, from what today actually loaded.** *Done, and the premise was
+  wrong in six ways.*
+  **(1) "Cooldown" appears in exactly one place in the app.** The proposal said the word
+  was in "ten programs' prose". Measured: **zero programs**. One line, `guides/starting.ts`
+  step 12 — *"Cool down. Light stretches for shoulders, forearms, and hips. 3-5 minutes.
+  Skip ballistic stretching."* That is still a real unmet promise, and it is also the whole
+  spec: the content below does not exceed it.
+  **(2) Prehab and antagonist work already run.** The proposal said they appear "in nothing
+  that runs". There are **thirteen prescribed blocks across nine programs** — Armor, Armor
+  & Prehab, Antagonist, Shoulder Health, Shoulder — with exercises, doses and progressions,
+  rendered by machinery that already exists. So the cooldown **must not** generate prehab:
+  it would compete with the block the climber is actually running. The M104 lesson.
+  **(3) Folding in the return-to-climbing steps is refused**, on that module's own opening
+  rule: *"No treatment. Nothing here prescribes an exercise, a dose, a load or a stretch."*
+  Those steps are observations — *has this been painless for a week?* — and putting them in
+  a timed sequence makes them the treatment protocol `returnToClimbing.ts` exists to
+  refuse. An injured part is handled `warmup.ts`'s way instead: leave out what works it,
+  never prescribe something *for* it.
+  **(4) Gym mode's rest screen is the wrong home.** That timer is rest *between burns*
+  (60–300s presets, and its own comment says it is "not the protocol timer"), and the page
+  deliberately holds only the tally, sending effort and notes to the full log. A cooldown
+  there fights scoping the app chose on purpose.
+  **(5) The per-session measure already existed**, inline inside `tissueLoad`'s loop.
+  Extracted as `sessionParts` and used by both, so the tissue chart and the cooldown cannot
+  disagree about what a session worked. The proposal read as though a new measure were
+  needed; it was one level down in an existing one.
+  **(6) Twenty-five warmup exercises, not twenty-six.**
+  **Three stages, not four.** No equipment stage — every cooldown is floor work, a wall or
+  a door frame, so a filter over a library where every row says the same thing is a stage
+  no test could kill. No recency stage — a cooldown that settles into a routine is a
+  cooldown, and the guide asks for *light* stretches rather than novel ones; the seed
+  re-rolls ties instead, so Swap gives a different equally-good set without the engine
+  pretending repetition is a problem.
+  **Measured, not asserted.** 31 mutations, 26 killed. Four real survivors: an
+  empty-exercises guard in `describeCooldown` that **no mutation could kill** (an empty set
+  covers nothing, so the next line already caught it) — deleted; `covered` reading the pool
+  rather than the chosen set, which would name a stretch the climber was never given; the
+  dedupe in `sessionParts`, which stops a session being charged twice for a tissue its
+  notes and its climbs both reach; and one weak mutation of mine that removed hip cover
+  from one of three hip stretches, which the library's redundancy absorbs by design.
+  **Two of my own tests passed for the wrong reason**, which is the M100 lesson for the
+  third time this run. The dedupe fixture used notes saying *"fingers felt strong"* — and
+  the scan does not know the bare word *fingers*; it knows climbing vocabulary, and
+  `partsInText('crimp')` is what returns `['fingers','pulley']`. No overlap existed, so the
+  mutation walked through. And the rest-day fixture set a recovery checklist, which is not
+  what the page branches on: it reads the session type out of the **active program**, so a
+  rest day only reads as one when that program is running. Both rewritten, and each now
+  asserts its premise before relying on it.
+  **Budget.** 218.0 → 218.6KB, measured 217.93 → 218.57. It first measured **220.16**:
+  `LogPage` is one of the four routes that cannot be deferred, so the twelve stretches and
+  their prose sat in the entry chunk of every cold start with the keyword scanner behind
+  `sessionParts` dragged in after them. Loading both on the tap gave **1.59KB** back into a
+  1.72KB chunk of its own; a test holds the split the way M110's and M111's do.
+  **COACH: the twelve stretches are a starter set**, written to the guide's own words and
+  deliberately conservative — static, light, nothing ballistic, nothing loaded, nothing
+  that reads as treatment. Enough to exercise the funnel and fill five minutes; not a
+  considered syllabus, and the wording of every line is the coach's to replace.
+  Verified in a browser in both themes at 430px: a session of V5 sends and "crimp ladders"
+  produces *"Weighted toward your fingers, shoulder and elbow"*, and the same session with
+  a shoulder injury produces *"fingers and elbow"* with the shoulder stretches named as
+  left out.
 
-**Open coaching calls.** Eight judgements the app is currently making on the coach's
+**Open coaching calls.** Nine judgements the app is currently making on the coach's
 behalf, each one stated at its milestone rather than made quietly, none of them settled.
-Every site is tagged `**COACH` so this list can be regenerated with `grep -n '\*\*COACH' PLAN.md`
-rather than remembered. They are cheap to answer and they compound: each is a place the app
+Every site is tagged so this list can be regenerated with `grep -n '\*\*COACH' PLAN.md`
+rather than remembered — the tag is deliberately spelled so this paragraph is not itself a
+hit. They are cheap to answer and they compound: each is a place the app
 says something in the coach's voice that the coach has not endorsed.
 
 1. **M64 — three capstone kit names.** "the Slate kit" → **Anchor**, "the Granite kit" →
@@ -4589,6 +4636,11 @@ says something in the coach's voice that the coach has not endorsed.
 8. **M102 — the projecting session's label.** A projecting session rendered two controls both
    called "High point" meaning different measurements; the session question is **"The move
    you reached"** now. The wording is overrulable.
+9. **M112 — the twelve cooldown stretches.** A starter set in `content/cooldowns.ts`,
+   written to the starting guide's own words and deliberately conservative: static, light,
+   nothing ballistic, nothing loaded, nothing that reads as treatment. Enough to exercise
+   the funnel and fill five minutes, and not a considered syllabus — the wording of every
+   line, and which stretches belong there at all, is the coach's.
 
 **Considered and left out, with the reason, so they are not re-proposed:**
 - *Race a ghost on the Daily Wall* — already ships (`createGhost`, `tapeToRace`, M81).
