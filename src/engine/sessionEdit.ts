@@ -22,15 +22,12 @@
 import type { LoggedExercise, Session } from '@/db/sessions';
 import { exerciseKey, hasNumbers } from './exerciseLog';
 import { sessionId } from '@/db/sessions';
+import { isRestSession } from './rest';
 
 export interface MergeCheck {
   ok: boolean;
   /** Why not, in words the UI can show. */
   reason?: string;
-}
-
-export function isRest(session: Session): boolean {
-  return session.restChecklist !== undefined && session.climbs.length === 0;
 }
 
 /** The same session on another date, with the clock dropped. */
@@ -52,7 +49,7 @@ export function moveSession(session: Session, toDate: string, index: number): Se
 export function canMerge(a: Session, b: Session): MergeCheck {
   if (a.id === b.id) return { ok: false, reason: 'That is the same session.' };
   if (a.date !== b.date) return { ok: false, reason: 'Only sessions on the same day can be merged.' };
-  if (isRest(a) !== isRest(b)) {
+  if (isRestSession(a) !== isRestSession(b)) {
     return { ok: false, reason: 'A rest day and a training session cannot be merged — they say different things about the day.' };
   }
   return { ok: true };
@@ -153,7 +150,7 @@ export function loadOf(session: Session): number {
 
 /** A short description of a session, for a picker that lists several. */
 export function describeSession(session: Session, typeName?: string): string {
-  if (isRest(session)) return 'Rest day';
+  if (isRestSession(session)) return 'Rest day';
   const parts: string[] = [];
   if (typeName) parts.push(typeName);
   const sends = session.climbs.reduce((n, c) => n + (c.result === 'send' ? c.count : 0), 0);

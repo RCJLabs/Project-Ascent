@@ -14,6 +14,7 @@
 import type { Session } from '@/db/sessions';
 import type { AcwrZone } from './derive';
 import { DEFAULT_DISPLAY, displayGrade, vEquivalent, type GradeDisplay, type GradeScale } from './grades';
+import { isRestSession } from './rest';
 
 // ── Levels ────────────────────────────────────────────────────────────────
 
@@ -219,7 +220,7 @@ export function sessionReward(session: Session, context: SessionContext): Sessio
   const label = (scale: GradeScale, grade: string) =>
     displayGrade(scale, grade, context.display ?? DEFAULT_DISPLAY);
 
-  if (session.restChecklist !== undefined && session.climbs.length === 0) {
+  if (isRestSession(session)) {
     awards.push({ id: 'rest', label: 'Rest day logged', units: AWARDS.restDay, source: 'real' });
   } else {
     awards.push({ id: 'session', label: 'Session completed', units: AWARDS.session, source: 'real' });

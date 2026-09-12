@@ -37,6 +37,7 @@ import {
 } from './economy';
 import { buildLoadIndex, zonesFor, type AcwrZone } from './derive';
 import { gradeOrdinal, type GradeDisplay, type GradeScale } from './grades';
+import { isRestSession } from './rest';
 
 export interface XpLine {
   label: string;
@@ -220,7 +221,7 @@ function deriveXpUncached(sources: XpSources): XpState {
     }
 
     const { session } = moment;
-    const isRest = session.restChecklist !== undefined && session.climbs.length === 0;
+    const isRest = isRestSession(session);
 
     // Records for the economy are strictly harder than anything sent
     // before on that ladder. `deriveClimberState` lists the first send of

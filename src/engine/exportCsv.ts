@@ -39,6 +39,7 @@ import type { Project } from '@/db/projects';
 import type { Session } from '@/db/sessions';
 import { METRICS } from '@/content/metrics';
 import { toCsv } from './csv';
+import { isRestSession } from './rest';
 
 /** What `importCsv` reads, in the order its header guesser expects. */
 export const CLIMB_HEADER = [
@@ -171,7 +172,7 @@ export function sessionsCsv(input: SessionCsvInput): string {
       // reads `session.climbs.length` and throws on the malformed record
       // this file must survive. Not a fourteenth copy by accident — the one
       // place the shared helper cannot be used.
-      yesNo(session.restChecklist !== undefined && listOf(session.climbs).length === 0),
+      yesNo(isRestSession(session)),
       cell(session.notes),
     ]);
   }

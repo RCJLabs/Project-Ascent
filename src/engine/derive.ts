@@ -15,6 +15,7 @@ import { getDrill } from '@/content/drills';
 import type { Climb, Session, SessionMode } from '@/db/sessions';
 import { gradeOrdinal, maxGrade, type GradeScale } from './grades';
 import { addDays, daysBetween, startOfWeek, today as todayKey } from './dates';
+import { isRestSession } from './rest';
 
 export interface GradeTally {
   /** Canonical grade → number sent. */
@@ -195,7 +196,7 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
   let earliestLoad: string | null = null;
 
   for (const session of completed) {
-    const isRest = session.restChecklist !== undefined && session.climbs.length === 0;
+    const isRest = isRestSession(session);
     if (isRest) restSessions++;
     else nonRest++;
 
@@ -587,7 +588,7 @@ function deriveLongestStreak(completed: Session[], target: number): number {
 function deriveStreak(completed: Session[], today: string, target: number): number {
   const byWeek = new Map<string, number>();
   for (const s of completed) {
-    const isRest = s.restChecklist !== undefined && s.climbs.length === 0;
+    const isRest = isRestSession(s);
     if (isRest) continue;
     const week = startOfWeek(s.date);
     byWeek.set(week, (byWeek.get(week) ?? 0) + 1);
@@ -607,7 +608,7 @@ function deriveStreak(completed: Session[], today: string, target: number): numb
 /** Training days in an unbroken run ending today or yesterday. */
 function deriveConsecutiveDays(completed: Session[], today: string): number {
   const trained = new Set(
-    completed.filter((s) => !(s.restChecklist !== undefined && s.climbs.length === 0)).map((s) => s.date),
+    completed.filter((s) => !isRestSession(s)).map((s) => s.date),
   );
   let count = 0;
   let cursor = trained.has(today) ? today : addDays(today, -1);

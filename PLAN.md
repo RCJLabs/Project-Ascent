@@ -4727,6 +4727,37 @@ entry above.)*
   the numerator. `fastest` had no other caller and went with it.
   Verified in a browser in both themes at 430px.
 
+- **M112e — One definition of a rest day.** *Done. Tidying, with one finding.*
+  **Thirteen copies, not the ten I had counted.** Two exported under different names —
+  `templates.isRestSession` and `sessionEdit.isRest` — and eleven written out by hand across
+  `derive` (three), `review`, `economy`, `coach`, `challenges`, `yearReview`, `xp`,
+  `achievements` and `exportCsv`.
+  **Nothing had drifted, and one copy had already learned something.** Twelve read
+  `session.climbs.length`; `exportCsv.ts` read `listOf(session.climbs).length`, because
+  M105b found the spreadsheet writers **crashing on real records with no `climbs` array at
+  all** — an older schema, or a row that came in through an import. `Session.climbs` is typed
+  `Climb[]` and is not optional, so that guard should be unreachable and is not. The single
+  definition takes the defensive reading, so every reader gets it rather than the one that
+  happened to be written last.
+  **Its own file, not `templates.ts`.** Five modules were already importing it from there,
+  so keeping it would have been zero churn — but that module owns session *templates* and
+  merely defined this first, and `import { isRestSession } from './templates'` in the XP
+  engine is a line that makes a reader stop and check why. Five import edits against twelve
+  call sites that now explain themselves.
+  **A correction to my own earlier note.** The backlog carried "`thinLog` uses a *different*
+  rule" as evidence that drift had already happened. It does not: `thinLog.isBare` answers
+  "did the climber put anything in this session at all", checks `climbs.length` two lines
+  earlier as its own early return, and is not a rest-day predicate. There was no drift —
+  which is why this is tidying and not a bug hunt.
+  **Measured, not asserted.** Six mutations of the one predicate, run against **seventeen**
+  consumers' suites at once, all six killed — which is the payoff itself: one definition
+  means one place to break and everything notices. A guard holds the count at one, and a
+  second test proves that guard's regex would actually fire on a copy, including
+  `exportCsv`'s defensive spelling.
+  **Budget.** Unchanged.
+  The full suite passed 3,684 → 3,684 across the extraction, which is what a pure
+  refactor should look like.
+
 **Open coaching calls.** Nine judgements the app is currently making on the coach's
 behalf, each one stated at its milestone rather than made quietly, none of them settled.
 Every site is tagged so this list can be regenerated with `grep -n '\*\*COACH' PLAN.md`

@@ -27,7 +27,7 @@
 import type { Session } from '@/db/sessions';
 import { daysBetween, addDays } from './dates';
 import type { Experience } from './finder';
-import { isRestSession } from './templates';
+import { isRestSession } from './rest';
 
 /** The window the training rate is observed over. */
 export const DRIFT_WEEKS = 8;

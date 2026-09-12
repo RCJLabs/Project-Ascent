@@ -37,6 +37,7 @@ import { daysBetween, startOfWeek, today as todayKey } from './dates';
 import { gradeOrdinal, type GradeDisplay } from './grades';
 import { outcomeOf, sortBlocks, type BlockRecord } from './blocks';
 import { joinCapped } from './phrase';
+import { isRestSession } from './rest';
 
 export interface Totals {
   sessions: number;
@@ -124,7 +125,7 @@ export function availableYears(sessions: Session[]): number[] {
 }
 
 function isRest(session: Session): boolean {
-  return session.restChecklist !== undefined && session.climbs.length === 0;
+  return isRestSession(session);
 }
 
 export function totalsFor(sessions: Session[], from: string, to: string): Totals {

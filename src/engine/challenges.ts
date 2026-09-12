@@ -22,6 +22,7 @@ import type { ClimberState } from './derive';
 import { DEFAULT_DISPLAY, V_GRADES, YDS_GRADES, displayGrade, gradeOrdinal, type GradeDisplay, type GradeScale } from './grades';
 import type { BodyPart } from '@/content/warmups';
 import { partsInText } from './bodyLoad';
+import { isRestSession } from './rest';
 
 export type ChallengeKind = 'daily' | 'weekly' | 'bounty';
 
@@ -69,8 +70,7 @@ interface Spec {
 
 // ── Measures ──────────────────────────────────────────────────────────────
 
-const isRest = (s: Session) => s.restChecklist !== undefined && s.climbs.length === 0;
-const trained = (sessions: Session[]) => sessions.filter((s) => s.completed && !isRest(s));
+const trained = (sessions: Session[]) => sessions.filter((s) => s.completed && !isRestSession(s));
 
 const countTrained: Measure = (s) => trained(s).length;
 const countWarmed: Measure = (s) => trained(s).filter((x) => x.warmup).length;

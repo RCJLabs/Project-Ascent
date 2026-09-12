@@ -37,7 +37,7 @@ import {
   type ReadinessCall,
   type SleepFeel,
 } from './readiness';
-import { isRestSession } from './templates';
+import { isRestSession } from './rest';
 
 /** Ninety days, to match "Where the ratio has been" on the same page. */
 export const CHECKIN_DAYS = 90;

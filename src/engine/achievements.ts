@@ -2,6 +2,7 @@ import type { Session } from '@/db/sessions';
 import type { Project } from '@/db/projects';
 import { addDays, daysBetween, startOfWeek } from './dates';
 import { gradeOrdinal, type GradeScale } from './grades';
+import { isRestSession } from './rest';
 
 /**
  * Named achievements — a fixed, finite set (PLAN.md M32).
@@ -499,7 +500,7 @@ const DEFINITIONS: Definition[] = [
 
 /** A logged rest day: the checklist is there and nothing was climbed. */
 function isRest(session: Session): boolean {
-  return session.restChecklist !== undefined && session.climbs.length === 0;
+  return isRestSession(session);
 }
 
 /**

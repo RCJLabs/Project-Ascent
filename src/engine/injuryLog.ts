@@ -37,7 +37,7 @@ import type { Session } from '@/db/sessions';
 import type { BodyPart } from '@/content/warmups';
 import type { TissueFeel } from './readiness';
 import { addDays, daysBetween } from './dates';
-import { isRestSession } from './templates';
+import { isRestSession } from './rest';
 
 /**
  * One day the climber said how the part felt.

@@ -28,6 +28,7 @@ import type { ClimberState } from './derive';
 import type { Diagnosis } from './plateau';
 import { activeProjects, attemptsFor, highPointOf } from './projects';
 import type { BlockAdherence } from './adherence';
+import { isRestSession } from './rest';
 
 export type TipTone = 'good' | 'neutral' | 'caution';
 
@@ -369,7 +370,7 @@ function skippedType({ adherence }: CoachInput): Tip | null {
 }
 
 function isRestDay(session: Session): boolean {
-  return session.restChecklist !== undefined && session.climbs.length === 0;
+  return isRestSession(session);
 }
 
 function staleBenchmarks(input: CoachInput, today: string): Tip | null {

@@ -24,7 +24,7 @@ import { addDays, daysBetween } from './dates';
 import { blockWindow, plannedDay } from './plan';
 import type { WeekOverrides } from './reschedule';
 import type { WeekPlan } from './scheduler';
-import { isRestSession } from './templates';
+import { isRestSession } from './rest';
 import { joinList } from './phrase';
 
 export interface TypeAdherence {

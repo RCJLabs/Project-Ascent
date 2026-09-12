@@ -24,6 +24,7 @@ import { DEFAULT_DISPLAY, displayGrade, maxGrade, type GradeDisplay, type GradeS
 import { plannedDay } from './plan';
 import type { WeekPlan } from './scheduler';
 import type { XpState } from './xp';
+import { isRestSession } from './rest';
 
 export type NoteTone = 'good' | 'caution' | 'neutral';
 
@@ -113,7 +114,6 @@ export interface ReviewInput {
   today?: string;
 }
 
-const isRestSession = (s: Session) => s.restChecklist !== undefined && s.climbs.length === 0;
 
 export function buildReview(input: ReviewInput): WeekReview {
   const today = input.today ?? todayKey();

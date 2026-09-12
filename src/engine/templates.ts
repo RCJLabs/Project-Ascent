@@ -22,6 +22,7 @@
 
 import type { Climb, Session, SessionMode } from '@/db/sessions';
 import { newSession } from '@/db/sessions';
+import { isRestSession } from './rest';
 
 /** The reusable part of a session. */
 export interface TemplateBody {
@@ -53,10 +54,6 @@ export interface Template {
 
 export const MAX_TEMPLATES = 12;
 export const MAX_NAME = 40;
-
-export function isRestSession(session: Session): boolean {
-  return session.restChecklist !== undefined && session.climbs.length === 0;
-}
 
 /** Everything worth keeping from a session, and nothing that was a claim. */
 export function bodyFrom(session: Session): TemplateBody {

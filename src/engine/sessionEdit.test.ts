@@ -3,11 +3,11 @@ import { newSession, type Session } from '@/db/sessions';
 import {
   canMerge,
   describeSession,
-  isRest,
   loadOf,
   mergeSessions,
   moveSession,
 } from './sessionEdit';
+import { isRestSession } from './rest';
 
 function session(patch: Partial<Session> = {}): Session {
   return newSession('2026-03-04', 0, {
@@ -182,7 +182,7 @@ describe('merging', () => {
 describe('describing a session in a list', () => {
   it('names a rest day', () => {
     expect(describeSession(rest())).toBe('Rest day');
-    expect(isRest(rest())).toBe(true);
+    expect(isRestSession(rest())).toBe(true);
   });
 
   it('leads with the session type and counts the sends', () => {

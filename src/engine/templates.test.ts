@@ -8,12 +8,12 @@ import {
   bodyFrom,
   cleanName,
   createTemplate,
-  isRestSession,
   markUsed,
   rankTemplates,
   suggestName,
   type Template,
 } from './templates';
+import { isRestSession } from './rest';
 
 const NOW = '2026-03-01T10:00:00.000Z';
 

@@ -24,7 +24,7 @@
 
 import type { RestChecklist, Session } from '@/db/sessions';
 import { addDays } from './dates';
-import { isRestSession } from './templates';
+import { isRestSession } from './rest';
 
 export type RestItem = keyof RestChecklist;
 
