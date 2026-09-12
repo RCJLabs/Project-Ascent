@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { ArrowRight, Copy, Plus, Upload, TriangleAlert } from 'lucide-react';
 import { PROGRAMS } from '@/content/programs';
 import { blankProgram, forkProgram, validateProgram } from '@/engine/customProgram';
 import { ProgramFileError, parseProgramFile } from '@/engine/programFile';
+import { takeLaunchFile } from '@/lib/launchFile';
 import { useCustomPrograms } from '@/store/programs';
 import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
@@ -25,9 +26,27 @@ export function BuilderList() {
     navigate(`/build/${program.id}`);
   }
 
+  /**
+   * A program file the app was opened with (PLAN.md M111).
+   *
+   * The same path as the file picker, so a shared block opened from a file
+   * manager behaves exactly as one chosen by hand — including naming what
+   * could not survive the trip.
+   */
+  useEffect(() => {
+    const opened = takeLaunchFile();
+    if (opened) void readProgram(opened);
+    // Once, on mount: `takeLaunchFile` clears as it returns.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function importFile(files: FileList | null) {
     const file = files?.[0];
     if (!file) return;
+    await readProgram(file);
+  }
+
+  async function readProgram(file: File) {
     try {
       const { program, dropped } = parseProgramFile(await file.text());
       await save(program);

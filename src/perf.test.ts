@@ -270,7 +270,16 @@ describe('the bundle stays small', () => {
     // it reads into the entry chunk with it. `db/demoFlag.ts` is the split
     // that gave 3.99KB back, and `demoClimber.test.tsx` holds it apart. The
     // line is 217.8 rather than 217.7: the demo's project burns cost 0.05KB.
-    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(217.8);
+    //
+    // 217.8 → 218.0 at M111, measured 217.80 → 217.93, so 0.13KB for the
+    // file handler. It first measured **218.09**: the launch consumer
+    // imported `lib/launchFile.ts`, which imports the sniffer, and
+    // `useFirstRunRedirect` needed the launched flag synchronously — so the
+    // whole path was eager. `lib/launchFlag.ts` is the split, the same one
+    // M110 made for the demo flag: two lines in the entry chunk, everything
+    // behind them loaded when a file actually arrives. What is left is the
+    // hook, the flag, and one line in the redirect.
+    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(218.0);
   });
 
   it.runIf(built)('keeps every program body out of the entry chunk', () => {

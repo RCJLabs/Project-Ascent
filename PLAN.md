@@ -4418,20 +4418,76 @@ materially wrong premise. Sizes are guesses.*
   **Budget.** 217.4 → 217.8KB, measured 217.34 → 217.73.
   Verified in both themes at 430px, and by 32 screenshots of the real app.
 
-- **M111 — The app on the phone: shortcuts, share target, file handlers.** *Proposed.
-  Size S–M. Not blocked on the name.*
-  **Premise.** The manifest has display, orientation, categories and icons. No
-  `shortcuts`, no `share_target`, no `file_handlers`. A TWA honours all three, and each is
-  a thing the app already does with a front door missing: gym mode, the timer and today's
-  log are each a navigation away from a cold launch; a photo shared from the gallery has nowhere to
-  land although the media store is built for it; a program file (M7's `programFile.ts`,
-  which exists so a coach can hand an athlete a block) opens in nothing.
-  **Shape.** Shortcuts: *Log today*, *Gym mode*, *Timer*, *The Ascent*. Share target for
-  images → pick the session or project it belongs to. File handlers for the backup JSON
-  and the program file → the existing import previews. `launch_handler` set to focus the
-  running instance rather than open a second one.
-  **Caveat.** Every one of these is a manifest entry the pure web mostly ignores; the value
-  is on the Play build, and the verification has to happen on a phone, not in Playwright.
+- **M111 — The app on the phone: shortcuts and file handlers.** *Done.*
+  **Two premise corrections, both from looking.**
+  **(1) There is no timer route.** The proposal named four shortcuts; the timer is a sheet
+  inside `LogPage` and needs a session to time, so a *Timer* shortcut has nowhere to point.
+  Three shipped — *Log today* (`#/today`), *Gym mode*, *The Ascent* — and a test now checks
+  every shortcut URL against the routes the router actually defines, which is what found it.
+  **(2) `file_handlers` cannot tell the app's two files apart.** It matches on extension,
+  and **both of the app's own JSON files are `.json`** — a shared program (`programFile.ts`)
+  and a backup. So the app reads the thing before deciding: `engine/openWith.ts` checks two
+  bytes for a zip, then two fields for a program or a backup, and answers *program*,
+  *backup* or *neither*. `programFile.ts`'s rule holds — **rebuild, never cast** — so the
+  sniffer only ever reads two fields and hands the file to a parser that re-checks all of it.
+  **`share_target` refused, with reasons.** It needs a POST handler, which on a static host
+  means owning the service worker — `generateSW` → `injectManifest`, or `importScripts` —
+  **and** a destination that does not exist: photos attach to a *specific* session or
+  project through `MediaCard`, and there is no app-level "which one?" picker. Building that
+  picker is the feature; the manifest entry is the easy part. Left proposed as **M111b**.
+  **Two defects the browser found that nothing else could.**
+  **(1) Onboarding ate the launch.** A climber setting up a new phone taps their backup:
+  `useFirstRunRedirect` fires on the empty database, wins the race against reading the file,
+  and the app lands on `#/welcome` with the backup dropped — the launch that matters most,
+  failing silently. Measured at `#/welcome` with a stubbed `launchQueue`, fixed with
+  `lib/launchFlag.ts`, re-measured at `#/settings`. Sticky rather than tied to the pending
+  file, so cancelling the preview does not throw the climber into onboarding a second later.
+  **(2) The preview was three screens below the fold.** A picked file previews next to the
+  button that picked it. A launched one arrives at the **top** of Settings — palettes, text
+  size, grade notation — with the thing they tapped **2,590px** down and no sign it is
+  there. It scrolls to it now, and only when the file arrived from a launch.
+  **Chromium already defines `window.launchQueue`,** which is why the first browser run
+  showed nothing: `window.launchQueue = stub` fails silently against a readonly accessor.
+  `Object.defineProperty` is the override. Worth knowing — it also means the app's
+  `queue?.setConsumer` guard passes on every Chromium, launch or not.
+  **An import never becomes one tap.** A launched backup goes through M20's preview, which
+  exists because "replace" and "merge" mean nothing until you can see what they would do.
+  A file handler is exactly the route by which that would have been skipped.
+  **Measured, not asserted.** 45 mutations across two rounds, 40 killed. Three real
+  survivors fixed: `typeof raw !== 'object'` was unreachable (every non-object falls through
+  the app-name check) and was deleted; the zip-before-text ordering was cost-only until a
+  fixture whose `text()` throws made it observable; and the launch decision moved out of
+  `App.tsx` into `receiveLaunch` so it could be tested at all. **Two survivors recorded, not
+  fixed:** the builder's mount effect survives losing its `[]` deps, because the one-shot
+  slot — not the deps array — is what makes the import happen once; and `navigate(target)`
+  in `App.tsx` is held only by a text guard, since rendering the whole `App` under jsdom
+  hangs. The browser run is the real evidence for that line.
+  **Budget.** 217.8 → 218.0KB, measured 217.80 → 217.93. It first measured **218.09**: the
+  launch consumer imported `lib/launchFile.ts`, which imports the sniffer, and the redirect
+  needed the launched flag synchronously — so the whole path was eager. `lib/launchFlag.ts`
+  is the split, the same one M110 made for the demo flag, and gave **0.16KB** back.
+  **One thing left undone, deliberately.** A file the app cannot place leaves it exactly
+  where it was — no message. The climber chose this app to open that file, so silence is a
+  real gap; but the app claims *every* `.json` on the device, and routing strangers into
+  Settings would collapse the sniffer's third answer into its second and make the app pushy
+  about files that were never its own. Closing it properly needs an app-level notice
+  surface, which does not exist. Recorded rather than bodged.
+  Verified in a real browser in both themes at 430px: a shared program opens in its editor
+  named, a backup opens in the preview, a stranger's file changes nothing, a backup on a
+  fresh install reaches the preview rather than onboarding, and all three shortcuts resolve
+  from a cold load.
+
+- **M111b — Share a photo to the app.** *Proposed. Size M.*
+  **Premise.** The media store is built for it and M111 refused the manifest entry rather
+  than ship a front door onto a room that does not exist. Two things are missing and only
+  one of them is the manifest: a `share_target` with `method: POST` needs the app to own
+  its service worker (`injectManifest`, or `importScripts` over `generateSW`), and a shared
+  photo needs somewhere to land — photos attach to a *specific* session or project through
+  `MediaCard`, and there is no app-level picker that asks which.
+  **Shape.** The picker first, as a screen that is worth having on its own: recent sessions,
+  open projects, today. Then the service worker change, then the manifest entry.
+  **Caveat.** The service-worker switch touches the offline guarantee, which M19 spent a
+  milestone getting right. It is the risky half, and it is second for that reason.
 
 - **M112 — The cooldown, from what today actually loaded.** *Proposed. Size M, half
   content.*

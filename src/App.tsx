@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { Route, Router, Switch, useLocation } from 'wouter';
 import { RouteBoundary } from '@/ui/ErrorBoundary';
+import { launchedWithFile } from '@/lib/launchFlag';
 import { useHashLocation } from 'wouter/use-hash-location';
 import { HomePage } from '@/features/home/HomePage';
 import { PlaceholderPage } from '@/features/placeholder/PlaceholderPage';
@@ -113,6 +114,49 @@ export function App() {
 }
 
 /**
+ * A file the operating system opened the app with (PLAN.md M111).
+ *
+ * `launchQueue` is how a file handler arrives, and it fires **once per
+ * launch, before React has painted** — so the consumer is set as early as
+ * an effect can run and the file is parked in `launchFile` for whichever
+ * screen knows what to do with it.
+ *
+ * Both of the app's own files are `.json`, so the kind is read rather than
+ * assumed: a shared program goes to the builder, a backup to settings, and
+ * anything else goes nowhere at all rather than to whichever screen was
+ * nearest.
+ */
+function useOpenedFile(): void {
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    const queue = (window as { launchQueue?: LaunchQueue }).launchQueue;
+    if (!queue?.setConsumer) return;
+    queue.setConsumer((params) => {
+      void (async () => {
+        const handle = params.files?.[0];
+        if (!handle) return;
+        // Where it goes is read out of the file, not guessed from its
+        // name: `file_handlers` matches on extension and both of the app's
+        // own JSON files are `.json`.
+        // Loaded only once a file actually arrives: the sniffer and the
+        // slot behind it are bytes every cold start would otherwise pay for
+        // a launch that almost never happens.
+        const { receiveLaunch } = await import('@/lib/launchFile');
+        const target = await receiveLaunch(await handle.getFile());
+        if (target !== null) navigate(target);
+      })();
+    });
+  }, [navigate]);
+}
+
+/** The slice of the File Handling API this uses, which TypeScript has no
+ *  lib for. Two calls, both guarded at the call site. */
+interface LaunchQueue {
+  setConsumer?: (consumer: (params: { files?: { getFile: () => Promise<File> }[] }) => void) => void;
+}
+
+/**
  * Send a genuinely new install to the baseline flow, once. Anyone with data
  * — including a backup imported from before onboarding existed — is left
  * alone; `onboardedAt` being null is not by itself evidence of a fresh start.
@@ -127,6 +171,10 @@ function useFirstRunRedirect(): void {
 
   useEffect(() => {
     if (!profileReady || !sessionsReady) return;
+    // An app opened *with* a file is not a first run in the "show me
+    // around" sense, and the database being empty is exactly the state a
+    // restore is for (PLAN.md M111).
+    if (launchedWithFile()) return;
     if (onboardedAt !== null || activeProgramId !== null) return;
     if (Object.keys(byDate).length > 0) return;
     if (location === '/welcome') return;
@@ -160,6 +208,7 @@ function useCatalogue(): boolean {
 
 function Shell() {
   useFirstRunRedirect();
+  useOpenedFile();
   const [location] = useLocation();
   const catalogue = useCatalogue();
   return (

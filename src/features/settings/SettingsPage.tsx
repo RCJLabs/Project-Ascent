@@ -9,6 +9,7 @@ import { SpreadsheetImportCard, pendingFrom, type CsvPending } from './Spreadshe
 import { CsvError, parseCsv } from '@/engine/csv';
 import { canLoadDemo, demoInjuries, loadDemo, wipeDemo } from '@/db/demo';
 import { hasDemo } from '@/db/demoFlag';
+import { takeLaunchFile } from '@/lib/launchFile';
 import { getProgram } from '@/content/programs';
 import { layoutsFor, planFromLayout } from '@/engine/scheduler';
 import type { Session } from '@/db/sessions';
@@ -112,6 +113,10 @@ export function SettingsPage() {
   const [snapshot, setSnapshot] = useState<{ takenAt: string; replacedWith: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  /** The preview card, so a launched backup can be scrolled to (M111). */
+  const previewRef = useRef<HTMLDivElement>(null);
+  /** Whether this page was opened *with* a file rather than navigated to. */
+  const [arrived, setArrived] = useState(false);
   const csvRef = useRef<HTMLInputElement>(null);
   const [csv, setCsv] = useState<CsvPending | null>(null);
   const byDate = useSessions((s) => s.byDate);
@@ -218,6 +223,36 @@ export function SettingsPage() {
   useEffect(() => {
     void refreshDemo();
   }, [refreshDemo, byDate]);
+
+  /**
+   * A backup the app was opened with (PLAN.md M111).
+   *
+   * Straight into the same preview a picked file gets: an import is never
+   * one tap from a file manager, because M20's whole point is that
+   * "replace" and "merge" mean nothing until you can see what they would do.
+   */
+  useEffect(() => {
+    const opened = takeLaunchFile();
+    if (!opened) return;
+    setArrived(true);
+    void handleFilePicked([opened] as unknown as FileList);
+    // Once, on mount: `takeLaunchFile` clears as it returns.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * Bring the preview to the climber, rather than the other way round.
+   *
+   * A picked file is previewed next to the button that picked it, already on
+   * screen. A launched one arrives at the top of a long page — palettes,
+   * text size, grade notation — with the thing they actually tapped several
+   * screens below and no sign it is there.
+   */
+  useEffect(() => {
+    if (!arrived || !pendingImport) return;
+    previewRef.current?.scrollIntoView({ block: 'center' });
+    setArrived(false);
+  }, [arrived, pendingImport]);
 
   async function startDemo() {
     setBusy(true);
@@ -588,6 +623,7 @@ export function SettingsPage() {
         </Card>
 
         {pendingImport && (
+          <div ref={previewRef}>
           <ImportPreviewCard
             preview={pendingImport.preview}
             fileLabel={pendingImport.label}
@@ -595,6 +631,7 @@ export function SettingsPage() {
             onImport={(mode) => void confirmImport(mode)}
             onCancel={() => setPendingImport(null)}
           />
+          </div>
         )}
 
         {csv && (

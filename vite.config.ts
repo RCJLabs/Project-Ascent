@@ -43,6 +43,45 @@ export default defineConfig({
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: 'icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Long-press the icon (PLAN.md M111). Three, not the four proposed:
+        // there is no timer route to point a fourth at — the timer is a
+        // sheet inside a session, and it needs a subject to time.
+        shortcuts: [
+          {
+            name: "Log today's session",
+            short_name: 'Log today',
+            url: '/Project-Ascent/#/today',
+            icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+          {
+            name: 'Gym mode',
+            short_name: 'Gym mode',
+            url: '/Project-Ascent/#/gym',
+            icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+          {
+            name: 'The Ascent',
+            short_name: 'The Ascent',
+            url: '/Project-Ascent/#/ascent',
+            icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+        ],
+        // A backup or a shared program, opened from a file manager. Both of
+        // the app's own files are `.json`, so which screen it lands on is
+        // decided by reading it — see `engine/openWith.ts`.
+        file_handlers: [
+          {
+            action: '/Project-Ascent/',
+            accept: {
+              'application/json': ['.json'],
+              'application/zip': ['.zip'],
+            },
+          },
+        ],
+        // One instance. Opening a file while the app is already running
+        // brings that window forward rather than starting a second copy
+        // over the same database.
+        launch_handler: { client_mode: 'focus-existing' },
       },
     }),
   ],
