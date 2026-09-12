@@ -3088,10 +3088,11 @@ commit.
   which is a different app identity to the browser regardless. Pre-launch this is one
   device; it will never be cheaper than now. M111 is what makes the fix a file tap:
   export on the old origin, open the file on the new one.
-  **Left on the branch, not merged.** Everything above is pushed to
-  `claude/climbing-app-audit-mvixjt` and deliberately **not** fast-forwarded to `main`,
-  because merging it publishes a broken site until the DNS record and the Pages setting
-  exist. That breaks this run's every-milestone-to-main habit, on purpose.
+  **Held off `main` until the domain was live, then merged.** Publishing the base change
+  before the DNS record and the Pages setting existed would have served a site whose every
+  asset 404s, so this deliberately broke the run's every-milestone-to-main habit until
+  `ascent.rcjlabs.com` resolved and HTTPS was enforced. Both are done; it is on `main` and
+  deployed.
   **One defect the live site found that no local check could have.** Typing
   `/.well-known/assetlinks.json` into a browser returned **the app**, not the file. The
   file was correct and deployed; `navigateFallback` matches *every* navigation request,
@@ -3916,25 +3917,10 @@ materially wrong premise. Sizes are guesses.*
   commit first so this landed on a correct base.
   Verified in both themes. 3,101 tests pass.
 
-- **M100 — Unlogged is not untrained.** *Proposed. Size M.*
-  **Premise.** The coach's detraining rule prints *"N days since you trained"* from the
-  newest completed session. Vitality, the streak, the consistency grid, the ratio's
-  chronic window, `staleSessions` and the finder's `comingOffBreak` all read a gap in the
-  log as a gap in training. A climber who climbed for three weeks and did not open the app
-  is told they have detrained and to *"come back at two-thirds of the volume you left on"*
-  — advice that is wrong, delivered confidently, by an app whose whole pitch is that it
-  never says more than the log supports.
-  **Shape.** A *sketch*: a completed session with `sketch: true`, placed from the calendar
-  over a day or a range in one tap — "Been away from the app? Mark the days you climbed."
-  It counts for consistency, the streak and the gap. It carries load only if the climber
-  gives RPE and duration; otherwise it is excluded from the ratio the way a deload is, and
-  every reader that would have counted it says so: *"3 unlogged days in this window"*.
-  **Never.** Invent climbs, feet or records. A sketch pays the session base and nothing
-  else, and no challenge that measures climbs can be satisfied by one. It is exactly as
-  gameable as an empty completed session is today, which is to say: already.
-  **Caveat.** This changes what a completed session means. Count the readers of
-  `completed` first — M94 found twice the readers the plan claimed for a smaller field —
-  and the ones that must not count a sketch are the ones that pay or measure climbs.
+*(The original M100 proposal stood here. It was removed once M100 shipped: the backlog
+carried the milestone twice, once done and once still proposed, and anyone reading it
+would have seen M100 as unbuilt. Its premise and the corrections to it are in the done
+entry above.)*
 
 - **M101 — The finder reads the log, not just the questionnaire.** *Done, with three of
   the four proposed signals refused for measured reasons and a better one used instead.*
