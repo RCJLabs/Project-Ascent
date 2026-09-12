@@ -4922,6 +4922,79 @@ entry above.)*
   **Still open after this**: M107b's cues and faults for 144 drills — which turned out to be
   a call after all, and is now call 11.
 
+- **M114 — Delete everything.** *Done, and the browser found a bug older than the feature.*
+  **Premise.** Every byte lives on this device and nothing could take any of it off. Import
+  replaces, `wipeDemo` removes what the sample climber wrote, and neither is *start over*.
+  The immediate reason was testing — `canLoadDemo` is `!hasRealData()`, so one logged
+  session locked the sample climber away for good and the only way back was clearing site
+  data, which a standalone or TWA install does not really offer. The general reason is
+  better: an offline app that cannot delete your data is one you cannot hand your phone to
+  someone with.
+  **The cheaper fix was refused.** Loosening the sample-data gate is exactly the risk M110
+  built it against. Deleting is the honest answer to *"I want the demo again"*, and it is
+  the one also worth shipping to somebody who is not testing.
+  **No snapshot, unlike the import it sits below.** M20 takes a restore point and
+  `UndoImportCard` offers it back, which is right for a replace and wrong here: someone who
+  taps *delete everything* before passing a phone on has not had their data deleted if a
+  complete copy is still sitting in `meta`. The typed confirmation carries the weight
+  instead — the word, not a second tap, and the button is disabled until it matches.
+  **`ALL_STORES` is written out rather than imported, and that is the point.**
+  `EXPORTABLE_STORES` omits `media`, because blobs do not survive `JSON.stringify` and the
+  export handles photos separately. Reusing it here would have left every photo in the
+  database after a delete that said everything — the single worst thing this could get
+  wrong. A test asserts the list equals what the database actually declares, so a store
+  added in a future `SCHEMA_VERSION` cannot survive a wipe silently.
+  **Theme and text size stay, and the card says so.** M60 split those into `localStorage`
+  because they belong to the phone in the hand rather than to the climber; they are never
+  in a backup and importing someone else's data does not change them. Erasing keeps the
+  same line, and a climber should not have to discover it by finding the app in light mode.
+  **The bug, which is not this milestone's.** The browser check deleted everything and then
+  **one project was back in the database**. `projects.ts` subscribes to `sessions.byDate`
+  and reconciles on every change; `hydrateAll` loads ten stores in one `Promise.all`, so
+  there is a window where sessions have gone empty and projects still hold the pre-wipe
+  list. Reconciling those produces a retraction patch, and `putProject` writes it into the
+  database that was just cleared. **M110 recorded the same symptom from the test harness** —
+  *"exactly one project surviving the clear"* — and worked around it by clearing until the
+  gate agreed. This is the cause. `store/hydrating.ts` is a re-entrant counter held across
+  the whole load, the subscription returns early while it is up, and `hydrateAll` runs one
+  reconcile afterwards on state that is fully loaded and therefore means something.
+  **It was never only the delete path**: import calls `hydrateAll` too, so the same window
+  could write a pre-import project over a just-imported database. Nobody had seen it
+  because an import replaces rather than empties, and a stale project among restored ones
+  looks like data rather than like a bug.
+  **A test that reproduced the scenario and not the timing.** The first version erased,
+  re-hydrated and asserted the database stayed empty — and **passed with the guard
+  removed**, because under fake-indexeddb the ten loads resolve in an order that usually
+  closes the window. The kept version forces it: stores put into exactly a hydrate's
+  midpoint, then the load that fires the subscription, plus a control asserting the
+  unguarded path *does* write one back so the fixture cannot go quiet. Two more attempts
+  failed on the way — priming the stores in the wrong order let the reconcile retract the
+  send in memory first, leaving the control with nothing to write.
+  **And one thing the behavioural test honestly cannot reach.** Deleting `beginHydration()`
+  from `hydrateAll` changes nothing any test here can observe, for the same timing reason.
+  So the wiring is pinned by reading the source — the guard armed before the `Promise.all`
+  and released in a `finally`, because one store throwing would otherwise suppress every
+  reconcile for the life of the tab. A weaker check said out loud beats a stronger one that
+  does not run.
+  **A second browser finding, kept rather than fixed.** The confirmation message is never
+  read: a wiped profile is exactly what `useFirstRunRedirect` keys on, so the app navigates
+  to `/welcome` and unmounts the page within a frame. That is correct — landing on *"let's
+  find out where you're starting from"* says everything went more plainly than a line of
+  text — but the test asserting the message was passing only because it renders
+  `SettingsPage` without the shell. It says so now, and a second test asserts the three
+  values that make the redirect fire.
+  **The emit-order trap, met again.** The confirm button was `outline` plus `text-danger`,
+  which is two equal-specificity colours resolved by Tailwind's emit order; the browser
+  showed `text-danger` losing and jsdom could not. It uses the `danger` variant that
+  already existed, and a test asserts exactly one text colour on it.
+  **Measured, not asserted.** 10 mutations on the feature, 9 killed plus the sanity no-op —
+  including one real gap it found: nothing tested the re-hydrate after the wipe, so the
+  stores would have gone on holding a year of sessions over an empty database and written
+  it all back on the next persist. 7 more on the guard, all killed.
+  **Budget.** 218.65 → 218.67KB. Settings is a lazy route; what lands is the counter.
+  Verified in a browser in both themes at 430px: every store zero afterwards, the theme
+  untouched, and the app on its welcome screen. 3,759 tests pass.
+
 **Coaching calls — ten settled (M113), one open (M107b).** Nine judgements the app was making on the coach's
 behalf, each stated at its milestone rather than made quietly, and a tenth the review itself
 turned up. Every site was tagged so the list could be regenerated with

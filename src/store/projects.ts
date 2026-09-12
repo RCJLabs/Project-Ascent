@@ -8,6 +8,7 @@ import {
   type Project,
 } from '@/db/projects';
 import { applyPatch, reconcileProjects } from '@/engine/projects';
+import { hydrationInProgress } from './hydrating';
 import { useSessions } from './sessions';
 
 const DISMISSED_KEY = 'project-suggestions';
@@ -115,6 +116,11 @@ export const useProjects = create<ProjectsState>((set, get) => ({
  * and cannot be forgotten by whoever adds the next entry point.
  */
 useSessions.subscribe((state, prev) => {
+  // Never during a hydrate. The guard below catches projects that have not
+  // loaded; this catches projects that loaded *before* sessions did and are
+  // now a whole load out of date — reconciling those against a fresh empty
+  // log retracts every send and writes it back (PLAN.md M114).
+  if (hydrationInProgress()) return;
   if (state.byDate !== prev.byDate && useProjects.getState().hydrated) {
     void useProjects.getState().reconcile();
   }

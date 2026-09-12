@@ -8,6 +8,7 @@ import { ImportPreviewCard, UndoImportCard } from './ImportPreviewCard';
 import { SpreadsheetImportCard, pendingFrom, type CsvPending } from './SpreadsheetImportCard';
 import { CsvError, parseCsv } from '@/engine/csv';
 import { canLoadDemo, demoInjuries, loadDemo, wipeDemo } from '@/db/demo';
+import { eraseEverything } from '@/db/erase';
 import { hasDemo } from '@/db/demoFlag';
 import { takeLaunchFile } from '@/lib/launchFile';
 import { getProgram } from '@/content/programs';
@@ -124,6 +125,15 @@ export function SettingsPage() {
     loaded: false,
     offerable: false,
   });
+  /**
+   * The delete confirmation (PLAN.md M114).
+   *
+   * `null` is the closed state; a string is the panel open with whatever has
+   * been typed into it. Two states rather than a boolean and a value,
+   * because "open with an empty box" and "closed" are then not the same
+   * thing by accident.
+   */
+  const [erasing, setErasing] = useState<string | null>(null);
   // Every session key already in the log, so an imported day never lands on
   // one the climber wrote here. Memoised on the store rather than rebuilt
   // per keystroke in the preview.
@@ -298,6 +308,38 @@ export function SettingsPage() {
       setMessage(`Sample data cleared — ${gone} record${gone === 1 ? '' : 's'}. Anything you logged yourself is still here.`);
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Could not clear the sample data.', true);
+    } finally {
+      setBusy(false);
+      void refreshDemo();
+      void refreshStorage();
+    }
+  }
+
+  /**
+   * Start over (PLAN.md M114).
+   *
+   * No snapshot and no undo, unlike the import this sits below. A restore
+   * point would mean a complete copy of everything survives a tap that said
+   * it deleted everything, which is wrong for the person handing a phone on.
+   * The typed confirmation carries the weight instead.
+   */
+  async function eraseAll() {
+    setBusy(true);
+    try {
+      const { records, photos } = await eraseEverything();
+      // The database first, the stores second: `hydrateAll` reads what is
+      // there, so doing it the other way round writes the old state back
+      // over the empty database on the next persist. Same trap M110 hit
+      // from the other side.
+      await hydrateAll();
+      setErasing(null);
+      setMessage(
+        records === 0
+          ? 'There was nothing stored to delete.'
+          : `Deleted — ${records} record${records === 1 ? '' : 's'}${photos > 0 ? `, including ${photos} photo${photos === 1 ? '' : 's'}` : ''}. Your theme and text size are untouched.`,
+      );
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Could not delete the data.', true);
     } finally {
       setBusy(false);
       void refreshDemo();
@@ -654,6 +696,62 @@ export function SettingsPage() {
             onKeep={() => void keepImport()}
           />
         )}
+
+        {/* Start over (PLAN.md M114). Below the backup card deliberately:
+            the export button is the thing to read first, and on an offline
+            app it is the only copy there will ever be. */}
+        <Card title="Start over">
+          {erasing === null ? (
+            <>
+              <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+                Deletes every session, project, photo, benchmark and setting you have entered,
+                and hands the sample climber back so the app can be looked at fresh. It cannot
+                be undone and there is no cloud copy — export a backup first if any of it
+                matters. Your theme and text size stay, because they belong to this phone
+                rather than to you.
+              </p>
+              <Button variant="outline" disabled={busy} onClick={() => setErasing('')}>
+                Delete everything
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm mb-3 leading-relaxed">
+                Type <strong>DELETE</strong> to confirm. This removes everything stored on this
+                device and keeps no copy.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="w-32 shrink-0">
+                  <Input
+                    value={erasing}
+                    onChange={(e) => setErasing(e.target.value)}
+                    aria-label="Type DELETE to confirm"
+                    placeholder="DELETE"
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    spellCheck={false}
+                  />
+                </span>
+                {/* The `danger` variant, not `outline` plus a colour class.
+                    The first version passed `text-danger` alongside
+                    `outline`'s own `text-ink` and the browser showed it
+                    losing — equal specificity, so Tailwind's emit order
+                    decides and jsdom cannot see which won. The trap the
+                    calendar cell records, met again. */}
+                <Button
+                  variant="danger"
+                  disabled={busy || erasing.trim().toUpperCase() !== 'DELETE'}
+                  onClick={() => void eraseAll()}
+                >
+                  Delete everything
+                </Button>
+                <Button variant="ghost" disabled={busy} onClick={() => setErasing(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </>
+          )}
+        </Card>
 
         {/* A climber who does not exist (PLAN.md M110). Offered only on an
             empty log, because sample data in a real one is the whole risk —
