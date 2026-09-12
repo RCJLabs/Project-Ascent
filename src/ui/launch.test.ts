@@ -18,11 +18,81 @@ const APP = read('src/App.tsx');
 
 /** Every `<Route path>` the router actually defines. */
 const ROUTES = [...APP.matchAll(/<Route path="([^"]+)"/g)].map((m) => m[1] as string);
-/** Every shortcut URL in the manifest. The lookbehind is what keeps
- *  `start_url` — which is a bare path by design — out of the list. */
-const SHORTCUTS = [...CONFIG.matchAll(/(?<!\w)url: '([^']+)'/g)].map((m) => m[1] as string);
+/**
+ * Where the app is served from, read from the config rather than repeated.
+ *
+ * M12 moved it from a Pages project path to a custom domain root. A test
+ * carrying its own copy of that would have gone on asserting the old one
+ * and passing, which is the whole failure this file exists to catch.
+ */
+const BASE = /^const BASE = '([^']+)';$/m.exec(CONFIG)?.[1] ?? '';
 
-const BASE = '/Project-Ascent/';
+/**
+ * Every shortcut URL in the manifest.
+ *
+ * Shortcuts are written as `` `${BASE}#/…` `` so they cannot drift from the
+ * scope; the lookbehind is what keeps `start_url` out of the list.
+ */
+const SHORTCUTS = [...CONFIG.matchAll(/(?<!\w)url: `\$\{BASE\}([^`]*)`/g)].map(
+  (m) => `${BASE}${m[1] as string}`,
+);
+
+describe('where the app is served from', () => {
+  it('has one answer', () => {
+    expect(BASE, 'vite.config.ts no longer declares a BASE constant').not.toBe('');
+    expect(BASE.endsWith('/'), 'a base that does not end in / breaks every joined URL').toBe(true);
+  });
+
+  it('says it in one place', () => {
+    // Eight fields have to agree. Each literal path written out again is a
+    // chance for one of them to be left behind on the next move.
+    expect(CONFIG).not.toMatch(/'\/Project-Ascent\//);
+    expect(CONFIG.match(/^const BASE = /gm) ?? []).toHaveLength(1);
+  });
+
+  it('is what CNAME makes true', () => {
+    // A Pages custom domain serves at the domain root; a bare project site
+    // serves at /<repo>/. The CNAME file is what decides which, so a base of
+    // '/' without one is every asset 404ing on the live site.
+    const cname = existsSync('public/CNAME') ? read('public/CNAME').trim() : null;
+    if (BASE === '/') expect(cname, 'base is / with no custom domain set').not.toBe(null);
+    else expect(cname, `base is ${BASE} but a custom domain serves at /`).toBe(null);
+  });
+});
+
+describe('proving the domain is ours', () => {
+  /**
+   * A TWA runs without a URL bar only if Digital Asset Links verifies, and
+   * that means this exact file at the domain root. It is empty until the
+   * Play app exists — the SHA-256 comes from Play App Signing, which has
+   * nothing to sign before the first upload — so the guard is shape, not
+   * contents: an empty statement list asserts nothing and is honest, a
+   * malformed one is a broken claim served publicly.
+   */
+  const PATH = 'public/.well-known/assetlinks.json';
+  const PACKAGE = 'com.rcjlabs.projectascent';
+
+  it('is served from the domain root', () => {
+    expect(existsSync(PATH), 'no assetlinks file; a TWA would show a URL bar').toBe(true);
+  });
+
+  it('is a statement list, whatever is in it', () => {
+    const raw: unknown = JSON.parse(read(PATH));
+    expect(Array.isArray(raw), 'assetlinks is a list of statements, not an object').toBe(true);
+  });
+
+  it('names this app and no other, once it names anything', () => {
+    // Deliberately passes while the list is empty. What it will not allow is
+    // a statement for some other package, or one missing its fingerprint.
+    const statements = JSON.parse(read(PATH)) as {
+      target?: { package_name?: string; sha256_cert_fingerprints?: string[] };
+    }[];
+    for (const statement of statements) {
+      expect(statement.target?.package_name).toBe(PACKAGE);
+      expect(statement.target?.sha256_cert_fingerprints?.length ?? 0).toBeGreaterThan(0);
+    }
+  });
+});
 
 describe('the shortcuts a long-press offers', () => {
   it('offers some', () => {
@@ -79,10 +149,9 @@ describe('a file tapped in a file manager', () => {
 
   it('opens at a URL inside the app’s scope', () => {
     // The manifest spec requires a file handler's action to be within scope;
-    // one outside it is dropped, and the handler never registers.
-    const action = /action: '([^']+)'/.exec(CONFIG)?.[1];
-    expect(action).toBeDefined();
-    expect(action?.startsWith(BASE)).toBe(true);
+    // one outside it is dropped, and the handler never registers. Written as
+    // the scope itself, so the two cannot disagree.
+    expect(CONFIG).toContain('action: BASE,');
   });
 
   it('brings the running app forward rather than starting a second copy', () => {

@@ -14,7 +14,7 @@
  * this is a tool for the person publishing, not part of the build. Point
  * PLAYWRIGHT at an installed copy if it is not resolvable.
  */
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
 const args = process.argv.slice(2);
@@ -25,7 +25,11 @@ const flag = (name, fallback) => {
 
 const OUT = flag('out', 'shots');
 const PORT = flag('port', '4173');
-const BASE = `http://localhost:${PORT}/Project-Ascent/`;
+/** Read from the config, not repeated: M12 moved the app to a domain root
+ *  and a second copy of the old path here would have served 404s silently. */
+const SERVED_AT =
+  /^const BASE = '([^']+)';$/m.exec(readFileSync(new URL('../vite.config.ts', import.meta.url), 'utf8'))?.[1] ?? '/';
+const BASE = `http://localhost:${PORT}${SERVED_AT}`;
 
 /** Play wants a phone and a tablet; the third is for the web listing. */
 const SIZES = [

@@ -5,10 +5,26 @@ import path from 'node:path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// Deployed as a GitHub Pages project site at /Project-Ascent/. Hash routing
-// keeps deep links working without a 404 fallback.
+/**
+ * Where the app is served from (PLAN.md M12).
+ *
+ * One constant, because it appears in eight places that must agree: the
+ * asset base, the service worker's navigation fallback, and five manifest
+ * fields. A disagreement between any two of them is a 404 on a cold load
+ * or a shortcut that silently opens the home screen — neither of which
+ * shows up in a dev server, which serves from `/` whatever this says.
+ *
+ * `/` because a GitHub Pages **custom domain** serves the site at the
+ * domain root, not at `/<repo>/` the way a bare `*.github.io` project
+ * site does. The `public/CNAME` file is what makes that true; the two are
+ * a pair and moving one without the other breaks every asset URL.
+ *
+ * Hash routing keeps deep links working without a 404 fallback.
+ */
+const BASE = '/';
+
 export default defineConfig({
-  base: '/Project-Ascent/',
+  base: BASE,
   plugins: [
     react(),
     tailwindcss(),
@@ -23,16 +39,16 @@ export default defineConfig({
       // "no precache" rule was an AI Studio constraint — see PLAN.md §2.)
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,woff2}'],
-        navigateFallback: '/Project-Ascent/index.html',
+        navigateFallback: `${BASE}index.html`,
       },
       manifest: {
-        id: '/Project-Ascent/',
+        id: BASE,
         name: 'Project Ascent',
         short_name: 'Ascent',
         description:
           'Climbing training programs, session logging, progress tracking, and a climber that grows with your real climbing.',
-        start_url: '/Project-Ascent/',
-        scope: '/Project-Ascent/',
+        start_url: BASE,
+        scope: BASE,
         display: 'standalone',
         orientation: 'portrait',
         categories: ['fitness', 'health', 'sports'],
@@ -50,19 +66,19 @@ export default defineConfig({
           {
             name: "Log today's session",
             short_name: 'Log today',
-            url: '/Project-Ascent/#/today',
+            url: `${BASE}#/today`,
             icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
           },
           {
             name: 'Gym mode',
             short_name: 'Gym mode',
-            url: '/Project-Ascent/#/gym',
+            url: `${BASE}#/gym`,
             icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
           },
           {
             name: 'The Ascent',
             short_name: 'The Ascent',
-            url: '/Project-Ascent/#/ascent',
+            url: `${BASE}#/ascent`,
             icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
           },
         ],
@@ -71,7 +87,7 @@ export default defineConfig({
         // decided by reading it — see `engine/openWith.ts`.
         file_handlers: [
           {
-            action: '/Project-Ascent/',
+            action: BASE,
             accept: {
               'application/json': ['.json'],
               'application/zip': ['.zip'],

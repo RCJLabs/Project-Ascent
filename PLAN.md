@@ -3038,10 +3038,64 @@ commit.
   `accuracy.test.ts` asserts that every guide printing an entry table has `prerequisites`
   the finder reads, and it passes empty. Proposed from stale audit prose.
 
-- **M12 — Ship.** *Parked.* TWA packaging + assetlinks, Play internal testing, store
-  listing. Blocked on two facts only the author has — the app name and the package id —
-  and set aside deliberately rather than waiting on them: everything above can be built
-  without shipping, and shipping cannot start without them.
+- **M12 — Ship.** *Unparked; the repo half is done, the account half is the author's.*
+  **The two facts arrived**, which is all it was ever waiting on: the store name is
+  **Project Ascent**, and the package id is **`com.rcjlabs.projectascent`** — reverse-DNS
+  of `rcjlabs.com`, and **immutable once published**, which is why it was worth asking
+  rather than guessing.
+  **A TWA cannot verify on `github.io`.** Digital Asset Links checks
+  `/.well-known/assetlinks.json` at the *domain root*, and a bare Pages project site is a
+  path on a domain owned by GitHub. So the app moves to a custom domain,
+  **`ascent.rcjlabs.com`** — a subdomain rather than the apex, so `rcjlabs.com` stays free.
+  Without it the app installs and runs with a Chrome URL bar over the top.
+  **Which changes the base path, and that was the engineering.** A Pages custom domain
+  serves at the domain root; a project site serves at `/<repo>/`. `/Project-Ascent/` was
+  written out in **twelve places** — the asset base, the service worker's navigation
+  fallback, five manifest fields, three shortcut URLs, a test and a script. It is one
+  `BASE` constant now, and the test and the script *parse it out of the config* rather
+  than keeping a copy: a test carrying its own copy of the old path would have gone on
+  asserting it and passing, which is the exact failure that file exists to catch.
+  **`public/CNAME` and the base are held to each other by a test.** A base of `/` with no
+  custom domain set is every asset 404ing on the live site, and nothing else would have
+  said so — a dev server serves from `/` whatever the config says, so the whole class of
+  bug is invisible until deploy.
+  **Verified, not assumed, three times.** That Vite copies a *dotfile* directory out of
+  `public/` (it does — `dist/.well-known/assetlinks.json`), so the assetlinks path is
+  proven before there is anything to put in it. That the app still works served from a
+  root base: both themes, all four launch cases, all three shortcuts cold. And that
+  `navigateFallback: '/index.html'` answers offline — an offline request to a path that is
+  not precached returns 200 with the app, which is the only thing that actually exercises
+  it, since a hash-routed app never requests anything but `/`.
+  **`assetlinks.json` ships as `[]`, deliberately.** The SHA-256 comes from Play App
+  Signing, which has nothing to sign before the first upload — so the file cannot be
+  written yet. An empty statement list asserts nothing and is honest; a placeholder
+  fingerprint would be a broken verification claim served publicly. A test guards the
+  shape rather than the contents: it passes on the empty list, and refuses a statement
+  naming another package or missing its fingerprint.
+  **`ship/twa-manifest.json`** is complete but for the signing key — package id, host,
+  colours light and dark, both icons, and M111's three launcher shortcuts.
+  **`ship/README.md`** is the ordered runbook, with the steps only the author can do
+  marked, and the two traps that bite most often called out: **do not merge the base
+  change to `main` before DNS is live** (the deploy workflow publishes on every push, and
+  a site built for `/` served at `/Project-Ascent/` is a blank page), and **assetlinks
+  takes the *app signing* key's fingerprint, not the *upload* key's** — Play re-signs the
+  upload, so the upload key never reaches the device.
+  **The cost, stated rather than discovered.** The origin change **strands every existing
+  install's data**: IndexedDB is per-origin, so a log written at
+  `rcjlabs.github.io/Project-Ascent/` is unreachable from `ascent.rcjlabs.com`, and Pages
+  redirects the old URL to the new one so the old install stops working rather than
+  sitting there as a fallback. The manifest `id` moves from `/Project-Ascent/` to `/`,
+  which is a different app identity to the browser regardless. Pre-launch this is one
+  device; it will never be cheaper than now. M111 is what makes the fix a file tap:
+  export on the old origin, open the file on the new one.
+  **Left on the branch, not merged.** Everything above is pushed to
+  `claude/climbing-app-audit-mvixjt` and deliberately **not** fast-forwarded to `main`,
+  because merging it publishes a broken site until the DNS record and the Pages setting
+  exist. That breaks this run's every-milestone-to-main habit, on purpose.
+  **Still the author's:** the DNS record, the Pages custom-domain setting, the Play
+  Console app, the first upload, the fingerprint, and the listing copy — short
+  description, full description, feature graphic, content rating, privacy policy.
+  `npm run shots` already produces the screenshot set.
 
 **Guide verification (the program guides, checked against the programs).** The app
 guide was already asserted against the engines it quotes; the nine *program* guides —

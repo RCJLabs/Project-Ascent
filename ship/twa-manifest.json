@@ -1,0 +1,51 @@
+{
+  "packageId": "com.rcjlabs.projectascent",
+  "host": "ascent.rcjlabs.com",
+  "name": "Project Ascent",
+  "launcherName": "Ascent",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#f6f8fa",
+  "themeColorDark": "#0d1117",
+  "navigationColor": "#f6f8fa",
+  "navigationColorDark": "#0d1117",
+  "navigationDividerColor": "#f6f8fa",
+  "navigationDividerColorDark": "#0d1117",
+  "backgroundColor": "#f6f8fa",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://ascent.rcjlabs.com/icons/icon-512.png",
+  "maskableIconUrl": "https://ascent.rcjlabs.com/icons/maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "appVersionName": "0.1.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Log today's session",
+      "shortName": "Log today",
+      "url": "/#/today",
+      "chosenIconUrl": "https://ascent.rcjlabs.com/icons/icon-192.png"
+    },
+    {
+      "name": "Gym mode",
+      "shortName": "Gym mode",
+      "url": "/#/gym",
+      "chosenIconUrl": "https://ascent.rcjlabs.com/icons/icon-192.png"
+    },
+    {
+      "name": "The Ascent",
+      "shortName": "The Ascent",
+      "url": "/#/ascent",
+      "chosenIconUrl": "https://ascent.rcjlabs.com/icons/icon-192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://ascent.rcjlabs.com/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://ascent.rcjlabs.com/",
+  "minSdkVersion": 23,
+  "features": {}
+}
