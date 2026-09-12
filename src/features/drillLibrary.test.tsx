@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { DRILLS } from '@/content/drills';
+import { DRILL_COACHING } from '@/content/drillCoaching';
 import { newSession, putSession, type Session } from '@/db/sessions';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { DrillsPage } from '@/features/drills/DrillsPage';
@@ -173,12 +174,60 @@ describe('one drill', () => {
   it('reads the protocol cues where a drill is a named method', async () => {
     const withProtocol = DRILLS.find((d) => d.protocolId !== undefined)!;
     await one(withProtocol.id);
-    expect(await screen.findByText('Cues')).toBeTruthy();
+    // "Cues" on its own, or "Cues for ARC Training" once that drill has
+    // coaching of its own to tell it apart from. Either is the card.
+    expect(await screen.findByText(/^Cues( for .+)?$/)).toBeTruthy();
   });
 
-  it('shows no cues card for a drill that is not one', async () => {
-    await one('sticky_feet');
+  it('shows no cues card for a drill with neither', async () => {
+    const bare = DRILLS.find(
+      (d) => d.protocolId === undefined && DRILL_COACHING[d.id] === undefined,
+    );
+    // Skips itself rather than lying once the whole library is coached
+    // (PLAN.md M107b) — at which point the card is never absent and there
+    // is nothing left to assert.
+    if (!bare) return;
+    await one(bare.id);
     await screen.findByText('How to run it');
-    expect(screen.queryByText('Cues')).toBeNull();
+    expect(screen.queryByText(/^Cues/)).toBeNull();
+  });
+});
+
+/**
+ * The coach's cues and faults (PLAN.md M107b).
+ *
+ * The fields are optional and most of the library has not been written yet,
+ * so these run against a drill the coverage guard in
+ * `content/drills/cues.test.ts` holds to having them.
+ */
+describe('a drill that has been coached', () => {
+  it('says what to do while you are on the wall', async () => {
+    await one('sticky_feet');
+    expect(await screen.findByText('Cues')).toBeTruthy();
+    expect(screen.getByText(/Pick the spot on the hold/)).toBeTruthy();
+  });
+
+  it('says what going wrong looks like, in its own card', async () => {
+    // Not a second list under Cues: a climber opens this page either to run
+    // the drill or to work out why it is not working.
+    await one('sticky_feet');
+    expect(await screen.findByText('Where it goes wrong')).toBeTruthy();
+    expect(screen.getByText(/slides a centimetre/)).toBeTruthy();
+  });
+
+  it('puts the cues before the faults', async () => {
+    await one('sticky_feet');
+    await screen.findByText('Cues');
+    const text = document.body.textContent ?? '';
+    expect(text.indexOf('Cues')).toBeLessThan(text.indexOf('Where it goes wrong'));
+  });
+
+  it('keeps them under the method rather than above it', async () => {
+    // The description is what the drill *is*. A cue read before it is an
+    // instruction about something the reader has not met.
+    await one('sticky_feet');
+    await screen.findByText('Cues');
+    const text = document.body.textContent ?? '';
+    expect(text.indexOf('How to run it')).toBeLessThan(text.indexOf('Cues'));
   });
 });

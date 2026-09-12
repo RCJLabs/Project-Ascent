@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { DRILL_CATEGORIES, getDrill } from '@/content/drills';
+import { drillCoaching } from '@/content/drillCoaching';
 import { PROTOCOLS } from '@/content/protocols';
 import { EQUIPMENT_LABELS } from '@/engine/customProgram';
 import type { DrillId } from '@/content/types';
@@ -11,6 +12,28 @@ import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
 import { RecordNotFound } from '@/ui/RecordNotFound';
 import { PageSkeleton } from '@/ui/Skeleton';
+
+/**
+ * A bulleted list of short coaching lines.
+ *
+ * Three lists on this page render identically — the drill's cues, its
+ * faults and the protocol's cues — and they did not before M107b, when
+ * there was only one.
+ */
+function Lines({ items, tone }: { items: string[]; tone?: 'warn' }) {
+  return (
+    <ul className="grid grid-cols-1 gap-1.5">
+      {items.map((line) => (
+        <li key={line} className="text-sm leading-relaxed flex gap-2">
+          <span className={tone === 'warn' ? 'text-warn' : 'text-accent'} aria-hidden>
+            ·
+          </span>
+          <span>{line}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 /**
  * One drill, and the climber's own record with it (PLAN.md M107).
@@ -48,6 +71,12 @@ export function DrillPage({ params }: { params: { id: string } }) {
   const programs = prescribedBy(drill.sources);
   const protocol = drill.protocolId ? PROTOCOLS[drill.protocolId] : undefined;
   const kit = drill.equipment.filter((e) => e !== 'none');
+  // A static import, and it stays one: this route is lazy, so the coaching
+  // for all 144 rides in this page's chunk rather than in every cold start.
+  // `drillCoaching.test.ts` holds the split; `perf.test.ts` holds the number.
+  const coaching = drillCoaching(drill.id);
+  const cues = coaching?.cues ?? [];
+  const faults = coaching?.faults ?? [];
 
   return (
     <>
@@ -77,19 +106,33 @@ export function DrillPage({ params }: { params: { id: string } }) {
           )}
         </Card>
 
-        {protocol !== undefined && protocol.cues.length > 0 && (
+        {/* The drill's own cues, above the protocol's (PLAN.md M107b).
+            Eleven of the 144 carry a `protocolId`, and where both exist the
+            protocol's are about the *method* — the edge, the rest, the RPE —
+            while these are about this drill on this wall. Specific first. */}
+        {cues.length > 0 && (
           <Card title="Cues">
+            <Lines items={cues} />
+          </Card>
+        )}
+
+        {/* Separate card, not a second list inside Cues. A climber opens
+            this page either to run the drill or to work out why it is not
+            working, and those are two different visits. */}
+        {faults.length > 0 && (
+          <Card title="Where it goes wrong">
+            <Lines items={faults} tone="warn" />
+          </Card>
+        )}
+
+        {protocol !== undefined && protocol.cues.length > 0 && (
+          <Card title={cues.length > 0 ? `Cues for ${protocol.name}` : 'Cues'}>
             {/* The drill *is* a named method, so its protocol's cues are the
                 drill's cues — written already, and read here rather than
-                repeated. Eleven of the 144 are like this. */}
-            <ul className="grid grid-cols-1 gap-1.5">
-              {protocol.cues.map((cue) => (
-                <li key={cue} className="text-sm leading-relaxed flex gap-2">
-                  <span className="text-accent" aria-hidden>·</span>
-                  <span>{cue}</span>
-                </li>
-              ))}
-            </ul>
+                repeated. Eleven of the 144 are like this. The title says
+                which method only when there is another list to tell it
+                apart from; on its own, "Cues" is what the reader wants. */}
+            <Lines items={protocol.cues} />
           </Card>
         )}
 

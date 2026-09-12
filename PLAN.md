@@ -4318,18 +4318,47 @@ entry above.)*
   what lands is two rows in the eager route table and two `lazy()` wrappers.
   Verified in both themes at 430px. 3,418 tests pass.
 
-- **M107b — The coach's cues and faults.** *Proposed. Size L, and entirely content.*
-  **Premise.** M107 settled that the descriptions already carry the method, so this is not
-  rescue work — it is the next layer: `cues?: string[]` and `faults?: string[]` on `Drill`,
-  the short imperatives a coach says at the wall and the shapes of going wrong, which no
-  paragraph can carry without becoming an essay.
-  **Shape.** The fields, a renderer on `/drills/:id` beside the protocol cues that already
-  render there, and a content guard holding every drill in a *shipped program* to at least
-  two cues.
-  **Why it is not started.** The fields are worth nothing empty — an optional field nothing
-  writes and nothing reads is the exact shape of code deleted twice in this session — so
-  they land **with** the words, in one milestone, when the coach has written them. 144
-  drills, and only Evan can write them.
+- **M107b — The coach's cues and faults.** *Done, the mechanism and twelve of 144. The
+  other 132 are a coaching call, not a task.*
+  **Premise held.** M107 settled that the descriptions already carry the method, so this
+  was the next layer rather than rescue work: the short imperatives a coach says at the
+  wall, and the shapes of going wrong, which no paragraph can carry without becoming an
+  essay.
+  **The proposed shape was wrong, and the budget test is what said so.** It proposed
+  `cues?: string[]` and `faults?: string[]` **on `Drill`**, which is where they belong by
+  every other measure. `content/drills/index.ts` is entry-chunk by construction — `derive`,
+  `plan`, `challenges` and `plateau` all call `getDrill` synchronously — so anything added
+  to a `Drill` loads on every cold start. **Measured, three ways.** Twelve drills coached
+  cost **1.58KB** gzipped (218.71 → 220.29). All 144 with one repeated cue everywhere cost
+  3.57KB — and that number is a *floor*, because gzip flattens repetition a real library
+  does not have. All 144 with distinct wording per drill cost **7.58KB** (218.71 → 226.29),
+  which is five times the cooldown split M112 fought over, on a page most visits never
+  open.
+  **So the coaching is a side table.** `content/drillCoaching.ts`, keyed by drill id,
+  imported by `DrillPage` and nothing else — and `DrillPage` is a `lazy()` route, so the
+  words ride in its chunk. **Measured again, and the split is free:** with none written the
+  first load is 218.64KB and the drill chunk 1.28KB; with twelve, 218.65 and 3.34; with
+  all 144 injected, **218.64 and 7.42**. The whole finished milestone costs *nothing* on
+  first load. The budget line does not move.
+  **What the split costs, said plainly.** Cohesion. A cue no longer sits beside the drill
+  it coaches, and `DrillId` is `string`, so a renamed drill orphans its coaching with no
+  compiler error. `drillCoaching.test.ts` is the compiler: every key must be a drill that
+  exists, and a test proves the check would notice.
+  **Twelve written, and the count is a test rather than a promise.** Base Camp's twelve
+  have three cues and two faults each. `WRITTEN` names the sources that are done, and the
+  guard holds the claim from both ends — a coached drill losing its cues fails, a source
+  added without its words fails, emptying `WRITTEN` to make everything pass vacuously
+  fails, and `{ done: 12, left: 132 }` is asserted so the size of the job is on screen
+  rather than in a comment.
+  **Cues above faults, both below the method.** They are different visits: one climber is
+  about to run the drill, the other is working out why it is not working. A cue read before
+  the description is an instruction about something the reader has not met yet.
+  **Measured, not asserted.** 12 mutations, 11 killed, and the survivor was the sanity
+  no-op. The one worth naming: **importing the coaching from `drills/index.ts` is killed**,
+  because that single line would put all of it back on the boot path and no other test
+  would have noticed.
+  **Still the coach's.** Twelve of 144, written from the descriptions' own method, and a
+  first pass rather than a syllabus. See coaching call 11.
 
 - **M108 — Style on a climb.** *Done, the angle and the rope. The board is refused.*
   **Premise held on four of five claims.** `Climb` really was grade, scale, count, result,
@@ -4867,16 +4896,18 @@ entry above.)*
   is unprotected prose and this says so**: the invariant would have to be "no description
   ranks itself above the weighting", which is a shape no regex reads honestly, and a
   contrived test is worse than a stated gap.
-  **Still open after this**: M107b's cues and faults for 144 drills, which is content and not
-  a call.
+  **Still open after this**: M107b's cues and faults for 144 drills — which turned out to be
+  a call after all, and is now call 11.
 
-**Coaching calls — all settled (M113).** Nine judgements the app was making on the coach's
+**Coaching calls — ten settled (M113), one open (M107b).** Nine judgements the app was making on the coach's
 behalf, each stated at its milestone rather than made quietly, and a tenth the review itself
 turned up. Every site was tagged so the list could be regenerated with
 `grep -n '\*\*COACH' PLAN.md` rather than remembered — the tag was deliberately spelled so
-this paragraph was not itself a hit, **and that grep now returns nothing**, which is the
-check: a settled call reads "Coach's call, settled" at its site, so a new `COACH` tag means a
-new open call and not an old one nobody got to.
+this paragraph was not itself a hit, and after M113 that grep returned nothing, which is the
+check: a settled call reads "Coach's call, settled" at its site, so a `COACH` tag is always a
+new open call and never an old one nobody got to. **M107b immediately produced one**, which
+is the mechanism working rather than failing — call 11 below is tagged, and it is the only
+hit.
 
 Five changed the app; five confirmed what it already did. The five that confirmed are worth
 as much as the five that changed — an unendorsed default and an endorsed one look identical
@@ -4927,6 +4958,16 @@ in the code and are not the same thing.
     back to back, not about which session a short week keeps — a near-miss worth recording,
     because the settled call next door is exactly the thing that makes a second look feel
     unnecessary. Fingers are `priority: 1` now.
+11. **M107b — the remaining 132 drills' cues and faults.** **COACH: open.** Twelve of 144
+    are coached, all of them Base Camp's, written from each drill's own description — a
+    first pass and not a syllabus, so the wording of every line is overrulable like call 9's
+    stretches. The other 132 are unwritten. The milestone deliberately built the mechanism
+    and stopped: `content/drillCoaching.ts` costs nothing on first load whether it holds
+    twelve entries or 144, so the remaining work is writing and nothing else, and
+    `drillCoaching.test.ts` asserts `{ done: 12, left: 132 }` so the number can never go
+    quiet. What it needs from the coach is a decision rather than a review — write them,
+    delegate them in the twelve's voice, or leave the library at twelve and let the rest
+    stand on their descriptions, which M107 established are not stubs.
 
 **Considered and left out, with the reason, so they are not re-proposed:**
 - *Race a ghost on the Daily Wall* — already ships (`createGhost`, `tapeToRace`, M81).
