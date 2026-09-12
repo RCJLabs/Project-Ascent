@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { Activity, BookOpen, CalendarRange, ChevronRight, Ruler, Trophy } from 'lucide-react';
+import { Activity, BookOpen, CalendarRange, ChevronRight, HeartPulse, Ruler, Trophy } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getDrill } from '@/content/drills';
 import type { Session } from '@/db/sessions';
@@ -21,6 +21,9 @@ import { FIELD_DAYS, fieldSeries } from '@/engine/sessionFields';
 import { addDays, fromKey, today } from '@/engine/dates';
 import { availableYears } from '@/engine/yearReview';
 import { deriveClimberState, type PersonalRecord } from '@/engine/derive';
+import { deriveStats } from '@/engine/stats';
+import { deriveVitality } from '@/engine/vitality';
+import { useSkillEffects } from '@/store/skills';
 import { ANGLE_LABEL, angles, describeAngles } from '@/engine/angles';
 import { describeLadders, ladders } from '@/engine/ladders';
 import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
@@ -146,6 +149,40 @@ function CareerCard() {
                 ? `Next: ${next.label}`
                 : `${career.achieved.length} so far`
               : 'Worked out from the log, not handed out.'}
+          </p>
+        </div>
+        <ChevronRight size={18} className="text-ink-soft shrink-0" />
+      </Link>
+    </Card>
+  );
+}
+
+/**
+ * The way to the training half of the old climber page (PLAN.md M118).
+ *
+ * Vitality, what hurts and the five stats live on `/body` now, and this is
+ * how Progress reaches them — with the reading that matters most on the
+ * card itself, so a climber who is fresh and unhurt need not open it.
+ */
+function BodyCard() {
+  const byDate = useSessions((s) => s.byDate);
+  const injuries = useProfile((s) => s.injuries);
+  const restBonus = useSkillEffects().restRecovery;
+  const vitality = useMemo(() => {
+    const state = deriveClimberState(Object.values(byDate).flat());
+    return deriveVitality({ state, endurance: deriveStats({ state }).END, injuries, restBonus });
+  }, [byDate, injuries, restBonus]);
+  const hurt = injuries.length;
+
+  return (
+    <Card title="Your body">
+      <Link href="/body" className="flex items-center gap-3">
+        <HeartPulse size={18} className="text-accent shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold truncate">{vitality.headline}</p>
+          <p className="text-xs text-ink-soft mt-0.5 truncate">
+            {hurt === 0 ? 'Nothing hurts' : `${hurt} ${hurt === 1 ? 'injury' : 'injuries'} on the books`} · the five
+            stats
           </p>
         </div>
         <ChevronRight size={18} className="text-ink-soft shrink-0" />
@@ -384,6 +421,7 @@ export function ProgressPage() {
           {/* Assessments need no session history, and taking a baseline before
               you start training is the point of them. */}
           <AssessmentsCard />
+          <BodyCard />
           <JournalCard />
         </PageGrid>
       </>
@@ -415,6 +453,7 @@ export function ProgressPage() {
             is going. */}
         <CareerCard />
         <YearCard />
+        <BodyCard />
 
         <TrainingState state={state} sessions={sessions} program={program} scale={scale} />
 

@@ -4,7 +4,8 @@ import { screen, within } from '@testing-library/react';
 import { newSession, putSession } from '@/db/sessions';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { CareerPage } from '@/features/career/CareerPage';
-import { ClimberPage } from '@/features/climber/ClimberPage';
+import { BodyPage } from '@/features/body/BodyPage';
+import { GamePage } from '@/features/game/GamePage';
 import { ProgressPage } from '@/features/progress/ProgressPage';
 import { ACHIEVEMENT_COUNT } from '@/engine/achievements';
 
@@ -25,9 +26,9 @@ async function seedSessions(): Promise<void> {
 }
 
 describe('achievements', () => {
-  it('are on the climber', async () => {
+  it('are on the game tab', async () => {
     await seedSessions();
-    renderAt('/climber', <ClimberPage />);
+    renderAt('/game', <GamePage />);
     expect(screen.getByText('Achievements')).toBeTruthy();
     expect(screen.getByText(new RegExp(`of ${ACHIEVEMENT_COUNT}`))).toBeTruthy();
   });
@@ -44,24 +45,21 @@ describe('achievements', () => {
   it('leaves a way back from where they used to be', async () => {
     await seedSessions();
     renderAt('/career', <CareerPage />);
-    const card = screen.getByText('On your climber').closest('a')!;
-    expect(card.getAttribute('href')).toBe('#/climber');
+    const card = screen.getByText('On the Game tab').closest('a')!;
+    expect(card.getAttribute('href')).toBe('#/achievements');
   });
 });
 
 describe('the career', () => {
-  it('is one tap from the climber', async () => {
+  // The climber page carried a career link beside the achievements (M63).
+  // The split (M118) put the achievements on the Game tab and the career
+  // stays where Progress already reaches it — so the game page does not
+  // link the career, and the body page does not either: neither is about
+  // what you did.
+  it('sits beside the achievements no longer, and is not lost', async () => {
     await seedSessions();
-    renderAt('/climber', <ClimberPage />);
-    const link = screen.getByText(/milestones/).closest('a')!;
-    expect(link.getAttribute('href')).toBe('#/career');
-  });
-
-  // The achievements are their own page now that there are twenty-five of
-  // them, and the climber carries the count and the newest one.
-  it('sits beside the achievements, which are one tap too', async () => {
-    await seedSessions();
-    renderAt('/climber', <ClimberPage />);
+    renderAt('/game', <GamePage />);
+    expect(screen.queryByText(/milestones/)).toBeNull();
     const link = screen.getByText(/^\d+ of \d+$/).closest('a')!;
     expect(link.getAttribute('href')).toBe('#/achievements');
   });
@@ -83,12 +81,24 @@ describe('the career', () => {
   });
 });
 
-describe('what the climber page holds', () => {
-  it('still shows who you are as well as what you did', async () => {
+describe('what the split left where', () => {
+  it('keeps the game half on the game tab', async () => {
     await seedSessions();
-    renderAt('/climber', <ClimberPage />);
-    for (const card of ['Skills', 'Stats', 'Vitality', 'Ranks']) {
+    renderAt('/game', <GamePage />);
+    for (const card of ['Skills', 'Ranks', 'Currency', 'Appearance', 'Recent XP']) {
       expect(within(document.body).getByText(card), card).toBeTruthy();
     }
+    expect(screen.queryByText('Vitality')).toBeNull();
+    expect(screen.queryByText('Stats')).toBeNull();
+  });
+
+  it('keeps the training half on the body page', async () => {
+    await seedSessions();
+    renderAt('/body', <BodyPage />);
+    for (const card of ['Vitality', 'Injuries', 'Stats']) {
+      expect(within(document.body).getByText(card), card).toBeTruthy();
+    }
+    expect(screen.queryByText('Ranks')).toBeNull();
+    expect(screen.queryByText('Currency')).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Redirect } from 'wouter';
-import { AlertTriangle, Check, ChevronRight, Clock, Copy, Dumbbell, Flag, Flame, Plus, RotateCw, Ruler, Snowflake, Sparkles, Timer, Trash2, TrendingUp, X } from 'lucide-react';
+import { AlertTriangle, Check, ChevronDown, ChevronRight, Clock, Copy, Dumbbell, Flag, Flame, Plus, RotateCw, Ruler, Snowflake, Sparkles, Timer, Trash2, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
 import { SCALE_MAX, getField, type FieldSpec } from '@/content/fields';
@@ -54,6 +54,7 @@ import { ExerciseNumbers } from './ExerciseNumbers';
 import { useTemplates } from '@/store/templates';
 import { parseCount } from '@/content/types';
 import { BackLink } from '@/ui/BackLink';
+import { DisclosureButton } from '@/ui/Disclosure';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Checkbox, Input, Select, TextArea } from '@/ui/Field';
@@ -1766,6 +1767,7 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
   const milestones = useSessionMilestones(session, detail);
   const lead = headlineMilestone(milestones);
   const display = useSettings((s) => s.display);
+  const [counting, setCounting] = useState(false);
   // Only derived when there is actually a card to put it on — see the hook.
   const avatar = useClimberAvatar(Boolean(lead?.shareable && lead.record));
 
@@ -1791,10 +1793,12 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
 
   return (
     <Card>
-      {/* M26: when something happened, it is the card. The XP total drops to
-          a line underneath — it is the same number either way, and a
-          climber who has just done the hardest thing they ever have should
-          not have to read an arithmetic breakdown to find that out. */}
+      {/* M26: when something happened, it is the card. The XP drops to a
+          line underneath — a climber who has just done the hardest thing
+          they ever have should not have to read an arithmetic breakdown to
+          find that out. M118 made the no-milestone case the same line: a
+          session is a session, and the number it paid is the game's
+          business, one tap away on its own tab. */}
       {lead ? (
         <div className="text-center mb-3">
           <div className="text-2xs font-bold uppercase tracking-widest text-accent">
@@ -1804,19 +1808,9 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
             {lead.headline}
           </div>
           <p className="text-sm text-ink-soft mt-1.5 leading-relaxed">{lead.detail}</p>
-          <p className="text-sm text-ink-soft mt-2 tabular-nums">
-            +{detail.xp.toLocaleString()} XP
-          </p>
         </div>
       ) : (
-        <div className="text-center mb-3">
-          <div className="text-3xl font-black tabular-nums leading-none">
-            +{detail.xp.toLocaleString()}
-          </div>
-          <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mt-1.5">
-            XP earned
-          </div>
-        </div>
+        <p className="text-center font-bold mb-3">Session logged.</p>
       )}
 
       {/* Anything else the session was, under the headline rather than lost. */}
@@ -1831,39 +1825,63 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
         </ul>
       )}
 
-      {levelled && !lead && (
-        <p className="flex items-center justify-center gap-1.5 text-sm font-semibold text-accent mb-3">
-          <TrendingUp size={15} /> Level {detail.levelAfter} — {xp.rank.title}
-        </p>
-      )}
-
-      <ul className="grid grid-cols-1 gap-1 mb-3">
-        {detail.lines.map((line, i) => (
-          <li key={`${line.label}-${i}`} className="flex items-baseline justify-between gap-3 text-sm">
-            <span className="text-ink-soft truncate">{line.label}</span>
-            <span className="font-semibold tabular-nums shrink-0">+{line.xp.toLocaleString()}</span>
-          </li>
-        ))}
-      </ul>
-
-      {detail.reward.multiplier !== 1 && (
-        <p className="text-xs text-ink-soft mb-3">
-          {[
-            detail.reward.effort !== 1 && `effort ×${detail.reward.effort}`,
-            detail.reward.drill !== 1 && `drill streak ×${detail.reward.drill}`,
-            detail.reward.outdoor !== 1 && `outdoor ×${detail.reward.outdoor}`,
-          ]
-            .filter(Boolean)
-            .join(' · ')}{' '}
-          already applied.
-        </p>
-      )}
+      {/* The one quiet line (PLAN.md M118). */}
+      <p className="text-sm text-ink-soft text-center mb-3 tabular-nums">
+        +{detail.xp.toLocaleString()} XP
+        {levelled && !lead && (
+          <span className="text-accent font-semibold"> · level {detail.levelAfter}, {xp.rank.title}</span>
+        )}
+      </p>
 
       {detail.reward.effortBraked && (
         <p className="text-sm flex gap-2 items-start mb-3">
           <AlertTriangle size={14} className="text-warn shrink-0 mt-0.5" />
           High load week — the effort bonus was withheld. Recover.
         </p>
+      )}
+
+      {/* The arithmetic, folded. It was the body of the card from M13 to
+          M117 — every session ended in a ledger. It is still here for the
+          climber who wants to know why one day paid more than another; it
+          is no longer what logging a session looks like. */}
+      <DisclosureButton
+        open={counting}
+        onToggle={() => setCounting(!counting)}
+        className="mb-3"
+        label="How it was counted"
+      >
+        <span className="flex items-center justify-between gap-2 text-xs text-ink-soft">
+          <span>How it was counted</span>
+          <ChevronDown
+            size={14}
+            className={`shrink-0 transition-transform ${counting ? 'rotate-180' : ''}`}
+            aria-hidden
+          />
+        </span>
+      </DisclosureButton>
+      {counting && (
+        <div className="mb-3 bg-sunken rounded-xl p-3">
+          <ul className="grid grid-cols-1 gap-1">
+            {detail.lines.map((line, i) => (
+              <li key={`${line.label}-${i}`} className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="text-ink-soft truncate">{line.label}</span>
+                <span className="font-semibold tabular-nums shrink-0">+{line.xp.toLocaleString()}</span>
+              </li>
+            ))}
+          </ul>
+          {detail.reward.multiplier !== 1 && (
+            <p className="text-xs text-ink-soft mt-2">
+              {[
+                detail.reward.effort !== 1 && `effort ×${detail.reward.effort}`,
+                detail.reward.drill !== 1 && `drill streak ×${detail.reward.drill}`,
+                detail.reward.outdoor !== 1 && `outdoor ×${detail.reward.outdoor}`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}{' '}
+              already applied.
+            </p>
+          )}
+        </div>
       )}
 
       <div className="grid grid-cols-1 gap-2">

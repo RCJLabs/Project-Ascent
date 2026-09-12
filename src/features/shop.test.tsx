@@ -5,7 +5,7 @@ import { earnedOutfits, shopOutfits } from '@/engine/avatar';
 import { useGame } from '@/store/game';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
-import { ClimberPage } from '@/features/climber/ClimberPage';
+import { GamePage } from '@/features/game/GamePage';
 
 /**
  * The currency finally has somewhere to go (PLAN.md M62).
@@ -46,7 +46,7 @@ beforeEach(() => {
 describe('a kit you buy', () => {
   it('shows its price while it is not yours', async () => {
     await withCoins(0);
-    renderAt('/climber', <ClimberPage />);
+    renderAt('/game', <GamePage />);
     expect(card(cheapest.name).getAttribute('aria-label')).toContain(
       cheapest.price!.toLocaleString(),
     );
@@ -54,7 +54,7 @@ describe('a kit you buy', () => {
 
   it('cannot be worn, or bought, without the coins', async () => {
     await withCoins(0);
-    renderAt('/climber', <ClimberPage />);
+    renderAt('/game', <GamePage />);
     const before = useProfile.getState().avatarPalette.top;
     expect(card(cheapest.name).hasAttribute('disabled')).toBe(true);
     fireEvent.click(card(cheapest.name));
@@ -64,7 +64,7 @@ describe('a kit you buy', () => {
 
   it('is bought, worn and paid for in one tap', async () => {
     await withCoins(400);
-    renderAt('/climber', <ClimberPage />);
+    renderAt('/game', <GamePage />);
     fireEvent.click(card(cheapest.name));
     await waitFor(() => expect(useGame.getState().wallet.owned).toContain(cheapest.name));
 
@@ -100,7 +100,7 @@ describe('a kit you earn', () => {
 
   it('says which node earns it rather than a price', async () => {
     await withCoins(400);
-    renderAt('/climber', <ClimberPage />);
+    renderAt('/game', <GamePage />);
     const label = card(earned.name).getAttribute('aria-label') ?? '';
     expect(label).toMatch(/Earned by/);
     expect(label).not.toMatch(/coins/);
@@ -108,7 +108,7 @@ describe('a kit you earn', () => {
 
   it('is locked until the tree grants it', async () => {
     await withCoins(400);
-    renderAt('/climber', <ClimberPage />);
+    renderAt('/game', <GamePage />);
     expect(card(earned.name).hasAttribute('disabled')).toBe(true);
   });
 });
@@ -116,7 +116,7 @@ describe('a kit you earn', () => {
 describe('a kit that was always free', () => {
   it('stays free, and wearable', async () => {
     await withCoins(0);
-    renderAt('/climber', <ClimberPage />);
+    renderAt('/game', <GamePage />);
     fireEvent.click(card('Chalk'));
     expect(useProfile.getState().avatarPalette.top).toBe('#f0efe9');
     expect(useGame.getState().wallet.spent).toBe(0);

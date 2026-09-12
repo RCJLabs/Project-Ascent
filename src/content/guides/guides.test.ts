@@ -312,6 +312,14 @@ describe('the app guide quotes real numbers', () => {
     }
   });
 
+  it('sends nobody to a page that no longer exists', () => {
+    // The climber page split in M118: its game half is the Game tab, its
+    // training half is Your body under Progress. A guide that still says
+    // "climber page" teaches a climber to look for a door that is gone.
+    expect(allText).not.toMatch(/climber page/i);
+    expect(allText).toContain('Your body');
+  });
+
   it('names only tabs that exist', () => {
     const table = tableAfter('Tab');
     expect(table?.rows.map((r) => r[0])).toEqual([

@@ -104,12 +104,12 @@ describe('the search sheet', () => {
     renderAt('/', <SearchSheet onClose={() => undefined} />);
     const dialog = await screen.findByRole('dialog', { name: 'Search' });
     const hrefs = [...dialog.querySelectorAll('a[href]')].map((a) => a.getAttribute('href'));
-    for (const expected of ['#/projects', '#/game', '#/glossary', '#/guides']) {
-      // `/game` is a root and is not browsed; its children are.
-      if (expected === '#/game') continue;
+    // `/game` is a root and is browsed anyway (M118): "level", "rank" and
+    // "kit" have to find something, and the tab is what they find.
+    for (const expected of ['#/projects', '#/game', '#/body', '#/glossary', '#/guides']) {
       expect(hrefs, `${expected} is not browsable`).toContain(expected);
     }
-    expect(hrefs).toContain('#/climber');
+    expect(hrefs).not.toContain('#/climber');
     expect(hrefs).not.toContain('#/search');
   });
 });

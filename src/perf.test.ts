@@ -240,7 +240,7 @@ describe('the bundle stays small', () => {
    * Every milestone that moves this moves it to just above what it measured;
    * the history is in the comment inside the first test.
    */
-  const BUDGET = 203.4;
+  const BUDGET = 204.4;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -401,6 +401,10 @@ describe('the bundle stays small', () => {
     // took off it is spent on the one screen that needs it. Two things
     // M115 and M116 bought stay bought: nothing *else* eager imports the
     // logger, and the glossary is still a tap away rather than a boot cost.
+    //
+    // **203.4 → 204.4 at M118**, measured 202.43 → 203.43: the reward
+    // card's fold (`ui/Disclosure` was not on the boot path before) and
+    // the search keywords for `/game` and `/body` in the route table.
     //
     // 174.04 → 165.13 before the logger came back: Home lost the climber
     // strip, the altimeter, the arcade card and — the large one — `BoardCard`,

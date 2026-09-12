@@ -152,12 +152,12 @@ export function CareerPage() {
         )}
 
         <Card title="Achievements">
-          <Link href="/climber" className="flex items-center gap-3">
+          <Link href="/achievements" className="flex items-center gap-3">
             <Trophy size={18} className="text-accent shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold">On your climber</p>
+              <p className="text-sm font-semibold">On the Game tab</p>
               <p className="text-xs text-ink-soft mt-0.5 leading-relaxed">
-                Fourteen named days, beside your level and your stats.
+                Named days, beside your level and your kit.
               </p>
             </div>
             <ChevronRight size={18} className="text-ink-soft shrink-0" />

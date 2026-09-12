@@ -10,7 +10,7 @@ import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { AchievementsPage } from './AchievementsPage';
-import { ClimberPage } from './ClimberPage';
+import { GamePage } from '@/features/game/GamePage';
 
 /**
  * The achievements, on a page of their own.
@@ -91,10 +91,10 @@ describe('the achievements page', () => {
   });
 });
 
-describe('the climber page', () => {
+describe('the game page', () => {
   it('carries the count rather than the list', async () => {
     await twiceInADay();
-    renderAt('/climber', <ClimberPage />);
+    renderAt('/game', <GamePage />);
     await screen.findByRole('heading', { level: 1 });
     expect(screen.getByText(`1 of ${ACHIEVEMENT_COUNT}`)).toBeTruthy();
     // The detail sentences belong to the page now, not to the card.
@@ -103,14 +103,14 @@ describe('the climber page', () => {
 
   it('names the newest one earned', async () => {
     await twiceInADay();
-    renderAt('/climber', <ClimberPage />);
+    renderAt('/game', <GamePage />);
     await screen.findByRole('heading', { level: 1 });
     expect(screen.getByText(/Latest: Twice in a Day/)).toBeTruthy();
   });
 
   it('says something useful before any are earned', async () => {
     await hydrate();
-    renderAt('/climber', <ClimberPage />);
+    renderAt('/game', <GamePage />);
     await screen.findByRole('heading', { level: 1 });
     expect(screen.getByText(`0 of ${ACHIEVEMENT_COUNT}`)).toBeTruthy();
     expect(screen.getByText(/Days with a shape to them/)).toBeTruthy();

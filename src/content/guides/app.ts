@@ -83,8 +83,9 @@ export const APP: Guide = {
           kind: 'list',
           items: [
             '**Search** — the magnifier at the top of every screen. A term, a program, a project, a day, a passage from a guide; or browse everything the app has.',
-            '**Your climber** — tap the avatar on Game. Stats, level, vitality, rank, and anything that hurts.',
-            '**Skill trees** — from Game, or from the climber page. Every node unlocks from real training.',
+            '**Your climber** — the Game tab. Level, rank, kit, coins, and where the XP came from.',
+            '**Your body** — from Progress. Vitality, anything that hurts, and the five stats the log builds.',
+            '**Skill trees** — from Game. Every node unlocks from real training.',
             "**Coach's Corner** — standing observations about your training, under today's session on Home.",
             '**The weekly review** — Sunday, and any past week you want to reread.',
             '**Settings** — the gear beside the magnifier. Themes, grade scales, sound, equipment, backups, and these guides.',
@@ -176,11 +177,11 @@ export const APP: Guide = {
       ],
     },
     {
-      title: 'Your climber',
+      title: 'Your body',
       content: [
         {
           kind: 'p',
-          text: 'A character sheet with no character creation. Everything on it is read out of the log.',
+          text: 'Under Progress: a reading of the climber rather than of the character. Everything on it is read out of the log, and the coach reads the same numbers.',
         },
         { kind: 'h', text: 'The five stats' },
         {
@@ -201,7 +202,7 @@ export const APP: Guide = {
         { kind: 'h', text: 'Vitality' },
         {
           kind: 'p',
-          text: 'The bar under the avatar. It drains for consecutive training days, skipped warmups and untreated injuries, and a rest day inside 24 hours softens the damage.',
+          text: 'The first card on Your body. It drains for consecutive training days, skipped warmups and untreated injuries, and a rest day inside 24 hours softens the damage. The avatar on the Game tab is drawn from it.',
         },
         {
           kind: 'note',
@@ -393,7 +394,7 @@ export const APP: Guide = {
       content: [
         {
           kind: 'p',
-          text: 'Mark it on your climber page with a part, a side, a severity and whether you are managing it or coming back from it. That one entry changes the app everywhere:',
+          text: 'Mark it on Your body, under Progress, with a part, a side, a severity and whether you are managing it or coming back from it. That one entry changes the app everywhere:',
         },
         {
           kind: 'list',

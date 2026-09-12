@@ -1,104 +1,105 @@
 import { useMemo } from 'react';
 import { Link } from 'wouter';
-import { ChevronRight, Gamepad2, Medal, Network } from 'lucide-react';
+import {
+  ChevronRight,
+  ClipboardCheck,
+  Coins,
+  Gamepad2,
+  Mountain,
+  Network,
+  Sparkles,
+  Target,
+} from 'lucide-react';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveClimberState } from '@/engine/derive';
+import { RANKS } from '@/engine/economy';
+import { shortLabel } from '@/engine/dates';
+import { describeNext } from '@/engine/nextUnlock';
 import { formatHeight, heightValue } from '@/engine/units';
+import type { XpEvent } from '@/engine/xp';
 import { BoardCard } from '@/features/challenges/BoardPage';
-import { useXp } from '@/store/game';
+import { AchievementsCard } from '@/features/climber/AchievementsCard';
+import { ShareButton } from '@/features/share/ShareSheet';
+import { useCurrency, useXp } from '@/store/game';
+import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
-import { useNextUnlock } from '@/store/skills';
+import { useNextUnlock, useSkills } from '@/store/skills';
 import { Avatar } from '@/ui/Avatar';
+import { Card } from '@/ui/Card';
 import { LevelBar } from '@/ui/LevelBar';
+import { Meter } from '@/ui/Meter';
 import { MountainMeter } from '@/ui/MountainMeter';
 import { PageGrid, Wide } from '@/ui/PageGrid';
-import { PageHeader } from '@/ui/PageHeader';
+import { rankCard } from '@/ui/shareCard';
 import { useClimberAvatar } from '@/ui/useClimberAvatar';
+import { AppearanceCard } from './AppearanceCard';
 
 /**
- * The game's front door (PLAN.md M117).
+ * The game's front page (PLAN.md M117, the character since M118).
  *
- * Everything training earns, in one place: the level and the next unlock,
- * the altimeter, the board, the arcade, and the way through to the skill
- * trees and the achievements. Four of these cards lived on Home, where they
- * sat between a climber and the session they opened the app to log; the
- * fifth tab is where they were always going to end up once Home became the
- * session.
+ * Everything training earns, in one place: the climber and their level,
+ * the altimeter, the board, the arcade, the skill trees, the achievements,
+ * the kit, the coins, the ranks and where the XP came from. Four of these
+ * cards lived on Home until M117; the rest were the game half of the
+ * climber page, beside the vitality and the stats that the coach reads.
+ * M118 split that page — the training half is `/body`, under Progress —
+ * and this is the other half, which is to say the character sheet.
  *
- * This is the hub in its first shape. The climber page still carries the
- * game's half of the character — kit, currency, ranks — beside the training
- * half that the coach and the injury engine read; M118 splits that page and
- * the game half lands here.
+ * Nothing here gates anything. The coach never reads the game store, and
+ * the one number that crosses over — vitality, drawn on the avatar — is
+ * read *from* training, never written by the game.
  */
 export function GamePage() {
+  const xp = useXp();
+  const avatar = useClimberAvatar();
+  const palette = useProfile((s) => s.avatarPalette);
+
   return (
     <>
-      <PageHeader title="Game" subtitle="What the training has earned" />
+      <header className="flex items-center gap-4 mb-4">
+        <div className="w-24 shrink-0">
+          <Avatar config={avatar} className="w-full h-auto block" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-black tracking-tight">{xp.rank.title}</h1>
+          <p className="text-sm text-ink-soft mt-0.5">
+            Level {xp.progress.level} · {xp.total.toLocaleString()} XP earned
+          </p>
+          <p className="text-xs text-ink-soft mt-1">
+            {avatar.stage.unlock}
+            {avatar.next && ` · ${avatar.next.unlock.toLowerCase()} at ${avatar.next.level}`}
+          </p>
+          <ShareButton
+            className="mt-2"
+            content={rankCard(xp, avatar)}
+            filename={`ascent-${xp.rank.title.toLowerCase().replace(/\s+/g, '-')}.png`}
+          />
+        </div>
+      </header>
+
       <PageGrid>
         <Wide>
-          <ClimberStrip />
+          <Card>
+            <LevelBar progress={xp.progress} rank={xp.rank} next={xp.next} />
+          </Card>
         </Wide>
+
         <AltimeterCard />
         <Link href="/board" className="block bg-surface border border-line rounded-2xl p-4">
           <BoardCard />
         </Link>
         <AscentCard />
-        <Link href="/skills" className="flex items-center gap-3 bg-surface border border-line rounded-2xl p-4">
-          <Network size={18} className="text-accent shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold">Skill trees</p>
-            <p className="text-xs text-ink-soft mt-0.5">Every node unlocks from real training.</p>
-          </div>
-          <ChevronRight size={16} className="text-ink-soft shrink-0" />
-        </Link>
-        <Link href="/achievements" className="flex items-center gap-3 bg-surface border border-line rounded-2xl p-4">
-          <Medal size={18} className="text-accent shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold">Achievements</p>
-            <p className="text-xs text-ink-soft mt-0.5">Earned, and the ones still out there.</p>
-          </div>
-          <ChevronRight size={16} className="text-ink-soft shrink-0" />
-        </Link>
+        <SkillsCard />
+        <AchievementsCard />
+        <AppearanceCard palette={palette} />
+        <CurrencyCard />
+        <SplitCard xp={xp} />
+        <RanksCard level={xp.progress.level} current={xp.rank.title} />
+        <RecentXpCard events={xp.events} />
       </PageGrid>
     </>
   );
-}
-
-/**
- * You, your level, and the one thing closest to unlocking (PLAN.md M29).
- *
- * The 130 skill nodes lived behind two taps and nothing outside them said
- * how close any of them was — the character page named the closest node but
- * quoted its *requirement*, so a climber one send away read the same line as
- * one who had never started. One line, not a list: five things you are
- * nearly at is a chore, and the pull comes from there being one.
- */
-function ClimberStrip() {
-  const xp = useXp();
-  const avatar = useClimberAvatar();
-  const next = useNextUnlock();
-
-  return (
-    <Link href="/climber" className="flex items-center gap-3 bg-surface border border-line rounded-2xl p-4">
-      <div className="w-12 shrink-0">
-        <Avatar config={avatar} className="w-full h-auto block" showGround={false} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <LevelBar progress={xp.progress} rank={xp.rank} compact />
-        {next && (
-          <p className="text-xs text-ink-soft mt-1.5 leading-relaxed">
-            <span className="font-semibold text-ink">{cap(next.remaining)}</span> and{' '}
-            {next.node.name} unlocks.
-          </p>
-        )}
-      </div>
-    </Link>
-  );
-}
-
-function cap(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /** The mountain filling toward the next milestone — the plan's silhouette,
@@ -157,5 +158,149 @@ function AscentCard() {
         </p>
       </div>
     </Link>
+  );
+}
+
+/**
+ * The count, and the one node closest to unlocking (PLAN.md M29).
+ *
+ * One line, not a list: five things you are nearly at is a chore, and the
+ * pull comes from there being one.
+ */
+function SkillsCard() {
+  const skills = useSkills();
+  const next = useNextUnlock();
+  return (
+    <Card title="Skills">
+      <Link href="/skills" className="flex items-center gap-3">
+        <Network size={18} className="text-accent shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold">
+            {skills.unlocked} of {skills.total} unlocked
+          </p>
+          <p className="text-xs text-ink-soft mt-0.5 leading-relaxed">{describeNext(next)}</p>
+        </div>
+        <ChevronRight size={18} className="text-ink-soft shrink-0" />
+      </Link>
+    </Card>
+  );
+}
+
+function CurrencyCard() {
+  const currency = useCurrency();
+  return (
+    <Card title="Currency">
+      <div className="flex items-center gap-3">
+        <Coins size={18} className="text-accent shrink-0" />
+        <div className="flex-1">
+          <div className="text-2xl font-black tabular-nums leading-none">
+            {currency.balance.toLocaleString()}
+          </div>
+          <p className="text-xs text-ink-soft mt-1">
+            {currency.earned.toLocaleString()} earned · {currency.spent.toLocaleString()} spent.
+            Cosmetics only — nothing you can buy makes you climb harder.
+          </p>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function SplitCard({ xp }: { xp: ReturnType<typeof useXp> }) {
+  return (
+    <Card title="Where it came from">
+      <div className="grid grid-cols-1 gap-2">
+        <Split label="Climbing" value={xp.real} total={xp.total} />
+        <Split label="The game lane" value={xp.game} total={xp.total} />
+      </div>
+      <p className="text-xs text-ink-soft mt-3">
+        No game action can pay more than half of what showing up and training does. Grinding it
+        will never beat climbing, and that is a rule rather than a tuning choice.
+      </p>
+    </Card>
+  );
+}
+
+function Split({ label, value, total }: { label: string; value: number; total: number }) {
+  const pct = total === 0 ? 0 : Math.round((value / total) * 100);
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-2 text-sm mb-1">
+        <span>{label}</span>
+        <span className="font-semibold tabular-nums">
+          {value.toLocaleString()} <span className="text-ink-soft font-normal">({pct}%)</span>
+        </span>
+      </div>
+      <Meter value={pct / 100} label={label} valueText={`${value.toLocaleString()} of ${total.toLocaleString()}`} />
+    </div>
+  );
+}
+
+function RanksCard({ level, current }: { level: number; current: string }) {
+  const reached = RANKS.filter((r) => r.level <= level);
+  const upcoming = RANKS.filter((r) => r.level > level).slice(0, 3);
+  return (
+    <Card title="Ranks">
+      <ol className="grid grid-cols-1 gap-1.5">
+        {reached.slice(-3).map((rank) => (
+          <li key={rank.title} className="flex items-baseline gap-2 text-sm">
+            <span className="w-8 text-xs text-ink-soft tabular-nums">{rank.level}</span>
+            <span className={rank.title === current ? 'font-bold' : 'text-ink-soft'}>{rank.title}</span>
+            {rank.title === current && <Sparkles size={13} className="text-accent shrink-0" />}
+          </li>
+        ))}
+        {upcoming.map((rank) => (
+          <li key={rank.title} className="flex items-baseline gap-2 text-sm opacity-50">
+            <span className="w-8 text-xs tabular-nums">{rank.level}</span>
+            <span>{rank.title}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="text-xs text-ink-soft mt-3">
+        {RANKS.length} ranks to GOAT at level {RANKS.at(-1)!.level}.
+      </p>
+    </Card>
+  );
+}
+
+const KIND_ICON: Record<XpEvent['kind'], typeof Mountain> = {
+  session: Mountain,
+  project: Target,
+  game: Gamepad2,
+  challenge: ClipboardCheck,
+};
+
+function RecentXpCard({ events }: { events: XpEvent[] }) {
+  return (
+    <Card title="Recent XP">
+      {events.length === 0 ? (
+        <p className="text-sm text-ink-soft">Nothing earned yet. Log a session and it starts here.</p>
+      ) : (
+        <ul className="grid grid-cols-1 gap-2">
+          {events.slice(0, 12).map((event) => (
+            <EventRow key={event.key} event={event} />
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+function EventRow({ event }: { event: XpEvent }) {
+  const Icon = KIND_ICON[event.kind];
+  return (
+    <li className="flex items-center gap-2.5 bg-sunken rounded-xl px-3 py-2">
+      <Icon size={14} className="text-ink-soft shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold truncate">{event.label}</div>
+        <div className="text-xs text-ink-soft">
+          {shortLabel(event.date)}
+          {event.levelUp !== undefined && (
+            <span className="text-accent font-semibold"> · reached level {event.levelUp}</span>
+          )}
+        </div>
+      </div>
+      <span className="text-sm font-bold tabular-nums shrink-0">+{event.xp.toLocaleString()}</span>
+    </li>
   );
 }

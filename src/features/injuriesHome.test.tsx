@@ -4,11 +4,12 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { ROUTES, parentOf } from '@/ui/routes';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
-import { ClimberPage } from '@/features/climber/ClimberPage';
+import { BodyPage } from '@/features/body/BodyPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 
 /**
- * Injuries live with the climber, not with the app's settings (PLAN.md M76).
+ * Injuries live with the climber, not with the app's settings (PLAN.md M76)
+ * — and since M118 with the *body*, the training half of that page.
  *
  * The move is a doorway, not a data change, so what is worth asserting is
  * that the doorway is on the right page and every way back leads there.
@@ -21,16 +22,16 @@ async function fresh(): Promise<void> {
 }
 
 describe('where injuries are recorded', () => {
-  it('is the climber page', async () => {
+  it('is the body page', async () => {
     await fresh();
-    renderAt('/climber', <ClimberPage />);
+    renderAt('/body', <BodyPage />);
     expect(await screen.findByText('Injuries')).toBeTruthy();
     expect(screen.getByRole('button', { name: '+ Fingers' })).toBeTruthy();
   });
 
   it('records one from there', async () => {
     await fresh();
-    renderAt('/climber', <ClimberPage />);
+    renderAt('/body', <BodyPage />);
     fireEvent.click(await screen.findByRole('button', { name: '+ Fingers' }));
     await waitFor(() => expect(useProfile.getState().injuries.map((i) => i.part)).toEqual(['fingers']));
     // The part just added is no longer offered, and its row is.
@@ -40,7 +41,7 @@ describe('where injuries are recorded', () => {
 
   it('sits next to what it costs', async () => {
     await fresh();
-    renderAt('/climber', <ClimberPage />);
+    renderAt('/body', <BodyPage />);
     const headings = (await screen.findAllByRole('heading')).map((h) => h.textContent);
     const vitality = headings.indexOf('Vitality');
     const injuries = headings.indexOf('Injuries');
@@ -58,12 +59,12 @@ describe('where injuries are recorded', () => {
 });
 
 describe('the ways back', () => {
-  it('sends the injury detail page back to the climber', () => {
-    expect(parentOf('/injury/inj-1')?.href).toBe('/climber');
+  it('sends the injury detail page back to the body', () => {
+    expect(parentOf('/injury/inj-1')?.href).toBe('/body');
   });
 
-  it('lets search find it under the climber, and not under settings', () => {
-    const climber = ROUTES.find((r) => r.path === '/climber')!;
+  it('lets search find it under the body, and not under settings', () => {
+    const climber = ROUTES.find((r) => r.path === '/body')!;
     const settings = ROUTES.find((r) => r.path === '/settings')!;
     expect(climber.keywords).toContain('injuries');
     expect(settings.keywords ?? []).not.toContain('injuries');

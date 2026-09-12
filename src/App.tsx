@@ -28,7 +28,7 @@ const BuilderList = lazy(() => import('@/features/builder/BuilderList').then((m)
 const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage').then((m) => ({ default: m.CalendarPage })));
 const CareerPage = lazy(() => import('@/features/career/CareerPage').then((m) => ({ default: m.CareerPage })));
 const AchievementsPage = lazy(() => import('@/features/climber/AchievementsPage').then((m) => ({ default: m.AchievementsPage })));
-const ClimberPage = lazy(() => import('@/features/climber/ClimberPage').then((m) => ({ default: m.ClimberPage })));
+const BodyPage = lazy(() => import('@/features/body/BodyPage').then((m) => ({ default: m.BodyPage })));
 const CoachPage = lazy(() => import('@/features/coach/CoachPage').then((m) => ({ default: m.CoachPage })));
 const FinderPage = lazy(() => import('@/features/finder/FinderPage').then((m) => ({ default: m.FinderPage })));
 const FinishPage = lazy(() => import('@/features/finish/FinishPage').then((m) => ({ default: m.FinishPage })));
@@ -235,7 +235,7 @@ function Shell() {
         ) : (
         <Switch>
           <Route path="/" component={HomePage} />
-          <Route path="/climber" component={ClimberPage} />
+          <Route path="/body" component={BodyPage} />
           <Route path="/achievements" component={AchievementsPage} />
           <Route path="/skills" component={SkillsPage} />
           <Route path="/coach" component={CoachPage} />

@@ -51,7 +51,9 @@ export const ROUTES: RouteMeta[] = [
   { path: '/train', title: 'Train', parent: null },
   { path: '/calendar', title: 'Calendar', parent: null },
   { path: '/progress', title: 'Progress', parent: null },
-  { path: '/game', title: 'Game', parent: null },
+  // Listed under its own group, tab or not (M118): "level", "rank", "kit"
+  // and "coins" have to find *something*, and what they find is this.
+  { path: '/game', title: 'Game', parent: null, group: 'Game', keywords: ['climber', 'character', 'level', 'avatar', 'rank', 'kit', 'currency', 'coins', 'xp'] },
 
   // Train
   { path: '/find', title: 'Find my program', parent: '/train', group: 'Train', keywords: ['finder', 'recommend', 'which program'] },
@@ -82,15 +84,17 @@ export const ROUTES: RouteMeta[] = [
   { path: '/year/:year', title: 'Year in review', parent: '/career' },
   { path: '/review', title: 'Weekly review', parent: '/progress', group: 'Progress', keywords: ['week', 'recap', 'sunday'] },
   { path: '/coach', title: "Coach's Corner", parent: '/', group: 'Progress', keywords: ['tips', 'advice', 'observations'] },
+  // The training half of the old climber page (M118): what the coach and
+  // the injury engine read, as opposed to what the game shows.
+  { path: '/body', title: 'Your body', parent: '/progress', group: 'Progress', keywords: ['vitality', 'stats', 'injuries', 'injury', 'fresh', 'tired', 'cooked', 'condition', 'strength', 'endurance', 'technique'] },
+  { path: '/injury/:id', title: 'Injury', parent: '/body' },
 
   // Game
-  { path: '/climber', title: 'Your climber', parent: '/game', group: 'Game', keywords: ['stats', 'level', 'avatar', 'vitality', 'rank', 'injuries', 'injury'] },
-  { path: '/skills', title: 'Skill trees', parent: '/climber', group: 'Game', keywords: ['unlock', 'nodes', 'power', 'tension'] },
-  { path: '/achievements', title: 'Achievements', parent: '/climber', group: 'Game', keywords: ['badges', 'earned', 'trophies', 'awards'] },
+  { path: '/skills', title: 'Skill trees', parent: '/game', group: 'Game', keywords: ['unlock', 'nodes', 'power', 'tension'] },
+  { path: '/achievements', title: 'Achievements', parent: '/game', group: 'Game', keywords: ['badges', 'earned', 'trophies', 'awards'] },
   { path: '/altimeter', title: 'The altimeter', parent: '/game', group: 'Game', keywords: ['height', 'feet', 'everest', 'metres'] },
   { path: '/board', title: 'The board', parent: '/game', group: 'Game', keywords: ['challenges', 'bounties', 'daily', 'weekly'] },
   { path: '/ascent', title: 'The Ascent', parent: '/game', group: 'Game', keywords: ['game', 'minigame', 'free solo', 'play'] },
-  { path: '/injury/:id', title: 'Injury', parent: '/climber' },
 
   // Reference
   { path: '/settings', title: 'Settings', parent: '/', group: 'Reference', keywords: ['theme', 'backup', 'export', 'grades', 'sound', 'equipment'] },

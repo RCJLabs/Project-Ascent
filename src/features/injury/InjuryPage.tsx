@@ -84,7 +84,7 @@ export function InjuryPage({ params }: { params: { id: string } }) {
   if (!hydrated || !sessionsReady) return <PageSkeleton title="Injury" />;
   if (!injury) {
     return (
-      <RecordNotFound what="That injury record" backTo="/climber" backLabel="Back to your climber">
+      <RecordNotFound what="That injury record" backTo="/body" backLabel="Back to your body">
         Recovered injuries are cleared from the tracker.
       </RecordNotFound>
     );
@@ -287,7 +287,7 @@ export function InjuryPage({ params }: { params: { id: string } }) {
               const healed = injury;
               removeInjury(healed.id);
               offerUndo(`${healed.side && healed.part !== 'back' ? `${healed.side} ` : ''}${healed.part} injury`, async () => restoreInjury(healed));
-              navigate('/climber');
+              navigate('/body');
             }}
           >
             Mark healed

@@ -5368,16 +5368,57 @@ read by seven pages as display. A separate tab is moving, not gating.*
   the button logs the program's rest type on such a day now. And the field's placeholder,
   which had grown a count, truncated at 430px — it is "Search 573 things".
   3,880 tests pass.
-- **M118 — The game gets its door (L4 + S4).** *Proposed.*
-  `GamePage` exists as of M117 with the four cards Home gave up and links through to the
-  skill trees and the achievements. This finishes it: `ClimberPage` splits into a training
-  half (vitality, injuries, stats — what the coach and the injury engine read; it stays
-  reachable from Home and Progress) and a game half (kit, currency, ranks, the avatar) that
-  lands on the hub; the XP lines on session completion, the weekly review and objectives
-  become one quiet line each rather than a card. `engine/` untouched — the M117 coupling
-  check found the coach never reads the game store, so this is moving display, not gating
-  logic. *Risk: the four display seams. A test per seam that XP still accrues and is still
-  shown somewhere.*
+- **M118 — The game gets its door (L4 + S4).** *Done.*
+  **The split.** The climber page held two things that only looked like one: the game's
+  character — level, rank, kit, coins, XP, the avatar — and the coach's reading of the
+  climber — vitality, what hurts, and the five stats the log builds. The coupling check
+  before M117 had already said which was which (the coach and the injury engine read
+  vitality; nothing in `engine/` reads the game store), so the cut followed it. The game half
+  *is* the Game tab now: the avatar and rank as the page's own heading, the level bar wide,
+  then the altimeter, the board, the arcade, skills, achievements, appearance and the shop,
+  currency, where the XP came from, ranks, and recent XP. The training half is **`/body`,
+  "Your body"**, under Progress — vitality first, injuries beside it, the stats under —
+  reached from a card on Progress that carries the vitality headline and the injury count, so
+  a climber who is fresh and unhurt need not open it. `/climber` is gone; `/injury/:id` goes
+  back to the body; the career page's achievements signpost points at the achievements.
+  **XP on the log is one quiet line.** From M13 to M117 every completed session ended in a
+  ledger — the number in 3xl, the lines under it, the multipliers under those. The milestone
+  lead (M26) stays exactly as it was, because a record is training; the no-milestone case
+  says *Session logged.* and the XP is one small line under whichever of those it got, with
+  the level on it when one was reached. The arithmetic folds behind *How it was counted* —
+  kept for the climber who wants to know why one day paid more than another, no longer what
+  logging a session looks like. The high-load brake warning stays visible: it is about
+  recovery, not about points. The review's line was already one line and is untouched;
+  objectives read the level for readiness and show nothing, so nothing to quiet.
+  **Deliberately not reachable from Home.** M117's plan said the training half "stays
+  reachable from Home and Progress". Progress reaches it; Home does not, and that is a
+  choice rather than an omission: Home just lost four cards to become the session, and a
+  fifth back on it for a page most climbers open rarely would undo that. The load warning on
+  the pre-session card names what hurts on the day it matters; recording an injury is
+  Progress › Your body, or a search for "injury".
+  **Measured, not asserted.** 20 mutations, 19 killed plus the sanity no-op that must survive
+  (two independent selectors reordered on the body page): the injury route sent back to
+  Progress, the body's injury keyword and the game's browse group each removed, the vitality
+  card removed and the injuries card moved below the stats, the body's back link removed, the
+  Progress card removed from each branch and its injury count zeroed, the appearance, ranks,
+  recent-XP and achievements cards each removed from Game, the career signpost pointed at
+  the old page, the XP line made loud again, the arithmetic shown always and shown never, the
+  no-milestone line reworded, and the guide sent back to "your climber page". **That last one
+  survived its first run** — no test read the guide's injury prose — and is a retired phrase
+  now, the way M113 retired the one-size deload dose: the app guide may not say "climber
+  page" and must say "Your body".
+  **In a browser, both themes, 430px and 1280px.** The Game tab with the rank as its heading and
+  every card in order; Your body with its back link to Progress and vitality, injuries and
+  stats in that order; the Progress card reading *Fresh · 1 injury on the books*; the injury
+  page going back to Your body; `/climber` answering Not found, which is deliberate — no
+  launcher shortcut or guide points at it, and a redirect route would have to be listed in
+  search to satisfy the route table's own rules; and a session started and marked complete
+  on Home showing *Session logged.*, one small `+300 XP` line, the arithmetic folded behind
+  *How it was counted* and unfolding on the tap. No overflow, no page errors.
+  **Budget.** 203.4 → 204.4, measured 202.43 → 203.43KB: the reward card's fold put
+  `ui/Disclosure` on the boot path, and the route table gained the keywords that make "level",
+  "kit" and "vitality" find something.
+  3,886 tests pass.
 - **M119 — Progress in three views (M2).** *Proposed.*
   A segmented control at the top of Progress — **This block · Grades · Body**, plus **All**,
   which is today's page — with the choice persisted in settings. Cards are assigned, not

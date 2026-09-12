@@ -17,7 +17,7 @@ import { BuilderPage } from '@/features/builder/BuilderPage';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { CareerPage } from '@/features/career/CareerPage';
 import { AchievementsPage } from '@/features/climber/AchievementsPage';
-import { ClimberPage } from '@/features/climber/ClimberPage';
+import { BodyPage } from '@/features/body/BodyPage';
 import { CoachPage } from '@/features/coach/CoachPage';
 import { FinderPage } from '@/features/finder/FinderPage';
 import { DataPage } from '@/features/data/DataPage';
@@ -68,7 +68,7 @@ import { YearPage } from '@/features/career/YearPage';
 
 const PAGES: [string, string, ReactElement][] = [
   ['home', '/', <HomePage />],
-  ['climber', '/climber', <ClimberPage />],
+  ['body', '/body', <BodyPage />],
   ['skills', '/skills', <SkillsPage />],
   ['achievements', '/achievements', <AchievementsPage />],
   ['coach', '/coach', <CoachPage />],

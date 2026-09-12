@@ -19,9 +19,10 @@ describe('the game tab', () => {
     await reset();
     await hydrate();
     renderAt('/game', <GamePage />);
-    await screen.findByRole('heading', { level: 1, name: 'Game' });
+    // The heading is the rank title (M118), whatever it is today.
+    await screen.findByRole('heading', { level: 1 });
     const hrefs = [...document.querySelectorAll('main a[href], a[href]')].map((a) => a.getAttribute('href'));
-    for (const expected of ['#/climber', '#/altimeter', '#/board', '#/ascent', '#/skills', '#/achievements']) {
+    for (const expected of ['#/altimeter', '#/board', '#/ascent', '#/skills', '#/achievements']) {
       expect(hrefs, `${expected} is not on the game tab`).toContain(expected);
     }
   });
@@ -39,7 +40,7 @@ describe('the game tab', () => {
     renderAt('/', <HomePage />);
     await screen.findByRole('button', { name: /Log a session/ });
     const hrefs = [...document.querySelectorAll('a[href]')].map((a) => a.getAttribute('href'));
-    for (const gone of ['#/climber', '#/altimeter', '#/board', '#/ascent']) {
+    for (const gone of ['#/game', '#/altimeter', '#/board', '#/ascent']) {
       expect(hrefs, `${gone} is still linked from Home`).not.toContain(gone);
     }
   });
