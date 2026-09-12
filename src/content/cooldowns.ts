@@ -27,11 +27,13 @@
  *
  * ## The content itself
  *
- * **COACH: this is a starter set, written to the guide's own words and
- * deliberately conservative — static, light, nothing ballistic, nothing
- * loaded, nothing that reads as treatment. Twelve items is enough to
- * exercise the funnel and fill five minutes; it is not a considered
- * coaching syllabus, and the wording of every line is yours to replace.**
+ * Written to the guide's own words and deliberately conservative — static,
+ * light, nothing ballistic, nothing loaded, nothing that reads as
+ * treatment. It went to the coach as a starter set and came back with all
+ * twelve kept and two lines changed, both of them places the content broke
+ * the rules stated above: the lat stretch was the one *loaded* item, and
+ * Child's pose claimed a priority the generator's own weighting decides.
+ * Each is noted where it sits (PLAN.md, coaching call 9).
  */
 
 import type { BodyPart } from './warmups';
@@ -103,10 +105,17 @@ export const COOLDOWN_EXERCISES: CooldownExercise[] = [
     targets: ['shoulder', 'elbow'],
   },
   {
+    // Was "Passive hang or lat stretch", and the hang came out at the
+    // coaching review. Not because hanging is harmful — a relaxed hang from
+    // a jug with the feet supported is a normal way to decompress a
+    // shoulder — but because this file's own rule three paragraphs up is
+    // "nothing loaded", and it was the one item breaking it, on fingers that
+    // have just finished a session. The kneeling version is the same shape
+    // with the fingers left out.
     id: 'lat-hang',
-    name: 'Passive hang or lat stretch',
+    name: 'Kneeling lat stretch',
     description:
-      'A relaxed hang from a jug, feet supported, shoulders loose — or the same shape kneeling with hands on a bench. Breathe out and let it lengthen.',
+      'Kneel with the hands on a bench or the arm of a sofa, hips back toward the heels, chest sinking between the arms. Breathe out and let it lengthen.',
     seconds: 60,
     targets: ['shoulder', 'back'],
   },
@@ -114,7 +123,7 @@ export const COOLDOWN_EXERCISES: CooldownExercise[] = [
     id: 'child-pose',
     name: "Child's pose",
     description:
-      'Knees wide, hips back to the heels, arms long in front. Let the back round out. This is the one to stay in if you only do one.',
+      'Knees wide, hips back to the heels, arms long in front. Let the back round out. Nothing to pull against here — it is a shape to settle into.',
     seconds: 60,
     targets: ['back', 'shoulder', 'hip'],
   },

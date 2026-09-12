@@ -116,14 +116,18 @@ describe('logging where a burn started', () => {
    * Two controls called "High point" on one page, meaning different things:
    * the burn card's is a percentage, the session question names a move.
    *
+   * The coaching review put the words back and qualified them: a climber
+   * says "my high point" and means the move. What must not come back is the
+   * bare label, which is the project's all-time percentage elsewhere.
+   *
    * On a session type that actually asks the question — a first version used
    * a plain session, which renders no fields at all, so the assertion passed
    * whatever the label said.
    */
-  it('no longer calls the session question a high point', async () => {
+  it('qualifies the session question rather than calling it the high point', async () => {
     await projecting([burn({})]);
     renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
-    expect(screen.getByLabelText('The move you reached')).toBeTruthy();
+    expect(screen.getByLabelText('High point this session')).toBeTruthy();
     expect(screen.queryByLabelText('High point')).toBeNull();
   });
 });

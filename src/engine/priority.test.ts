@@ -52,21 +52,62 @@ describe('the catalogue is tuned', () => {
   });
 });
 
+/**
+ * Where the coach overruled the derivation, and why (PLAN.md, coaching
+ * calls 2 and 10).
+ *
+ * `proposePriority` reads each program's own data and proposes an order
+ * from it. Its own doc says it is a proposal; this is the file where that
+ * stops being a figure of speech. Both overrides are the same disagreement
+ * with the same weight — `onTheWall`, worth 2, which ranks a climbing day
+ * above a training day. That is right for a program whose point is climbing
+ * and wrong for one whose point is the training, and the derivation cannot
+ * tell those apart because nothing in a program's data says which it is.
+ *
+ * Listed per program rather than allowed generally, so a *third* program
+ * drifting away from its own evidence is still a failure rather than a
+ * precedent.
+ */
+const OVERRULED: Record<string, string[]> = {
+  // A two-day week that drops Session A is not a static power block.
+  lockdown: ['sa', 'tech', 'sb'],
+  // A one-day week that drops the finger protocol is not a finger-strength
+  // program.
+  iron_grip: ['fp', 'perf'],
+};
+
 describe('the tuning matches what the programs say', () => {
-  it('agrees with the proposal derived from each program', () => {
+  it('agrees with the proposal derived from each program, bar the overrides', () => {
     for (const program of structured) {
       const authored = sessionPriority(program);
-      const proposed = proposePriority(program).map((p) => p.id);
-      expect(authored, program.id).toEqual(proposed);
+      const expected = OVERRULED[program.id] ?? proposePriority(program).map((p) => p.id);
+      expect(authored, program.id).toEqual(expected);
     }
   });
 
-  // The one the app protects with a rule of its own: Iron Grip says never
-  // hang the day before hard climbing, which is the program naming what it
-  // is protecting.
-  it('keeps the climbing day over the hangboard in Iron Grip', () => {
+  it('lists no override the derivation already agrees with', () => {
+    // An override that matches the proposal is a no-op that reads as a
+    // decision, and it would go on excusing the program after the reason
+    // for it had gone away.
+    for (const [id, order] of Object.entries(OVERRULED)) {
+      const program = structured.find((p) => p.id === id)!;
+      expect(proposePriority(program).map((p) => p.id), id).not.toEqual(order);
+    }
+  });
+
+  // Overruled at the coaching review, and it used to read the other way.
+  // The program protects the hangboard with a rule of its own — never hang
+  // the day before hard climbing — and the derivation counted that
+  // protection as evidence for keeping the *climbing*. One day of a program
+  // called 12-Week Finger Strength keeps the fingers.
+  it('keeps the hangboard over the climbing day in Iron Grip', () => {
     const ironGrip = structured.find((p) => p.id === 'iron_grip')!;
-    expect(sessionsForDays(ironGrip, 1)).toEqual(['perf']);
+    expect(sessionsForDays(ironGrip, 1)).toEqual(['fp']);
+  });
+
+  it('keeps the strength day over the technique day in Lockdown', () => {
+    const lockdown = structured.find((p) => p.id === 'lockdown')!;
+    expect(sessionsForDays(lockdown, 1)).toEqual(['sa']);
   });
 
   it('drops the session a program calls optional first', () => {

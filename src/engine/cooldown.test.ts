@@ -229,6 +229,41 @@ describe('the library itself', () => {
     expect(offenders.map((e) => e.name)).toEqual([]);
   });
 
+  /**
+   * Loaded, as opposed to stretched (PLAN.md, coaching call 9).
+   *
+   * `content/cooldowns.ts` states four rules for itself and three of them
+   * were checked here — prehab, ballistic, and the claims the card makes.
+   * "Nothing loaded" was the fourth, and it was the one the content broke:
+   * *Passive hang or lat stretch* asked for a hang from a jug at the end of
+   * a session, on the fingers that had just done the session. The coaching
+   * review replaced it with the kneeling version; this is what keeps the
+   * rule a rule.
+   *
+   * Not a claim that hanging is bad for you — a relaxed hang with the feet
+   * supported is a normal way to decompress a shoulder, and several of the
+   * programs prescribe one. It is a claim about what belongs in *this*
+   * library, which is five minutes of stretching with nothing to fail at.
+   * A stretch that genuinely wants the word ("let the arm hang") trips this
+   * and should: the point is that it gets read before it ships.
+   */
+  const readsAsLoaded = (text: string) =>
+    /\bhangs?\b|\bhanging\b|\bhung\b/i.test(text) ||
+    /\b(weighted|added weight|vest|dumbbells?|barbell|kettlebell|plates?)\b/i.test(text);
+
+  it('would notice a load if any arrived', () => {
+    // The library's own retired line, and a program's real one.
+    expect(readsAsLoaded('A relaxed hang from a jug, feet supported, shoulders loose')).toBe(true);
+    expect(readsAsLoaded('Compression Planks. Weighted vest, 5-10 lbs')).toBe(true);
+    // And does not fire on the shape that replaced it.
+    expect(readsAsLoaded('Kneel with the hands on a bench, hips back toward the heels')).toBe(false);
+  });
+
+  it('asks nothing to be held under load', () => {
+    const offenders = COOLDOWN_EXERCISES.filter((e) => readsAsLoaded(`${e.name} ${e.description}`));
+    expect(offenders.map((e) => e.name)).toEqual([]);
+  });
+
   it('is not ballistic, which the guide names', () => {
     const offenders = COOLDOWN_EXERCISES.filter((e) =>
       /\b(bounce|bouncing|ballistic|swing|jerk|pulse)\b/i.test(`${e.name} ${e.description}`),

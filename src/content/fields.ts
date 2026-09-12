@@ -48,7 +48,17 @@ export const FIELDS: Record<FieldId, FieldSpec> = {
   // beside the burn card, whose own high point is a *percentage* — so the
   // log page carried two controls called the same thing meaning different
   // measurements. This one names a feature; that one is how far up.
-  highPoint: { id: 'highPoint', label: 'The move you reached', kind: 'text', placeholder: 'The move, bolt or hold' },
+  //
+  // "this session" rather than nothing is a coaching call: a climber says
+  // "my high point" out loud and means the move, so the word had to come
+  // back; the qualifier is what keeps it from reading as the project's
+  // all-time high point, which is the percentage on `/projects/:id`.
+  highPoint: {
+    id: 'highPoint',
+    label: 'High point this session',
+    kind: 'text',
+    placeholder: 'The move, bolt or hold',
+  },
   projectName: { id: 'projectName', label: 'Project', kind: 'text', placeholder: 'What you were working' },
   routeName: { id: 'routeName', label: 'Route', kind: 'text', placeholder: 'What you climbed' },
   pumpLevel: { id: 'pumpLevel', label: 'Pump', kind: 'scale', ends: ['Fresh', 'Wrecked'] },

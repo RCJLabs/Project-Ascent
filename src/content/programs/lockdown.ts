@@ -143,8 +143,13 @@ export const LOCKDOWN: Program = {
 
   sessionTypes: [
     {
+      // Overruled from the M64 derivation, which scored the technique
+      // climbing day above this one on `onTheWall` (PLAN.md, coaching call
+      // 2). A two-day week that keeps the climbing and drops Session A is
+      // not a static power block — the hangs, lock-offs and pulling are the
+      // program. The derivation is evidence, not the coach.
       id: 'sa',
-      priority: 2,
+      priority: 1,
       name: 'Session A: Static Power',
       icon: '🤜',
       description: 'Density hangs, lock-offs, pulling, armor.',
@@ -421,8 +426,11 @@ export const LOCKDOWN: Program = {
       ],
     },
     {
+      // Second, not first: see Session A above. Drills are how the strength
+      // reaches the wall, and there is nothing to reach it with if the
+      // strength day is the one that gets cut.
       id: 'tech',
-      priority: 1,
+      priority: 2,
       name: 'Climbing: Technique',
       icon: '🧱',
       description: 'Static-specific drills. Low intensity, high focus.',

@@ -2148,9 +2148,10 @@ something that already exists; six are new. Nothing here is committed.*
   **Prices come from the real rate.** A coin is a quarter of an XP point, which the first
   pass got wrong by a factor of four — 1,200 / 2,500 / 5,000 / 8,000 lands them at roughly
   levels 7, 10, 14 and 18. One number each, meant to be retuned.
-  **COACH: three capstone labels changed and are the coach's to confirm.** "the Slate kit" →
+  **Coach's call, settled (M113): the three names stand.** "the Slate kit" →
   Anchor, "the Granite kit" → Weathered, "the Alpine kit" → Summit. They had to change,
-  because each named a kit that was already free; the names themselves are a judgement.
+  because each named a kit that was already free; the names themselves are a judgement,
+  and the judgement was confirmed rather than changed.
   What was *not* built: no seasons, and no titles beyond the ranks that already exist. And
   nothing buyable touches training, XP or the log — the shop sells paint.
   Eight mutations, eight killed. Verified in a browser: five locked kits each naming what
@@ -2199,17 +2200,19 @@ something that already exists; six are new. Nothing here is committed.*
   Camp, Gravity Defied and The Long Game — a one-day week now keeps the climbing session
   rather than the strength one. *Iron Grip keeps the climbing day over the fingerboard*,
   which the program itself argues for by protecting it ("never hang the day before hard
-  climbing"). Both of those I would defend. **COACH: Lockdown is the one I would not**: the
-  proposal puts the technique climbing day above "Session A: Static Power", which is the
-  program's named centrepiece, and a two-day week that drops Session A is not a static
-  power block. **COACH: The Cruiser's four climbing days score within a point of each other**, so
-  a one-day week now keeps Performance where it used to keep Volume & Flow. **Peak
+  climbing"). Both of those I would defend. **Coach's call, settled (M113): Lockdown was the one I would
+  not, and it was overruled.** The proposal put the technique climbing day above "Session A:
+  Static Power", which is the program's named centrepiece, and a two-day week that drops
+  Session A is not a static power block. Session A is `priority: 1` now. **Coach's call, settled (M113): The Cruiser's four climbing days score within a point of
+  each other**, so a one-day week now keeps Performance where it used to keep Volume & Flow —
+  and that is the day the coach wants kept. Unchanged. **Peak
   Performance ties** Max Intensity with Projecting, and declaration order stands.
   **An authoring finding the tuning surfaced.** With the climbing day ranked first, Iron
   Grip's Friday-Saturday-Sunday week fills as *Performance, Performance, Fingers* — legal,
   because the program spaces the fingerboard and nothing else. It has no rule against two
-  hard climbing days back to back. **COACH: that is the program's to decide, not the
-  scheduler's.**
+  hard climbing days back to back. **Coach's call, settled (M113): left as it is** — that is
+  the program's to decide, not the scheduler's, and the program declines to. (The *ordering*
+  behind it did change; see call 10 below.)
   Six mutations, six killed, after two rules that no shipped program exercises — the
   protection lift and the optional penalty — were moved onto fixtures rather than left as
   rules nobody checks. A third, an explicit tie-break, was deleted: `sort` has been required
@@ -2666,9 +2669,14 @@ commit.
   out as columns; The Cruiser's block cycle stopped at week 4 of a repeating twelve. Each
   has a row for every week the program runs now, with cells taken from the program's own
   phase descriptions rather than written fresh — and the deload rows say what the
-  programs do not: *cut the sets by a third to a half, keep the load.* **COACH: that is a coaching
-  call and the one thing here the author should read**; the programs schedule the week and
-  prescribe no dose for it.
+  programs do not. The first draft said the same thing in both: *cut the sets by a third to a
+  half, keep the load.* **Coach's call, settled (M113): a dose per program, not one dose.**
+  Iron Grip's two rows now name the protocol they are deloading — one Finger Protocol day
+  instead of two, repeaters at two sets or max hangs at three, same edge and same load —
+  and Lockdown's name Session A, the density hangs and the armor that does not drop. Both
+  follow the shape The Cruiser's guide already had ("Strength Sets 3 → 2. Armor: full —
+  Armor never deloads"), which is the strongest argument they are right: the coach had
+  already written this dose once, for a different program, in the app's own voice.
   Both allow-lists are empty and the comments say they stay so, which is the fourth step:
   the test no longer reports the debt, it fails on it. Eight mutations, eight killed — a
   retired spelling returning to a program or a guide, a qualifier hiding one, a deload row
@@ -3281,9 +3289,10 @@ a kept one.
   that is what the label means. Where nobody numbered anything, outdoor days close together
   are taken as one trip, which is a guess, and the card says which of the two it used rather
   than presenting both the same way.
-  **COACH: two rest days inside a trip do not end it.** A trip with bad weather in the middle is
-  still a trip, and two consecutive weekends are two trips to everyone I have climbed with.
-  **My number**, and the one thing here most likely to be wrong for someone else.
+  **Coach's call, settled (M113): three stands.** Two rest days inside a trip do not end it —
+  a trip with bad weather in the middle is still a trip, and two consecutive weekends are two
+  trips to everyone I have climbed with. Still the one number here most likely to be wrong for
+  someone else, and still the number.
   **A gap still splits a numbered trip**: a stale "day 4" fifteen days later is a forgotten
   field, not a fortnight in Spain.
   **Derived, like M88b, and with the same cost stated.** No stored trip, so nothing to
@@ -3825,12 +3834,11 @@ materially wrong premise. Sizes are guesses.*
   **Bareness is derived, never flagged.** A stored flag can be contradicted by its own record —
   mark a day a sketch, then log six climbs on it. Reading it off the session cannot: the moment
   a day carries anything, it stops being bare.
-  **COACH: the call, stated rather than made quietly.** A bare completed day already pays the
+  **Coach's call, settled (M113): the full 300 stands.** A bare completed day pays the
   full session base — 300 XP, measured — and this milestone makes that one tap instead of
-  three. Left as it is: a marked day is a claim about real training exactly like every other
-  logged session, and the app has never policed honesty (you can log a V15 you did not send).
-  If the coach wants marked days to pay nothing, it is a one-line change and the reasoning
-  should be theirs.
+  three. A marked day is a claim about real training exactly like every other logged session,
+  and the app has never policed honesty (you can log a V15 you did not send). The one-line
+  change to make marked days pay less was offered and declined.
   Thirty-two mutations, thirty-one killed. The survivor was **a badly-written mutation of
   mine** — an unused `let n = 0` that mutated nothing, the M91 mistake again; two real forms of
   the same day-versus-session confusion were both killed.
@@ -3993,8 +4001,10 @@ entry above.)*
   the app will not guess how close it is."* It appears only where it says something the
   ground-up number does not.
   **A copy fix the measurement turned up**: a projecting session rendered two controls called
-  "High point" meaning different measurements. The session question is "The move you reached"
-  now — **COACH: the coach can overrule the wording.**
+  "High point" meaning different measurements. The session question was "The move you reached"
+  at M102 — **Coach's call, settled (M113): "High point this session".** The words came back
+  with a qualifier, because a climber says "my high point" out loud and means the move; what
+  stays gone is the bare label, which is the project's all-time percentage on `/projects/:id`.
   **Not touched, deliberately**: `projectHistory` (M69). Links are the state of one project;
   that module reports what projects *cost* per grade, and a link is not a cost.
   Twenty-two mutations, nineteen killed. **All three survivors were weak fixtures of mine**,
@@ -4593,10 +4603,16 @@ entry above.)*
   their prose sat in the entry chunk of every cold start with the keyword scanner behind
   `sessionParts` dragged in after them. Loading both on the tap gave **1.59KB** back into a
   1.72KB chunk of its own; a test holds the split the way M110's and M111's do.
-  **COACH: the twelve stretches are a starter set**, written to the guide's own words and
-  deliberately conservative — static, light, nothing ballistic, nothing loaded, nothing
-  that reads as treatment. Enough to exercise the funnel and fill five minutes; not a
-  considered syllabus, and the wording of every line is the coach's to replace.
+  **Coach's call, settled (M113): the twelve stay, with two fixes.** The set was written to
+  the guide's own words and deliberately conservative — static, light, nothing ballistic,
+  nothing loaded, nothing that reads as treatment — and the review kept all twelve while
+  fixing the two places the content contradicted itself. *Passive hang or lat stretch* was
+  the one loaded item in a file whose own rule is "nothing loaded", on fingers that have just
+  finished a session; it is *Kneeling lat stretch* now, the same shape without the fingers.
+  (Not a claim that hanging is harmful — it is a consistency fix, and the code comment says
+  so.) And Child's pose no longer says "the one to stay in if you only do one", which
+  overrode the funnel's own weighting: after a finger-heavy session the flexor stretch is the
+  one to stay in, and the generator already knows that.
   Verified in a browser in both themes at 430px: a session of V5 sends and "crimp ladders"
   produces *"Weighted toward your fingers, shoulder and elbow"*, and the same session with
   a shoulder injury produces *"fingers and elbow"* with the shoulder stretches named as
@@ -4791,41 +4807,126 @@ entry above.)*
   **Budget.** Unchanged: the career page is a lazy route.
   Verified in a browser in both themes at 430px.
 
-**Open coaching calls.** Nine judgements the app is currently making on the coach's
-behalf, each one stated at its milestone rather than made quietly, none of them settled.
-Every site is tagged so this list can be regenerated with `grep -n '\*\*COACH' PLAN.md`
-rather than remembered — the tag is deliberately spelled so this paragraph is not itself a
-hit. They are cheap to answer and they compound: each is a place the app
-says something in the coach's voice that the coach has not endorsed.
+- **M113 — The coaching calls, answered.** *Done. Five changed the app, five confirmed it,
+  and a tenth call was found while working the fifth.*
+  **What this was.** Ten milestones between M64 and M112 had each stopped at a point where
+  the app was about to say something in the coach's voice that the coach had not endorsed,
+  written the judgement down, tagged it `COACH`, and shipped the default. This is the pass
+  that answered all of them. The tag was built to be greppable rather than remembered, and
+  **`grep -n '\*\*COACH' PLAN.md` now returns nothing** — a settled call reads *"Coach's
+  call, settled"* at its site instead, so the next `COACH` tag to appear is a new open call
+  and not an old one nobody got to. The index above records every answer.
+  **The five confirmations are not nothing.** An unendorsed default and an endorsed one are
+  the same bytes; the difference is whether anyone has looked. Four of the five (the kit
+  names, The Cruiser's one-day week, the trip gap, the marked-day XP) came back unchanged,
+  and the one-line change to make marked days pay less was offered and declined.
+  **The deload dose was the largest.** Two guides said *cut the sets by a third to a half,
+  keep the load* in four rows — true, and specific to nothing. Both now name the protocol
+  their program actually runs: Iron Grip's weeks say one Finger Protocol day instead of two
+  with repeaters at two sets or max hangs at three, same edge and same load; Lockdown's say
+  Session A once instead of twice, density hangs at three sets holding the week's time and
+  load, armor unchanged. **The shape was already in the catalogue.** The Cruiser's guide has
+  carried a per-component deload table since it was written — *Strength Sets 3 → 2. Armor:
+  full — Armor never deloads* — which is the strongest evidence these four rows are right:
+  the answer had been written once already, for a different program, in the app's own voice.
+  Neither of the other two guides M77 authored needed anything; The Long Game and The
+  Cruiser had program-specific doses all along, and only the two that got the generic
+  sentence got it.
+  **The tenth call was found, not listed.** Working the deload dose meant reading Iron Grip's
+  program, and Iron Grip carried the same priority inversion as Lockdown: `Climbing Session`
+  at `priority: 1` and `Finger Protocol + Engine` at `2`, so a one-day week of a program
+  called *12-Week Finger Strength* dropped the fingerboard. **The near-miss is the part worth
+  recording.** Call 4 was about Iron Grip, and call 4 had been answered *leave it* — but call
+  4 was about two hard climbing days back to back, which is a different question. A settled
+  call next door is exactly the thing that makes a second look feel unnecessary.
+  **A test that forbade the overrule had to change, and it was right to.** `priority.test.ts`
+  asserted the authored order equals `proposePriority`'s for every program — which made the
+  derivation the coach rather than the evidence, and would have failed both calls 2 and 10.
+  It now compares against an `OVERRULED` map with the two entries and their reasons, so a
+  *third* program drifting from its own evidence is still a failure rather than a precedent,
+  plus a check that no listed override merely restates what the proposal already says. Both
+  overrides are the same disagreement with the same weight — `onTheWall`, worth 2 — which
+  ranks a climbing day above a training day. Right for a program whose point is climbing,
+  wrong for one whose point is the training, and nothing in a program's data tells the
+  derivation which it is.
+  **Two rules the content stated and nothing checked.** `content/cooldowns.ts` declares four
+  rules for itself and three were tested — prehab, ballistic, and the claims the card makes.
+  *Nothing loaded* was the fourth and the content broke it: *Passive hang or lat stretch*
+  asked for a hang from a jug at the end of a session, on the fingers that had just done the
+  session. It is **Kneeling lat stretch** now, and `cooldown.test.ts` has a `readsAsLoaded`
+  guard with its own positive control, so the rule is checked rather than stated. **Not a
+  claim that hanging is harmful** — a relaxed hang with the feet supported is a normal way to
+  decompress a shoulder and several programs prescribe one; it is a claim about what belongs
+  in five minutes of stretching, and the code comment says which. Separately, the retired
+  one-size deload sentence is pinned the way `RETIRED_NAMES` pins spellings, with a companion
+  check that the four rows still *say* something — deleting them would have passed the first
+  test and left the reader worse off.
+  **Ten mutations, eight killed, and both survivors were predicted.** The sanity no-op
+  survived as it must, and so did restoring Child's pose's *"the one to stay in if you only
+  do one"* — the line the review cut for overriding the generator's own weighting. **That one
+  is unprotected prose and this says so**: the invariant would have to be "no description
+  ranks itself above the weighting", which is a shape no regex reads honestly, and a
+  contrived test is worse than a stated gap.
+  **Still open after this**: M107b's cues and faults for 144 drills, which is content and not
+  a call.
 
-1. **M64 — three capstone kit names.** "the Slate kit" → **Anchor**, "the Granite kit" →
-   **Weathered**, "the Alpine kit" → **Summit**. They had to change (each named a kit that
-   was already free); the names themselves are a judgement.
-2. **M64 — Lockdown's session order.** The derivation puts the technique climbing day above
-   *Session A: Static Power*, the program's named centrepiece. A two-day week that drops
-   Session A is not a static power block. The one ordering I would not defend.
-3. **M64 — The Cruiser's one-day week.** Its four climbing days score within a point of each
-   other, so a one-day week now keeps **Performance** where it used to keep **Volume & Flow**.
-4. **M64 — Iron Grip, two hard climbing days back to back.** A Friday–Saturday–Sunday week
-   fills as *Performance, Performance, Fingers*. Legal: the program spaces the fingerboard
-   and nothing else. Whether it should have a rule against that is the program's to decide.
-5. **M77 — the deload dose.** The guides' deload rows say *cut the sets by a third to a half,
-   keep the load* — written because the programs schedule the week and prescribe no dose for
-   it. Whether that is the deload the coach wants is unsettled.
-6. **M88c — what ends a trip.** Two rest days inside a trip do not end it; three do. Stated
-   as *my number*, and the one most likely to be wrong for someone else.
-7. **M100 — what a marked day is worth.** A bare completed day pays the full **300 XP**
-   session base, and this milestone made that one tap instead of three. Left as it is,
-   because the app has never policed honesty — but if marked days should pay less, it is a
-   one-line change and the reasoning should be the coach's.
-8. **M102 — the projecting session's label.** A projecting session rendered two controls both
-   called "High point" meaning different measurements; the session question is **"The move
-   you reached"** now. The wording is overrulable.
-9. **M112 — the twelve cooldown stretches.** A starter set in `content/cooldowns.ts`,
-   written to the starting guide's own words and deliberately conservative: static, light,
-   nothing ballistic, nothing loaded, nothing that reads as treatment. Enough to exercise
-   the funnel and fill five minutes, and not a considered syllabus — the wording of every
-   line, and which stretches belong there at all, is the coach's.
+**Coaching calls — all settled (M113).** Nine judgements the app was making on the coach's
+behalf, each stated at its milestone rather than made quietly, and a tenth the review itself
+turned up. Every site was tagged so the list could be regenerated with
+`grep -n '\*\*COACH' PLAN.md` rather than remembered — the tag was deliberately spelled so
+this paragraph was not itself a hit, **and that grep now returns nothing**, which is the
+check: a settled call reads "Coach's call, settled" at its site, so a new `COACH` tag means a
+new open call and not an old one nobody got to.
+
+Five changed the app; five confirmed what it already did. The five that confirmed are worth
+as much as the five that changed — an unendorsed default and an endorsed one look identical
+in the code and are not the same thing.
+
+1. **M64 — three capstone kit names.** *Confirmed.* **Anchor**, **Weathered**, **Summit**
+   stand. They had to change (each named a kit that was already free); the names themselves
+   were the judgement, and the judgement holds.
+2. **M64 — Lockdown's session order.** *Overruled.* The derivation put the technique climbing
+   day above *Session A: Static Power*, the program's named centrepiece; a two-day week that
+   drops Session A is not a static power block. Session A is `priority: 1`, the technique day
+   `2`, and the comment at each says the derivation is evidence rather than the coach.
+3. **M64 — The Cruiser's one-day week.** *Confirmed.* Its four climbing days score within a
+   point of each other and a one-day week keeps **Performance** where it used to keep
+   **Volume & Flow**. That is the day to keep.
+4. **M64 — Iron Grip, two hard climbing days back to back.** *Confirmed, left as it is.* A
+   Friday–Saturday–Sunday week fills as *Performance, Performance, Fingers* — legal, because
+   the program spaces the fingerboard and nothing else. Whether it should have a rule against
+   that is the program's to decide, and the program declines to.
+5. **M77 — the deload dose.** *Changed: a dose per program, not one dose.* The rows said *cut
+   the sets by a third to a half, keep the load* in both Lockdown and Iron Grip. They now name
+   the protocol each program actually runs — one Finger Protocol day instead of two, repeaters
+   at two sets or max hangs at three, same edge and same load; Session A once instead of twice,
+   density hangs at three sets holding the week's time and load, armor unchanged. The shape is
+   The Cruiser's own deload table, which had been written this way all along.
+6. **M88c — what ends a trip.** *Confirmed.* Two rest days inside a trip do not end it; three
+   do. Still the number here most likely to be wrong for someone else, and still the number.
+7. **M100 — what a marked day is worth.** *Confirmed.* A bare completed day pays the full
+   **300 XP** session base. The app has never policed honesty, and the one-line change to make
+   marked days pay less was offered and declined.
+8. **M102 — the projecting session's label.** *Changed: **"High point this session"**.* A
+   climber says "my high point" and means the move, so the words came back; the qualifier is
+   what keeps them off the project's all-time percentage on `/projects/:id`.
+9. **M112 — the twelve cooldown stretches.** *Changed in two places, all twelve kept.* The
+   set was conservative by construction — static, light, nothing ballistic, nothing loaded,
+   nothing that reads as treatment — and the review fixed the two lines that broke their own
+   file's rules. *Passive hang or lat stretch* was the single loaded item in a file whose rule
+   is "nothing loaded", on fingers that had just finished a session; it is **Kneeling lat
+   stretch** now, the same shape without the fingers, and the comment says plainly that this
+   is consistency rather than a claim about hanging. Child's pose no longer claims to be "the
+   one to stay in if you only do one" — after a finger-heavy session the flexor stretch is,
+   and the generator already weights for that.
+10. **M64 (found in M113) — Iron Grip's session order.** *Overruled, and this one was not on
+    the list.* Working call 5 turned up that Iron Grip carried the same inversion as call 2:
+    `Climbing Session` at `priority: 1`, `Finger Protocol + Engine` at `2`, so a one-day week
+    of a program called *12-Week Finger Strength* dropped the fingerboard. Call 4 had been
+    about that program and had been answered "leave it", but call 4 was about two hard days
+    back to back, not about which session a short week keeps — a near-miss worth recording,
+    because the settled call next door is exactly the thing that makes a second look feel
+    unnecessary. Fingers are `priority: 1` now.
 
 **Considered and left out, with the reason, so they are not re-proposed:**
 - *Race a ghost on the Daily Wall* — already ships (`createGhost`, `tapeToRace`, M81).

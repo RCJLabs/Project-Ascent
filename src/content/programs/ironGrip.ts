@@ -102,8 +102,13 @@ export const IRON_GRIP: Program = {
 
   sessionTypes: [
     {
+      // Overruled from the M64 derivation, which scored the climbing session
+      // above this one on `onTheWall` (PLAN.md, coaching call 10 — the same
+      // inversion settled for Lockdown in call 2). A one-day week of a
+      // finger-strength program that drops the finger protocol is a climbing
+      // day with the program's name on it.
       id: 'fp',
-      priority: 2,
+      priority: 1,
       name: 'Finger Protocol + Engine',
       icon: '✋',
       description: 'Hangboard protocol plus pulling, pushing, core, and armor work.',
@@ -344,8 +349,12 @@ export const IRON_GRIP: Program = {
       ],
     },
     {
+      // Second, not first: see the Finger Protocol above. Fingers built on a
+      // board and never used on the wall is the failure mode this session
+      // exists for — but it is the application, and the protocol is the
+      // program.
       id: 'perf',
-      priority: 1,
+      priority: 2,
       name: 'Climbing Session',
       icon: '⚡',
       description: 'Volume or performance climbing, themed to the current phase.',

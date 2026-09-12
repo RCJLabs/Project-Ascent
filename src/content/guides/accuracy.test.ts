@@ -197,6 +197,56 @@ describe('which weeks are deloads', () => {
 });
 
 /**
+ * The one-size deload dose, retired (PLAN.md, coaching call 5).
+ *
+ * M77 authored week rows for four guides that had none, and for two of them
+ * it wrote the same sentence: *cut the sets by a third to a half, keep the
+ * load.* True enough to print and specific to nothing — Lockdown's deload
+ * and Iron Grip's are different weeks of different work, and a climber
+ * reading either got a rule of thumb rather than their week.
+ *
+ * The coaching review replaced both with the protocol each program actually
+ * runs. This is what stops the rule of thumb coming back: a phrase, the way
+ * `RETIRED_NAMES` below is a list of spellings, because the thing being
+ * forbidden is a sentence and no structural property distinguishes it.
+ *
+ * It is deliberately narrow. "Reduce to 2 sets" in The Long Game and "2 per
+ * exercise" in The Cruiser are the same arithmetic and both are fine: they
+ * are attached to a named protocol. What is retired is the *unattached*
+ * version.
+ */
+const RETIRED_DELOAD_DOSE = /cut the sets by a third to a half/i;
+
+describe('the deload dose is the program\u2019s own', () => {
+  it('uses the retired one-size sentence in no guide', () => {
+    const found: string[] = [];
+    for (const { program, guide } of PAIRS) {
+      for (const text of authored(guide)) {
+        if (RETIRED_DELOAD_DOSE.test(text)) found.push(`${program.id}: "${text}"`);
+      }
+    }
+    expect(found).toEqual([]);
+  });
+
+  it('says something on every deload week of the two it was written for', () => {
+    // The sentence could also be "removed" by deleting the rows it sat in,
+    // which would pass the check above and leave the reader with less than
+    // they started with. These are the weeks it occupied.
+    for (const id of ['lockdown', 'iron_grip']) {
+      const pair = PAIRS.find((p) => p.program.id === id)!;
+      for (const week of [4, 8]) {
+        const row = tables(pair.guide)
+          .filter((t) => /^weeks?$/i.test((t.head[0] ?? '').trim()))
+          .flatMap((t) => t.rows)
+          .find((r) => (r[0] ?? '').trim().startsWith(String(week)));
+        expect(row, `${id} week ${week}`).toBeTruthy();
+        expect((row![row!.length - 1] ?? '').length, `${id} week ${week}`).toBeGreaterThan(40);
+      }
+    }
+  });
+});
+
+/**
  * Exercises a guide prescribes that its program never schedules.
  *
  * Empty, and it stays empty (PLAN.md M77). The seven it used to list were
