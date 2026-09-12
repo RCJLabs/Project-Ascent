@@ -7,10 +7,12 @@ import {
   SLEEP_ANSWERS,
   SLEEP_LABEL,
   readinessFor,
+  tissueLabel,
   type CheckIn,
   type FingerFeel,
   type ReadinessCall,
   type SleepFeel,
+  type TissueFeel,
 } from './readiness';
 import { STALE_DAYS } from './assessments';
 
@@ -221,5 +223,66 @@ describe('a test scheduled for today', () => {
   it('gives the fingers the first word when both would defer', () => {
     // The one that is a safety question as well as a data question.
     expect(readinessFor(check('sore', 'none'), { test: true }).deferTest).toMatch(/sore/);
+  });
+});
+
+/**
+ * An injured part the fingers question does not cover (PLAN.md M103).
+ *
+ * The same rule the milestone was built on: every answer that is not "fine"
+ * has to produce something you can point at. For a part that is not the
+ * fingers that means the part named in the advice, the part flagged on the
+ * lines that load it, and a test that loads it told to wait.
+ */
+describe('an injured part', () => {
+  const elbow = (feel: TissueFeel, loads?: string[]) =>
+    readinessFor({ fingers: 'good', sleep: 'good', parts: { elbow: feel } }, {
+      test: true,
+      ...(loads ? { loads: loads as never } : {}),
+    });
+
+  it('costs a good day nothing', () => {
+    const out = elbow('good');
+    expect(out.call).toBe('full');
+    expect(out.advice).toEqual([]);
+    expect(out.flag).toEqual([]);
+    expect(out.because).toBe('Nothing flagged.');
+    expect(out.deferTest).toBeNull();
+  });
+
+  it('flags the part, either way it is answered', () => {
+    expect(elbow('tender').flag).toEqual(['elbow']);
+    expect(elbow('sore').flag).toEqual(['elbow']);
+  });
+
+  // "Keep the load off it" is advice about nothing. The part is the whole
+  // content of the sentence, because an elbow, a knee and a hip do not
+  // share a prescription.
+  it('names the part in the advice, either way it is answered', () => {
+    expect(elbow('tender').advice.join(' ')).toMatch(/elbow/);
+    expect(elbow('sore').advice.join(' ')).toMatch(/elbow/);
+  });
+
+  it('says which answer it is reacting to', () => {
+    expect(elbow('sore').because).toBe(tissueLabel('elbow', 'sore'));
+    expect(elbow('tender').flagBecause).toBe(tissueLabel('elbow', 'tender'));
+  });
+
+  it('holds a test that would load it', () => {
+    expect(elbow('sore').deferTest).toMatch(/elbow/);
+    expect(elbow('tender').deferTest).toBeNull();
+  });
+
+  // Advice about a part today does not load is noise, and the same rule
+  // already governs the fingers.
+  it('keeps quiet about a part the day does not load', () => {
+    expect(elbow('sore', ['shoulder']).advice).toEqual([]);
+    expect(elbow('sore', ['elbow']).advice.length).toBe(1);
+  });
+
+  it('moves the call on the part alone', () => {
+    expect(elbow('good').call).toBe('full');
+    expect(elbow('tender').call).toBe('adjusted');
+    expect(elbow('sore').call).toBe('adjusted');
   });
 });

@@ -43,7 +43,8 @@ import { OUTCOME_HIGH_POINT, OUTCOME_LABEL } from '@/engine/projects';
 import { useXp } from '@/store/game';
 import { useProjects } from '@/store/projects';
 import { useSkillEffects } from '@/store/skills';
-import { useProfile } from '@/store/profile';
+import { useProfile, type Injury } from '@/store/profile';
+import type { BodyPart } from '@/content/warmups';
 import { useSessions } from '@/store/sessions';
 import { lastLogged } from '@/engine/exerciseLog';
 import { circuitPlan } from '@/engine/circuit';
@@ -67,13 +68,17 @@ import { canMerge, describeSession } from '@/engine/sessionEdit';
 import { concerning, injuryPolicy } from '@/engine/injury';
 import { climbOutcome } from '@/engine/gym';
 import {
+  ASKED_BY_FINGERS,
   FINGER_ANSWERS,
   FINGER_CHIP,
   SLEEP_ANSWERS,
   SLEEP_CHIP,
+  TISSUE_ANSWERS,
+  TISSUE_CHIP,
   readinessFor,
   type CheckIn,
   type ReadinessCall,
+  type TissueFeel,
 } from '@/engine/readiness';
 import { describeParts, drillConflict, exerciseConflict, exerciseLoads } from '@/engine/bodyLoad';
 import { REST_ITEMS } from '@/engine/restHabits';
@@ -656,6 +661,7 @@ function SessionEditor({
           <CheckInCard
             checkIn={session.checkIn}
             readiness={readiness}
+            injured={askablePartsOf(editorInjuries)}
             onAnswer={(checkIn) => patch({ checkIn })}
           />
 
@@ -1090,13 +1096,28 @@ const CALL_TONE: Record<ReadinessCall, string> = {
   easy: 'text-warn',
 };
 
+/**
+ * The open injuries worth asking about today (PLAN.md M103).
+ *
+ * Fingers and pulleys are left out: the check-in already asks how the
+ * fingers feel, of everyone, and a second chip row for the same tissue is
+ * the same question twice. A `returning` injury still counts — that is the
+ * state where the answer changes most.
+ */
+function askablePartsOf(injuries: readonly Injury[]): BodyPart[] {
+  return [...new Set(injuries.filter((i) => !ASKED_BY_FINGERS.includes(i.part)).map((i) => i.part))];
+}
+
 function CheckInCard({
   checkIn,
   readiness,
+  injured,
   onAnswer,
 }: {
   checkIn?: CheckIn;
   readiness: ReturnType<typeof readinessFor> | null;
+  /** Open injuries the fingers question does not already cover (M103). */
+  injured: BodyPart[];
   onAnswer: (checkIn: CheckIn) => void;
 }) {
   const [draft, setDraft] = useState<Partial<CheckIn>>(checkIn ?? {});
@@ -1105,6 +1126,11 @@ function CheckInCard({
     const next = { ...draft, ...patch };
     setDraft(next);
     if (next.fingers && next.sleep) onAnswer(next as CheckIn);
+  }
+
+  /** Answering a part is answering the check-in, so it saves like the rest. */
+  function pickPart(part: BodyPart, feel: TissueFeel) {
+    pick({ parts: { ...draft.parts, [part]: feel } });
   }
 
   return (
@@ -1140,6 +1166,30 @@ function CheckInCard({
           ))}
         </div>
       </fieldset>
+
+      {/* One row per open injury (PLAN.md M103). An `Injury` says where a
+          part stands now and nothing about how it got there, so the question
+          every physio asks — how has it been? — had no data in an app holding
+          both the injury and the sessions. */}
+      {injured.map((part) => (
+        <fieldset key={part} className="mt-3">
+          <legend className="text-sm text-ink-soft mb-1.5">
+            How is {describeParts([part])} today?
+          </legend>
+          <div className="grid grid-cols-3 gap-2">
+            {TISSUE_ANSWERS.map((answer) => (
+              <Chip
+                key={answer}
+                active={draft.parts?.[part] === answer}
+                onClick={() => pickPart(part, answer)}
+                className="justify-center text-center px-1"
+              >
+                {TISSUE_CHIP[answer]}
+              </Chip>
+            ))}
+          </div>
+        </fieldset>
+      ))}
 
       {readiness && (
         <div className="mt-3 pt-3 border-t border-line">

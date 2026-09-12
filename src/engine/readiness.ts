@@ -28,15 +28,52 @@
  */
 
 import type { BodyPart } from '@/content/warmups';
+import { describeParts } from './bodyLoad';
 import { STALE_DAYS } from './assessments';
 
 export type FingerFeel = 'good' | 'tender' | 'sore';
 export type SleepFeel = 'good' | 'short' | 'none';
 
+/**
+ * The same three answers, asked about a tissue that is not the fingers
+ * (PLAN.md M103).
+ *
+ * An alias rather than a second union: "good, tender, sore" reads correctly
+ * for an elbow or a shoulder, and two vocabularies for one idea is the
+ * duplication M98, M99b and M102 each had to undo. What differs is the
+ * *label*, which has to name the part — `FINGER_LABEL` is finger copy and
+ * stays that way.
+ */
+export type TissueFeel = FingerFeel;
+
 export interface CheckIn {
   fingers: FingerFeel;
   sleep: SleepFeel;
+  /**
+   * How each injured part felt, keyed by the injury vocabulary (PLAN.md
+   * M103).
+   *
+   * Asked only about injuries that are open, and never about the fingers or
+   * a pulley: those are what the fingers question is. An `Injury` records
+   * where a part stands *now* and nothing about how it got there, so the one
+   * question every physio asks — how has it been? — had no data in an app
+   * holding both the injury and the sessions.
+   *
+   * Sparse: a part the climber did not answer is absent rather than "good",
+   * because a question skipped is not a part that felt fine.
+   */
+  parts?: Partial<Record<BodyPart, TissueFeel>>;
 }
+
+/** Which injured parts get their own question. Fingers and pulleys do not:
+ *  that is the fingers question, and asking twice is asking twice. */
+export const ASKED_BY_FINGERS: BodyPart[] = ['fingers', 'pulley'];
+
+export function tissueLabel(part: BodyPart, feel: TissueFeel): string {
+  const word = feel === 'good' ? 'fine' : feel;
+  return `${part.charAt(0).toUpperCase()}${part.slice(1)} ${word}`;
+}
+
 
 /** What to do with the session, not a colour and not a score. */
 export type ReadinessCall = 'full' | 'adjusted' | 'easy';
@@ -101,6 +138,10 @@ export const SLEEP_CHIP: Record<SleepFeel, string> = {
 /** The question, and the three answers, in the order they are asked. */
 export const FINGER_ANSWERS: FingerFeel[] = ['good', 'tender', 'sore'];
 export const SLEEP_ANSWERS: SleepFeel[] = ['good', 'short', 'none'];
+
+/** The same chips and the same order, for an injured part (PLAN.md M103). */
+export const TISSUE_CHIP: Record<TissueFeel, string> = FINGER_CHIP;
+export const TISSUE_ANSWERS: TissueFeel[] = FINGER_ANSWERS;
 
 /**
  * What each answer contributes.
@@ -194,10 +235,44 @@ export interface ReadinessContext {
   test?: boolean;
 }
 
+/**
+ * What an injured part's answer costs today (PLAN.md M103).
+ *
+ * The same shape as the fingers table and deliberately gentler in its
+ * wording: the fingers rules can be specific because there is one thing a
+ * finger session is, and "leave the fingerboard alone" means something. An
+ * elbow, a knee and a hip do not share a prescription, so the advice names
+ * the part and the choice and stops there rather than inventing a protocol
+ * per tissue.
+ */
+function tissueContribution(part: BodyPart, feel: TissueFeel): Contribution {
+  if (feel === 'good') return { cost: 0 };
+  const named = describeParts([part]);
+  if (feel === 'tender') {
+    return {
+      cost: 1,
+      advice: `Keep the load off ${named} where the session lets you. Tender is the signal you still have a choice about.`,
+      needs: [part],
+      flag: [part],
+    };
+  }
+  return {
+    cost: 2,
+    advice: `Train around ${named} today rather than through it. You logged it as an injury, and this is the day it is telling you about.`,
+    needs: [part],
+    flag: [part],
+    deferTest: `A test that loads ${named} while it is sore measures the soreness.`,
+  };
+}
+
 export function readinessFor(checkIn: CheckIn, context: ReadinessContext = {}): Readiness {
   const parts: Contribution[] = [
     { ...FINGERS[checkIn.fingers], said: FINGER_LABEL[checkIn.fingers] },
     { ...SLEEP[checkIn.sleep], said: SLEEP_LABEL[checkIn.sleep] },
+    ...Object.entries(checkIn.parts ?? {}).map(([part, feel]) => ({
+      ...tissueContribution(part as BodyPart, feel),
+      said: tissueLabel(part as BodyPart, feel),
+    })),
   ];
   const cost = parts.reduce((n, p) => n + p.cost, 0);
   const call: ReadinessCall = cost === 0 ? 'full' : cost >= 3 ? 'easy' : 'adjusted';

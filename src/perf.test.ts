@@ -203,7 +203,7 @@ describe('the bundle stays small', () => {
   const dist = 'dist/assets';
   const built = existsSync(dist);
 
-  it.runIf(built)('keeps the first load under 215KB gzipped', () => {
+  it.runIf(built)('keeps the first load under 216.2KB gzipped', () => {
     const html = readFileSync('dist/index.html', 'utf8');
     const entry = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)?.[1];
     expect(entry, 'no entry chunk in index.html').toBeDefined();
@@ -227,7 +227,14 @@ describe('the bundle stays small', () => {
     // lazy `LogPage` — it is eagerly imported, so everything it touches is
     // first-load — and that is a perf milestone rather than a side effect of
     // this one.
-    expect(total, `first load is ${total.toFixed(0)}KB gzipped`).toBeLessThan(216);
+    //
+    // 216 → 216.2 at M103, measured the same way: 215.71KB before the injury
+    // check-in, 216.12KB after, so 0.41KB for a tissue answer on the
+    // check-in and a reading of it. The line stopped being a round number
+    // here on purpose — 217 would have handed the next milestone 0.88KB of
+    // free space, which is the headroom a regression hides in, three
+    // paragraphs above.
+    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(216.2);
   });
 
   it.runIf(built)('keeps every program body out of the entry chunk', () => {

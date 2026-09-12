@@ -289,6 +289,38 @@ describe('colour classes name colours that exist', () => {
 });
 
 /**
+ * A status colour is a graphic, not a word (PLAN.md M103).
+ *
+ * `themes.test.ts` holds `positive`, `warn` and `danger` to **3:1** against
+ * every surface, and says why in as many words: *"Graphics rather than text,
+ * so 3:1 is the bar."* Nothing held anyone to using them that way.
+ *
+ * M103's day strip painted `text-warn` on `bg-warn/15` and measured 3.72,
+ * 3.99 and 4.47 in light mode — three WCAG AA failures at 11px, from
+ * tokens every palette test passed, because the tint drops what little
+ * headroom a 3:1 promise leaves. The pairing is the tell: a status colour
+ * as text on a tint of itself.
+ */
+describe('a status colour is a graphic, not a word', () => {
+  const STATUS = ['positive', 'warn', 'danger'];
+
+  it('never paints a status colour as text on a tint of itself', () => {
+    const offences: string[] = [];
+    for (const file of [...FEATURE_FILES, ...UI_FILES]) {
+      for (const line of file.source.split('\n')) {
+        if (isComment(line)) continue;
+        for (const status of STATUS) {
+          const tinted = new RegExp(`\\bbg-${status}/\\d+`).test(line);
+          const worded = new RegExp(`\\btext-${status}\\b`).test(line);
+          if (tinted && worded) offences.push(`${file.path}: text-${status} on bg-${status}/…`);
+        }
+      }
+    }
+    expect(offences).toEqual([]);
+  });
+});
+
+/**
  * A utility may not change the shape of what it is applied to (PLAN.md M99b).
  *
  * `.focus-ring` carried `border-radius: inherit` from M14, on the

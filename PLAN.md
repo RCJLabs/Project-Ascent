@@ -3959,18 +3959,64 @@ materially wrong premise. Sizes are guesses.*
   the control's own border and background.
   Verified in both themes. 3,178 tests pass.
 
-- **M103 — The injury as a series.** *Proposed. Size M.*
-  **Premise.** `Injury` is part, since, severity, status, side, a checklist and your own
-  steps. The check-in asks about *fingers* and *sleep* and nothing else. So the one
-  question every physio asks — *does it flare after a particular kind of session?* — has
-  no data in an app that has both the injury and the sessions.
-  **Shape.** M82's pattern, again. The check-in grows one chip per *active* injury —
-  fine / niggly / worse — stored as `checkIn.parts?: Partial<Record<BodyPart, Feel>>`,
-  reusing the injury vocabulary so one flag means one thing. `/injury/:id` gets a strip
-  like `CheckInStrip`, and the honest co-occurrence: *"worse on 4 of the 5 days after a
-  session that loaded the elbow; 1 of 9 otherwise"* — counts, with coverage stated first.
-  **Never.** Diagnose, or say "cause". Two counts side by side and the tissue-load caveat
-  (it is a keyword scan) printed under them.
+- **M103 — The injury as a series.** *Done.*
+  **Premise, corrected.** The check-in asked about fingers and sleep and nothing else, so
+  *how has it been?* had no answer in an app holding both the injury and every session
+  around it. That much held. What did not: the milestone's own headline feature.
+  **Refused: the co-occurrence.** *"Worse on 4 of the 5 days after a session that loaded
+  the elbow; 1 of 9 otherwise"* is not built, and the module says why at length.
+  **"Loaded the elbow" is a keyword scan** — `tissueLoad` says of itself that it is
+  tolerable for a relative picture and *"not tolerable for a number with a unit"*, and a
+  ratio is a number with a unit. **And two counts side by side are a causal claim however
+  they are worded**: a climber reading "4 of 5 against 1 of 9" reads *hangboarding hurts my
+  elbow*, on a sample of fourteen, from a scan that guesses which sessions loaded what.
+  So the app reports what was answered, shows what was logged around the bad days, and the
+  climber draws the line.
+  **Built.** `CheckIn.parts?: Partial<Record<BodyPart, TissueFeel>>` — sparse, and
+  `TissueFeel` is an *alias* of `FingerFeel` rather than a second vocabulary for the same
+  three answers. `ASKED_BY_FINGERS = ['fingers', 'pulley']`, because a second chip row for
+  a tissue the fingers question already covers is the same question twice.
+  `tissueContribution` feeds `readinessFor`, so a sore part flags the lines that load it,
+  names itself in the advice, and holds a test that would load it. `engine/injuryLog.ts`
+  reads it back: the answered days, the counts, `describeInjuryHistory` (coverage first,
+  `null` when nothing was answered), and `badDays` carrying *the day before* and *the day
+  itself* separately — the check-in is taken before the session it sits on, so a flare
+  during a session and a flare the morning after are different stories and the app says
+  which rather than picking one.
+  **Three things the browser found in my own card**, none of which a test had:
+  **(1)** the day strip encoded the answer in colour alone — red/amber/green with the word
+  only in a `title` no phone will ever show. The word is in the chip now.
+  **(2)** the strip was unbounded: an injury logged in January and answered about all year
+  is hundreds of chips. Capped at 14, with a line saying the counts above are all of them.
+  **(3)** the caveat asserted *"the app has a fortnight of answers"* over a window bounded
+  by `since`, which can be a year. Rewritten to something true.
+  **And a fourth, measured.** The chips painted `text-warn` on `bg-warn/15` and came in at
+  **3.72, 3.99 and 4.47** in light mode — three WCAG AA failures out of tokens every
+  palette test passes, because `themes.test.ts` holds the status colours to **3:1**:
+  *"graphics rather than text, so 3:1 is the bar."* Nothing held anyone to using them that
+  way. Ordinary ink on the tint now measures 10.06–14.59 in both themes, and `ui.test.ts`
+  has a new rule — a status colour is never text on a tint of itself — which was mutated
+  against all three tokens and killed each time. The tint itself measures **1.06:1** in
+  dark and 1.41:1 in light against the card it sits on: decoration, and the comment says
+  so rather than claiming it reads at a glance.
+  **Deleted.** `InjuryDay.did` — computed on every day, read by nobody but its own test.
+  The strip shows a tone and a date; what was around a day is only worth naming on the days
+  it was worse, where `badDays` carries it. With it went `injuryHistory`'s `nameOf`.
+  **Not fixed, recorded.** `restChecklist !== undefined && climbs.length === 0` is written
+  out inline in **ten** engine modules and exported twice more (`templates.isRestSession`,
+  `sessionEdit.isRest`); `thinLog` already uses a *different* rule for the same question.
+  `injuryLog` imports the existing helper rather than becoming a fourteenth copy. The
+  extraction is its own milestone, not this one's to fold in.
+  **Measured, not asserted.** 33 mutations over four rounds. The first battery of 29 left
+  **seven survivors, every one a weak fixture of mine**: a "day before" and a "day itself"
+  that both rendered as *Climbing session* so the two could be swapped unseen; a fixture
+  with no unfinished session in it; a fine part that could have cost the day unnoticed; no
+  test at all on a tender part, on the flag, or on a second answered injury; and a bad-day
+  heading that never rendered over an empty list. Rounds two to four killed all of them.
+  **Budget.** 216 → 216.2KB, measured: 215.71 before, 216.12 after, 0.41KB. Not 217 —
+  that would hand the next milestone 0.88KB of free space, which is the headroom the same
+  comment warns regressions hide in.
+  Verified in both themes at 430px. 3,224 tests pass.
 
 - **M104 — The coach rules the plan promised.** *Proposed. Size S–M.*
   **Premise.** §6.6 named the triggers worth keeping: PR reactions, outdoor re-entry,
