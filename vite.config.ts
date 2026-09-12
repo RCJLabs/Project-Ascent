@@ -40,6 +40,15 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,woff2}'],
         navigateFallback: `${BASE}index.html`,
+        // `navigateFallback` matches *every* navigation request, and typing a
+        // URL in the address bar is one — so without this the service worker
+        // answers `/.well-known/assetlinks.json` with the app shell and the
+        // file underneath it becomes unreachable in a browser. Android's
+        // Digital Asset Links verifier fetches that URL directly and is not
+        // affected, so the symptom is not a broken TWA: it is being unable to
+        // check the thing by hand, which is how it went unnoticed until the
+        // domain was live (PLAN.md M12).
+        navigateFallbackDenylist: [/^\/\.well-known\//],
       },
       manifest: {
         id: BASE,

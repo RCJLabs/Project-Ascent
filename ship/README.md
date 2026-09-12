@@ -61,6 +61,8 @@ whether DNS has propagated.
 - `https://ascent.rcjlabs.com/manifest.webmanifest` serves `"start_url": "/"`.
 - `https://ascent.rcjlabs.com/.well-known/assetlinks.json` serves `[]` — empty for
   now, and that is correct: it asserts nothing until there is an app to assert.
+  If this returns the *app* rather than the file, the service worker's
+  `navigateFallbackDenylist` has been lost — see the M12 note in PLAN.md.
 
 ## 4. Build the TWA
 

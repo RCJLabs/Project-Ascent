@@ -3092,6 +3092,16 @@ commit.
   `claude/climbing-app-audit-mvixjt` and deliberately **not** fast-forwarded to `main`,
   because merging it publishes a broken site until the DNS record and the Pages setting
   exist. That breaks this run's every-milestone-to-main habit, on purpose.
+  **One defect the live site found that no local check could have.** Typing
+  `/.well-known/assetlinks.json` into a browser returned **the app**, not the file. The
+  file was correct and deployed; `navigateFallback` matches *every* navigation request,
+  and a URL typed in the address bar is one — so the service worker answered it with the
+  app shell. Reproduced locally (no service worker: `[]`; service worker controlling: the
+  onboarding screen), fixed with `navigateFallbackDenylist`, re-measured. It would **not**
+  have broken the TWA — Android's verifier fetches that URL directly and never sees a
+  service worker — so the only symptom was being unable to check the thing by hand, which
+  is precisely what step 7 of the runbook asks for. It took the domain being live to
+  surface at all.
   **Still the author's:** the DNS record, the Pages custom-domain setting, the Play
   Console app, the first upload, the fingerprint, and the listing copy — short
   description, full description, feature graphic, content rating, privacy policy.

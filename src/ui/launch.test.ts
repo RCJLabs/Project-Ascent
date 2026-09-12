@@ -76,6 +76,14 @@ describe('proving the domain is ours', () => {
     expect(existsSync(PATH), 'no assetlinks file; a TWA would show a URL bar').toBe(true);
   });
 
+  it('is not swallowed by the service worker', () => {
+    // `navigateFallback` matches every navigation, so a browser asking for
+    // this file gets the app shell unless it is denied explicitly. Found on
+    // the live site the day the domain went up, reproduced locally, and
+    // this is what stops it coming back.
+    expect(CONFIG).toMatch(/navigateFallbackDenylist:\s*\[[^\]]*\\\.well-known/);
+  });
+
   it('is a statement list, whatever is in it', () => {
     const raw: unknown = JSON.parse(read(PATH));
     expect(Array.isArray(raw), 'assetlinks is a list of statements, not an object').toBe(true);
