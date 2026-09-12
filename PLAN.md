@@ -4119,16 +4119,53 @@ materially wrong premise. Sizes are guesses.*
   the opposite reason.
   Verified in both themes at 430px. 3,323 tests pass.
 
-- **M105b — The same history, back out.** *Proposed. Size S–M.*
-  **Premise.** M105 wrote `csv.ts` with `toCsv` and `csvCell` already in it, tested and
-  round-tripped, and shipped nothing that calls them. The archive is one JSON file: fine
-  for a restore, useless to a climber who wants their sessions in a spreadsheet, and the
-  app's whole offline argument rests on the data being *theirs*.
-  **Shape.** Sessions, climbs, project attempts and metrics as four CSVs inside M53's
-  archive, beside `backup.json` rather than instead of it. Column sets that M105's importer
-  can read back, which is a property a test can hold: export, import, compare.
-  **Never.** A second source of truth. The archive restores from `backup.json`; the CSVs
-  are for the climber and for other software, and the importer treats them as foreign.
+- **M105b — The same history, back out.** *Done.*
+  **Premise held exactly.** `toCsv` and `csvCell` shipped in M105, tested and round-tripped,
+  called by nothing. The archive was one JSON file: right for a restore, useless to a
+  climber who wants their climbs in a spreadsheet.
+  **Built.** Four CSVs inside M53's archive, under `spreadsheets/`: `climbs.csv` (one row
+  per climb, and the one this app reads back), `sessions.csv` (the RPE, the duration, the
+  warmup — everything a climb row has no column for), `attempts.csv`, `benchmarks.csv`.
+  Written from the exported records rather than re-read from the database, so the two can
+  never describe different moments. `backup.json` stays the statement of record and the
+  restore has never heard of them.
+  **Grades go out canonical, not as displayed** — the direct consequence of M105's finding.
+  A climber reading in Font sees `7C` in the app and `V9` in the file, which looks like a
+  translation error until you try the alternative: Font and French are written identically,
+  so exporting the display spelling produces a file this app cannot read back without
+  asking which discipline every row is. `V9` and `5.12c` say their own scale, so the round
+  trip closes with no question asked.
+  **Three bugs, two of which would have shipped.**
+  **(1)** Session type ids are **not unique across the catalogue** — `fp` is Iron Grip's
+  *Finger Protocol + Engine* and Trip Prep's *Finger Primer*. A map keyed on the type alone
+  let whichever program was iterated last name every session carrying that id, so a real
+  Iron Grip session exported as *Trip Prep, Finger Primer*. Keyed by program **and** type
+  now, and an unknown program names neither rather than guessing.
+  **(2)** The writers crashed on a record the app cannot walk — a session with no `climbs`
+  array, which is what most of the export tests write and what a half-written backup
+  produces. An export is the one operation whose failure costs the climber everything they
+  were trying to protect, so a bad row now contributes no rows instead of taking the
+  archive down with it. That means `listOf` and a `cell()` coercion: the types are not
+  wrong about what a `Session` should be, they are wrong about what is on disk, which is
+  what `dataHealth` exists for.
+  **(3)** A `Style` column would have been mapped correctly on re-import **only by column
+  order** — `style` is in `importCsv`'s *result* spellings, for logs where one column holds
+  redpoint/flash, and `Result` happened to claim that meaning first. Renamed *Ascent style*,
+  which the guesser passes over on purpose.
+  **One place the shared helper cannot be used.** `sessionsCsv` spells out the rest-day rule
+  rather than calling `isRestSession`, which reads `session.climbs.length` and throws on
+  exactly the malformed record this file must survive. Recorded in the code so it does not
+  read as a fourteenth copy by accident.
+  **Verified end to end in a browser**, not only in tests: exported a real archive from the
+  running app (quoting intact — `"Malham, Yorkshire"`, `"He said ""go"""`), unzipped it, and
+  fed `climbs.csv` back into the app's own import screen. It read as **1 day, 3 climbs,
+  nothing refused and no discipline asked**. The browser also caught the last cosmetic
+  defect: *Indoor or outdoor* clipped to *"Indoor or outdoo"* in a 160px select.
+  **Measured, not asserted.** 24 mutations. One survivor, and the same gap as M103's: no
+  fixture had a rest checklist *and* climbs on one day.
+  **Budget.** Unchanged at 216.9KB — 216.82 measured, the same as M105, because the export
+  engine lands in the lazy settings chunk beside the importer.
+  Verified in both themes at 430px. 3,353 tests pass.
 
 - **M106 — Indoor and outdoor are two ladders, and the app draws one.** *Proposed. Size M.*
   **Premise.** `GradeTally` is per scale. `session.mode` is read for outdoor *days* (career,

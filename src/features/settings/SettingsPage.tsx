@@ -463,7 +463,8 @@ export function SettingsPage() {
           ))}
           <p className="text-sm text-ink-soft mb-3">
             Everything lives on this device. Export a backup regularly — an offline app has no
-            cloud copy to fall back on.
+            cloud copy to fall back on. The backup also carries your climbs, sessions, project
+            burns and benchmarks as spreadsheets, so the data is readable without this app.
             {photoBytes > 0 && (
               <>
                 {' '}Photos are included, which adds roughly {formatBytes(photoBytes)} — the

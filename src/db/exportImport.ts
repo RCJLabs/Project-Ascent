@@ -1,7 +1,12 @@
 import { APP_VERSION } from '@/version';
 import { looksLikeZip, unzip, zip, ZipError, type ZipEntry } from '@/lib/zip';
 import type { Mark } from '@/lib/marks';
+import { PROGRAMS } from '@/content/programs';
+import { attemptsCsv, climbsCsv, CSV_FILES, metricsCsv, sessionsCsv } from '@/engine/exportCsv';
 import { getDb } from './db';
+import type { MetricEntry } from './metrics';
+import type { Project } from './projects';
+import type { Session } from './sessions';
 import {
   EXPORTABLE_STORES,
   SCHEMA_VERSION,
@@ -125,9 +130,55 @@ export async function exportArchive(options: { media?: boolean } = {}): Promise<
   // included — knows what it is holding before it reaches the pictures.
   const entries: ZipEntry[] = [
     { name: BACKUP_ENTRY, bytes: new TextEncoder().encode(JSON.stringify(file, null, 2)) },
+    ...spreadsheets(file),
     ...photos,
   ];
   return { bytes: zip(entries), file };
+}
+
+/**
+ * The same records as a spreadsheet (PLAN.md M105b).
+ *
+ * Beside `backup.json`, never instead of it: the restore reads the JSON and
+ * has never heard of these, because a second source of truth inside one
+ * file is how the two halves start disagreeing. A climber who wants their
+ * climbs in a spreadsheet opens one of these; one who wants their app back
+ * imports the archive, and the CSVs ride along unread.
+ *
+ * Written from the exported records rather than re-read from the database,
+ * so the two can never describe different moments.
+ */
+function spreadsheets(file: ExportFile): ZipEntry[] {
+  const sessions = (file.data.sessions ?? []) as Session[];
+  const projects = (file.data.projects ?? []) as Project[];
+  const metrics = (file.data.metrics ?? []) as MetricEntry[];
+  // Keyed by program **and** type. Session type ids are not unique across
+  // the catalogue — `fp` is a Finger Protocol in Iron Grip and a Finger
+  // Primer in Trip Prep — so a map keyed on the type alone lets whichever
+  // program is iterated last name every session of that id.
+  const types = new Map<string, [string, string]>();
+  for (const program of PROGRAMS) {
+    for (const type of program.sessionTypes) types.set(`${program.id}:${type.id}`, [program.name, type.name]);
+  }
+  const encode = (text: string): Uint8Array => new TextEncoder().encode(text);
+  return [
+    { name: CSV_FILES.climbs, bytes: encode(climbsCsv(sessions)) },
+    {
+      name: CSV_FILES.sessions,
+      bytes: encode(
+        sessionsCsv({
+          sessions,
+          // A custom program is not in the catalogue, so its rows leave both
+          // blank rather than guessing at a name from an id that another
+          // program may also use.
+          nameOf: (programId, typeId) =>
+            programId && typeId ? (types.get(`${programId}:${typeId}`) ?? ['', '']) : ['', ''],
+        }),
+      ),
+    },
+    { name: CSV_FILES.attempts, bytes: encode(attemptsCsv(sessions, projects)) },
+    { name: CSV_FILES.metrics, bytes: encode(metricsCsv(metrics)) },
+  ];
 }
 
 /** File extensions worth naming. Anything else keeps its subtype. */

@@ -33,7 +33,7 @@ const LABEL: Record<ColumnKind, string> = {
   result: 'Sent or tried',
   count: 'How many',
   discipline: 'Boulder or route',
-  mode: 'Indoor or outdoor',
+  mode: 'Indoor/outdoor',
   place: 'Where',
   notes: 'Notes',
   skip: "Don't import",

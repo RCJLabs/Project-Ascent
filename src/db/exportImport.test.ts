@@ -226,8 +226,8 @@ describe('photos', () => {
       });
     }
     const { bytes, file } = await exportArchive();
-    const names = unzip(bytes).map((e) => e.name);
-    expect(new Set(names).size).toBe(4);
+    const photos = unzip(bytes).map((e) => e.name).filter((n) => n.startsWith('media/'));
+    expect(new Set(photos).size).toBe(3);
     expect(new Set(file.media!.map((m) => m.file)).size).toBe(3);
 
     const backup = readBackupFile(bytes);
@@ -252,7 +252,11 @@ describe('photos', () => {
     });
     const { bytes } = await exportArchive();
     const names = unzip(bytes).map((e) => e.name);
-    expect(names).toEqual([BACKUP_ENTRY, 'media/.._.._backup.json.webp']);
+    // The spreadsheets ride between the records and the photos (M105b).
+    expect(names.filter((n) => !n.startsWith('spreadsheets/'))).toEqual([
+      BACKUP_ENTRY,
+      'media/.._.._backup.json.webp',
+    ]);
     // And it still comes back, under the id it actually has.
     const backup = readBackupFile(bytes);
     globalThis.indexedDB = new IDBFactory();
@@ -291,7 +295,111 @@ describe('photos', () => {
     const { file, bytes } = await exportArchive({ media: false });
     expect(file.media).toBeUndefined();
     expect(file.data.sessions).toHaveLength(1);
-    expect(unzip(bytes).map((e) => e.name)).toEqual([BACKUP_ENTRY]);
+    const names = unzip(bytes).map((e) => e.name);
+    expect(names.filter((n) => !n.startsWith('spreadsheets/'))).toEqual([BACKUP_ENTRY]);
+  });
+
+  /**
+   * The same records as a spreadsheet (PLAN.md M105b).
+   *
+   * Beside `backup.json` and never instead of it: the restore has never
+   * heard of these, because a second source of truth inside one file is how
+   * the two halves start disagreeing.
+   */
+  describe('the spreadsheets in the archive', () => {
+    it('writes one per kind of record', async () => {
+      const { bytes } = await exportArchive({ media: false });
+      expect(unzip(bytes).map((e) => e.name).filter((n) => n.startsWith('spreadsheets/')).sort()).toEqual([
+        'spreadsheets/attempts.csv',
+        'spreadsheets/benchmarks.csv',
+        'spreadsheets/climbs.csv',
+        'spreadsheets/sessions.csv',
+      ]);
+    });
+
+    it('writes the climbs that are in the log', async () => {
+      const db = await getDb();
+      await db.put('sessions', {
+        id: '2026-03-01#0', date: '2026-03-01', completed: true, mode: 'outdoor',
+        planned: false, rewarded: true, createdAt: 'x', updatedAt: 'x',
+        climbs: [{ id: 'c1', grade: 'V6', scale: 'V', count: 2, result: 'send' }],
+      } as never);
+      const { bytes } = await exportArchive({ media: false });
+      const text = new TextDecoder().decode(
+        unzip(bytes).find((e) => e.name === 'spreadsheets/climbs.csv')!.bytes,
+      );
+      expect(text).toContain('2026-03-01,boulder,V6,send,2');
+    });
+
+    /**
+     * Session type ids are not unique across the catalogue: `fp` is Iron
+     * Grip's Finger Protocol and Trip Prep's Finger Primer. A map keyed on
+     * the type alone let whichever program was iterated last name every
+     * session carrying that id.
+     */
+    it('names the session type from the program it belongs to', async () => {
+      const db = await getDb();
+      await db.put('sessions', {
+        id: '2026-03-01#0', date: '2026-03-01', completed: true, mode: 'indoor',
+        planned: false, rewarded: true, createdAt: 'x', updatedAt: 'x', climbs: [],
+        programId: 'iron_grip', sessionTypeId: 'fp',
+      } as never);
+      const { bytes } = await exportArchive({ media: false });
+      const text = new TextDecoder().decode(
+        unzip(bytes).find((e) => e.name === 'spreadsheets/sessions.csv')!.bytes,
+      );
+      expect(text).toMatch(/Iron Grip,Finger Protocol \+ Engine/);
+      expect(text).not.toMatch(/Trip Prep/);
+    });
+
+    it('names neither for a program the catalogue does not have', async () => {
+      const db = await getDb();
+      await db.put('sessions', {
+        id: '2026-03-02#0', date: '2026-03-02', completed: true, mode: 'indoor',
+        planned: false, rewarded: true, createdAt: 'x', updatedAt: 'x', climbs: [],
+        programId: 'my_own_block', sessionTypeId: 'fp',
+      } as never);
+      const { bytes } = await exportArchive({ media: false });
+      const text = new TextDecoder().decode(
+        unzip(bytes).find((e) => e.name === 'spreadsheets/sessions.csv')!.bytes,
+      );
+      expect(text).toContain('2026-03-02,1,,,indoor');
+    });
+
+    /**
+     * An export is the one operation whose failure costs the climber
+     * everything they were trying to protect. The database really does hold
+     * records the app cannot walk — a session with no `climbs` is what
+     * every one of these tests writes — so a bad row contributes no rows
+     * rather than taking the archive down with it.
+     */
+    it('survives a record the app cannot walk', async () => {
+      const db = await getDb();
+      await db.put('sessions', { id: '2026-03-01#0', date: '2026-03-01' } as never);
+      const { bytes } = await exportArchive({ media: false });
+      const text = new TextDecoder().decode(
+        unzip(bytes).find((e) => e.name === 'spreadsheets/climbs.csv')!.bytes,
+      );
+      // A header and nothing under it, rather than a thrown export.
+      expect(text.split('\r\n')).toHaveLength(1);
+    });
+
+    // The restore reads `backup.json`. Removing the spreadsheets must not
+    // change what comes back.
+    it('is not what the restore reads', async () => {
+      const db = await getDb();
+      await db.put('sessions', {
+        id: '2026-03-01#0', date: '2026-03-01', completed: true, mode: 'indoor',
+        planned: false, rewarded: true, createdAt: 'x', updatedAt: 'x',
+        climbs: [{ id: 'c1', grade: 'V6', scale: 'V', count: 1, result: 'send' }],
+      } as never);
+      const { bytes } = await exportArchive({ media: false });
+      const kept = unzip(bytes).filter((e) => !e.name.startsWith('spreadsheets/'));
+      const backup = readBackupFile(zip(kept));
+      expect((backup.file.data.sessions as { id: string }[]).map((x) => x.id)).toEqual([
+        '2026-03-01#0',
+      ]);
+    });
   });
 
   // Half a restore is worse than either half.
