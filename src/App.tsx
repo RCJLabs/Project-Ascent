@@ -58,6 +58,7 @@ const SearchPage = lazy(() => import('@/features/search/SearchPage').then((m) =>
 const GlossaryPage = lazy(() => import('@/features/glossary/GlossaryPage').then((m) => ({ default: m.GlossaryPage })));
 const DrillsPage = lazy(() => import('@/features/drills/DrillsPage').then((m) => ({ default: m.DrillsPage })));
 const DrillPage = lazy(() => import('@/features/drills/DrillPage').then((m) => ({ default: m.DrillPage })));
+const AttachPage = lazy(() => import('@/features/media/AttachPage').then((m) => ({ default: m.AttachPage })));
 
 import { sweepOrphanMedia } from '@/db/media';
 import { hydrateAll } from '@/store';
@@ -252,6 +253,7 @@ function Shell() {
           <Route path="/calendar" component={CalendarPage} />
           <Route path="/gym" component={GymPage} />
           <Route path="/log/:date" component={LogPage} />
+          <Route path="/attach" component={AttachPage} />
           <Route path="/today" component={TodayRedirect} />
           <Route path="/progress" component={ProgressPage} />
           <Route path="/journal" component={JournalPage} />

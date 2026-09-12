@@ -4590,17 +4590,64 @@ entry above.)*
   fresh install reaches the preview rather than onboarding, and all three shortcuts resolve
   from a cold load.
 
-- **M111b — Share a photo to the app.** *Proposed. Size M.*
-  **Premise.** The media store is built for it and M111 refused the manifest entry rather
-  than ship a front door onto a room that does not exist. Two things are missing and only
-  one of them is the manifest: a `share_target` with `method: POST` needs the app to own
-  its service worker (`injectManifest`, or `importScripts` over `generateSW`), and a shared
-  photo needs somewhere to land — photos attach to a *specific* session or project through
-  `MediaCard`, and there is no app-level picker that asks which.
-  **Shape.** The picker first, as a screen that is worth having on its own: recent sessions,
-  open projects, today. Then the service worker change, then the manifest entry.
-  **Caveat.** The service-worker switch touches the offline guarantee, which M19 spent a
-  milestone getting right. It is the risky half, and it is second for that reason.
+- **M111b — Share a photo to the app.** *The picker is done. The service worker and the
+  manifest entry are not, and they are the risky half.*
+  **Premise held exactly.** Photos attach through `MediaCard`, which takes an owner and is
+  rendered on two pages — a session's log and a project's detail — so adding one has always
+  meant already being on the page it belongs to. A climber back from a crag with five
+  photos navigates five times, and a *shared* photo has nowhere at all to land. That is why
+  M111 refused the `share_target` entry: a front door onto a room that did not exist.
+  **`/attach` is the room, and it is worth having without the share target**, which is the
+  reason it went first. It asks the question the other way round: here is a picture, which
+  day or project is it? Recent sessions most recent first, then open projects, with the
+  photo count on each.
+  **It never invents a day.** The obvious convenience is an entry for *Today* that creates
+  a session when none exists, and it is refused: an empty day created as a side effect of
+  filing a photo is a day the review, the streak and the consistency grid all have to
+  explain. Today is offered when today has a session and not otherwise.
+  **A full owner is listed and marked, never hidden.** `MAX_PER_OWNER` is 8, and a
+  destination that silently disappears at eight is one a climber hunts for. The button says
+  *Full* and is disabled.
+  **Three empties, three sentences.** A new install, a climber who has not logged in a
+  fortnight, and one whose every destination is at the cap look identical on screen and are
+  not the same problem — *"no targets"* to all three sends two of them looking for a bug.
+  `describeEmpty` says which, and a test asserts the returning climber is not told to log
+  their first session.
+  **The image is prepared before the question is asked.** `prepareImage` resizes and
+  re-encodes, which is long enough to notice on a phone; doing it on the tap would put that
+  delay between choosing a day and seeing it land, and a file the app cannot read would
+  only say so after the climber had answered a question about a photo that was never going
+  to work. Verified in a browser both ways: a malformed PNG produces *"That image could not
+  be read"* immediately and leaves every destination locked.
+  **Measured, not asserted.** 18 mutations, 16 killed, and **the battery mis-reported one
+  survivor** — re-run twice on its own, "the photo is not cleared after it lands" is killed;
+  the batch run returning zero was the flake, not the test. The one real survivor was a
+  **vacuous test of mine**: asserting `input.value === ''` after picking a file passes
+  whether or not the code clears anything, because jsdom's `fireEvent.change` sets `.files`
+  and never `.value`, and staging the dirty state is impossible since assigning a non-empty
+  value to a file input throws by design. Replaced with a source-level check that says why.
+  **Two things the browser caught that jsdom could not.** The count rendered as a bare `1`
+  with no units, reading in the DOM as part of the grade beside it — *"The Nose · V7"* and
+  *"1"* running together into `V71`. Measured with a long project name and three photos:
+  the two spans are 8px apart with `justify-between` and nothing overflows at 430px, so the
+  concatenation was an artefact of `textContent` rather than a visual bug — but a number
+  with no unit was worth fixing anyway, and it says *"3 photos"* now. And the first browser
+  run failed on a malformed test PNG, which is how the error path got verified for free.
+  **A process note.** The full suite passed before the build, and then the budget check
+  failed: `perf.test.ts` is `it.runIf(built)` and had measured the *previous* milestone's
+  `dist`. A stale artefact looks identical to a healthy one. Build first; the comment in
+  that file now says so.
+  **Budget.** 218.8 → 218.9, measured 218.67 → 218.87, so 0.20KB. The page itself is lazy
+  and 2.17KB; what lands in the entry chunk is what always lands for a new route — a
+  `lazy()` wrapper, a `<Route>` row and the `ui/routes.ts` entry the shell imports eagerly.
+  M107 paid 0.17KB for two routes, so this is the going rate.
+  Verified in a browser in both themes at 430px, with the real canvas pipeline rather than
+  the jsdom stub. 3,805 tests pass.
+  **Still to do, and the caveat stands.** A `share_target` with `method: POST` needs the app
+  to own its service worker (`injectManifest`, or `importScripts` over `generateSW`), which
+  touches the offline guarantee M19 spent a milestone getting right. Then the manifest
+  entry, pointing at `/attach`. The landing place exists now, so that work has somewhere to
+  deliver to — which was the whole point of doing it in this order.
 
 - **M112 — The cooldown, from what today actually loaded.** *Done, and the premise was
   wrong in six ways.*

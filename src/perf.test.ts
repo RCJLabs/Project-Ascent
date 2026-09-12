@@ -329,7 +329,27 @@ describe('the bundle stays small', () => {
     // rock ladder. `derive.ts` is entry-chunk by definition — everything
     // reads `ClimberState` — so this is the cost of the accumulator itself.
     // The card is on the lazy progress route.
-    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(218.8);
+    //
+    // Unchanged at M107b, and that is the milestone rather than a footnote:
+    // 144 drills' cues and faults would have cost **7.58KB** on the fields
+    // they were proposed for, because `content/drills/index.ts` is
+    // entry-chunk by construction. In `content/drillCoaching.ts`, read only
+    // by a lazy route, they cost nothing here and 19.5KB in that route's own
+    // chunk. Unchanged again at M114 — 218.65 → 218.67 for the delete, which
+    // is a counter in a lazy Settings.
+    //
+    // 218.8 → 218.9 at M111b, measured 218.67 → 218.87, so 0.20KB for the
+    // attach page. The page itself is lazy and 2.17KB; what lands here is
+    // what always lands for a new route — a `lazy()` wrapper, a `<Route>`
+    // row, and the entry in `ui/routes.ts`, which the shell imports eagerly
+    // for back-link titles and the search browser. M107 paid 0.17KB for two
+    // routes, so this is the going rate and not a regression.
+    //
+    // **A process note, because it nearly shipped red.** The full suite was
+    // run *before* `npm run build`, so this check measured the previous
+    // milestone's `dist` and passed on it. It is `it.runIf(built)`, which
+    // makes a stale artefact look identical to a healthy one. Build first.
+    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(218.9);
   });
 
   it.runIf(built)('keeps every program body out of the entry chunk', () => {

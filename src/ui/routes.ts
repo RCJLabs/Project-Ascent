@@ -91,6 +91,7 @@ export const ROUTES: RouteMeta[] = [
   { path: '/drills', title: 'Drills', parent: '/settings', group: 'Reference', keywords: ['library', 'exercises', 'technique', 'session ideas', 'what to do'] },
   { path: '/drills/:id', title: 'Drill', parent: '/drills' },
   { path: '/data', title: 'Your data', parent: '/settings', group: 'Reference', keywords: ['storage', 'records', 'health', 'orphaned', 'unreadable', 'tidy'] },
+  { path: '/attach', title: 'Add a photo', parent: '/', group: 'Log', keywords: ['photo', 'picture', 'image', 'camera', 'attach', 'upload', 'beta shot', 'share'] },
   { path: '/injury/:id', title: 'Injury', parent: '/climber' },
 
   // Play
