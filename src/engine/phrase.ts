@@ -14,6 +14,22 @@
  */
 
 /** "A", "A and B", "A, B and C". */
+/**
+ * "a" or "an", by the sound the word starts with.
+ *
+ * Vowel letters, which is not the rule English actually uses — "an hour",
+ * "a European" — but is right for every word the app puts after it: body
+ * parts, grades and program names. Anything that needs the real rule needs
+ * a dictionary, and a dictionary for one adjective is not worth carrying.
+ *
+ * Added at M110, when the sample climber put *"you have logged a elbow
+ * injury"* on the home screen of a screenshot. Nothing had ever shown it,
+ * because nothing had ever had an elbow injury and a plateau at once.
+ */
+export function article(word: string): string {
+  return /^[aeiou]/i.test(word.trim()) ? 'an' : 'a';
+}
+
 export function joinList(parts: readonly string[]): string {
   if (parts.length <= 1) return parts[0] ?? '';
   return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]!}`;

@@ -28,6 +28,15 @@ export interface MetricEntry {
   /** Human form, when the number alone is not the answer. */
   display?: string;
   note?: string;
+  /**
+   * Written by the demo climber, and the only thing the wipe deletes
+   * (PLAN.md M110).
+   *
+   * Absent on everything a real climber logged, which is what makes the
+   * wipe safe: it removes what it wrote and nothing else, so a real session
+   * logged while the sample data was loaded survives it.
+   */
+  demo?: true;
 }
 
 /** A benchmark is its metric, its day and its number; charts plot all three. */

@@ -7,6 +7,10 @@ import { clearSnapshot, readSnapshot, restoreSnapshot, takeSnapshot } from '@/db
 import { ImportPreviewCard, UndoImportCard } from './ImportPreviewCard';
 import { SpreadsheetImportCard, pendingFrom, type CsvPending } from './SpreadsheetImportCard';
 import { CsvError, parseCsv } from '@/engine/csv';
+import { canLoadDemo, demoInjuries, loadDemo, wipeDemo } from '@/db/demo';
+import { hasDemo } from '@/db/demoFlag';
+import { getProgram } from '@/content/programs';
+import { layoutsFor, planFromLayout } from '@/engine/scheduler';
 import type { Session } from '@/db/sessions';
 import { useSessions } from '@/store/sessions';
 import { mediaBytes } from '@/db/media';
@@ -111,6 +115,10 @@ export function SettingsPage() {
   const csvRef = useRef<HTMLInputElement>(null);
   const [csv, setCsv] = useState<CsvPending | null>(null);
   const byDate = useSessions((s) => s.byDate);
+  const [demo, setDemo] = useState<{ loaded: boolean; offerable: boolean }>({
+    loaded: false,
+    offerable: false,
+  });
   // Every session key already in the log, so an imported day never lands on
   // one the climber wrote here. Memoised on the store rather than rebuilt
   // per keystroke in the preview.
@@ -147,10 +155,20 @@ export function SettingsPage() {
     // The old single-JSON form base64'd every picture, which cost a third of
     // their size in the file and several copies of it in memory.
     const { bytes, file } = await exportArchive({ media: withMedia });
+    // Sample data does not leave as a backup (PLAN.md M110). The file is
+    // named for what it is, and `markExported` is not called: `lastExportAt`
+    // feeds the coach's "you have never exported a backup" rule, and a year
+    // of someone else's training is not the thing that rule is about.
+    const sample = await hasDemo();
     downloadFile(
       new Blob([bytes as BlobPart], { type: 'application/zip' }),
-      `project-ascent-backup-${file.exportedAt.slice(0, 10)}.zip`,
+      `project-ascent-${sample ? 'sample-data' : 'backup'}-${file.exportedAt.slice(0, 10)}.zip`,
     );
+    if (sample) {
+      setMessage('Exported as sample data — this is not a backup, because none of it is yours.');
+      void refreshStorage();
+      return;
+    }
     markExported();
     setMessage(
       withMedia && file.media?.length
@@ -189,6 +207,66 @@ export function SettingsPage() {
       setMessage(e instanceof Error ? e.message : 'Import failed.', true);
     } finally {
       if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
+  /** What the sample-data card can offer right now (PLAN.md M110). */
+  const refreshDemo = useCallback(async () => {
+    setDemo({ loaded: await hasDemo(), offerable: await canLoadDemo() });
+  }, []);
+
+  useEffect(() => {
+    void refreshDemo();
+  }, [refreshDemo, byDate]);
+
+  async function startDemo() {
+    setBusy(true);
+    try {
+      const made = await loadDemo();
+      const program = getProgram(made.programId);
+      const profile = useProfile.getState();
+      // Through the store's own actions, because they are what persist.
+      // Writing the profile with `setState` and then re-hydrating threw the
+      // whole thing away on the next read — the sample climber came back
+      // with no program and no injury.
+      //
+      // The start date is seeded first: `startProgram` keeps an existing one
+      // rather than stamping today, which is what backdates the block to
+      // week six instead of week one.
+      useProfile.setState((p) => ({
+        startDates: { ...p.startDates, [made.programId]: made.startDate },
+      }));
+      // The program's own recommended week, which is what a climber picking
+      // it from the catalogue gets offered first.
+      const layout = program ? layoutsFor(program)[0] : undefined;
+      profile.startProgram(made.programId, layout ? planFromLayout(layout) : {});
+      for (const injury of demoInjuries()) profile.restoreInjury(injury);
+      await hydrateAll();
+      setMessage('Sample data loaded. Nothing in it happened.');
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Could not load the sample data.', true);
+    } finally {
+      setBusy(false);
+      void refreshDemo();
+      void refreshStorage();
+    }
+  }
+
+  async function clearDemo() {
+    setBusy(true);
+    try {
+      const gone = await wipeDemo();
+      const profile = useProfile.getState();
+      profile.stopProgram();
+      for (const injury of demoInjuries()) profile.removeInjury(injury.id);
+      await hydrateAll();
+      setMessage(`Sample data cleared — ${gone} record${gone === 1 ? '' : 's'}. Anything you logged yourself is still here.`);
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Could not clear the sample data.', true);
+    } finally {
+      setBusy(false);
+      void refreshDemo();
+      void refreshStorage();
     }
   }
 
@@ -538,6 +616,37 @@ export function SettingsPage() {
             onUndo={() => void undoImport()}
             onKeep={() => void keepImport()}
           />
+        )}
+
+        {/* A climber who does not exist (PLAN.md M110). Offered only on an
+            empty log, because sample data in a real one is the whole risk —
+            the same `hasRealData` gate the backup import uses. */}
+        {(demo.loaded || demo.offerable) && (
+          <Card title="Sample data">
+            {demo.loaded ? (
+              <>
+                <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+                  A year of someone else's training is loaded: sessions, three projects, an injury
+                  and a set of benchmarks. None of it happened. Clearing it takes out exactly what
+                  it put in — anything you logged yourself stays.
+                </p>
+                <Button variant="outline" disabled={busy} onClick={() => void clearDemo()}>
+                  Clear the sample data
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+                  Fills the app with a year of plausible training so every screen has something to
+                  show — for a look around, a screenshot or a video. Offered only while your log is
+                  empty, and it never touches anything you write afterwards.
+                </p>
+                <Button variant="outline" disabled={busy} onClick={() => void startDemo()}>
+                  Load a sample climber
+                </Button>
+              </>
+            )}
+          </Card>
         )}
 
         <StorageCard

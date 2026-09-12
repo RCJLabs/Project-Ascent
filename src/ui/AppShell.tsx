@@ -3,6 +3,7 @@ import { Link, useLocation } from 'wouter';
 import { CalendarDays, Dumbbell, Mountain, Search, Target, TrendingUp } from 'lucide-react';
 import { Announcer } from './Announce';
 import { LiveBar, useLiveBanner } from './LiveBar';
+import { DemoBanner } from './DemoBanner';
 import { StorageWarning } from './StorageWarning';
 import { UndoBar } from './UndoBar';
 import { UpdatePrompt } from './UpdatePrompt';
@@ -173,7 +174,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* The content still has a maximum: a paragraph 1,200px wide is
             unreadable whatever the window is doing. Wide enough for two
             columns of cards, and no wider. */}
-        <div className="max-w-2xl mx-auto lg:max-w-5xl">{children}</div>
+        <div className="max-w-2xl mx-auto lg:max-w-5xl">
+          <DemoBanner />
+          {children}
+        </div>
       </main>
     </div>
   );

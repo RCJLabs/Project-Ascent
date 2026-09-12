@@ -48,6 +48,15 @@ export interface Project {
   sendAppliedFrom?: string;
   /** When that fold happened. The M4 reward pipeline reads this. */
   appliedAt?: string;
+  /**
+   * Written by the demo climber, and the only thing the wipe deletes
+   * (PLAN.md M110).
+   *
+   * Absent on everything a real climber logged, which is what makes the
+   * wipe safe: it removes what it wrote and nothing else, so a real session
+   * logged while the sample data was loaded survives it.
+   */
+  demo?: true;
   createdAt: string;
   updatedAt: string;
 }

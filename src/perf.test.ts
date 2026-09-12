@@ -203,7 +203,7 @@ describe('the bundle stays small', () => {
   const dist = 'dist/assets';
   const built = existsSync(dist);
 
-  it.runIf(built)('keeps the first load under 217.4KB gzipped', () => {
+  it.runIf(built)('keeps the first load under 217.8KB gzipped', () => {
     const html = readFileSync('dist/index.html', 'utf8');
     const entry = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)?.[1];
     expect(entry, 'no entry chunk in index.html').toBeDefined();
@@ -261,7 +261,16 @@ describe('the bundle stays small', () => {
     // `GymPage` are eagerly imported, so a chip row in the climb entry is
     // first-load by construction. The lazy `LogPage` the note above calls
     // the real headroom is still the answer, and still a perf milestone.
-    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(217.4);
+    //
+    // 217.4 → 217.7 at M110, measured 217.34 → 217.68, so 0.34KB for the
+    // sample-data banner — which is in the eager shell because the risk it
+    // guards is sample data mistaken for a real log on a page that is not
+    // Settings. It first measured **221.67**: the banner imported `hasDemo`
+    // from `db/demo.ts` and pulled the generator, the RNG and the programs
+    // it reads into the entry chunk with it. `db/demoFlag.ts` is the split
+    // that gave 3.99KB back, and `demoClimber.test.tsx` holds it apart. The
+    // line is 217.8 rather than 217.7: the demo's project burns cost 0.05KB.
+    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(217.8);
   });
 
   it.runIf(built)('keeps every program body out of the entry chunk', () => {

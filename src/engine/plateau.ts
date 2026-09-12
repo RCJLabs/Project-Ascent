@@ -22,6 +22,7 @@ import type { Session } from '@/db/sessions';
 import type { BodyPart } from '@/content/warmups';
 import { getDrill } from '@/content/drills';
 import { getMetric } from '@/content/metrics';
+import { article } from './phrase';
 import { seriesFor } from './assessments';
 import { addDays, daysBetween, shortLabel, today as todayKey } from './dates';
 import type { ClimberState } from './derive';
@@ -216,7 +217,10 @@ function recoveryExplanation(
   state: ClimberState,
 ): string {
   const reasons: string[] = [];
-  if (injuries.length > 0) reasons.push(`you have logged a ${injuries.join(' and ')} injury`);
+  if (injuries.length > 0) {
+    const named = injuries.join(' and ');
+    reasons.push(`you have logged ${article(named)} ${named} injury`);
+  }
   if (overloaded) {
     reasons.push(
       `your load has jumped to ${state.load.acwr!.toFixed(2)}× your baseline`,

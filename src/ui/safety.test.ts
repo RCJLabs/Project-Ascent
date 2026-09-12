@@ -135,6 +135,8 @@ describe('a delete can be undone', () => {
       'the same toggle, on the first-run screen',
     'src/features/settings/SettingsPage.tsx#clearSnapshot':
       'clearing the import restore point is the climber saying they are done with undo',
+    'src/features/settings/SettingsPage.tsx#clearDemo':
+      'clearing the sample climber, which is generated from a fixed seed — the button that put it there puts back the identical climber, so an undo toast would be a second way to do the same thing',
   };
 
   it('offers undo within reach of every destructive call, or says why not', () => {
@@ -152,7 +154,11 @@ describe('a delete can be undone', () => {
         // so the store call and the offer sit together in one function.
         const local = /\bremove\(/.test(line) && /async function remove\([\s\S]*?offerUndo\([\s\S]*?\n  \}/.test(source);
         if (local) return;
-        const fn = /clearSnapshot/.test(line) ? '#clearSnapshot' : '';
+        const fn = /clearSnapshot/.test(line)
+          ? '#clearSnapshot'
+          : /demoInjuries\(\)/.test(line)
+            ? '#clearDemo'
+            : '';
         if (ALLOWED[path + fn] !== undefined || ALLOWED[path] !== undefined) return;
         misses.push(`${path}:${i + 1}  ${line.trim().slice(0, 70)}`);
       });

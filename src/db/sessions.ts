@@ -206,6 +206,15 @@ export interface Session {
    */
   imported?: 'csv';
   /**
+   * Written by the demo climber, and the only thing the wipe deletes
+   * (PLAN.md M110).
+   *
+   * Absent on everything a real climber logged, which is what makes the
+   * wipe safe: it removes what it wrote and nothing else, so a real session
+   * logged while the sample data was loaded survives it.
+   */
+  demo?: true;
+  /**
    * When the session was started live, as wall-clock time. Present only for
    * sessions started on their own day; logging Tuesday on Thursday has no
    * clock to run. See engine/live.ts.

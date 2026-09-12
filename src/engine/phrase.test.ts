@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { joinCapped, joinList } from './phrase';
+import { article, joinCapped, joinList } from './phrase';
 
 /**
  * The two rules that collided in M84's first draft: an Oxford-less join and
@@ -37,5 +37,25 @@ describe('joining a list that is cut short', () => {
 
   it('counts one remainder as one', () => {
     expect(joinCapped(['A', 'B', 'C', 'D'], 3)).toBe('A, B, C and 1 more');
+  });
+});
+
+describe('a or an', () => {
+  // The sample climber put "you have logged a elbow injury" on a home
+  // screen: nothing had ever had an elbow injury and a plateau at once.
+  it('reads the first letter', () => {
+    expect(article('elbow')).toBe('an');
+    expect(article('ankle')).toBe('an');
+    expect(article('shoulder')).toBe('a');
+    expect(article('knee')).toBe('a');
+  });
+
+  it('is not fooled by padding or case', () => {
+    expect(article(' Elbow ')).toBe('an');
+  });
+
+  it('reads the first word of a list, which is the one it precedes', () => {
+    expect(article('elbow and knee')).toBe('an');
+    expect(article('knee and elbow')).toBe('a');
   });
 });

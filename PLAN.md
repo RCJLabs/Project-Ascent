@@ -4366,20 +4366,57 @@ materially wrong premise. Sizes are guesses.*
   **Budget.** Unchanged at 217.4KB — 217.34 measured, the objective page being lazy.
   Verified in both themes at 430px. 3,489 tests pass.
 
-- **M110 — A demo climber, for the screenshots and the videos.** *Proposed. Size M.*
-  **Premise.** §9.3 closed multi-profile with "better served by a sample-data mode".
-  Nothing was built. M12 needs store screenshots, the coach makes content about the app,
-  and every browser verification from M89 to M97 hand-rolled a fixture into IndexedDB
-  through the console.
-  **Shape.** Settings → *Load a demo climber*, offered only when the log is empty (or
-  after an export the app has seen succeed); deterministic from a seed — a year of
-  plausible sessions across two programs, three projects with burns, a trip, one injury
-  with its checklist, a set of assessments; a banner on every page and one tap to wipe;
-  export refuses to write it as a real backup. And a Playwright script that takes the
-  Play listing's screenshot set in both themes at the sizes the store wants.
-  **Risk.** Demo data in a real log. Two gates — the empty-log condition and a `demo` tag
-  on every record the wipe can find — and a test that a real session written on top of it
-  survives the wipe.
+- **M110 — A demo climber, for the screenshots and the videos.** *Done.*
+  **Premise held in full**, which is rare in this run. §9.3 really did close multi-profile
+  with *"better served by a sample-data mode"*, nothing was built, and **every browser
+  verification from M89 to M109 hand-rolled a fixture into IndexedDB through a throwaway
+  script** — seven times in this run alone, each a different shape, none of them kept.
+  **Built on what was already there.** `ascent/rng.ts` exists for the wall game and says of
+  itself that "a seed plus a sequence of inputs reproduces a run exactly on any machine",
+  which is the property a screenshot set needs — so no second generator. `hasRealData` is
+  the gate, the same one the backup import uses before it takes a restore point.
+  **Deletion by tag, not a snapshot restore.** The milestone's stated risk is sample data in
+  a real log, and its stated test is that a real session written on top survives the wipe. A
+  snapshot restore would have taken it with everything else, so every record carries
+  `demo: true` and the wipe removes exactly what it wrote.
+  **Plausible, not flattering.** A plateau in the middle, a week off, sessions with no
+  warmup, a project not sent, an injury still there, benchmarks that go sideways before they
+  go up — because `plateau.ts`, the coach and half the progress page exist to say something
+  about those and say nothing at all against a line that only goes up.
+  **Four things the screenshots caught that nothing else would have.**
+  **(1)** `newSession` stamps `createdAt` from the wall clock, so two runs a millisecond
+  apart produced different records — *"the same climber every time"* was false and the whole
+  point of a seed was lost. Every stamp is derived from the day now.
+  **(2)** Writing the profile with `setState` and then re-hydrating **threw it away**: the
+  sample climber came back with no program and no injury. It goes through the store's own
+  actions, which are what persist — and seeding the start date first makes `startProgram`
+  keep it, so the block is six weeks in rather than on day one.
+  **(3)** Every project read **"No burns yet"**. The timeline, the high point and M102's
+  longest link all drew nothing, on a headline feature. The generator writes burns now, and
+  the send it claims in the project list actually exists — it had been behind three dice and
+  never landed.
+  **(4)** *"You have logged **a** elbow injury"*, on a home screen. Nothing had ever shown it
+  because nothing had ever had an elbow injury and a plateau at once. `phrase.article` now
+  exists and is tested.
+  **And one that cost 4.3KB.** `DemoBanner` is in the eager shell — deliberately, since the
+  risk is sample data mistaken for a real log on a page that is not Settings — and importing
+  `hasDemo` from `db/demo.ts` pulled the generator, the RNG and the programs it reads into
+  the entry chunk. Measured at **221.67KB**. `db/demoFlag.ts` knows only how to count; the
+  split gave **3.99KB** back and a test holds the two apart.
+  **`scripts/shots.mjs`** takes the Play set — two sizes, both themes, eight pages, 32 files
+  — by driving the app's own button rather than a fixture that would drift from it. It found
+  its own bugs on the first run: a fresh install redirects to onboarding and held every
+  route until the script skipped it, and a hash change keeps the scroll position, so every
+  shot after the first started wherever the last one ended and the banner was never in frame.
+  **Measured, not asserted.** 36 mutations. Six survivors, all test gaps — including one
+  test that compared grade totals across a whole log to prove a pyramid, which a log of
+  single problems passes, and two that asserted on a profile the fixture had never populated.
+  **One test-harness finding, recorded rather than fixed:** the stores persist with
+  fire-and-forget writes, so `reset()` can run between a save being issued and it landing —
+  measured as exactly one project surviving the clear. The fixture clears until the gate
+  agrees rather than assuming one pass is enough.
+  **Budget.** 217.4 → 217.8KB, measured 217.34 → 217.73.
+  Verified in both themes at 430px, and by 32 screenshots of the real app.
 
 - **M111 — The app on the phone: shortcuts, share target, file handlers.** *Proposed.
   Size S–M. Not blocked on the name.*
