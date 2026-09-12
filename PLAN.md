@@ -4318,8 +4318,7 @@ entry above.)*
   what lands is two rows in the eager route table and two `lazy()` wrappers.
   Verified in both themes at 430px. 3,418 tests pass.
 
-- **M107b — The coach's cues and faults.** *Done, the mechanism and twelve of 144. The
-  other 132 are a coaching call, not a task.*
+- **M107b — The coach's cues and faults.** *Done: the mechanism, and all 144 drills coached.*
   **Premise held.** M107 settled that the descriptions already carry the method, so this
   was the next layer rather than rescue work: the short imperatives a coach says at the
   wall, and the shapes of going wrong, which no paragraph can carry without becoming an
@@ -4344,21 +4343,45 @@ entry above.)*
   it coaches, and `DrillId` is `string`, so a renamed drill orphans its coaching with no
   compiler error. `drillCoaching.test.ts` is the compiler: every key must be a drill that
   exists, and a test proves the check would notice.
-  **Twelve written, and the count is a test rather than a promise.** Base Camp's twelve
-  have three cues and two faults each. `WRITTEN` names the sources that are done, and the
-  guard holds the claim from both ends — a coached drill losing its cues fails, a source
-  added without its words fails, emptying `WRITTEN` to make everything pass vacuously
-  fails, and `{ done: 12, left: 132 }` is asserted so the size of the job is on screen
-  rather than in a comment.
+  **All 144 written, program by program, and the count is a test rather than a promise.**
+  Three cues and two faults each, every line taken from the drill's own description — M107
+  established those paragraphs already carry the method, so what this adds is what a coach
+  says about it while you are doing it. `WRITTEN` names the sources that are done and the
+  guard holds the claim from both ends: a coached drill dropping below two cues fails, a
+  source added without its words fails, emptying `WRITTEN` to make everything pass
+  vacuously fails, and `{ done: 144, left: 0 }` is asserted, so a drill added later cannot
+  arrive silently uncoached. It shipped one commit per source program, because `WRITTEN` is
+  the granularity the guard checks and each program is therefore a real increment rather
+  than a checkpoint.
   **Cues above faults, both below the method.** They are different visits: one climber is
   about to run the drill, the other is working out why it is not working. A cue read before
   the description is an instruction about something the reader has not met yet.
-  **Measured, not asserted.** 12 mutations, 11 killed, and the survivor was the sanity
-  no-op. The one worth naming: **importing the coaching from `drills/index.ts` is killed**,
-  because that single line would put all of it back on the boot path and no other test
-  would have noticed.
-  **Still the coach's.** Twelve of 144, written from the descriptions' own method, and a
-  first pass rather than a syllabus. See coaching call 11.
+  **Two cue cards on eleven pages, and that is the arrangement.** Eleven drills carry a
+  `protocolId` — all of them ARCing — so those pages show the drill's own cues *and* the
+  protocol's, the second titled "Cues for ARCing" so a reader can tell them apart. The
+  drill's are about this week's version of the session; the protocol's are about the
+  method. Specific first. Before M107b no drill had both and the title logic was
+  unexercised; a test pins the order now.
+  **Measured, not asserted.** 12 mutations on the mechanism, 11 killed, the survivor the
+  sanity no-op — and the one worth naming is that **importing the coaching from
+  `drills/index.ts` is killed**, because that single line would put all of it back on the
+  boot path and no other test would have noticed. 6 more on the finished content, 5 killed
+  plus the no-op; the apparent survivor was **a weak mutation of mine**, not a gap — it took
+  a three-cue drill down to two, which is the guard's floor. Re-run at one cue and at zero
+  faults, both killed.
+  **The final numbers, and one estimate that was wrong.** First load **218.65KB**, exactly
+  where it sat with twelve written and under the 218.8 budget: the whole library of
+  coaching costs first load nothing. The drill page's own chunk went 1.28 → **20.8KB**
+  gzipped, 63.9KB raw. That is well above the 7.42KB the injected-placeholder measurement
+  predicted, and the reason is instructive: the generator drew on a pool of eighteen
+  subjects and fourteen verbs, so gzip found structure across 144 entries that 144 pieces
+  of real prose do not have. **That measurement was a floor for the same reason the
+  repeated-text one was** — a caveat this milestone wrote down about one measurement and
+  then failed to apply to the next. It does not change the decision: 20.8KB on a deliberate
+  tap to a lazy route is cheap, and 7.58KB on every cold start was not. But the number in
+  the record is the measured one, not the projected one.
+  **Still the coach's.** All 144 in a single pass, which is a lot of coaching written at
+  once. See coaching call 11.
 
 - **M108 — Style on a climb.** *Done, the angle and the rope. The board is refused.*
   **Premise held on four of five claims.** `Climb` really was grade, scale, count, result,
@@ -4958,16 +4981,23 @@ in the code and are not the same thing.
     back to back, not about which session a short week keeps — a near-miss worth recording,
     because the settled call next door is exactly the thing that makes a second look feel
     unnecessary. Fingers are `priority: 1` now.
-11. **M107b — the remaining 132 drills' cues and faults.** **COACH: open.** Twelve of 144
-    are coached, all of them Base Camp's, written from each drill's own description — a
-    first pass and not a syllabus, so the wording of every line is overrulable like call 9's
-    stretches. The other 132 are unwritten. The milestone deliberately built the mechanism
-    and stopped: `content/drillCoaching.ts` costs nothing on first load whether it holds
-    twelve entries or 144, so the remaining work is writing and nothing else, and
-    `drillCoaching.test.ts` asserts `{ done: 12, left: 132 }` so the number can never go
-    quiet. What it needs from the coach is a decision rather than a review — write them,
-    delegate them in the twelve's voice, or leave the library at twelve and let the rest
-    stand on their descriptions, which M107 established are not stubs.
+11. **M107b — 144 drills' cues and faults, written in one pass.** **COACH: open, and it is
+    a review rather than a decision.** All 144 are coached: three cues and two faults each,
+    every line derived from the drill's own description, which M107 established already
+    carries the method. The mechanism is finished and the words are a first pass — the same
+    standing as call 9's twelve cooldown stretches before M113 settled them, at twelve times
+    the volume.
+    **Where to look first, if the whole thing is too much to read at once.** The cues are
+    the safer half: most restate a dose or a rule the description already states, and their
+    failure mode is dullness rather than wrongness. **The faults are where a coach's
+    inference got added** — a description that says *"4 quality burns, 5 min rest"* does not
+    say what going wrong looks like, so lines like *"burns three and four get flailed
+    through because two nearly worked"* are mine and not the program's. Those are the ones
+    worth your eye.
+    **Two shapes recur deliberately and are worth endorsing or killing as a set**: grade
+    drift on volume sessions (*"minus two drifts to minus one as the session warms up"*),
+    and rest-shrinkage on limit sessions (*"the last twenty minutes trains power endurance
+    instead"*). If either is wrong as coaching it is wrong in a dozen places at once.
 
 **Considered and left out, with the reason, so they are not re-proposed:**
 - *Race a ghost on the Daily Wall* — already ships (`createGhost`, `tapeToRace`, M81).

@@ -43,12 +43,20 @@
  * it describes. Faults are allowed to run longer, because being
  * recognisable from the outside takes more words than an instruction does.
  *
- * **COACH: this is a first pass rather than a syllabus.** Every line is
- * written from the drill's own description — the method was already there,
- * and what was missing is what you say about it at the wall — so the
- * wording of all of it is yours to replace, the same way M113 settled the
- * twelve cooldown stretches. `drillCoaching.test.ts` holds how much of the
- * library is done, program by program, so the count can never go quiet.
+ * ## What is here
+ *
+ * All 144, three cues and two faults each, written from each drill's own
+ * description — M107 established that those paragraphs already carry the
+ * method, so what was added is what a coach says about it while you are
+ * doing it. `drillCoaching.test.ts` holds the coverage program by program,
+ * so a drill added later cannot arrive silently uncoached.
+ *
+ * **COACH: this is a first pass rather than a syllabus, and it is 144
+ * drills written in one go.** Every line is overrulable the way M113's
+ * twelve cooldown stretches were. The shapes most likely to need your eye
+ * are the ones where a drill's description left the failure mode unstated
+ * and the fault below is a coach's inference rather than the program's
+ * own words.
  */
 
 export interface DrillCoaching {
@@ -1072,6 +1080,730 @@ export const DRILL_COACHING: Record<string, DrillCoaching> = {
     faults: [
       'Training creeps back in because the week feels idle, and the attempts get the leftovers.',
       'Skipping the graduation retest after a session that did not end in a send, which loses twelve weeks of measurement to a bad mood.',
+    ],
+  },
+
+  // ── The Siege ─────────────────────────────────────────────────────────
+
+  sg_project_selection_recon: {
+    cues: [
+      'You are auditioning, not sending. Top-rope or stick-clip everything.',
+      'Every move first try means too easy. No idea at the crux means too hard.',
+      'Pick one by the end of the session. Leaving undecided costs a week.',
+    ],
+    faults: [
+      'Choosing the route you want to have climbed rather than the one that fits the rule — the audition exists to stop that.',
+      'Trying each candidate once and calling it recon, so the choice is made on a first impression of a cold route.',
+    ],
+  },
+
+  sg_move_by_move_decoding: {
+    cues: [
+      'One move at a time. Linking is not this session.',
+      'Rehearse each move until it repeats, not until it happens once.',
+      'Log the moves that feel low-percentage. Those are the project.',
+    ],
+    faults: [
+      'Starting to link because the moves are going well, which spends the session and leaves the hard moves undecoded.',
+      'A move gets done once and marked solved. Once is luck; repeatable is beta.',
+    ],
+  },
+
+  sg_beta_refinement_rests: {
+    cues: [
+      'Hunt the micro-beta: a thumb catch, a heel that turns a campus into a reach, a knee bar that becomes a rest.',
+      'Test an alternative through the crux. The first solution is rarely the best one.',
+      'Find and rehearse every shake-out, not just the moves.',
+    ],
+    faults: [
+      'Settling on the first sequence that worked, which is how a route stays at ninety per cent for a season.',
+      'Rests get noted and never rehearsed, so on the redpoint you arrive at one and do not know how to use it.',
+    ],
+  },
+
+  sg_first_links_checkpoint: {
+    cues: [
+      'Three to five move sections, and at least one attempt through the crux.',
+      'Moderate volume. The fingerboard deloads this week for a reason.',
+      'Checkpoint: still impossible rather than low-percentage means reassess the choice now.',
+    ],
+    faults: [
+      'The checkpoint gets skipped because reassessing feels like quitting — it is cheaper this week than in week 8.',
+      'Volume creeps up because linking is the fun part, and the deload the week was built around disappears.',
+    ],
+  },
+
+  sg_section_links_doubles: {
+    cues: [
+      'Five to eight move sections, especially through and around the crux.',
+      'Two or three burns, fifteen to twenty minutes between. Each one a genuine effort.',
+      'Climb in the better conditions of your window, not the convenient part of it.',
+    ],
+    faults: [
+      'Burns become rehearsals — going through the sequence rather than trying it, which trains nothing new.',
+      'Four or five burns because the rests feel long, so the last two happen on a body that has nothing left.',
+    ],
+  },
+
+  sg_extend_links_crux: {
+    cues: [
+      'At least one link carries from before the crux to after it.',
+      'The crux with pump in the forearms, not fresh.',
+      'Two or three burns, fifteen to twenty minutes between.',
+    ],
+    faults: [
+      'Every link stops at the crux, so the move only ever gets tried fresh and the redpoint version is never rehearsed.',
+      'Doing the crux fresh and calling it solved. If it never goes linked, that is the capacity problem the parallel session is fixing.',
+    ],
+  },
+
+  sg_bottom_to_crux: {
+    cues: [
+      'Pick the half that is your weakness, not the half that feels good.',
+      'Ground to crux, or crux to anchors. One or the other on your best burn.',
+      'Two or three burns, fifteen to twenty minutes between.',
+    ],
+    faults: [
+      'Always choosing bottom-to-crux because the top already goes, which leaves the finish untested under fatigue.',
+      'Best burn spent on a warm-up lap, so the real link happens third and tired.',
+    ],
+  },
+
+  sg_longest_links_reassess: {
+    cues: [
+      'The biggest chunks the route allows, in one or two pieces.',
+      'By the end of this week, one link should contain the full crux sequence.',
+      'Still falling before the crux means consider dropping a grade and banking a send.',
+    ],
+    faults: [
+      'The reassessment rule gets read and not applied, which is how a cycle ends with no send and no link.',
+      'Chunk sizes stop growing and the sessions repeat week 5, so the route never gets stitched together.',
+    ],
+  },
+
+  sg_full_redpoint_burns: {
+    cues: [
+      'Single-attempt mode. Two or three burns from the ground, twenty to thirty minutes between.',
+      'Warm up thoroughly but conserve skin and fingers for the real attempts.',
+      'Every burn gets the same warm-up, the same focus, the same clipping.',
+    ],
+    faults: [
+      'A rehearsal burn sneaks in first, which spends the best attempt of the day on a lap.',
+      'Climbing at whatever time suits, on the phase where conditions start deciding the outcome.',
+    ],
+  },
+
+  sg_first_one_hang: {
+    cues: [
+      'The whole route with one rest or fall. That is the milestone.',
+      'Two burns, maybe three, full rest, best conditions.',
+      'Tape a split early and stop while the fingers still feel crisp.',
+    ],
+    faults: [
+      'Pushing a fourth and fifth burn on tired skin, which costs the next session and the one after.',
+      'Taking two hangs and calling it close. The one-hang is a specific thing and it predicts the send.',
+    ],
+  },
+
+  sg_refine_dont_rehearse: {
+    cues: [
+      'You know the moves. Now dial the clipping stances, the warm-up and the time of day.',
+      'Reduce volume so every burn is fully fresh.',
+      'You are removing reasons to fall, not learning anything new.',
+    ],
+    faults: [
+      'Going back to working moves because it feels like training — rehearsal at this stage only costs skin.',
+      'The warm-up never gets tested, so send day uses one that has left you either cold or already pumped.',
+    ],
+  },
+
+  sg_send_window: {
+    cues: [
+      'Few attempts, fully rested. Thirty minutes or more between burns.',
+      'Coolest, driest window of the day.',
+      'Poor conditions are a reason to wait, not a reason to burn skin.',
+    ],
+    faults: [
+      'Going anyway on a bad day because the session was in the diary, which spends skin on a low-percentage attempt.',
+      'Adding volume around the burns because the session feels short. The session is meant to feel short.',
+    ],
+  },
+
+  sg_capacity_laps_arc: {
+    cues: [
+      'RPE 3 to 4. Easy breathing and a mild pump, never more.',
+      'Fifteen to twenty minutes continuous, two rounds, five minutes between.',
+      'Do not stop between routes. Keep moving.',
+    ],
+    faults: [
+      'The terrain is hard enough to pump you, which trains the wrong system and makes the session pointless rather than merely dull.',
+      'Skipping it because it is boring — the linking weeks are where that bill arrives.',
+    ],
+  },
+
+  sg_arc_volume_build: {
+    cues: [
+      'Eighteen to twenty-two minutes continuous, two or three rounds.',
+      'Strictly RPE 3 to 4. Genuine pump means you are climbing too hard.',
+      'Use easier terrain or bigger holds to keep moving for the whole round.',
+    ],
+    faults: [
+      'Holding the grade and shortening the round, when the point is holding the round and dropping the grade.',
+      'The last third of each round becomes survival, which is an endurance session rather than a capacity one.',
+    ],
+  },
+
+  sg_arc_light_intervals: {
+    cues: [
+      'One ARC round first, then two or three light laps at RPE 5 to 6.',
+      'Work and rest are equal. Two to three minutes each.',
+      'Keep the form clean. Sloppy intervals teach bad movement under fatigue.',
+    ],
+    faults: [
+      'The intervals drift up toward true doubles, which is next block and lands on legs that have not built to it.',
+      'The ARC round gets dropped to make room for the intervals, so the bridge loses the half it is bridging from.',
+    ],
+  },
+
+  sg_capacity_consolidation: {
+    cues: [
+      'Peak the volume: two or three rounds over twenty minutes, RPE 3 to 4.',
+      'Easy and high-volume. You are banking capacity, not testing it.',
+      'Finish pump-free and recovered. Next week the intensity steps up.',
+    ],
+    faults: [
+      'Testing the base because it is the last week of it, which arrives at the linking block already tired.',
+      'Cutting the volume because the intensity is low and it feels like a wasted session. This is the biggest aerobic week of the program.',
+    ],
+  },
+
+  sg_rope_links_doubles: {
+    cues: [
+      'Lower off the first and pull straight onto the second. No ground rest.',
+      'Eighty to ninety per cent of redpoint, so both routes go.',
+      'Four to six minutes between sets, three or four sets.',
+    ],
+    faults: [
+      'A chalk-up and a shake at the ground between the two, which removes the entire stimulus.',
+      'Set one is clean and set four falls off the first route. Choose the grade for set four.',
+    ],
+  },
+
+  sg_doubles_added_volume: {
+    cues: [
+      'Add a set or nudge the grade toward ninety per cent. One or the other, not both.',
+      'Deeply pumped forearms with controlled movement is the target.',
+      'If form collapses, drop the intensity rather than the focus.',
+    ],
+    faults: [
+      'Adding the set and the grade in the same week, so the jump is too big and the last sets turn to flailing.',
+      'Grinding out a set after the movement has gone, which trains sloppiness under pump.',
+    ],
+  },
+
+  sg_rope_links_triples: {
+    cues: [
+      'Three routes back-to-back, no ground rest. Five to seven minutes between sets.',
+      'Around eighty per cent of redpoint so all three are completable.',
+      'Two or three sets. The duration of the pumped state is the point.',
+    ],
+    faults: [
+      'Keeping the doubles grade for triples, so the third route never gets climbed and the set is really a double.',
+      'Resting at the anchor between routes, which breaks the continuity the triple exists to train.',
+    ],
+  },
+
+  sg_triples_peak_volume: {
+    cues: [
+      'Three or four sets. The highest power-endurance volume of the program.',
+      'Pumped but precise. Exhausted and sloppy is a different session.',
+      'If the climbing turns to flailing, drop a route rather than grind out junk laps.',
+    ],
+    faults: [
+      'Finishing the planned sets after the movement has gone, so the peak week banks fatigue rather than capacity.',
+      'Treating this as a week to push harder terrain — the volume is the progression, and the grade stays.',
+    ],
+  },
+
+  sg_redpoint_bursts: {
+    cues: [
+      'A route at your redpoint grade, not the project.',
+      'One all-out burn, twenty minutes of full rest, then one or two more.',
+      'Each burn is maximal and each rest is real. This is not a circuit.',
+    ],
+    faults: [
+      'Cutting the rest because twenty minutes feels idle, which turns the burst session back into power endurance.',
+      'Using the project, so the session becomes projecting and the recovery-to-peak cycle never gets rehearsed.',
+    ],
+  },
+
+  sg_burst_intensity: {
+    cues: [
+      'One or two maximal burns, twenty minutes or more of recovery between.',
+      'Total volume stays low. Intensity is the whole point.',
+      'Go to the limit, recover, and go again. That is the send-day pattern.',
+    ],
+    faults: [
+      'Adding a third and fourth burn, which converts the sharpening week into a fatigue week.',
+      'Warming up so much that the first maximal burn is the fourth hard thing of the day.',
+    ],
+  },
+
+  sg_taper_begins: {
+    cues: [
+      'Half the volume, the same intensity.',
+      'One or two crisp bursts, full rest, then stop.',
+      'Leave feeling like you could have done more.',
+    ],
+    faults: [
+      'Dropping the intensity along with the volume, which sheds the sharpness the taper is meant to keep.',
+      'Adding a session back because the week feels empty, which is the fatigue the taper exists to shed.',
+    ],
+  },
+
+  sg_send_support: {
+    cues: [
+      'Ten to fifteen minutes of easy continuous climbing, or one easy burst.',
+      'Just enough to stay primed. No more.',
+      'Deep in send attempts on the project? Skip it entirely.',
+    ],
+    faults: [
+      'Turning the flush into a session because it feels like a wasted day, which takes fitness out of the redpoint.',
+      'Doing it the day before a send attempt on tired forearms, when skipping it was the instruction.',
+    ],
+  },
+
+  // ── Peak Performance ──────────────────────────────────────────────────
+
+  pp_limit_four_burns: {
+    cues: [
+      'Twenty to thirty minutes of warm-up, to full temperature.',
+      'Four burns per project, five minutes between. Ten or more between projects.',
+      'Form visibly breaking on two burns in a row ends that project.',
+    ],
+    faults: [
+      'Burns three and four get flailed through because two nearly worked, which trains the sloppy pattern at max load.',
+      'Rests shrink as the session runs on, so the last hour is power endurance at a limit grade.',
+    ],
+  },
+
+  pp_style_diverse_limit: {
+    cues: [
+      'Slab, vertical, overhang, roof. Four different styles, not four boulders.',
+      'Three or four burns each, five minutes between.',
+      'Note which style felt worst. It feeds the next technique day.',
+    ],
+    faults: [
+      'Three overhangs and a vertical, chosen because they looked best in the warm-up — breadth is the drill.',
+      'The worst style gets abandoned after one burn, which is the style with the most to give.',
+    ],
+  },
+
+  pp_crux_isolation: {
+    cues: [
+      'Pre-rig the sequence and try the crux alone, five to eight attempts.',
+      'Three to four minutes between isolation attempts.',
+      'Then one full run. Isolation builds it, the full run integrates it.',
+    ],
+    faults: [
+      'Running the full boulder between every isolation attempt, so the crux always arrives tired and never improves.',
+      'Skipping the full run at the end, which leaves a stronger move that has never been climbed into.',
+    ],
+  },
+
+  pp_deload_flow: {
+    cues: [
+      'Forty-five to sixty minutes at RPE 6 on V5 to V7.',
+      'No limit work and no projects.',
+      'Sleep and eat well. Tendon adaptation is what the week is for.',
+    ],
+    faults: [
+      'One limit go at the end because the body feels good, which is the week Intensify is built on.',
+      'Dropping the session entirely instead of climbing easy — the movement keeps the patterns, the intensity is what goes.',
+    ],
+  },
+
+  pp_intensify_five_burns: {
+    cues: [
+      'Three projects, five burns each, five minutes between.',
+      'This is the hardest climbing week of the program so far.',
+      'Burn five worse than burn one means stop that project.',
+    ],
+    faults: [
+      'Finishing all five on every project regardless, so the added fatigue buys nothing and costs the next session.',
+      'Choosing projects that went last block, which makes the peak volume week the easiest one.',
+    ],
+  },
+
+  pp_boulder_link_ups: {
+    cues: [
+      'Each problem twice, back to back, no rest between the two.',
+      'One to two grades below max so the second lap is climbable.',
+      'Three sets per problem, five minutes between sets.',
+    ],
+    faults: [
+      'A chalk-up between the two laps, which removes the pump the drill is built around.',
+      'Picking problems at max, so the first lap is the session and the second never happens.',
+    ],
+  },
+
+  pp_hard_flash_day: {
+    cues: [
+      'Five or six boulders one to two grades below max. No second burns.',
+      'Read the sequence carefully before you leave the ground.',
+      'Warm up fully first. A flash day punishes a cold start.',
+    ],
+    faults: [
+      'A second go on the one that nearly went, which is projecting and voids the test.',
+      'Choosing boulders you have watched other people climb, so the reading half was done for you.',
+    ],
+  },
+
+  pp_deload_flash_volume: {
+    cues: [
+      'Twenty to twenty-five moderate boulders, two to three grades below max.',
+      'One to two minutes between. Keep moving.',
+      'No limit work at all.',
+    ],
+    faults: [
+      'Grade drift through the session until minus three becomes minus one, which turns mileage into a session to recover from.',
+      'Cutting the volume because the grades are easy. The volume is what keeps the patterns grooved.',
+    ],
+  },
+
+  pp_critical_taper: {
+    cues: [
+      'Thirty-five per cent less volume. Four or five boulders at a moderate grade.',
+      'Muscles adapt in weeks and tendons in months. The muscles are lying to you.',
+      'Non-negotiable. Skip it and the peak sends become peak injuries.',
+    ],
+    faults: [
+      'Skipping it because the first deload already happened and the body feels ready. Feeling ready is the symptom.',
+      'Keeping the volume and dropping only the grade, which is not what thirty-five per cent means.',
+    ],
+  },
+
+  pp_peak_projecting: {
+    cues: [
+      'One project. Six burns, six to eight minutes between.',
+      'Longer rests than usual, because this is about send quality rather than accumulation.',
+      'Visualise the sequence before you leave the ground, every time.',
+    ],
+    faults: [
+      'Shortening the rests back to five minutes, which trades the quality the phase exists for.',
+      'The note says fell at the crux. Where is not why.',
+    ],
+  },
+
+  pp_send_window: {
+    cues: [
+      'Four or five burns maximum, eight to ten minutes between.',
+      'Eight hours of sleep the night before.',
+      'No send today is fine. Week 12 exists.',
+    ],
+    faults: [
+      'A sixth and seventh burn because the fifth was close, which spends the week that was held in reserve.',
+      'Junk volume before the burns, which spends the session the twelve weeks were for.',
+    ],
+  },
+
+  pp_graduation_retest: {
+    cues: [
+      'Split the week: one session to retest, one to send.',
+      'Same edge, same bar, same rest as Week 0.',
+      'Three full rest days after, before any new program.',
+    ],
+    faults: [
+      'Retesting and sending in the same session, so whichever comes second measures a tired climber.',
+      'Rolling straight into the next program on peak-cycle fatigue, which is how a good block ends in an injury.',
+    ],
+  },
+
+  pp_movement_inventory: {
+    cues: [
+      'Six to eight sub-max boulders, climbed to notice rather than to send.',
+      'Where do the feet slip, which hands feel weak, which positions feel awkward?',
+      'Write two or three weaknesses down. That is the deliverable.',
+    ],
+    faults: [
+      'Fixing things as you notice them, which is the next two weeks and not this one. This session diagnoses.',
+      'Finishing with no notes, so weeks 3 and 4 have nothing to target.',
+    ],
+  },
+
+  pp_video_review_day: {
+    cues: [
+      'Film four or five boulders one to two grades below max.',
+      'Watch back between attempts, not afterwards.',
+      'One focus per boulder. Early arm-bend, hips off the wall, or foot hesitation.',
+    ],
+    faults: [
+      'Watching for how it looked rather than for one fixable thing, so the next attempt is identical.',
+      'Filming everything and reviewing it at home, which removes the only chance to change anything.',
+    ],
+  },
+
+  pp_weakness_drilling_1: {
+    cues: [
+      'One weakness. Four or five sub-max boulders that expose it.',
+      'Each climbed two or three times with deliberate attention.',
+      'Three minutes between burns.',
+    ],
+    faults: [
+      'Drilling two weaknesses at once, which halves the dose on both.',
+      'Choosing boulders you climb well, so the weakness never actually gets exposed.',
+    ],
+  },
+
+  pp_weakness_drilling_2: {
+    cues: [
+      'The second weakness, same structure as week 3.',
+      'Two weeks per weakness is the minimum dose for the change to stick.',
+      'Both already fixed? Pick a third rather than repeating the first.',
+    ],
+    faults: [
+      'Going back to weakness one because it felt productive, which leaves the second one untouched.',
+      'Deciding a weakness is fixed after one session. One session is a good day.',
+    ],
+  },
+
+  pp_footwork_under_fatigue: {
+    cues: [
+      'Eight to ten boulders two to three grades below max, on deliberately small feet.',
+      'Between boulders: ten push-ups and twenty seconds of hollow body.',
+      'The fatigue is the point. Precision arrives before it or not at all.',
+    ],
+    faults: [
+      'Skipping the push-ups because they interrupt the climbing, which removes the entire premise.',
+      'Taking bigger feet as the session goes on, so the drill gets easier exactly where it should bite.',
+    ],
+  },
+
+  pp_silent_feet_hover: {
+    cues: [
+      'Feet make no sound. If you hear it, that placement did not count.',
+      'Two to three seconds hovering above the hold before you place.',
+      'Six to eight boulders, two grades below max. Slower than you are used to.',
+    ],
+    faults: [
+      'The hover shortens as the forearms load, and the last placements of a boulder are taps.',
+      'Feet get quiet and the hover goes, or the reverse. Losing one turns it into a drill you have already done.',
+    ],
+  },
+
+  pp_body_position_puzzles: {
+    cues: [
+      'Four or five boulders with contested positions: heel-toes, drop-knees, layback cruxes.',
+      'Climb each three times with a different variation.',
+      'Log which variation worked. The log is the point.',
+    ],
+    faults: [
+      'Climbing it the same way three times because the first way worked, which trains no flexibility at all.',
+      'Trying variations and noting none, so nothing survives the session.',
+    ],
+  },
+
+  pp_deload_style_library: {
+    cues: [
+      'Ten to fifteen boulders, V5 to V7, across every style.',
+      'No projects, no focus. Varied mileage on solid terrain.',
+      'Broad recovery for the nervous system, vocabulary kept.',
+    ],
+    faults: [
+      'One project go because the terrain is right there, which is the whole thing the week says no to.',
+      'Ten boulders in one style, which recovers just as well and maintains nothing.',
+    ],
+  },
+
+  pp_integration_day: {
+    cues: [
+      'Four to six boulders at your old flash level. They should feel different.',
+      'Apply silent feet and the body-position work from phase 2.',
+      'Every send should feel cleaner than it used to. That is the measurement.',
+    ],
+    faults: [
+      'Pushing the grade because the old flash level feels easy, which is the point being missed rather than proved.',
+      'Climbing them the old way, so nothing from phase 2 gets integrated and the day just banks volume.',
+    ],
+  },
+
+  pp_flow_projecting_prep: {
+    cues: [
+      'Fifteen to twenty boulders, three grades below max, at speed.',
+      'RPE 5 to 6. Fluid rather than careful.',
+      'Fewer mental cues. This is the session where you stop thinking.',
+    ],
+    faults: [
+      'Climbing them precisely and slowly, which is a different drill and leaves the motor patterns at the old speed.',
+      'The grade creeps up until speed is impossible, and the session becomes ordinary volume.',
+    ],
+  },
+
+  pp_light_maintenance: {
+    cues: [
+      'Eight to ten easy boulders. Heart rate up, volume down.',
+      'Keep the nervous system awake without adding fatigue.',
+      'Feeling fresh? Skip it entirely and rest.',
+    ],
+    faults: [
+      'Turning a maintenance session into a workout because it felt too easy, which takes something out of the send attempts.',
+      'Doing it the day before a send attempt when skipping it was the instruction.',
+    ],
+  },
+
+  pp_graduation_assessment: {
+    cues: [
+      'Five boulders, five different styles, one to two grades below max.',
+      'Rate attempt quality nought to ten, independent of send or fail.',
+      'Log whatever still feels weak. It picks your next program.',
+    ],
+    faults: [
+      'Scoring by outcome, which is the one thing the rating exists to decouple.',
+      'Choosing five boulders in your best style, so the assessment measures the half you already knew about.',
+    ],
+  },
+
+  pp_project_selection: {
+    cues: [
+      'One or two projects at your max grade, five or six attempts each.',
+      'Sixty seconds of visualisation with the eyes closed between attempts.',
+      'Can you do each move? Linking is not this week.',
+    ],
+    faults: [
+      'Trying to link because the moves went well, which spends the session and leaves the hard moves undecoded.',
+      'The note says fell low down. Which move, and why, is what week 2 needs.',
+    ],
+  },
+
+  pp_link_building: {
+    cues: [
+      'Start two or three moves before the crux and top out two or three after.',
+      'Five or six attempts, five to eight minutes between.',
+      'The goal is consecutive moves, not the send.',
+    ],
+    faults: [
+      'Going for the full redpoint because a link felt good, which turns every attempt into a low-percentage go from the ground.',
+      'Links that always start after the crux, so the crux is only ever climbed fresh.',
+    ],
+  },
+
+  pp_top_down_redpointing: {
+    cues: [
+      'Send the top section first, from the last rest through the top-out.',
+      'Then start one move lower and send it again.',
+      'Six to eight attempts, and quality decides when to stop.',
+    ],
+    faults: [
+      'Extending down two or three moves at a time because progress feels slow, so no section is ever actually owned.',
+      'Skipping to full attempts once the top goes, which loses the ending-confidence the drill was building.',
+    ],
+  },
+
+  pp_deload_session_review: {
+    cues: [
+      'No projecting. One to two grades below the project.',
+      'Read every crux note from weeks 1 to 3.',
+      'Decide: keep this project for Intensify, or swap. Log the decision.',
+    ],
+    faults: [
+      'The review gets skipped because the climbing was the plan, so the decision gets made by default in week 5.',
+      'One go on the project to see how it feels, which is the week not happening.',
+    ],
+  },
+
+  pp_full_redpoint_attempts: {
+    cues: [
+      'Five or six burns, six to eight minutes between.',
+      'Eyes closed, full sequence, sixty seconds minimum before every burn.',
+      'Visualise, climb, note, rest. Every loop, every time.',
+    ],
+    faults: [
+      'A note that says fell on the crux rather than left foot cut on the second-to-last move because I did not flag.',
+      'Visualisation gets skipped on the burn you feel readiest for, which is the burn it would have helped most.',
+    ],
+  },
+
+  pp_mental_game_commitment: {
+    cues: [
+      'Do the scary move on a lower-stakes version until it is automatic.',
+      'Then two or three false starts: full power, deliberately not grabbing.',
+      'Only then go for the send.',
+    ],
+    faults: [
+      'Going straight to send attempts because the move is physically easy, which leaves the hesitation exactly where it was.',
+      'The false starts get done at half power, so they prove the fall is safe from a height you were never going to fall from.',
+    ],
+  },
+
+  pp_conditions_day: {
+    cues: [
+      'Cool, dry, uncrowded. Time the session around the conditions.',
+      'Four to six burns, eight to ten minutes between. Fewer and better.',
+      'No send? Log fell on X move because Y. That is what deload 2 plans around.',
+    ],
+    faults: [
+      'Going at the convenient hour on the one session built entirely around conditions.',
+      'Leaving without a specific note, so the strategy review two weeks later has nothing to work with.',
+    ],
+  },
+
+  pp_deload_strategy_review: {
+    cues: [
+      'No projecting. Low intensity, and an honest look at the progress.',
+      'Links consistent? Double down. Links not moving? Switch to another project at the same grade.',
+      'Overcommitting to a plateau project is how send cycles fail.',
+    ],
+    faults: [
+      'Keeping the project out of sunk cost, which is the exact failure the session exists to catch.',
+      'Switching after one bad session rather than on the pattern in the notes.',
+    ],
+  },
+
+  pp_deload2_light_session: {
+    cues: [
+      'No projecting. Short and easy, one to two grades below max.',
+      'The project is waiting. The tendons are catching up.',
+      'One week of restraint here saves three weeks of injury.',
+    ],
+    faults: [
+      'Treating the second deload as optional because the first one already happened. Tendons work on a different clock to muscles.',
+      'A single project burn at the end, which is the whole week undone in ten minutes.',
+    ],
+  },
+
+  pp_peak_session_1: {
+    cues: [
+      'Six to eight burns, eight to ten minutes between.',
+      'Rate every attempt nought to ten on execution, independent of send or fail.',
+      'Clear goal, immediate feedback, nothing else in your head.',
+    ],
+    faults: [
+      'A sloppy send scores ten and a perfect attempt that fell scores four. It is the other way round.',
+      'Rests shrink as the session goes on, so burn eight has nothing behind it.',
+    ],
+  },
+
+  pp_send_attempts_quality: {
+    cues: [
+      'Four to six burns maximum, ten to fifteen minutes between.',
+      'Forty minutes of warm-up, not thirty.',
+      'Eight hours of sleep the night before. It counts as preparation.',
+    ],
+    faults: [
+      'Warming up on the project, so the first real burn is the third hard effort of the day.',
+      'Extra burns because the window feels short. It continues into week 12 by design.',
+    ],
+  },
+
+  pp_final_attempts: {
+    cues: [
+      'Send it, or bank the beta and graduate. Both are outcomes.',
+      'Complete the assessment retest in your other session this week either way.',
+      'Three full rest days before any new program.',
+    ],
+    faults: [
+      'Skipping the retest because the project did not go, which loses twelve weeks of measurement to one afternoon.',
+      'Rotating straight into the next program on peak-cycle fatigue, which compounds into an injury.',
     ],
   },
 };

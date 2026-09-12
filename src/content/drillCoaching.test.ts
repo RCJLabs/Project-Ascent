@@ -25,7 +25,7 @@ import { DRILL_COACHING } from './drillCoaching';
  * same reason: a list that shrinks is a plan, and an allow-list that grows
  * quietly is not.
  */
-const WRITTEN = ['base_camp', 'iron_grip', 'lockdown', 'gravity_defied', 'the_long_game'] as const;
+const WRITTEN = ['base_camp', 'iron_grip', 'lockdown', 'gravity_defied', 'the_long_game', 'the_siege', 'peak_performance'] as const;
 
 /** Drills whose provenance lies entirely inside a finished source. */
 const coached = DRILLS.filter(
@@ -161,8 +161,8 @@ describe('the size of what is left', () => {
     // library has been coached and this file was not updated to say so,
     // which is the one direction that would leave the plan lying.
     expect({ done: coached.length, left: DRILLS.length - coached.length }).toEqual({
-      done: 84,
-      left: 60,
+      done: 144,
+      left: 0,
     });
   });
 });

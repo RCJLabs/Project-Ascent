@@ -169,27 +169,49 @@ describe('one drill', () => {
     expect(await screen.findByText(/That drill/)).toBeTruthy();
   });
 
-  // Eleven of the 144 are a named method, and the method's cues are
-  // written already.
-  it('reads the protocol cues where a drill is a named method', async () => {
+  /**
+   * Eleven of the 144 are a named method, and the method's cues were
+   * written before the drill's were (PLAN.md M107).
+   *
+   * Since M107b those eleven pages carry **two** cue cards, which is the
+   * arrangement rather than a bug: the drill's own cues are about this
+   * week's version of the session, the protocol's are about the method, and
+   * the second card names its method so the reader can tell them apart.
+   */
+  it('shows the drill’s cues and the protocol’s, named apart', async () => {
     const withProtocol = DRILLS.find((d) => d.protocolId !== undefined)!;
     await one(withProtocol.id);
-    // "Cues" on its own, or "Cues for ARC Training" once that drill has
-    // coaching of its own to tell it apart from. Either is the card.
-    expect(await screen.findByText(/^Cues( for .+)?$/)).toBeTruthy();
+    expect(await screen.findByText('Cues')).toBeTruthy();
+    const named = screen.getByText(/^Cues for .+/);
+    expect(named).toBeTruthy();
+    // Specific first: what to do on this drill, then what the method is.
+    const text = document.body.textContent ?? '';
+    expect(text.indexOf('Cues')).toBeLessThan(text.indexOf(named.textContent!));
   });
 
-  it('shows no cues card for a drill with neither', async () => {
-    const bare = DRILLS.find(
-      (d) => d.protocolId === undefined && DRILL_COACHING[d.id] === undefined,
-    );
-    // Skips itself rather than lying once the whole library is coached
-    // (PLAN.md M107b) — at which point the card is never absent and there
-    // is nothing left to assert.
-    if (!bare) return;
-    await one(bare.id);
-    await screen.findByText('How to run it');
-    expect(screen.queryByText(/^Cues/)).toBeNull();
+  /**
+   * There is no longer a drill in the library without cues, so the absent
+   * case cannot be tested through a real one (PLAN.md M107b). This is what
+   * replaced that test rather than a version of it that skipped itself and
+   * passed — a test that asserts nothing is worse than a deleted one.
+   *
+   * The branch it used to cover is still live: `drillCoaching` returns
+   * `undefined` for an id it does not know, which is what a drill added
+   * tomorrow gets. `drillCoaching.test.ts` is what fails then, and it fails
+   * first.
+   */
+  it('has no drill left without cues to render', async () => {
+    const bare = DRILLS.filter((d) => DRILL_COACHING[d.id] === undefined);
+    expect(bare.map((d) => d.id)).toEqual([]);
+  });
+
+  it('renders the cards conditionally rather than always', async () => {
+    // The guard, read at the source, because the content can no longer
+    // produce the case that would exercise it.
+    const { readFileSync } = await import('node:fs');
+    const page = readFileSync('src/features/drills/DrillPage.tsx', 'utf8');
+    expect(page).toMatch(/\{cues\.length > 0 && \(/);
+    expect(page).toMatch(/\{faults\.length > 0 && \(/);
   });
 });
 
