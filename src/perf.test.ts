@@ -70,18 +70,47 @@ function median(fn: () => void): number {
 }
 
 /**
- * The fastest of five — the run with the least interference from everything
- * else on the machine, and so the closest estimate of what the work itself
- * costs.
+ * Two measurements taken alternately, fastest of each.
  *
- * Only for *ratios*. An absolute budget wants the conservative number and
- * keeps the median; a ratio of two medians divides one noisy measurement by
- * another, and with a three-millisecond denominator that is enough to fail a
- * green build. This one did, twice in a day, while passing on its own
- * (PLAN.md M41).
+ * The fastest of five is the run with the least interference from everything
+ * else on the machine, and so the closest estimate of what the work itself
+ * costs. An absolute budget wants the conservative number and keeps the
+ * median; a ratio of two medians divides one noisy measurement by another,
+ * and with a three-millisecond denominator that is enough to fail a green
+ * build. It did, twice in a day (PLAN.md M41).
+ *
+ * Taking the fastest of each was not enough on its own (PLAN.md M112d). A
+ * `fastest(a)` then `fastest(b)` runs all five of one and then all five of
+ * the other, so a runner that gets busier between the two batches inflates
+ * *every* sample of the second — and a minimum over five equally inflated
+ * samples is still inflated. That is a ratio failing for a reason that has
+ * nothing to do with the code, which is what happened on CI at 2.0ms →
+ * 7.2ms while the same commit measured 2.3 → 4.9 on a quiet machine.
+ *
+ * `fastest` alone was not enough. It runs all five of one and then all five
+ * of the other, so a runner that gets busier between the two batches
+ * inflates *every* sample of the second — and a minimum over five equally
+ * inflated samples is still inflated. That is a ratio failing for a reason
+ * that has nothing to do with the code, which is what happened on CI at
+ * 2.0ms → 7.2ms while the same commit measured 2.3 → 4.9 on a quiet machine.
+ *
+ * Alternating puts both sides in the same conditions, so drift cancels in
+ * the division instead of landing entirely on the numerator.
  */
-function fastest(fn: () => void): number {
-  return timings(fn)[0] as number;
+function ratioOf(a: () => void, b: () => void): { one: number; two: number } {
+  const as: number[] = [];
+  const bs: number[] = [];
+  for (let i = 0; i < 5; i += 1) {
+    let start = performance.now();
+    a();
+    as.push(performance.now() - start);
+    start = performance.now();
+    b();
+    bs.push(performance.now() - start);
+  }
+  as.sort((x, y) => x - y);
+  bs.sort((x, y) => x - y);
+  return { one: as[0] as number, two: bs[0] as number };
 }
 
 const TEN_YEARS = 1560;
@@ -123,14 +152,16 @@ describe('ten years of logs stays cheap', () => {
 
   it('scales linearly rather than superlinearly', () => {
     const half = log(TEN_YEARS / 2);
-    const one = fastest(() => {
-      clearXpCache();
-      deriveXp({ sessions: half, projects: [], ledger: [] });
-    });
-    const two = fastest(() => {
-      clearXpCache();
-      deriveXp({ sessions, projects: [], ledger: [] });
-    });
+    const { one, two } = ratioOf(
+      () => {
+        clearXpCache();
+        deriveXp({ sessions: half, projects: [], ledger: [] });
+      },
+      () => {
+        clearXpCache();
+        deriveXp({ sessions, projects: [], ledger: [] });
+      },
+    );
     // Twice the log should not cost more than three times the work.
     expect(two / Math.max(one, 0.01), `${one.toFixed(1)}ms → ${two.toFixed(1)}ms`).toBeLessThan(3);
   });

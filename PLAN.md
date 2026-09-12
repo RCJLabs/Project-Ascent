@@ -4713,6 +4713,18 @@ entry above.)*
   bites with V10 then 5.9), and the card's `.reverse()`, which needs more than six records
   before showing the oldest six is visibly wrong.
   **Budget.** 218.7 → 218.8KB, measured 218.64 → 218.71.
+  **It went to `main` red, and CI is what caught it.** `perf.test.ts`'s scaling ratio failed
+  on the runner at **2.0ms → 7.2ms**; the deploy job never ran, so nothing broken reached the
+  site. Measured before assuming: the same commit gives 2.3 → 4.9 on a quiet machine, and the
+  ratio against the *previous* `derive.ts` is 1.55 / 2.16 / 2.06 against this one's 1.44 /
+  2.21 / 2.13 — identical, and slightly faster in absolute terms, which is the two deleted
+  `Set` operations. Not a regression.
+  **The test's remaining flaw, and the fix.** M41 already made this a *fastest of five*
+  because a ratio of medians flaked. What was left is that it ran all five of one side and
+  then all five of the other, so a runner getting busier between the two batches inflates
+  every sample of the second — and a minimum over five equally inflated samples is still
+  inflated. `ratioOf` alternates them, so drift cancels in the division instead of landing on
+  the numerator. `fastest` had no other caller and went with it.
   Verified in a browser in both themes at 430px.
 
 **Open coaching calls.** Nine judgements the app is currently making on the coach's
