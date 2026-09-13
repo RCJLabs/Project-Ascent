@@ -116,7 +116,7 @@ describe('a climb found by its name', () => {
  */
 describe('the benchmark that said it was derived', () => {
   it('no longer claims the app worked it out', () => {
-    expect(METRICS.total_outdoor_days.description).not.toMatch(/Derived from your logs/);
+    expect(METRICS.total_outdoor_days!.description).not.toMatch(/Derived from your logs/);
   });
 
   /**
@@ -125,7 +125,7 @@ describe('the benchmark that said it was derived', () => {
    * every word of every benchmark description is in the first load.
    */
   it('says whose count it is', () => {
-    const said = METRICS.total_outdoor_days.description ?? '';
+    const said = METRICS.total_outdoor_days!.description ?? '';
     expect(said).toMatch(/counted by you/);
     expect(said.length).toBeLessThan(80);
   });

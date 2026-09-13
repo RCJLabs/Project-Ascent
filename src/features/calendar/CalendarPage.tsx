@@ -8,6 +8,8 @@ import { activeObjectives } from '@/engine/objectives';
 import { blockOn, season, soonestSeason } from '@/engine/season';
 import { useObjectives } from '@/store/objectives';
 import { summarise } from '@/engine/injury';
+import { INTENSITY_LABEL } from '@/content/types';
+import { effortOfDay } from '@/engine/effort';
 import { intensityOf } from '@/engine/scheduler';
 import { useProfile } from '@/store/profile';
 import type { Session } from '@/db/sessions';
@@ -320,10 +322,28 @@ export function CalendarPage() {
            * because of it, and the `done` and in-month pair had the same
            * coin flip latent. `Field.tsx` records the trap for type sizes.
            */
+          /**
+           * How hard the day was, as the one channel a 40px cell has left
+           * (PLAN.md M144). M131 turned down four hues for planned
+           * intensity and was right to: this is a monochrome ramp of the
+           * same accent, which reads as *more* rather than as *different*,
+           * and it is the shade the ✅ sits on rather than a fifth marker.
+           * The accessible name carries the same fact in words, because a
+           * tint alone says nothing to a reader who cannot see it.
+           */
+          const effort = done ? effortOfDay(logged, day?.sessionType) : null;
           const fill = chosen
             ? 'bg-accent/30'
             : done
-              ? 'bg-accent/15'
+              ? effort === 'max'
+                ? 'bg-accent/50'
+                : effort === 'hard'
+                  ? 'bg-accent/32'
+                  : effort === 'moderate'
+                    ? 'bg-accent/20'
+                    : effort === 'easy'
+                      ? 'bg-accent/8'
+                      : 'bg-accent/15'
               : ghost
                 ? ghostBand === 0
                   ? 'bg-accent/10'
@@ -397,7 +417,20 @@ export function CalendarPage() {
           }
 
           return (
-            <Link key={date} href={`/log/${date}`} className={shell}>
+            <Link
+              key={date}
+              href={`/log/${date}`}
+              className={shell}
+              // The shade is the only thing that says how hard the day was,
+              // and a shade is nothing to a screen reader (PLAN.md M144).
+              {...(done
+                ? {
+                    'aria-label': `${shortLabel(date)} — logged${
+                      effort ? `, ${INTENSITY_LABEL[effort].toLowerCase()}` : ''
+                    }`,
+                  }
+                : {})}
+            >
               {body}
             </Link>
           );
@@ -408,7 +441,7 @@ export function CalendarPage() {
           Settings › Data now (PLAN.md M122), with the other exports. */}
       <Card className="mt-4">
         <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-ink-soft">
-          <span>✅ Logged</span>
+          <span>✅ Logged — the darker the day, the harder you rated it</span>
           {planning && (
             <>
               <span>{program.sessionTypes.find((t) => !t.isRest)?.icon} Planned session</span>

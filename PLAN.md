@@ -6852,7 +6852,8 @@ something rests on an inference it says so.*
   `total_outdoor_days` says *Derived from your logs* over a number the climber types
   (`metrics.ts:306`) while `state.outdoorDays` (`derive.ts:292`) is derived and never offered.
 
-- **M144 — a logged day on the calendar is one glyph.** *Proposed. Small.*
+- **M144 — a logged day on the calendar is one glyph.** *Proposed, and built tenth — see the
+  Done entry below.*
   Any completed day is ✅ (`CalendarPage.tsx:485-486`; legend *✅ Logged*, `:583`). Planned days
   have carried LIMIT since M131, and DL and T before that; a logged day says nothing about what
   it was — a two-hour limit session and a twenty-minute flush are the same tick — while the
@@ -7347,3 +7348,37 @@ something rests on an inference it says so.*
   visible control, and logs a named climb through the app — including finishing the session,
   since the index holds completed days only, which is why the first attempt found nothing.
   **Budget.** 154.0 holds: 153.97 → 153.97. 4,520 tests pass.
+
+- **M144 — a logged day says how hard it was.** *Done. The tenth of the third brainstorm, and the
+  last of it.*
+  **The proposal called itself an inference and it was right to.** Nothing measured says a climber
+  wants effort on the month grid; what is measured is that the cell throws away two numbers it
+  already holds. Every completed day drew the same ✅ — a two-hour limit session and a
+  twenty-minute flush were one tick — while the session carried an RPE and the planned type
+  carried an intensity.
+  **Not the consistency grid's scale, and the reason is worth keeping.** The obvious move is to
+  reuse the five-level heat the Progress grid already computes from the same sessions. It would be
+  wrong: that grid cuts its levels at **quantiles of the window it is drawing**, which is right for
+  a year of columns asking *how did this year vary*, and wrong for a month, where the same session
+  would shade differently depending on which month you were looking at and a quiet month would
+  make an easy day look hard. RPE is already an absolute 1-10 self-rating, and its four tiers are
+  the app's own four intensities — so one vocabulary now covers the planned day and the logged one.
+  **The climber's rating beats the plan, and a rest day says nothing.** The hardest RPE across the
+  day's completed sessions decides, because a hard morning and an easy evening is a hard day. The
+  planned intensity speaks only where nothing was rated: it is what was asked for, not what was
+  done. Neither known means no shade at all, rather than the app inventing a number.
+  **M131 turned down four hues and was right; this is not that.** A monochrome ramp of one accent
+  reads as *more*, not as *different*, and it tints the square the ✅ already sits on rather than
+  adding a fifth marker to a 40px cell that carries three. It still goes through the single `fill`
+  expression M100's bug established — one background class, never stacked — and a test counts them.
+  **The honest caveat: a tint alone tells a screen reader nothing**, and this cell had no
+  accessible name at all. Each logged day now carries one: *Sep 9 — logged, limit day*. That is
+  the fact in words, and it is an improvement the shading paid for rather than a mitigation of it.
+  **What the battery found.** Forty-three mutations, one survivor, and it was not equivalent
+  though it looked it: dropping the finite check on the RPE leaves NaN falling out of the tiers on
+  its own, so the test passed — but an infinity clears every floor and reads as limit work.
+  `Session.rpe` is whatever was in the database, so that guard is the rebuild-never-cast rule
+  rather than decoration. Both infinities and a negative are pinned now.
+  **And the browser check failed on its own regex**, not on the app: an unrated day's name ends at
+  *logged* with no comma after it. Fixed in the check.
+  **Budget.** 154.0 holds: 153.97 → 153.98. 4,540 tests pass.
