@@ -93,6 +93,7 @@ export const PEAK_PERFORMANCE: Program = {
   sessionTypes: [
     {
       id: 'perf',
+      intensity: 'max',
       priority: 1,
       name: 'Max Intensity Bouldering',
       icon: '⚡',
@@ -115,6 +116,7 @@ export const PEAK_PERFORMANCE: Program = {
     },
     {
       id: 'tech',
+      intensity: 'moderate',
       priority: 3,
       name: 'Technique & Movement',
       icon: '🧱',
@@ -137,6 +139,7 @@ export const PEAK_PERFORMANCE: Program = {
     },
     {
       id: 'fp',
+      intensity: 'hard',
       priority: 4,
       name: 'Fingerboard & Armor',
       icon: '✋',
@@ -320,6 +323,7 @@ export const PEAK_PERFORMANCE: Program = {
     },
     {
       id: 'proj',
+      intensity: 'max',
       priority: 2,
       name: 'Projecting & Mental',
       icon: '🎯',

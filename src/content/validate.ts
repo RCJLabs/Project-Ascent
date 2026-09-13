@@ -10,7 +10,7 @@ import { getDrill } from './drills';
 import { getMetric } from './metrics';
 import { getProtocol } from './protocols';
 import { PLANNED_PROGRAM_IDS } from './programs';
-import type { Program } from './types';
+import { atLeastAsHard, type Program } from './types';
 
 export function validateProgram(program: Program): string[] {
   const errors: string[] = [];
@@ -122,6 +122,17 @@ export function validateProgram(program: Program): string[] {
     where('has no rest session type');
   }
 
+  // Every working day says how hard it is (PLAN.md M131). Optional in the
+  // type so a half-built custom program is not invalid while it is being
+  // written, required here so nothing ships without it: the scheduler's
+  // back-to-back rule reads this, and a type with no intensity would be
+  // silently exempt from a rule about recovery.
+  for (const type of program.sessionTypes) {
+    if (!type.isRest && type.intensity === undefined) {
+      where(`session type '${type.id}' does not say how hard it is`);
+    }
+  }
+
   // Constraints must reference real session types.
   for (const c of program.constraints) {
     const refs =
@@ -136,6 +147,15 @@ export function validateProgram(program: Program): string[] {
               : [];
     for (const ref of refs) {
       if (!typeIds.has(ref)) where(`constraint '${c.kind}' references unknown session type '${ref}'`);
+    }
+    // A rule about days this hard, in a program that has none, is a rule
+    // that can never fire — the same class of mistake as a constraint
+    // naming a session type that does not exist.
+    if (
+      c.kind === 'no-back-to-back' &&
+      !program.sessionTypes.some((t) => t.intensity && atLeastAsHard(t.intensity, c.intensity))
+    ) {
+      where(`constraint 'no-back-to-back' asks about '${c.intensity}' days and there are none`);
     }
     if (!c.note.trim()) where(`constraint '${c.kind}' has no display note`);
   }

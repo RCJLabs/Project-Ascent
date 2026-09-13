@@ -166,6 +166,7 @@ export const THE_CRUISER: Program = {
   sessionTypes: [
     {
       id: 'vol',
+      intensity: 'moderate',
       priority: 3,
       name: 'Climbing: Volume & Flow',
       icon: '🎵',
@@ -202,6 +203,7 @@ export const THE_CRUISER: Program = {
     },
     {
       id: 'perf',
+      intensity: 'max',
       priority: 1,
       name: 'Climbing: Performance',
       icon: '⚡',
@@ -238,6 +240,7 @@ export const THE_CRUISER: Program = {
     },
     {
       id: 'end',
+      intensity: 'hard',
       priority: 2,
       name: 'Climbing: Endurance',
       icon: '🔥',
@@ -274,6 +277,7 @@ export const THE_CRUISER: Program = {
     },
     {
       id: 'str',
+      intensity: 'moderate',
       priority: 4,
       name: 'Strength & Armor',
       icon: '⚙️',
@@ -421,6 +425,7 @@ export const THE_CRUISER: Program = {
     },
     {
       id: 'hb',
+      intensity: 'hard',
       priority: 5,
       name: 'Hangboard Module (optional)',
       icon: '✋',
@@ -529,15 +534,23 @@ export const THE_CRUISER: Program = {
     },
     {
       kind: 'min-gap-hours',
-      between: ['perf', 'end'],
-      hours: 48,
-      note: 'Performance and Endurance should not fall on consecutive days.',
-    },
-    {
-      kind: 'min-gap-hours',
       between: ['hb'],
       hours: 48,
-      note: 'Leave 48 hours between hangboard sessions and hard climbing.',
+      note: 'Leave 48 hours between hangboard sessions.',
+    },
+    // One rule where there were two and a half (PLAN.md M131). The
+    // hangboard gap above said "and hard climbing" in its note over data
+    // that only ever compared hangboard days with each other, so that half
+    // was never checked; and a separate 48-hour rule between Performance
+    // and Endurance said the same thing as this one, in hours rather than
+    // days, so a climber who moved Endurance next to Performance was told
+    // off twice in different words. Hangboard, Performance and Endurance
+    // are the three days this program calls hard. None of them wants the
+    // one before it, and that is now a single sentence.
+    {
+      kind: 'no-back-to-back',
+      intensity: 'hard',
+      note: 'Hangboard, Performance and Endurance each want a clear day before them.',
     },
     { kind: 'max-per-week', sessionTypeId: 'perf', count: 2, note: 'One or two performance days a week.' },
   ],

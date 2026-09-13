@@ -107,6 +107,7 @@ export const GRAVITY_DEFIED: Program = {
   sessionTypes: [
     {
       id: 'tech',
+      intensity: 'moderate',
       priority: 1,
       name: 'Technical Flight',
       icon: '🧱',
@@ -129,6 +130,7 @@ export const GRAVITY_DEFIED: Program = {
     },
     {
       id: 'eng',
+      intensity: 'hard',
       priority: 3,
       name: 'Engine Room',
       icon: '⚙️',
@@ -261,6 +263,7 @@ export const GRAVITY_DEFIED: Program = {
     },
     {
       id: 'perf',
+      intensity: 'max',
       priority: 2,
       name: 'Performance & Limit',
       icon: '⚡',

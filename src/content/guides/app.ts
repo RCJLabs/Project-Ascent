@@ -144,6 +144,8 @@ export const APP: Guide = {
             '**Pick your days.** The app checks them against the program\'s own rules before you commit — two finger sessions 24 hours apart gets flagged then, not in week six.',
             '**Pick a track** where the program has them, and the plan only shows you your own lines.',
             '**Then the calendar fills in.** Nothing is written to those future days: the plan is derived from the program, your start date and your chosen week, so changing any of them re-derives the future immediately.',
+            '**Every day says how hard it is** — limit, hard, moderate or easy — and the planner uses the same word you read. A program can ask for no two hard days running and the calendar will hold you to it. Limit days are marked on the month view.',
+            '**And roughly how long it takes**, worked out from the prescription rather than written down, so a deload week is a shorter number without anyone saying so. It counts the prescribed work and not the warm-up, and it stays quiet about sessions it cannot honestly measure — a projecting day is burns with rests that end when you want to pull on again.',
           ],
         },
         { kind: 'h', text: 'How a block progresses' },

@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
 import { Link } from 'wouter';
 import { AlertTriangle, ChevronRight, Flag, Plus, Ruler, Zap } from 'lucide-react';
-import type { Program, SessionType } from '@/content/types';
+import { INTENSITY_LABEL, type Program, type SessionType } from '@/content/types';
 import { TEST_REASON_LABEL } from '@/engine/assessments';
 import { dayLoad, describeDayLoad } from '@/engine/bodyLoad';
 import { today } from '@/engine/dates';
 import { concerning, injuryPolicy } from '@/engine/injury';
-import type { PlannedDay } from '@/engine/plan';
+import { prescriptionFor, type PlannedDay } from '@/engine/plan';
+import { intensityOf } from '@/engine/scheduler';
+import { describeWork, workMinutes } from '@/engine/sessionLength';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { useSettings, type LogView } from '@/store/settings';
@@ -41,7 +43,41 @@ export interface DayPlan {
   others: SessionType[];
   /** The warning about what today loads, or null when there is none. */
   loadNote: string | null;
+  /** The track this climber picked, where the program declares tracks. */
+  trackId: string | undefined;
   start: (sessionTypeId?: string) => Promise<void>;
+}
+
+/**
+ * What kind of day this is, and roughly how long it takes (PLAN.md M131).
+ *
+ * Two facts the app had no way to state. **How hard** is the session's own
+ * property now rather than something a reader infers from the exercise
+ * names, and it is the same word the planner's back-to-back rule reads, so
+ * the card and the calendar cannot disagree with the scheduler. **How
+ * long** is derived from the prescription rather than authored, which is
+ * why it is here at all: on a deload week it is a shorter number, and
+ * nothing had to be written twice for that to happen.
+ *
+ * Silent about the length when the prescription cannot carry one — a
+ * climbing day is burns with rests that end when you want to pull on
+ * again — and that is most of the point. The question this answers is
+ * "have I got time for this tonight", and the honest answer for a
+ * projecting session is that the app does not know.
+ */
+function DayShape({ day, trackId }: { day: PlannedDay; trackId: string | undefined }) {
+  const spent = useMemo(() => {
+    if (!day.sessionType || !day.phase) return null;
+    const blocks = prescriptionFor(day.sessionType, day.phase, trackId, day.week, day.isDeload);
+    return describeWork(workMinutes(blocks, day.drill));
+  }, [day, trackId]);
+
+  return (
+    <p className="text-sm mb-3">
+      <span className="font-semibold">{INTENSITY_LABEL[intensityOf(day.sessionType)]}</span>
+      {spent && <span className="text-ink-soft"> · {spent}</span>}
+    </p>
+  );
 }
 
 /**
@@ -106,7 +142,7 @@ export function useStartSession(date: string): DayPlan {
     });
   }
 
-  return { program, day, primary, label, others, loadNote, start };
+  return { program, day, primary, label, others, loadNote, trackId, start };
 }
 
 /**
@@ -120,7 +156,7 @@ export function useStartSession(date: string): DayPlan {
  * logger, so starting a session is all there is to do.
  */
 export function PreSessionCard({ date, onOpen }: { date: string; onOpen?: () => void }) {
-  const { program, day, primary, label, others, loadNote, start } = useStartSession(date);
+  const { program, day, primary, label, others, loadNote, trackId, start } = useStartSession(date);
   const byDate = useSessions((s) => s.byDate);
   const hydrated = useSessions((s) => s.hydrated);
   const setLogView = useSettings((s) => s.setLogView);
@@ -142,12 +178,13 @@ export function PreSessionCard({ date, onOpen }: { date: string; onOpen?: () => 
             <span className="text-xl leading-none">{day.sessionType.icon}</span>
             <h2 className="font-bold text-lg">{day.sessionType.name}</h2>
           </div>
-          <p className="text-sm text-ink-soft mb-3">
+          <p className="text-sm text-ink-soft mb-1">
             Week {day.week} of {program!.weeks}
             {day.phase ? ` · ${day.phase.name}` : ''}
             {day.isDeload ? ' · Deload week' : ''}
             {day.test !== undefined ? ' · Test week' : ''}
           </p>
+          <DayShape day={day} trackId={trackId} />
         </>
       ) : day?.over ? (
         /* Before the rest-day branch, which an over day would

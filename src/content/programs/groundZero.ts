@@ -87,6 +87,7 @@ export const GROUND_ZERO: Program = {
   sessionTypes: [
     {
       id: 'str',
+      intensity: 'moderate',
       priority: 1,
       name: 'Structural Integrity',
       icon: '💪',
@@ -268,6 +269,7 @@ export const GROUND_ZERO: Program = {
     },
     {
       id: 'mob',
+      intensity: 'easy',
       priority: 2,
       name: 'Mobility & Core',
       icon: '🧘',

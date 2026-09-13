@@ -110,6 +110,7 @@ export const TWO_DAY_WEEK: Program = {
   sessionTypes: [
     {
       id: 'climb',
+      intensity: 'max',
       name: 'Climb & Apply',
       icon: '🧗',
       description: 'The hard day. Warm up properly, climb hard, then a short hangboard finish.',
@@ -180,6 +181,7 @@ export const TWO_DAY_WEEK: Program = {
     },
     {
       id: 'build',
+      intensity: 'moderate',
       name: 'Climb & Build',
       icon: '🧱',
       description: 'The second climbing day: volume on the wall, then the pull and the prehab.',
@@ -287,6 +289,7 @@ export const TWO_DAY_WEEK: Program = {
     },
     {
       id: 'easy',
+      intensity: 'easy',
       name: 'Easy Volume',
       icon: '🌤️',
       description: 'An optional third day. Easy climbing, no agenda, nothing measured.',

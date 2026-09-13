@@ -128,6 +128,7 @@ export const THE_LONG_GAME: Program = {
   sessionTypes: [
     {
       id: 'end',
+      intensity: 'hard',
       priority: 1,
       name: 'Endurance Session',
       icon: '🔥',
@@ -150,6 +151,7 @@ export const THE_LONG_GAME: Program = {
     },
     {
       id: 'eng',
+      intensity: 'moderate',
       priority: 3,
       name: 'Strength & Armor',
       icon: '⚙️',
@@ -253,6 +255,7 @@ export const THE_LONG_GAME: Program = {
     },
     {
       id: 'perf',
+      intensity: 'hard',
       priority: 2,
       name: 'Performance Climbing',
       icon: '⚡',

@@ -15,7 +15,7 @@
  * exactly what happened before this existed.
  */
 
-import type { Program, SessionType, SessionTypeId } from '@/content/types';
+import { atLeastAsHard, type Program, type SessionType, type SessionTypeId } from '@/content/types';
 
 /** What each piece of evidence is worth, and why it is worth that. */
 export const WEIGHTS = {
@@ -63,6 +63,14 @@ function evidence(program: Program, type: SessionType): { score: number; why: st
     }
     if (c.kind === 'min-gap-hours' && c.between.includes(type.id)) {
       note(WEIGHTS.spaced, `needs ${c.hours} hours around it`);
+    }
+    // The same evidence as the gap above, said the general way (PLAN.md
+    // M131). A program that asks for a clear day before its hard sessions
+    // is saying those sessions are the ones worth protecting, and a
+    // program that switched from naming the pairs to naming the intensity
+    // would otherwise have quietly demoted every session it was about.
+    if (c.kind === 'no-back-to-back' && type.intensity && atLeastAsHard(type.intensity, c.intensity)) {
+      note(WEIGHTS.spaced, 'wants a clear day before it');
     }
   }
 

@@ -50,6 +50,7 @@ export const OUTDOOR_CLIMBING: Program = {
   sessionTypes: [
     {
       id: 'outdoor_boulder',
+      intensity: 'max',
       name: 'Outdoor Bouldering',
       icon: '🪨',
       description: 'Bouldering on real rock. Brush holds, note texture, pad placement matters.',
@@ -57,6 +58,7 @@ export const OUTDOOR_CLIMBING: Program = {
     },
     {
       id: 'outdoor_sport',
+      intensity: 'hard',
       name: 'Outdoor Sport',
       icon: '🧗',
       description:
@@ -65,6 +67,7 @@ export const OUTDOOR_CLIMBING: Program = {
     },
     {
       id: 'outdoor_trad',
+      intensity: 'moderate',
       name: 'Outdoor Trad',
       icon: '⛰️',
       description:
@@ -73,6 +76,7 @@ export const OUTDOOR_CLIMBING: Program = {
     },
     {
       id: 'outdoor_dws',
+      intensity: 'hard',
       name: 'Deep Water Solo',
       icon: '🌊',
       description: 'Deep water soloing. Check water depth and tide before every session; never solo alone.',
@@ -80,6 +84,7 @@ export const OUTDOOR_CLIMBING: Program = {
     },
     {
       id: 'outdoor_alpine',
+      intensity: 'moderate',
       name: 'Alpine / Multipitch',
       icon: '🏔️',
       description:

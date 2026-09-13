@@ -10,6 +10,7 @@ import { blockOn, season, soonestSeason } from '@/engine/season';
 import { useObjectives } from '@/store/objectives';
 import { summarise } from '@/engine/injury';
 import { effectivePlan, previewMove, type MovePreview } from '@/engine/reschedule';
+import { intensityOf } from '@/engine/scheduler';
 import { useProfile } from '@/store/profile';
 import type { Session } from '@/db/sessions';
 import { useSessions } from '@/store/sessions';
@@ -488,6 +489,17 @@ export function CalendarPage() {
               ) : (
                 <span className="text-sm leading-none text-ink-soft/40">·</span>
               )}
+              {/* The limit days, and only those (PLAN.md M131). Session
+                  types carry an intensity now, and the tempting thing was
+                  to paint all four of them — four colours on a 40px cell
+                  in a seven-column grid, encoding the one thing a climber
+                  most wants to see at a glance in nothing but hue. One
+                  mark for the hardest day answers the question the week
+                  view is actually asked (*where are my hard days*) and
+                  leaves the grid readable. */}
+              {inMonth && planned && intensityOf(day!.sessionType) === 'max' && (
+                <span className="text-2xs font-bold uppercase text-warn leading-none">LIMIT</span>
+              )}
               {/* Both, when a week is both (PLAN.md M67). Suppressing the
                   test marker on a deload week sounded tidy and lost Peak
                   Performance *both* of its mid-block tests: it deloads on
@@ -572,6 +584,7 @@ export function CalendarPage() {
           {planning && (
             <>
               <span>{program.sessionTypes.find((t) => !t.isRest)?.icon} Planned session</span>
+              <span className="text-warn font-bold">LIMIT — the hardest day</span>
               <span className="text-warn font-bold">DL — deload week</span>
               <span className="text-accent font-bold">T — assessment week</span>
             </>

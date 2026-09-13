@@ -9,7 +9,17 @@
  * Pure functions over plain data — no React, no storage.
  */
 
-import type { Constraint, DayOfWeek, Program, SessionTypeId, WeeklyLayout } from '@/content/types';
+import {
+  atLeastAsHard,
+  INTENSITY_ORDER,
+  type Constraint,
+  type DayOfWeek,
+  type Intensity,
+  type Program,
+  type SessionType,
+  type SessionTypeId,
+  type WeeklyLayout,
+} from '@/content/types';
 
 export const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 export const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
@@ -29,6 +39,20 @@ export interface Violation {
 }
 
 const ALL_DAYS: DayOfWeek[] = [0, 1, 2, 3, 4, 5, 6];
+
+/**
+ * How hard a session type is, with an answer for the types that do not say.
+ *
+ * A rest day is easy by definition — that is what `isRest` means — and
+ * anything else that has not been authored is ordinary training. Not the
+ * hardest: an unstated intensity that defaulted to `max` would make a
+ * half-written custom program unschedulable, and one that defaulted to
+ * `easy` would exempt it from the rule it most needs.
+ */
+export function intensityOf(type: SessionType | undefined): Intensity {
+  if (!type) return 'easy';
+  return type.intensity ?? (type.isRest ? 'easy' : 'moderate');
+}
 
 function daysOf(plan: WeekPlan, typeId: SessionTypeId): DayOfWeek[] {
   return ALL_DAYS.filter((d) => plan[d] === typeId);
@@ -62,7 +86,9 @@ export function validateWeek(program: Program, plan: WeekPlan): Violation[] {
   const violations: Violation[] = [];
   const restIds = new Set(program.sessionTypes.filter((t) => t.isRest).map((t) => t.id));
   const trainingDays = ALL_DAYS.filter((d) => plan[d] && !restIds.has(plan[d]!));
-  const nameOf = (id: SessionTypeId) => program.sessionTypes.find((t) => t.id === id)?.name ?? id;
+  const typeOf = (id: SessionTypeId | undefined) =>
+    id === undefined ? undefined : program.sessionTypes.find((t) => t.id === id);
+  const nameOf = (id: SessionTypeId) => typeOf(id)?.name ?? id;
 
   for (const c of program.constraints) {
     switch (c.kind) {
@@ -129,6 +155,29 @@ export function validateWeek(program: Program, plan: WeekPlan): Violation[] {
             message: `${nameOf(c.then)} is scheduled before ${nameOf(c.first)}. ${c.note}`,
             days: [Math.min(...thenDays) as DayOfWeek, Math.min(...firstDays) as DayOfWeek],
           });
+        }
+        break;
+      }
+
+      case 'no-back-to-back': {
+        // Every adjacent pair around the repeating week, Saturday into
+        // Sunday included: a week that ends hard and begins hard is two
+        // hard days running for anyone whose weeks follow each other.
+        // Consecutive only — a clear day between them is the rest the rule
+        // is asking for, and `min-gap-hours` is the constraint for programs
+        // that want more than one.
+        for (const day of ALL_DAYS) {
+          const next = ((day + 1) % 7) as DayOfWeek;
+          const here = intensityOf(typeOf(plan[day]));
+          const there = intensityOf(typeOf(plan[next]));
+          if (atLeastAsHard(here, c.intensity) && atLeastAsHard(there, c.intensity)) {
+            violations.push({
+              severity: 'error',
+              kind: c.kind,
+              message: `${nameOf(plan[day]!)} on ${DAY_SHORT[day]} runs straight into ${nameOf(plan[next]!)} on ${DAY_SHORT[next]}. ${c.note}`,
+              days: [day, next],
+            });
+          }
         }
         break;
       }
@@ -204,8 +253,17 @@ function capsOf(program: Program): Map<SessionTypeId, number> {
  * Which sessions a week of `days` days should hold.
  *
  * Fewer days than sessions: the most important survive, which is the whole
- * point of `priority`. More days than sessions: they repeat from the top,
- * skipping any type that has hit its own weekly cap.
+ * point of `priority`. More days than sessions: they repeat.
+ *
+ * **What repeats is the easiest thing left, not the most important**
+ * (PLAN.md M131). The first pass is priority order, because that is what
+ * the program *is* — the block first, then the accessory work. Every pass
+ * after that is answering a different question: the week already holds
+ * everything the program asks for, and the extra day is being spent on a
+ * second helping. A second helping of the limit day is the one thing a
+ * coach would never add; a second easy day is what an extra day is for.
+ * Before this the loop simply walked the priority list again, so a
+ * six-day Peak Performance week opened with two max-intensity days.
  */
 export function sessionsForDays(program: Program, days: number): SessionTypeId[] {
   const priority = sessionPriority(program);
@@ -213,10 +271,18 @@ export function sessionsForDays(program: Program, days: number): SessionTypeId[]
   const caps = capsOf(program);
   const used = new Map<SessionTypeId, number>();
   const chosen: SessionTypeId[] = [];
+  const hardness = new Map(
+    program.sessionTypes.map((t) => [t.id, INTENSITY_ORDER.indexOf(intensityOf(t))]),
+  );
+  // Easiest first, and priority order inside a tie, so a program whose
+  // types are all one intensity repeats exactly as it always did.
+  const seconds = [...priority].sort(
+    (a, b) => (hardness.get(a) ?? 0) - (hardness.get(b) ?? 0) || priority.indexOf(a) - priority.indexOf(b),
+  );
 
   while (chosen.length < days) {
     const before = chosen.length;
-    for (const id of priority) {
+    for (const id of chosen.length === 0 ? priority : seconds) {
       if (chosen.length >= days) break;
       const cap = caps.get(id);
       const count = used.get(id) ?? 0;

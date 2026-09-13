@@ -108,6 +108,7 @@ export const IRON_GRIP: Program = {
       // finger-strength program that drops the finger protocol is a climbing
       // day with the program's name on it.
       id: 'fp',
+      intensity: 'hard',
       priority: 1,
       name: 'Finger Protocol + Engine',
       icon: '✋',
@@ -386,6 +387,7 @@ export const IRON_GRIP: Program = {
       // exists for — but it is the application, and the protocol is the
       // program.
       id: 'perf',
+      intensity: 'hard',
       priority: 2,
       name: 'Climbing Session',
       icon: '⚡',

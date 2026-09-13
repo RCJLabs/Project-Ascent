@@ -122,6 +122,7 @@ export const BASE_CAMP: Program = {
   sessionTypes: [
     {
       id: 'tech',
+      intensity: 'moderate',
       priority: 1,
       name: 'Climb: Technique',
       icon: '🧱',
@@ -144,6 +145,7 @@ export const BASE_CAMP: Program = {
     },
     {
       id: 'eng',
+      intensity: 'moderate',
       priority: 3,
       name: 'The Engine Room',
       icon: '⚙️',
@@ -292,6 +294,7 @@ export const BASE_CAMP: Program = {
     },
     {
       id: 'perf',
+      intensity: 'hard',
       priority: 2,
       name: 'Climb: Performance',
       icon: '⚡',

@@ -265,6 +265,46 @@ export type FieldId =
   | 'gearNotes'
   | 'sessionDuration';
 
+/**
+ * How hard a day is, as a property of the session rather than of the dose
+ * (PLAN.md M131).
+ *
+ * Four levels, defined by what a climber can do the day after:
+ *
+ * - **max** — limit work. Projecting, max hangs, the hardest boulders you
+ *   can pull on. Not two days running, and the thing a week is built around.
+ * - **hard** — demanding and repeatable. Power-endurance, heavy pulling,
+ *   fingerboard protocols. Needs a day, not a week.
+ * - **moderate** — real training that does not dig a hole. Volume climbing,
+ *   technique, general strength.
+ * - **easy** — active recovery. Mobility, armor on its own, easy volume
+ *   three grades down.
+ *
+ * It sits on the session type and not on the exercise on purpose. Per-line
+ * RPE is a fourth dose field and 159 of them to author, and the question the
+ * scheduler actually asks — *can these two days sit next to each other* — is
+ * a question about the day. The programs answered it in prose already: The
+ * Siege's own constraint note reads "never two hard climbing days back to
+ * back", which nothing could check until the word `hard` meant something.
+ */
+export type Intensity = 'max' | 'hard' | 'moderate' | 'easy';
+
+/** Easiest first, so "at or above hard" is a comparison rather than a set. */
+export const INTENSITY_ORDER: readonly Intensity[] = ['easy', 'moderate', 'hard', 'max'];
+
+/** How the four read on screen. */
+export const INTENSITY_LABEL: Record<Intensity, string> = {
+  max: 'Limit day',
+  hard: 'Hard day',
+  moderate: 'Moderate day',
+  easy: 'Easy day',
+};
+
+/** True when `a` is as demanding as `b`, or more so. */
+export function atLeastAsHard(a: Intensity, b: Intensity): boolean {
+  return INTENSITY_ORDER.indexOf(a) >= INTENSITY_ORDER.indexOf(b);
+}
+
 export interface SessionType {
   id: SessionTypeId;
   /** Program-specific thematic name, e.g. 'Finger Protocol + Engine'. */
@@ -280,6 +320,12 @@ export interface SessionType {
   /** Marks the rest/recovery type so the scheduler and reward pipeline can
    *  find it without string-matching an id. */
   isRest?: boolean;
+  /**
+   * How hard this day is (PLAN.md M131). Rest types may leave it out — a
+   * rest day is `easy` by definition — and every other type in the shipped
+   * catalogue declares one, which `validateProgram` enforces.
+   */
+  intensity?: Intensity;
   /**
    * Which sessions survive a short week (PLAN.md M55). Lower is kept first.
    *
@@ -318,7 +364,18 @@ export type Constraint =
   /** `first` should be scheduled earlier in the week than `then`. */
   | { kind: 'order-in-week'; first: SessionTypeId; then: SessionTypeId; note: string }
   /** `sessionTypeId` must not fall on the day immediately before `before`. */
-  | { kind: 'not-day-before'; sessionTypeId: SessionTypeId; before: SessionTypeId; note: string };
+  | { kind: 'not-day-before'; sessionTypeId: SessionTypeId; before: SessionTypeId; note: string }
+  /**
+   * No two sessions at or above this intensity on consecutive days
+   * (PLAN.md M131).
+   *
+   * Expressible only since session types carry an intensity. Before that a
+   * program wanting this had to enumerate the pairs — The Siege spelled out
+   * a 48-hour gap between Project and Power-Endurance and wrote the general
+   * rule in the note, where nothing could read it, and a fourth hard type
+   * added later would have slipped straight through.
+   */
+  | { kind: 'no-back-to-back'; intensity: Intensity; note: string };
 
 // ── Weekly layout ─────────────────────────────────────────────────────────
 

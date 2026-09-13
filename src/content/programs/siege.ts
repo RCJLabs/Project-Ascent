@@ -88,6 +88,7 @@ export const THE_SIEGE: Program = {
   sessionTypes: [
     {
       id: 'proj',
+      intensity: 'max',
       priority: 1,
       name: 'Project Session',
       icon: '🎯',
@@ -110,6 +111,7 @@ export const THE_SIEGE: Program = {
     },
     {
       id: 'pe',
+      intensity: 'hard',
       priority: 2,
       name: 'Power-Endurance',
       icon: '🔥',
@@ -132,6 +134,7 @@ export const THE_SIEGE: Program = {
     },
     {
       id: 'fp',
+      intensity: 'hard',
       priority: 3,
       name: 'Fingerboard + Structural',
       icon: '✋',

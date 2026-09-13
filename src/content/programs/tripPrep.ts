@@ -92,6 +92,7 @@ export const TRIP_PREP: Program = {
   sessionTypes: [
     {
       id: 'proj',
+      intensity: 'max',
       name: 'Specific Session',
       icon: '🎯',
       description: 'Climbing that looks like the trip. The session that matters.',
@@ -124,6 +125,7 @@ export const TRIP_PREP: Program = {
     },
     {
       id: 'fp',
+      intensity: 'hard',
       name: 'Finger Primer',
       icon: '🤏',
       description: 'Short, sharp, and never the day before a hard climb.',
@@ -156,6 +158,7 @@ export const TRIP_PREP: Program = {
     },
     {
       id: 'move',
+      intensity: 'easy',
       name: 'Movement Day',
       icon: '🌤️',
       description: 'Easy climbing that keeps you moving without costing anything.',

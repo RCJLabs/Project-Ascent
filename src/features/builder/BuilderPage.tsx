@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ArrowRight, CircleCheck, Info, Plus, Share2, Trash2, TriangleAlert } from 'lucide-react';
-import type { Constraint, DayOfWeek, Equipment, Phase, Program, SessionType } from '@/content/types';
+import {
+  INTENSITY_LABEL,
+  INTENSITY_ORDER,
+  type Constraint,
+  type DayOfWeek,
+  type Equipment,
+  type Intensity,
+  type Phase,
+  type Program,
+  type SessionType,
+} from '@/content/types';
 import { allMetrics } from '@/engine/assessments';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
 import { DAY_SHORT } from '@/engine/scheduler';
@@ -495,6 +505,10 @@ function SessionTypesCard({ program, onChange }: { program: Program; onChange: (
       name: trimmed,
       icon: ICONS[program.sessionTypes.length % ICONS.length]!,
       description: '',
+      // Not the hardest thing this program could ask for, and not recovery
+      // either: a new session starts as ordinary training and the author
+      // says otherwise on the card.
+      intensity: 'moderate',
     };
     onChange({ sessionTypes: [...program.sessionTypes, type] });
     setName('');
@@ -552,12 +566,35 @@ function SessionTypesCard({ program, onChange }: { program: Program; onChange: (
                 {type.isRest ? '✓ Rest day' : 'Mark as a rest day'}
               </Chip>
               {!type.isRest && (
-                <Link
-                  href={`/build/${program.id}/session/${type.id}`}
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent"
-                >
-                  {summarise(type)} <ArrowRight size={14} />
-                </Link>
+                <>
+                  {/* How hard the day is, not how hard the exercises are
+                      (PLAN.md M131). The planner reads it for the
+                      never-two-running rule, and the day itself says it. */}
+                  <Select
+                    value={type.intensity ?? 'moderate'}
+                    onChange={(e) =>
+                      onChange({
+                        sessionTypes: replace(program.sessionTypes, i, {
+                          intensity: e.target.value as Intensity,
+                        }),
+                      })
+                    }
+                    aria-label={`${type.name} intensity`}
+                    className="bg-surface border border-line rounded-lg px-2 py-1.5 text-sm"
+                  >
+                    {[...INTENSITY_ORDER].reverse().map((level) => (
+                      <option key={level} value={level}>
+                        {INTENSITY_LABEL[level]}
+                      </option>
+                    ))}
+                  </Select>
+                  <Link
+                    href={`/build/${program.id}/session/${type.id}`}
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent"
+                  >
+                    {summarise(type)} <ArrowRight size={14} />
+                  </Link>
+                </>
               )}
             </div>
           </div>
@@ -631,6 +668,7 @@ const RULE_KINDS = [
   { kind: 'min-gap-hours', label: 'Hours between sessions of a type' },
   { kind: 'max-per-week', label: 'Most of one type per week' },
   { kind: 'not-day-before', label: 'Never the day before' },
+  { kind: 'no-back-to-back', label: 'Never two hard days running' },
 ] as const;
 
 function RulesCard({ program, onChange }: { program: Program; onChange: (p: Partial<Program>) => void }) {
@@ -648,7 +686,9 @@ function RulesCard({ program, onChange }: { program: Program; onChange: (p: Part
           ? { kind, between: [first!], hours: 48, note: 'Leave time between these.' }
           : kind === 'max-per-week'
             ? { kind, sessionTypeId: first!, count: 2, note: 'No more than this many a week.' }
-            : { kind, sessionTypeId: first!, before: second!, note: 'Do not stack these.' };
+            : kind === 'no-back-to-back'
+              ? { kind, intensity: 'hard', note: 'Leave a day between the hard ones.' }
+              : { kind, sessionTypeId: first!, before: second!, note: 'Do not stack these.' };
     onChange({ constraints: [...program.constraints, made] });
   }
 
@@ -722,6 +762,8 @@ function ruleTitle(c: Constraint, program: Program): string {
       return `${name(c.first)} before ${name(c.then)}`;
     case 'not-day-before':
       return `${name(c.sessionTypeId)} never the day before ${name(c.before)}`;
+    case 'no-back-to-back':
+      return `Never two ${INTENSITY_LABEL[c.intensity].toLowerCase()}s running`;
   }
 }
 
@@ -810,6 +852,21 @@ function RuleFields({
             className={picker}
           >
             {types.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
+          </Select>
+        </div>
+      );
+    case 'no-back-to-back':
+      return (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-ink-soft shrink-0">Days this hard or harder</span>
+          <Select
+            value={constraint.intensity} aria-label="How hard"
+            onChange={(e) => onChange({ intensity: e.target.value as Intensity } as Partial<Constraint>)}
+            className={picker}
+          >
+            {[...INTENSITY_ORDER].reverse().map((i) => (
+              <option key={i} value={i}>{INTENSITY_LABEL[i]}</option>
+            ))}
           </Select>
         </div>
       );

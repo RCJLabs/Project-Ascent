@@ -175,6 +175,12 @@ function sessionIssues(program: Program): Issue[] {
     if (ids.has(type.id)) add('error', `Two session types share the id "${type.id}".`);
     ids.add(type.id);
     if (type.name.trim() === '') add('error', 'A session type has no name.');
+    // A warning and not an error: the program runs perfectly well without
+    // it, and what it costs is precise — the planner's hard-day rule cannot
+    // see this session, so it will happily put it the day after a limit day.
+    if (!type.isRest && type.intensity === undefined) {
+      add('warning', `${type.name || type.id} does not say how hard it is, so the planner cannot space it.`);
+    }
   }
   if (program.sessionTypes.every((t) => t.isRest)) {
     add('error', 'Every session type is a rest day. Add something to train.');
@@ -318,6 +324,7 @@ function mentions(c: Constraint, typeId: string): boolean {
     case 'not-day-before':
       return c.sessionTypeId === typeId || c.before === typeId;
     case 'sessions-per-week':
+    case 'no-back-to-back':
       return false;
   }
 }

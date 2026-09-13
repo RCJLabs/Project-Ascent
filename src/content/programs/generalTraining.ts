@@ -70,6 +70,7 @@ export const GENERAL_TRAINING: Program = {
   sessionTypes: [
     {
       id: 'climb',
+      intensity: 'moderate',
       name: 'Climbing Session',
       icon: '🧗',
       description: 'Bouldering, sport, or trad. Focus on movement and fun.',
@@ -77,6 +78,7 @@ export const GENERAL_TRAINING: Program = {
     },
     {
       id: 'str',
+      intensity: 'moderate',
       name: 'Strength & Conditioning',
       icon: '💪',
       description: 'Off-wall training: pulling, pushing, core, legs, and prehab.',
@@ -178,6 +180,7 @@ export const GENERAL_TRAINING: Program = {
     },
     {
       id: 'hb',
+      intensity: 'hard',
       name: 'Hangboard / Finger',
       icon: '✋',
       description: 'Specific finger strength training. Know what you are doing before you start.',

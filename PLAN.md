@@ -5851,8 +5851,8 @@ rests on an inference it says so.*
   are what feed project suggestion (`engine/projects.ts:287`) and what `TallyRow` already
   knows how to show.
 
-- **M131 — hardness and minutes in the model.** *Proposed. Independent, and it unblocks the
-  scheduler.*
+- **M131 — hardness and minutes in the model.** *Proposed, and built seventh — see the Done
+  entry below. Independent, and it unblocks the scheduler.*
   `SessionType` carries `id, name, icon, description, blocks, drillsByWeek, fields, isRest,
   priority` and nothing else (`types.ts:229-254`); `Exercise` carries `sets, reps, hold, load,
   rest, notes` and no RPE, tempo or percentage of max (`types.ts:127-147`). The catalogue says
@@ -6311,3 +6311,103 @@ rests on an inference it says so.*
   **Budget.** 165.0 holds: measured 164.03 → 164.17, so 0.14KB — the engine function is
   entry-chunk beside `lastLogged`, and both screens that show its output are lazy. 4,069 tests
   pass.
+
+- **M131 — hardness and minutes in the model.** *Done. Three gaps, one of which was not a gap.*
+  **The proposal listed three missing constraints and one of them already existed.** *At least
+  two full rest days* is `sessions-per-week` with a maximum on it: a week has seven days, so a
+  ceiling of five sessions **is** a floor of two rest days, and the kind was dropped from the
+  draft before a line of it was written. The second correction is bigger. The proposal wanted
+  RPE and tempo on `Exercise`, which is a fourth dose field and a hundred and fifty-nine of them
+  to author — and it is the wrong object. The question the scheduler asks is *can these two days
+  sit next to each other*, and that is a question about the day.
+  **`SessionType.intensity`, four levels, defined by what you can do the day after.** Limit,
+  hard, moderate, easy. Forty-two working session types across thirteen programs now declare
+  one, and every one was read off the type's own prose rather than invented — Peak Performance
+  calls its Monday *"the hardest climbing of the week"*, Lockdown's Session B is *"lighter and
+  can follow A after one day"*, Ground Zero's mobility day is a flow and a core circuit.
+  `validateProgram` requires it of every non-rest type, because a session with no intensity is
+  silently exempt from the rule that is about recovery. A rest day may stay silent: `isRest`
+  already says easy.
+  **`no-back-to-back`, and an honest account of what it fixes.** The proposal implied the
+  scheduler could not express "never two hard days running", and that is not quite true: every
+  program that wanted it had enumerated the pairs, and every one of those enumerations is
+  correct for the types that program has. What enumeration cannot survive is a program being
+  edited, which the builder lets a climber do. And there was **one live miss**: The Cruiser's
+  hangboard constraint carried the note *"leave 48 hours between hangboard sessions and hard
+  climbing"* over data that only ever compared hangboard days with each other. The half of that
+  sentence after the "and" had never been checked by anything.
+  **And it took The Cruiser from two and a half rules to one.** Its separate 48-hour rule
+  between Performance and Endurance says the same thing as the new one in hours rather than
+  days, so a climber who moved Endurance next to Performance was told off twice, in two
+  different sentences, in the same dialogue. Found in a browser; both notes were in the same
+  screenshot. The pair rule is gone and the general one carries it.
+  **A longer week repeats the easiest session, not the most important one.** `sessionsForDays`
+  walked the priority list again to fill a week longer than the program, so a six-day Peak
+  Performance week opened with two max-intensity days. The first pass is still priority order,
+  because that is what the program *is*; every pass after it is a second helping, and a second
+  helping of the limit day is the one thing a coach would never add.
+  **Minutes are derived, not authored.** A `minutes` field would have been forty numbers
+  invented for sessions that are not the same length in week one and week eleven. The dose
+  fields already say it — sets, a hold or a count, a rest — and reading it off the resolved
+  prescription means it moves with the prescription: a deload week is a shorter number and
+  nobody wrote that down twice.
+  **Two drafts of it were confidently wrong, which is the interesting part.** The first read
+  *8 sets · 1 burn each* as eight three-second reps and offered **"about 3 min of work"** over
+  an evening of limit bouldering — every line parsed, the coverage guard perfectly satisfied. A
+  line that parses to nonsense is worse than one that does not parse, so the words are checked
+  before the numbers and a burn, a problem, a route and a lap are all "the app does not know".
+  The second draft still reported Base Camp's performance day as three minutes, because its only
+  block is a post-climb core circuit and the climbing is in the description and nowhere in the
+  data. Hence a floor: a prescription under a quarter of an hour is a corner of a session rather
+  than a session. Trip Prep's finger primer is thirteen minutes and genuinely the whole thing,
+  so the floor sits below that, and both cases are pinned against the real catalogue — raise it
+  and one test fails, drop it and the other does.
+  **Twenty-five of forty-two sessions get an answer**, and the seventeen that do not are the
+  right seventeen: projecting days, volume days, anything counted in burns. That is the point
+  rather than a shortfall. The drill counts, because a drill-driven day is a climbing day whose
+  length the program *does* state.
+  **The protocol registry was measured and refused.** `ProtocolTimer` would make a repeater
+  ladder exact instead of approximate, and reading it put `content/protocols` — prose, cues,
+  safety notes and all — into the entry chunk, because the card that shows the estimate is the
+  one on the front door. 167.63KB with it, 165.29 without, for five to twenty per cent of
+  accuracy on a figure printed as a range with "about" in front of it. The dose fields are also
+  the numbers the climber is looking at while they read it, which is the better reason.
+  **The calendar marks limit days and nothing else.** Four intensities is four colours on a
+  40px cell in a seven-column grid, encoding the thing a climber most wants to see in nothing
+  but hue. One mark answers the question the month view is actually asked — *where are my hard
+  days* — and leaves the grid readable.
+  **One thing followed that was not planned for.** `engine/priority.ts` derives a proposed
+  priority order from each program's own evidence, and "named in a spacing constraint" is part
+  of that evidence — so removing The Cruiser's pair rule demoted the two sessions it was about,
+  and its test caught it. The general rule counts as the same evidence, which is right: a
+  program asking for a clear day before its hard sessions is saying those are the ones worth
+  protecting.
+  **Measured, not asserted.** Thirty-three mutations, every one killed: equal hardness ceasing
+  to count and the four levels reversed; the catalogue letting a session stay silent, demanding
+  it of rest days, and accepting a rule about days a program does not have; an unauthored day
+  defaulting to easy and a rest day to ordinary; the rule firing on one hard day rather than
+  two, treating the week as a list rather than a loop, downgrading to a warning, naming one day
+  of the pair, and never firing; the longer week repeating the hardest, sorting the first pass
+  too, and not sorting at all; minutes read as seconds, a range collapsing, the trailing rest
+  counted, a burn counting as a rep and every count counting as a burn, half a session being
+  enough, no floor and a floor raised past a real session, the drill dropped and the drill
+  replacing the blocks, one number printed as a range; the card never saying what kind of day
+  it is and saying a length it does not have; the calendar marking every hard day and marking
+  none; and the priority derivation ignoring the new rule or crediting every session with it.
+  A no-op statement reorder survived. **Two survived the first round**, both tests comparing
+  code with itself: "a longer week still opens with what the program asks for" checked a
+  six-day week against a four-day one, which a version that sorted *every* pass by intensity
+  satisfied perfectly, and "the drill adds to the blocks" checked against the blocks alone when
+  the drill is the longer half. Both now assert against something outside the function.
+  **In a browser, both themes, 430px and 1280px.** Iron Grip's finger day reads *Hard day ·
+  about 42-51 min of work*; The Cruiser's volume day reads *Moderate day* and stops, because it
+  should; Peak Performance's Monday reads *Limit day · about 120 min of work*. The month view
+  carries twelve limit marks and a legend. Moving Endurance onto the Wednesday before a
+  Performance day raises one warning naming both sessions and both days. No overflow, no page
+  errors.
+  **Budget.** 165.0 → 166.0, measured 164.17 → 165.29, so 1.12KB. 4,117 tests pass.
+  **Left for later, and named:** minutes as a *scheduling* constraint — `LayoutRequest` taking
+  the time a climber has rather than the days, and the finder asking for it. That needs the
+  estimate to be trusted first, and it currently answers for twenty-five sessions out of
+  forty-two. Filtering a catalogue on a number that is absent for the other seventeen would
+  quietly hide the projecting programs from anyone who said they had ninety minutes.

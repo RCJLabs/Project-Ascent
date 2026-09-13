@@ -149,6 +149,7 @@ export const LOCKDOWN: Program = {
       // not a static power block — the hangs, lock-offs and pulling are the
       // program. The derivation is evidence, not the coach.
       id: 'sa',
+      intensity: 'hard',
       priority: 1,
       name: 'Session A: Static Power',
       icon: '🤜',
@@ -309,6 +310,7 @@ export const LOCKDOWN: Program = {
     },
     {
       id: 'sb',
+      intensity: 'moderate',
       priority: 3,
       name: 'Session B: Body Tension',
       icon: '🧘',
@@ -430,6 +432,7 @@ export const LOCKDOWN: Program = {
       // reaches the wall, and there is nothing to reach it with if the
       // strength day is the one that gets cut.
       id: 'tech',
+      intensity: 'moderate',
       priority: 2,
       name: 'Climbing: Technique',
       icon: '🧱',

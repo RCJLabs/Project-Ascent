@@ -240,7 +240,7 @@ describe('the bundle stays small', () => {
    * Every milestone that moves this moves it to just above what it measured;
    * the history is in the comment inside the first test.
    */
-  const BUDGET = 165.0;
+  const BUDGET = 166.0;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -402,6 +402,15 @@ describe('the bundle stays small', () => {
     // took off it is spent on the one screen that needs it. Two things
     // M115 and M116 bought stay bought: nothing *else* eager imports the
     // logger, and the glossary is still a tap away rather than a boot cost.
+    //
+    // **165.0 → 166.0 at M131**, measured 164.17 → 165.29, so 1.12KB, and
+    // the interesting part is the 2.3KB it is *not*. The session-length
+    // estimate reads the prescription, and a first draft read protocol
+    // timers too — which put `content/protocols`, prose and cues and all,
+    // in the entry chunk, because the card that shows the estimate is the
+    // one on the front door. Measured both ways: 167.63 with the registry,
+    // 165.29 without, for five to twenty per cent of accuracy on a figure
+    // already printed as a range. The cheaper number won.
     //
     // **164.0 → 165.0 at M129**, measured 163.95 → 164.03, so 0.08KB. The
     // dose arithmetic — `easedDose`, `easesAnything` and the deload rule
