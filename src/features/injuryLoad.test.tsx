@@ -100,7 +100,7 @@ describe('the front door, before you travel', () => {
     // A logged day replaces the card with the line that says where the
     // session got to (PLAN.md M124): wait for that, so the absence below
     // is the card being gone rather than the store being slow.
-    await view.findByRole('button', { name: 'Open the log' });
+    await view.findByText(/Session logged/);
     expect(view.container.textContent ?? '').not.toMatch(/3 exercises load your elbow/);
   });
 });

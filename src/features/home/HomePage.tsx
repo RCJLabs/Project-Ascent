@@ -11,7 +11,7 @@ import { usePlannedDay } from '@/features/log/usePlannedDay';
 import { ReviewCard } from '@/features/review/ReviewPage';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
-import { useSettings, type LogView } from '@/store/settings';
+import { useSettings } from '@/store/settings';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageGrid } from '@/ui/PageGrid';
@@ -116,7 +116,17 @@ function TodayCard({ date }: { date: string }) {
   );
 }
 
-/** Where today's session got to, and the way back into it. */
+/**
+ * Where today's session got to, and the way back into it.
+ *
+ * **One button, and it is the quick view.** It shipped with two — *Open the
+ * log* beside *Quick log* — and the pair asked a question with no
+ * interesting answer: a session that already exists is one a climber is
+ * coming back to add climbs to, which is the quick view by definition, and
+ * the fold is a toggle at the top of the log for the day they want the rest
+ * of it. The line above the button is what carries the state; the button
+ * only has to be the way in.
+ */
 function OpenSessionCard({ date, sessions }: { date: string; sessions: Session[] }) {
   const setLogView = useSettings((s) => s.setLogView);
   const [, navigate] = useLocation();
@@ -125,11 +135,6 @@ function OpenSessionCard({ date, sessions }: { date: string; sessions: Session[]
   // exactly what it means everywhere else — an attempt is not a send, and
   // one row of eight boulders is eight.
   const summary = gymSummary(sessions.flatMap((s) => s.climbs ?? []));
-
-  function go(view: LogView) {
-    setLogView(view);
-    navigate(`/log/${date}`);
-  }
 
   return (
     <Card>
@@ -140,14 +145,15 @@ function OpenSessionCard({ date, sessions }: { date: string; sessions: Session[]
           : ` · ${summary.total} climb${summary.total === 1 ? '' : 's'}, ${summary.sends} sent`}
         {sessions.length > 1 ? ` · ${sessions.length} sessions today` : ''}.
       </p>
-      <div className="flex gap-2">
-        <Button className="flex-1" onClick={() => go('full')}>
-          {done ? 'Open the log' : 'Continue session'}
-        </Button>
-        <Button variant="outline" className="flex-1" onClick={() => go('quick')}>
-          <Zap size={15} /> Quick log
-        </Button>
-      </div>
+      <Button
+        className="w-full"
+        onClick={() => {
+          setLogView('quick');
+          navigate(`/log/${date}`);
+        }}
+      >
+        <Zap size={15} /> Quick log
+      </Button>
     </Card>
   );
 }

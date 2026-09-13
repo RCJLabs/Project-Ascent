@@ -67,7 +67,7 @@ describe('with no active program', () => {
     // (PLAN.md M124): with a session already logged the front door is not
     // a dead end, which is the thing M45 was about.
     const view = renderAt('/', <HomePage />);
-    await view.findByRole('button', { name: 'Open the log' });
+    await view.findByText(/Session logged/);
     expect(view.container.textContent ?? '').toMatch(/Session logged · 2 climbs, 2 sent/);
   });
 

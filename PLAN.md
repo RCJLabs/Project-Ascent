@@ -5659,7 +5659,11 @@ read by seven pages as display. A separate tab is moving, not gating.*
   buttons, M123's three first-run cards, unchanged and still last: they are the first week of
   the app's life and the button is every day of it.
   **Once a session exists Home says where it got to** — *Session started · 5 climbs, 3 sent*,
-  or *Session logged* — with **Continue session** and **Quick log** beside it. Counted
+  or *Session logged* — with one **Quick log** button under it. It shipped with two, *Open
+  the log* beside *Quick log*, and they were collapsed the same day: a session that already
+  exists is one you are coming back to add climbs to, which is the quick view by definition,
+  and the fold is a toggle at the top of the log for the day you want the rest. The line
+  carries the state; the button only has to be the way in. Counted
   through `gymSummary`, so a send means on Home what it means everywhere else. The live bar
   comes back to Home with it: from M117 to M123 the bar stood down here because Home carried
   the session's own clock, and now it is the way back into a session from wherever you

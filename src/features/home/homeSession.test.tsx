@@ -58,7 +58,7 @@ describe('the one big button', () => {
     expect(useSessions.getState().byDate[TODAY]?.[0]?.sessionTypeId).toBe('tech');
     // The card is gone, and the app is at the log rather than showing it
     // on the front door.
-    await screen.findByRole('button', { name: 'Continue session' });
+    await screen.findByText(/Session started/);
     expect(screen.queryByRole('button', { name: 'Start session' })).toBeNull();
   });
 

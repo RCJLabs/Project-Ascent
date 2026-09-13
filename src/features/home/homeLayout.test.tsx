@@ -127,8 +127,7 @@ describe('once a session exists', () => {
   it('says where it got to rather than rendering the editor', async () => {
     await withSession(false);
     renderAt('/', <HomePage />);
-    await screen.findByRole('button', { name: 'Continue session' });
-    expect(screen.getByText(/Session started · 5 climbs, 3 sent/)).toBeTruthy();
+    await screen.findByText(/Session started · 5 climbs, 3 sent/);
     // The editor's own headings are not on the front door any more.
     expect(screen.queryByText('Effort', { selector: 'h2' })).toBeNull();
     expect(screen.queryByText(/Add another session today/)).toBeNull();
@@ -137,8 +136,20 @@ describe('once a session exists', () => {
   it('says so when the session is finished', async () => {
     await withSession(true);
     renderAt('/', <HomePage />);
-    await screen.findByRole('button', { name: 'Open the log' });
-    expect(screen.getByText(/Session logged/)).toBeTruthy();
+    await screen.findByText(/Session logged/);
+  });
+
+  it('offers one way in, and it is the quick view', async () => {
+    // Two buttons shipped in M124 — *Open the log* beside *Quick log* —
+    // and the pair asked a question with no interesting answer. A session
+    // you are coming back to is one you are adding climbs to.
+    await withSession(false);
+    renderAt('/', <HomePage />);
+    await screen.findByText(/Session started/);
+    const buttons = screen
+      .getAllByRole('button')
+      .filter((b) => /Quick log|Open the log|Continue session|Start session/.test(b.textContent ?? ''));
+    expect(buttons.map((b) => b.textContent?.trim())).toEqual(['Quick log']);
   });
 
   it('says nothing about climbs before any are entered', async () => {
@@ -146,17 +157,17 @@ describe('once a session exists', () => {
     await putSession({ ...newSession(TODAY, 0, { completed: false }), climbs: [] } as never);
     await hydrate();
     renderAt('/', <HomePage />);
-    await screen.findByRole('button', { name: 'Continue session' });
-    expect(screen.getByText(/no climbs entered yet/)).toBeTruthy();
+    await screen.findByText(/no climbs entered yet/);
   });
 
-  it('opens it, in the view the button names', async () => {
+  it('opens the log in the quick view', async () => {
     await withSession(false);
-    useSettings.setState({ logView: 'quick' });
+    useSettings.setState({ logView: 'full' });
     renderAt('/', <HomePage />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Continue session' }));
+    await screen.findByText(/Session started/);
+    fireEvent.click(screen.getByRole('button', { name: /Quick log/ }));
     await waitFor(() => expect(window.location.hash).toBe(`#/log/${TODAY}`));
-    expect(useSettings.getState().logView).toBe('full');
+    expect(useSettings.getState().logView).toBe('quick');
   });
 
   it('counts a second session on the same day', async () => {
@@ -164,7 +175,6 @@ describe('once a session exists', () => {
     await putSession({ ...newSession(TODAY, 1, { completed: false }), climbs: [] } as never);
     await hydrate();
     renderAt('/', <HomePage />);
-    await screen.findByRole('button', { name: 'Continue session' });
-    expect(screen.getByText(/2 sessions today/)).toBeTruthy();
+    await screen.findByText(/2 sessions today/);
   });
 });
