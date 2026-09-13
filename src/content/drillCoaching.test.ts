@@ -28,9 +28,18 @@ import { DRILL_COACHING } from './drillCoaching';
  */
 const WRITTEN = ['base_camp', 'iron_grip', 'lockdown', 'gravity_defied', 'the_long_game', 'the_siege', 'peak_performance'] as const;
 
-/** Drills whose provenance lies entirely inside a finished source. */
+/**
+ * Drills whose provenance lies entirely inside a finished source.
+ *
+ * The off-wall set has no provenance at all — no program prescribes it
+ * (PLAN.md M132) — and an empty `sources` list read as "not from a written
+ * source", so twelve drills arrived and the ledger recorded them as debt
+ * while sitting on a full set of cues. Library-only *is* a finished source;
+ * it is the one whose drills were written here rather than extracted.
+ */
 const coached = DRILLS.filter(
-  (d) => d.sources.length > 0 && d.sources.every((s) => (WRITTEN as readonly string[]).includes(s)),
+  (d) =>
+    d.sources.length === 0 || d.sources.every((s) => (WRITTEN as readonly string[]).includes(s)),
 );
 
 describe('the drills that are coached', () => {
@@ -161,7 +170,7 @@ describe('the size of what is left', () => {
     // a new drill cannot arrive uncoached: adding one to any program moves
     // this number and fails here before anything else notices.
     expect({ done: coached.length, left: DRILLS.length - coached.length }).toEqual({
-      done: 144,
+      done: 156,
       left: 0,
     });
   });

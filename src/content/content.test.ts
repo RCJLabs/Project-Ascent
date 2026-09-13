@@ -288,15 +288,30 @@ describe('Lockdown', () => {
 });
 
 describe('library coverage', () => {
-  it('every drill is used by at least one program', () => {
+  it('every drill that claims a program is used by one', () => {
+    // `sources` was provenance and nothing else until M132, when the
+    // library gained drills that belong to no program — the off-wall set,
+    // which exists precisely because nothing prescribes it. An empty
+    // `sources` is that declaration; a non-empty one is a claim, and a
+    // claim nothing backs up is the orphan this has always caught.
     const referenced = new Set<string>();
     for (const program of PROGRAMS) {
       for (const type of program.sessionTypes) {
         for (const id of Object.values(type.drillsByWeek ?? {})) referenced.add(id);
       }
     }
-    const orphans = DRILLS.filter((d) => !referenced.has(d.id)).map((d) => d.id);
+    const orphans = DRILLS.filter((d) => d.sources.length > 0 && !referenced.has(d.id)).map((d) => d.id);
     expect(orphans).toEqual([]);
+  });
+
+  it('only the off-wall set stands on its own', () => {
+    // The other direction, so "library-only" cannot become a way to skip
+    // wiring a drill into the program it was written for.
+    const standalone = DRILLS.filter((d) => d.sources.length === 0);
+    expect(standalone.length).toBeGreaterThan(8);
+    for (const drill of standalone) {
+      expect(drill.equipment, `${drill.id} stands alone but needs kit`).toEqual(['none']);
+    }
   });
 
   it('every protocol is used by at least one program', () => {
@@ -461,10 +476,14 @@ describe('helpers', () => {
   });
 
   it('filters drills by equipment availability', () => {
-    // Nothing at all runs nothing. Every drill in this library is climbing
-    // or hanging, and the six that claimed to need no equipment all read
-    // "pick a project" or "before placing each hand on a hold" (PLAN.md M39).
-    expect(filterDrills({ equipment: [] })).toEqual([]);
+    // Nothing at all used to run nothing, and that was the finding: every
+    // drill was climbing or hanging, and the six that claimed to need no
+    // equipment all read "pick a project" (PLAN.md M39). M132 wrote the set
+    // that genuinely needs nothing, so an empty kit list now returns those
+    // and only those.
+    const nothing = filterDrills({ equipment: [] });
+    expect(nothing.length).toBeGreaterThan(8);
+    for (const drill of nothing) expect(drill.equipment).toEqual(['none']);
 
     const withWall = filterDrills({ equipment: ['wall'] }).map((d) => d.id);
     expect(withWall).toContain('the_crimp_project');

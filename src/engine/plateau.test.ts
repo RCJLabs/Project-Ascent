@@ -203,6 +203,16 @@ describe('the reset protocol', () => {
     expect(reset.steps[2]!.detail).toContain('no drill from this category at all');
   });
 
+  it('names a drill even for a climber with no equipment at all', () => {
+    // `novelStimulus` takes the first category holding a drill the climber
+    // can equip, and until M132 every drill in the library declared a wall
+    // — so a climber with nothing walked the whole preference order and
+    // came out the bottom holding "pick any drill", which is the one piece
+    // of advice a reset protocol cannot afford to give.
+    const reset = run(steadyHistory('V5'), { equipment: ['none'] }).reset!;
+    expect(reset.steps[2]!.title).toMatch(/^One novel stimulus: /);
+  });
+
   it('retests the program benchmark that has gone longest without a number', () => {
     const program = getProgram('iron_grip')!;
     const metrics: MetricEntry[] = program.assessments

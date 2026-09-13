@@ -21,14 +21,20 @@ import { PageSkeleton } from '@/ui/Skeleton';
  * knows had nowhere to do it, and a drill they had been given six times and
  * done twice looked exactly like one they had never met.
  *
- * **No equipment filter, measured.** One was built here on the assumption
- * that the library is mostly unavailable to someone with a wall and nothing
- * else. Counted: **all 144 drills list `wall`**, and exactly **three** ask
- * for anything more. A filter that separates three entries out of 144 is a
- * control and a sentence for nothing — and its failure mode is much worse
- * than its benefit, since a climber who has not listed a wall would open the
- * library to *zero* drills. What each one needs is on its own page, where it
- * is read before doing it rather than before finding it.
+ * **No equipment filter, measured — until the measurement changed.** One was
+ * built here on the assumption that the library is mostly unavailable to
+ * someone with a wall and nothing else. Counted at the time: all 144 drills
+ * listed `wall` and exactly three asked for anything more, so a filter would
+ * have separated three entries out of 144 — a control and a sentence for
+ * nothing, whose failure mode was much worse than its benefit, since a
+ * climber who had not listed a wall would open the library to *zero* drills.
+ *
+ * That last clause was the real finding, and M132 fixed the library rather
+ * than the page: twelve drills that need nothing at all. One chip now
+ * separates those twelve, and it answers a question a climber actually
+ * arrives with — *the gym is shut and my finger hurts, what can I do* —
+ * rather than describing a tag. The rest of what a drill needs is still on
+ * its own page, read before doing it rather than before finding it.
  *
  * **Grouped by category, like the glossary.** A hundred-odd rows in one
  * flat list is a wall rather than a library — seen in a browser, where the
@@ -41,6 +47,7 @@ export function DrillsPage() {
   const byDate = useSessions((s) => s.byDate);
   const ready = useSessions((s) => s.hydrated);
   const [category, setCategory] = useState<DrillCategory | null>(null);
+  const [offWall, setOffWall] = useState(false);
   const [search, setSearch] = useState('');
 
   const history = useMemo(
@@ -52,9 +59,10 @@ export function DrillsPage() {
     () =>
       filterDrills({
         ...(category ? { category } : {}),
+        ...(offWall ? { equipment: [] } : {}),
         ...(search.trim() ? { search } : {}),
       }),
-    [category, search],
+    [category, offWall, search],
   );
 
   // Category order comes from the registry rather than from whatever order
@@ -74,7 +82,7 @@ export function DrillsPage() {
       <BackLink />
       <PageHeader
         title="Drills"
-        subtitle={`${shown.length} of ${DRILLS.length} — every one the programs prescribe`}
+        subtitle={`${shown.length} of ${DRILLS.length} — what the programs prescribe, and what the library adds`}
       />
 
       <div className="grid grid-cols-1 gap-3">
@@ -96,13 +104,23 @@ export function DrillsPage() {
               </Chip>
             ))}
           </div>
+          {/* Its own row, because it is not a category — it crosses them.
+              An empty kit list is the whole filter: `filterDrills` keeps a
+              drill only when the climber has everything it asks for, and
+              `none` asks for nothing. */}
+          <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-line">
+            <Chip active={offWall} onClick={() => setOffWall(!offWall)}>
+              {offWall ? '✓ ' : ''}No wall needed
+            </Chip>
+          </div>
 
         </Card>
 
         {shown.length === 0 ? (
           <Card>
             <p className="text-sm text-ink-soft">
-              Nothing matches. Try a different category, or turn the kit filter off.
+              Nothing matches. Try a different category, a different search, or drop the
+              no-wall filter.
             </p>
           </Card>
         ) : (
@@ -143,8 +161,10 @@ export function DrillsPage() {
           <p className="text-xs text-ink-soft leading-relaxed flex items-start gap-2">
             <Search size={13} className="shrink-0 mt-0.5" aria-hidden />
             <span>
-              A drill is a way of climbing for an hour, not a workout to get through. The ones your
-              program picks are here too — this is the whole library, including what it did not pick.
+              Most of these are a way of climbing for an hour rather than a workout to get through,
+              and twelve are for the days you are not climbing at all. Your program's own picks are
+              here too — this is the whole library, including what it did not pick, and any of them
+              can go on today from its own page.
             </span>
           </p>
         </Card>

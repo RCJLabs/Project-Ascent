@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { AlertTriangle, Check, ChevronDown, ChevronUp, Clock, Copy, Flame, Plus, RotateCw, Snowflake, Sparkles, Timer, Trash2, TrendingDown, TrendingUp, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
+import { getDrill } from '@/content/drills';
 import { getProtocol } from '@/content/protocols';
 import { SCALE_MAX, getField, type FieldSpec } from '@/content/fields';
 import type { FieldId, SessionType } from '@/content/types';
@@ -657,6 +658,18 @@ function SessionEditor({
   // week it is.
   const blocks =
     type && day?.phase ? prescriptionFor(type, day.phase, trackId, day.week, day.isDeload) : [];
+  /**
+   * The drill this session is actually carrying (PLAN.md M132).
+   *
+   * The session's own `drillId` first, the plan's for the week second. They
+   * agree for every planned session — starting one stamps the plan's drill
+   * onto it — and they differ exactly when a climber chose one from the
+   * library, which is the case this card did not render at all. Found in a
+   * browser: the id was written, the card kept showing the plan's drill or
+   * nothing, and a drill that cannot be seen cannot be ticked done, so
+   * `drillsCompleted` stayed at zero and the coach kept asking.
+   */
+  const drill = (session.drillId ? getDrill(session.drillId) : undefined) ?? day?.drill;
   // What today actually loads, so the check-in does not tell a climber on a
   // legs-and-core day to leave the fingerboard alone.
   const loads = type
@@ -1051,13 +1064,13 @@ function SessionEditor({
             </Card>
           )}
 
-          {full && day?.drill && (
+          {full && drill && (
             <Card title="Drill">
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="min-w-0">
-                  <div className="font-semibold text-sm">{day.drill.name}</div>
+                  <div className="font-semibold text-sm">{drill.name}</div>
                   <p className="text-xs text-ink-soft mt-0.5">
-                    {day.drill.duration} · {day.drill.focus}
+                    {drill.duration} · {drill.focus}
                   </p>
                 </div>
                 <Chip
@@ -1068,9 +1081,9 @@ function SessionEditor({
                   {session.drillDone ? 'Done' : 'Mark done'}
                 </Chip>
               </div>
-              <p className="text-sm text-ink-soft leading-relaxed">{day.drill.description}</p>
+              <p className="text-sm text-ink-soft leading-relaxed">{drill.description}</p>
               {(() => {
-                const clash = drillConflict(day.drill!, hurtParts);
+                const clash = drillConflict(drill!, hurtParts);
                 return clash ? (
                   <p className="text-warn text-xs mt-2 flex items-start gap-1.5">
                     <AlertTriangle size={12} className="shrink-0 mt-0.5" />
@@ -1081,7 +1094,7 @@ function SessionEditor({
                 ) : null;
               })()}
               {(() => {
-                const protocol = day.drill.protocolId ? getProtocol(day.drill.protocolId) : undefined;
+                const protocol = drill.protocolId ? getProtocol(drill.protocolId) : undefined;
                 if (!protocol?.timer) return null;
                 return (
                   <Button
@@ -1091,11 +1104,11 @@ function SessionEditor({
                       setTimer({
                         subject: protocolSubject(
                           protocol,
-                          day.drill!.name,
-                          day.drill!.timerOverride?.sets ?? 2,
-                          day.drill!.timerOverride,
+                          drill!.name,
+                          drill!.timerOverride?.sets ?? 2,
+                          drill!.timerOverride,
                         )!,
-                        completes: day.drill!.name,
+                        completes: drill!.name,
                       })
                     }
                     className="mt-3 text-accent"

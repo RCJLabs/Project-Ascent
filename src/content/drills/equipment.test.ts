@@ -102,10 +102,43 @@ describe('drill equipment', () => {
     // The under-declared direction, narrow enough to be mechanical: a drill
     // whose text is about projecting or bouldering has to say it needs a
     // wall, or it is offered to someone with nothing.
+    //
+    // A drill declaring `none` is exempt, and the exemption is the point
+    // rather than a hole (PLAN.md M132). The rule catches the *accidental*
+    // omission — a tag list that forgot the wall the drill obviously
+    // happens on — and `['none']` is not an omission, it is an author
+    // saying out loud that this needs nothing. It has to be, because the
+    // off-wall drills are about climbing without doing any: rehearsing a
+    // project move by move is the whole of Sequence Rehearsal and happens
+    // in a chair. The rule below replaces the teeth this one gives up.
     const onTheWall = /\b(boulder|boulders|project|projects|projecting|route|routes|lap|laps|burn|burns|traverse)\b/i;
     const wrong = DRILLS.filter(
-      (d) => !d.equipment.includes('wall') && onTheWall.test(`${d.name} ${d.description}`),
+      (d) =>
+        !d.equipment.includes('wall') &&
+        !d.equipment.includes('none') &&
+        onTheWall.test(`${d.name} ${d.description}`),
     ).map((d) => `${d.id} climbs but does not declare a wall (declares ${d.equipment.join(', ') || 'nothing'})`);
     expect(wrong).toEqual([]);
+  });
+
+  it('lets a drill declare nothing only when it declares nothing else', () => {
+    // `none` means *no kit*, not *no kit worth listing*. A drill that
+    // claimed `none` beside a hangboard would pass every filter and then
+    // ask a climber with bare hands for a twenty-millimetre edge.
+    const wrong = DRILLS.filter((d) => d.equipment.includes('none') && d.equipment.length > 1).map(
+      (d) => `${d.id} declares none and ${d.equipment.filter((e) => e !== 'none').join(' + ')}`,
+    );
+    expect(wrong).toEqual([]);
+  });
+
+  it('leaves something for a climber with nothing', () => {
+    // The invariant M132 exists to create, and the one that rots quietly:
+    // a library whose every entry needs a wall is a library that is empty
+    // on the day it is most wanted.
+    const bare = DRILLS.filter((d) => d.equipment.every((e) => e === 'none'));
+    expect(bare.length).toBeGreaterThan(8);
+    // And across more than one kind of day — twelve mobility drills would
+    // satisfy a count and still leave nothing to think with.
+    expect(new Set(bare.map((d) => d.category)).size).toBeGreaterThan(2);
   });
 });

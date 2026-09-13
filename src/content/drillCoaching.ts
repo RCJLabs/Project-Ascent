@@ -1806,6 +1806,158 @@ export const DRILL_COACHING: Record<string, DrillCoaching> = {
       'Rotating straight into the next program on peak-cycle fatigue, which compounds into an injury.',
     ],
   },
+
+
+  // ── The off-wall set (PLAN.md M132) ──────────────────────────────────
+  //
+  // Coached like everything else, because the ledger below says every drill
+  // is, and because these are the ones most likely to be done alone in a
+  // room with nobody watching the form. A cue that lands between two moves
+  // on a wall has to land between two breaths here instead.
+
+  off_shoulder_cars: {
+    cues: [
+      'Twenty seconds to get round once. If it took ten, it was a swing.',
+      'Ribs down. The shoulder moves, the body does not help.',
+      'Slow through the part that catches, not around it.',
+    ],
+    faults: [
+      'The lower back arches as the arm goes overhead, which borrows the range from the spine and gives the shoulder nothing.',
+      'Speeding up through the back half of the circle, which is exactly the part that has stopped working.',
+    ],
+  },
+
+  off_wrist_forearm_prep: {
+    cues: [
+      'Rock the weight on, then off. Never hold at the end of the range.',
+      'Thirty seconds is the dose. Two minutes is a stretch session.',
+      'Sharp means stop. Stretch means stay.',
+    ],
+    faults: [
+      'Doing this only on days the wrists already hurt, which turns a prep routine into a treatment that arrives late every time.',
+      'Loading straight into full extension from cold, which is the position the wrist is weakest in.',
+    ],
+  },
+
+  off_ninety_ninety_hips: {
+    cues: [
+      'Switch without the hands. The hands are how you cheat it.',
+      'Chest tall through the switch, not folded over the front leg.',
+      'Lean over the shin, not past it.',
+    ],
+    faults: [
+      'Rolling onto the back to get the legs over, which trades the rotation being trained for a sit-up.',
+      'Forcing the lean until the front knee lifts off the floor — the hip stopped rotating one second earlier and the knee is now taking it.',
+    ],
+  },
+
+  off_thoracic_opening: {
+    cues: [
+      'Eyes follow the hand. The head turns first and the ribs follow.',
+      'Knees stay stacked and on the floor the whole way round.',
+      'Pause anywhere it catches and breathe twice.',
+    ],
+    faults: [
+      'The top knee lifts as the arm travels, which turns a thoracic rotation into a lumbar one and trains the segment that should not be moving.',
+      'Racing the arc to get the reps in, which is the one way to get nothing at all from eight reps.',
+    ],
+  },
+
+  off_extensor_work: {
+    cues: [
+      'Slow out, slower back. The return is the half that counts.',
+      'Stop at a mild pump, not a burn.',
+      'Ten minutes, two or three times a week. More is not better here.',
+    ],
+    faults: [
+      'Going hard enough to feel it the next day, which loads a small muscle group that is being asked to recover, not to grow.',
+      'Doing it once after an elbow starts hurting and never again, which is the pattern this drill exists to break.',
+    ],
+  },
+
+  off_skin_repair: {
+    cues: [
+      'File dry, and file flat. Never down to pink.',
+      'No lip left on a flapper for the next hold to catch.',
+      'Moisturise lightly, then leave it alone.',
+    ],
+    faults: [
+      'Sanding until it feels smooth, which takes off the callus that was doing the work and costs two sessions.',
+      'Heavy cream straight after filing, which softens the skin overnight and tears it the next day.',
+    ],
+  },
+
+  off_easy_aerobic: {
+    cues: [
+      'A pace you could hold a conversation through. If you cannot, slow down.',
+      'Thirty minutes counts. Sixty is not twice as good.',
+      'This is not the day to make it a workout.',
+    ],
+    faults: [
+      'Turning it into intervals because easy feels pointless, which adds load to a day whose job was to move blood and nothing else.',
+      'Skipping it on the grounds that it is not training — it is the cheapest thing in the app for how the back half of a week feels.',
+    ],
+  },
+
+  off_tension_holds: {
+    cues: [
+      'Lower back flat on the floor. That is the position; everything else is decoration.',
+      'Hold until the position breaks, then stop. Not until a number.',
+      'Breathe. A held breath is not tension, it is a stall.',
+    ],
+    faults: [
+      'The lower back peeling off the floor a few seconds in and the hold continuing anyway, which trains the hip flexors and the habit of a soft middle.',
+      'Chasing a longer time each session, which is how the position degrades while the number improves.',
+    ],
+  },
+
+  off_sequence_rehearsal: {
+    cues: [
+      'Real time. If the rehearsal is faster than the climb, you are skipping something.',
+      'Hands, feet, breath, where you shake out.',
+      'When it goes fuzzy, write that section down. That is the output.',
+    ],
+    faults: [
+      'Rehearsing only the part that already works, because it is the part that is pleasant to imagine.',
+      'Running it at double speed, which produces confidence about a sequence you still cannot execute.',
+    ],
+  },
+
+  off_box_breathing: {
+    cues: [
+      'Four in, four hold, four out, four hold. Nose only.',
+      'Sit up. Slumped is a different nervous system.',
+      'The second ten rounds, with the move in mind, are the drill.',
+    ],
+    faults: [
+      'Stretching the count to six or eight because four is easy, which makes it a breath-hold exercise instead of a down-regulation one.',
+      'Only ever practising it calm, so the first time it is asked for under pressure is the first time it is asked for at all.',
+    ],
+  },
+
+  off_rehearsing_the_fall: {
+    cues: [
+      'Slowly, and in detail. The jolt is the thing being worked on.',
+      'Stop if it stays sharp after a few passes.',
+      'This earns the first real one. It does not replace it.',
+    ],
+    faults: [
+      'Pushing through a response that is not settling, which rehearses the fear rather than the fall.',
+      'Treating it as a substitute for practising falls on a rope, which it is not and cannot be.',
+    ],
+  },
+
+  off_ten_minute_debrief: {
+    cues: [
+      'What actually limited you. Not what you did.',
+      'One decision you would take back.',
+      'One thing to do differently, specific enough to schedule.',
+    ],
+    faults: [
+      'Writing "felt weak", which names a mood and not a limiter, and gives next week nothing to act on.',
+      'Listing five things to change, which is a list nobody runs — the drill asks for one on purpose.',
+    ],
+  },
 };
 
 export function drillCoaching(id: string): DrillCoaching | undefined {

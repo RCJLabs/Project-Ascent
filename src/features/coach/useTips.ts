@@ -63,6 +63,12 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
       metrics,
       adherence,
       lastExportAt,
+      // Whether this climber's program ever puts a drill in a week, so the
+      // drill tip stops asserting one for the six programs that do not
+      // (PLAN.md M132).
+      prescribesDrills: Boolean(
+        program?.sessionTypes.some((t) => Object.keys(t.drillsByWeek ?? {}).length > 0),
+      ),
       diagnosis: diagnose({
         display,
         state,

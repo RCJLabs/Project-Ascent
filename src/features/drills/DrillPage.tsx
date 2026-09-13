@@ -1,13 +1,17 @@
 import { useMemo } from 'react';
+import { useLocation } from 'wouter';
+import { CalendarPlus, Check } from 'lucide-react';
 import { DRILL_CATEGORIES, getDrill } from '@/content/drills';
 import { drillCoaching } from '@/content/drillCoaching';
 import { PROTOCOLS } from '@/content/protocols';
 import { EQUIPMENT_LABELS } from '@/engine/customProgram';
-import type { DrillId } from '@/content/types';
+import type { Drill, DrillId } from '@/content/types';
 import { today } from '@/engine/dates';
 import { describeRecord, drillHistory, prescribedBy } from '@/engine/drillHistory';
 import { useSessions } from '@/store/sessions';
+import { useSettings } from '@/store/settings';
 import { BackLink } from '@/ui/BackLink';
+import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
 import { RecordNotFound } from '@/ui/RecordNotFound';
@@ -36,6 +40,60 @@ function Lines({ items, tone }: { items: string[]; tone?: 'warn' }) {
 }
 
 /**
+ * Put this drill on today, and say so when it is already there.
+ *
+ * It writes `drillId` onto today's session and nothing else — not
+ * `drillDone`, which is the climber's to tick in the logger once they have
+ * actually done it. Replacing a drill the plan placed is allowed and is
+ * most of the point: the plan's drill for the week is a prescription, and a
+ * climber whose fingers hurt on the day the plan wants contact strength is
+ * the person this button is for.
+ *
+ * The session is created if there is not one, because on a day you cannot
+ * climb there usually is not one yet — and the drill *is* the session.
+ */
+function PutOnToday({ drill }: { drill: Drill }) {
+  const date = today();
+  const byDate = useSessions((s) => s.byDate);
+  const create = useSessions((s) => s.create);
+  const update = useSessions((s) => s.update);
+  const setLogView = useSettings((s) => s.setLogView);
+  const [, navigate] = useLocation();
+
+  const sessions = byDate[date] ?? [];
+  const current = sessions[0];
+  const already = sessions.some((s) => s.drillId === drill.id);
+
+  async function put() {
+    if (current) await update({ ...current, drillId: drill.id });
+    else await create(date, { drillId: drill.id });
+    // And open the log where the drill is. The quick view is climbs and
+    // effort, and the drill card lives in the full one — so without this
+    // the button wrote the drill and handed the climber a screen with no
+    // sign of it. Found in a browser; jsdom renders whichever view the
+    // test asks for and never noticed.
+    setLogView('full');
+    navigate(`/log/${date}`);
+  }
+
+  return (
+    <Card>
+      <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+        {already
+          ? 'This is on today already. The logger is where you tick it off.'
+          : current
+            ? 'Today already has a session. This puts the drill on it.'
+            : 'Nothing logged today yet. This starts a session with the drill on it.'}
+      </p>
+      <Button className="w-full" variant={already ? 'outline' : 'primary'} onClick={() => void put()}>
+        {already ? <Check size={15} /> : <CalendarPlus size={15} />}
+        {already ? 'Open today' : 'Put this on today'}
+      </Button>
+    </Card>
+  );
+}
+
+/**
  * One drill, and the climber's own record with it (PLAN.md M107).
  *
  * **The description is not a stub.** M107's premise is that "a drill is a
@@ -47,6 +105,13 @@ function Lines({ items, tone }: { items: string[]; tone?: 'warn' }) {
  *
  * What was missing is underneath: how many times the app has put this in
  * front of you, and how many of those you did.
+ *
+ * **And a way to choose one** (PLAN.md M132). `session.drillId` was written
+ * in exactly one place — the plan's drill for the week — so the library was
+ * a reference and nothing else: a climber could read 144 drills and put none
+ * of them on a day. That was survivable while every drill belonged to a
+ * program that would eventually prescribe it. It stopped being survivable
+ * the moment the library gained twelve drills no program prescribes at all.
  */
 export function DrillPage({ params }: { params: { id: string } }) {
   const byDate = useSessions((s) => s.byDate);
@@ -84,6 +149,8 @@ export function DrillPage({ params }: { params: { id: string } }) {
       <PageHeader title={drill.name} subtitle={`${drill.focus} · ${drill.level}`} />
 
       <div className="grid grid-cols-1 gap-3">
+        <PutOnToday drill={drill} />
+
         <Card title="How to run it">
           <p className="text-sm leading-relaxed whitespace-pre-line">{drill.description}</p>
           <div className="flex flex-wrap gap-1.5 mt-3">
@@ -101,8 +168,16 @@ export function DrillPage({ params }: { params: { id: string } }) {
               </span>
             ))}
           </div>
+          {/* This said "needs nothing but somewhere to climb" until M132,
+              and it had never once been shown: `kit` drops `none`, so the
+              line only renders for a drill that declares nothing else —
+              and every drill in the library declared a wall. The off-wall
+              set is the first content to reach it, and for them the old
+              sentence was exactly wrong. */}
           {kit.length === 0 && (
-            <p className="text-xs text-ink-soft mt-2">Needs nothing but somewhere to climb.</p>
+            <p className="text-xs text-ink-soft mt-2">
+              Needs nothing at all — no wall, no board, no weights.
+            </p>
           )}
         </Card>
 

@@ -67,6 +67,18 @@ export interface CoachInput {
    * things the coach has no business holding to write one tip.
    */
   adherence?: BlockAdherence | null;
+  /**
+   * Whether the running program puts a drill in any week (PLAN.md M132).
+   *
+   * Six of the thirteen programs ship no drills at all — Ground Zero, The
+   * Cruiser, Two Days a Week, Trip Prep, General Training and Outdoor
+   * Climbing — and the drill tip told every one of their climbers that
+   * *"your program prescribes a drill each week"*, which for them is
+   * simply false. Passed in rather than derived here for the reason
+   * `adherence` is: the coach has no business holding a program to write
+   * one tip.
+   */
+  prescribesDrills?: boolean;
   today?: string;
 }
 
@@ -398,8 +410,9 @@ interface Domain {
   after: (s: ClimberState) => boolean;
   missing: (s: ClimberState) => boolean;
   headline: string;
-  body: string;
-  action: { label: string; href: string };
+  /** A function where the advice depends on more than the climber's log. */
+  body: string | ((input: CoachInput) => string);
+  action: { label: string; href: string } | ((input: CoachInput) => { label: string; href: string });
 }
 
 /**
@@ -420,8 +433,20 @@ const DOMAINS: Domain[] = [
     after: (s) => s.completedSessions >= 8,
     missing: (s) => s.drillsCompleted === 0,
     headline: 'No drills yet',
-    body: 'Technique is the only stat that will not move for you on volume alone. Your program prescribes a drill each week and it takes ten minutes of a session you are already having.',
-    action: { label: 'See this week', href: '/train' },
+    // Two sentences, because the first one was false for six of thirteen
+    // programs (PLAN.md M132). A climber on The Cruiser has never been
+    // prescribed a drill in their life and was being told they skip one
+    // every week; the fix is to say the true thing to each of them, and
+    // to point the second sort at the library, which is now somewhere a
+    // drill can actually be chosen from.
+    body: (input) =>
+      input.prescribesDrills === true
+        ? 'Technique is the only stat that will not move for you on volume alone. Your program prescribes a drill each week and it takes ten minutes of a session you are already having.'
+        : 'Technique is the only stat that will not move for you on volume alone. Your program does not prescribe drills, so this one is on you: the library has a hundred and fifty-odd, twelve of which need no wall at all, and any of them can go on today.',
+    action: (input) =>
+      input.prescribesDrills === true
+        ? { label: 'See this week', href: '/train' }
+        : { label: 'Browse the drills', href: '/drills' },
   },
   {
     id: 'domain:outdoor',
@@ -449,7 +474,8 @@ const DOMAINS: Domain[] = [
   },
 ];
 
-function missingDomains({ state }: CoachInput): Tip[] {
+function missingDomains(input: CoachInput): Tip[] {
+  const { state } = input;
   return DOMAINS.filter((d) => d.after(state) && d.missing(state))
     // One gap at a time. A list of five things you are not doing reads as an
     // indictment, and nobody acts on an indictment.
@@ -460,8 +486,8 @@ function missingDomains({ state }: CoachInput): Tip[] {
       tone: 'neutral' as const,
       weight: 45,
       headline: d.headline,
-      body: d.body,
-      action: d.action,
+      body: typeof d.body === 'function' ? d.body(input) : d.body,
+      action: typeof d.action === 'function' ? d.action(input) : d.action,
     }));
 }
 

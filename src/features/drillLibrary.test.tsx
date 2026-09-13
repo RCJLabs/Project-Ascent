@@ -42,14 +42,39 @@ describe('the library, browsable at last', () => {
 
   /**
    * A kit filter was built here and removed after counting: all 144 drills
-   * list `wall` and exactly three ask for more, so it separated three
+   * listed `wall` and exactly three asked for more, so it separated three
    * entries — and a climber who had not listed a wall would have opened the
    * library to nothing at all.
+   *
+   * That last clause was the finding, and M132 answered it in the library
+   * rather than on the page. What stays true is the default: the page opens
+   * on everything, and it never quietly hides a drill on the strength of
+   * what a climber has typed into their profile.
    */
-  it('shows the whole library rather than filtering it by kit', async () => {
+  it('opens on the whole library rather than filtering it by kit', async () => {
     await library();
-    expect(screen.getByText(`${DRILLS.length} of ${DRILLS.length} — every one the programs prescribe`)).toBeTruthy();
+    expect(
+      screen.getByText(`${DRILLS.length} of ${DRILLS.length} — what the programs prescribe, and what the library adds`),
+    ).toBeTruthy();
     expect(screen.queryByText(/need kit you have not listed/)).toBeNull();
+  });
+
+  it('narrows to what needs no wall, when asked', async () => {
+    await library();
+    expect(screen.getByText('Sticky Feet')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /No wall needed/ }));
+    // Sticky Feet is bouldering; Box Breathing is a chair.
+    await waitFor(() => expect(screen.queryByText('Sticky Feet')).toBeNull());
+    expect(screen.getByText('Box Breathing')).toBeTruthy();
+  });
+
+  it('lets go of the no-wall filter again', async () => {
+    await library();
+    const chip = screen.getByRole('button', { name: /No wall needed/ });
+    fireEvent.click(chip);
+    await waitFor(() => expect(screen.queryByText('Sticky Feet')).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: /No wall needed/ }));
+    await waitFor(() => expect(screen.getByText('Sticky Feet')).toBeTruthy());
   });
 
   it('narrows by category', async () => {

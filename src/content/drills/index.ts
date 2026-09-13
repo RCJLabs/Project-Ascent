@@ -6,7 +6,8 @@
  * data, referenced nothing by id, and let the two drift (AUDIT.md §8.9).
  *
  * Split one file per source program: the library grows past a hundred
- * entries, and provenance is the natural seam.
+ * entries, and provenance is the natural seam. `offWall.ts` is the one file
+ * that is not a program — see its own note (PLAN.md M132).
  */
 
 import type { Discipline, Drill, DrillCategory, DrillId, Equipment } from '../types';
@@ -15,6 +16,7 @@ import { GRAVITY_DEFIED_DRILLS } from './gravityDefied';
 import { IRON_GRIP_DRILLS } from './ironGrip';
 import { LOCKDOWN_DRILLS } from './lockdown';
 import { LONG_GAME_DRILLS } from './longGame';
+import { OFF_WALL_DRILLS } from './offWall';
 import { PEAK_PERFORMANCE_DRILLS } from './peakPerformance';
 import { SIEGE_DRILLS } from './siege';
 
@@ -42,7 +44,27 @@ export const DRILLS: Drill[] = [
   ...LONG_GAME_DRILLS,
   ...PEAK_PERFORMANCE_DRILLS,
   ...SIEGE_DRILLS,
+  // Last, and belonging to no program (PLAN.md M132). Every other file here
+  // is named after the program its drills were extracted from, which is the
+  // seam this library was split on — and is exactly why nothing in it worked
+  // without a wall until these.
+  ...OFF_WALL_DRILLS,
 ];
+
+/**
+ * The drills a climber with nothing at all can do (PLAN.md M132).
+ *
+ * An empty kit list, run through the ordinary filter, rather than a second
+ * predicate beside it: `filterDrills` keeps a drill only when the climber
+ * has everything it asks for, and `none` asks for nothing, so "what is there
+ * with no equipment" is already a question this library can answer. Writing
+ * the rule again here — `every(e => e === 'none')` — produced exactly the
+ * same set today and a different one the moment a drill needs a band and no
+ * wall, which is the kind of drift a mutation found by surviving.
+ */
+export function offWallDrills(): Drill[] {
+  return filterDrills({ equipment: [] });
+}
 
 const BY_ID = new Map<DrillId, Drill>(DRILLS.map((d) => [d.id, d]));
 

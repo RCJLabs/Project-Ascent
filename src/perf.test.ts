@@ -240,7 +240,7 @@ describe('the bundle stays small', () => {
    * Every milestone that moves this moves it to just above what it measured;
    * the history is in the comment inside the first test.
    */
-  const BUDGET = 166.0;
+  const BUDGET = 168.0;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -402,6 +402,21 @@ describe('the bundle stays small', () => {
     // took off it is spent on the one screen that needs it. Two things
     // M115 and M116 bought stay bought: nothing *else* eager imports the
     // logger, and the glossary is still a tap away rather than a boot cost.
+    //
+    // **166.0 → 168.0 at M132**, measured 165.29 → 167.92, so 2.63KB for
+    // twelve drills — about 0.22KB each, and all of it description. The
+    // drill library is entry-chunk by construction: `derive`, `plan`,
+    // `challenges` and `plateau` all call `getDrill` synchronously, so
+    // every drill's prose loads on every cold start whether or not the
+    // library is ever opened. M107b split the *cues* out for exactly this
+    // reason and left the descriptions where they were.
+    //
+    // Measured while here, because the number is worth writing down: the
+    // 156 descriptions gzip to **15.93KB**, which is a tenth of the entry
+    // chunk for content only two lazy routes read. Splitting them the way
+    // the cues were split is a milestone of its own — `filterDrills`
+    // searches descriptions and three screens render them — and not
+    // something to do in the commit that adds twelve.
     //
     // **165.0 → 166.0 at M131**, measured 164.17 → 165.29, so 1.12KB, and
     // the interesting part is the 2.3KB it is *not*. The session-length

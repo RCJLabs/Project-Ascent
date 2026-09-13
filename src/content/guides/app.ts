@@ -393,6 +393,10 @@ export const APP: Guide = {
       content: [
         {
           kind: 'p',
+          text: '**Drills** are the library under Train. Most are prescribed by a program a week at a time, and twelve of them belong to no program at all — mobility, extensor work, breathing, sequence rehearsal, a ten-minute debrief. Those twelve need nothing but a floor, which is what the *No wall needed* filter narrows to on a day the gym is shut or a finger is sore. Any drill can be put on today from its own page, whether your program asked for it or not.',
+        },
+        {
+          kind: 'p',
           text: '**Assessments** are the numbers your program is trying to move — max hang, weighted pull-up, max pull-ups, flexibility, and the rest. The app tracks each as a series, charts it, and tells you which are due for a retest based on the program you are running.',
         },
         {

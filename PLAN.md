@@ -5866,7 +5866,8 @@ rests on an inference it says so.*
   session needs ninety minutes*. `validateWeek` is a faithful implementation of the five it
   has; the gap is the vocabulary, not the checker.
 
-- **M132 — drills off the wall, and a coach that stops promising one.** *Proposed.*
+- **M132 — drills off the wall, and a coach that stops promising one.** *Proposed, and built
+  eighth — see the Done entry below.*
   All 144 drills require a wall: 141 declare `equipment: ['wall']` and three declare
   `['hangboard', 'wall']`. `filterDrills` requires every listed item to be available, so a
   climber whose equipment is `['none']` gets **nothing**, and `plateau.novelStimulus()` falls
@@ -6411,3 +6412,86 @@ rests on an inference it says so.*
   estimate to be trusted first, and it currently answers for twenty-five sessions out of
   forty-two. Filtering a catalogue on a number that is absent for the other seventeen would
   quietly hide the projecting programs from anyone who said they had ninety minutes.
+
+- **M132 — drills off the wall, and a coach that stops promising one.** *Done.*
+  **Why every drill needed a wall, which the proposal counted and did not explain.** The library
+  was never a library. Every entry was extracted from one of the seven programs that schedule
+  drills, `sources` recorded which, and `content.test.ts` enforced that *every drill is used by
+  at least one program* — so the only drills that could exist were drills a climbing program
+  prescribed, and climbing programs prescribe climbing. A climber with no wall listed opened it
+  to nothing, and `novelStimulus` walked its whole preference order and fell out of the bottom
+  into "pick any drill", which is the one piece of advice a reset protocol cannot afford to
+  give.
+  **The twenty-three drills filed under *recovery* are not recovery.** Read them: "climb 30 min
+  at RPE 5", "5-6 easy problems", "20-25 moderate boulders". They are deload sessions, correctly
+  tagged and correctly needing a wall. No retagging was ever going to produce a thing to do on a
+  Tuesday when the gym is shut.
+  **Twelve drills that belong to no program.** Six recovery (shoulder CARs, wrist and forearm
+  prep, 90/90 hips, thoracic opening, extensor work, skin repair), three mental (sequence
+  rehearsal, box breathing, rehearsing the fall), one strategy, one endurance, one power. All
+  `equipment: ['none']`, all short on purpose — the day this is for has something wrong with it,
+  and a forty-minute prescription on that day gets read and not done. Mental goes from three
+  drills to six, which is the thinnest category in the proposal's own count.
+  **An empty `sources` is now a declaration rather than an orphan.** The coverage test asks the
+  same question from the other end: a drill that *claims* a program must be used by one, and a
+  drill that claims none must need nothing. So "library-only" cannot become a way to skip wiring
+  a drill into the program it was written for.
+  **They are coached, because a test said so and was right.** `drillCoaching.test.ts` holds a
+  ledger at `left: 0` with a comment explaining that at zero it stops being a plan and becomes a
+  floor — a new drill arrives uncoached and fails here before anything else notices. It fired.
+  Thirty-six cues and twenty-four faults later it reads `{ done: 156, left: 0 }`. The one real
+  bug in it was its own definition of *done*: `sources.length > 0` meant the off-wall set could
+  never count as written however many cues it had.
+  **And a way to choose one.** `session.drillId` was written in exactly one place — the plan's
+  drill for the week — so the library was a reference and nothing else. A drill page now puts
+  its drill on today, creating the session if there is not one, replacing the plan's drill if
+  there is. Replacing is most of the point: a climber whose fingers hurt on the day the plan
+  wants contact strength is who the button is for. It does not tick it done; that is the
+  climber's, in the logger.
+  **The coach stops asserting a fact about a program it never read.** *"Your program prescribes
+  a drill each week"* is false for six of the thirteen — Ground Zero, The Cruiser, Two Days a
+  Week, Trip Prep, General Training and Outdoor Climbing ship no drills at all. `CoachInput`
+  gained `prescribesDrills`, `Domain` learned to take a function, and the second sort now hears
+  the true thing and gets pointed at the library rather than at a week that has no drill in it.
+  **The browser found two faults jsdom could not, and both were the same fault.** The button
+  wrote `drillId` and the logger rendered the *plan's* drill for the week, so a chosen drill was
+  recorded, invisible and impossible to tick off — which meant `drillsCompleted` stayed at zero
+  and the coach kept asking. Then, fixed, it still showed nothing: the drill card is in the full
+  log and the quick view is the default, so the button handed the climber a screen with no sign
+  of what they had just chosen. A store write that nothing renders is not a feature, and the two
+  tests that pinned it both looked right.
+  **A third string had never been rendered at all.** The drill page's line about kit read *"needs
+  nothing but somewhere to climb"* and only ever shows for a drill declaring no equipment — which
+  no drill did. The off-wall set is the first content to reach it, and for them the sentence was
+  exactly wrong. Rewritten rather than branched: a version that kept both sentences had an
+  unreachable one, which is the thing M129 and M130 each deleted instead.
+  *Folded in:* the drills page's own two stale strings. The empty state offered to "turn the kit
+  filter off" when there was no kit filter — there is one now, and it is named after the question
+  a climber arrives with (*No wall needed*) rather than after a tag. And the footer called a drill
+  "a way of climbing for an hour" over twelve drills that are not climbing.
+  **Measured, not asserted.** Twenty-three mutations, every one killed: the off-wall set
+  unregistered, no-kit matching any kit, off-wall meaning everything; a drill quietly gaining a
+  wall and one quietly claiming a program; the button writing nothing, creating a second session,
+  ticking the drill done for you, refusing to replace the plan's, always or never saying it is
+  already on today, and landing on the quick log; the logger preferring the plan's drill and
+  never reading the session's; the no-wall chip doing nothing and being stuck on; the kit line
+  shown always and saying the old sentence; the coach telling everyone or no-one that their
+  program prescribes one, the action not following the body, a function body never resolved, and
+  the program fact never supplied. A no-op statement reorder survived. **Three survived the first
+  round.** One was a second implementation of "what can a climber with nothing do" sitting beside
+  `filterDrills` and agreeing with it today — deleted, not tested. One was a mutation that
+  inserted a comment, which is a mutation of nothing. And one mutated an assertion rather than
+  the source, which always survives; the battery mutates code.
+  **In a browser, both themes, 430px and 1280px.** The library opens on 156 of 156; *No wall
+  needed* narrows to twelve across five categories; a breathing drill reads its cues and its
+  faults and says it needs nothing at all; *Put this on today* lands on the full log with the
+  drill on it and a *Mark done* chip. The Cruiser's climber is told their program prescribes no
+  drills; Iron Grip's is told it prescribes one a week. No overflow, no page errors.
+  **Budget.** 166.0 → 168.0, measured 165.29 → 167.92, so 2.63KB for twelve drills — about
+  0.22KB each, all of it description. The library is entry-chunk by construction: `derive`,
+  `plan`, `challenges` and `plateau` call `getDrill` synchronously, so every drill's prose loads
+  on every cold start. **Measured while here:** the 156 descriptions gzip to **15.93KB**, a tenth
+  of the entry chunk for content two lazy routes read. M107b split the cues out for exactly this
+  reason and left the descriptions. Splitting them too is a milestone of its own —
+  `filterDrills` searches them and three screens render them — and not something to do in the
+  commit that adds twelve. 4,143 tests pass.
