@@ -30,7 +30,9 @@ beforeEach(async () => {
 async function calendar() {
   await hydrate();
   renderAt('/calendar', <CalendarPage />);
-  await screen.findByText(/✅ Logged/);
+  // The grid, not the legend: the legend's logged row only appears once
+  // something is logged, which is the point of M145.
+  await screen.findByText('Mark days');
 }
 
 /** The cell for a date, found by the link it is. */
@@ -92,6 +94,7 @@ describe('and says it in words, not only in colour', () => {
   });
 
   it('says what the shading means in the legend', async () => {
+    await putSession(newSession(TODAY, 0, { completed: true, rpe: 7 }));
     await calendar();
     expect(screen.getByText(/the darker the day, the harder you rated it/)).toBeTruthy();
   });

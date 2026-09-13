@@ -242,7 +242,7 @@ describe('the bundle stays small', () => {
    * Every milestone that moves this moves it to just above what it measured;
    * the history is in the comment inside the first test.
    */
-  const BUDGET = 154.0;
+  const BUDGET = 155.0;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -428,6 +428,19 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **154.0 → 155.0 at M145**, measured 153.98 → 154.00, and the 0.02KB
+    // is not weight. The calendar's legend is in `CalendarPage`, a lazy
+    // chunk; what grew in the entry is the *module map*, because that
+    // chunk's content hash changed and its filename is a string the entry
+    // carries. Deterministic — two builds agree to the byte — and unrelated
+    // to anything that loads at boot.
+    //
+    // The line moves because 154.0 had three bytes of room left, which is
+    // smaller than one lazy chunk's hash churn: a ceiling that close fails
+    // on builds that changed nothing worth failing over, and a gate that
+    // cries wolf is a gate that gets raised in a hurry. 1.00KB of slack,
+    // inside the 1.5KB the headroom test allows.
     //
     // **170.0 → 154.0 at M137**, measured 169.42 → 153.50, so 15.92KB back:
     // the 156 drill descriptions left the entry chunk for

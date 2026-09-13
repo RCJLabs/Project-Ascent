@@ -10,6 +10,7 @@ import { useObjectives } from '@/store/objectives';
 import { summarise } from '@/engine/injury';
 import { INTENSITY_LABEL } from '@/content/types';
 import { effortOfDay } from '@/engine/effort';
+import { monthMarks, worthExplaining } from '@/engine/monthMarks';
 import { intensityOf } from '@/engine/scheduler';
 import { useProfile } from '@/store/profile';
 import type { Session } from '@/db/sessions';
@@ -160,6 +161,41 @@ export function CalendarPage() {
    */
   const planning = program !== undefined && startDate !== undefined && plan !== undefined;
 
+  /**
+   * What every square on the grid is, worked out once.
+   *
+   * The legend used to be written independently of this loop and drifted
+   * from it in both directions (PLAN.md M145): it named one session type
+   * for a month that drew several, and it explained a LIMIT marker on
+   * blocks that have no limit day at all. A key that is derived from the
+   * same pass that draws the squares cannot say either thing.
+   */
+  const cells = useMemo(
+    () =>
+      days.map((date) => {
+        const day = planning ? plannedDay(program!, startDate!, plan!, date, overrides) : null;
+        const logged = byDate[date] ?? [];
+        const type = day?.isRest ? undefined : day?.sessionType;
+        return {
+          date,
+          logged,
+          done: logged.some((s) => s.completed),
+          inMonth: fromKey(date).getMonth() === month,
+          type,
+          // Flattened, not left under `day`. `MarkedDay`'s fields are all
+          // optional, so a cell that kept them nested satisfied the type
+          // and reported every month as having no deload and no test —
+          // which is the same legend-drifts-from-grid fault one level down
+          // (PLAN.md M145).
+          isDeload: day?.isDeload ?? false,
+          test: day?.test,
+        };
+      }),
+    [days, planning, program, startDate, plan, overrides, byDate, month],
+  );
+
+  const marks = useMemo(() => monthMarks(cells), [cells]);
+
   return (
     <>
       <PageHeader
@@ -260,13 +296,9 @@ export function CalendarPage() {
       </div>
 
       <div className="grid grid-cols-7 gap-1">
-        {days.map((date) => {
-          const day = planning ? plannedDay(program, startDate, plan, date, overrides) : null;
-          const logged = byDate[date] ?? [];
-          const done = logged.some((s) => s.completed);
-          const inMonth = fromKey(date).getMonth() === month;
+        {cells.map(({ date, logged, done, inMonth, type, isDeload, test }) => {
           const isToday = date === today();
-          const planned = day !== null && day.sessionType && !day.isRest;
+          const planned = type !== undefined;
           // Outside the running block's window and nowhere else. Both ends
           // inclusive: the block's last day is still the block's.
           //
@@ -331,7 +363,7 @@ export function CalendarPage() {
            * The accessible name carries the same fact in words, because a
            * tint alone says nothing to a reader who cannot see it.
            */
-          const effort = done ? effortOfDay(logged, day?.sessionType) : null;
+          const effort = done ? effortOfDay(logged, type) : null;
           const fill = chosen
             ? 'bg-accent/30'
             : done
@@ -360,7 +392,7 @@ export function CalendarPage() {
               {done ? (
                 <span className="text-sm leading-none">✅</span>
               ) : planned ? (
-                <span className="text-sm leading-none">{day!.sessionType!.icon}</span>
+                <span className="text-sm leading-none">{type!.icon}</span>
               ) : (
                 <span className="text-sm leading-none text-ink-soft/40">·</span>
               )}
@@ -372,7 +404,7 @@ export function CalendarPage() {
                   mark for the hardest day answers the question the week
                   view is actually asked (*where are my hard days*) and
                   leaves the grid readable. */}
-              {inMonth && planned && intensityOf(day!.sessionType) === 'max' && (
+              {inMonth && planned && intensityOf(type) === 'max' && (
                 <span className="text-2xs font-bold uppercase text-warn leading-none">LIMIT</span>
               )}
               {/* Both, when a week is both (PLAN.md M67). Suppressing the
@@ -380,12 +412,12 @@ export function CalendarPage() {
                   Performance *both* of its mid-block tests: it deloads on
                   weeks 5 and 9, which are the two weeks its phases start.
                   A deload is also the week you are freshest to test in. */}
-              {inMonth && (day?.isDeload || day?.test !== undefined) && (
+              {inMonth && (isDeload || test !== undefined) && (
                 <span className="flex items-center gap-0.5 leading-none">
-                  {day?.isDeload && (
+                  {isDeload && (
                     <span className="text-2xs font-bold uppercase text-warn leading-none">DL</span>
                   )}
-                  {day?.test !== undefined && (
+                  {test !== undefined && (
                     <span className="text-2xs font-bold uppercase text-accent leading-none">T</span>
                   )}
                 </span>
@@ -439,19 +471,34 @@ export function CalendarPage() {
 
       {/* The .ics export lived here from M75 to M121. It is under
           Settings › Data now (PLAN.md M122), with the other exports. */}
-      <Card className="mt-4">
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-ink-soft">
-          <span>✅ Logged — the darker the day, the harder you rated it</span>
-          {planning && (
-            <>
-              <span>{program.sessionTypes.find((t) => !t.isRest)?.icon} Planned session</span>
-              <span className="text-warn font-bold">LIMIT — the hardest day</span>
-              <span className="text-warn font-bold">DL — deload week</span>
-              <span className="text-accent font-bold">T — assessment week</span>
-            </>
-          )}
-        </div>
-      </Card>
+      {/* A key to this month, not to the app (PLAN.md M145). Every row is
+          here because the grid above drew it: the legend named a single
+          "Planned session" for a month carrying several different ones, and
+          explained a LIMIT marker on blocks like Iron Grip that have no
+          limit day at all — a key to a mark the climber could not find. */}
+      {worthExplaining(marks) && (
+        <Card className="mt-4">
+          {/* A list, and a named one. It was an unlabelled row of spans, so
+              a screen reader met five fragments with nothing saying what
+              they were fragments of. */}
+          <ul
+            aria-label="What the marks on this month mean"
+            className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-ink-soft list-none p-0 m-0"
+          >
+            {marks.logged && <li>✅ Logged — the darker the day, the harder you rated it</li>}
+            {/* Each session type this month holds, by name. "Planned
+                session" was true of all of them and told you which none. */}
+            {marks.types.map((type) => (
+              <li key={type.id}>
+                {type.icon} {type.name}
+              </li>
+            ))}
+            {marks.limit && <li className="text-warn font-bold">LIMIT — the hardest day</li>}
+            {marks.deload && <li className="text-warn font-bold">DL — deload week</li>}
+            {marks.test && <li className="text-accent font-bold">T — assessment week</li>}
+          </ul>
+        </Card>
+      )}
     </>
   );
 }

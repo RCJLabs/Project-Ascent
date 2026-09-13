@@ -127,7 +127,9 @@ describe('the month view marks the limit days', () => {
       injuries: [],
     });
     renderAt('/calendar', <CalendarPage />);
-    await screen.findByText(/Planned session/);
+    // The grid is up. Not the legend: it now names only what this month
+    // carries, so a block with no limit day has no LIMIT row (PLAN.md M145).
+    await screen.findByText('Mark days');
     // One per Monday on the grid. The legend says "LIMIT — the hardest
     // day" in one node, so it is not one of these.
     expect(screen.getAllByText('LIMIT').length).toBeGreaterThan(1);
@@ -148,7 +150,9 @@ describe('the month view marks the limit days', () => {
       injuries: [],
     });
     renderAt('/calendar', <CalendarPage />);
-    await screen.findByText(/Planned session/);
+    // The grid is up. Not the legend: it now names only what this month
+    // carries, so a block with no limit day has no LIMIT row (PLAN.md M145).
+    await screen.findByText('Mark days');
     expect(screen.queryAllByText('LIMIT')).toHaveLength(0);
   });
 });

@@ -7382,3 +7382,40 @@ something rests on an inference it says so.*
   **And the browser check failed on its own regex**, not on the app: an unrated day's name ends at
   *logged* with no comma after it. Fixed in the check.
   **Budget.** 154.0 holds: 153.97 → 153.98. 4,540 tests pass.
+
+- **M145 — the legend is a key to this month.** *Done. Reported from a screenshot, not from the
+  audit: two complaints about one calendar, and one cause under both.*
+  **What was reported.** A September of Iron Grip drawing two different session icons — ✋ and ⚡ —
+  under a legend that said *Planned session* once; and a legend promising *LIMIT — the hardest
+  day* over a month with no LIMIT anywhere to find.
+  **One cause.** The legend was written independently of the loop that draws the squares, so it
+  could drift from it in both directions at once: under-reporting what the grid shows, and
+  advertising what it does not. Iron Grip's two working days are both `hard` and neither is a
+  limit day — `dayShape.test.tsx` has asserted exactly that since M131 ("marks nothing in a block
+  that has no limit day"), so the grid was right and the key was wrong, and no test compared them.
+  **The fix is one pass, not two.** A `cells` memo works out every square once; the grid renders
+  from it and `monthMarks` reduces the same array to what the month carries. Every legend row is
+  now conditional on that: each session type by **name**, and LIMIT, DL and T only where the
+  month draws one. No marks and nothing logged means no card at all.
+  **The two gates are not the same gate, and the code says so.** The cell draws a session icon
+  and a logged tick on every square including the borrowed leading and trailing days; it draws
+  LIMIT, DL and T only `inMonth`. `monthMarks` mirrors that exactly, because a key that gated
+  differently from the grid is the bug it exists to prevent.
+  **A second drift, found by the first fix.** `MarkedDay`'s fields are all optional, so a cell
+  that left `isDeload` and `test` nested under `day` satisfied the type and reported every month
+  as having neither. Caught by the first test written against a month that actually deloads. They
+  are flattened into the shared pass now, and the grid reads them from there.
+  **The legend was also an unlabelled row of spans** — five fragments with nothing saying what
+  they were fragments of. It is a named list now, which is what let the tests stop guessing at it.
+  **What the battery found.** Sixty-three mutations. The survivors were all one shape: a rule and
+  its display failing *together*, which an agreement test cannot see. Killing them needed absolute
+  assertions — that a marker appears at all, and that no marker lands on a borrowed square — plus
+  the case where a legend exists with no program running, since inside a block there is always
+  another row for an always-on one to hide behind. Four more died once `monthMarks` was pure and
+  could be given a limit day in the leading week or two session types sharing a name.
+  **Budget 154.0 → 155.0**, measured 153.98 → 154.00. The 0.02KB is not weight: the calendar is a
+  lazy chunk, and what grew in the entry is the module map, because that chunk's content hash is
+  a string the entry carries. Deterministic to the byte across builds. The line moves because
+  154.0 had three bytes of room left — smaller than one lazy chunk's hash churn — and a ceiling
+  that close fails on builds that changed nothing worth failing over. 1.00KB of slack, inside the
+  1.5KB the headroom test allows. 4,568 tests pass.
