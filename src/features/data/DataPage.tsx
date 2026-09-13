@@ -13,6 +13,7 @@ import {
   describeStale,
   type Finding,
 } from '@/engine/dataHealth';
+import { ARCHIVE_SHEETS } from '@/engine/importCsv';
 import { useSessions } from '@/store/sessions';
 import { announce } from '@/ui/Announce';
 import { BackLink } from '@/ui/BackLink';
@@ -160,6 +161,35 @@ export function DataPage() {
             ))}
           </tbody>
         </table>
+      </Card>
+
+      {/* Which of the archive's spreadsheets can come back in (PLAN.md
+          M139). Said here rather than left to be discovered: a climber with
+          five exported files and three importable ones will otherwise find
+          out by trying each. */}
+      <Card title="The spreadsheets in a backup" className="mt-3">
+        <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+          An exported backup carries these beside <code className="text-xs">backup.json</code>, so
+          your history is readable without this app. Three of them can be imported back; the other
+          two restore from the backup file itself.
+        </p>
+        <ul className="grid grid-cols-1 gap-2">
+          {ARCHIVE_SHEETS.map((sheet) => (
+            <li key={sheet.file} className="border-t border-line pt-2 first:border-0 first:pt-0">
+              <p className="text-sm font-semibold flex flex-wrap items-center gap-2">
+                {sheet.file.replace('spreadsheets/', '')}
+                <span
+                  className={`text-2xs uppercase tracking-widest font-bold ${
+                    sheet.kind ? 'text-positive' : 'text-ink-soft'
+                  }`}
+                >
+                  {sheet.kind ? 'Imports' : 'Export only'}
+                </span>
+              </p>
+              <p className="text-xs text-ink-soft mt-0.5 leading-relaxed">{sheet.holds}</p>
+            </li>
+          ))}
+        </ul>
       </Card>
 
       <Card title="Tidy up" className="mt-3">

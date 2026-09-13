@@ -6776,7 +6776,8 @@ something rests on an inference it says so.*
   reason stands unchanged: telling someone that three of a program's sessions run over an hour
   is coaching, hiding the program is not.
 
-- **M139 — the import reads climbs; a training log is mostly not climbs.** *Proposed. Medium.*
+- **M139 — the import reads climbs; a training log is mostly not climbs.** *Proposed, and built
+  fifth — see the Done entry below.*
   **Five files out, one shape in.** `CSV_FILES` writes climbs, sessions, exercises, attempts and
   benchmarks (`exportCsv.ts:304-310`; exercises and the answers columns since M133).
   `importCsv.ts` reads one shape — a row is a climb — with nine column kinds: date, grade,
@@ -7172,3 +7173,50 @@ something rests on an inference it says so.*
   moved the number; it asks nine now, and both say so.
   **Budget.** 154.0 holds: measured 153.50 → 153.82, so 0.32KB for the resolver and the fit
   rule. 4,406 tests pass.
+
+- **M139 — three shapes into the import, not one.** *Done. The fifth of the third brainstorm.*
+  **The proposal undercounted its own finding, and the undercount was the interesting part.** It
+  said the climbs file loses three columns — Name, Angle and Rope, the three M133 added. It loses
+  **four**. The fourth is `Ascent style`, and M133 spelled it those two words on purpose: `style`
+  alone is already a spelling of *result* in the files climbers actually have, where one column
+  holds redpoint/flash, so a column named `Style` would have been read as the result. M133 wrote
+  a two-word header to stay out of the guesser's way — for a reader that then never arrived. The
+  header was a note left for a future milestone, and this is it.
+  **Four files with no way in, and none of them corrupting anything.** Measured before building:
+  `exercises.csv` opened as a climb list guesses `Reps` as `count` and then refuses every row for
+  having no grade. So the damage was never wrong data arriving — it was no data arriving, loudly,
+  which is the better failure and the reason this sat unnoticed. The same for `benchmarks.csv`,
+  `sessions.csv` and `attempts.csv`.
+  **What the kind actually buys is that one spelling can mean two things.** `Reps` is a count of
+  climbs in a tick list and a count of reps on a hangboard, and there is nothing in the cell to
+  separate them. So the card asks *what is this a list of* before it asks what the columns are,
+  and each kind carries its own `ColumnKind` list: a grade column on a gym log is a column that
+  cannot be named, which is the honest answer rather than a wrong one. Changing the kind
+  re-guesses the columns rather than carrying them across, for the same reason.
+  **Three kinds, and two files that say why not.** Exercises land as `LoggedExercise` rows on the
+  session for their date, every number bounded by what the field can be — sets 1-99, reps 1-999,
+  hold 1-3600 seconds, load -500 to 500 because assisted is how a climber works toward their
+  first one-arm anything. Benchmarks land as `MetricEntry` and **make no session at all**: a
+  reading belongs to its metric and its day, and inventing a training day to hang it on would put
+  a day in the log nobody had. `sessions.csv` and `attempts.csv` are export-only and the Data page
+  says so in a card that lists all five — a session row is facts about a session the app already
+  holds, and a burn belongs to a project a spreadsheet does not have.
+  **The unit column overrides the climber's setting, which is what closes the round trip.** A
+  number in a sheet has a unit and the file usually does not say which, so it is read the way the
+  climber would have typed it — the same rule as typing one in. But the archive writes the stored
+  unit on every row, so a climber reading in kilograms must not have their own 40 lb hang come
+  back as 40 kg. The file wins where the file says.
+  **What the mutation battery found.** Sixty-four mutations, and the survivors were the useful
+  part. Two were equivalent mutants pointing at real redundancy: `countOf`'s benchmarks branch was
+  dead because the card had its own `read.metrics.length` in three places, and the
+  `kind === 'climbs'` guard on the which-discipline question was unreachable because only a tick
+  list is offered a grade column at all. Both deleted, the card now taking its number and its noun
+  from one place — so the preview sentence and the button cannot disagree. Three more were missing
+  assertions on bounds that happened to coincide: a blank cell refused by the floor rather than on
+  its own account, a hold bounded like a weight, and `findMetric` matching the label where the
+  label and the id flatten to the same string for most metrics but not for *Weighted Pull-Ups 3RM*.
+  **A grammar bug, found by a test.** The missing-column line read *"Nothing can be read without
+  a exercise column"*. The column names are data, so the article is now chosen from the word.
+  **Budget.** 154.0 holds: 153.82 → 153.81, no change. The exporter's `CSV_FILES` is imported by
+  `importCsv.ts` so the two lists cannot drift, and rollup shakes the exporter's body back out.
+  4,479 tests pass.

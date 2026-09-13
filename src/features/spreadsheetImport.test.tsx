@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { listMetricEntries } from '@/db/metrics';
+import { useSettings } from '@/store/settings';
 import { getSession, listSessions, newSession, putSession } from '@/db/sessions';
 import { useSessions } from '@/store/sessions';
 import { hydrate, renderAt, reset } from '@/test/render';
@@ -216,5 +218,178 @@ describe('what actually lands in the log', () => {
   it('says what is wrong with a file it cannot parse at all', async () => {
     await choose('a,b\n"never closed');
     expect(await screen.findByText(/never closed/)).toBeTruthy();
+  });
+});
+
+/**
+ * A training log is mostly not climbs (PLAN.md M139).
+ *
+ * The engine covers the three shapes in `importCsv.test.ts`. What is here
+ * is the part only the screen has: that the kind is asked before the
+ * columns, that changing it re-asks the column question rather than
+ * carrying a meaning across, and that a benchmark sheet lands in the
+ * metrics store rather than inventing training days.
+ */
+
+const GYM = [
+  'Date,Exercise,Sets,Reps,Hold (s),Load (lb)',
+  '2026-01-09,Max hang,5,1,10,40',
+  '2026-01-09,Pull-up,4,6,,20',
+  '2026-01-11,Max hang,5,1,10,45',
+].join('\n');
+
+const BENCH = [
+  'Date,Metric,Value,Unit',
+  '2026-01-09,Max Hang 20mm 7s,40,BW+lbs',
+  '2026-01-11,Max Pull-Ups,12,reps',
+].join('\n');
+
+/** The kind buttons, which are the first question the card asks. */
+const kindButton = (label: string) =>
+  [...card().querySelectorAll('button')].find(
+    (b) => b.querySelector('span')?.textContent === label,
+  )!;
+
+describe('what is this a list of', () => {
+  it('asks before it asks what the columns are', async () => {
+    await pick();
+    expect(within(card()).getByText('What is this a list of?')).toBeTruthy();
+    expect(['Climbs', 'Exercises', 'Benchmarks'].map((l) => !!kindButton(l))).toEqual([
+      true, true, true,
+    ]);
+  });
+
+  it('guesses a tick list, which is what a spreadsheet of climbing usually is', async () => {
+    await pick();
+    expect(kindButton('Climbs').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('guesses a gym log from its exercise column', async () => {
+    await pick(GYM);
+    expect(kindButton('Exercises').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('guesses a benchmark sheet from its metric column', async () => {
+    await pick(BENCH);
+    expect(kindButton('Benchmarks').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  /**
+   * The columns are re-guessed rather than kept. `Reps` means a count of
+   * climbs on one kind and a count of reps on the other, and a mapping
+   * carried across would be a column silently meaning the wrong thing.
+   */
+  it('asks the column question again when the kind changes', async () => {
+    await pick(GYM);
+    expect(column('Reps').value).toBe('reps');
+    fireEvent.click(kindButton('Climbs'));
+    await waitFor(() => expect(column('Reps').value).toBe('count'));
+  });
+
+  it('offers only the meanings the kind has', async () => {
+    await pick(GYM);
+    const offered = [...column('Exercise').options].map((o) => o.value);
+    expect(offered).toContain('sets');
+    expect(offered).not.toContain('grade');
+  });
+
+  it('names the column a kind cannot be read without', async () => {
+    await pick(GYM);
+    fireEvent.change(column('Exercise'), { target: { value: 'skip' } });
+    await waitFor(() =>
+      expect(screen.getByText(/Nothing can be read without an exercise column/)).toBeTruthy(),
+    );
+  });
+});
+
+describe('a gym log, on screen and into the log', () => {
+  it('counts days and exercises rather than rows', async () => {
+    await pick(GYM);
+    expect(card().textContent).toMatch(/2 days would arrive, carrying 3 exercises/);
+  });
+
+  it('says where the numbers go, in the words of a gym log', async () => {
+    await pick(GYM);
+    expect(card().textContent).toMatch(/the load history the strength charts read/);
+  });
+
+  it('writes the sets onto the days', async () => {
+    await pick(GYM);
+    fireEvent.click(screen.getByRole('button', { name: /^Import 2 days$/ }));
+    await waitFor(async () => expect((await listSessions()).length).toBe(2));
+    const day = await getSession('2026-01-09#0');
+    expect(day?.exercises?.map((e) => [e.name, e.sets, e.load])).toEqual([
+      ['Max hang', 5, 40],
+      ['Pull-up', 4, 20],
+    ]);
+  });
+});
+
+describe('a benchmark sheet, on screen and into the charts', () => {
+  it('counts readings, because a reading is not a day', async () => {
+    await pick(BENCH);
+    expect(card().textContent).toMatch(/2 readings would arrive/);
+    expect(card().textContent).not.toMatch(/days would arrive/);
+  });
+
+  it('offers to import readings rather than days', async () => {
+    await pick(BENCH);
+    expect(screen.getByRole('button', { name: /^Import 2 readings$/ })).toBeTruthy();
+  });
+
+  it('writes them where the ones taken in the app go', async () => {
+    await pick(BENCH);
+    fireEvent.click(screen.getByRole('button', { name: /^Import 2 readings$/ }));
+    await waitFor(async () => expect((await listMetricEntries()).length).toBe(2));
+    const entries = await listMetricEntries();
+    expect(entries.map((e) => [e.metricId, e.value]).sort()).toEqual(
+      [['max_hang_20mm_7s', 40], ['max_pullups', 12]].sort(),
+    );
+  });
+
+  // A reading belongs to its metric and its day. Inventing a session to
+  // hang it on would put a training day in the log that nobody had.
+  it('adds no training day to the log', async () => {
+    await pick(BENCH);
+    fireEvent.click(screen.getByRole('button', { name: /^Import 2 readings$/ }));
+    await waitFor(async () => expect((await listMetricEntries()).length).toBe(2));
+    expect(await listSessions()).toEqual([]);
+  });
+
+  it('says what arrived in the words of what it was', async () => {
+    await pick(BENCH);
+    fireEvent.click(screen.getByRole('button', { name: /^Import 2 readings$/ }));
+    expect(await screen.findByText(/2 readings imported\. You can undo this below\./)).toBeTruthy();
+  });
+
+  /**
+   * A number in a spreadsheet has a unit, and the file usually does not say
+   * which. A climber who reads in kilograms typed kilograms, the same rule
+   * as typing one into the app — so the screen's own setting has to reach
+   * the reader. Values are stored imperial, so 40 kg arrives as 88 lb.
+   */
+  describe('for a climber who reads in kilograms', () => {
+    const NO_UNIT = 'Date,Metric,Value\n2026-01-09,Max Hang 20mm 7s,40';
+
+    it('reads a unitless number the way that climber would have typed it', async () => {
+      await pick(NO_UNIT);
+      act(() => useSettings.setState({ units: 'metric' }));
+      await waitFor(() => expect(card().textContent).toMatch(/1 reading would arrive/));
+      fireEvent.click(screen.getByRole('button', { name: /^Import 1 reading$/ }));
+      await waitFor(async () => expect((await listMetricEntries()).length).toBe(1));
+      expect((await listMetricEntries())[0]!.value).toBeCloseTo(88.18, 1);
+    });
+
+    // The file's own unit still wins, which is what closes the round trip:
+    // their own export says BW+lbs on every row and must come back as 40.
+    it('still takes the unit from the file where the file names one', async () => {
+      await pick(BENCH);
+      act(() => useSettings.setState({ units: 'metric' }));
+      await waitFor(() => expect(card().textContent).toMatch(/2 readings would arrive/));
+      fireEvent.click(screen.getByRole('button', { name: /^Import 2 readings$/ }));
+      await waitFor(async () => expect((await listMetricEntries()).length).toBe(2));
+      const hang = (await listMetricEntries()).find((e) => e.metricId === 'max_hang_20mm_7s');
+      expect(hang?.value).toBe(40);
+    });
   });
 });

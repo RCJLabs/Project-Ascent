@@ -5,7 +5,12 @@ import { exportArchive, hasRealData, importAll, readBackupFile, SCHEMA_VERSION }
 import { previewFile, type ImportPreview } from '@/db/importPreview';
 import { clearSnapshot, readSnapshot, restoreSnapshot, takeSnapshot } from '@/db/snapshot';
 import { ImportPreviewCard, UndoImportCard } from './ImportPreviewCard';
-import { SpreadsheetImportCard, pendingFrom, type CsvPending } from './SpreadsheetImportCard';
+import {
+  SpreadsheetImportCard,
+  pendingFrom,
+  type CsvPending,
+  type CsvResult,
+} from './SpreadsheetImportCard';
 import { CsvError, parseCsv } from '@/engine/csv';
 import { canLoadDemo, demoInjuries, loadDemo, wipeDemo } from '@/db/demo';
 import { eraseEverything } from '@/db/erase';
@@ -13,7 +18,6 @@ import { hasDemo } from '@/db/demoFlag';
 import { takeLaunchFile } from '@/lib/launchFile';
 import { getProgram } from '@/content/programs';
 import { layoutsFor, planFromLayout } from '@/engine/scheduler';
-import type { Session } from '@/db/sessions';
 import { useSessions } from '@/store/sessions';
 import { mediaBytes } from '@/db/media';
 import type { Equipment } from '@/content/types';
@@ -375,28 +379,36 @@ export function SettingsPage() {
     }
   }
 
-  async function confirmCsv(sessions: Session[]) {
+  async function confirmCsv({ sessions, metrics }: CsvResult) {
     setBusy(true);
     try {
+      // What arrived, in the words of the file it came from (PLAN.md M139).
+      // A benchmark sheet brings no days at all, and "0 days imported" is a
+      // sentence that reads like a failure.
+      const parts = [
+        ...(sessions.length > 0 ? [`${sessions.length} day${sessions.length === 1 ? '' : 's'}`] : []),
+        ...(metrics.length > 0 ? [`${metrics.length} reading${metrics.length === 1 ? '' : 's'}`] : []),
+      ];
+      const what = parts.length > 0 ? parts.join(' and ') : 'nothing';
       // The same restore point the backup import takes, for the same
       // reason — and only where there is something to restore.
-      if (await hasRealData()) await takeSnapshot(`${sessions.length} days from a spreadsheet`);
+      if (await hasRealData()) await takeSnapshot(`${what} from a spreadsheet`);
       await importAll(
         {
           app: 'project-ascent',
           schemaVersion: SCHEMA_VERSION,
           appVersion: APP_VERSION,
           exportedAt: new Date().toISOString(),
-          // Only sessions. A spreadsheet of climbs says nothing about a
-          // program, a project or a metric, and a merge that wrote empty
-          // arrays over them would be a replace wearing another word.
-          data: { meta: [], sessions, profile: [], programs: [], projects: [], metrics: [], game: [] },
+          // Only what the file was a list of. A spreadsheet says nothing
+          // about a program, a project or the game, and a merge that wrote
+          // empty arrays over them would be a replace wearing another word.
+          data: { meta: [], sessions, profile: [], programs: [], projects: [], metrics, game: [] },
         },
         'merge',
       );
       await hydrateAll();
       setSnapshot(await readSnapshot());
-      setMessage(`${sessions.length} day${sessions.length === 1 ? '' : 's'} imported. You can undo this below.`);
+      setMessage(`${what} imported. You can undo this below.`);
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Import failed.', true);
     } finally {
@@ -676,7 +688,7 @@ export function SettingsPage() {
             occupied={occupiedIds}
             busy={busy}
             onChange={setCsv}
-            onImport={(sessions) => void confirmCsv(sessions)}
+            onImport={(read) => void confirmCsv(read)}
             onCancel={() => setCsv(null)}
           />
         )}

@@ -194,3 +194,46 @@ describe('sessions left open', () => {
     expect(screen.getByText(/1 session was left open/)).toBeTruthy();
   });
 });
+
+/**
+ * Which of the archive's spreadsheets can come back (PLAN.md M139).
+ *
+ * The backup writes five files and three of them import. Said here rather
+ * than left to be discovered: a climber would otherwise find out which two
+ * are export-only by trying each one.
+ */
+describe('the spreadsheets in a backup', () => {
+  beforeEach(async () => {
+    await hydrate();
+    renderAt('/data', <DataPage />);
+    await screen.findByText('The spreadsheets in a backup');
+  });
+
+  const sheets = () =>
+    within(screen.getByText('The spreadsheets in a backup').closest('section')!).getAllByRole(
+      'listitem',
+    );
+
+  /** The file name each row is about, which is its first line. */
+  const named = (li: HTMLElement) =>
+    /[a-z]+\.csv/.exec(li.textContent ?? '')?.[0];
+
+  it('names every file the archive writes', async () => {
+    expect(sheets().map(named)).toEqual([
+      'climbs.csv', 'exercises.csv', 'benchmarks.csv', 'sessions.csv', 'attempts.csv',
+    ]);
+  });
+
+  it('says which three come back in', async () => {
+    const marked = sheets().filter((li) => li.textContent?.includes('Imports'));
+    expect(marked.map(named)).toEqual(['climbs.csv', 'exercises.csv', 'benchmarks.csv']);
+  });
+
+  // Not silence: the two that do not import say what they are for, and
+  // where the history in them does come back from.
+  it('says what the other two are for rather than leaving them out', async () => {
+    const rest = sheets().filter((li) => li.textContent?.includes('Export only'));
+    expect(rest).toHaveLength(2);
+    for (const li of rest) expect(li.textContent).toMatch(/backup file/);
+  });
+});

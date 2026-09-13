@@ -5,7 +5,7 @@ import type { Project } from '@/db/projects';
 import { newSession, type Session } from '@/db/sessions';
 import { parseCsv } from './csv';
 import { attemptsCsv, climbsCsv, exercisesCsv, metricsCsv, sessionsCsv } from './exportCsv';
-import { guessColumns, importCsv } from './importCsv';
+import { guessColumns, guessKind, importCsv } from './importCsv';
 
 /**
  * The same history, back out (PLAN.md M105b).
@@ -149,18 +149,140 @@ describe('the round trip', () => {
     expect(back().climbs).toBe(8);
   });
 
-  // The header guesser has to place every column this writer produces,
-  // including the ones it deliberately ignores.
+  // The header guesser has to place every column this writer produces.
   it('is mapped by the guesser without a hand on it', () => {
     const header = parseCsv(climbsCsv(log))[0]!;
     expect(guessColumns(header)).toEqual([
-      'date', 'discipline', 'grade', 'result', 'count', 'skip',
-      // Name, Angle and Rope: written for a person and a spreadsheet, and
-      // nothing the importer can read back into a `Climb` yet, so the
-      // guesser passing over them is the right answer rather than a gap.
-      'skip', 'skip', 'skip',
+      'date', 'discipline', 'grade', 'result', 'count',
+      // Ascent style, Name, Angle and Rope. Written by M133 for a person
+      // and a spreadsheet, skipped by the reader for four milestones, and
+      // read back since M139 — which is why *Ascent style* is spelled that
+      // way: `style` alone means a result in the files people already have.
+      'style', 'name', 'angle', 'rope',
       'mode', 'place', 'notes',
     ]);
+  });
+
+  // What M133 added and M139 came back for: the round trip lost these four
+  // columns on the way in, silently, and the file looked complete.
+  it('brings back what the climb said about itself', () => {
+    const table = parseCsv(
+      climbsCsv([
+        day('2026-01-09', {
+          climbs: [
+            climb('5.12a', {
+              name: 'The Crucifix',
+              angle: 'overhang',
+              ropeStyle: 'lead',
+              style: 'redpoint',
+            }),
+          ],
+        }),
+      ]),
+    );
+    const [header = [], ...body] = table;
+    const out = importCsv({ rows: body, columns: guessColumns(header) });
+    const back = out.sessions[0]!.climbs[0]!;
+    expect([back.name, back.angle, back.ropeStyle, back.style]).toEqual([
+      'The Crucifix', 'overhang', 'lead', 'redpoint',
+    ]);
+  });
+});
+
+/**
+ * The other two round trips (PLAN.md M139).
+ *
+ * The archive has written these two files since M133 and nothing could
+ * read either of them back, so "the same history, back out" was true of
+ * one file in five. The property is the climbs one: a file this app writes
+ * is a file this app can read, with no question asked about it.
+ */
+describe('the round trip of a gym log', () => {
+  const log = [
+    day('2026-01-09', {
+      exercises: [
+        { name: 'Max hang', sets: 5, reps: 1, hold: 10, load: 40, note: 'felt strong' },
+        { name: 'Pull-up', sets: 4, reps: 6, load: 20 },
+      ],
+    } as never),
+    day('2026-01-11', { exercises: [{ name: 'Max hang', sets: 5, hold: 10, load: 45 }] } as never),
+  ];
+
+  const back = () => {
+    const [header = [], ...body] = parseCsv(exercisesCsv(log));
+    return importCsv({ kind: guessKind(header), rows: body, columns: guessColumns(header, 'exercises') });
+  };
+
+  it('is recognised as a gym log from its header alone', () => {
+    expect(guessKind(parseCsv(exercisesCsv(log))[0]!)).toBe('exercises');
+  });
+
+  it('is read back with nothing refused', () => {
+    const out = back();
+    expect(out.refused).toEqual([]);
+    expect(out.sessions).toHaveLength(2);
+    expect(out.exercises).toBe(3);
+  });
+
+  it('brings every number back as it went out', () => {
+    expect(back().sessions[0]!.exercises).toEqual([
+      { name: 'Max hang', sets: 5, reps: 1, hold: 10, load: 40, note: 'felt strong' },
+      { name: 'Pull-up', sets: 4, reps: 6, load: 20 },
+    ]);
+  });
+
+  // The exporter writes a blank rather than a zero, and the reader has to
+  // leave it off rather than filling it in — a bodyweight hang is not a
+  // zero-pound one.
+  it('leaves out what the file left blank', () => {
+    expect(back().sessions[1]!.exercises).toEqual([
+      { name: 'Max hang', sets: 5, hold: 10, load: 45 },
+    ]);
+  });
+});
+
+describe('the round trip of a benchmark sheet', () => {
+  const entries: MetricEntry[] = [
+    { metricId: 'max_hang_20mm_7s', date: '2026-01-09', value: 40, note: 'two hands' },
+    { metricId: 'max_pullups', date: '2026-01-11', value: 12 },
+  ];
+
+  const back = (units: 'metric' | 'imperial') => {
+    const [header = [], ...body] = parseCsv(metricsCsv(entries));
+    return importCsv({ kind: guessKind(header), rows: body, columns: guessColumns(header, 'benchmarks'), units });
+  };
+
+  it('is recognised as a benchmark sheet from its header alone', () => {
+    expect(guessKind(parseCsv(metricsCsv(entries))[0]!)).toBe('benchmarks');
+  });
+
+  it('brings every reading back on the metric it went out on', () => {
+    const out = back('imperial');
+    expect(out.refused).toEqual([]);
+    expect(out.metrics.map((m) => [m.metricId, m.date, m.value])).toEqual([
+      ['max_hang_20mm_7s', '2026-01-09', 40],
+      ['max_pullups', '2026-01-11', 12],
+    ]);
+  });
+
+  /**
+   * The reason the file's unit column overrides the climber's preference.
+   * Values are stored imperial and the archive writes the stored unit, so
+   * a climber who reads kilograms must not have their own 40 lb hang come
+   * back as 40 kg — which is what reading it "the way they would type it"
+   * would do.
+   */
+  it('comes back the same for a climber who reads in kilograms', () => {
+    expect(back('metric').metrics.map((m) => m.value)).toEqual([40, 12]);
+  });
+
+  it('carries the note with it', () => {
+    expect(back('imperial').metrics[0]!.note).toBe('two hands');
+  });
+
+  // A reading is not a session, so a sheet of them adds no training days.
+  it('adds no day to the log', () => {
+    expect(back('imperial').sessions).toEqual([]);
   });
 });
 

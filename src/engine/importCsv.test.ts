@@ -1,16 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { parseCsv } from './csv';
 import {
+  ARCHIVE_SHEETS,
+  COLUMNS,
+  countOf,
   guessColumns,
+  guessKind,
   importCsv,
   readCount,
   readDate,
   readDiscipline,
   readMode,
+  readNumber,
   readResult,
+  REQUIRED,
   selfScaling,
   type ColumnKind,
+  type CsvKind,
 } from './importCsv';
+import { CSV_FILES } from './exportCsv';
 
 /**
  * A climber's history, out of a spreadsheet (PLAN.md M105).
@@ -315,5 +323,351 @@ describe('rows into days', () => {
 
   it('leaves a day indoors when nothing says otherwise', () => {
     expect(of('date,grade\n2026-01-09,V4', ['date', 'grade']).sessions[0]!.mode).toBe('indoor');
+  });
+});
+
+/**
+ * Three shapes, not one (PLAN.md M139).
+ *
+ * A row was a climb, and a training log is mostly not climbs. These cover
+ * the two kinds that did not exist and the four climb columns that were
+ * written by M133 and read by nothing.
+ */
+
+const read = (text: string, kind: CsvKind, columns?: ColumnKind[], units?: 'metric' | 'imperial') => {
+  const [header = [], ...rows] = parseCsv(text);
+  return importCsv({
+    kind,
+    rows,
+    columns: columns ?? guessColumns(header, kind),
+    ...(units ? { units } : {}),
+  });
+};
+
+describe('what kind of file this is', () => {
+  it('knows a benchmark sheet by its metric column', () => {
+    expect(guessKind(['Date', 'Metric', 'Value', 'Unit'])).toBe('benchmarks');
+  });
+
+  it('knows a hangboard log by its exercise column', () => {
+    expect(guessKind(['Date', 'Exercise', 'Sets', 'Reps'])).toBe('exercises');
+  });
+
+  it('calls anything else a tick list, which is what one usually is', () => {
+    expect(guessKind(['Date', 'Grade', 'Crag'])).toBe('climbs');
+  });
+
+  /**
+   * `Name` is in `exercise`'s spellings, because a gym log's column for
+   * what the lift was is often called that — and it is also the archive's
+   * column for what a climb is called. The climb file must not read as a
+   * gym log on the strength of it.
+   */
+  it('does not mistake a climb name for an exercise name', () => {
+    expect(guessKind(['Date', 'Grade', 'Name', 'Angle', 'Rope'])).toBe('climbs');
+  });
+});
+
+describe('one spelling, two meanings', () => {
+  // The reason each kind has its own column list rather than one shared
+  // set: `Reps` is a count of climbs in a tick list and a count of reps on
+  // a hangboard, and neither kind can offer the other's meaning.
+  it('reads Reps as a count of climbs in a tick list', () => {
+    expect(guessColumns(['Date', 'Grade', 'Reps'], 'climbs')).toEqual(['date', 'grade', 'count']);
+  });
+
+  it('reads Reps as reps in a gym log', () => {
+    expect(guessColumns(['Date', 'Exercise', 'Reps'], 'exercises')).toEqual([
+      'date', 'exercise', 'reps',
+    ]);
+  });
+
+  // A grade column on a hangboard log is a column that cannot be named,
+  // which is the honest answer rather than a wrong one.
+  it('offers no meaning a kind does not have', () => {
+    expect(guessColumns(['Date', 'Exercise', 'Grade'], 'exercises')).toEqual([
+      'date', 'exercise', 'skip',
+    ]);
+  });
+
+  it('offers every column of a kind and no column of another', () => {
+    expect(COLUMNS.benchmarks).not.toContain('grade');
+    expect(COLUMNS.climbs).not.toContain('sets');
+    expect(COLUMNS.exercises).not.toContain('metric');
+  });
+});
+
+describe('a gym log', () => {
+  const LOG = [
+    'Date,Exercise,Sets,Reps,Hold (s),Load (lb),Note',
+    '2026-01-09,Max hang,5,1,10,40,felt strong',
+    '2026-01-09,Pull-up,4,6,,20,',
+    '2026-01-11,Max hang,5,1,10,45,',
+  ].join('\n');
+
+  it('reads the archive\'s own header without a hand on it', () => {
+    expect(guessColumns(parseCsv(LOG)[0]!, 'exercises')).toEqual([
+      'date', 'exercise', 'sets', 'reps', 'hold', 'load', 'notes',
+    ]);
+  });
+
+  it('makes one day out of the rows that share a date', () => {
+    const out = read(LOG, 'exercises');
+    expect(out.sessions).toHaveLength(2);
+    expect(out.sessions[0]!.exercises?.map((e) => e.name)).toEqual(['Max hang', 'Pull-up']);
+  });
+
+  it('carries the numbers a climber typed', () => {
+    const first = read(LOG, 'exercises').sessions[0]!.exercises![0]!;
+    expect([first.sets, first.reps, first.hold, first.load]).toEqual([5, 1, 10, 40]);
+    expect(first.note).toBe('felt strong');
+  });
+
+  it('counts exercises, not rows and not days', () => {
+    const out = read(LOG, 'exercises');
+    expect(out.exercises).toBe(3);
+    expect(countOf(out, 'exercises')).toEqual({ n: 3, noun: 'exercise' });
+  });
+
+  // One place decides what a kind counts and what it calls them, so the
+  // preview sentence and the import button cannot disagree.
+  it('names what each kind counts in its own words', () => {
+    const gym = read(LOG, 'exercises');
+    expect(countOf(gym, 'climbs')).toEqual({ n: 0, noun: 'climb' });
+    expect(countOf(gym, 'benchmarks')).toEqual({ n: 0, noun: 'reading' });
+  });
+
+  // A blank load column is a bodyweight log, not a zero-pound lift.
+  it('leaves a number out rather than inventing a zero', () => {
+    const second = read(LOG, 'exercises').sessions[0]!.exercises![1]!;
+    expect(second.hold).toBeUndefined();
+    expect(second.note).toBeUndefined();
+  });
+
+  // Assisted, which is how a climber works toward their first one-arm
+  // anything — so the bound cannot be zero at the bottom.
+  it('reads an assisted weight as the negative number it is', () => {
+    const out = read('Date,Exercise,Load (lb)\n2026-01-09,One-arm hang,-30', 'exercises');
+    expect(out.sessions[0]!.exercises![0]!.load).toBe(-30);
+  });
+
+  it('refuses a number it cannot read, by its line and its reason', () => {
+    const out = read('Date,Exercise,Sets\n2026-01-09,Max hang,a few', 'exercises');
+    expect(out.sessions).toEqual([]);
+    expect(out.refused).toEqual([{ line: 2, because: '"a few" is not a sets the app can read.' }]);
+  });
+
+  it('refuses a number outside what the field allows', () => {
+    // 4000 seconds is a 66-minute hang. A cell like that is a typo or a
+    // different unit, and writing it would poison every chart that reads it.
+    const out = read('Date,Exercise,Hold (s)\n2026-01-09,Max hang,4000', 'exercises');
+    expect(out.refused[0]!.because).toMatch(/hold in seconds/);
+  });
+
+  /**
+   * Each field's bounds are its own, and a hold's are not a weight's.
+   * A negative weight is assisted and a negative hold is nothing; a ten
+   * minute ARC hang is a real entry and a 600 lb one is not.
+   */
+  it('bounds a hold by what a hold can be, not by what a weight can be', () => {
+    const negative = read('Date,Exercise,Hold (s)\n2026-01-09,Max hang,-30', 'exercises');
+    expect(negative.refused[0]!.because).toMatch(/hold in seconds/);
+    const long = read('Date,Exercise,Hold (s)\n2026-01-09,ARC hang,600', 'exercises');
+    expect(long.sessions[0]!.exercises![0]!.hold).toBe(600);
+  });
+
+  it('refuses a row with no exercise on it', () => {
+    const out = read('Date,Exercise\n2026-01-09,', 'exercises');
+    expect(out.refused).toEqual([{ line: 2, because: 'No exercise named on this row.' }]);
+  });
+
+  it('cannot be read without a date and an exercise', () => {
+    expect(REQUIRED.exercises).toEqual(['date', 'exercise']);
+  });
+});
+
+describe('a sheet of benchmark readings', () => {
+  const SHEET = [
+    'Date,Metric,Value,Unit,Note',
+    '2026-01-09,Max Hang 20mm 7s,40,BW+lbs,two hands',
+    '2026-01-11,Max Pull-Ups,12,reps,',
+  ].join('\n');
+
+  it('reads the archive\'s own header without a hand on it', () => {
+    expect(guessColumns(parseCsv(SHEET)[0]!, 'benchmarks')).toEqual([
+      'date', 'metric', 'value', 'unit', 'notes',
+    ]);
+  });
+
+  /**
+   * Not a session. A reading belongs to its metric and its day, and
+   * inventing a session to hang it on would put a training day in the log
+   * that nobody had.
+   */
+  it('brings readings in without inventing a training day', () => {
+    const out = read(SHEET, 'benchmarks');
+    expect(out.sessions).toEqual([]);
+    expect(out.metrics).toHaveLength(2);
+  });
+
+  it('lands them on the metric the app records, by its own label', () => {
+    const out = read(SHEET, 'benchmarks');
+    expect(out.metrics[0]!.metricId).toBeTruthy();
+    expect(out.metrics[0]!.date).toBe('2026-01-09');
+    expect(out.metrics[0]!.note).toBe('two hands');
+  });
+
+  /**
+   * The label is what a person writes and the id is what the app stores,
+   * and they are not the same string — *Weighted Pull-Ups 3RM* against
+   * `weighted_pullup_3rm`, which differ by a plural even after the
+   * punctuation is stripped. Both have to land on the same metric.
+   */
+  it('takes the benchmark by the name a person writes', () => {
+    const out = read('Date,Metric,Value\n2026-01-09,Weighted Pull-Ups 3RM,25', 'benchmarks');
+    expect(out.metrics[0]!.metricId).toBe('weighted_pullup_3rm');
+  });
+
+  it('takes it by the name the app stores, too', () => {
+    const out = read('Date,Metric,Value\n2026-01-09,weighted_pullup_3rm,25', 'benchmarks');
+    expect(out.metrics[0]!.metricId).toBe('weighted_pullup_3rm');
+  });
+
+  // Exactly, not loosely: *Max Hang* is not *Max Hang 20mm 7s*, and a
+  // near-match filed on the wrong metric is worse than a refusal a climber
+  // can see and fix.
+  it('will not take a name that merely contains the right words', () => {
+    const out = read('Date,Metric,Value\n2026-01-09,Max Hang,40', 'benchmarks');
+    expect(out.metrics).toEqual([]);
+    expect(out.refused[0]!.because).toMatch(/not a benchmark this app records/);
+  });
+
+  it('refuses a benchmark the app does not record', () => {
+    const out = read('Date,Metric,Value\n2026-01-09,Vertical leap,40', 'benchmarks');
+    expect(out.metrics).toEqual([]);
+    expect(out.refused[0]!.because).toBe('"Vertical leap" is not a benchmark this app records.');
+  });
+
+  /**
+   * The file's own unit wins where it names one, which is what closes the
+   * round trip: the archive writes the unit it stored, and a climber
+   * reading in kilograms must not have their own export re-read as kilos.
+   */
+  it('takes the unit from the file over the climber\'s own', () => {
+    const named = read(
+      'Date,Metric,Value,Unit\n2026-01-09,Max Hang 20mm 7s,40,BW+lbs',
+      'benchmarks',
+      undefined,
+      'metric',
+    );
+    const silent = read('Date,Metric,Value\n2026-01-09,Max Hang 20mm 7s,40', 'benchmarks', undefined, 'metric');
+    expect(named.metrics[0]!.value).not.toBe(silent.metrics[0]!.value);
+  });
+
+  it('reads the number the way the climber types it when the file is silent', () => {
+    const imperial = read('Date,Metric,Value\n2026-01-09,Max Hang 20mm 7s,40', 'benchmarks', undefined, 'imperial');
+    expect(imperial.metrics[0]!.value).toBe(40);
+  });
+
+  it('counts readings, in the word a reading is called', () => {
+    expect(countOf(read(SHEET, 'benchmarks'), 'benchmarks')).toEqual({ n: 2, noun: 'reading' });
+  });
+
+  it('cannot be read without a date, a metric and a value', () => {
+    expect(REQUIRED.benchmarks).toEqual(['date', 'metric', 'value']);
+  });
+});
+
+describe('a bounded number', () => {
+  it('takes one inside the bounds', () => {
+    expect(readNumber('5', 1, 99)).toBe(5);
+  });
+
+  it('refuses one outside them at either end', () => {
+    expect(readNumber('0', 1, 99)).toBeNull();
+    expect(readNumber('100', 1, 99)).toBeNull();
+  });
+
+  it('refuses text that is not a number at all', () => {
+    expect(readNumber('a few', 1, 99)).toBeNull();
+    expect(readNumber('', 1, 99)).toBeNull();
+  });
+
+  /**
+   * The blank is refused on its own account, not by the floor.
+   * `Number('')` is 0, and 0 is inside the range a weight allows — so a
+   * blank load column would become a zero-pound lift rather than the
+   * bodyweight one it is.
+   */
+  it('refuses a blank even where zero would be allowed', () => {
+    expect(readNumber('', -500, 500)).toBeNull();
+    expect(readNumber('0', -500, 500)).toBe(0);
+  });
+});
+
+describe('the four columns the archive wrote and nothing read', () => {
+  const FILE = [
+    'Date,Grade,Ascent style,Name,Angle,Rope',
+    '2026-01-09,5.12a,redpoint,The Crucifix,overhang,lead',
+  ].join('\n');
+
+  it('guesses every one of them', () => {
+    expect(guessColumns(parseCsv(FILE)[0]!, 'climbs')).toEqual([
+      'date', 'grade', 'style', 'name', 'angle', 'rope',
+    ]);
+  });
+
+  it('reads them onto the climb', () => {
+    const climb = read(FILE, 'climbs').sessions[0]!.climbs[0]!;
+    expect([climb.name, climb.angle, climb.ropeStyle, climb.style]).toEqual([
+      'The Crucifix', 'overhang', 'lead', 'redpoint',
+    ]);
+  });
+
+  /**
+   * Each one absent rather than guessed. An unsaid angle is not vertical
+   * and an unsaid rope style is not a top-rope: the archive leaves them
+   * blank precisely because the climber never said.
+   */
+  it('leaves each one off where the cell is blank', () => {
+    const climb = read('Date,Grade,Ascent style,Name,Angle,Rope\n2026-01-09,V4,,,,', 'climbs')
+      .sessions[0]!.climbs[0]!;
+    expect(climb.name).toBeUndefined();
+    expect(climb.angle).toBeUndefined();
+    expect(climb.ropeStyle).toBeUndefined();
+    expect(climb.style).toBeUndefined();
+  });
+
+  // `Style` alone stays a result, for the files people already have where
+  // one column holds redpoint/flash. *Ascent style* is spelled that way in
+  // the archive for exactly this reason.
+  it('still reads a bare Style column as the result', () => {
+    expect(guessColumns(['Date', 'Grade', 'Style'], 'climbs')).toEqual(['date', 'grade', 'result']);
+  });
+
+  it('does not read a word it cannot place', () => {
+    const climb = read('Date,Grade,Angle,Rope\n2026-01-09,V4,sideways,abseil', 'climbs')
+      .sessions[0]!.climbs[0]!;
+    expect(climb.angle).toBeUndefined();
+    expect(climb.ropeStyle).toBeUndefined();
+  });
+});
+
+describe('which of the archive\'s spreadsheets come back', () => {
+  it('names every file the archive writes, and no other', () => {
+    expect(ARCHIVE_SHEETS.map((s) => s.file).sort()).toEqual(Object.values(CSV_FILES).sort());
+  });
+
+  it('claims exactly the three kinds the importer has', () => {
+    const kinds = ARCHIVE_SHEETS.map((s) => s.kind).filter((k): k is CsvKind => k !== null);
+    expect(kinds.sort()).toEqual((Object.keys(COLUMNS) as CsvKind[]).sort());
+  });
+
+  // Said out loud rather than by omission: a climber with five files and
+  // three importable ones would otherwise find out by trying each.
+  it('says what the other two are for rather than leaving them out', () => {
+    const silent = ARCHIVE_SHEETS.filter((s) => s.kind === null);
+    expect(silent.map((s) => s.file)).toEqual([CSV_FILES.sessions, CSV_FILES.attempts]);
+    for (const sheet of silent) expect(sheet.holds).toMatch(/backup file/);
   });
 });

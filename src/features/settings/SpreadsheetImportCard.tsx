@@ -1,15 +1,21 @@
 import { useMemo } from 'react';
 import { TriangleAlert } from 'lucide-react';
 import {
+  COLUMNS,
+  countOf,
   guessColumns,
+  guessKind,
   importCsv,
+  REQUIRED,
   selfScaling,
   type ColumnKind,
+  type CsvKind,
   type Discipline,
 } from '@/engine/importCsv';
+import { useSettings } from '@/store/settings';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
-import { Chip } from '@/ui/Chip';
+import { Chip, OptionCard } from '@/ui/Chip';
 import { Select } from '@/ui/Field';
 
 /**
@@ -35,17 +41,39 @@ const LABEL: Record<ColumnKind, string> = {
   discipline: 'Boulder or route',
   mode: 'Indoor/outdoor',
   place: 'Where',
+  name: 'Climb name',
+  angle: 'Wall angle',
+  rope: 'Lead or top-rope',
+  style: 'Ascent style',
+  exercise: 'Exercise',
+  sets: 'Sets',
+  reps: 'Reps',
+  hold: 'Hold (seconds)',
+  load: 'Weight',
+  metric: 'Benchmark',
+  value: 'Result',
+  unit: 'Unit',
   notes: 'Notes',
   skip: "Don't import",
 };
 
-const ORDER: ColumnKind[] = ['date', 'grade', 'result', 'count', 'discipline', 'mode', 'place', 'notes', 'skip'];
+/** What each kind of file is, in the words the question asks. */
+const KINDS: { kind: CsvKind; label: string; blurb: string }[] = [
+  { kind: 'climbs', label: 'Climbs', blurb: 'A tick list — one row per climb, with its grade.' },
+  { kind: 'exercises', label: 'Exercises', blurb: 'A hangboard or gym log — sets, reps, hold, weight.' },
+  { kind: 'benchmarks', label: 'Benchmarks', blurb: 'Max hangs, dead hangs, pull-ups — a number per test.' },
+];
 
 /** How many refusals to print before the rest become a count. */
 const NAMED = 5;
 
+/** "a grade", "an exercise" — the column names are data, so this is too. */
+const article = (word: string): string => `${/^[aeiou]/.test(word) ? 'an' : 'a'} ${word}`;
+
 export interface CsvPending {
   name: string;
+  /** What a row is (PLAN.md M139). Guessed from the header, changeable. */
+  kind: CsvKind;
   header: string[];
   rows: string[][];
   columns: ColumnKind[];
@@ -54,7 +82,14 @@ export interface CsvPending {
 
 export function pendingFrom(name: string, table: string[][]): CsvPending {
   const [header = [], ...rows] = table;
-  return { name, header: [...header], rows, columns: guessColumns(header), assume: null };
+  const kind = guessKind(header);
+  return { name, kind, header: [...header], rows, columns: guessColumns(header, kind), assume: null };
+}
+
+/** What arrives, in the words of the kind of file it is. */
+export interface CsvResult {
+  sessions: ReturnType<typeof importCsv>['sessions'];
+  metrics: ReturnType<typeof importCsv>['metrics'];
 }
 
 export function SpreadsheetImportCard({
@@ -70,24 +105,28 @@ export function SpreadsheetImportCard({
   occupied: ReadonlySet<string>;
   busy: boolean;
   onChange: (next: CsvPending) => void;
-  onImport: (sessions: ReturnType<typeof importCsv>['sessions']) => void;
+  onImport: (read: CsvResult) => void;
   onCancel: () => void;
 }) {
+  const units = useSettings((s) => s.units);
   const read = useMemo(
     () =>
       importCsv({
+        kind: pending.kind,
         rows: pending.rows,
         columns: pending.columns,
         occupied,
+        units,
         ...(pending.assume ? { assume: pending.assume } : {}),
       }),
-    [pending.rows, pending.columns, pending.assume, occupied],
+    [pending.kind, pending.rows, pending.columns, pending.assume, occupied, units],
   );
 
-  const hasDate = pending.columns.includes('date');
-  const hasGrade = pending.columns.includes('grade');
+  const missing = REQUIRED[pending.kind].filter((c) => !pending.columns.includes(c));
   // Only worth asking where a grade in this file actually needs it: a log of
-  // V grades and YDS says its own scale on every row.
+  // V grades and YDS says its own scale on every row. No check on the kind:
+  // only a tick list is offered a grade column at all, so a gym log's
+  // `indexOf` is already -1 (PLAN.md M139).
   const gradeAt = pending.columns.indexOf('grade');
   const ambiguous =
     gradeAt !== -1 &&
@@ -96,6 +135,17 @@ export function SpreadsheetImportCard({
       const cell = r[gradeAt]?.trim() ?? '';
       return cell !== '' && selfScaling(cell) === null;
     });
+  const arriving = countOf(read, pending.kind);
+  /**
+   * What the button offers to import, which is not always a day.
+   *
+   * A benchmark reading belongs to its metric and its date and adds no
+   * training day at all, so a sheet of them would otherwise offer "Import
+   * 0 days" — a sentence that reads like a refusal.
+   */
+  const landing =
+    pending.kind === 'benchmarks' ? arriving : { n: read.sessions.length, noun: 'day' };
+  const nothing = landing.n === 0;
 
   const set = (index: number, kind: ColumnKind) => {
     const columns = [...pending.columns];
@@ -112,6 +162,32 @@ export function SpreadsheetImportCard({
   return (
     <Card title="Import this spreadsheet?">
       <p className="text-sm text-ink-soft leading-relaxed">{pending.name}</p>
+
+      {/* What a row is, asked before what each column holds — because the
+          answer decides which columns there are to name (PLAN.md M139). */}
+      <fieldset className="mt-3">
+        <legend className="text-sm text-ink-soft mb-1.5">What is this a list of?</legend>
+        <div className="grid grid-cols-1 gap-2">
+          {KINDS.map((k) => (
+            <OptionCard
+              key={k.kind}
+              active={pending.kind === k.kind}
+              onClick={() =>
+                onChange({
+                  ...pending,
+                  kind: k.kind,
+                  // The columns are re-guessed rather than kept: they mean
+                  // different things per kind, and a `grade` column on a
+                  // hangboard log is a column that cannot be named.
+                  columns: guessColumns(pending.header, k.kind),
+                })
+              }
+              label={k.label}
+              blurb={k.blurb}
+            />
+          ))}
+        </div>
+      </fieldset>
 
       <div className="mt-3 grid grid-cols-1 gap-2">
         {pending.header.map((name, i) => (
@@ -130,7 +206,7 @@ export function SpreadsheetImportCard({
                 onChange={(e) => set(i, e.target.value as ColumnKind)}
                 aria-label={`What is in "${name.trim() === '' ? `Column ${i + 1}` : name}"?`}
               >
-                {ORDER.map((kind) => (
+                {COLUMNS[pending.kind].map((kind) => (
                   <option key={kind} value={kind}>
                     {LABEL[kind]}
                   </option>
@@ -166,25 +242,38 @@ export function SpreadsheetImportCard({
       )}
 
       <div className="mt-3 rounded-xl bg-sunken p-3">
-        {!hasDate || !hasGrade ? (
+        {missing.length > 0 ? (
           <p className="text-sm flex items-start gap-2">
             <TriangleAlert size={15} className="text-warn shrink-0 mt-0.5" aria-hidden />
             <span>
-              Nothing can be read without a {!hasDate ? 'date' : 'grade'} column. Say which one
-              it is above.
+              Nothing can be read without {article(LABEL[missing[0]!].toLowerCase())} column. Say
+              which one it is above.
             </span>
           </p>
+        ) : pending.kind === 'benchmarks' ? (
+          <>
+            <p className="text-sm">
+              <span className="font-semibold">{arriving.n.toLocaleString()}</span> {arriving.noun}
+              {arriving.n === 1 ? '' : 's'} would arrive.
+            </p>
+            <p className="text-xs text-ink-soft mt-1.5 leading-relaxed">
+              They go where the ones you take in the app go: the assessment charts, the strength
+              curve, and the before-and-after a block report compares.
+            </p>
+          </>
         ) : (
           <>
             <p className="text-sm">
               <span className="font-semibold">{read.sessions.length.toLocaleString()}</span> day
               {read.sessions.length === 1 ? '' : 's'} would arrive, carrying{' '}
-              <span className="font-semibold">{read.climbs.toLocaleString()}</span> climb
-              {read.climbs === 1 ? '' : 's'}.
+              <span className="font-semibold">{arriving.n.toLocaleString()}</span> {arriving.noun}
+              {arriving.n === 1 ? '' : 's'}.
             </p>
             <p className="text-xs text-ink-soft mt-1.5 leading-relaxed">
-              They count for your grades, your pyramid, the career page and the altimeter. They
-              pay no XP — five years cashed out at once is a level nobody climbed for.
+              {pending.kind === 'exercises'
+                ? 'They sit beside anything already logged on those days rather than over it, and they carry the load history the strength charts read.'
+                : 'They count for your grades, your pyramid, the career page and the altimeter.'}{' '}
+              They pay no XP — five years cashed out at once is a level nobody climbed for.
             </p>
           </>
         )}
@@ -213,12 +302,8 @@ export function SpreadsheetImportCard({
       </div>
 
       <div className="flex flex-wrap gap-2 mt-3">
-        <Button
-          disabled={busy || read.sessions.length === 0}
-          onClick={() => onImport(read.sessions)}
-        >
-          Import {read.sessions.length.toLocaleString()} day
-          {read.sessions.length === 1 ? '' : 's'}
+        <Button disabled={busy || nothing} onClick={() => onImport(read)}>
+          {`Import ${landing.n.toLocaleString()} ${landing.noun}${landing.n === 1 ? '' : 's'}`}
         </Button>
         <Button variant="ghost" disabled={busy} onClick={onCancel}>
           Cancel
