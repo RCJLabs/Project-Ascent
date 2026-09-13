@@ -240,7 +240,7 @@ describe('the bundle stays small', () => {
    * Every milestone that moves this moves it to just above what it measured;
    * the history is in the comment inside the first test.
    */
-  const BUDGET = 164.0;
+  const BUDGET = 165.0;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -402,6 +402,18 @@ describe('the bundle stays small', () => {
     // took off it is spent on the one screen that needs it. Two things
     // M115 and M116 bought stay bought: nothing *else* eager imports the
     // logger, and the glossary is still a tap away rather than a boot cost.
+    //
+    // **164.0 → 165.0 at M129**, measured 163.95 → 164.03, so 0.08KB. The
+    // dose arithmetic — `easedDose`, `easesAnything` and the deload rule
+    // M128 built on it — lives in `engine/plan.ts`, which is entry-chunk by
+    // construction because `usePlannedDay` reads it on every screen that
+    // shows a day. The readiness engine and the prescription card it feeds
+    // are both inside the lazy logger, so what reaches here is the
+    // arithmetic and nothing else.
+    //
+    // Unchanged at M125 through M128, measured 163.06 → 163.95: new light
+    // palettes are the same number of bytes, and M126's block screen, M127's
+    // week steps and M128's deload all landed on lazy routes or in content.
     //
     // **203.0 → 164.0 at M124, measured 202.08 → 163.06 — 39KB off, and
     // the largest single move this file has recorded.** The logger is

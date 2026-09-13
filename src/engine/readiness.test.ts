@@ -194,6 +194,28 @@ describe('the effort ceiling', () => {
   });
 });
 
+describe('how much volume the day suggests coming off', () => {
+  it('suggests none on a good day, and more as the day gets worse', () => {
+    // Notches rather than a dose: what one notch means belongs to the dose,
+    // and `engine/plan.ts` has owned that since M128's deload (PLAN.md M129).
+    expect(readinessFor(check('good', 'good')).lighten).toBe(0);
+    expect(readinessFor(check('tender', 'good')).lighten).toBe(1);
+    expect(readinessFor(check('sore', 'none')).lighten).toBe(2);
+  });
+
+  it('moves with the same answers the ceiling moves with', () => {
+    // Two numbers from one call. If they ever disagree about which day is
+    // worse, one of them is wrong.
+    for (const fingers of FINGER_ANSWERS) {
+      for (const sleep of SLEEP_ANSWERS) {
+        const r = readinessFor(check(fingers, sleep));
+        expect(r.lighten === 0, `${fingers}/${sleep}`).toBe(r.cap === null);
+        if (r.cap === 5) expect(r.lighten).toBe(2);
+      }
+    }
+  });
+});
+
 describe('a test scheduled for today', () => {
   it('is left alone when there is no test', () => {
     expect(readinessFor(check('sore', 'none')).deferTest).toBeNull();

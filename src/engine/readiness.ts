@@ -99,6 +99,21 @@ export interface Readiness {
   flagBecause: string | null;
   /** Suggested ceiling on RPE, or null when there is no reason for one. */
   cap: number | null;
+  /**
+   * How much volume today's answers suggest taking off, in notches
+   * (PLAN.md M129).
+   *
+   * A number of notches rather than a dose, because what one notch means
+   * belongs to the dose and not to the climber: `engine/plan.ts` owns that
+   * arithmetic and has since M128's deload. Zero on a full day.
+   *
+   * **A suggestion, and never applied.** The prescription a climber sees is
+   * still the one their program wrote; this is shown beside it, with the
+   * answers that produced it, and taking it is their business. The check-in
+   * is two questions and a rule — the app has no standing to overrule a
+   * program on the strength of that.
+   */
+  lighten: number;
   /** Why a test scheduled for today should wait, or null to go ahead. */
   deferTest: string | null;
 }
@@ -220,6 +235,18 @@ const HEADLINE: Record<ReadinessCall, string> = {
  *  last week is an 8 today, and the ceiling catches that without being told. */
 const CAP: Record<ReadinessCall, number | null> = { full: null, adjusted: 7, easy: 5 };
 
+/**
+ * Notches of volume each call suggests coming off (PLAN.md M129).
+ *
+ * One and two rather than a percentage, for the reason the cap is an RPE
+ * and not a load: a notch is defined against the dose that was written, so
+ * it means the same thing on a five-set hangboard block and a three-set
+ * mobility circuit. Two on an easy day is a real cut and still leaves a
+ * session — the advice above already says to drop the hardest block, and
+ * this is what to do with the rest of it.
+ */
+const LIGHTEN: Record<ReadinessCall, number> = { full: 0, adjusted: 1, easy: 2 };
+
 export interface ReadinessContext {
   /**
    * The parts today's session actually loads, from `engine/bodyLoad`.
@@ -294,6 +321,7 @@ export function readinessFor(checkIn: CheckIn, context: ReadinessContext = {}): 
     flag: [...new Set(parts.flatMap((p) => p.flag ?? []))],
     flagBecause: flagger?.said ?? null,
     cap: CAP[call],
+    lighten: LIGHTEN[call],
     deferTest: context.test !== true ? null : (parts.find((p) => p.deferTest)?.deferTest ?? null),
   };
 }

@@ -5820,8 +5820,8 @@ rests on an inference it says so.*
   sessions are "excluded from training-load maths" and `engine/derive.ts:222-225` deliberately
   includes them and explains why. One of those comments is a lie a future reader will act on.
 
-- **M129 — the readiness cap reaches the prescription.** *Proposed. Needs M127; much better
-  after M130.*
+- **M129 — the readiness cap reaches the prescription.** *Proposed, and built fifth — see the
+  Done entry at the end of this file.*
   `readinessFor()` already computes an RPE ceiling — `CAP = { full: null, adjusted: 7, easy: 5 }`
   (`engine/readiness.ts:221`) — plus body-part flags and a reason to defer a test. None of it
   touches what the climber is asked to do: `prescriptionFor` takes no climber state at all.
@@ -6196,3 +6196,60 @@ rests on an inference it says so.*
   **Budget.** Unchanged at 164.0, measured 163.60 → 163.95. The rule is thirty lines in an
   engine the entry chunk already carried.
   4,033 tests pass.
+
+- **M129 — the readiness cap reaches the prescription.** *Done. The last of the dose phase.*
+  **A correction to the proposal before anything else.** It said the readiness engine's output
+  "never touches what the climber is asked to do", and that was too strong: the RPE ceiling has
+  sat beside the effort field since M72, and the body-part flags have marked the exercise lines
+  that load them since M103. What never reached the screen was the **dose**. A climber who
+  answered *sore fingers, barely slept* read *"drop the hardest block and keep the rest"* above
+  a prescription card showing the same five sets as anyone else's. The advice was there and the
+  numbers under it had not moved.
+  **`Readiness` gained one field: `lighten`,** a number of notches. Zero on a full day, one on
+  *train with changes*, two on *today is not the day*. Notches rather than a dose, for the
+  reason the ceiling is an RPE and not a load: a notch is defined against the dose that was
+  written, so it means the same thing on a five-set hangboard block and a three-set mobility
+  circuit. `engine/readiness.ts` owns how much lighter, because that is a rule about the
+  climber; `engine/plan.ts` owns what a notch is, because that is a rule about a dose. A test
+  holds the two numbers to the same opinion of which day is worse.
+  **One arithmetic, two callers.** `easedDose(exercise, notches)` is the rule, and M128's
+  `deloadDose` is now literally it at one notch. A deload is one notch the program decided in
+  advance; a check-in is one or two the climber decided this morning. Both are "less of the
+  same session", and writing that twice is how the two would drift apart. It stops early rather
+  than giving up, so two notches off a three-set block is two sets and not nothing.
+  **They compose, and the order is right.** The suggestion is computed from the resolved
+  prescription, so on a deload week it eases from the deloaded dose rather than from the one
+  the phase opened at. Iron Grip's week 4 has Pull already at two sets, and the app does not
+  invent a third notch in it.
+  **It proposes and never writes.** The program's numbers stay exactly where they are and the
+  lighter one sits beside them in the accent colour — *3 sets · 8-10 · 2-3 min rest · today 2
+  sets*. Two questions and a rule is not standing to overrule a program, and an app that
+  quietly rewrote a prescription on the strength of a check-in would be worse than one that
+  said nothing. The note above the card names the answers that produced it, once for the
+  session.
+  **Only where there is something to suggest.** `easesAnything` is in the engine rather than
+  the logger, because it is the same question the screen must not answer by eye: saying "less
+  of it today" over a prescription that has not moved is the fault M128 met with the deload
+  marker, one screen along. Iron Grip's band work is two sets and stays two sets, with no
+  suggestion beside it.
+  **Measured, not asserted.** Sixteen mutations, every one killed: a good day suggesting less,
+  every bad day the same depth, nothing ever suggested, the depth disagreeing with the ceiling;
+  one notch not being the deload rule, easing giving up instead of stopping early, ignoring the
+  depth asked for, easing at zero notches, easing the load as well; the suggestion never shown,
+  offered with nothing to suggest, the guard ignored, the lighter dose missing from the line,
+  the suggestion replacing the prescribed dose, and the reason dropped from the note. A no-op
+  statement reorder survived. **Two survived the first round and both were the same fault in
+  the code rather than the tests**: the "is there anything to suggest" decision was written
+  inline in the component, where no test could reach the case of a session with nothing left to
+  give. Moving it into `easesAnything` killed one; the other turned out to be an early return
+  for zero notches that `easedDose` already handles — a line no test could reach, which the
+  mutation showed by surviving, and which is gone rather than left standing.
+  **In a browser, both themes, 430px and 1280px.** No check-in and a clean check-in show
+  nothing; *Tender · Well* shows the note naming *Fingers tender*, the ceiling at 7 beside the
+  effort field, and *today 2 sets* against every three-set line with the two-set band work left
+  alone; *Sore · Barely* shows the ceiling at 5 and a second notch off. No overflow, no page
+  errors.
+  **Budget.** 164.0 → 165.0, measured 163.95 → 164.03, so 0.08KB. The arithmetic is in
+  `engine/plan.ts`, which is entry-chunk because `usePlannedDay` reads it on every screen that
+  shows a day; the readiness engine and the card it feeds are both inside the lazy logger.
+  4,052 tests pass.

@@ -1,12 +1,79 @@
 import { describe, expect, it } from 'vitest';
 import { BASE_CAMP, IRON_GRIP, PEAK_PERFORMANCE } from '@/content/programs/catalogue';
 import { planFromLayout } from './scheduler';
-import { blockStatus, blockWindow, plannedDay } from './plan';
+import { blockStatus, blockWindow, deloadDose, easedDose, easesAnything, plannedDay } from './plan';
 import { addDays } from './dates';
 
 const IG_PLAN = planFromLayout(IRON_GRIP.recommendedLayout!);
 // 2026-03-08 is a Sunday.
 const START = '2026-03-09'; // Monday of week 1
+
+/**
+ * One notch, as deep as asked for (PLAN.md M129).
+ *
+ * A deload is one notch the program decided in advance; a check-in is one
+ * or two the climber decided this morning. Both are "less of the same
+ * session", so they share the arithmetic rather than drifting apart.
+ */
+describe('easing a dose', () => {
+  const ex = (sets: string) => ({ name: 'x', sets });
+
+  it('is the deload rule at one notch', () => {
+    for (const sets of ['3-5', '5', '3', '2', '1']) {
+      expect(easedDose(ex(sets), 1), sets).toEqual(deloadDose(ex(sets)));
+    }
+  });
+
+  it('goes deeper when asked', () => {
+    expect(easedDose(ex('3-5'), 2)).toEqual({ sets: '2' });
+    expect(easedDose(ex('5'), 2)).toEqual({ sets: '3' });
+  });
+
+  it('stops early rather than giving up, when the notches run out', () => {
+    // Two off a three-set block is two sets, not nothing: the climber asked
+    // for less and there is less to give, just not as much as they asked.
+    expect(easedDose(ex('3'), 2)).toEqual({ sets: '2' });
+  });
+
+  it('changes nothing at zero notches, or where there is no notch', () => {
+    expect(easedDose(ex('5'), 0)).toBeNull();
+    expect(easedDose(ex('2'), 2)).toBeNull();
+    expect(easedDose({ name: 'x' }, 2)).toBeNull();
+    expect(easedDose(ex('AMRAP'), 2)).toBeNull();
+  });
+
+  it('touches volume and nothing else', () => {
+    expect(easedDose({ name: 'x', sets: '5', load: '90%', hold: '10s' }, 2)).toEqual({ sets: '3' });
+  });
+});
+
+describe('whether a session has anything to give', () => {
+  const block = (...sets: string[]) => ({
+    blockId: 'b',
+    name: 'B',
+    entry: { rationale: 'x', exercises: sets.map((s, i) => ({ name: `e${i}`, sets: s })) },
+  });
+
+  it('says no on a full day, whatever the session holds', () => {
+    expect(easesAnything([block('5', '3-5')], 0)).toBe(false);
+  });
+
+  it('says no when every line is already at the floor', () => {
+    // Telling a climber "less of it today" over a prescription that has not
+    // moved is the fault the deload marker had before M128.
+    expect(easesAnything([block('2', '1', 'AMRAP')], 2)).toBe(false);
+  });
+
+  it('says yes when one line has a notch, even if the rest do not', () => {
+    expect(easesAnything([block('2', '1', '4')], 1)).toBe(true);
+  });
+
+  it('reads the depth, not just the flag', () => {
+    // A three-set block gives one notch at the floor of two, and no second.
+    expect(easesAnything([block('3')], 1)).toBe(true);
+    expect(easesAnything([block('2')], 2)).toBe(false);
+  });
+});
 
 describe('plannedDay', () => {
   it('places the session type the plan asks for', () => {

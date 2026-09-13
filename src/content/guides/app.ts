@@ -152,6 +152,7 @@ export const APP: Guide = {
             '**Phases carry the big changes.** Most blocks run three phases of four weeks, and the session you do in phase two is not the one you did in phase one.',
             '**Weeks carry the small ones.** Where a program says how a dose moves inside a phase, the logger shows that week\'s numbers and a line saying what changed — "five sets at whatever load week 2 settled on".',
             '**Some steps are a rule, not a number.** "Add one increment if every set held to the last rep" depends on how last week actually went, so the app passes the rule on rather than inventing a figure for you.',
+            '**Your check-in can suggest less of it.** Answer the two questions before a session and the app puts a lighter dose beside each line, with the answers that produced it. It is a suggestion and stays one — the program\'s numbers do not move, and taking it is your call.',
             '**A deload week is genuinely lighter.** A set comes off each block that has one to give, and the load, reps and holds stay exactly where they are — a deload is less volume, not easier work. Where a program wrote down what its own deload should be, that wins.',
             '**A block that never changes says why.** Where the progression is in intensity or grade choice rather than sets and reps, the program page says so out loud instead of leaving it looking like an oversight.',
           ],

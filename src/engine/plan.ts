@@ -176,8 +176,28 @@ export interface BlockPrescription {
  * never thought about is recoverable; over-reducing it silently is not.
  */
 export function deloadDose(exercise: Exercise): Dose | null {
-  const sets = lighter(exercise.sets);
-  return sets === null ? null : { sets };
+  return easedDose(exercise, 1);
+}
+
+/**
+ * The same arithmetic, as many notches deep as asked for (PLAN.md M129).
+ *
+ * A deload is one notch decided by the program in advance; a check-in is
+ * one or two decided by the climber this morning. Both are "less of the
+ * same session", and writing the rule twice is how the two would drift
+ * apart. Stops early when there is no notch left to take, so asking for two
+ * on a three-set block gives two sets rather than nothing.
+ */
+export function easedDose(exercise: Exercise, notches: number): Dose | null {
+  let sets = exercise.sets;
+  let moved = false;
+  for (let i = 0; i < notches; i += 1) {
+    const next = lighter(sets);
+    if (next === null) break;
+    sets = next;
+    moved = true;
+  }
+  return moved ? { sets } : null;
 }
 
 /** One notch off a count, or null when there is no notch to take. */
@@ -196,6 +216,24 @@ function lighter(value: string | undefined): string | null {
   // 'AMRAP', '1 per arm', 'to failure' — a count this cannot read is a count
   // it must not guess at.
   return null;
+}
+
+/**
+ * Whether a check-in of this depth would take anything off the session
+ * (PLAN.md M129).
+ *
+ * Here rather than in the logger, because it is the same question the
+ * screen must not answer by eye: saying "less of it today" over a
+ * prescription that has not moved is the fault M128 met with the deload
+ * marker, one screen along.
+ *
+ * A full day falls out of this rather than being checked for. `easedDose`
+ * at zero notches never moves anything, so the answer is already false and
+ * an early return for it was a line no test could reach — which a mutation
+ * duly showed by surviving.
+ */
+export function easesAnything(blocks: readonly BlockPrescription[], notches: number): boolean {
+  return blocks.some((b) => b.entry.exercises.some((e) => easedDose(e, notches) !== null));
 }
 
 /** Whether a deload would take anything off this prescription at all. */

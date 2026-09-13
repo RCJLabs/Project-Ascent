@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { AlertTriangle, Check, ChevronDown, ChevronUp, Clock, Copy, Flame, Plus, RotateCw, Snowflake, Sparkles, Timer, Trash2, TrendingUp, X } from 'lucide-react';
+import { AlertTriangle, Check, ChevronDown, ChevronUp, Clock, Copy, Flame, Plus, RotateCw, Snowflake, Sparkles, Timer, Trash2, TrendingDown, TrendingUp, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
 import { SCALE_MAX, getField, type FieldSpec } from '@/content/fields';
@@ -33,7 +33,7 @@ import {
   isLive,
   isStale,
 } from '@/engine/live';
-import { DELOAD_STEP, prescriptionFor, type PlannedDay } from '@/engine/plan';
+import { DELOAD_STEP, easedDose, easesAnything, prescriptionFor, type PlannedDay } from '@/engine/plan';
 import { prescriptionLine } from '@/engine/prescription';
 import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
 import type { CooldownPlan } from '@/engine/cooldown';
@@ -665,6 +665,10 @@ function SessionEditor({
   const readiness = session.checkIn
     ? readinessFor(session.checkIn, { ...(loads ? { loads } : {}), test: day?.test !== undefined })
     : null;
+  // Only where the answers ask for less and some block has a notch to give.
+  // The rule is in the engine, where it can be tested against a session that
+  // has nothing left to take.
+  const suggesting = readiness !== null && easesAnything(blocks, readiness.lighten);
 
   return (
     <>
@@ -829,6 +833,28 @@ function SessionEditor({
                   <span>{DELOAD_STEP}</span>
                 </p>
               )}
+              {/* What this morning's check-in suggests taking off (PLAN.md
+                  M129). The readiness engine has computed an RPE ceiling
+                  and a set of body-part flags since M72, and both already
+                  reached the screen — the ceiling beside the effort field,
+                  the flags on the lines that load them. What never reached
+                  it was the dose: a climber who said they had barely slept
+                  was shown the same five sets as anyone.
+
+                  It is a suggestion and stays one. The program's numbers
+                  are where they were; this sits beside them, with the
+                  answers that produced it, and the climber decides. Two
+                  questions and a rule is not standing to overrule a
+                  program. */}
+              {suggesting && (
+                <p className="text-xs text-ink-soft leading-relaxed mb-3 flex items-start gap-1.5">
+                  <TrendingDown size={13} className="text-accent shrink-0 mt-0.5" />
+                  <span>
+                    Your check-in suggests less of it today — {readiness!.because}. What each dose
+                    would be is beside it; taking it is your call.
+                  </span>
+                </p>
+              )}
               {blocks.map((b) => (
                 <div key={b.blockId} className="mb-3 last:mb-0">
                   <h4 className="text-xs font-bold uppercase tracking-widest text-accent mb-1.5">{b.name}</h4>
@@ -921,6 +947,15 @@ function SessionEditor({
                               {[ex.sets && `${ex.sets} sets`, ex.reps, ex.hold, ex.load, ex.rest && `${ex.rest} rest`]
                                 .filter(Boolean)
                                 .join(' · ')}
+                              {(() => {
+                                const eased = suggesting ? easedDose(ex, readiness!.lighten) : null;
+                                return eased === null ? null : (
+                                  <span className="text-accent font-semibold">
+                                    {' '}
+                                    · today {eased.sets} sets
+                                  </span>
+                                );
+                              })()}
                             </div>
                             {ex.notes && <div className="text-ink-soft/80 text-xs italic mt-0.5">{ex.notes}</div>}
                             {(() => {
