@@ -12,6 +12,7 @@ import {
   type Program,
   type SessionType,
 } from '@/content/types';
+import { PROGRAMS, getProgram } from '@/content/programs';
 import { allMetrics } from '@/engine/assessments';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
 import { DAY_SHORT } from '@/engine/scheduler';
@@ -21,8 +22,10 @@ import {
   canRun,
   nextPhaseId,
   removeSessionType,
+  removeTrack,
   retile,
   sessionTypeId,
+  trackIdFor,
   validateProgram,
   type Issue,
 } from '@/engine/customProgram';
@@ -326,10 +329,12 @@ export function BuilderPage({ params }: { params: { id: string } }) {
         </Card>
 
         <SessionTypesCard program={program} onChange={edit} />
+        <TracksCard program={program} onChange={edit} />
         <LayoutCard program={program} onChange={edit} />
         <RulesCard program={program} onChange={edit} />
 
         <AssessmentsCard program={program} onChange={edit} />
+        <NextCard program={program} onChange={edit} />
 
         <Card title="Share it">
           <p className="text-sm text-ink-soft mb-3 leading-relaxed">
@@ -613,6 +618,148 @@ function SessionTypesCard({ program, onChange }: { program: Program; onChange: (
           <Plus size={14} /> Add
         </Button>
       </div>
+    </Card>
+  );
+}
+
+/**
+ * Two ways through one program (PLAN.md M136). Base Camp, The Cruiser and
+ * Iron Grip each offer a bodyweight and a loaded track; a climber picks one
+ * when they start and only sees its lines. The editor could show a forked
+ * copy's tracks and never make one.
+ */
+function TracksCard({ program, onChange }: { program: Program; onChange: (p: Partial<Program>) => void }) {
+  const [name, setName] = useState('');
+  const tracks = program.tracks ?? [];
+
+  function add() {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    onChange({ tracks: [...tracks, { id: trackIdFor(trimmed, tracks), name: trimmed, description: '' }] });
+    setName('');
+  }
+
+  return (
+    <Card title="Tracks">
+      <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+        Two ways through the same program — bodyweight and loaded, say. A climber picks one when
+        they start, and an exercise put on a track is shown only to climbers on it. Most programs
+        have none.
+      </p>
+      {tracks.length > 0 && (
+        <div className="grid grid-cols-1 gap-2 mb-3">
+          {tracks.map((track, i) => (
+            <div key={track.id} className="bg-sunken rounded-xl p-3">
+              <div className="flex gap-2 mb-2">
+                <Input
+                  value={track.name}
+                  onChange={(e) => onChange({ tracks: replace(tracks, i, { name: e.target.value }) })}
+                  aria-label={`Track ${i + 1} name`}
+                  className="flex-1 min-w-0"
+                />
+                <IconButton
+                  tone="danger"
+                  onClick={() => onChange(removeTrack(program, track.id))}
+                  label={`Remove ${track.name || `track ${i + 1}`}`}
+                >
+                  <Trash2 size={15} />
+                </IconButton>
+              </div>
+              <Input
+                value={track.description}
+                onChange={(e) => onChange({ tracks: replace(tracks, i, { description: e.target.value }) })}
+                placeholder="Who this track is for"
+                aria-label={`Track ${i + 1} description`}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && add()}
+          placeholder="Loaded"
+          aria-label="New track"
+          className="flex-1 min-w-0"
+        />
+        <Button size="sm" onClick={add}>
+          <Plus size={14} /> Add
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * What comes after (PLAN.md M136). A fork drops the original's successors,
+ * because they belonged to its place in the catalogue; the author writes
+ * their own here, and the block's last page orders them by what the block
+ * left where it was (M134). Catalogue programs only: a shared file has to
+ * name something the other app has.
+ */
+function NextCard({ program, onChange }: { program: Program; onChange: (p: Partial<Program>) => void }) {
+  const named = new Set(program.nextPrograms.map((n) => n.id));
+  const candidates = PROGRAMS.filter((p) => p.kind === 'program' && p.id !== program.id && !named.has(p.id));
+  const [pick, setPick] = useState('');
+  const chosen = candidates.find((p) => p.id === pick) ?? candidates[0];
+
+  return (
+    <Card title="What comes after">
+      <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+        Named on the block's last page, with your reason under each. Only programs in the
+        catalogue, so a shared file names something the other app has.
+      </p>
+      {program.nextPrograms.length > 0 && (
+        <div className="grid grid-cols-1 gap-2 mb-3">
+          {program.nextPrograms.map((next, i) => {
+            const label = getProgram(next.id)?.name ?? next.id;
+            return (
+              <div key={next.id} className="bg-sunken rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-semibold flex-1 min-w-0">{label}</span>
+                  <IconButton
+                    tone="danger"
+                    onClick={() => onChange({ nextPrograms: program.nextPrograms.filter((_, j) => j !== i) })}
+                    label={`Remove ${label}`}
+                  >
+                    <Trash2 size={15} />
+                  </IconButton>
+                </div>
+                <Input
+                  value={next.reason}
+                  onChange={(e) => onChange({ nextPrograms: replace(program.nextPrograms, i, { reason: e.target.value }) })}
+                  placeholder="Why this one follows"
+                  aria-label={`Why ${label} follows`}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {chosen && (
+        <div className="flex flex-wrap gap-2">
+          <Select
+            value={chosen.id}
+            onChange={(e) => setPick(e.target.value)}
+            aria-label="Program that follows"
+            className="flex-1 min-w-0"
+          >
+            {candidates.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
+          <Button
+            size="sm"
+            onClick={() => onChange({ nextPrograms: [...program.nextPrograms, { id: chosen.id, reason: '' }] })}
+          >
+            <Plus size={14} /> Add
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }

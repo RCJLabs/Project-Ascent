@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ExerciseBlock, Phase, Program, SessionType } from '@/content/types';
+import type { ExerciseBlock, Phase, Program, SessionType, WeekStep } from '@/content/types';
 import { blankProgram } from './customProgram';
 import {
   blockId,
@@ -7,13 +7,19 @@ import {
   copyPhase,
   copyPhaseToAll,
   describeBlock,
+  flatAcrossPhases,
   newBlock,
+  nextStepWeek,
+  phaseLength,
   phasePrescription,
   prescriptionLine,
   reconcilePhases,
   reconcileProgramPhases,
   setPrescription,
   trimDrills,
+  withStep,
+  withStepDose,
+  withoutStep,
 } from './prescription';
 
 const phases: Phase[] = [
@@ -266,5 +272,221 @@ describe('the line that says how to run a block', () => {
   // worse than no line: it makes the ones that mean something ordinary.
   it('says nothing about a block that is just its list', () => {
     expect(prescriptionLine(undefined, undefined, 4)).toBe('');
+  });
+});
+
+/**
+ * Everything else a block can say (PLAN.md M136).
+ *
+ * The editor offered a name, five dose fields and *pick N of*; the catalogue
+ * runs circuits, moves its dose week by week, says why a block never moves,
+ * folds one block into another and puts lines on tracks. These hold the
+ * helpers the editor writes through and the warnings the builder raises,
+ * which are the catalogue's own content rules, applied to the author.
+ */
+describe('a block that never changes', () => {
+  const same = { name: 'Max Hangs', sets: '5', hold: '7s' };
+  const flatBlock = () => {
+    let block = newBlock('Hangboard', phases, []);
+    block = setPrescription(block, 'a', { exercises: [same] });
+    return setPrescription(block, 'b', { exercises: [{ ...same }] });
+  };
+
+  it('is flat when every phase asks the same dose', () => {
+    expect(flatAcrossPhases(flatBlock(), phases)).toBe(true);
+  });
+
+  it('is not flat once a number moves', () => {
+    const moved = setPrescription(flatBlock(), 'b', { exercises: [{ ...same, sets: '6' }] });
+    expect(flatAcrossPhases(moved, phases)).toBe(false);
+  });
+
+  it('is not flat when only the words change', () => {
+    // Dose and only dose: rewording a rationale is not progressing a block.
+    const reworded = setPrescription(flatBlock(), 'b', { rationale: 'Now with feeling' });
+    expect(flatAcrossPhases(reworded, phases)).toBe(true);
+  });
+
+  it('is not flat when a later week moves it', () => {
+    const stepped = setPrescription(flatBlock(), 'b', {
+      perWeek: [{ week: 2, step: 'Add a set', dose: { 'Max Hangs': { sets: '6' } } }],
+    });
+    expect(flatAcrossPhases(stepped, phases)).toBe(false);
+  });
+
+  it('is empty rather than flat when nothing is written anywhere', () => {
+    expect(flatAcrossPhases(newBlock('Hangboard', phases, []), phases)).toBe(false);
+  });
+
+  it('is never flat over a single phase', () => {
+    expect(flatAcrossPhases(flatBlock(), [phases[0]!])).toBe(false);
+  });
+
+  it('is asked for a reason, and told when the reason has stopped being true', () => {
+    const silent = program({
+      sessionTypes: [{ id: 'fp', name: 'Finger power', icon: '✋', description: '', blocks: [flatBlock()] }],
+    });
+    expect(contentIssues(silent).map((i) => i.message)).toContain(
+      'Finger power · Hangboard prescribes the same dose in every block of weeks. Say why, or change one.',
+    );
+    const lying = program({
+      sessionTypes: [
+        {
+          id: 'fp',
+          name: 'Finger power',
+          icon: '✋',
+          description: '',
+          blocks: [{ ...setPrescription(flatBlock(), 'b', { exercises: [{ ...same, sets: '6' }] }), constantDose: 'Never moves.' }],
+        },
+      ],
+    });
+    expect(contentIssues(lying).map((i) => i.message)).toContain(
+      'Finger power · Hangboard says its dose never changes, and it does.',
+    );
+    const honest = program({
+      sessionTypes: [{ id: 'fp', name: 'Finger power', icon: '✋', description: '', blocks: [{ ...flatBlock(), constantDose: 'The progression is grade, not dose.' }] }],
+    });
+    expect(contentIssues(honest).map((i) => i.message).filter((m) => /never changes|Say why/.test(m))).toEqual([]);
+  });
+});
+
+describe('week by week', () => {
+  const base = [{ name: 'Max Hangs', sets: '3', hold: '7s' }, { name: 'Pull-ups', sets: '3', reps: '5' }];
+
+  it('writes a step into its week, in order, replacing one already there', () => {
+    const steps = withStep(withStep(undefined, { week: 3, step: 'Three' }), { week: 2, step: 'Two' });
+    expect(steps.map((s) => s.week)).toEqual([2, 3]);
+    expect(withStep(steps, { week: 3, step: 'Three again' }).map((s) => s.step)).toEqual(['Two', 'Three again']);
+  });
+
+  it('takes a step out, and leaves nothing rather than an empty list', () => {
+    const steps = withStep(undefined, { week: 2, step: 'Two' });
+    expect(withoutStep(steps, 2)).toBeUndefined();
+    expect(withoutStep(withStep(steps, { week: 3, step: 'Three' }), 2)?.map((s) => s.week)).toEqual([3]);
+  });
+
+  it('moves one number on one exercise, and clears it again', () => {
+    const step: WeekStep = { week: 2, step: 'More' };
+    const moved = withStepDose(step, 'Max Hangs', 'sets', '4');
+    expect(moved.dose).toEqual({ 'Max Hangs': { sets: '4' } });
+    const both = withStepDose(moved, 'Max Hangs', 'hold', '10s');
+    expect(both.dose).toEqual({ 'Max Hangs': { sets: '4', hold: '10s' } });
+    const back = withStepDose(withStepDose(both, 'Max Hangs', 'sets', ''), 'Max Hangs', 'hold', '  ');
+    // Nothing left to say about the exercise, so the step says nothing.
+    expect(back.dose).toBeUndefined();
+    expect(back).toEqual({ week: 2, step: 'More' });
+  });
+
+  it('offers the first week of the phase without a step', () => {
+    expect(nextStepWeek(undefined, 4)).toBe(2);
+    expect(nextStepWeek([{ week: 2, step: 'x' }], 4)).toBe(3);
+    expect(nextStepWeek([{ week: 2, step: 'x' }, { week: 3, step: 'y' }, { week: 4, step: 'z' }], 4)).toBeNull();
+    // A one-week phase has no later week.
+    expect(nextStepWeek(undefined, 1)).toBeNull();
+  });
+
+  it('measures a phase in weeks', () => {
+    expect(phaseLength(phases[0]!)).toBe(4);
+    expect(phaseLength({ weekStart: 5, weekEnd: 5 })).toBe(1);
+  });
+
+  const withSteps = (perWeek: WeekStep[]) =>
+    program({
+      sessionTypes: [
+        {
+          id: 'fp',
+          name: 'Finger power',
+          icon: '✋',
+          description: '',
+          blocks: [setPrescription(newBlock('Hangboard', phases, []), 'a', { exercises: base, perWeek })],
+        },
+      ],
+    });
+  const said = (perWeek: WeekStep[]) => contentIssues(withSteps(perWeek)).map((i) => i.message);
+
+  it('warns about a step the phase has no week for', () => {
+    expect(said([{ week: 5, step: 'Beyond the Anvil' }])).toContain(
+      'Finger power · Hangboard (Anvil) has a step for week 5, and the phase runs 4 weeks — it never applies.',
+    );
+    expect(said([{ week: 1, step: 'Week one is the list' }]).some((m) => /never applies/.test(m))).toBe(true);
+  });
+
+  it('warns about two steps for one week', () => {
+    expect(said([{ week: 2, step: 'A' }, { week: 2, step: 'B' }])).toContain(
+      'Finger power · Hangboard (Anvil) has two steps for week 2.',
+    );
+  });
+
+  it('warns about a step with nothing written on it', () => {
+    expect(said([{ week: 2, step: '  ', dose: { 'Max Hangs': { sets: '4' } } }])).toContain(
+      'Finger power · Hangboard (Anvil) week 2 changes the dose without a line saying what it asks.',
+    );
+  });
+
+  it('warns about a dose on an exercise the phase does not have', () => {
+    expect(said([{ week: 2, step: 'More', dose: { 'Campus': { sets: '4' } } }])).toContain(
+      'Finger power · Hangboard (Anvil) week 2 moves "Campus", which is not in the block that phase.',
+    );
+  });
+
+  it('warns about a dose that restates the phase', () => {
+    expect(said([{ week: 2, step: 'More', dose: { 'Max Hangs': { sets: '3' } } }])).toContain(
+      'Finger power · Hangboard (Anvil) week 2 restates Max Hangs and changes nothing.',
+    );
+  });
+
+  it('says nothing about a step that is in order', () => {
+    const fine = said([{ week: 2, step: 'Add a set if last week held', dose: { 'Max Hangs': { sets: '4' } } }]);
+    expect(fine.filter((m) => /week 2/.test(m))).toEqual([]);
+  });
+});
+
+describe('circuits, folds and tracks', () => {
+  const typed = (block: ExerciseBlock, tracks?: Program['tracks']) =>
+    contentIssues(
+      program({
+        ...(tracks ? { tracks } : {}),
+        sessionTypes: [
+          {
+            id: 'fp',
+            name: 'Finger power',
+            icon: '✋',
+            description: '',
+            blocks: [block, newBlock('Pull', phases, [block])],
+          },
+        ],
+      }),
+    ).map((i) => i.message);
+
+  it('warns about a circuit with no rounds', () => {
+    const block = setPrescription(newBlock('Core', phases, []), 'a', {
+      exercises: [{ name: 'Plank' }],
+      circuit: { rounds: ' ' },
+    });
+    expect(typed(block)).toContain('Finger power · Core (Anvil) is a circuit with no number of rounds.');
+  });
+
+  it('warns about a block folded into itself or into nothing', () => {
+    const self = setPrescription(newBlock('Core', phases, []), 'a', { mergedInto: 'core' });
+    expect(typed(self)).toContain('Finger power · Core (Anvil) is folded into itself.');
+    const ghost = setPrescription(newBlock('Core', phases, []), 'a', { mergedInto: 'legs' });
+    expect(typed(ghost)).toContain(
+      'Finger power · Core (Anvil) is folded into "legs", which is not a block in Finger power.',
+    );
+  });
+
+  it('accepts a fold into a block that exists, and does not call it empty', () => {
+    const folded = setPrescription(newBlock('Core', phases, []), 'a', { mergedInto: 'pull' });
+    const said = typed(folded);
+    expect(said.filter((m) => /folded/.test(m))).toEqual([]);
+    expect(said.filter((m) => /Core: nothing prescribed for Anvil/.test(m))).toEqual([]);
+  });
+
+  it('warns about an exercise on a track the program does not declare', () => {
+    const block = setPrescription(newBlock('Core', phases, []), 'a', { exercises: [{ name: 'Plank', track: 'B' }] });
+    expect(typed(block, [{ id: 'A', name: 'Bodyweight', description: '' }])).toContain(
+      'Finger power · Core (Anvil): Plank is on track "B", which this program does not declare.',
+    );
+    expect(typed(block, [{ id: 'B', name: 'Loaded', description: '' }]).filter((m) => /track/.test(m))).toEqual([]);
   });
 });

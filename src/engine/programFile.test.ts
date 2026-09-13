@@ -246,3 +246,139 @@ describe('attribution', () => {
     expect(parseProgramFile(wrap({ name: 'X', author: 42 })).program.author).toBeUndefined();
   });
 });
+
+/**
+ * Everything the file carried and the reader threw away (PLAN.md M136).
+ *
+ * `buildProgramFile` wrote the whole program from the day it existed, and
+ * this parser — rebuild, never cast — read only what it had been taught.
+ * So a shared Iron Grip arrived with its tracks gone (and both tracks'
+ * lines shown to everyone), its weekly steps flattened to one dose a
+ * phase, every day ordinary, every session equally droppable, the Cruiser's
+ * hard-day rule dropped as a kind this version does not know — and the
+ * round-trip test counted session types and called it intact.
+ */
+describe('the rest of the round trip', () => {
+  const grip = forkProgram(getProgram('iron_grip')!, 'Grip');
+  const back = parseProgramFile(JSON.stringify(buildProgramFile(grip))).program;
+  const cruiser = forkProgram(getProgram('the_cruiser')!, 'Cruise');
+  const cruised = parseProgramFile(JSON.stringify(buildProgramFile(cruiser)));
+
+  it('keeps the tracks, and the lines on them', () => {
+    expect(back.tracks).toEqual(grip.tracks);
+    const on = (p: typeof grip) =>
+      p.sessionTypes.flatMap((t) => (t.blocks ?? []).flatMap((b) => Object.values(b.perPhase).flatMap((e) => e.exercises.map((x) => x.track ?? ''))));
+    expect(on(back)).toEqual(on(grip));
+    expect(on(back).some((t) => t !== '')).toBe(true);
+  });
+
+  it('keeps the week-by-week steps, dose and all', () => {
+    const steps = (p: typeof grip) =>
+      p.sessionTypes.flatMap((t) => (t.blocks ?? []).flatMap((b) => Object.values(b.perPhase).flatMap((e) => e.perWeek ?? [])));
+    expect(steps(back)).toEqual(steps(grip));
+    expect(steps(back).length).toBeGreaterThan(0);
+  });
+
+  it('keeps how hard each day is, which sessions survive a short week, and the questions it asks', () => {
+    expect(back.sessionTypes.map((t) => t.intensity)).toEqual(grip.sessionTypes.map((t) => t.intensity));
+    expect(back.sessionTypes.map((t) => t.priority)).toEqual(grip.sessionTypes.map((t) => t.priority));
+    expect(back.sessionTypes.map((t) => t.fields)).toEqual(grip.sessionTypes.map((t) => t.fields));
+    expect(grip.sessionTypes.some((t) => t.fields !== undefined)).toBe(true);
+  });
+
+  it('keeps the helpful kit', () => {
+    expect(back.helpfulEquipment).toEqual(grip.helpfulEquipment);
+    expect(grip.helpfulEquipment?.length).toBeGreaterThan(0);
+  });
+
+  it('keeps a circuit, a reason for never changing, and the hard-day rule', () => {
+    const circuits = (p: typeof grip) =>
+      p.sessionTypes.flatMap((t) => (t.blocks ?? []).flatMap((b) => Object.values(b.perPhase).map((e) => e.circuit ?? null)));
+    expect(circuits(cruised.program)).toEqual(circuits(cruiser));
+    const reasons = (p: typeof grip) => p.sessionTypes.flatMap((t) => (t.blocks ?? []).map((b) => b.constantDose ?? null));
+    expect(reasons(cruised.program)).toEqual(reasons(cruiser));
+    expect(reasons(cruiser).some((r) => r !== null)).toBe(true);
+    expect(cruised.program.constraints).toEqual(cruiser.constraints);
+    expect(cruiser.constraints.some((c) => c.kind === 'no-back-to-back')).toBe(true);
+    expect(cruised.dropped).toEqual([]);
+  });
+
+  it('keeps a successor the catalogue has, and says when it drops one it does not', () => {
+    const { program, dropped } = parseProgramFile(
+      wrap({ name: 'X', nextPrograms: [{ id: 'peak_performance', reason: 'Express it.' }, { id: 'nope', reason: '' }] }),
+    );
+    expect(program.nextPrograms).toEqual([{ id: 'peak_performance', reason: 'Express it.' }]);
+    expect(dropped.some((d) => /what comes after/.test(d))).toBe(true);
+  });
+
+  it('drops a question this version does not ask, and a line on a track the file does not declare', () => {
+    const { program, dropped } = parseProgramFile(
+      wrap({
+        name: 'X',
+        tracks: [{ id: 'a', name: 'A', description: '' }],
+        sessionTypes: [
+          {
+            id: 'a',
+            name: 'A',
+            icon: '',
+            description: '',
+            fields: ['pumpLevel', 'shoeSize'],
+            blocks: [
+              {
+                id: 'b',
+                name: 'B',
+                perPhase: {
+                  phase1: { rationale: '', exercises: [{ name: 'On A', track: 'a' }, { name: 'On nothing', track: 'ghost' }] },
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    expect(program.sessionTypes[0]!.fields).toEqual(['pumpLevel']);
+    const lines = program.sessionTypes[0]!.blocks![0]!.perPhase['phase1']!.exercises;
+    expect(lines.map((e) => e.track)).toEqual(['a', undefined]);
+    expect(dropped.some((d) => /shoeSize/.test(d))).toBe(true);
+    expect(dropped.some((d) => /track the file does not declare/.test(d))).toBe(true);
+  });
+
+  it('drops a step with no week or nothing written, and keeps the rest in order', () => {
+    const { program, dropped } = parseProgramFile(
+      wrap({
+        name: 'X',
+        sessionTypes: [
+          {
+            id: 'a',
+            name: 'A',
+            icon: '',
+            description: '',
+            blocks: [
+              {
+                id: 'b',
+                name: 'B',
+                perPhase: {
+                  phase1: {
+                    rationale: '',
+                    exercises: [{ name: 'Hangs', sets: '3' }],
+                    perWeek: [
+                      { week: 3, step: 'Three', dose: { Hangs: { sets: '5', bogus: 'x' } } },
+                      { week: 2, step: 'Two' },
+                      { week: 1, step: 'Week one is the list' },
+                      { week: 4, step: '' },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    expect(program.sessionTypes[0]!.blocks![0]!.perPhase['phase1']!.perWeek).toEqual([
+      { week: 2, step: 'Two' },
+      { week: 3, step: 'Three', dose: { Hangs: { sets: '5' } } },
+    ]);
+    expect(dropped.filter((d) => /week step/.test(d))).toHaveLength(2);
+  });
+});

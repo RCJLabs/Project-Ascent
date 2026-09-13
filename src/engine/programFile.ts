@@ -19,22 +19,31 @@
 
 import { APP_VERSION } from '@/version';
 import { DRILLS } from '@/content/drills';
+import { FIELDS } from '@/content/fields';
 import { METRICS } from '@/content/metrics';
+import { PLANNED_PROGRAM_IDS } from '@/content/programs';
 import { PROTOCOLS } from '@/content/protocols';
 import { SCHEMA_VERSION } from '@/db/schema';
-import type {
-  Constraint,
-  Discipline,
-  Equipment,
-  Exercise,
-  ExerciseBlock,
-  Phase,
-  PhasePrescription,
-  Program,
-  ProgramStage,
-  SessionType,
-  WeeklyLayout,
+import {
+  INTENSITY_ORDER,
+  type Constraint,
+  type Discipline,
+  type Dose,
+  type Equipment,
+  type Exercise,
+  type ExerciseBlock,
+  type FieldId,
+  type Intensity,
+  type Phase,
+  type PhasePrescription,
+  type Program,
+  type ProgramStage,
+  type SessionType,
+  type Track,
+  type WeekStep,
+  type WeeklyLayout,
 } from '@/content/types';
+import { DOSE_FIELDS } from './prescription';
 import type { GradeScale } from './grades';
 import { MAX_WEEKS, newProgramId } from './customProgram';
 
@@ -61,11 +70,15 @@ export const LIMITS = {
   assessments: 40,
   goals: 12,
   rhythm: 12,
+  tracks: 8,
+  steps: 24,
+  fields: 16,
+  next: 8,
 } as const;
 
 const STAGES: ProgramStage[] = ['start', 'foundations', 'style', 'advanced', 'ongoing'];
 const DISCIPLINES: Discipline[] = ['boulder', 'sport', 'both'];
-const EQUIPMENT: Equipment[] = ['none', 'wall', 'hangboard', 'campus', 'gym'];
+const EQUIPMENT: Equipment[] = ['none', 'wall', 'hangboard', 'campus', 'gym', 'weight'];
 const SCALES: GradeScale[] = ['V', 'YDS'];
 
 export class ProgramFileError extends Error {}
@@ -127,10 +140,23 @@ export function parseProgramFile(text: string): ParseResult {
 
 // ── Readers ───────────────────────────────────────────────────────────────
 
+/**
+ * What every reader below needs to know about the file as a whole: the
+ * length, the tracks it declares (an exercise on a track the file does not
+ * declare is on no track), and where to say what was left out.
+ */
+interface Reading {
+  weeks: number;
+  tracks: Set<string>;
+  dropped: string[];
+}
+
 function readProgram(raw: Record<string, unknown>, dropped: string[]): Program {
   const weeks = clampInt(raw['weeks'], 1, MAX_WEEKS, 8);
+  const tracks = readTracks(raw['tracks'], dropped);
+  const reading: Reading = { weeks, tracks: new Set(tracks.map((t) => t.id)), dropped };
   const sessionTypes = readList(raw['sessionTypes'], LIMITS.sessionTypes, dropped, 'session types')
-    .map((t) => readSessionType(t, weeks, dropped))
+    .map((t) => readSessionType(t, reading))
     .filter((t): t is SessionType => t !== null);
   const knownTypes = new Set(sessionTypes.map((t) => t.id));
 
@@ -151,9 +177,11 @@ function readProgram(raw: Record<string, unknown>, dropped: string[]): Program {
     frequency: str(raw['frequency'], LIMITS.text),
     ordering: str(raw['ordering'], LIMITS.text),
     assessments: readAssessments(raw['assessments'], dropped),
-    // A shared program is not part of this catalog's progression graph, and
-    // its prerequisites named a place in a catalog it is no longer in.
-    nextPrograms: [],
+    // Only successors the catalogue ships, because a shipped id is the same
+    // on every install and a written one is not (PLAN.md M136). Its
+    // prerequisites named a place in a catalog it is no longer in, and stay
+    // behind.
+    nextPrograms: readNext(raw['nextPrograms'], dropped),
   };
 
   const author = str(raw['author'], LIMITS.name);
@@ -162,6 +190,15 @@ function readProgram(raw: Record<string, unknown>, dropped: string[]): Program {
   const deloads = readNumbers(raw['deloadWeeks'], 1, weeks);
   if (deloads.length > 0) program.deloadWeeks = deloads;
 
+  if (tracks.length > 0) program.tracks = tracks;
+
+  // Helpful kit that is also required is a contradiction the finder would
+  // trip on, so the required list wins.
+  const helpful = readEquipmentList(raw['helpfulEquipment']).filter(
+    (kit) => kit !== 'none' && !program.equipment.includes(kit),
+  );
+  if (helpful.length > 0) program.helpfulEquipment = helpful;
+
   const layout = readLayout(raw['recommendedLayout'], knownTypes, dropped);
   if (layout) program.recommendedLayout = layout;
 
@@ -169,7 +206,8 @@ function readProgram(raw: Record<string, unknown>, dropped: string[]): Program {
   return program;
 }
 
-function readSessionType(raw: unknown, weeks: number, dropped: string[]): SessionType | null {
+function readSessionType(raw: unknown, reading: Reading): SessionType | null {
+  const { weeks, dropped } = reading;
   const r = asRecord(raw);
   if (r === null) return null;
   const name = str(r['name'], LIMITS.name);
@@ -183,9 +221,20 @@ function readSessionType(raw: unknown, weeks: number, dropped: string[]): Sessio
     description: str(r['description'], LIMITS.line),
   };
   if (r['isRest'] === true) type.isRest = true;
+  // How hard, and which sessions survive a short week (PLAN.md M131, M55).
+  // Both were written to the file since they existed and read back by
+  // nothing, so a shared program arrived with every day ordinary and every
+  // session equally droppable.
+  if (typeof r['intensity'] === 'string' && (INTENSITY_ORDER as readonly string[]).includes(r['intensity'])) {
+    type.intensity = r['intensity'] as Intensity;
+  }
+  if (typeof r['priority'] === 'number') type.priority = clampInt(r['priority'], 1, 99, 1);
+
+  const fields = readFields(r['fields'], dropped);
+  if (fields.length > 0) type.fields = fields;
 
   const blocks = readList(r['blocks'], LIMITS.blocks, dropped, `blocks in ${type.name}`)
-    .map((b) => readBlock(b, dropped))
+    .map((b) => readBlock(b, reading))
     .filter((b): b is ExerciseBlock => b !== null);
   if (blocks.length > 0) type.blocks = blocks;
 
@@ -195,7 +244,7 @@ function readSessionType(raw: unknown, weeks: number, dropped: string[]): Sessio
   return type;
 }
 
-function readBlock(raw: unknown, dropped: string[]): ExerciseBlock | null {
+function readBlock(raw: unknown, reading: Reading): ExerciseBlock | null {
   const r = asRecord(raw);
   if (r === null) return null;
   const name = str(r['name'], LIMITS.name);
@@ -207,14 +256,18 @@ function readBlock(raw: unknown, dropped: string[]): ExerciseBlock | null {
     const key = slug(phaseId, '');
     const entry = asRecord(value);
     if (!key || entry === null) continue;
-    perPhase[key] = readPrescription(entry, dropped);
+    perPhase[key] = readPrescription(entry, reading);
   }
-  return { id, name: name || id, perPhase };
+  const block: ExerciseBlock = { id, name: name || id, perPhase };
+  const constant = str(r['constantDose'], LIMITS.text);
+  if (constant) block.constantDose = constant;
+  return block;
 }
 
-function readPrescription(raw: Record<string, unknown>, dropped: string[]): PhasePrescription {
+function readPrescription(raw: Record<string, unknown>, reading: Reading): PhasePrescription {
+  const { dropped } = reading;
   const exercises = readList(raw['exercises'], LIMITS.exercises, dropped, 'exercises')
-    .map(readExercise)
+    .map((e) => readExercise(e, reading))
     .filter((e): e is Exercise => e !== null);
   const out: PhasePrescription = { rationale: str(raw['rationale'], LIMITS.text), exercises };
 
@@ -234,21 +287,66 @@ function readPrescription(raw: Record<string, unknown>, dropped: string[]): Phas
   }
   const merged = str(raw['mergedInto'], LIMITS.name);
   if (merged) out.mergedInto = merged;
+  const steps = readSteps(raw['perWeek'], dropped);
+  if (steps.length > 0) out.perWeek = steps;
   return out;
 }
 
-function readExercise(raw: unknown): Exercise | null {
+/**
+ * The week-by-week steps (PLAN.md M127), which the file carried from the
+ * day they existed and this never read — so a shared block arrived with its
+ * progression flattened back to one dose a phase, silently.
+ */
+function readSteps(raw: unknown, dropped: string[]): WeekStep[] {
+  const out: WeekStep[] = [];
+  const seen = new Set<number>();
+  for (const value of readList(raw, LIMITS.steps, dropped, 'week steps')) {
+    const r = asRecord(value);
+    if (r === null) continue;
+    const week = clampInt(r['week'], 1, MAX_WEEKS, 0);
+    const step = str(r['step'], LIMITS.line);
+    // Week one is the phase's own dose, and a step with nothing written on
+    // it is a number with no reason — the shape the type refuses.
+    if (week < 2 || !step || seen.has(week)) {
+      dropped.push(`a week step with no week or nothing written on it`);
+      continue;
+    }
+    seen.add(week);
+    const dose: Record<string, Dose> = {};
+    for (const [name, change] of Object.entries(asRecord(r['dose']) ?? {})) {
+      const exercise = str(name, LIMITS.name);
+      const d = asRecord(change);
+      if (!exercise || d === null) continue;
+      const moved: Dose = {};
+      for (const field of DOSE_FIELDS) {
+        const v = str(d[field], 60);
+        if (v) moved[field] = v;
+      }
+      if (Object.keys(moved).length > 0) dose[exercise] = moved;
+    }
+    out.push({ week, step, ...(Object.keys(dose).length > 0 ? { dose } : {}) });
+  }
+  return out.sort((a, b) => a.week - b.week);
+}
+
+function readExercise(raw: unknown, reading: Reading): Exercise | null {
   const r = asRecord(raw);
   if (r === null) return null;
   const name = str(r['name'], LIMITS.name);
   if (!name) return null;
   const protocolId = str(r['protocolId'], 60);
+  const track = str(r['track'], 40);
+  // A line on a track the file does not declare would be hidden from
+  // everyone, since no climber can pick a track that is not offered.
+  if (track && !reading.tracks.has(track)) {
+    reading.dropped.push(`"${name}" was on a track the file does not declare`);
+  }
   return {
     name,
     // A protocol that does not exist here would render a timer that cannot
     // open, so an unknown one is dropped rather than kept as a dead link.
     ...(protocolId && protocolId in PROTOCOLS ? { protocolId } : {}),
-    ...opt('track', str(r['track'], 40)),
+    ...(track && reading.tracks.has(track) ? { track } : {}),
     ...opt('sets', str(r['sets'], 40)),
     ...opt('reps', str(r['reps'], 60)),
     ...opt('hold', str(r['hold'], 40)),
@@ -337,6 +435,9 @@ function readConstraints(raw: unknown, known: Set<string>, dropped: string[]): C
         else dropped.push('a spacing rule naming a session type that is not in the file');
         break;
       }
+      case 'no-back-to-back':
+        out.push({ kind: 'no-back-to-back', intensity: pick(r['intensity'], [...INTENSITY_ORDER], 'hard'), note });
+        break;
       default:
         dropped.push('a rule of a kind this version does not know');
     }
@@ -376,6 +477,52 @@ function readDrills(raw: unknown, weeks: number, dropped: string[]): Record<numb
   return out;
 }
 
+function readTracks(raw: unknown, dropped: string[]): Track[] {
+  const out: Track[] = [];
+  const seen = new Set<string>();
+  for (const value of readList(raw, LIMITS.tracks, dropped, 'tracks')) {
+    const r = asRecord(value);
+    if (r === null) continue;
+    const name = str(r['name'], LIMITS.name);
+    // Kept as written rather than slugged: a track id is opaque, and the
+    // exercises name it verbatim — the catalogue's are 'A' and 'B', and
+    // lowercasing them here put every tracked line on no track at all.
+    const id = str(r['id'], 40) || slug(name, '');
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push({ id, name: name || id, description: str(r['description'], LIMITS.line) });
+  }
+  return out;
+}
+
+function readFields(raw: unknown, dropped: string[]): FieldId[] {
+  const out: FieldId[] = [];
+  for (const value of readList(raw, LIMITS.fields, dropped, 'questions')) {
+    const id = typeof value === 'string' ? value.trim() : '';
+    if (id && id in FIELDS) out.push(id as FieldId);
+    else if (id) dropped.push(`a question this version does not ask ("${id}")`);
+  }
+  return [...new Set(out)];
+}
+
+function readNext(raw: unknown, dropped: string[]): Program['nextPrograms'] {
+  const out: Program['nextPrograms'] = [];
+  const seen = new Set<string>();
+  for (const value of readList(raw, LIMITS.next, dropped, 'what comes after')) {
+    const r = asRecord(value);
+    if (r === null) continue;
+    const id = slug(r['id'], '');
+    if (!id || seen.has(id)) continue;
+    if (!PLANNED_PROGRAM_IDS.includes(id)) {
+      dropped.push(`a program named as what comes after that this version does not have ("${id}")`);
+      continue;
+    }
+    seen.add(id);
+    out.push({ id, reason: str(r['reason'], LIMITS.line) });
+  }
+  return out;
+}
+
 function readAssessments(raw: unknown, dropped: string[]): string[] {
   const out: string[] = [];
   for (const value of readList(raw, LIMITS.assessments, dropped, 'benchmarks')) {
@@ -406,11 +553,16 @@ function readIntro(raw: unknown): Program['intro'] {
   };
 }
 
-function readEquipment(raw: unknown): Equipment[] {
+function readEquipmentList(raw: unknown): Equipment[] {
   const list = (Array.isArray(raw) ? raw : [])
     .map((v) => (typeof v === 'string' ? v : ''))
     .filter((v): v is Equipment => (EQUIPMENT as string[]).includes(v));
-  return list.length > 0 ? [...new Set(list)] : ['wall'];
+  return [...new Set(list)];
+}
+
+function readEquipment(raw: unknown): Equipment[] {
+  const list = readEquipmentList(raw);
+  return list.length > 0 ? list : ['wall'];
 }
 
 // ── Primitives ────────────────────────────────────────────────────────────

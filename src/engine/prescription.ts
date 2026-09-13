@@ -21,6 +21,7 @@
 
 import type {
   CircuitFormat,
+  Dose,
   Exercise,
   ExerciseBlock,
   Phase,
@@ -28,8 +29,87 @@ import type {
   Program,
   SelectionRule,
   SessionType,
+  WeekStep,
 } from '@/content/types';
 import type { Issue } from './customProgram';
+
+/** The dose fields a week may move, in the order the editor shows them. */
+export const DOSE_FIELDS: readonly (keyof Dose)[] = ['sets', 'reps', 'hold', 'load', 'rest'];
+
+/** How many weeks a phase runs. */
+export function phaseLength(phase: Pick<Phase, 'weekStart' | 'weekEnd'>): number {
+  return phase.weekEnd - phase.weekStart + 1;
+}
+
+/**
+ * What a prescription asks, with the prose left out (PLAN.md M33, M136).
+ *
+ * Dose and only dose: `rationale`, `notes` and `selection.note` are words,
+ * and changing the words a block is described with is not progressing it.
+ * The same signature the catalogue's periodisation test reads, so a block
+ * the builder calls flat is one that test would call flat.
+ */
+export function doseSignature(p: PhasePrescription): string {
+  return JSON.stringify([
+    p.exercises.map((e) => [e.name, e.track ?? '', e.sets ?? '', e.reps ?? '', e.hold ?? '', e.load ?? '', e.rest ?? '']),
+    p.selection?.pick ?? null,
+    p.circuit
+      ? [p.circuit.rounds, p.circuit.work ?? '', p.circuit.restBetween ?? '', p.circuit.restBetweenRounds ?? '']
+      : null,
+    p.mergedInto ?? null,
+    p.perWeek ?? null,
+  ]);
+}
+
+/**
+ * True when the block prescribes one dose for every block of weeks it
+ * covers — the case M33 requires a written reason for. A block with nothing
+ * written anywhere is empty rather than flat, and is reported as empty.
+ */
+export function flatAcrossPhases(block: ExerciseBlock, phases: readonly Phase[]): boolean {
+  if (phases.length < 2) return false;
+  const entries = phases.map((phase) => phasePrescription(block, phase.id));
+  if (!entries.some((p) => p.exercises.length > 0 || p.mergedInto)) return false;
+  const sigs = entries.map(doseSignature);
+  return sigs.every((sig) => sig === sigs[0]);
+}
+
+// ── Week by week ──────────────────────────────────────────────────────────
+
+/** The steps with this one written in for its week, in week order. */
+export function withStep(steps: readonly WeekStep[] | undefined, step: WeekStep): WeekStep[] {
+  return [...(steps ?? []).filter((s) => s.week !== step.week), step].sort((a, b) => a.week - b.week);
+}
+
+/** The steps without the one for `week`; undefined once none are left. */
+export function withoutStep(steps: readonly WeekStep[] | undefined, week: number): WeekStep[] | undefined {
+  const kept = (steps ?? []).filter((s) => s.week !== week);
+  return kept.length > 0 ? kept : undefined;
+}
+
+/**
+ * One dose field on one exercise in a step. An empty value clears the
+ * field, an exercise with nothing left is dropped, and a step with no
+ * changes left loses its `dose` — so what the author cleared is gone
+ * rather than stored as an empty string the planner would apply.
+ */
+export function withStepDose(step: WeekStep, name: string, field: keyof Dose, value: string): WeekStep {
+  const current = { ...(step.dose?.[name] ?? {}) };
+  if (value.trim() === '') delete current[field];
+  else current[field] = value;
+  const dose = { ...(step.dose ?? {}) };
+  if (Object.keys(current).length === 0) delete dose[name];
+  else dose[name] = current;
+  const { dose: _dropped, ...rest } = step;
+  return Object.keys(dose).length > 0 ? { ...rest, dose } : rest;
+}
+
+/** The first week of the phase that has no step yet, or null when every week has one. */
+export function nextStepWeek(steps: readonly WeekStep[] | undefined, length: number): number | null {
+  const taken = new Set((steps ?? []).map((s) => s.week));
+  for (let week = 2; week <= length; week += 1) if (!taken.has(week)) return week;
+  return null;
+}
 
 export function blankPrescription(): PhasePrescription {
   return { rationale: '', exercises: [] };
@@ -138,24 +218,65 @@ export function trimDrills(type: SessionType, weeks: number): SessionType {
  */
 export function contentIssues(program: Program): Issue[] {
   const issues: Issue[] = [];
+  const warn = (message: string) => issues.push({ level: 'warning', field: 'sessions', message });
   const phaseNames = new Map(program.phases.map((p) => [p.id, p.name || p.id]));
+  const trackIds = new Set((program.tracks ?? []).map((t) => t.id));
 
   for (const type of program.sessionTypes) {
     if (type.isRest) continue;
+    const blockIds = new Set((type.blocks ?? []).map((b) => b.id));
     for (const block of type.blocks ?? []) {
       if (block.name.trim() === '') {
-        issues.push({ level: 'warning', field: 'sessions', message: `A block in ${type.name} has no name.` });
+        warn(`A block in ${type.name} has no name.`);
       }
       for (const phase of program.phases) {
         const p = block.perPhase[phase.id];
         const empty = !p || (p.exercises.length === 0 && !p.mergedInto);
         if (empty) {
-          issues.push({
-            level: 'warning',
-            field: 'sessions',
-            message: `${type.name} · ${block.name}: nothing prescribed for ${phaseNames.get(phase.id)}.`,
-          });
+          warn(`${type.name} · ${block.name}: nothing prescribed for ${phaseNames.get(phase.id)}.`);
         }
+        if (!p) continue;
+        // The rest of what a block can say, checked the way the catalogue's
+        // content tests check it (PLAN.md M136). Warnings, all of them: a
+        // step numbered past the phase never applies and a circuit with no
+        // rounds runs as a list, which is thin rather than broken.
+        const at = `${type.name} · ${block.name} (${phaseNames.get(phase.id)})`;
+        if (p.circuit && p.circuit.rounds.trim() === '') warn(`${at} is a circuit with no number of rounds.`);
+        if (p.mergedInto === block.id) warn(`${at} is folded into itself.`);
+        else if (p.mergedInto && !blockIds.has(p.mergedInto)) {
+          warn(`${at} is folded into "${p.mergedInto}", which is not a block in ${type.name}.`);
+        }
+        for (const e of p.exercises) {
+          if (e.track && !trackIds.has(e.track)) {
+            warn(`${at}: ${e.name || 'an exercise'} is on track "${e.track}", which this program does not declare.`);
+          }
+        }
+        const length = phaseLength(phase);
+        const weeks = new Set<number>();
+        for (const w of p.perWeek ?? []) {
+          if (w.week < 2 || w.week > length) {
+            warn(`${at} has a step for week ${w.week}, and the phase runs ${length} week${length === 1 ? '' : 's'} — it never applies.`);
+          }
+          if (weeks.has(w.week)) warn(`${at} has two steps for week ${w.week}.`);
+          weeks.add(w.week);
+          if (w.step.trim() === '') warn(`${at} week ${w.week} changes the dose without a line saying what it asks.`);
+          for (const [name, dose] of Object.entries(w.dose ?? {})) {
+            const base = p.exercises.find((e) => e.name === name);
+            if (!base) warn(`${at} week ${w.week} moves "${name}", which is not in the block that phase.`);
+            else if (!Object.entries(dose).some(([k, v]) => base[k as keyof Dose] !== v)) {
+              warn(`${at} week ${w.week} restates ${name} and changes nothing.`);
+            }
+          }
+        }
+      }
+      // A block that never changes says why, and a block that says so does
+      // not change: the M33 rule the catalogue is held to, for the author.
+      if (program.phases.length > 1) {
+        const flat = flatAcrossPhases(block, program.phases);
+        if (flat && !block.constantDose) {
+          warn(`${type.name} · ${block.name} prescribes the same dose in every block of weeks. Say why, or change one.`);
+        }
+        if (!flat && block.constantDose) warn(`${type.name} · ${block.name} says its dose never changes, and it does.`);
       }
       for (const [phaseId, p] of Object.entries(block.perPhase)) {
         if (p.selection && p.selection.pick > p.exercises.length) {

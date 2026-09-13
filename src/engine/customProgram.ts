@@ -13,6 +13,7 @@
  * still wrong without refusing to hold the half-finished thing.
  */
 
+import { PLANNED_PROGRAM_IDS } from '@/content/programs';
 import type {
   Constraint,
   DayOfWeek,
@@ -83,7 +84,7 @@ export type IssueLevel = 'error' | 'warning';
 export interface Issue {
   level: IssueLevel;
   /** Which part of the builder to send the climber to. */
-  field: 'identity' | 'weeks' | 'phases' | 'sessions' | 'layout' | 'constraints';
+  field: 'identity' | 'weeks' | 'phases' | 'sessions' | 'layout' | 'constraints' | 'tracks' | 'next';
   message: string;
 }
 
@@ -111,6 +112,8 @@ export function validateProgram(program: Program): Issue[] {
   issues.push(...sessionIssues(program));
   issues.push(...layoutIssues(program));
   issues.push(...constraintIssues(program));
+  issues.push(...trackIssues(program));
+  issues.push(...nextIssues(program));
 
   if (program.subtitle.trim() === '') add('warning', 'identity', 'No subtitle — the catalog card will look bare.');
   if (program.intro.pitch.trim() === '') {
@@ -252,6 +255,44 @@ function constraintIssues(program: Program): Issue[] {
   return issues;
 }
 
+/**
+ * Two ways through one program (PLAN.md M136). A second track with the
+ * same id would be one track twice, which the exercises could not tell
+ * apart, so that is the one error; a nameless one is a chip with nothing
+ * on it.
+ */
+function trackIssues(program: Program): Issue[] {
+  const issues: Issue[] = [];
+  const ids = new Set<string>();
+  for (const track of program.tracks ?? []) {
+    if (ids.has(track.id)) {
+      issues.push({ level: 'error', field: 'tracks', message: `Two tracks share the id "${track.id}".` });
+    }
+    ids.add(track.id);
+    if (track.name.trim() === '') issues.push({ level: 'warning', field: 'tracks', message: 'A track has no name.' });
+  }
+  return issues;
+}
+
+/**
+ * What comes after (PLAN.md M136). Only the catalogue can be named: a
+ * shipped id is the same on every install, and a successor the block-end
+ * page cannot find is dropped there without a word, which is why it is
+ * said here.
+ */
+function nextIssues(program: Program): Issue[] {
+  const issues: Issue[] = [];
+  for (const next of program.nextPrograms) {
+    if (!PLANNED_PROGRAM_IDS.includes(next.id)) {
+      issues.push({ level: 'warning', field: 'next', message: `"${next.id}" is named as what comes after, and is not a program in the catalogue.` });
+    }
+    if (next.reason.trim() === '') {
+      issues.push({ level: 'warning', field: 'next', message: `What comes after gives no reason for "${next.id}".` });
+    }
+  }
+  return issues;
+}
+
 /** A program with no errors can be started. Warnings are advice. */
 export function canRun(program: Program): boolean {
   return !validateProgram(program).some((i) => i.level === 'error');
@@ -311,6 +352,48 @@ export function removeSessionType(program: Program, typeId: string): Program {
       ? { recommendedLayout: { ...program.recommendedLayout, slots } }
       : {}),
   };
+}
+
+/** Drop a track, and take every exercise that was on it off it. */
+export function removeTrack(program: Program, trackId: string): Program {
+  const tracks = (program.tracks ?? []).filter((t) => t.id !== trackId);
+  return {
+    ...program,
+    ...(tracks.length > 0 ? { tracks } : { tracks: undefined }),
+    sessionTypes: program.sessionTypes.map((type) =>
+      type.blocks
+        ? {
+            ...type,
+            blocks: type.blocks.map((block) => ({
+              ...block,
+              perPhase: Object.fromEntries(
+                Object.entries(block.perPhase).map(([phaseId, p]) => [
+                  phaseId,
+                  {
+                    ...p,
+                    exercises: p.exercises.map((e) => {
+                      if (e.track !== trackId) return e;
+                      const { track: _off, ...rest } = e;
+                      return rest;
+                    }),
+                  },
+                ]),
+              ),
+            })),
+          }
+        : type,
+    ),
+  };
+}
+
+/** A track id from its name, unique within the program. */
+export function trackIdFor(name: string, existing: readonly { id: string }[]): string {
+  const base = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'track';
+  const taken = new Set(existing.map((t) => t.id));
+  if (!taken.has(base)) return base;
+  let n = 2;
+  while (taken.has(`${base}${n}`)) n++;
+  return `${base}${n}`;
 }
 
 function mentions(c: Constraint, typeId: string): boolean {

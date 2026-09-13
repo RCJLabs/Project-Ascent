@@ -10,8 +10,10 @@ import {
   newProgramId,
   nextPhaseId,
   removeSessionType,
+  removeTrack,
   retile,
   sessionTypeId,
+  trackIdFor,
   validateProgram,
 } from './customProgram';
 
@@ -268,5 +270,73 @@ describe('length bounds', () => {
   it('refuses zero weeks and refuses a decade', () => {
     expect(errors({ ...runnable(), weeks: 0 }).some((i) => i.field === 'weeks')).toBe(true);
     expect(errors({ ...runnable(), weeks: MAX_WEEKS + 1 }).some((i) => i.field === 'weeks')).toBe(true);
+  });
+});
+
+/**
+ * Tracks and successors (PLAN.md M136): the two program-level things the
+ * catalogue is made of that the builder could not write.
+ */
+describe('tracks', () => {
+  it('refuses two tracks with one id, and asks a nameless one for a name', () => {
+    const p = { ...runnable(), tracks: [{ id: 'a', name: 'Bodyweight', description: '' }, { id: 'a', name: '', description: '' }] };
+    expect(errors(p).map((i) => i.message)).toContain('Two tracks share the id "a".');
+    expect(messages(p)).toContain('A track has no name.');
+  });
+
+  it('makes a readable track id and keeps it unique', () => {
+    expect(trackIdFor('Track B — Loaded', [])).toBe('track_b_loaded');
+    expect(trackIdFor('Loaded', [{ id: 'loaded' }])).toBe('loaded2');
+    expect(trackIdFor('  ', [])).toBe('track');
+  });
+
+  it('takes every exercise off a track when the track goes', () => {
+    const p: Program = {
+      ...runnable(),
+      tracks: [{ id: 'a', name: 'A', description: '' }, { id: 'b', name: 'B', description: '' }],
+      sessionTypes: [
+        {
+          id: 'hard',
+          name: 'Hard day',
+          icon: '💪',
+          description: '',
+          blocks: [
+            {
+              id: 'pull',
+              name: 'Pull',
+              perPhase: {
+                phase1: {
+                  rationale: '',
+                  exercises: [{ name: 'Rows', track: 'a' }, { name: 'Weighted pull-ups', track: 'b' }, { name: 'Hangs' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    };
+    const without = removeTrack(p, 'b');
+    expect(without.tracks).toEqual([{ id: 'a', name: 'A', description: '' }]);
+    const lines = without.sessionTypes[0]!.blocks![0]!.perPhase['phase1']!.exercises;
+    expect(lines.map((e) => e.track)).toEqual(['a', undefined, undefined]);
+    expect(lines[1]).toEqual({ name: 'Weighted pull-ups' });
+    // The last track leaves no empty list behind.
+    expect(removeTrack(without, 'a').tracks).toBeUndefined();
+  });
+});
+
+describe('what comes after', () => {
+  it('warns about a successor the catalogue does not have, and one with no reason', () => {
+    const p = { ...runnable(), nextPrograms: [{ id: 'made_up', reason: 'Because' }, { id: 'iron_grip', reason: '' }] };
+    expect(messages(p)).toContain('"made_up" is named as what comes after, and is not a program in the catalogue.');
+    expect(messages(p)).toContain('What comes after gives no reason for "iron_grip".');
+    // Neither stops the program running: the block-end page drops what it
+    // cannot find, and a reason is advice.
+    expect(errors(p)).toEqual([]);
+  });
+
+  it('says nothing about a catalogue successor with a reason', () => {
+    const p = { ...runnable(), nextPrograms: [{ id: 'iron_grip', reason: 'Fingers next.' }] };
+    expect(messages(p).filter((m) => /comes after/.test(m))).toEqual([]);
   });
 });

@@ -6701,7 +6701,7 @@ something rests on an inference it says so.*
   the one week-shaped fact M127 added — the dose changing — is currently visible only on the
   card for the session you are about to do.
 
-- **M136 — the builder can author what the catalogue is made of.** *Proposed. Large.*
+- **M136 — the builder can author what the catalogue is made of.** *Proposed, and built second — see the Done entry below.*
   **Counted, builder against catalogue** (`grep` of `BuilderPage.tsx` and `SessionEditorPage.tsx`
   against `content/programs/*.ts`): `perWeek` **0** against 5 blocks — the M127 progression
   (`types.ts:197-222`), so every custom program still has the hole M127 closed for the
@@ -6955,3 +6955,79 @@ something rests on an inference it says so.*
   **Budget.** 168.0 → 170.0, measured 167.92 → 169.32: 1.40KB for the reading and the hook,
   first-load because Home's card says where the week stands. The page itself is a lazy route
   at 3.9KB. M137 is the one that buys this back. 4,290 tests pass.
+
+- **M136 — the builder can author what the catalogue is made of.** *Done. The second of the third
+  brainstorm.*
+  **The premise held, and the proposal was wrong about three things, one of which is the half of
+  this milestone that matters most.** *"The program-file share already carries all of it"* —
+  `buildProgramFile` writes the whole `Program`, and `parseProgramFile`, which rebuilds rather
+  than casts, read only what it had been taught. It had never been taught `perWeek`, `tracks`,
+  `constantDose`, `fields`, `intensity`, `priority` or `helpfulEquipment`, and it dropped the
+  M131 rule `no-back-to-back` as *"a rule of a kind this version does not know"*. So a shared
+  Iron Grip arrived with its two tracks gone and both tracks' lines shown to everyone, its weekly
+  steps flattened back to one dose a phase, every day ordinary, every session equally droppable —
+  and the round-trip test counted session types and called it intact. Second, *warmup and
+  cooldown*: no program declares them and the model has no field for them; the count of zero in
+  the builder was a count of zero everywhere. Dropped. Third, the proposal (and M142 after it)
+  called eleven of the sixteen `fields` *never read*; `fieldSeries` on Progress charts every
+  numeric and scale answer generically. They are worth offering, and M142's premise needs the
+  same correction when it comes.
+  **What the editor can write now, in the catalogue's order of use.** A block **run as a circuit**
+  — rounds, work, rest between, rest between rounds — with the clock's own verdict under it
+  (`circuitPlan`), so an author learns *"counted in reps rather than timed, so there is nothing to
+  count down"* here rather than a climber at the wall. **Week by week** (M127): every phase of two
+  weeks or more offers *Week N* for its first free week; a step is a line and a row of the five
+  dose fields per exercise with the phase's own numbers as the placeholders, so a value typed is
+  a change and a value cleared is not one stored as an empty string. **Why a block never changes**
+  (M33): the textarea appears when the block is flat across its blocks of weeks or already carries
+  a reason, and says which. **Folded into another block** for a phase, with the block's own list
+  going quiet, as Base Camp's Pull does. **A track per line**, shown only when the program has
+  tracks. **Ask at the end**: the fourteen questions the log can put — not *where*, asked of
+  everyone since M133, and not the retired clip style. On the builder page, **Tracks** (name,
+  who it is for, and removing one takes every line off it) and **What comes after**, catalogue
+  programs only with a reason each, which the block's last page orders by what the block left
+  where it was (M134).
+  **The catalogue's content rules, raised on the author.** `contentIssues` now says what the
+  content tests say: a step numbered past the phase never applies, two steps for one week, a step
+  with nothing written, a dose on an exercise the phase does not have, a dose that restates the
+  phase, a circuit with no rounds, a block folded into itself or into nothing, a line on a track
+  the program does not declare; and the two halves of M33 — a flat block with no reason, a reason
+  on a block that moves. `validateProgram` adds two tracks with one id (an error) and a successor
+  the catalogue does not have or that gives no reason (warnings). All warnings but the duplicate
+  id: none of them makes a program incoherent, and a builder that refuses to run a program over a
+  stray step number is a builder nobody finishes.
+  **The parser reads what the file carries.** Tracks kept by their id as written — the first draft
+  slugged them, which lowercased the catalogue's `A` and `B` and put every tracked line on no
+  track, found by the Cruiser round trip. Steps with a week, a line and the five dose fields and
+  nothing else; intensity, priority, the questions, the reason for never changing, helpful kit,
+  the hard-day rule; successors that resolve in the catalogue, dropped with a note when they do
+  not, as an unknown question or an undeclared track is. The round-trip test compares the fork
+  and the parse field by field now.
+  **Measured, not asserted.** Forty-nine mutations, every one killed: a single phase flat, an
+  empty block flat, a later week not counting as movement, the words counting as dose; steps out
+  of order, an empty list left behind, a cleared value stored as empty, week one offered; every
+  content rule above silenced one at a time; the duplicate track passing, the unknown successor
+  and the missing reason passing, a removed track leaving its lines on it, a track id not unique;
+  in the parser, ids slugged, week one kept, steps unsorted, a dose field the type has not got
+  kept, intensity, priority, the reason, the steps, the hard-day rule, helpful kit each not read,
+  an unknown question, successor or track kept; in the editor, a circuit starting with no rounds,
+  the track control shown without tracks, the fold control shown with nothing to fold into, a
+  folded block keeping its list, the step row hiding the phase dose, the next week never
+  offered, a stale reason not shown, every question offered, an empty question list stored; on
+  the builder page, a track id that is its name, a removed track leaving its lines, a named
+  successor offered again, a successor arriving with a reason written for it. A no-op statement
+  reorder survived. The first round had one skip rather than a survivor — a mutation whose anchor
+  matched twice, because `trackIdFor` and `sessionTypeId` share a shape — re-anchored and killed.
+  **In a browser, both themes, 430px and 1280px.** Forking The Cruiser: the builder shows
+  *Track A — Maintenance* and *Track B — Progressive* with their descriptions, *What comes after*
+  takes Peak Performance and a reason. Its Strength & Armor session shows the Core Circuit as
+  *Circuit · 45-60s each · 2-3 rounds* with *The clock can run this one from the log*, five
+  *Week by week* sections, a track control on all twenty-seven lines, and a fold control on each
+  of the five blocks. A week-two step written on Pull with sets moved to 4 is there after a reload.
+  Turning the circuit off and on again yields the honest verdict for a circuit with rounds and no
+  work time. No overflow, no page errors.
+  **Left, and named.** `SessionType.priority` — which sessions survive a short week (M55) — is
+  still not authorable; the parser now keeps it, the editor does not offer it. One select per
+  type, when a milestone opens that card next.
+  **Budget.** 170.0 holds: measured 169.32 → 169.42, and the builder is lazy — its chunk went
+  5.6 → 6.2KB gzipped, the session editor's is 4.5KB. 4,347 tests pass.
