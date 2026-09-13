@@ -164,6 +164,139 @@ describe('text contrast clears WCAG AA', () => {
   });
 });
 
+/**
+ * A theme has to look like a different theme (PLAN.md M125).
+ *
+ * The hole every assertion above left: they prove each palette is
+ * *legible* — AA on every surface it is painted on, a focus ring at 3:1, a
+ * border that stays quiet, two chart series separable under three kinds of
+ * colour blindness — and not one of them proved that any two palettes are
+ * *different*. They were not, in light mode. Seven of the ten painted cards
+ * exactly `#ffffff`, the page furniture sat 13.5 RGB apart against 25.3 in
+ * dark, and the accent was equally far apart in both — so picking a light
+ * theme changed the buttons and nothing else. Gritstone and Desert, and
+ * Alpine and Midnight, were 4.9 apart: the same page with a different
+ * button on it. Seven of the forty-five pairs sat within 8 of each other in
+ * light and none did in dark; it is none in both now.
+ *
+ * The furniture is what this measures, deliberately. `positive`, `warn` and
+ * `danger` barely vary across themes and the severity ramp does not vary at
+ * all, which is the decision recorded at the top of `themes.ts`: a status
+ * must never look like a chart series, and a climber who changes theme
+ * should not have to relearn what danger looks like.
+ */
+describe('a theme looks like a different theme', () => {
+  /** What a page is made of, as opposed to what is written on it. */
+  const FURNITURE = ['bg', 'surface', 'sunken', 'line'] as const;
+
+  const gap = (a: Palette, b: Palette) =>
+    FURNITURE.reduce((n, k) => n + distance(rgb(a[k]), rgb(b[k])), 0) / FURNITURE.length;
+
+  function pairs(mode: 'light' | 'dark'): { a: Theme; b: Theme; gap: number }[] {
+    const out: { a: Theme; b: Theme; gap: number }[] = [];
+    for (let i = 0; i < THEMES.length; i++) {
+      for (let j = i + 1; j < THEMES.length; j++) {
+        out.push({ a: THEMES[i]!, b: THEMES[j]!, gap: gap(THEMES[i]![mode], THEMES[j]![mode]) });
+      }
+    }
+    return out;
+  }
+
+  /**
+   * The floor. Seven, because the closest pair measured 7.4 in light and
+   * 8.9 in dark once M125 re-pigmented the light palettes — so it sits just
+   * under what ships, and the next flattening hits it rather than
+   * disappearing into slack.
+   */
+  const FLOOR = 7;
+
+  it('keeps every pair of themes apart on the page furniture, in both modes', () => {
+    const tooClose: string[] = [];
+    for (const mode of ['light', 'dark'] as const) {
+      for (const p of pairs(mode)) {
+        if (p.gap < FLOOR) tooClose.push(`${mode}: ${p.a.id} and ${p.b.id} are ${p.gap.toFixed(1)} apart`);
+      }
+    }
+    expect(tooClose).toEqual([]);
+  });
+
+  it('keeps the floor just under what actually ships', () => {
+    // A floor of zero passes forever and catches nothing — the same trap
+    // `perf.test.ts` names about its budget, and the reason that file
+    // checks its own slack. This is the other half of the rule above.
+    const closest = Math.min(...(['light', 'dark'] as const).flatMap((m) => pairs(m).map((p) => p.gap)));
+    const slack = closest - FLOOR;
+    expect(slack, `the floor has ${slack.toFixed(1)} to spare`).toBeLessThan(3);
+    expect(slack, 'the floor is already breached').toBeGreaterThan(0);
+  });
+
+  /**
+   * Pairs allowed to paint the same card, each with the reason it may.
+   *
+   * Both of these are deliberately undecorated: Contrast is the
+   * accessibility palette, where a tinted card would cost the contrast it
+   * exists for, and Slate is the minimal one, whose whole idea is a crisp
+   * white card on grey. Every other theme gets a paper of its own.
+   */
+  const SHARED_SURFACE: Record<string, string> = {
+    'contrast+slate': 'the two palettes whose point is no decoration',
+  };
+
+  it('gives every other theme a card colour of its own, in light', () => {
+    const shared: string[] = [];
+    for (const p of pairs('light')) {
+      if (p.a.light.surface !== p.b.light.surface) continue;
+      const key = [p.a.id, p.b.id].sort().join('+');
+      if (SHARED_SURFACE[key] === undefined) shared.push(`${key} both paint ${p.a.light.surface}`);
+    }
+    expect(shared).toEqual([]);
+  });
+
+  it('keeps every allowance pointing at a pair that still shares one', () => {
+    // An allowance for a pair that has since diverged is a hole waiting for
+    // the next two themes that collide.
+    const stale = Object.keys(SHARED_SURFACE).filter((key) => {
+      const [a, b] = key.split('+');
+      const first = THEMES.find((t) => t.id === a);
+      const second = THEMES.find((t) => t.id === b);
+      return !first || !second || first.light.surface !== second.light.surface;
+    });
+    expect(stale).toEqual([]);
+  });
+
+  it('does not let light go flat again while dark stays themed', () => {
+    // The shape of the original fault, as one number. Light averaged 13.5
+    // against dark's 25.3; it is 20.4 now, and a light palette re-flattened
+    // one convenient white at a time would slide back past this.
+    const FLAT = 15;
+    const mean = (mode: 'light' | 'dark') =>
+      pairs(mode).reduce((n, p) => n + p.gap, 0) / pairs(mode).length;
+    expect(mean('light'), `light averages ${mean('light').toFixed(1)}`).toBeGreaterThan(FLAT);
+    expect(mean('dark'), `dark averages ${mean('dark').toFixed(1)}`).toBeGreaterThan(FLAT);
+    // And this threshold has to mean something too, for the reason the
+    // floor above checks its own slack.
+    expect(mean('light') - FLAT, 'the flatness guard has room to hide in').toBeLessThan(6);
+  });
+
+  it('tints the paper rather than leaving it grey, in light', () => {
+    // The distances above can be cleared by two palettes being *differently
+    // neutral*, which is not what a theme is. A surface whose three channels
+    // sit within a point or two of each other is grey however carefully it
+    // was picked, and grey is what every light theme used to be. Contrast
+    // and Slate are exempt for the reason `SHARED_SURFACE` gives.
+    const spread = (hex: string) => {
+      const c = rgb(hex);
+      return Math.max(...c) - Math.min(...c);
+    };
+    const grey = THEMES.filter((t) => t.id !== 'contrast' && t.id !== 'slate').filter(
+      (t) => spread(t.light.bg) < 5 || spread(t.light.surface) < 3,
+    );
+    expect(
+      grey.map((t) => `${t.id} (bg ${spread(t.light.bg)}, surface ${spread(t.light.surface)})`),
+    ).toEqual([]);
+  });
+});
+
 describe('charts survive colour blindness', () => {
   it('keeps the two series apart under every simulation', () => {
     const failures: string[] = [];

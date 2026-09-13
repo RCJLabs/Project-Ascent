@@ -7,12 +7,12 @@
    `text-ink`, `border-line`, `bg-accent`, etc. are live in both themes. */
 
 :root {
-  --c-bg: #f6f8fa;
-  --c-surface: #ffffff;
-  --c-sunken: #eef1f4;
+  --c-bg: #e9f2fa;
+  --c-surface: #fafdff;
+  --c-sunken: #e5eff7;
   --c-ink: #17222b;
   --c-ink-soft: #55646f;
-  --c-line: #dde3e9;
+  --c-line: #ccdcec;
   --c-accent: #2a6f9f;
   --c-accent-strong: #215a82;
   --c-accent-ink: #ffffff;
@@ -26,10 +26,10 @@
   --viz-warning: #8f6900;
   --viz-serious: #a33c00;
   --viz-critical: #7d1418;
-  --heat-1: #cfdeef;
-  --heat-2: #abc8ea;
-  --heat-3: #82aee4;
-  --heat-4: #5593dd;
+  --heat-1: #c7dcf2;
+  --heat-2: #a5c7ec;
+  --heat-3: #7eaee5;
+  --heat-4: #5392dd;
   --heat-5: #2a78d6;
 
 }

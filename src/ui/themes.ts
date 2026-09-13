@@ -21,7 +21,30 @@
  *
  * `index.css` still carries Alpine's values so the very first frame is
  * painted before any JavaScript runs. A test asserts the two agree, which is
- * the only honest way to keep a duplicate.
+ * the only honest way to keep a duplicate, and `scripts/gen-theme-css.mjs`
+ * writes it from here rather than anyone typing it twice.
+ *
+ * ## Light mode used to be the accent and nothing else (PLAN.md M125)
+ *
+ * Every rule above is about whether a palette is *legible*. None of them
+ * asked whether two palettes are *different*, and in light mode they were
+ * not: **seven of the ten painted `surface` — the card colour, and the
+ * most-painted colour in the app — as exactly `#ffffff`.** Measured across
+ * the page furniture the mean distance between two themes was 13.5 in light
+ * against 25.3 in dark, while the accents were equally far apart in both.
+ * Gritstone beside Desert, and Alpine beside Midnight, were 4.9 apart: the
+ * same page with a different button on it. It is 20.4 now, with the closest
+ * pair at 7.4 against dark's 8.9 — nine of the ten papers are distinct, and
+ * the two that share one are the two that are meant to.
+ *
+ * So the ten light palettes have a paper each now — warm for Sandstone and
+ * Desert, cool for Alpine and Ice, grey-brown for Gritstone — and the
+ * blurbs above finally describe both modes rather than only the dark one.
+ * The tint is in the hue rather than the lightness, because `bg`, `surface`
+ * and `sunken` all carry the same AA obligation and `sunken` is the one
+ * that binds: every attempt to darken it put `accent`, `positive` or `warn`
+ * under 4.5:1 on it. `themes.test.ts` now holds a floor on the separation,
+ * which is the half of that milestone that keeps.
  */
 
 export interface Palette {
@@ -110,12 +133,12 @@ const ALPINE: Theme = {
   name: 'Alpine',
   blurb: 'Glacier blue on paper. The original.',
   light: {
-    bg: '#f6f8fa',
-    surface: '#ffffff',
-    sunken: '#eef1f4',
+    bg: '#e9f2fa',
+    surface: '#fafdff',
+    sunken: '#e5eff7',
     ink: '#17222b',
     inkSoft: '#55646f',
-    line: '#dde3e9',
+    line: '#ccdcec',
     accent: '#2a6f9f',
     accentStrong: '#215a82',
     accentInk: '#ffffff',
@@ -156,12 +179,12 @@ const SLATE: Theme = {
   name: 'Slate',
   blurb: 'Maximum contrast. For bright sun and tired eyes.',
   light: {
-    bg: '#ffffff',
+    bg: '#f4f4f4',
     surface: '#ffffff',
-    sunken: '#f0f2f4',
+    sunken: '#e9e9e9',
     ink: '#000000',
     inkSoft: '#3d4854',
-    line: '#c3cbd3',
+    line: '#d9d9d9',
     accent: '#12507c',
     accentStrong: '#0c3a5b',
     accentInk: '#ffffff',
@@ -201,12 +224,12 @@ const SANDSTONE: Theme = {
   name: 'Sandstone',
   blurb: 'Desert rock. Warm rather than clinical.',
   light: {
-    bg: '#faf7f2',
-    surface: '#fffdfa',
-    sunken: '#f2ece3',
+    bg: '#faf1e2',
+    surface: '#fffbf2',
+    sunken: '#f2e8d5',
     ink: '#2a211a',
     inkSoft: '#665c52',
-    line: '#e5dccf',
+    line: '#e6d8bd',
     accent: '#9c4a1c',
     accentStrong: '#7d3a14',
     accentInk: '#fffdfa',
@@ -258,12 +281,12 @@ const LIMESTONE: Theme = {
   name: 'Limestone',
   blurb: 'Pale grey-buff, the colour of a sunny crag.',
   light: {
-    bg: '#f5f3f0',
-    surface: '#fdfdfc',
-    sunken: '#ece9e4',
+    bg: '#f2efe6',
+    surface: '#fdfcf7',
+    sunken: '#ece8dd',
     ink: '#2e2a24',
     inkSoft: '#6b6357',
-    line: '#e0dbd2',
+    line: '#dcd5c3',
     accent: '#1d6ca5',
     accentStrong: '#1879bf',
     accentInk: '#ffffff',
@@ -298,12 +321,12 @@ const GRITSTONE: Theme = {
   name: 'Gritstone',
   blurb: 'Dark, coarse and warm — northern rock.',
   light: {
-    bg: '#efedeb',
-    surface: '#ffffff',
-    sunken: '#e6e2e0',
+    bg: '#ebe7e3',
+    surface: '#fcfaf8',
+    sunken: '#e7e2de',
     ink: '#2e2724',
     inkSoft: '#6b5e57',
-    line: '#d9d3ce',
+    line: '#d3ccc5',
     accent: '#a74820',
     accentStrong: '#bc4b1a',
     accentInk: '#ffffff',
@@ -338,12 +361,12 @@ const VOLCANIC: Theme = {
   name: 'Volcanic',
   blurb: 'Black rock with an ember in it.',
   light: {
-    bg: '#efeef1',
-    surface: '#ffffff',
-    sunken: '#e5e3e8',
+    bg: '#edeaf4',
+    surface: '#fcfaff',
+    sunken: '#e5e1ef',
     ink: '#28242e',
     inkSoft: '#5f576b',
-    line: '#d5d3d9',
+    line: '#d2cde1',
     accent: '#b63616',
     accentStrong: '#c7340f',
     accentInk: '#ffffff',
@@ -378,12 +401,12 @@ const DESERT: Theme = {
   name: 'Desert',
   blurb: 'Red rock and a hard blue sky.',
   light: {
-    bg: '#f4eeec',
-    surface: '#ffffff',
-    sunken: '#ece3df',
+    bg: '#f9eae1',
+    surface: '#fffaf5',
+    sunken: '#efe0d2',
     ink: '#2e2624',
     inkSoft: '#6b5c57',
-    line: '#e1d2cc',
+    line: '#e3cab6',
     accent: '#b63925',
     accentStrong: '#ba311c',
     accentInk: '#ffffff',
@@ -418,12 +441,12 @@ const ICE: Theme = {
   name: 'Ice',
   blurb: 'Cold blue, first light on a glacier.',
   light: {
-    bg: '#f3f5f7',
-    surface: '#fcfdfd',
-    sunken: '#e6ebef',
+    bg: '#e3f2f7',
+    surface: '#f8fdff',
+    sunken: '#dcedf3',
     ink: '#24292e',
     inkSoft: '#57616b',
-    line: '#d3dde3',
+    line: '#c2e0ea',
     accent: '#167188',
     accentStrong: '#138fae',
     accentInk: '#ffffff',
@@ -463,7 +486,7 @@ const CONTRAST: Theme = {
     sunken: '#f5f5f5',
     ink: '#2e2424',
     inkSoft: '#6b5757',
-    line: '#e7e4e4',
+    line: '#d4d4d4',
     accent: '#0b65da',
     accentStrong: '#025dd4',
     accentInk: '#ffffff',
@@ -498,12 +521,12 @@ const MIDNIGHT: Theme = {
   name: 'Midnight',
   blurb: 'True black. On an OLED screen it is a battery setting as much as a look.',
   light: {
-    bg: '#f7f7f8',
-    surface: '#ffffff',
-    sunken: '#ebedef',
+    bg: '#e9e9fa',
+    surface: '#fcfbff',
+    sunken: '#ebeaf7',
     ink: '#24272e',
     inkSoft: '#575e6b',
-    line: '#dbdde1',
+    line: '#d2d1ea',
     accent: '#1d719a',
     accentStrong: '#1a86bc',
     accentInk: '#ffffff',

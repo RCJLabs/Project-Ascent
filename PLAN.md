@@ -5732,8 +5732,8 @@ rests on an inference it says so.*
   order or not at all.
 - **On their own** — M125, M126, M131, M132, M133, M134.
 
-- **M125 — ten themes, one of which you can see.** *Proposed. The UI item, and the one that
-  was asked for.*
+- **M125 — ten themes, one of which you can see.** *Proposed, and built second — see the Done
+  entry at the end of this file.*
   **In light mode a theme is its accent and nothing else.** Seven of the ten paint `surface`
   — the card colour, and the most-painted colour in the app — as exactly `#ffffff`: Alpine,
   Slate, Gritstone, Volcanic, Desert, Contrast and Midnight. All ten dark surfaces are
@@ -5999,3 +5999,68 @@ rests on an inference it says so.*
   **Budget.** Unchanged at 164.0, measured 163.06 → 163.44. Every screen this touches is a
   lazy route; what reaches the entry chunk is `restoreProgram` in the profile store.
   3,983 tests pass.
+
+- **M125 — ten themes, one of which you could see.** *Done.*
+  **In light mode a theme was its accent and nothing else.** Seven of the ten painted
+  `surface` — the card colour, and the most-painted colour in the app — as exactly
+  `#ffffff`: Alpine, Slate, Gritstone, Volcanic, Desert, Contrast and Midnight. All ten dark
+  surfaces were distinct. Measured across the page furniture (`bg`, `surface`, `sunken`,
+  `line`) the mean distance between two themes was **13.5 in light against 25.3 in dark**,
+  while the accent and chart colours were equally far apart in both (102.4 and 103.6). Seven
+  of the forty-five pairs sat within 8 of each other in light and **none** did in dark; the
+  closest, Gritstone against Desert and Alpine against Midnight, were **4.9** apart. Side by
+  side at 430px they were the same page with a differently coloured button.
+  **The weighting made it worse than the averages suggest.** The tokens that carry the page —
+  `surface`, `sunken`, `line`, `ink`, `ink-soft` — account for about **1,473** class uses
+  across the components against about **168** for the accent tokens, so nine-tenths of what
+  is painted was the same whichever theme was picked.
+  **The ten light palettes have a paper each now.** Warm cream for Sandstone, terracotta for
+  Desert, grey-brown for Gritstone, glacier for Alpine, cold cyan for Ice, violet for
+  Volcanic, indigo for Midnight. The blurbs at the top of `themes.ts` — *"Desert rock, warm
+  rather than clinical"*, *"cold blue, first light on a glacier"* — finally describe both
+  modes rather than only the dark one. **Measured after: mean 20.4, closest pair 7.4, and no
+  pair within 8 in either mode.**
+  **The tint is in the hue, not the lightness, and that was forced rather than chosen.**
+  `bg`, `surface` and `sunken` all carry the same AA obligation, and `sunken` is the one that
+  binds: every attempt to darken it put `accent`, `positive` or `warn` under 4.5:1 on it. Six
+  such failures on the first pass, all between 4.26 and 4.50. A generator that built the
+  ladder from hue and chroma at fixed lightness was tried and lost — it collapsed the
+  low-chroma palettes onto Slate and measured 18.1 against the hand-tuned 20.4 — so the
+  values are hand-picked and the rules, not a formula, are what vouch for them.
+  **It was a pigment problem, not a plumbing one,** which is why it was worth doing at all:
+  the whole `src` tree carries 22 hardcoded neutral classes and almost every one is a photo
+  overlay or a modal scrim in `MediaCard`, `ShareSheet` and `SearchSheet`, where black is the
+  right answer. Changing the values changed the app.
+  **Three things left alone, deliberately.** `positive`, `warn` and `danger` barely vary
+  across themes and the severity ramp does not vary at all — a status must never look like a
+  chart series, and a climber who changes theme should not have to relearn what *danger*
+  looks like. Contrast keeps its pure white, because a tinted card costs the contrast it
+  exists for. Slate keeps white cards on grey, because that is what the minimal palette is.
+  Those two are the only pair allowed to share a surface, and the allowance is named in the
+  test with its reason.
+  **The half of this that keeps is a test.** `themes.test.ts` proved every theme was
+  *legible* — AA on every surface it is painted on, 3:1 for the focus ring, a border held
+  *below* 3:1 so it stays a boundary rather than a shout, two chart series separable under
+  three colour-blindness simulations, `index.css` agreeing with the data for the first frame
+  — and **nothing in it proved any two themes were different**. Four assertions now do: a
+  floor of 7 on every pair in both modes, an allow-list for the one shared card colour that
+  fails if the pair ever diverges, a guard that light's mean cannot slide back toward dark's,
+  and a check that each paper is actually *tinted* — a surface whose three channels sit
+  within a couple of points is grey however carefully it was picked, and grey is what every
+  light theme used to be. Both numeric floors check their own slack, for the reason
+  `perf.test.ts` checks its budget's: a floor of zero passes forever and catches nothing.
+  **`index.css` is generated.** `scripts/gen-theme-css.mjs` writes the first-frame block from
+  `themes.ts`, so the duplicate that exists for the very first paint cannot drift — and the
+  heat ramp, which is derived from `sunken` and `viz1`, was regenerated with it.
+  **Measured, not asserted.** Fourteen mutations, every one killed: each of four palettes
+  painting cards white again; Desert flattened onto Gritstone; Ice and Midnight reverted to
+  their old near-grey papers; `sunken` darkened past AA; `line` made loud enough to be a
+  boundary; the floor and the flatness guard each set to zero; the shared-surface allowance
+  widened to cover everything; a stale allowance left behind; `index.css` drifted from the
+  palette; the heat ramp left un-regenerated. A no-op reorder of the export survived, as the
+  sanity check should.
+  **In a browser, every theme, both modes, 430px.** All ten paint their own four values, the
+  card and body backgrounds match the tokens, and no page errors. Sandstone reads as warm
+  cream paper with cream cards; Ice reads as cold blue with cool white cards. Dark is
+  untouched and measured identical.
+  3,989 tests pass.
