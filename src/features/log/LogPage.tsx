@@ -33,7 +33,7 @@ import {
   isLive,
   isStale,
 } from '@/engine/live';
-import { prescriptionFor, type PlannedDay } from '@/engine/plan';
+import { DELOAD_STEP, prescriptionFor, type PlannedDay } from '@/engine/plan';
 import { prescriptionLine } from '@/engine/prescription';
 import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
 import type { CooldownPlan } from '@/engine/cooldown';
@@ -655,7 +655,8 @@ function SessionEditor({
   // The week too (PLAN.md M127): a phase's prescription is four weeks of
   // one dose unless the block said how it moves, and the day knows which
   // week it is.
-  const blocks = type && day?.phase ? prescriptionFor(type, day.phase, trackId, day.week) : [];
+  const blocks =
+    type && day?.phase ? prescriptionFor(type, day.phase, trackId, day.week, day.isDeload) : [];
   // What today actually loads, so the check-in does not tell a climber on a
   // legs-and-core day to leave the fingerboard alone.
   const loads = type
@@ -816,6 +817,18 @@ function SessionEditor({
 
           {blocks.length > 0 && (
             <Card title="Today's prescription">
+              {/* Said once for the session, not once per block (PLAN.md
+                  M128). The derived note is the same sentence for every
+                  block the rule touched, and on Iron Grip's deload week the
+                  browser showed it four times down one card. A block whose
+                  program wrote its own deload keeps that below, because
+                  that one is about the block. */}
+              {blocks.some((b) => b.step === DELOAD_STEP) && (
+                <p className="text-xs text-ink-soft leading-relaxed mb-3 flex items-start gap-1.5">
+                  <TrendingUp size={13} className="text-warn shrink-0 mt-0.5" />
+                  <span>{DELOAD_STEP}</span>
+                </p>
+              )}
               {blocks.map((b) => (
                 <div key={b.blockId} className="mb-3 last:mb-0">
                   <h4 className="text-xs font-bold uppercase tracking-widest text-accent mb-1.5">{b.name}</h4>
@@ -824,7 +837,7 @@ function SessionEditor({
                       it is the reason the numbers below changed — and it
                       is the whole content of a step that moves nothing a
                       field can hold. */}
-                  {b.step && (
+                  {b.step && b.step !== DELOAD_STEP && (
                     <p className="text-xs text-ink-soft leading-relaxed mb-2 flex items-start gap-1.5">
                       <TrendingUp size={13} className="text-accent shrink-0 mt-0.5" />
                       <span>{b.step}</span>

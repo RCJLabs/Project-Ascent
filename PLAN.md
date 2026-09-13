@@ -5807,7 +5807,8 @@ rests on an inference it says so.*
   `PhasePrescription`, or a progression descriptor the planner can apply, turns eleven
   programs' worth of written intent into something the app can place and check.
 
-- **M128 — a deload that is lighter, not just labelled.** *Proposed. Needs M127.*
+- **M128 — a deload that is lighter, not just labelled.** *Proposed, and built fourth — see
+  the Done entry at the end of this file.*
   `Program.deloadWeeks` is documented as driving exactly three things — a calendar marker, a
   `deload: true` stamp on the session, and an explanation for the load dip
   (`types.ts:380-388`) — and that is exactly what it does: `plannedDay` sets `isDeload`
@@ -6131,3 +6132,67 @@ rests on an inference it says so.*
   a dozen lines in an engine the entry chunk already carried, and the bodies are still their own
   chunk.
   4,015 tests pass.
+
+- **M128 — a deload that is lighter, not just labelled.** *Done. Second of the dose phase, and
+  it spends M127's mechanism rather than needing its own.*
+  **The flag drove three things and none of them was a dose.** `deloadWeeks` marked the
+  calendar, stamped `deload: true` on the session, and gave the training-state card a sentence
+  to explain the dip — and **nothing reduced a set, a rep or a load**. Its own documentation
+  said so, listing the three. For The Cruiser, Two Days a Week and Ground Zero there is no
+  weekly drill either, so a deload week was byte-identical to the week before it: the app
+  printed *Deload week* over the same five sets of maximal hangs.
+  **Volume, and only volume.** A set comes off; reps, hold, load and rest are left exactly as
+  written. That is the ordinary meaning of a deload and the one lever safe to pull without
+  knowing the block — dropping the load on a max-hang week and dropping it on a mobility
+  circuit are not the same decision, and the app has no business making either. A circuit
+  loses a round, which is its unit of volume.
+  **Conservative on purpose.** A range drops to its bottom, a fixed count loses one, nothing
+  goes below two, and a count the rule cannot read — *AMRAP*, *1 per arm* — is left alone
+  rather than guessed at. Under-reducing a week an author never thought about is recoverable;
+  over-reducing it silently is not.
+  **The author wins, per block.** A block that wrote its own deload week with `perWeek` keeps
+  it, and a block in the same session that said nothing still gets lightened. Iron Grip's
+  finger protocol wrote week 4 in M127 and keeps *three sets on the same edge*; the Pull, Push,
+  Core and Armor blocks beside it go from three sets to two. A step with no dose is still the
+  author speaking, and the rule stands down under it too — *"keep all four sets, this deload is
+  in the intensity"* must not come back with *"a set comes off"* underneath it.
+  **It says so once, not five times.** The derived note is the same sentence for every block
+  the rule touched, and the browser showed it four times down one card before it was hoisted to
+  the top of the prescription. A block whose program wrote its own deload keeps its note where
+  it is, because that one is about the block.
+  **The claim is only made where something came off.** A block of two-set prehab has no notch
+  to take, and telling a climber a set went when none did is the same lie the marker was
+  telling before this.
+  **The program page shows deload weeks a block never wrote down.** M127's ladder listed
+  authored rows only; it now derives a row for each deload week the block will actually
+  lighten, so the week is visible before a climber arrives at it. The *Deload* marker is
+  suppressed where the sentence already opens with the word — the browser showed *Deload
+  Deload. Three sets on the same edge*.
+  **The fold-in.** `db/sessions.ts` said deload sessions were "excluded from training-load
+  maths" and `engine/derive.ts` has deliberately included them since M67, with the reason
+  written out. The code was right the whole time and the comment was waiting for someone to act
+  on it. `types.ts` also listed the three things the flag drives, and now lists four.
+  **Measured, not asserted.** Twenty mutations, every one killed: the flag changing nothing,
+  the derived rule overriding the author, a range not lightened and a range dropping to its
+  top, a fixed count not lightened and one dropping below two, an unreadable count guessed at,
+  the load deloaded too, a circuit keeping its rounds, the note claimed when nothing came off
+  and never shown at all, the lightens check saying yes to a block with nothing to give, the
+  logger not passing the flag, the session note suppressed and the note repeated per block, the
+  program page's derived row dropped and derived for every week, its marker removed, and the
+  catalogue sweep's floor set to zero. A no-op statement reorder survived. **Two survived the
+  first round.** One was an equivalent mutant with the content as it stands — overriding the
+  author changes nothing while every authored deload week also carries a dose — and the test
+  that now kills it is the case that matters for content nobody has written yet: an authored
+  step with no numbers in it. The other was the floor again, with no slack check.
+  **The test that is the milestone.** For every one of the nineteen deload weeks across the ten
+  programs that have them, the prescription must differ from what the same week would be
+  without the flag, and from the week before it. Before this, both sides of both comparisons
+  were the same string for every program in the catalogue.
+  **In a browser, both themes, 430px and 1280px.** Iron Grip week 3 shows the volume ramp and
+  five sets; week 4 reads *Week 4 · The Anvil (Repeaters) · Deload*, carries the note once at
+  the top of the prescription, keeps the finger protocol's own authored deload, and shows two
+  sets on every other block. The ladder reads Wk 2, Wk 3, Wk 4 with no stutter. No overflow, no
+  page errors.
+  **Budget.** Unchanged at 164.0, measured 163.60 → 163.95. The rule is thirty lines in an
+  engine the entry chunk already carried.
+  4,033 tests pass.

@@ -118,6 +118,17 @@ describe('what this week asks that last week did not', () => {
     expect(doses()).not.toMatch(/3-5 sets/);
   });
 
+  it('lightens a deload week rather than only labelling it', async () => {
+    // Iron Grip deloads on week 4. The finger protocol wrote its own; every
+    // other block of the session is lightened by the rule (PLAN.md M128).
+    await inWeek(4);
+    expect(screen.getByText(/Deload\. Three sets on the same edge/)).toBeTruthy();
+    // Said once for the session, however many blocks the rule touched.
+    expect(screen.getAllByText(/A set comes off where there is one to give/)).toHaveLength(1);
+    // Pull is 3 sets every other week of The Anvil.
+    expect(doses()).toMatch(/2 sets · 8-10/);
+  });
+
   it('carries a step that moves no number at all', async () => {
     // Half of what a program says about progression is a rule about the
     // climber, and the app must be able to pass it on without inventing a
@@ -136,8 +147,25 @@ describe('the ladder on the program page', () => {
 
   it('shows how the dose moves inside the phase', () => {
     ironGrip();
-    expect(screen.getByText('How it moves')).toBeTruthy();
+    // Several blocks carry one now: the finger protocol authored its weeks,
+    // and every other block of the session has a derived deload row.
+    expect(screen.getAllByText('How it moves').length).toBeGreaterThan(0);
     expect(screen.getByText(/The top of the volume ramp/)).toBeTruthy();
+  });
+
+  it('does not stutter the word beside a step that already says it', () => {
+    // "Deload Deload. Three sets on the same edge" — the marker and the
+    // sentence saying the same thing, found in the browser.
+    ironGrip();
+    expect(screen.queryByText(/DeloadDeload|Deload Deload/)).toBeNull();
+  });
+
+  it('shows a deload week the block never wrote down', () => {
+    // Iron Grip deloads on weeks 4 and 8 and its Pull block says nothing
+    // about either; before M128 the only sign of one on this page was a
+    // marker in the drill list.
+    ironGrip();
+    expect(screen.getAllByText(/A set comes off where there is one to give/).length).toBeGreaterThan(0);
   });
 
   it('numbers the weeks the way a climber counts them', () => {
@@ -150,8 +178,10 @@ describe('the ladder on the program page', () => {
     expect(screen.queryByText('Wk 3')).toBeNull();
   });
 
-  it('says nothing where a phase runs one dose the whole way', () => {
-    renderAt('/train/lockdown', <ProgramDetailPage params={{ id: 'lockdown' }} />);
+  it('says nothing in a phase that runs one dose the whole way', () => {
+    // Ground Zero deloads on week 8 only, so its first phase has no week
+    // that moves and nothing to say about one.
+    renderAt('/train/ground_zero', <ProgramDetailPage params={{ id: 'ground_zero' }} />);
     fireEvent.click(screen.getByRole('button', { name: /What's in it/ }));
     expect(screen.queryByText('How it moves')).toBeNull();
   });

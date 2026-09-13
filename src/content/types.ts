@@ -421,8 +421,13 @@ export interface Program {
    * explain the dip rather than to hide it. (The prototype excluded them,
    * which is what made a planned deload read as detraining.) What the flag
    * actually drives: the calendar marks the week, the logger stamps
-   * `deload: true` on the session, and the training-state card can say the
-   * dip was the plan.
+   * `deload: true` on the session, the training-state card can say the dip
+   * was the plan — and since M128 **the prescription itself is lighter**.
+   * A set comes off each block that has one to give, reps, hold and load
+   * are left alone, and a block that wants something else says so with
+   * `perWeek`, which wins. Before that the flag was a label: a deload week
+   * was byte-identical to the week before it, and the app printed "Deload
+   * week" over the same five sets of maximal hangs.
    */
   deloadWeeks?: number[];
   /**

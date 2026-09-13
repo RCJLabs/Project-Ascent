@@ -17,6 +17,7 @@ import { RecordNotFound } from '@/ui/RecordNotFound';
 import { EQUIPMENT_LABELS } from '@/engine/customProgram';
 import { displayRange } from '@/engine/grades';
 import { prescriptionLine } from '@/engine/prescription';
+import { DELOAD_STEP, deloadLightens } from '@/engine/plan';
 import { today } from '@/engine/dates';
 import { usePlannedDay } from '@/features/log/usePlannedDay';
 import { useSettings } from '@/store/settings';
@@ -115,27 +116,58 @@ function SessionTypeCard({
                     <ExerciseRow key={`${ex.name}-${i}`} ex={ex} />
                   ))}
                 </ul>
-                {/* How the dose moves inside the phase (PLAN.md M127). The
-                    week numbers are the program's, not the phase's: an
+                {/* How the dose moves inside the phase (PLAN.md M127, M128).
+                    The week numbers are the program's, not the phase's: an
                     author writes "week 2 of this phase" and a climber reads
-                    "week 6", and the page is for the climber. */}
-                {entry.perWeek && entry.perWeek.length > 0 && (
-                  <div className="mt-2.5 pt-2.5 border-t border-line">
-                    <p className="text-2xs font-bold uppercase tracking-wide text-ink-soft mb-1.5">
-                      How it moves
-                    </p>
-                    <ul className="grid grid-cols-1 gap-1.5">
-                      {entry.perWeek.map((w) => (
-                        <li key={w.week} className="text-sm text-ink-soft leading-relaxed flex gap-2">
-                          <span className="font-semibold text-ink shrink-0 tabular-nums">
-                            Wk {phase.weekStart + w.week - 1}
-                          </span>
-                          <span>{w.step}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                    "week 6", and the page is for the climber.
+
+                    Deload weeks the block said nothing about are in here
+                    too, derived. They are the ones a climber most needs to
+                    see in advance, and before M128 the only sign of one was
+                    a marker in the drill list. */}
+                {(() => {
+                  const rows = Array.from(
+                    { length: phase.weekEnd - phase.weekStart + 1 },
+                    (_, i) => i + 1,
+                  ).flatMap((inPhase) => {
+                    const week = phase.weekStart + inPhase - 1;
+                    const authored = entry.perWeek?.find((w) => w.week === inPhase);
+                    if (authored) return [{ week, step: authored.step, deload: deloadWeeks.has(week) }];
+                    if (!deloadWeeks.has(week) || !deloadLightens(entry)) return [];
+                    return [{ week, step: DELOAD_STEP, deload: true }];
+                  });
+                  if (rows.length === 0) return null;
+                  return (
+                    <div className="mt-2.5 pt-2.5 border-t border-line">
+                      <p className="text-2xs font-bold uppercase tracking-wide text-ink-soft mb-1.5">
+                        How it moves
+                      </p>
+                      <ul className="grid grid-cols-1 gap-1.5">
+                        {rows.map((r) => (
+                          <li key={r.week} className="text-sm text-ink-soft leading-relaxed flex gap-2">
+                            <span className="font-semibold text-ink shrink-0 tabular-nums">
+                              Wk {r.week}
+                            </span>
+                            <span>
+                              {/* Only where the sentence does not already
+                                  say it. Both the derived note and the two
+                                  authored deload weeks open with the word,
+                                  and the marker beside them read "Deload
+                                  Deload. Three sets on the same edge" —
+                                  caught in the browser. */}
+                              {r.deload && !/^deload/i.test(r.step) && (
+                                <span className="text-2xs font-bold uppercase tracking-wide text-warn mr-1.5">
+                                  Deload
+                                </span>
+                              )}
+                              {r.step}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })()}
                 {/* Below the dose, because that is where the question forms
                     (PLAN.md M90). M33 required this sentence of any block
                     that runs an identical dose for the whole program, on the

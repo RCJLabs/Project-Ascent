@@ -10,7 +10,9 @@
 import { getDrill } from '@/content/drills';
 import {
   phaseForWeek,
+  type Dose,
   type Drill,
+  type Exercise,
   type Phase,
   type PhasePrescription,
   type Program,
@@ -153,6 +155,59 @@ export interface BlockPrescription {
 }
 
 /**
+ * What a deload week takes off a dose (PLAN.md M128).
+ *
+ * `deloadWeeks` drove three things before this — a calendar marker, a
+ * `deload: true` stamp on the session, and a sentence explaining the dip in
+ * training load — and **not one of them reduced a set, a rep or a load**.
+ * For The Cruiser, Two Days a Week and Ground Zero there is no weekly drill
+ * either, so a deload week was byte-identical to the week before it: the app
+ * printed "Deload week" over the same five sets of maximal hangs.
+ *
+ * **Volume, and only volume.** A set comes off; reps, hold, load and rest
+ * are left exactly as written. That is the ordinary meaning of a deload and
+ * the one lever that is safe to pull without knowing the block: dropping the
+ * load on a max-hang week and dropping the load on a mobility circuit are
+ * not the same decision, and the app has no business making either. A
+ * program that wants something else says so with `perWeek`, which wins.
+ *
+ * **Conservative on purpose.** A range goes to its bottom, a fixed count
+ * loses one, and nothing goes below two. Under-reducing a week an author
+ * never thought about is recoverable; over-reducing it silently is not.
+ */
+export function deloadDose(exercise: Exercise): Dose | null {
+  const sets = lighter(exercise.sets);
+  return sets === null ? null : { sets };
+}
+
+/** One notch off a count, or null when there is no notch to take. */
+function lighter(value: string | undefined): string | null {
+  if (value === undefined) return null;
+  const range = /^(\d+)\s*-\s*(\d+)$/.exec(value.trim());
+  if (range) {
+    const low = Number(range[1]);
+    return low < Number(range[2]) ? String(low) : null;
+  }
+  const flat = /^(\d+)$/.exec(value.trim());
+  if (flat) {
+    const n = Number(flat[1]);
+    return n > 2 ? String(n - 1) : null;
+  }
+  // 'AMRAP', '1 per arm', 'to failure' — a count this cannot read is a count
+  // it must not guess at.
+  return null;
+}
+
+/** Whether a deload would take anything off this prescription at all. */
+export function deloadLightens(entry: PhasePrescription): boolean {
+  return entry.exercises.some((e) => deloadDose(e) !== null) || lighter(entry.circuit?.rounds) !== null;
+}
+
+/** What the climber is told when the week was lightened rather than authored. */
+export const DELOAD_STEP =
+  'Deload week. A set comes off where there is one to give and nothing else changes — the load stays where it is, and you stop while it still feels easy.';
+
+/**
  * Which week of its own phase a program week is, 1-based.
  *
  * Phases carry absolute bounds (`weekStart`, `weekEnd`) because that is
@@ -179,6 +234,8 @@ export function prescriptionFor(
   phase: Phase,
   trackId?: string,
   week?: number | null,
+  /** This week is one the program deloads on — see `deloadDose`. */
+  deload = false,
 ): BlockPrescription[] {
   const inPhase = week === undefined || week === null ? null : weekInPhase(phase, week);
   const out: BlockPrescription[] = [];
@@ -189,18 +246,37 @@ export function prescriptionFor(
       ? entry.exercises.filter((e) => !e.track || e.track === trackId)
       : entry.exercises;
     const step = inPhase === null ? undefined : entry.perWeek?.find((w) => w.week === inPhase);
+    // The author's week beats the derived one, per block rather than per
+    // session: a program that wrote down what its deload looks like has
+    // said something the default cannot know, and a block it said nothing
+    // about still gets lightened.
+    const derived = deload && step === undefined;
     // Merged by name rather than by index: an author adding a line to the
     // phase should not silently re-point every week's overrides at the
     // wrong exercise, and a name that matches nothing is caught by the
     // content test rather than by a climber.
     const exercises = step?.dose
       ? tracked.map((e) => (step.dose![e.name] ? { ...e, ...step.dose![e.name] } : e))
-      : tracked;
+      : derived
+        ? tracked.map((e) => {
+            const off = deloadDose(e);
+            return off ? { ...e, ...off } : e;
+          })
+        : tracked;
+    // A circuit deloads in rounds, which is its unit of volume.
+    const rounds = derived && entry.circuit ? lighter(entry.circuit.rounds) : null;
+    const circuit = rounds === null ? entry.circuit : { ...entry.circuit!, rounds };
+    // Only where something actually came off. A block of two-set prehab has
+    // no notch to take, and telling a climber a set went when none did is
+    // the same lie the marker was telling before this.
+    const lightened =
+      derived &&
+      (rounds !== null || exercises.some((e, i) => e.sets !== tracked[i]?.sets));
     out.push({
       blockId: block.id,
       name: block.name,
-      entry: { ...entry, exercises },
-      ...(step ? { step: step.step } : {}),
+      entry: { ...entry, exercises, ...(circuit ? { circuit } : {}) },
+      ...(step ? { step: step.step } : lightened ? { step: DELOAD_STEP } : {}),
     });
   }
   return out;

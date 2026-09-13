@@ -192,7 +192,15 @@ export interface Session {
   projectAttempts?: ProjectAttempt[];
   restChecklist?: RestChecklist;
   notes?: string;
-  /** A planned deload week — excluded from training-load maths. */
+  /**
+   * A planned deload week.
+   *
+   * **Included** in training-load maths, deliberately: a lighter week is
+   * genuinely lighter, and `engine/derive.ts` uses the flag to explain the
+   * dip rather than to hide it. This comment said the opposite from M67
+   * until M128 — the code was right the whole time and the comment was
+   * waiting for someone to act on it.
+   */
   deload?: boolean;
   /**
    * Where this session came from, when it was not logged in the app
