@@ -191,7 +191,7 @@ export const TWO_DAY_WEEK: Program = {
       // Second, not third: this is a climbing session, and the only reason
       // `climb` outranks it is that a one-day week should be the hard one.
       priority: 2,
-      fields: ['sessionVolume', 'sessionDuration'],
+      fields: ['sessionVolume'],
       blocks: [
         {
           id: 'movement',

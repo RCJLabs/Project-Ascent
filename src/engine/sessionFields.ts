@@ -12,12 +12,20 @@
  * ## Only the ones that are quantities
  *
  * Of the sixteen, six are `number` and one is a `scale` — those are the ones
- * a series can be drawn from. The `text` fields (`highPoint`, `projectName`,
- * `location`, `gearNotes`, `routeName`, `clipStyle`) are notes, and the two
- * `grade` fields are handled separately and for a different reason: the app
- * already derives the hardest grade of a session from the climbs logged in
- * it, so those two are not a missing reading but a duplicate one. See
- * `gradeDisagreement` below.
+ * a series can be drawn from. The `text` fields (`highPoint`, `location`,
+ * `gearNotes`, `clipStyle`, and the retired `projectName` and `routeName`)
+ * are notes, and the two `grade` fields are handled separately and for a
+ * different reason: the app already derives the hardest grade of a session
+ * from the climbs logged in it, so those two are not a missing reading but
+ * a duplicate one. See `gradeDisagreement` below.
+ *
+ * **This is what M142 had to correct.** The third brainstorm called eleven
+ * of the sixteen *asked and never read*; seven of those eleven are numbers
+ * or scales and every one of them is charted here, generically, by the very
+ * function this file exists for. The three M142 retired are a different
+ * fault and a real one — a second place to answer a question the app reads
+ * somewhere else — and the remaining one is a note nobody charts on
+ * purpose.
  *
  * ## Sparse by construction
  *

@@ -6826,7 +6826,7 @@ something rests on an inference it says so.*
   width.
 
 - **M142 — *Time on the wall* is `durationMin` asked a second way, and the ten beside it.**
-  *Proposed. Small. M133's rule, applied to what M133 left.*
+  *Proposed, and built eighth — see the Done entry below.*
   `sessionDuration` (`fields.ts:102`: *Time on the wall*, minutes) is declared by Outdoor
   Climbing, Trip Prep and Two Days a Week and read by nothing; `Session.durationMin`
   (`db/sessions.ts:151`) is the same number and is read by derive, review, templates, the CSV and
@@ -7282,3 +7282,39 @@ something rests on an inference it says so.*
   which is the Tailwind classes the one remaining instance needs to do two jobs — `order-first
   lg:order-last`, the width rules, and the sibling-margin selector — against four short JSX tags
   that gzip against their twins. Worth it for the effects, not for the bytes. 4,499 tests pass.
+
+- **M142 — a question the app already asks, asked once.** *Done. The eighth of the third
+  brainstorm, with the premise correction M136 flagged in advance.*
+  **Eleven fields "asked and never read" is wrong, and M136 said so first.** Seven of those
+  eleven are `number` or `scale`, and `fieldSeries` charts every one of them generically on
+  Progress — `pumpLevel`, `attemptsToday`, `routesCompleted`, `pitches`, `sessionNumber`,
+  `waterDepth` and `sessionDuration` itself. They are read. The count came from grepping for
+  each id by name and finding nothing, which is what a generic reader looks like from a grep.
+  **The real fault is smaller, sharper, and survives the correction.** Three fields ask for
+  something the app *also* asks somewhere it reads better:
+  - *Time on the wall* sat on the same screen as the logger's own **Duration (minutes)** input.
+    Two boxes, one number, and only `durationMin` reaches load (RPE × hours), the weekly review,
+    the career totals, the year review, the archive's Minutes column and `thinLog`. A climber on
+    Trip Prep who answered the question the program asked has hours the app never counted.
+  - *Project* is prose beside a real project picker, and a typed name links no burns to anything.
+  - *Route* is prose beside `Climb.name`, which every climb row has carried since M130.
+  **Retired rather than deleted, and that is the interesting decision.** The obvious move is to
+  drop the three from `FieldId` and `FIELDS`. It is wrong: `answersOf` labels every stored answer
+  through `getField` and falls back to the raw id, so deleting the entry would turn a readable
+  *Time on the wall: 75* into *sessionDuration: 75* in a climber's own spreadsheet. The entries
+  stay with a `retired` note saying where the question is asked instead — the same shape as M120's
+  `derived`, one step further out — and a content rule refuses any session type that names one.
+  A rule, not a convention, because nothing else would stop it coming back.
+  **And the minutes already typed are recovered.** `migrateSession` promotes
+  `fields.sessionDuration` into `durationMin` when the session has none, checked for being a
+  positive finite number first — rebuild, never cast, since a field answer is whatever was in the
+  database. Only when `durationMin` is empty: the M98 rule, so a stale answer never overwrites
+  what the climber gave. The answer itself is left in `fields`, so the archive still carries it.
+  **What the battery found.** Thirty-four mutations, one survivor: the rule was only ever tested
+  against a program's first session type and a type's first field, so narrowing the loop to either
+  went unnoticed. Two tests added — the last working type, and a retired field sitting behind a
+  question that is fine.
+  **A browser check that could not fail, caught.** The first run was CLEAN while never opening the
+  logger at all: the assertions ran against an empty page. It now clicks through to a live session
+  and counts the Duration inputs, which is one.
+  **Budget.** 154.0 holds: 153.89 → 153.97. 4,512 tests pass.

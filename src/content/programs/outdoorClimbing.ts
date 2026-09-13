@@ -89,7 +89,7 @@ export const OUTDOOR_CLIMBING: Program = {
       icon: '🏔️',
       description:
         'Alpine or multipitch. Route-level grade, not pitch-level. Weather window and descent plan before every route.',
-      fields: ['location', 'routeName', 'pitches', 'sessionDuration', 'attemptsToday'],
+      fields: ['location', 'pitches', 'attemptsToday'],
     },
     {
       id: 'rest',

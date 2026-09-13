@@ -134,7 +134,6 @@ export const TRIP_PREP: Program = {
       icon: '🤏',
       description: 'Short, sharp, and never the day before a hard climb.',
       priority: 2,
-      fields: ['sessionDuration'],
       blocks: [
         {
           id: 'primer',

@@ -6,6 +6,7 @@
  * Every rule here is one the old app could only fail at runtime.
  */
 
+import { FIELDS } from './fields';
 import { secondsRange, sessionMinutes } from '@/engine/sessionLength';
 import { getDrill } from './drills';
 import { getMetric } from './metrics';
@@ -131,6 +132,25 @@ export function validateProgram(program: Program): string[] {
   for (const type of program.sessionTypes) {
     if (!type.isRest && type.intensity === undefined) {
       where(`session type '${type.id}' does not say how hard it is`);
+    }
+  }
+
+  /**
+   * No session type asks a question the app asks better elsewhere
+   * (PLAN.md M142).
+   *
+   * *Time on the wall* sat beside the logger's own Duration input on the
+   * same screen, and only the second one reached load, the review and the
+   * archive. A rule rather than a comment, because the registry entries
+   * stay — a stored answer needs its label — so nothing but this stops a
+   * program declaring one again.
+   */
+  for (const type of program.sessionTypes) {
+    for (const id of type.fields ?? []) {
+      const retired = FIELDS[id]?.retired;
+      if (retired !== undefined) {
+        where(`session type '${type.id}' asks for '${FIELDS[id]!.label}'; that is ${retired}`);
+      }
     }
   }
 

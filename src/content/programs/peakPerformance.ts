@@ -328,7 +328,7 @@ export const PEAK_PERFORMANCE: Program = {
       name: 'Projecting & Mental',
       icon: '🎯',
       description: 'Structured projecting. Warm up 30-40 minutes.',
-      fields: ['projectName', 'attemptsToday', 'highPoint'],
+      fields: ['attemptsToday', 'highPoint'],
       drillsByWeek: {
         1: 'pp_project_selection',
         2: 'pp_link_building',

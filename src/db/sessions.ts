@@ -290,9 +290,32 @@ const SESSION_SHAPE: Shape = {
  */
 export function migrateSession(session: Session): Session {
   const { completedExercises, ...rest } = session;
-  if (rest.exercises?.length) return rest;
-  if (!completedExercises?.length) return rest;
-  return { ...rest, exercises: completedExercises.map((name) => ({ name })) };
+  const promoted = promoteDuration(rest);
+  if (promoted.exercises?.length) return promoted;
+  if (!completedExercises?.length) return promoted;
+  return { ...promoted, exercises: completedExercises.map((name) => ({ name })) };
+}
+
+/**
+ * Minutes typed into the wrong box, moved to the one the app reads
+ * (PLAN.md M142).
+ *
+ * Outdoor Climbing, Trip Prep and Two Days a Week asked *Time on the wall*
+ * as a session field, on the same screen as the logger's own Duration
+ * input — two boxes for one number, and only the second one counted.
+ * `durationMin` is what load, the weekly review, the career totals, the
+ * year review and the archive all read, so a climber who answered the
+ * question the program asked has hours the app never saw.
+ *
+ * Only when `durationMin` is empty. A session that carries its own
+ * duration has the number the climber meant, and a stale field answer
+ * beside it must not overwrite it — the rule M98's migration settled on.
+ */
+function promoteDuration(session: Session): Session {
+  const typed = session.fields?.sessionDuration;
+  if (session.durationMin !== undefined) return session;
+  if (typeof typed !== 'number' || !Number.isFinite(typed) || typed <= 0) return session;
+  return { ...session, durationMin: typed };
 }
 
 export async function listSessions(from?: string, to?: string): Promise<Session[]> {

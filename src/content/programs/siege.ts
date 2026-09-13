@@ -93,7 +93,7 @@ export const THE_SIEGE: Program = {
       name: 'Project Session',
       icon: '🎯',
       description: 'Siege work on your chosen project. Structure shifts with the phase.',
-      fields: ['projectName', 'attemptsToday', 'highPoint'],
+      fields: ['attemptsToday', 'highPoint'],
       drillsByWeek: {
         1: 'sg_project_selection_recon',
         2: 'sg_move_by_move_decoding',

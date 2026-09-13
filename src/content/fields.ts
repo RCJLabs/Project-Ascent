@@ -43,6 +43,22 @@ export interface FieldSpec {
    * session written as a note has nothing to derive from.
    */
   derived?: 'climbs';
+  /**
+   * Asked somewhere the app actually reads, so this one stops being asked
+   * (PLAN.md M142).
+   *
+   * The same shape as `derived` one step further out: `derived` is a
+   * question the session's own climbs answer, this is a question another
+   * part of the session already asks and the engines already read. The
+   * value is where that is, in the words a reader needs.
+   *
+   * **Kept rather than deleted.** Sessions already carry answers under
+   * these ids, and the archive labels every answer through `getField` —
+   * removing the entry would turn a readable *Time on the wall: 75* into
+   * *sessionDuration: 75* in a climber's own spreadsheet. What changes is
+   * that no session type may name one, which `content/validate.ts` holds.
+   */
+  retired?: string;
 }
 
 export const FIELDS: Record<FieldId, FieldSpec> = {
@@ -79,8 +95,20 @@ export const FIELDS: Record<FieldId, FieldSpec> = {
     kind: 'text',
     placeholder: 'The move, bolt or hold',
   },
-  projectName: { id: 'projectName', label: 'Project', kind: 'text', placeholder: 'What you were working' },
-  routeName: { id: 'routeName', label: 'Route', kind: 'text', placeholder: 'What you climbed' },
+  projectName: {
+    id: 'projectName',
+    label: 'Project',
+    kind: 'text',
+    placeholder: 'What you were working',
+    retired: 'the project picked on the session, which is what links the burns to it',
+  },
+  routeName: {
+    id: 'routeName',
+    label: 'Route',
+    kind: 'text',
+    placeholder: 'What you climbed',
+    retired: "the climb's own name, which every climb row has carried since M130",
+  },
   pumpLevel: { id: 'pumpLevel', label: 'Pump', kind: 'scale', ends: ['Fresh', 'Wrecked'] },
   location: { id: 'location', label: 'Where', kind: 'text', placeholder: 'The gym, the crag, the boulder' },
   sessionNumber: { id: 'sessionNumber', label: 'Day of the trip', kind: 'number' },
@@ -99,7 +127,13 @@ export const FIELDS: Record<FieldId, FieldSpec> = {
   clipStyle: { id: 'clipStyle', label: 'Style', kind: 'text', placeholder: 'Onsight, flash, redpoint, toprope' },
   waterDepth: { id: 'waterDepth', label: 'Water depth', kind: 'number', unit: 'ft' },
   gearNotes: { id: 'gearNotes', label: 'Gear', kind: 'text', placeholder: 'What the rack needed' },
-  sessionDuration: { id: 'sessionDuration', label: 'Time on the wall', kind: 'number', unit: 'min' },
+  sessionDuration: {
+    id: 'sessionDuration',
+    label: 'Time on the wall',
+    kind: 'number',
+    unit: 'min',
+    retired: 'the Duration input the logger shows on every session, which load, the weekly review, the career totals and the archive all read',
+  },
 };
 
 export function getField(id: FieldId): FieldSpec | undefined {
