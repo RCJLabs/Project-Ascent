@@ -6637,3 +6637,243 @@ rests on an inference it says so.*
   says *"You did 0 of the 36 sessions this block placed."* No overflow, no page errors.
   **Budget.** 168.0 holds — `nextBlock` is read by `/finish`, which is a lazy route. 4,216 tests
   pass.
+
+### The third brainstorm (proposed, M135–M144)
+
+*The second brainstorm went underneath the surface and found the model poorer than the surface
+it served; M127–M134 gave it a dose that moves, hardness, minutes, a set recorded as it went and
+a successor that reads the report. This pass asked the next question: **where does all of that
+show up, and who can write it?** Two answers, and they are the two large ones. The unit the
+model speaks in — the week — has no screen: everything a program says it says per week, and
+the app shows a day, a month and a block. And the builder cannot author a third of what the
+catalogue is made of, so a custom program is a strict subset of a shipped one — including the
+per-week dose M127 built, which every custom program still lacks. The rest is this pass's usual
+kind: a chunk weight measured, a deferral M131 named and dated, an import that stopped at
+climbs, and five things small enough to be exact about.*
+
+*Sized as asked — two large, three medium, five small. Every figure below was measured on the
+M134 build (`d6b1e23`) and every claim read in the code, with the file and line given. Where
+something rests on an inference it says so.*
+
+**What depends on what:**
+
+- **M137 first**, because it buys back about a tenth of the entry chunk and both large ones will
+  want the room — M135 puts something on Home.
+- **M138 before M136** if both are taken: a `minutes` override on `SessionType`, if M138 authors
+  one, is one more field the builder has to offer.
+- **M135 consumes M127, M131 and M134** and all three are shipped; it waits on nothing.
+- **M137 and M143 touch the same file** (the search index has to learn a lazy load and two
+  fixes); take them together or back to back.
+- **On their own** — M136, M139, M140, M141, M142, M144.
+
+- **M135 — the week, as a screen.** *Proposed. Large.*
+  **The program model is week-shaped and the app has no week.** The routes are today (`/`), a
+  day (`/log/:date`), a month (`/calendar`) and a block (`/train/:id`) — `App.tsx:217-264` —
+  and nothing between the day and the month. Meanwhile everything a program says, it says per week:
+  `WeekPlan` is seven slots; `WeekStep`/`perWeek` moves the dose week by week since M127
+  (`types.ts:197`, `:222`); `deloadWeeks` (`types.ts:489`); `testWeeks()` marks week 1, every
+  phase start and the last (`assessments.ts:159-177`); `drillsByWeek`; the M131 rule
+  `no-back-to-back` walks the seven days; `blockAdherence` counts planned-against-done per
+  session type *per week* (`adherence.ts:76-148`); and a reschedule is per-week by design —
+  the override is keyed by the week's start (`reschedule.ts:12-16`, `:30`) and the calendar
+  refuses a landing outside the moving day's own week (`CalendarPage.tsx:144-153`).
+  **What the surface shows of a week is real, and scattered across four screens.** Home has the
+  review line — *N of M sessions · K sends this week* (`ReviewPage.tsx:298`) — and the block
+  hero's *Week 6 of 12*. The calendar has a month of 40px cells with LIMIT, DL and T stacked in
+  them (measured in M131's browser pass) and the week-scoped move UI. The logger has *Drill this
+  week* (`LogPage.tsx:181`) and *what this week asks that last week did not* (`LogPage.tsx:880`).
+  The program page has the weekly shape. So the question a training climber asks on a Sunday
+  night — what does this week look like, which day is the limit day, what is the dose this week,
+  what did I do last week — is answered in pieces on four pages, with a month grid as the
+  nearest thing to a week view.
+  **What the milestone is.** `/week` (this week) and `/week/:start`: seven rows — day, session
+  type, intensity label, deload / test / drill marker, the prescription at *this week's* step
+  (M127, which today only the day before a session ever renders), done / missed / planned — with
+  the moves on this screen rather than the month (they reuse `previewMove` and `applyMove`, and
+  they were already confined to a week). A header: week N of M, the phase, what this week asks
+  that last did not. A foot: last week's adherence line and the week after. Home's review line
+  links here; the calendar's day taps still go to the day. What it is not: a second calendar.
+  The month stays, the week is where moves live, the day is where the session lives — that
+  discipline is the whole design risk, because the alternative is a fifth place showing the same
+  session.
+  **Where this is an inference.** That a week screen is what is wanted is a coaching claim, not
+  a measurement. What is measured is that the model has no surface at its own grain, and that
+  the one week-shaped fact M127 added — the dose changing — is currently visible only on the
+  card for the session you are about to do.
+
+- **M136 — the builder can author what the catalogue is made of.** *Proposed. Large.*
+  **Counted, builder against catalogue** (`grep` of `BuilderPage.tsx` and `SessionEditorPage.tsx`
+  against `content/programs/*.ts`): `perWeek` **0** against 5 blocks — the M127 progression
+  (`types.ts:197-222`), so every custom program still has the hole M127 closed for the
+  catalogue, one dose per four-week phase; `circuit` **0** against 19 blocks (`CircuitFormat`,
+  `types.ts:166`); `constantDose` **0** against 8 (`types.ts:244`); `tracks` **0** against 3
+  programs — Base Camp, The Cruiser, Iron Grip (`Track`, `types.ts:405`); `mergedInto` **0**
+  against 1 (`types.ts:213`); and `warmup`, `cooldown`, `fields` and `nextPrograms` **0** in both
+  builder files. What it does offer is real: name, phases that retile, session types with an
+  intensity (M131), blocks with per-phase sets / reps / hold / load / rest, a protocol, *pick N
+  of*, drills by week, a rationale, deload weeks, rules including `no-back-to-back`, and
+  assessments.
+  **A fork keeps what the editor cannot show.** `forkProgram` copies a shipped program whole
+  (`customProgram.ts:69`) and the editor spreads what it does not render
+  (`SessionEditorPage.tsx:171-175`, `prescription.ts:68-71`), so a forked Cruiser keeps its
+  circuits and Iron Grip its per-week steps invisibly: they survive a save and never appear.
+  Not data loss — a circuit block is shown as whatever `exercises` it carries, with nothing of
+  the circuit it is, and a step that changes the load weekly is edited as though it did not.
+  **What the milestone is,** in the catalogue's order of use: a circuit editor (format, stations,
+  rounds — 19 blocks); the per-week step (a row per week, in whatever form M127 settled on — 5
+  blocks, and the one that matters most); the constant-dose flag (a checkbox); tracks (a named
+  variant chosen at start — 3 programs); the fields a session type asks; warmup and cooldown;
+  successors with a reason each. `validateProgram` (`customProgram.ts:97`) grows with every one,
+  and the program-file share (`programFile.ts`) already carries all of it.
+  **Large by surface, not by engine.** Every one of these already plans, renders and validates
+  for the catalogue; only the authoring is missing. The audience is one coach and whoever
+  imports their files, which is an argument for doing it in the catalogue's order and stopping
+  when the returns thin, not against starting.
+
+- **M137 — the drill text out of the entry chunk.** *Proposed. Medium.*
+  **Measured.** 156 drill descriptions: 47.0KB raw, **16.5KB gzipped** on their own. The entry
+  chunk is 159.1KB gzipped against a budget of 168, and a description probe lands in
+  `index-*.js` and in neither `DrillPage-*.js` nor `catalogue-*.js`. Ten modules import
+  `@/content/drills` statically — `derive`, `plateau`, `challenges`, `plan`, `programFile`,
+  `LogPage`, `ProgressPage`, `SearchBody`, `ObjectiveDetailPage` — and what they read is
+  `getDrill`, `filterDrills`, `drillsByCategory`, `DRILL_CATEGORIES`, `DRILLS`: ids, names,
+  categories, equipment, focus. Nothing in the entry reads the paragraph except search, which
+  indexes it as a keyword (`SearchBody.tsx:157`).
+  **The precedent is in the same feature.** M107b's cues and faults live in `drillCoaching.ts`
+  and are imported by `DrillPage` alone (`DrillPage.tsx:5`), a lazy route; the glossary is an
+  `await import('@/content/glossary')` when the sheet needs it, and a test pins that it stays
+  one (`glossaryTerms.test.ts:128`). Same move: `description` leaves `Drill` for a
+  `content/drillText.ts` keyed by id, `DrillPage` imports it, the search sheet loads it when it
+  opens, and `Drill` keeps its one-line `focus`.
+  **What it is worth, honestly.** The gzip of the strings alone is not their marginal cost inside
+  the chunk — the number to trust is the one `perf.test.ts` reads after the move, and the
+  expectation is 12–17KB, which puts the entry around 143–147 and the budget at 152 with the
+  same headroom. A tenth of the entry for a mechanical change with a test that already exists.
+
+- **M138 — minutes reach the finder and the scheduler.** *Proposed. Medium. Deferred from M131,
+  by name.*
+  M131's Done entry left this named: *minutes as a scheduling constraint — `LayoutRequest`
+  taking the time a climber has rather than the days, and the finder asking for it* — and the
+  gate it set: the estimate answered for **twenty-five session types out of forty-two**, and
+  filtering on a number absent for the other seventeen would hide the projecting programs from
+  anyone who said they had ninety minutes. Nothing has moved since. `LayoutRequest` takes
+  `daysPerWeek` and `availableDays` and nothing about time (`scheduler.ts:209-221`); the finder
+  asks *How many days a week can you train?* (`FinderPage.tsx:482`) and `StartProgramPage` the
+  same; `workMinutes` has one caller, the pre-session card (`PreSession.tsx:72`). So the program
+  page never says how long a session runs: the number exists for the day you are about to do and
+  not for the block you are choosing.
+  **Through the gate first.** The seventeen the estimate cannot read are, by the estimator's own
+  rules, the climbing-shaped sessions — burns, problems and laps with no count it can turn into
+  seconds — which is an inference from the rules, so the coverage is the first thing to
+  re-measure. Two ways through, and the second is the honest one: make the finder treat
+  *unknown* as *fits* and label it, or author a `minutes` on the session types the estimate
+  cannot read — seventeen lines of content, validated so that every type has one or the other.
+  Do the second; it also fixes the pre-session card for those seventeen.
+  **Then the constraint, as a note and never a filter.** `LayoutRequest.minutes`, and a layout
+  that says *Performance runs about 90 minutes; you said 60* the way it already says what a
+  shape had to leave out; the finder asks *How long is a session for you?* (45 / 60 / 90 / 120+)
+  and the fit line answers; the program page's session-type rows carry the range. M131's
+  reason stands unchanged: telling someone that three of a program's sessions run over an hour
+  is coaching, hiding the program is not.
+
+- **M139 — the import reads climbs; a training log is mostly not climbs.** *Proposed. Medium.*
+  **Five files out, one shape in.** `CSV_FILES` writes climbs, sessions, exercises, attempts and
+  benchmarks (`exportCsv.ts:304-310`; exercises and the answers columns since M133).
+  `importCsv.ts` reads one shape — a row is a climb — with nine column kinds: date, grade,
+  result, count, discipline, mode, place, notes, skip (`importCsv.ts:48-57`). It cannot read
+  Name, Angle or Rope, the three columns M133 added to the climbs file, so the app's own
+  `climbs.csv` opened in a spreadsheet and brought back loses them. And it cannot read the other
+  four files at all.
+  **Who it is for, in its own words:** *someone with five years in a spreadsheet* (`importCsv.ts:
+  2-8`). A training-minded climber's spreadsheet is a hangboard log — date, exercise, sets,
+  reps, load — and a benchmark log — max hang, dead hang, pull-ups by date — before it is a
+  tick list. Those are exactly the `exercises.csv` and `benchmarks.csv` shapes the export writes, and
+  neither can come in. `exerciseSeries` (M130) charts a load history the importer cannot seed;
+  the block report (M134) compares readings it cannot bring. That the spreadsheet is a hangboard
+  log is a claim about climbers, not a measurement; the measurable fact is that four of the five
+  exported files have no way back and the fifth loses three columns.
+  **What the milestone is.** The mapping sheet asks *what kind of file* first — climbs,
+  exercises, benchmarks — each with its own `ColumnKind` set. Exercises land as `LoggedExercise`
+  rows on the session for that date, created if absent and marked imported the way the climb
+  path marks its sessions; benchmarks as `MetricEntry`, the metric picked by name or alias, with
+  the same rule as today — a row that cannot be read is refused with its line and a reason, and
+  the rest still imports. Name, Angle and Rope fold into the climb kinds. Sessions-only and
+  attempts are optional; if they are left out, say so on the Data page rather than by omission.
+
+- **M140 — the chart's table says Week / Hardest grade under four charts, three of which are
+  neither.** *Proposed. Small.*
+  `ProgressionLine` hard-codes `head={['Week', 'Hardest grade']}` (`Charts.tsx:292`). Four
+  callers: the grade line it was written for (`ProgressPage.tsx:677`); a project's high point
+  per day, in percent (`ProjectDetailPage.tsx:134`); an exercise's load or hold across a block
+  (`FinishPage.tsx:199`); a benchmark over time (`MetricDetailPage.tsx:77-80`). The `DataTable`
+  is the chart's accessible form — what a screen reader gets instead of the SVG — so on a
+  project page it reads *Week: Sep 3 · Hardest grade: 60%*. One `head` prop defaulting to the
+  old pair, each caller naming its columns, and a test that the header agrees with the label.
+
+- **M141 — the shell mounts every bar twice.** *Proposed. Small.*
+  `AppShell.tsx:142-151` (`lg:hidden`) and `:204-208` (`hidden lg:block`) each render
+  `StorageWarning`, `UndoBar`, `UpdatePrompt` and `LiveBar`. `display: none` takes the hidden
+  copy out of the accessibility tree, so the two `role="status"` regions do not double-announce
+  — but effects run per instance. `StorageWarning` asks `navigator.storage.estimate()` and
+  `persisted()` twice on every page and hangs two `visibilitychange` listeners
+  (`StorageWarning.tsx:17-40`); `UndoBar` runs two one-second intervals per offer and calls
+  `announce()` twice for one offer (`UndoBar.tsx:23-36`), so the announcer (`Announce.tsx:57`)
+  is handed the same sentence twice — whether a reader says it twice depends on the region's
+  text-change semantics, which is unverified and does not need to be: it should be handed it
+  once. Render each once and place it with CSS; a test that the shell holds one `UndoBar` at any
+  width.
+
+- **M142 — *Time on the wall* is `durationMin` asked a second way, and the ten beside it.**
+  *Proposed. Small. M133's rule, applied to what M133 left.*
+  `sessionDuration` (`fields.ts:102`: *Time on the wall*, minutes) is declared by Outdoor
+  Climbing, Trip Prep and Two Days a Week and read by nothing; `Session.durationMin`
+  (`db/sessions.ts:151`) is the same number and is read by derive, review, templates, the CSV and
+  the check-in strip. A climber on Trip Prep types minutes into an answer that goes nowhere while
+  the column the app reads stays empty. Write it through — or drop the field and show the
+  duration input for those types. Same story, weaker, for `projectName` (Peak Performance, The
+  Siege) and `routeName` (Outdoor Climbing): the named climb M130 made the natural gesture on
+  every climb row, asked again as prose. Of the sixteen `FieldId`s, three are derived from the
+  tallies, one is read (`location`, M133), one is deprecated (`clipStyle`), and **eleven are
+  asked and never read** — `pumpLevel` (4 programs), `attemptsToday` (4), `routesCompleted` (3),
+  `pitches`, `sessionNumber`, `waterDepth`, `gearNotes`, and the three above. This milestone is
+  the three duplicates. The other eight are a coaching call, and it is yours, field by field: an
+  engine reads it, or the program stops asking.
+
+- **M143 — search sends a drill to the wrong page and cannot find a climb by name.** *Proposed.
+  Small.*
+  Every drill result links to `/train` (`SearchBody.tsx:156`) — the catalogue tab, not the
+  drill. The drill page has existed since M107 and the library links to it
+  (`DrillsPage.tsx:140`); the search index predates it and was never moved. Second, the session
+  index renders each climb as *V5 × 2* (`SearchBody.tsx:163-165`), so the name M130 made the
+  natural thing to type is not in it, and *Moonlight* matches nothing unless it is also a
+  project. Two lines and a test each. In passing, still there from the last pass:
+  `total_outdoor_days` says *Derived from your logs* over a number the climber types
+  (`metrics.ts:306`) while `state.outdoorDays` (`derive.ts:292`) is derived and never offered.
+
+- **M144 — a logged day on the calendar is one glyph.** *Proposed. Small.*
+  Any completed day is ✅ (`CalendarPage.tsx:485-486`; legend *✅ Logged*, `:583`). Planned days
+  have carried LIMIT since M131, and DL and T before that; a logged day says nothing about what
+  it was — a two-hour limit session and a twenty-minute flush are the same tick — while the
+  consistency grid on Progress shades five levels from the same sessions. The session carries
+  `rpe` and `durationMin` (`db/sessions.ts:150-151`) and the planned type carries `intensityOf`.
+  Shade the tick by the session's own effort, RPE tier first and the planned intensity as the
+  fallback, and say so in the legend. Considered last pass and called an inference; it still is
+  one — the measured fact is that the cell throws away two numbers it has. Cheap because it is
+  one cell renderer and a legend line; the risk is that a 40px cell already stacks three markers,
+  and a shade is the only thing left that fits.
+
+**Considered in this pass, and where each went:**
+- *`engine/priority.ts`* — named for deletion last pass and not deleted, because its test pins
+  every program's authored `priority` against the derivation (`priority.test.ts:8-13`): a
+  content invariant wearing an engine module's clothes. Move `proposePriority` into the test or
+  into `content/validate` so `engine/` carries nothing that does not ship. Ten minutes; in
+  passing.
+- *Reduced motion* — one rule (`index.css:172-180`) clamps every animation and transition under
+  `prefers-reduced-motion`, with a `data-motion='essential'` exemption for the game; the 21
+  `transition-colors`, 4 `transition-transform` and 2 `animate-ping` all fall under it. Looked
+  like a gap and is not.
+- *An injury reaching an exercise* — `readiness.ts:26` already flags a body part on the lines
+  that load it, since M129. Not a gap.
+- *The logger at 2,200 lines and sixteen cards* — a decomposition is a phase with no
+  user-visible change, and the cards are already separate functions. Not proposed; do it when a
+  milestone has to open the file anyway.
