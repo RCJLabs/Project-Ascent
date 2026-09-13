@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { ChevronRight, CircleStop, Ruler, Search } from 'lucide-react';
 import { getProgram } from '@/content/programs';
@@ -12,16 +12,19 @@ import {
   type BlockRecord,
 } from '@/engine/blocks';
 import { describeBlock } from '@/engine/blockReport';
-import { describeChange, exerciseMovement } from '@/engine/exerciseLog';
+import { describeChange, describeLoad, exerciseMovement, exerciseSeries, type LoggedPoint } from '@/engine/exerciseLog';
 import { formatEntry } from '@/engine/assessments';
 import { fromKey, today } from '@/engine/dates';
+import { ProgressionLine } from '@/ui/charts/Charts';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { offerUndo } from '@/store/undo';
 import { useSessions } from '@/store/sessions';
 import { blockAdherence, describeAdherence } from '@/engine/adherence';
 import { useSettings } from '@/store/settings';
+import type { UnitSystem } from '@/engine/units';
 import { BackLink } from '@/ui/BackLink';
+import { DisclosureButton } from '@/ui/Disclosure';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { EmptyState } from '@/ui/EmptyState';
@@ -149,6 +152,54 @@ function StopBlockCard({ name }: { name: string }) {
   );
 }
 
+/**
+ * One line's readings across the block, charted (PLAN.md M130).
+ *
+ * The dimension charted is the one that moved, preferring load: a hangboard
+ * block progresses in load and the sets stay put, so a chart of the sets
+ * would be a flat line over the interesting one. Everything is a number the
+ * climber typed — nothing here is parsed out of a prescription, which is the
+ * rule `exerciseLog.ts` has stated since M98.
+ */
+function LineHistory({
+  name,
+  points,
+  units,
+}: {
+  name: string;
+  points: LoggedPoint[];
+  units: UnitSystem;
+}) {
+  const dimension =
+    (['load', 'hold', 'reps', 'sets'] as const).find((d) =>
+      points.some((p) => p.entry[d] !== undefined),
+    ) ?? null;
+  // No length guard: `exerciseMovement` only lists a line logged more than
+  // once in this window, and `seriesFor` windows it the same way, so a row
+  // that reached this always has two readings. A guard for a case the UI
+  // cannot produce is a line no test can reach, which a mutation showed by
+  // surviving.
+  if (dimension === null) return null;
+  const format = (v: number) =>
+    dimension === 'load' ? describeLoad(v, units) : dimension === 'hold' ? `${v}s` : String(v);
+  const plotted = points.map((p) => {
+    const value = p.entry[dimension];
+    return {
+      // The date itself, not a label: `ProgressionLine` formats it for the
+      // read-out above the chart, and a pre-formatted string came back as
+      // Invalid Date there.
+      week: p.date,
+      value: value ?? null,
+      display: value === undefined ? null : format(value),
+    };
+  });
+  return (
+    <div className="mt-2.5 pt-2.5 border-t border-line">
+      <ProgressionLine points={plotted} label={`${name}, ${dimension}`} formatValue={format} />
+    </div>
+  );
+}
+
 export function FinishPage({ params }: { params?: { id?: string } } = {}) {
   const entries = useMetrics((s) => s.entries);
   const metricsReady = useMetrics((s) => s.hydrated);
@@ -227,11 +278,23 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
 
   // The same window the report covers, read off the block rather than the
   // report: a block still running has a window and no finished report.
+  /** Which line's history is open, if any. One at a time (PLAN.md M130). */
+  const [openLine, setOpenLine] = useState<string | null>(null);
+
   const movement = useMemo(() => {
     if (end === null) return [];
     const through = today() < end.status.to ? today() : end.status.to;
     return exerciseMovement(Object.values(byDate).flat(), end.status.from, through);
   }, [end, byDate]);
+
+  /** Every reading for one line inside the block's own window. */
+  const seriesFor = (name: string) => {
+    if (end === null) return [];
+    const through = today() < end.status.to ? today() : end.status.to;
+    return exerciseSeries(Object.values(byDate).flat(), name).filter(
+      (p) => p.date >= end.status.from && p.date <= through,
+    );
+  };
 
   if (!metricsReady || !profileReady || !sessionsReady) return <PageSkeleton />;
 
@@ -360,15 +423,31 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
             <ul className="grid grid-cols-1 gap-2">
               {movement.map((row) => (
                 <li key={row.name} className="bg-sunken rounded-xl px-3 py-2.5">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="font-semibold text-sm min-w-0 truncate">{row.name}</span>
-                    <span className="shrink-0 text-2xs uppercase tracking-wide text-ink-soft">
-                      {row.readings} readings
-                    </span>
-                  </div>
-                  <p className="text-sm text-ink-soft mt-0.5 tabular-nums">
-                    {row.changed.map((c) => describeChange(c, units)).join(' · ')}
-                  </p>
+                  {/* From → to was all this said, and `exerciseSeries` has
+                      built the whole run since M98 with nothing but
+                      `lastLogged` reading it (PLAN.md M130). A benchmark
+                      gets a detail page with a progression line; the numbers
+                      a climber types every session got one "last time".
+
+                      One chart at a time, opened rather than always on:
+                      eleven lines of a strength session is eleven SVGs, and
+                      the question is asked of one line at a time. */}
+                  <DisclosureButton
+                    open={openLine === row.name}
+                    onToggle={() => setOpenLine(openLine === row.name ? null : row.name)}
+                    className="rounded-lg"
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="font-semibold text-sm min-w-0 truncate">{row.name}</span>
+                      <span className="shrink-0 text-2xs uppercase tracking-wide text-ink-soft">
+                        {row.readings} readings
+                      </span>
+                    </div>
+                    <p className="text-sm text-ink-soft mt-0.5 tabular-nums">
+                      {row.changed.map((c) => describeChange(c, units)).join(' · ')}
+                    </p>
+                  </DisclosureButton>
+                  {openLine === row.name && <LineHistory name={row.name} points={seriesFor(row.name)} units={units} />}
                 </li>
               ))}
             </ul>

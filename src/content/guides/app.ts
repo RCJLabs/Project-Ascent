@@ -106,6 +106,7 @@ export const APP: Guide = {
             '**Add climbs** — grade, how many, sent or attempted, and the style if you flashed or onsighted it.',
             '**Rate it** — RPE from 1 to 10, and how long it took. These two are what training load is made of, so guessing them roughly is much better than leaving them out.',
             '**Notes** — anything. They all end up in the journal, searchable.',
+            '**The numbers you type are kept and read back.** Log the sets, load or hold on a prescribed line and the app says how it compares with what the day asked, then charts the whole run of it on the block screen. Nothing is inferred: every number there is one you typed.',
           ],
         },
         {

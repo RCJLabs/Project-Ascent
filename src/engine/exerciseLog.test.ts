@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { newSession, type LoggedExercise, type Session } from '@/db/sessions';
 import {
+  againstPrescription,
   describeChange,
   describeEntry,
   describeLoad,
   exerciseKey,
   exerciseMovement,
+  doseRange,
   exerciseSeries,
   hasNumbers,
   lastLogged,
@@ -79,6 +81,54 @@ describe('one exercise, over time', () => {
     const first = { ...newSession('2026-03-02', 0, { completed: true }), exercises: [{ name: HANG, load: 1 }] };
     const second = { ...newSession('2026-03-02', 1, { completed: true }), exercises: [{ name: HANG, load: 2 }] };
     expect(exerciseSeries([second, first], HANG).map((p) => p.entry.load)).toEqual([1, 2]);
+  });
+});
+
+/**
+ * What was logged, against what the day asked (PLAN.md M130).
+ *
+ * The entry stores no block and no phase, so the app could ask whether a
+ * climber did a thing with that name and not whether they did what was
+ * asked. It does not need a field for it: the day knows its own
+ * prescription, and since M127 to M129 that is the week's, after any deload.
+ */
+describe('against the prescription', () => {
+  it('reads a range and a flat count', () => {
+    expect(doseRange('3-5')).toEqual({ min: 3, max: 5 });
+    expect(doseRange('5')).toEqual({ min: 5, max: 5 });
+    expect(doseRange('3 - 5')).toEqual({ min: 3, max: 5 });
+  });
+
+  it('refuses a count it cannot read rather than guessing', () => {
+    expect(doseRange('AMRAP')).toBeNull();
+    expect(doseRange(undefined)).toBeNull();
+    expect(doseRange('')).toBeNull();
+  });
+
+  it('calls anywhere inside the range met', () => {
+    for (const sets of [3, 4, 5]) {
+      expect(againstPrescription({ name: 'x', sets }, '3-5')?.verdict, `${sets}`).toBe('met');
+    }
+  });
+
+  it('calls under it short and over it over', () => {
+    expect(againstPrescription({ name: 'x', sets: 2 }, '3-5')?.verdict).toBe('short');
+    expect(againstPrescription({ name: 'x', sets: 6 }, '3-5')?.verdict).toBe('over');
+    expect(againstPrescription({ name: 'x', sets: 4 }, '5')?.verdict).toBe('short');
+  });
+
+  it('says what was asked and what was done, for the sentence', () => {
+    expect(againstPrescription({ name: 'x', sets: 2 }, ' 3-5 ')).toEqual({
+      verdict: 'short',
+      asked: '3-5',
+      did: 2,
+    });
+  });
+
+  it('has nothing to say without both halves', () => {
+    expect(againstPrescription({ name: 'x' }, '3-5')).toBeNull();
+    expect(againstPrescription({ name: 'x', sets: 3 }, undefined)).toBeNull();
+    expect(againstPrescription({ name: 'x', sets: 3 }, 'AMRAP')).toBeNull();
   });
 });
 

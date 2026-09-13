@@ -86,6 +86,47 @@ export function exerciseSeries(sessions: readonly Session[], name: string): Logg
 }
 
 /**
+ * The range a prescribed count asks for. `'3-5'` is three to five, `'5'` is
+ * five to five, and anything this cannot read is null rather than a guess.
+ */
+export function doseRange(value: string | undefined): { min: number; max: number } | null {
+  if (!value) return null;
+  const range = /^(\d+)\s*[-–]\s*(\d+)/.exec(value.trim());
+  if (range) return { min: Number(range[1]), max: Number(range[2]) };
+  const flat = /^(\d+)/.exec(value.trim());
+  return flat ? { min: Number(flat[1]), max: Number(flat[1]) } : null;
+}
+
+export type DoseVerdict = 'met' | 'short' | 'over';
+
+/**
+ * What was logged, against what the day asked for (PLAN.md M130).
+ *
+ * **Derived, and nothing is stored.** The entry carries no `blockId` or
+ * `phaseId`, so before this the app could ask whether a climber did a thing
+ * with that name and not whether they did what was asked. It does not need
+ * a field: the day already knows its own prescription, and since M127, M128
+ * and M129 that prescription is week-accurate and deload-accurate, so the
+ * comparison is against what was actually asked on the day rather than what
+ * the phase opened at.
+ *
+ * Null where there is nothing to compare — an unread count, a line with no
+ * sets prescribed, an entry with no number typed. Falling short is not a
+ * fault and is not called one; it is a fact the climber put there, and the
+ * only reason to surface it is that next week's load depends on it.
+ */
+export function againstPrescription(
+  entry: LoggedExercise,
+  prescribedSets: string | undefined,
+): { verdict: DoseVerdict; asked: string; did: number } | null {
+  const range = doseRange(prescribedSets);
+  if (range === null || entry.sets === undefined) return null;
+  const verdict: DoseVerdict =
+    entry.sets < range.min ? 'short' : entry.sets > range.max ? 'over' : 'met';
+  return { verdict, asked: prescribedSets!.trim(), did: entry.sets };
+}
+
+/**
  * The newest reading strictly before `before`.
  *
  * Strictly, because the logger asks this while editing a session and today's

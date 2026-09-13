@@ -47,7 +47,7 @@ import { useSkillEffects } from '@/store/skills';
 import { useProfile, type Injury } from '@/store/profile';
 import type { BodyPart } from '@/content/warmups';
 import { useSessions } from '@/store/sessions';
-import { lastLogged } from '@/engine/exerciseLog';
+import { againstPrescription, lastLogged } from '@/engine/exerciseLog';
 import { circuitPlan } from '@/engine/circuit';
 import { circuitSubject, protocolSubject, type TimerSubject } from '@/engine/timer';
 import { ExerciseNumbers } from './ExerciseNumbers';
@@ -766,6 +766,20 @@ function SessionEditor({
           )}
 
           <Card title="Climbs">
+            {/* Above the button it applies to (PLAN.md M130). It shipped
+                below, so the natural gesture — pick the grade, pick the
+                outcome, tap Add — filed every climb unnamed and left the
+                field reading as leftover. Named climbs are what feed
+                project suggestion and what the tally row already knows how
+                to show, so the ordering was quietly costing a feature. */}
+            <Input
+              value={climbName}
+              onChange={(e) => setClimbName(e.target.value)}
+              placeholder="Name it (optional) — named climbs can become projects"
+              aria-label="Climb name"
+              className="mb-3"
+            />
+
             <ClimbEntry
               scale={scale}
               grade={grade}
@@ -778,14 +792,6 @@ function SessionEditor({
               onAngle={setAngle}
               onRopeStyle={setRopeStyle}
               onAdd={addClimb}
-            />
-
-            <Input
-              value={climbName}
-              onChange={(e) => setClimbName(e.target.value)}
-              placeholder="Name it (optional) — named climbs can become projects"
-              aria-label="Climb name"
-              className="mb-3"
             />
 
             {session.climbs.length === 0 ? (
@@ -994,6 +1000,31 @@ function SessionEditor({
                                 onChange={patchExercise}
                               />
                             )}
+                            {/* What you logged against what the day asked
+                                (PLAN.md M130). Derived — the entry stores no
+                                block or phase, and does not need to: the day
+                                knows its own prescription, and since M127 to
+                                M129 that is the week's, after any deload.
+
+                                Only when the two differ. "You did what was
+                                asked" on every line of every session is the
+                                kind of line that teaches people to stop
+                                reading, and falling short is a fact the
+                                climber typed rather than a fault. */}
+                            {(() => {
+                              if (!logged) return null;
+                              const verdict = againstPrescription(logged, ex.sets);
+                              if (verdict === null || verdict.verdict === 'met') return null;
+                              return (
+                                <div className="text-ink-soft text-xs mt-1 flex items-start gap-1.5">
+                                  <TrendingDown size={12} className="shrink-0 mt-0.5" />
+                                  <span>
+                                    {verdict.did} {verdict.did === 1 ? 'set' : 'sets'}, against the{' '}
+                                    {verdict.asked} asked.
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </div>
                           {protocol?.timer && (
                             <Button

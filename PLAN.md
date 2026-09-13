@@ -5833,7 +5833,8 @@ rests on an inference it says so.*
   that **proposes and never writes**, honours the readiness cap, and shows its reasoning the
   way the coach and the finder already do.
 
-- **M130 — a set recorded as it went, and read back across the block.** *Proposed. Feeds M129.*
+- **M130 — a set recorded as it went, and read back across the block.** *Proposed, and built
+  sixth — see the Done entry below. Feeds M129.*
   `LoggedExercise` is `{ name, sets?, reps?, load?, hold?, note? }` (`db/sessions.ts:117-136`),
   with `reps` documented as "reps per set, *where they were the same*". So the canonical
   hangboard session — five ascending sets, the fourth of which failed — collapses to one row
@@ -6253,3 +6254,60 @@ rests on an inference it says so.*
   `engine/plan.ts`, which is entry-chunk because `usePlannedDay` reads it on every screen that
   shows a day; the readiness engine and the card it feeds are both inside the lazy logger.
   4,052 tests pass.
+
+- **M130 — a set recorded as it went, and read back across the block.** *Done. The one that
+  makes M129's suggestion worth trusting.*
+  **The proposal asked for the wrong thing, and the code said so in as many words.** It wanted
+  a per-set table: five ascending sets, the fourth of which failed, collapsing to one row. But
+  `db/sessions.ts:117-136` documents the one-row shape as a decision M98 took on purpose — *"a
+  per-set table is a different control and a much longer logger"* — and `sets` already means
+  *sets completed*, not sets prescribed. A climber who managed two of five types 2, and the log
+  is then correct. Nothing was unrecordable. What was missing is that **nobody compared the
+  two**: the app knew what it asked for and knew what was done and never put the numbers in the
+  same sentence. That is a derivation, not a schema change, and it is the half of the proposal
+  worth building.
+  **`againstPrescription` reads a dose and a logging and returns short, met or over.** It lives
+  in `engine/exerciseLog.ts` beside `lastLogged`, and `doseRange` is the whole of its cleverness
+  — `3-5` is a range, `5` is a range of one, and anything it cannot read is a `null` rather than
+  a guess. The entry stores no block and no phase and still does not need to: the day knows its
+  own prescription, and since M127 to M129 that is the *week's* dose, after any deload, which is
+  what makes the comparison honest. Comparing against the phase's opening numbers on a deload
+  week would have told a climber they fell short of a dose the program itself had withdrawn.
+  **Only when the two differ.** *You did what was asked* on every line of every session is the
+  kind of line that teaches people to stop reading. Short or over gets one quiet grey line —
+  *2 sets, against the 5 asked* — and met gets silence. Not a warning colour, either: falling
+  short is a fact the climber typed, not a fault the app caught them in.
+  **The other half is a chart that already existed.** `exerciseSeries()` has built the full run
+  of readings for one line since M98, and its only caller was `lastLogged` in the same module —
+  so a benchmark got a progression line and the numbers typed every single session got one
+  "last time" line. The block screen's *What you were lifting* card now opens each line onto
+  its own chart, windowed to the block the card is about, charting whichever dimension that
+  line actually carries — load for a hangboard, hold for a dead hang, reps for pull-ups. Shut
+  by default and one at a time: the card lists every line worth listing, and four charts
+  stacked is a wall rather than a readback.
+  *Folded in:* the climb-name field now sits **above** the Add button it applies to. The
+  natural gesture is grade, outcome, Add, and with the field below the button every climb was
+  filed unnamed — which is what feeds project suggestion.
+  **Measured, not asserted.** Eighteen mutations, every one killed: a range read as only its
+  low or only its high end, an unreadable count guessed at, short and over swapped, everything
+  met, nothing met, a verdict on an untyped count, the asked string left untrimmed; the verdict
+  never shown, shown when it was met, and one set reading as "sets"; the climb name back under
+  the button; the history never opening, every line open at once, a second tap leaving it open,
+  the series not windowed to the block, the chart charting the wrong dimension, and the chart
+  fed a pre-formatted date. A no-op statement reorder survived. **Three survived the first
+  round and all three were real gaps.** Counting `<svg>` elements passed with no chart at all,
+  because the report card above has one — the test now names the chart by its caption. The
+  windowing test asserted a count the unwindowed code also produced. And a `points.length < 2`
+  guard in the history component turned out to be unreachable — a line already excluded
+  upstream — so it is deleted rather than left standing as a branch no test can enter. The last
+  survivor was the interesting one: the chart is handed a date and formats it itself, so
+  handing it a constant still drew a line and still looked right. It is killed by reading the
+  chart's own data table, which is where the formatted date lands in the DOM — the accessible
+  view of a chart turning out to be the testable one.
+  **In a browser, both themes, 430px and 1280px.** Two sets against a five-set prescription
+  shows the line; the block screen's chart opens with two readings and a table reading *Sep 3 ·
+  +12 lbs, Sep 10 · +15 lbs* — real dates, from real sessions. The climb name sits above Add in
+  all four. No overflow, no page errors.
+  **Budget.** 165.0 holds: measured 164.03 → 164.17, so 0.14KB — the engine function is
+  entry-chunk beside `lastLogged`, and both screens that show its output are lazy. 4,069 tests
+  pass.
