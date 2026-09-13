@@ -5,10 +5,9 @@ export const LOCKDOWN_DRILLS: Drill[] = [
   {
     id: 'quiet_feet_hover_hands',
     name: 'Quiet Feet + 3-Second Hover Hands',
-    description:
-      'Before placing each hand on a hold, hover it above the target for a 3-count while staying still. Then place precisely. Forces slow, static climbing and perfect body positioning. Do for 6-8 V-easy boulders, rest 2 min between.',
     duration: '30-40 min',
     focus: 'Body Positioning & Static Control',
+    loads: [],
     category: 'technique',
     discipline: 'both',
     level: 'V3-V5',
@@ -18,10 +17,9 @@ export const LOCKDOWN_DRILLS: Drill[] = [
   {
     id: 'drop_knee_isolation',
     name: 'Drop-Knee Isolation',
-    description:
-      'On overhanging V-easy boulders, find every opportunity to drop-knee. Rotate the inside knee down toward the wall, which rotates the hip into the wall and extends your reach. Do not skip holds — use drop-knees even where a square hip would work. 4-6 problems, focus on hip rotation, not arm pull.',
     duration: '30-40 min',
     focus: 'Hip Rotation',
+    loads: ['hip', 'legs'],
     category: 'technique',
     discipline: 'both',
     level: 'V3-V5',
@@ -31,10 +29,9 @@ export const LOCKDOWN_DRILLS: Drill[] = [
   {
     id: 'heel_hook_commitment',
     name: 'Heel Hook Commitment',
-    description:
-      'Pick 5-6 problems with intentional heel-hook holds (or create them on juggy traverses). On every heel hook, fully weight the heel — pull yourself INTO the wall using the heel before reaching. Do not just use the heel for balance; use it as a second hand. Forces the hamstring and glute engagement climbers typically skip.',
     duration: '30-40 min',
     focus: 'Lower Body Engagement',
+    loads: ['sustained', 'hook', 'hip'],
     category: 'technique',
     discipline: 'both',
     level: 'V3-V5',
@@ -44,10 +41,9 @@ export const LOCKDOWN_DRILLS: Drill[] = [
   {
     id: 'static_trifecta',
     name: 'The Trifecta (Quiet Feet + Hover + Drop-Knee)',
-    description:
-      'Combine the last three drills on every climb: Quiet Feet on every foot placement, 3-second Hover before every hand, drop-knee wherever possible. Slower session than normal — that is the point. Quality over quantity. 4-5 problems, V-easy.',
     duration: '45-55 min',
     focus: 'Integrated Static Technique',
+    loads: ['legs'],
     category: 'technique',
     discipline: 'both',
     level: 'V3-V5',
@@ -57,10 +53,9 @@ export const LOCKDOWN_DRILLS: Drill[] = [
   {
     id: 'lock_off_holds_on_wall',
     name: 'Lock-Off Holds on the Wall',
-    description:
-      'Climb a V-easy to V-moderate problem. On every OTHER move, pause in the lock-off position for 3 seconds before reaching. Builds in-position isometric capacity and the habit of setting the body before the hand moves. 4-6 problems, 2 min rest. Match intensity to how fresh the arms feel.',
     duration: '30-40 min',
     focus: 'In-Position Strength',
+    loads: ['pull'],
     category: 'power',
     discipline: 'both',
     level: 'V3-V5',
@@ -70,10 +65,9 @@ export const LOCKDOWN_DRILLS: Drill[] = [
   {
     id: 'twist_lock_practice',
     name: 'Twist-Lock Practice',
-    description:
-      'On overhanging problems, turn your body into the wall so your hip is parallel to the wall instead of square. The twist-lock is the key to reaching long on roofs and steep sections without cutting feet. 5-6 problems, focus on rotating through moves, not pulling through them.',
     duration: '30-40 min',
     focus: 'Rotational Technique',
+    loads: ['hip'],
     category: 'technique',
     discipline: 'both',
     level: 'V3-V5',
@@ -83,10 +77,9 @@ export const LOCKDOWN_DRILLS: Drill[] = [
   {
     id: 'static_projecting',
     name: 'Static Projecting',
-    description:
-      'Pick a project 1-2 grades above your flash on static terrain. NO dynamic moves allowed — every move static and controlled. If you cannot do a move statically, find a static beta or skip the problem. Exposes which moves require real static strength. 3-5 attempts, 5 min rest.',
     duration: '45-60 min',
     focus: 'Static Problem-Solving',
+    loads: ['dynamic'],
     category: 'strategy',
     discipline: 'both',
     level: 'V3-V5',
@@ -96,10 +89,9 @@ export const LOCKDOWN_DRILLS: Drill[] = [
   {
     id: 'deload_the_flow_session',
     name: 'DELOAD: The Flow Session',
-    description:
-      'Intentional easy week. Climb 30 minutes at RPE 4-5 on terrain 2+ grades below your limit. No drills, no constraints — just smooth, relaxed static movement. Recovery matters more than stimulus this week. Skip if you are feeling fresh; your CNS will thank you.',
     duration: '30-40 min',
     focus: 'Recovery',
+    loads: [],
     category: 'recovery',
     discipline: 'both',
     level: 'V3-V5',
@@ -109,10 +101,9 @@ export const LOCKDOWN_DRILLS: Drill[] = [
   {
     id: 'no_match_climbing',
     name: 'No-Match Climbing',
-    description:
-      'Pick V-easy to V-moderate problems. Climb them without matching hands on any hold — every move must be a controlled reach to the next hold with the OTHER hand. Forces precise sequencing and commits the body to each move. 5-6 problems, full rest between.',
     duration: '30-40 min',
     focus: 'Commitment & Sequencing',
+    loads: [],
     category: 'technique',
     discipline: 'both',
     level: 'V3-V5',
@@ -122,10 +113,9 @@ export const LOCKDOWN_DRILLS: Drill[] = [
   {
     id: 'offset_pull_practice',
     name: 'Offset Pull Practice',
-    description:
-      'On overhanging terrain, find moves where you can intentionally leave ONE hand low and reach far with the other — the offset pull. Builds one-armed pulling strength in a real climbing context. 4-5 problems, 2-3 offset pulls each, rest 3 min between problems.',
     duration: '30-40 min',
     focus: 'One-Arm Strength Application',
+    loads: ['one-arm'],
     category: 'power',
     discipline: 'both',
     level: 'V3-V5',
@@ -135,10 +125,9 @@ export const LOCKDOWN_DRILLS: Drill[] = [
   {
     id: 'project_week_static',
     name: 'Project Week',
-    description:
-      'Pick your hardest static project. Apply everything: Quiet Feet, Hover Hands, Drop-Knees, Twist-Locks where they fit. 4-6 quality burns, 5-10 min rest between. This is your first performance peak on static strength. Send or bank the beta for next cycle.',
     duration: '60-90 min',
     focus: 'Performance',
+    loads: ['legs'],
     category: 'performance',
     discipline: 'both',
     level: 'V3-V5',
@@ -148,10 +137,9 @@ export const LOCKDOWN_DRILLS: Drill[] = [
   {
     id: 'graduation_retest_static',
     name: 'Graduation Retest',
-    description:
-      'Retest every Week 0 baseline: Density Hang (BW and +10lbs), 90° Lock-Off, Max Pull-Ups, Hollow Body, Max Static Grade, Wrist Extensors. Log everything. Your strength gains here are what qualify you for Iron Grip’s weighted hangboard work.',
     duration: '60 min',
     focus: 'Assessment',
+    loads: ['fingers', 'pull', 'forearm', 'core'],
     category: 'assessment',
     discipline: 'both',
     level: 'V3-V5',

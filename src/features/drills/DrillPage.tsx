@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { CalendarPlus, Check } from 'lucide-react';
 import { DRILL_CATEGORIES, getDrill } from '@/content/drills';
 import { drillCoaching } from '@/content/drillCoaching';
+import { drillText } from '@/content/drillText';
 import { PROTOCOLS } from '@/content/protocols';
 import { EQUIPMENT_LABELS } from '@/engine/customProgram';
 import type { Drill, DrillId } from '@/content/types';
@@ -152,7 +153,7 @@ export function DrillPage({ params }: { params: { id: string } }) {
         <PutOnToday drill={drill} />
 
         <Card title="How to run it">
-          <p className="text-sm leading-relaxed whitespace-pre-line">{drill.description}</p>
+          <p className="text-sm leading-relaxed whitespace-pre-line">{drillText(drill.id)}</p>
           <div className="flex flex-wrap gap-1.5 mt-3">
             {[
               DRILL_CATEGORIES[drill.category].label,

@@ -20,9 +20,11 @@
  */
 
 import type { BodyPart } from '@/content/warmups';
-import type { Drill, Equipment, Exercise, SessionType } from '@/content/types';
+import type { Drill, DrillLoad, Equipment, Exercise, SessionType } from '@/content/types';
 
 export interface LoadRule {
+  /** The name a drill's `loads` refers to it by (PLAN.md M137). */
+  id: DrillLoad;
   /** What the words say. */
   pattern: RegExp;
   parts: BodyPart[];
@@ -36,31 +38,37 @@ export interface LoadRule {
  */
 export const LOAD_RULES: LoadRule[] = [
   {
+    id: 'campus',
     pattern: /\bcampus|\bbump\b|ladder(ing)?\b|double dyno/i,
     parts: ['fingers', 'pulley', 'elbow', 'shoulder'],
     because: 'campus work is the highest-force protocol there is',
   },
   {
+    id: 'one-arm',
     pattern: /one[- ]?arm|1[- ]?arm|unilateral hang/i,
     parts: ['fingers', 'pulley', 'elbow', 'shoulder'],
     because: 'one-arm work doubles the load through a single side',
   },
   {
+    id: 'fingers',
     pattern: /max hang|repeater|dead ?hang|min(imum)? edge|density hang|hangboard|fingerboard|\bedge\b|crimp/i,
     parts: ['fingers', 'pulley'],
     because: 'it loads the fingers directly',
   },
   {
+    id: 'lever',
     pattern: /front lever|back lever|\blever\b|muscle[- ]?up|typewriter/i,
     parts: ['elbow', 'shoulder', 'back'],
     because: 'it holds the elbow and shoulder under tension',
   },
   {
+    id: 'pull',
     pattern: /lock[- ]?off|pull[- ]?up|chin[- ]?up|\brow\b|lat pull|\bpulldown\b/i,
     parts: ['elbow', 'shoulder', 'back'],
     because: 'pulling loads the elbow and shoulder',
   },
   {
+    id: 'dynamic',
     pattern: /dyno|dynamic|deadpoint|explosive|throw|pop\b|jump/i,
     parts: ['shoulder', 'elbow', 'knee'],
     because: 'catching a dynamic move is a shock load',
@@ -68,41 +76,49 @@ export const LOAD_RULES: LoadRule[] = [
   {
     // Sustained gripping is not a low-force activity for a healing tendon,
     // even though it feels like the easy end of training.
+    id: 'sustained',
     pattern: /\barc\b|linked lap|\blaps?\b|circuit|\bpump\b|4 ?x ?4|continuous|traverse/i,
     parts: ['fingers', 'pulley'],
     because: 'sustained gripping keeps the fingers under load for a long time',
   },
   {
+    id: 'open-hand',
     pattern: /sloper|open hand|pinch|gaston/i,
     parts: ['fingers', 'shoulder'],
     because: 'it holds an open-handed position under load',
   },
   {
+    id: 'shoulder',
     pattern: /overhead|press|dip\b|push[- ]?up|shoulder|scapul|face pull|\bY\b|\bT\b|\bW\b/i,
     parts: ['shoulder'],
     because: 'it works through the shoulder',
   },
   {
+    id: 'forearm',
     pattern: /wrist|forearm|extensor|hammer curl|reverse curl|rice bucket/i,
     parts: ['wrist', 'elbow'],
     because: 'it loads the forearm and wrist',
   },
   {
+    id: 'hook',
     pattern: /heel hook|toe hook|high ?step|drop ?knee|rock ?over|flag\b/i,
     parts: ['knee', 'hip'],
     because: 'it torques the knee and hip',
   },
   {
+    id: 'hip',
     pattern: /hip|hamstring|adductor|frog|pigeon|split|straddle/i,
     parts: ['hip'],
     because: 'it works through the hip',
   },
   {
+    id: 'legs',
     pattern: /squat|lunge|calf|ankle|hop\b|landing|drop\b/i,
     parts: ['ankle', 'knee'],
     because: 'it loads the ankle and knee',
   },
   {
+    id: 'core',
     pattern: /core|plank|hollow|dead ?bug|leg raise|\bab\b|oblique|hanging knee/i,
     parts: ['back'],
     because: 'it works through the trunk',
@@ -125,11 +141,18 @@ export interface LoadFinding {
 
 /** Every rule that matches some text, hardest first. Empty when none do. */
 export function scanText(text: string): LoadFinding[] {
-  const out: LoadFinding[] = [];
-  for (const rule of LOAD_RULES) {
-    if (rule.pattern.test(text)) out.push({ parts: rule.parts, because: rule.because });
-  }
-  return out;
+  return rulesFor(rulesInText(text));
+}
+
+/** The rules some text matches, by name, hardest first (PLAN.md M137). */
+export function rulesInText(text: string): DrillLoad[] {
+  return LOAD_RULES.filter((rule) => rule.pattern.test(text)).map((rule) => rule.id);
+}
+
+/** The findings for a set of rule names, in the rules' own order. */
+function rulesFor(ids: Iterable<DrillLoad>): LoadFinding[] {
+  const wanted = new Set(ids);
+  return LOAD_RULES.filter((rule) => wanted.has(rule.id)).map(({ parts, because }) => ({ parts, because }));
 }
 
 /** The parts a text loads, deduplicated. */
@@ -156,13 +179,27 @@ export function exerciseConflict(exercise: Exercise, injured: readonly BodyPart[
   return firstConflict(scanText(joinExercise(exercise)), injured);
 }
 
-/** A drill's own words: its name, focus and the prose that describes it. */
-export function drillConflict(drill: Drill, injured: readonly BodyPart[]): LoadFinding | null {
+/**
+ * Everything a drill loads: its kit, its name and focus read now, and what
+ * its text said when `loads` was derived from it (PLAN.md M137). The text
+ * itself is out of the entry chunk; for 67 drills it was the only place the
+ * words this scan looks for appeared, which is why they travel as data.
+ */
+export function drillFindings(drill: Pick<Drill, 'name' | 'focus' | 'loads' | 'equipment'>): LoadFinding[] {
   const byEquipment = drill.equipment
     .map((e) => EQUIPMENT_LOADS[e])
     .filter((v): v is { parts: BodyPart[]; because: string } => v !== undefined);
-  const findings = [...byEquipment, ...scanText(`${drill.name} ${drill.focus} ${drill.description}`)];
-  return firstConflict(findings, injured);
+  return [...byEquipment, ...rulesFor([...rulesInText(`${drill.name} ${drill.focus}`), ...drill.loads])];
+}
+
+/** Every part a drill loads, deduplicated. */
+export function drillLoads(drill: Pick<Drill, 'name' | 'focus' | 'loads' | 'equipment'>): BodyPart[] {
+  return [...new Set(drillFindings(drill).flatMap((f) => f.parts))];
+}
+
+/** A drill's own words: its kit, its name, its focus and what its text loads. */
+export function drillConflict(drill: Pick<Drill, 'name' | 'focus' | 'loads' | 'equipment'>, injured: readonly BodyPart[]): LoadFinding | null {
+  return firstConflict(drillFindings(drill), injured);
 }
 
 function firstConflict(findings: LoadFinding[], injured: readonly BodyPart[]): LoadFinding | null {

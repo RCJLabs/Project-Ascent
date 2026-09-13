@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { Activity, BookOpen, CalendarRange, ChevronRight, HeartPulse, Ruler, Trophy } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getDrill } from '@/content/drills';
+import { drillText } from '@/content/drillText';
 import type { Session } from '@/db/sessions';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
 import { PageGrid, Wide } from '@/ui/PageGrid';
@@ -289,7 +290,7 @@ function catalogueWords(session: Session): string {
   const words: string[] = [];
   if (session.drillId) {
     const drill = getDrill(session.drillId);
-    if (drill) words.push(drill.name, drill.focus, drill.description);
+    if (drill) words.push(drill.name, drill.focus, drillText(drill.id) ?? '');
   }
   const type = session.programId
     ? getProgram(session.programId)?.sessionTypes.find((t) => t.id === session.sessionTypeId)

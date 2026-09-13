@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'wouter';
 import { Activity, AlertTriangle, BookOpen, ChevronDown, ChevronRight, ChevronUp, Clock, Layers, Play, Timer } from 'lucide-react';
 import { getDrill } from '@/content/drills';
+import { drillText } from '@/content/drillText';
 import { guideSummaryFor } from '@/content/guides/summary';
 import { getMetric } from '@/content/metrics';
 import { getProtocol } from '@/content/protocols';
@@ -214,7 +215,7 @@ function SessionTypeCard({
                       )}
                       <span className="font-semibold text-sm">{drill.name}</span>
                     </div>
-                    <p className="text-sm text-ink-soft mt-1 leading-relaxed">{drill.description}</p>
+                    <p className="text-sm text-ink-soft mt-1 leading-relaxed">{drillText(drill.id)}</p>
                     <p className="text-xs text-ink-soft/80 mt-1.5 flex items-center gap-2 flex-wrap">
                       <span className="inline-flex items-center gap-1">
                         <Clock size={11} />

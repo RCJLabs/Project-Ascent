@@ -9,6 +9,7 @@ import {
   dailyChallenge,
   deriveBoard,
   hash,
+  categoryLoads,
   offeredBounties,
   resolveBounty,
   weeklyChallenges,
@@ -282,5 +283,16 @@ describe('bounties and injuries', () => {
   it('reaches the board itself', () => {
     const board = deriveBoard({ sessions: history(), state, today: TODAY, injured: ['pulley'] });
     for (const offer of board.offers) expect(bountyLoads(offer)).not.toContain('pulley');
+  });
+
+  it('reads what a category’s drills load from their text, not their names alone', () => {
+    // The assessment drills are named "graduation retest" and the like; it
+    // is their text that says they hang, pull and lever (PLAN.md M137).
+    // The text is out of the entry chunk and what it said travels as
+    // `loads`, so this is the reading that would go quiet if it stopped.
+    const fromText = categoryLoads('assessment');
+    expect(fromText).toContain('elbow');
+    expect(fromText).toContain('back');
+    expect(categoryLoads('finger-strength')).toContain('shoulder');
   });
 });

@@ -6730,7 +6730,7 @@ something rests on an inference it says so.*
   imports their files, which is an argument for doing it in the catalogue's order and stopping
   when the returns thin, not against starting.
 
-- **M137 — the drill text out of the entry chunk.** *Proposed. Medium.*
+- **M137 — the drill text out of the entry chunk.** *Proposed, and built third — see the Done entry below.*
   **Measured.** 156 drill descriptions: 47.0KB raw, **16.5KB gzipped** on their own. The entry
   chunk is 159.1KB gzipped against a budget of 168, and a description probe lands in
   `index-*.js` and in neither `DrillPage-*.js` nor `catalogue-*.js`. Ten modules import
@@ -7031,3 +7031,53 @@ something rests on an inference it says so.*
   type, when a milestone opens that card next.
   **Budget.** 170.0 holds: measured 169.32 → 169.42, and the builder is lazy — its chunk went
   5.6 → 6.2KB gzipped, the session editor's is 4.5KB. 4,347 tests pass.
+
+- **M137 — the drill text out of the entry chunk.** *Done. The third of the third brainstorm.*
+  **The premise held and the proposal was wrong about who reads the text.** *"Nothing in the
+  entry reads the paragraph except search"* — the injury engine does. `drillConflict` (M89) scans
+  a drill's name, focus *and description* for the words that load a healing part, and
+  `challenges.categoryLoads` scans the same for the board's injury rule; both run on Home's first
+  paint. Measured before moving anything: for **67 of the 156 drills** the description is the
+  only place those words appear — *Vertical Deadpoint*'s text is where the crimps are, and a
+  scan over name and focus alone reads it as loading nothing. So the paragraph could not simply
+  leave; what it says about load had to stay behind as data.
+  **What moved, and what stayed.** The 156 descriptions live in `content/drillText.ts` now, keyed
+  by id in the order of the drill files, a 17.3KB chunk of their own; `Drill.description` is gone
+  from the type. The drill pages, the logger's drill cards, the program page and Progress import
+  it statically — every one of them is a lazy route — and the search sheet fetches it when it
+  opens, the way it has fetched the glossary since M65, indexing a drill by name and focus until
+  the text lands. The library's search-by-method takes the text from the page rather than
+  importing it, because the registry is entry-chunk by construction and would have dragged the
+  text back in. **`Drill.loads` is what stayed:** the fourteen load rules have names now, and each
+  drill carries the names its text matches — derived once, held as data, and pinned to the text
+  by `drillText.test.ts` drill by drill, so an edited description names the drill whose `loads`
+  no longer agrees with it. The engine reads name and focus live and the loads as given; nothing
+  it reported before this is reported differently after it.
+  **Measured, not asserted.** First load **169.42 → 153.50KB**, 15.92KB back, against the
+  12–17 the proposal expected; the budget follows the win to 154.0, with `perf.test.ts` holding
+  every one of the 156 out of the entry chunk and in the text chunk by a marker each — one
+  marker would pass a split that leaked half the text back. Sixteen mutations, every one
+  killed: the loads ignored, the name and focus no longer read, the kit no longer read, findings
+  out of the rules' order, every rule matching every text, loads keeping duplicates; a drill's
+  loads drifting from its text, a load its text does not say, a rule id shared, a text that is a
+  stub; the registry ignoring the text it is handed, the library search not handed it, the drill
+  page showing nothing where the text was, the search index never receiving it, the text
+  imported eagerly, a category's loads read from names alone. A no-op statement reorder survived.
+  **Three survived the first round.** Two were assertions that did not exist — nothing held that a
+  drill's *name* alone still raises a finding with nothing in its loads, and nothing held that
+  `drillLoads` says a part once when three rules name it; both do now. The third was the
+  mutation's fault: it trimmed three words from the middle of a description and called that a
+  stub, which the length floor rightly ignored and the loads pin rightly did not notice, because
+  *crimp* still appeared later in the same text. Re-anchored to replace the whole paragraph, and
+  killed.
+  **In a browser, both themes, 430px and 1280px.** A cold start loads three chunks and the text
+  is not among them. With an elbow injury and a structural day planned, Home still says *3
+  exercises load your elbow*. The drill page pulls the text chunk and shows *Pick 3-5 crimpy
+  boulders at your limit minus 1 grade…* under *How to run it*, over the cues. The library finds
+  Limit Boulders on the Crimps by *resting 3-5 min between burns*, a phrase in no drill's name;
+  the search sheet finds it by the same phrase once the text has arrived. No overflow, no page
+  errors.
+  **Named, and left.** `loads` is generated from the text and the test insists the two agree: a
+  coach who wants a drill to count as loading something its text does not say edits the text,
+  not the list. That is the right constraint for now — the text is what the climber reads — and
+  it is a constraint, not a feature. 4,363 tests pass.

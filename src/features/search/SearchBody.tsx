@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { Search as SearchIcon, X } from 'lucide-react';
 import { DRILLS } from '@/content/drills';
@@ -41,6 +41,23 @@ function useIndex(): SearchItem[] {
   const objectives = useObjectives((s) => s.objectives);
   const custom = useCustomPrograms((s) => s.custom);
   const display = useSettings((s) => s.display);
+
+  /**
+   * The drills' text, fetched when the sheet opens (PLAN.md M137). It is a
+   * tenth of the entry chunk and this was the one eager reader of it; the
+   * glossary has been loaded this way since M65. Until it lands a drill is
+   * found by its name and focus, which is how it is found on the page.
+   */
+  const [drillText, setDrillText] = useState<Readonly<Record<string, string>> | null>(null);
+  useEffect(() => {
+    let live = true;
+    void import('@/content/drillText').then((m) => {
+      if (live) setDrillText(m.DRILL_TEXT);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   return useMemo(() => {
     const items: SearchItem[] = [];
@@ -154,7 +171,7 @@ function useIndex(): SearchItem[] {
         title: drill.name,
         detail: drill.focus,
         href: '/train',
-        keywords: [drill.description],
+        ...(drillText?.[drill.id] ? { keywords: [drillText[drill.id]!] } : {}),
       });
     }
 
@@ -179,7 +196,7 @@ function useIndex(): SearchItem[] {
     }
 
     return items;
-  }, [byDate, projects, objectives, custom, display]);
+  }, [byDate, projects, objectives, custom, display, drillText]);
 }
 
 /**

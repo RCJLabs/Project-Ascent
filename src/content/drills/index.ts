@@ -81,6 +81,13 @@ export interface DrillFilter {
   discipline?: Exclude<Discipline, 'both'>;
   equipment?: Equipment[];
   search?: string;
+  /**
+   * The drills' text, for a search that reads the method as well as the
+   * name (PLAN.md M137). Handed in by the page rather than imported here,
+   * because this registry is entry-chunk by construction and the text is
+   * not; without it a search reads names and focus lines only.
+   */
+  text?: Readonly<Record<string, string>>;
 }
 
 /** Filter the library. `discipline: 'boulder'` also matches 'both' drills;
@@ -95,7 +102,7 @@ export function filterDrills(filter: DrillFilter): Drill[] {
       if (!d.equipment.every((e) => e === 'none' || have.has(e))) return false;
     }
     if (needle) {
-      const haystack = `${d.name} ${d.focus} ${d.description}`.toLowerCase();
+      const haystack = `${d.name} ${d.focus} ${filter.text?.[d.id] ?? ''}`.toLowerCase();
       if (!haystack.includes(needle)) return false;
     }
     return true;

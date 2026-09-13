@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { AlertTriangle, Check, ChevronDown, ChevronUp, Clock, Copy, Flame, Plus, RotateCw, Snowflake, Sparkles, Timer, Trash2, TrendingDown, TrendingUp, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getDrill } from '@/content/drills';
+import { drillText } from '@/content/drillText';
 import { getProtocol } from '@/content/protocols';
 import { SCALE_MAX, getField, type FieldSpec } from '@/content/fields';
 import type { FieldId, SessionType } from '@/content/types';
@@ -180,7 +181,7 @@ export function DayBody({ date }: { date: string }) {
             {day?.drill && (
               <Card title="Drill this week">
                 <div className="font-semibold text-sm mb-1">{day.drill.name}</div>
-                <p className="text-sm text-ink-soft leading-relaxed">{day.drill.description}</p>
+                <p className="text-sm text-ink-soft leading-relaxed">{drillText(day.drill.id)}</p>
                 <p className="text-xs text-ink-soft/80 mt-2 flex items-center gap-1.5">
                   <Clock size={11} /> {day.drill.duration} · {day.drill.focus}
                 </p>
@@ -1081,7 +1082,7 @@ function SessionEditor({
                   {session.drillDone ? 'Done' : 'Mark done'}
                 </Chip>
               </div>
-              <p className="text-sm text-ink-soft leading-relaxed">{drill.description}</p>
+              <p className="text-sm text-ink-soft leading-relaxed">{drillText(drill.id)}</p>
               {(() => {
                 const clash = drillConflict(drill!, hurtParts);
                 return clash ? (

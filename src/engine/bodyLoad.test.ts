@@ -10,6 +10,8 @@ import {
   dayLoad,
   describeDayLoad,
   partsInText,
+  drillFindings,
+  drillLoads,
   scanText,
   sessionConflicts,
 } from './bodyLoad';
@@ -75,7 +77,7 @@ describe('conflicts against an injury', () => {
   // A drill's equipment loads the tissue whatever its prose says.
   it('flags a hangboard drill by its equipment alone', () => {
     const drill: Drill = {
-      id: 'x', name: 'Quiet session', description: 'Nothing in particular.', duration: '30 min',
+      id: 'x', name: 'Quiet session', loads: [], duration: '30 min',
       focus: 'General', category: 'technique', discipline: 'both', level: 'V0-V17',
       equipment: ['hangboard'], sources: [],
     };
@@ -83,9 +85,32 @@ describe('conflicts against an injury', () => {
     expect(drillConflict(drill, ['knee'])).toBeNull();
   });
 
-  it('reads a drill’s description as well as its name', () => {
+  it('reads a drill’s name on its own, with nothing in its loads', () => {
+    // The name and focus are scanned live; only the text travels as data.
     const drill: Drill = {
-      id: 'y', name: 'Session', description: 'Work heel hooks on steep ground.', duration: '30 min',
+      id: 'c', name: 'Campus laddering', loads: [], duration: '20 min',
+      focus: 'Power', category: 'power', discipline: 'both', level: 'V5+',
+      equipment: ['wall'], sources: [],
+    };
+    expect(drillConflict(drill, ['elbow'])?.because).toMatch(/campus/);
+  });
+
+  it('lists what a drill loads once each, however many rules say so', () => {
+    const drill: Drill = {
+      id: 'd', name: 'Session', loads: ['fingers', 'sustained'], duration: '20 min',
+      focus: 'Endurance', category: 'endurance', discipline: 'both', level: 'V0-V17',
+      equipment: ['hangboard'], sources: [],
+    };
+    // Three findings name the fingers and the pulleys; the list says each once.
+    expect(drillLoads(drill)).toEqual(['fingers', 'pulley']);
+  });
+
+  it('reads what a drill’s text loads, as well as its name', () => {
+    // The text itself is out of the entry chunk (PLAN.md M137); what it
+    // said about load travels as `loads`, derived from it and pinned by
+    // `drillText.test.ts`.
+    const drill: Drill = {
+      id: 'y', name: 'Session', loads: ['hook'], duration: '30 min',
       focus: 'Footwork', category: 'technique', discipline: 'both', level: 'V0-V17',
       equipment: ['wall'], sources: [],
     };
@@ -126,7 +151,7 @@ describe('the scan against the real catalog', () => {
   // tissue are seen, and the ones that do not are left alone. A technique
   // drill about footwork precision should be quiet; an ARC lap should not.
   const seen = (d: (typeof DRILLS)[number]) =>
-    scanText(`${d.name} ${d.focus} ${d.description}`).length > 0;
+    drillFindings(d).length > 0;
   const share = (categories: string[]) => {
     const inScope = DRILLS.filter((d) => categories.includes(d.category));
     return inScope.filter(seen).length / inScope.length;
@@ -194,7 +219,7 @@ describe('what a whole planned day loads', () => {
     ],
   };
   const heels: Drill = {
-    id: 'h', name: 'Heel practice', description: 'Work heel hooks on steep ground.', duration: '20 min',
+    id: 'h', name: 'Heel practice', loads: ['hook'], duration: '20 min',
     focus: 'Footwork', category: 'technique', discipline: 'both', level: 'V0-V17',
     equipment: ['wall'], sources: [],
   };

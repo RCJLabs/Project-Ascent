@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DRILL_TEXT } from '@/content/drillText';
 import { DRILLS } from './index';
 import { PROGRAMS } from '@/content/programs';
 
@@ -66,7 +67,7 @@ describe('drill equipment', () => {
       drill.equipment
         .filter((kit) => {
           const words = VOCABULARY[kit];
-          return words !== undefined && !words.test(`${drill.name} ${drill.focus} ${drill.description}`);
+          return words !== undefined && !words.test(`${drill.name} ${drill.focus} ${DRILL_TEXT[drill.id]}`);
         })
         .map((kit) => `${drill.id} declares ${kit} but never asks you to use one`),
     );
@@ -116,7 +117,7 @@ describe('drill equipment', () => {
       (d) =>
         !d.equipment.includes('wall') &&
         !d.equipment.includes('none') &&
-        onTheWall.test(`${d.name} ${d.description}`),
+        onTheWall.test(`${d.name} ${DRILL_TEXT[d.id]}`),
     ).map((d) => `${d.id} climbs but does not declare a wall (declares ${d.equipment.join(', ') || 'nothing'})`);
     expect(wrong).toEqual([]);
   });

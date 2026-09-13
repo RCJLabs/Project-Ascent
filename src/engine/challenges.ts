@@ -21,7 +21,7 @@ import { addDays, daysBetween, startOfWeek, today as todayKey } from './dates';
 import type { ClimberState } from './derive';
 import { DEFAULT_DISPLAY, V_GRADES, YDS_GRADES, displayGrade, gradeOrdinal, type GradeDisplay, type GradeScale } from './grades';
 import type { BodyPart } from '@/content/warmups';
-import { partsInText } from './bodyLoad';
+import { drillLoads } from './bodyLoad';
 import { isRestSession } from './rest';
 
 export type ChallengeKind = 'daily' | 'weekly' | 'bounty';
@@ -291,12 +291,13 @@ function clashes(spec: BountySpec, injured: readonly BodyPart[]): boolean {
   return bountyLoads(spec).some((part) => injured.includes(part));
 }
 
-/** What a drill category's drills load, across the whole catalog. */
-function categoryLoads(category: DrillCategory): BodyPart[] {
-  const parts = drillsByCategory(category).flatMap((d) =>
-    partsInText(`${d.name} ${d.focus} ${d.description}`),
-  );
-  return [...new Set(parts)];
+/**
+ * What a drill category's drills load, across the whole catalog. Exported
+ * for the test that holds it to the drill text (PLAN.md M137): the words
+ * this reads left the entry chunk, and what they said travels as data.
+ */
+export function categoryLoads(category: DrillCategory): BodyPart[] {
+  return [...new Set(drillsByCategory(category).flatMap((d) => drillLoads(d)))];
 }
 
 export function offeredBounties(

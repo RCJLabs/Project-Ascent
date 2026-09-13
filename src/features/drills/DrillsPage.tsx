@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { ChevronRight, Search } from 'lucide-react';
 import { DRILL_CATEGORIES, DRILLS, filterDrills } from '@/content/drills';
+import { DRILL_TEXT } from '@/content/drillText';
 import type { DrillCategory } from '@/content/types';
 import { drillHistory } from '@/engine/drillHistory';
 import { today } from '@/engine/dates';
@@ -60,7 +61,7 @@ export function DrillsPage() {
       filterDrills({
         ...(category ? { category } : {}),
         ...(offWall ? { equipment: [] } : {}),
-        ...(search.trim() ? { search } : {}),
+        ...(search.trim() ? { search, text: DRILL_TEXT } : {}),
       }),
     [category, offWall, search],
   );

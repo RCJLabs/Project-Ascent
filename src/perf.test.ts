@@ -1,4 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { DRILLS } from '@/content/drills';
+import { DRILL_TEXT } from '@/content/drillText';
 import { CATALOGUE } from '@/content/programs/catalogue';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
@@ -240,7 +242,7 @@ describe('the bundle stays small', () => {
    * Every milestone that moves this moves it to just above what it measured;
    * the history is in the comment inside the first test.
    */
-  const BUDGET = 170.0;
+  const BUDGET = 154.0;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -427,6 +429,14 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **170.0 → 154.0 at M137**, measured 169.42 → 153.50, so 15.92KB back:
+    // the 156 drill descriptions left the entry chunk for
+    // `content/drillText.ts`, a 17.3KB chunk of their own that the drill
+    // pages import and the search sheet fetches when it opens. The injury
+    // scan, which read the paragraphs, reads `Drill.loads` instead —
+    // derived from the text and pinned to it — which is the ~1KB the
+    // entry kept. The line follows the win the way it followed M78's.
+    //
     // **165.0 → 166.0 at M131**, measured 164.17 → 165.29, so 1.12KB, and
     // the interesting part is the 2.3KB it is *not*. The session-length
     // estimate reads the prescription, and a first draft read protocol
@@ -543,6 +553,34 @@ describe('the bundle stays small', () => {
       expect(marker.length, `${program.id} subtitle too short to be a marker`).toBeGreaterThan(12);
       expect(entry.includes(marker), `${program.id} is in the entry chunk`).toBe(false);
       expect(bodies.includes(marker), `${program.id} is not in the catalogue chunk`).toBe(true);
+    }
+  });
+
+  it.runIf(built)('keeps the drill text out of the entry chunk', () => {
+    // A marker per drill, not one marker, for the reason the program-body
+    // check above gives: a split that leaks half the text back into the
+    // entry would pass a single probe. Every one of the 156 has to be out,
+    // and all of them in the one chunk that holds them (PLAN.md M137).
+    const html = readFileSync('dist/index.html', 'utf8');
+    const entryName = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)![1]!;
+    const entry = readFileSync(`${dist}/${entryName}`, 'utf8');
+    const chunks = readdirSync(dist).filter((f) => f.startsWith('drillText-') && f.endsWith('.js'));
+    expect(chunks, 'the drill text is its own chunk').toHaveLength(1);
+    const text = readFileSync(`${dist}/${chunks[0]!}`, 'utf8');
+    expect(DRILLS.length).toBeGreaterThan(150);
+    for (const drill of DRILLS) {
+      // The longest run of the text with no quote or backslash in it, so the
+      // marker survives whatever quoting the minifier chose; trimmed at the
+      // first quote alone, a text that opens with one made a nine-letter
+      // marker.
+      const marker = DRILL_TEXT[drill.id]!
+        .split(/['"\\]/)
+        .map((run) => run.trim())
+        .sort((x, y) => y.length - x.length)[0]!
+        .slice(0, 60);
+      expect(marker.length, `${drill.id} text too short to be a marker`).toBeGreaterThan(12);
+      expect(entry.includes(marker), `${drill.id} is in the entry chunk`).toBe(false);
+      expect(text.includes(marker), `${drill.id} is not in the drill text chunk`).toBe(true);
     }
   });
 

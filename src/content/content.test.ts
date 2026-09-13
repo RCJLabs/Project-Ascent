@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DRILLS, filterDrills, getDrill } from './drills';
+import { DRILL_TEXT } from '@/content/drillText';
 import { getMetric, METRICS } from './metrics';
 import { PROTOCOLS } from './protocols';
 import { PLANNED_PROGRAM_IDS, PROGRAMS } from './programs';
@@ -498,7 +499,10 @@ describe('helpers', () => {
     const recovery = filterDrills({ category: 'recovery' });
     expect(recovery.length).toBeGreaterThan(0);
     expect(recovery.every((d) => d.category === 'recovery')).toBe(true);
-    expect(filterDrills({ search: 'campus board' }).length).toBeGreaterThan(0);
-    expect(filterDrills({ search: 'no drill mentions this' })).toHaveLength(0);
+    // The method is in the text, which the page hands in (PLAN.md M137);
+    // the registry alone reads names and focus lines.
+    expect(filterDrills({ search: 'campus board', text: DRILL_TEXT }).length).toBeGreaterThan(0);
+    expect(filterDrills({ search: 'campus board' })).toHaveLength(0);
+    expect(filterDrills({ search: 'no drill mentions this', text: DRILL_TEXT })).toHaveLength(0);
   });
 });

@@ -94,14 +94,41 @@ export type Discipline = 'boulder' | 'sport' | 'both';
  */
 export type Equipment = 'none' | 'wall' | 'hangboard' | 'campus' | 'gym' | 'weight';
 
+/**
+ * The load rules a drill's own text matches (PLAN.md M137).
+ *
+ * The paragraph that describes a drill lives in `content/drillText.ts`, out
+ * of the entry chunk, and the injury engine used to read it — for 67 of the
+ * 156 drills the description was the only place the words it looks for
+ * appeared. So what the text says about load is derived from it once, held
+ * here as data, and pinned to the text by a test: edit a description and
+ * the test says which drill's `loads` no longer agrees with it.
+ */
+export type DrillLoad =
+  | 'campus'
+  | 'one-arm'
+  | 'fingers'
+  | 'lever'
+  | 'pull'
+  | 'dynamic'
+  | 'sustained'
+  | 'open-hand'
+  | 'shoulder'
+  | 'forearm'
+  | 'hook'
+  | 'hip'
+  | 'legs'
+  | 'core';
+
 export interface Drill {
   id: DrillId;
   name: string;
-  description: string;
   /** Prose duration, e.g. '45-60 min'. */
   duration: string;
   /** One-line "what this trains", e.g. 'Crimp Strength Application'. */
   focus: string;
+  /** What the drill's text says it loads — see `DrillLoad`. */
+  loads: DrillLoad[];
   /** Links to a Protocol when the drill *is* a named method, so the logger
    *  can open its timer and cues (an ARC drill is the ARC protocol, timed). */
   protocolId?: ProtocolId;
