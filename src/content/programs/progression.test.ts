@@ -37,6 +37,11 @@ function doseSig(p: PhasePrescription): string {
       ? [p.circuit.rounds, p.circuit.work ?? '', p.circuit.restBetween ?? '', p.circuit.restBetweenRounds ?? '']
       : null,
     p.mergedInto ?? null,
+    // Week-level movement counts (PLAN.md M127). Without this a block that
+    // opens each phase at the same dose but climbs through it would read as
+    // flat, and the rule below would demand a `constantDose` note saying
+    // something that is not true.
+    p.perWeek ?? null,
   ]);
 }
 
@@ -71,6 +76,28 @@ const blocks: BlockView[] = periodised.flatMap((program) =>
 const isFlat = (b: BlockView) => b.sigs.length === b.phaseCount && new Set(b.sigs).size === 1;
 
 const where = (b: BlockView) => `${b.program.id}/${b.sessionId}/${b.blockId} (${b.name})`;
+
+describe('what counts as movement', () => {
+  const base: PhasePrescription = {
+    rationale: 'x',
+    exercises: [{ name: 'Max Hangs', sets: '5', hold: '10s' }],
+  };
+
+  it('reads a block that climbs through its weeks as moving, not as flat', () => {
+    // Without this the declare-or-fail rule below would demand a
+    // `constantDose` note from a block that progresses every week, and the
+    // note would have to say something untrue (PLAN.md M127).
+    const moving: PhasePrescription = {
+      ...base,
+      perWeek: [{ week: 2, step: 'Add one increment if every set held to the last rep last week.' }],
+    };
+    expect(doseSig(base)).not.toBe(doseSig(moving));
+  });
+
+  it('still reads two identical prescriptions as identical', () => {
+    expect(doseSig(base)).toBe(doseSig({ ...base }));
+  });
+});
 
 describe('periodisation', () => {
   it('scans the whole catalogue', () => {

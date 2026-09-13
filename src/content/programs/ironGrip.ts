@@ -131,6 +131,22 @@ export const IRON_GRIP: Program = {
                   notes: 'Half crimp on a 20mm edge. RPE 7.',
                 },
               ],
+              perWeek: [
+                {
+                  week: 2,
+                  step: "Same sets. Add one increment if every set held to the last rep last week, and take one off if you failed early — the phase rationale's own rule, on the week it applies to.",
+                },
+                {
+                  week: 3,
+                  step: 'The top of the volume ramp: five sets at whatever load week 2 settled on.',
+                  dose: { '7/3 Repeaters': { sets: '5' } },
+                },
+                {
+                  week: 4,
+                  step: 'Deload. Three sets on the same edge, a step lighter than you have been hanging, and stop while it still feels easy.',
+                  dose: { '7/3 Repeaters': { sets: '3' } },
+                },
+              ],
             },
             [PHASE.hammer]: {
               rationale:
@@ -144,6 +160,22 @@ export const IRON_GRIP: Program = {
                   load: '85-90% max added weight',
                   rest: '3-5 min',
                   notes: 'Half crimp on a 20mm edge. RPE 9 — no burn, just max tension.',
+                },
+              ],
+              perWeek: [
+                {
+                  week: 2,
+                  step: 'Add one increment if all five hangs held the full ten seconds in half crimp last week. This is the weekly progression the phase goal asks for.',
+                },
+                {
+                  week: 3,
+                  step: "The heaviest week of the block. Go up once more, or repeat week 2's load and take the full five minutes between sets.",
+                  dose: { 'Max Hangs': { rest: '5 min' } },
+                },
+                {
+                  week: 4,
+                  step: 'Deload. Three hangs at the load you opened the phase with, then leave the board alone until the next block.',
+                  dose: { 'Max Hangs': { sets: '3' } },
                 },
               ],
             },

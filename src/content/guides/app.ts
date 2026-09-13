@@ -145,6 +145,16 @@ export const APP: Guide = {
             '**Then the calendar fills in.** Nothing is written to those future days: the plan is derived from the program, your start date and your chosen week, so changing any of them re-derives the future immediately.',
           ],
         },
+        { kind: 'h', text: 'How a block progresses' },
+        {
+          kind: 'list',
+          items: [
+            '**Phases carry the big changes.** Most blocks run three phases of four weeks, and the session you do in phase two is not the one you did in phase one.',
+            '**Weeks carry the small ones.** Where a program says how a dose moves inside a phase, the logger shows that week\'s numbers and a line saying what changed — "five sets at whatever load week 2 settled on".',
+            '**Some steps are a rule, not a number.** "Add one increment if every set held to the last rep" depends on how last week actually went, so the app passes the rule on rather than inventing a figure for you.',
+            '**A block that never changes says why.** Where the progression is in intensity or grade choice rather than sets and reps, the program page says so out loud instead of leaving it looking like an oversight.',
+          ],
+        },
         { kind: 'h', text: 'Changing the plan' },
         {
           kind: 'list',

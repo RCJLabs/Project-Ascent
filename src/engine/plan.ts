@@ -142,22 +142,66 @@ export interface BlockPrescription {
   blockId: string;
   name: string;
   entry: PhasePrescription;
+  /**
+   * What this week asks that the week before did not (PLAN.md M127).
+   *
+   * Present only when the block authored a step for this week *and* a week
+   * was asked for. Absent is the ordinary case and means what it always
+   * meant: the phase runs one dose.
+   */
+  step?: string;
 }
 
-/** Blocks to show for a session type in a given phase, filtered to a track. */
+/**
+ * Which week of its own phase a program week is, 1-based.
+ *
+ * Phases carry absolute bounds (`weekStart`, `weekEnd`) because that is
+ * what tiling 1..weeks needs, and an author writing a four-week phase
+ * thinks in *its* weeks rather than the program's. Null outside the phase,
+ * which is not a case any caller should reach and is worth saying rather
+ * than clamping into a wrong answer.
+ */
+export function weekInPhase(phase: Phase, week: number): number | null {
+  if (week < phase.weekStart || week > phase.weekEnd) return null;
+  return week - phase.weekStart + 1;
+}
+
+/**
+ * Blocks to show for a session type in a given phase, filtered to a track.
+ *
+ * `week` is the program week, and giving it is what turns a phase's
+ * prescription into this week's. Left out, the phase's own dose comes back
+ * unchanged — which is what every caller got before M127, and what a screen
+ * showing a phase rather than a day still wants.
+ */
 export function prescriptionFor(
   sessionType: SessionType,
   phase: Phase,
   trackId?: string,
+  week?: number | null,
 ): BlockPrescription[] {
+  const inPhase = week === undefined || week === null ? null : weekInPhase(phase, week);
   const out: BlockPrescription[] = [];
   for (const block of sessionType.blocks ?? []) {
     const entry = block.perPhase[phase.id];
     if (!entry) continue;
-    const exercises = trackId
+    const tracked = trackId
       ? entry.exercises.filter((e) => !e.track || e.track === trackId)
       : entry.exercises;
-    out.push({ blockId: block.id, name: block.name, entry: { ...entry, exercises } });
+    const step = inPhase === null ? undefined : entry.perWeek?.find((w) => w.week === inPhase);
+    // Merged by name rather than by index: an author adding a line to the
+    // phase should not silently re-point every week's overrides at the
+    // wrong exercise, and a name that matches nothing is caught by the
+    // content test rather than by a climber.
+    const exercises = step?.dose
+      ? tracked.map((e) => (step.dose![e.name] ? { ...e, ...step.dose![e.name] } : e))
+      : tracked;
+    out.push({
+      blockId: block.id,
+      name: block.name,
+      entry: { ...entry, exercises },
+      ...(step ? { step: step.step } : {}),
+    });
   }
   return out;
 }

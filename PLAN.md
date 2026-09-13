@@ -6064,3 +6064,70 @@ rests on an inference it says so.*
   cream paper with cream cards; Ice reads as cold blue with cool white cards. Dark is
   untouched and measured identical.
   3,989 tests pass.
+
+- **M127 — a dose that moves inside a phase.** *Done. The first of the dose phase, and what
+  M128 and M129 stand on.*
+  **Progression was quantised to four weeks.** `ExerciseBlock.perPhase` was the only dose the
+  model had, and its only reader — `prescriptionFor(sessionType, phase, trackId)` — took a
+  phase and never a week, so a climber saw byte-identical sets, reps, hold and load for four
+  weeks running. The catalogue knew and worked around it in prose the app could not read:
+  Iron Grip's Hammer phase lists *"Progress added load weekly"* as a goal beside a static
+  `load`, and The Siege's Decode rationale says to add load each week *"when the last set felt
+  solid — not when it felt hard"*. The only week-keyed field in the entire schema was
+  `SessionType.drillsByWeek`.
+  **`PhasePrescription.perWeek` is a sparse list of steps.** Week 1 is the phase's own
+  `exercises`, and only the weeks that change carry a row — so absent means what it has always
+  meant, one dose for the phase, which is still most of the catalogue. Each row is a week
+  number, a `step` line, and an optional `dose` keyed by exercise name.
+  **Both halves are in it on purpose, and the split is the interesting part.** `dose` is what
+  the app can place: a number the author changed, merged over the phase's. `step` is what it
+  cannot — *"add one increment if last week's top set felt solid"* depends on a climber the
+  content has never met — so it is passed on as a line rather than faked as a figure. A step
+  with no dose is still progression, which is why the type allows it and a test insists
+  something uses it; a dose with no step is a number with no reason, which is why `step` is
+  required.
+  **Merged by name, not by index.** An author adding a line to a phase would otherwise
+  silently re-point every week's overrides at the wrong exercise. A name matching nothing is
+  caught by a content test rather than by a climber finding an empty prescription.
+  **Authored where the catalogue already said it.** Iron Grip's finger protocol through The
+  Anvil and The Hammer, and The Siege's through Decode: nine steps, every one of them a
+  restatement of what that phase's own rationale or goal line already told the climber to do.
+  **Nothing here is new coaching** — the doses that move are the volume top and the deload
+  weeks the programs already mark, and the rest is the phase's stated rule attached to the
+  week it applies to. The other forty-odd prescriptions are untouched and still run one dose
+  a phase, which is a gap this milestone makes visible rather than fills.
+  **Written without a unit, deliberately.** The first draft said *"Add 2.5lb"* and put seven
+  new pound figures into program prose. `units.test.ts` pins that count — it is a ledger of
+  content that will not convert for a climber working in kilograms, kept "so the number is the
+  size of the job when it is picked up" — and the steps read just as well as *one increment*,
+  with the phase rationale still carrying the figures for anyone who wants them. The ledger
+  stayed at sixteen.
+  **Two screens read it.** The logger passes the day's week and shows the step above the dose,
+  because it is the reason the numbers below changed and the whole content of a step that
+  moves nothing. The program page shows the ladder under the exercise list as *How it moves*,
+  numbered in the climber's weeks rather than the phase's — an author writes "week 2 of this
+  phase" and a climber reads "week 6".
+  **`doseSig` in `progression.test.ts` counts `perWeek`.** Without it a block that opens each
+  phase at the same dose but climbs through it would read as flat, and M33's declare-or-fail
+  rule would demand a `constantDose` note saying something untrue. Two tests hold that
+  directly rather than waiting for the catalogue to produce the case.
+  **Measured, not asserted.** Twenty mutations, every one killed: the week ignored, off by one
+  into the phase, a week outside the phase clamped in, the step never handed back, the dose not
+  merged, the merge mutating the catalogue in place; the logger not passing the week and not
+  rendering the step; the program-page ladder removed and its weeks numbered phase-relative;
+  and eight on the content — a week the phase does not have, a row for week 1, two rows for one
+  week, rows out of order, a dose naming an exercise that is not there, a dose restating the
+  phase, a step too short to be one, a rule-only step given a number, and the adoption floor set
+  to zero. A no-op statement reorder survived, as the sanity check should. **Two survived the
+  first round and both were weak tests rather than safe code**: the rule-only assertion counted
+  across the whole catalogue instead of naming the phase whose goal requires it, and the
+  adoption floor had no slack check, so lowering it passed — the same trap `perf.test.ts` names
+  about its budget, met for the third time in this plan.
+  **In a browser, both themes, 430px and 1280px.** Seeded into Iron Grip at weeks 1, 2 and 3:
+  week 1 shows no step and *3-5 sets*, week 2 shows the rule and still *3-5 sets*, week 3 shows
+  *the top of the volume ramp* and *5 sets*. The program page's ladder reads Wk 2, Wk 3, Wk 4 in
+  The Anvil and Wk 6 to Wk 8 in The Hammer. No overflow, no page errors.
+  **Budget.** Unchanged at 164.0, measured 163.44 → 163.60. The schema is types, the merge is
+  a dozen lines in an engine the entry chunk already carried, and the bodies are still their own
+  chunk.
+  4,015 tests pass.

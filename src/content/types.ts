@@ -173,6 +173,36 @@ export interface CircuitFormat {
   restBetweenRounds?: string;
 }
 
+/** The dose fields, and only those — what a week is allowed to move. */
+export type Dose = Partial<Pick<Exercise, 'sets' | 'reps' | 'hold' | 'load' | 'rest'>>;
+
+/**
+ * What one week inside a phase asks that the week before it did not
+ * (PLAN.md M127).
+ *
+ * Progression was quantised to the phase: `perPhase` was the only dose the
+ * model had, so a climber saw byte-identical sets, reps, hold and load for
+ * four weeks running. The catalogue knew and worked around it in prose the
+ * app could not read — Iron Grip's Hammer phase lists *"Progress added load
+ * weekly"* as a goal beside a static `load`, and The Siege's rationale says
+ * to add 2-5lb a week when the last set felt solid.
+ *
+ * Both halves are here on purpose. `dose` is the part the app can place: a
+ * number that changes, written by the author. `step` is the part it cannot
+ * — "add 2.5kg if last week's top set felt solid" depends on a climber the
+ * content has never met — so it is said in a line rather than faked as a
+ * figure. A step with no `dose` is still progression; a `dose` with no
+ * `step` is a number with no reason, which is why `step` is required.
+ */
+export interface WeekStep {
+  /** Week within the phase, 1-based: week 1 is the phase's first week. */
+  week: number;
+  /** What this week asks that the last one did not, in a line. */
+  step: string;
+  /** Dose changes, by exercise name. Anything unnamed keeps the phase's. */
+  dose?: Record<string, Dose>;
+}
+
 export interface PhasePrescription {
   rationale: string;
   exercises: Exercise[];
@@ -181,6 +211,15 @@ export interface PhasePrescription {
   /** This block is folded into another block for this phase (e.g. Pull
    *  supersetted into Push). Exercises may be empty when set. */
   mergedInto?: string;
+  /**
+   * How the dose moves week by week inside this phase (PLAN.md M127).
+   *
+   * Sparse on purpose: a phase's first week is the `exercises` above, and
+   * only the weeks that change need a row. Absent means the phase runs one
+   * dose for its whole length, which is what every block did before this
+   * and what most still do.
+   */
+  perWeek?: WeekStep[];
 }
 
 /** One exercise block (the old `cats`), with its own prescription and

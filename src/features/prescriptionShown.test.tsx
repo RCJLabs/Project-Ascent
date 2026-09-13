@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { fireEvent, screen } from '@testing-library/react';
 import { getProgram } from '@/content/programs';
 import { newSession, putSession } from '@/db/sessions';
-import { dayOfWeek, today } from '@/engine/dates';
+import { addDays, dayOfWeek, startOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { DayBody } from '@/features/log/LogPage';
@@ -66,6 +66,94 @@ describe('a menu, in the logger', () => {
   it('says nothing about a block that is simply its list', async () => {
     await logging('iron_grip', 'fp');
     expect(screen.queryByText(/^Pick \d+ of/)).toBeNull();
+  });
+});
+
+/**
+ * A dose that moves inside the phase (PLAN.md M127).
+ *
+ * The logger asked `prescriptionFor` for a phase and never a week, so four
+ * weeks of The Anvil showed one identical card. It passes the day's week
+ * now, and Iron Grip's finger protocol is the block whose own phase goal
+ * asks for weekly progression.
+ */
+describe('what this week asks that last week did not', () => {
+  /** The dose renders joined — '5 sets · 10s · 85-90%…' — so it is read
+   *  off the container rather than looked up as its own element. */
+  const doses = () => document.body.textContent ?? '';
+
+  async function inWeek(week: number): Promise<void> {
+    await reset();
+    const program = getProgram('iron_grip')!;
+    const start = addDays(startOfWeek(DATE), -(week - 1) * 7);
+    await hydrate();
+    useProfile.setState({
+      activeProgramId: program.id,
+      startDates: { [program.id]: start },
+      plans: { [program.id]: { [dayOfWeek(DATE)]: 'fp' } },
+      weekOverrides: {},
+      adaptations: {},
+      injuries: [],
+    });
+    renderAt('/', <DayBody date={DATE} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Start session|Log a session|Log rest day/ }));
+    await screen.findByText("Today's prescription");
+  }
+
+  it('says nothing on the first week of a phase, because there is nothing to say', async () => {
+    await inWeek(1);
+    expect(screen.queryByText(/volume ramp/i)).toBeNull();
+    expect(doses()).toMatch(/3-5 sets/);
+  });
+
+  it('shows the step on a week that has one', async () => {
+    await inWeek(3);
+    expect(screen.getByText(/The top of the volume ramp/)).toBeTruthy();
+  });
+
+  it('shows the dose that week moved to, not the phase it opened at', async () => {
+    await inWeek(3);
+    // Five sets, where week 1 prescribes 3-5.
+    expect(doses()).toMatch(/(^|[^-])5 sets/);
+    expect(doses()).not.toMatch(/3-5 sets/);
+  });
+
+  it('carries a step that moves no number at all', async () => {
+    // Half of what a program says about progression is a rule about the
+    // climber, and the app must be able to pass it on without inventing a
+    // figure to hang it from.
+    await inWeek(2);
+    expect(screen.getByText(/Add one increment if every set held to the last rep/)).toBeTruthy();
+    expect(doses()).toMatch(/3-5 sets/);
+  });
+});
+
+describe('the ladder on the program page', () => {
+  function ironGrip(): void {
+    renderAt('/train/iron_grip', <ProgramDetailPage params={{ id: 'iron_grip' }} />);
+    fireEvent.click(screen.getByRole('button', { name: /What's in it/ }));
+  }
+
+  it('shows how the dose moves inside the phase', () => {
+    ironGrip();
+    expect(screen.getByText('How it moves')).toBeTruthy();
+    expect(screen.getByText(/The top of the volume ramp/)).toBeTruthy();
+  });
+
+  it('numbers the weeks the way a climber counts them', () => {
+    // The author writes "week 3 of this phase"; the climber reads "week 3"
+    // in The Anvil and "week 7" in The Hammer, and the page is for them.
+    ironGrip();
+    expect(screen.getByText('Wk 3')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Weeks 5-8/ }));
+    expect(screen.getByText('Wk 7')).toBeTruthy();
+    expect(screen.queryByText('Wk 3')).toBeNull();
+  });
+
+  it('says nothing where a phase runs one dose the whole way', () => {
+    renderAt('/train/lockdown', <ProgramDetailPage params={{ id: 'lockdown' }} />);
+    fireEvent.click(screen.getByRole('button', { name: /What's in it/ }));
+    expect(screen.queryByText('How it moves')).toBeNull();
   });
 });
 

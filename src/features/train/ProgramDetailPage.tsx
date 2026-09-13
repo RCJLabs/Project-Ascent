@@ -115,6 +115,27 @@ function SessionTypeCard({
                     <ExerciseRow key={`${ex.name}-${i}`} ex={ex} />
                   ))}
                 </ul>
+                {/* How the dose moves inside the phase (PLAN.md M127). The
+                    week numbers are the program's, not the phase's: an
+                    author writes "week 2 of this phase" and a climber reads
+                    "week 6", and the page is for the climber. */}
+                {entry.perWeek && entry.perWeek.length > 0 && (
+                  <div className="mt-2.5 pt-2.5 border-t border-line">
+                    <p className="text-2xs font-bold uppercase tracking-wide text-ink-soft mb-1.5">
+                      How it moves
+                    </p>
+                    <ul className="grid grid-cols-1 gap-1.5">
+                      {entry.perWeek.map((w) => (
+                        <li key={w.week} className="text-sm text-ink-soft leading-relaxed flex gap-2">
+                          <span className="font-semibold text-ink shrink-0 tabular-nums">
+                            Wk {phase.weekStart + w.week - 1}
+                          </span>
+                          <span>{w.step}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 {/* Below the dose, because that is where the question forms
                     (PLAN.md M90). M33 required this sentence of any block
                     that runs an identical dose for the whole program, on the

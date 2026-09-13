@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { AlertTriangle, Check, ChevronDown, ChevronUp, Clock, Copy, Flame, Plus, RotateCw, Snowflake, Sparkles, Timer, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Check, ChevronDown, ChevronUp, Clock, Copy, Flame, Plus, RotateCw, Snowflake, Sparkles, Timer, Trash2, TrendingUp, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
 import { SCALE_MAX, getField, type FieldSpec } from '@/content/fields';
@@ -652,7 +652,10 @@ function SessionEditor({
     `${summary.total} climb${summary.total === 1 ? '' : 's'} · ${summary.sends} sent · ${summary.attempts} tried` +
     (summary.hardest ? ` · hardest ${gradeLabel(summary.hardest.scale, summary.hardest.grade)}` : '');
 
-  const blocks = type && day?.phase ? prescriptionFor(type, day.phase, trackId) : [];
+  // The week too (PLAN.md M127): a phase's prescription is four weeks of
+  // one dose unless the block said how it moves, and the day knows which
+  // week it is.
+  const blocks = type && day?.phase ? prescriptionFor(type, day.phase, trackId, day.week) : [];
   // What today actually loads, so the check-in does not tell a climber on a
   // legs-and-core day to leave the fingerboard alone.
   const loads = type
@@ -816,6 +819,17 @@ function SessionEditor({
               {blocks.map((b) => (
                 <div key={b.blockId} className="mb-3 last:mb-0">
                   <h4 className="text-xs font-bold uppercase tracking-widest text-accent mb-1.5">{b.name}</h4>
+                  {/* What this week asks that last week did not (PLAN.md
+                      M127). Above the dose rather than beside it, because
+                      it is the reason the numbers below changed — and it
+                      is the whole content of a step that moves nothing a
+                      field can hold. */}
+                  {b.step && (
+                    <p className="text-xs text-ink-soft leading-relaxed mb-2 flex items-start gap-1.5">
+                      <TrendingUp size={13} className="text-accent shrink-0 mt-0.5" />
+                      <span>{b.step}</span>
+                    </p>
+                  )}
                   {/* The circuit, on the clock (PLAN.md M99). It runs over the
                       exercises that are ticked, because twelve of the
                       seventeen authored circuits are menus and which of the

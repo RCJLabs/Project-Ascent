@@ -155,6 +155,21 @@ export const THE_SIEGE: Program = {
                   notes: 'Warm up with a hang ladder from 30mm down to 20mm first.',
                 },
               ],
+              perWeek: [
+                {
+                  week: 2,
+                  step: "Go up only if last week's final set felt solid. Felt hard is not the same as felt solid, and repeating a week is not a lost week.",
+                },
+                {
+                  week: 3,
+                  step: 'Go up again on the same rule. If the load has not moved in two weeks, hold it and let the rest do the work.',
+                },
+                {
+                  week: 4,
+                  step: 'Deload. Three sets at the load you opened the phase with, and a full warm-up ladder before each one.',
+                  dose: { 'Max Hangs': { sets: '3' } },
+                },
+              ],
             },
             [PHASE.link]: {
               rationale:
