@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { screen, within } from '@testing-library/react';
-import { loadPrograms } from '@/content/programs';
+import { BASE_CAMP } from '@/content/programs/catalogue';
+import { getProgram, loadPrograms } from '@/content/programs';
 import { addDays, startOfWeek, today } from '@/engine/dates';
 import type { Objective } from '@/engine/objectives';
 import { useObjectives } from '@/store/objectives';
@@ -162,7 +163,15 @@ describe('the climber’s plan outranks the app’s advice', () => {
   });
 
   it('does not replace them', async () => {
+    // The card's opening line is the block's own since M134 — an order
+    // explained, or the author's order and why it is still the author's —
+    // so what this holds is the list under it rather than that sentence.
     await finished(['base_camp', 'iron_grip']);
-    expect(screen.getByText(/Written into .* itself/)).toBeTruthy();
+    const card = screen.getByText('What comes next').closest('section, div')!;
+    const successors = BASE_CAMP.nextPrograms.map((n) => getProgram(n.id)?.name).filter(Boolean);
+    expect(successors.length).toBeGreaterThan(1);
+    for (const name of successors) {
+      expect(card.textContent, `${name} is missing from the card`).toContain(name!);
+    }
   });
 });

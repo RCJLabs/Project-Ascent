@@ -5897,7 +5897,8 @@ rests on an inference it says so.*
   or the session's own field answers (`engine/exportCsv.ts:45-74`) — an archive billed as "the
   same history, back out" that has forgotten the things the logger asked for.
 
-- **M134 — what comes next, chosen rather than recited.** *Proposed.*
+- **M134 — what comes next, chosen rather than recited.** *Proposed, and built tenth — see the
+  Done entry below.*
   `blockAdherence()` produces planned-against-done per session type per week
   (`engine/adherence.ts:76-148`), which is genuinely good data, and it reaches two readers: one
   coach tip and the finish page. Nothing acts on it — `reschedule.ts` moves a day only inside
@@ -6568,3 +6569,71 @@ rests on an inference it says so.*
   they were led or top-roped. 5.10d led, 5.12a top-roped — 5 rungs between them*, with a row for
   each. An objective linked to a sent project says so and waits. No overflow, no page errors.
   **Budget.** 168.0 holds. 4,185 tests pass.
+
+- **M134 — what comes next, chosen rather than recited.** *Done. The last of the ten.*
+  **The answer was already in the room.** `blockEnd` computes the block report — every benchmark
+  the program declared, what it was at the start, what it is now, whether it moved — and then,
+  four lines later in the same function, returns `program.nextPrograms` verbatim and
+  unconditionally. So a climber whose fingers moved and whose endurance did not was handed the
+  same four suggestions, in the same order, as one whose report said the opposite.
+  **The rule: a program declares the benchmarks it is trying to move, so the successor worth
+  running first is the one that trains what this block left where it was.** Which is usually
+  what it did not train. Iron Grip moves fingers and measures a dead hang beside them; if twelve
+  weeks of hangboarding left the dead hang flat, the next block being a finger block again is
+  the one choice the report argues against. In a browser, on that exact history, The Cruiser
+  goes from fourth to first and Peak Performance from first to fourth.
+  **Repeating what moved is said and never scored.** Consolidating a gain is real coaching — a
+  grade you just reached is a grade worth holding — and an app that deducted for it would be
+  taking a side in a judgement it has no access to. Peak Performance still says what it is:
+  *"This trains max hang 20mm 7s again — consolidation rather than a new stimulus, which is a
+  choice rather than a fault."*
+  **A never-tested benchmark says nothing.** Flat means measured twice and unchanged. A metric
+  with one reading or none is not evidence the block failed to move it, and counting it would
+  reward the successor that happens to declare the benchmarks nobody tests.
+  **A block barely run argues for running it again.** The rule the finder has followed since
+  M101, and it outranks the ranking: a plan done at a third of its sessions was not tried, and
+  ordering four successors on a block that did not happen is arithmetic on nothing. The
+  successors stay on the page, because it is the climber's call.
+  **And it says when it has nothing.** The case that makes this milestone quiet for most
+  climbers is a block whose benchmarks were never taken twice — so the card says so, names the
+  program whose order it is falling back on, and says what would make the next one better. A
+  silent fallback is indistinguishable from a fallback that did not happen.
+  **The author's reasons are untouched and the author's order is the tie-break.** What this adds
+  is an order and a sentence; the line a program wrote about why it follows is still under every
+  entry, and a set of candidates with nothing to separate them comes back exactly as it was
+  written. Nothing is reordered on the strength of an absence.
+  **Two things the audit read as gaps and are not.** *A test week that is actually a test* — the
+  test weeks are marked on the calendar, and the day's nudge has linked to the battery with the
+  reason for that week's test since it was built; what is missing is not a prompt but a second
+  reading, which is what the new note asks for. And *Trip Prep ships no assessments* — four
+  weeks of taper, whose own pitch reads *"not a training block — you cannot get strong in four
+  weeks, and trying is how people arrive injured"*. A program that declines to measure a taper
+  is right, `blockReport` returning null for it is right, and the card stays silent rather than
+  explaining a choice as though it were an oversight.
+  **Measured, not asserted.** Twenty-five mutations, every one killed: a never-tested benchmark
+  counting as unmoved, better and the rest swapped, worse counting as moved; the unmoved worth
+  nothing, ranked backwards, ranked by what moved instead, a tie losing the author's order, and
+  a benchmark the program does not train still counting; nothing said about any of them, the
+  overlap becoming the whole sentence or never appearing beside the argument, consolidation
+  reading as a recommendation, a list losing its conjunction, and the verb agreeing with the
+  count instead of the block; a barely-run block unmentioned, every block reading as barely run,
+  a handful of placed sessions being enough to judge, the order never explained, and a block
+  with no benchmarks told to go and measure them; and on the page, the ranking never asked for,
+  the block's sentence never shown, the author's reason dropped, the note never replacing the
+  default line, and adherence never reaching the choice. A no-op statement reorder survived.
+  **Two survived the first round** and both were assertions that had stopped short: a list read
+  as "dead hang, max pull-ups" satisfied three separate `toMatch`es and never the conjunction
+  between them, and the adherence wiring was mutated against the engine's tests, which do not
+  render a page.
+  **The browser found the sentence.** *"Your max pull-ups is where it was"* — half these
+  benchmarks are plural nouns naming a single measurement, and agreeing the verb with the count
+  produces that on three cards out of four. Moving the verb onto the block — *"This block left
+  your max pull-ups where it was"* — sidesteps a disagreement English will not let this have
+  both ways.
+  **In a browser, both themes, 430px and 1280px.** A block with nothing measured lists the four
+  in the author's order and says why. The same block with fingers up and the dead hang and
+  pull-ups flat puts The Cruiser first, with *"This block left your max pull-ups and dead hang
+  where they were, and this trains them."* The same block with nothing logged against its plan
+  says *"You did 0 of the 36 sessions this block placed."* No overflow, no page errors.
+  **Budget.** 168.0 holds — `nextBlock` is read by `/finish`, which is a lazy route. 4,216 tests
+  pass.

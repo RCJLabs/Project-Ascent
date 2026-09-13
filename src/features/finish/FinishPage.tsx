@@ -21,6 +21,7 @@ import { useProfile } from '@/store/profile';
 import { offerUndo } from '@/store/undo';
 import { useSessions } from '@/store/sessions';
 import { blockAdherence, describeAdherence } from '@/engine/adherence';
+import { chooseNext } from '@/engine/nextBlock';
 import { useSettings } from '@/store/settings';
 import type { UnitSystem } from '@/engine/units';
 import { BackLink } from '@/ui/BackLink';
@@ -278,6 +279,23 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
 
   // The same window the report covers, read off the block rather than the
   // report: a block still running has a window and no finished report.
+  /**
+   * The successors, ordered by what this block did (PLAN.md M134).
+   *
+   * After `adherence` because it reads it: a block run at a third of its
+   * sessions is not one to follow, and the sentence over the list says so
+   * instead of ranking three programs on a block that did not happen.
+   */
+  const { choices, note } = useMemo(
+    () =>
+      chooseNext({
+        candidates: end?.next ?? [],
+        report: end?.report ?? null,
+        adherence: adherence?.measured ?? null,
+      }),
+    [end, adherence],
+  );
+
   /** Which line's history is open, if any. One at a time (PLAN.md M130). */
   const [openLine, setOpenLine] = useState<string | null>(null);
 
@@ -324,7 +342,7 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
     );
   }
 
-  const { status, report, graduation, owed, next } = end;
+  const { status, report, graduation, owed } = end;
 
   /**
    * Whether the block on screen is the one the climber is on.
@@ -538,14 +556,19 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
           </Card>
         )}
 
-        {next.length > 0 && (
+        {/* Ordered by what the block actually did (PLAN.md M134). The
+            authored list and its reasons are unchanged — what this adds is
+            the order, and a sentence per entry saying what this block says
+            about it. With no report and nothing tested, the list is the one
+            the program wrote, in the order it wrote it. */}
+        {choices.length > 0 && (
           <Card title="What comes next">
             <p className="text-sm text-ink-soft mb-3 leading-relaxed">
-              Written into {end.program.name} itself — each one with the reason it follows this
-              block rather than another.
+              {note ??
+                `Written into ${end.program.name} itself — each one with the reason it follows this block rather than another.`}
             </p>
             <ul className="grid grid-cols-1 gap-2">
-              {next.map((step) => (
+              {choices.map((step) => (
                 <li key={step.program.id}>
                   <Link
                     href={`/train/${step.program.id}`}
@@ -557,6 +580,9 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
                         {step.program.weeks} weeks
                       </span>
                     </div>
+                    {step.because !== null && (
+                      <p className="text-sm mt-0.5 leading-relaxed">{step.because}</p>
+                    )}
                     <p className="text-sm text-ink-soft mt-0.5 leading-relaxed">{step.reason}</p>
                   </Link>
                 </li>

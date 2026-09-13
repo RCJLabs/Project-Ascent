@@ -367,7 +367,7 @@ export const APP: Guide = {
       content: [
         {
           kind: 'p',
-          text: 'Four things talk to you, and they are deliberately separate so they do not repeat each other.',
+          text: 'Five things talk to you, and they are deliberately separate so they do not repeat each other.',
         },
         {
           kind: 'table',
@@ -377,6 +377,7 @@ export const APP: Guide = {
             ["Coach's Corner", 'Standing observations about your training as a whole. Dismissible, and a dismissed tip stays gone until the situation actually changes.'],
             ['The weekly review', 'One reading of the week just gone: load against last week, what you sent, how the board went, whether you turned up as often as the program asked, and the week ahead.'],
             ['The year in review', 'The long view, compared like for like against the same stretch of last year.'],
+            ['What comes next', 'At the end of a block, the successors its author wrote — ordered by which of your benchmarks this block left where they were, since that is usually what it did not train. A block you barely ran is told to run again instead. With nothing measured twice, the order is the author\'s and the page says so.'],
           ],
         },
         {
