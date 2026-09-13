@@ -7,6 +7,10 @@ import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { DayBody } from '@/features/log/LogPage';
 import { today } from '@/engine/dates';
+import { useSettings } from '@/store/settings';
+
+/** The card under test is behind the fold (PLAN.md M120); open it. */
+const fullLog = () => useSettings.setState({ logView: 'full' });
 
 /**
  * The questions a session type asks, finally asked (PLAN.md M70).
@@ -35,6 +39,7 @@ async function logging(): Promise<void> {
     weekOverrides: {},
     adaptations: {},
   });
+  fullLog();
   renderAt('/', <DayBody date={DATE} />);
 }
 
@@ -77,6 +82,7 @@ describe('a session type that asks for more', () => {
     await putSession(newSession(DATE, 0, { completed: false }));
     await hydrate();
     useProfile.setState({ activeProgramId: null, startDates: {}, plans: {}, weekOverrides: {}, adaptations: {} });
+    fullLog();
     renderAt('/', <DayBody date={DATE} />);
     expect(screen.queryByText('This session')).toBeNull();
   });
@@ -109,6 +115,7 @@ async function performance(fields: Record<string, string>, climbs: unknown[]): P
     weekOverrides: {},
     adaptations: {},
   });
+  fullLog();
   renderAt('/', <DayBody date={DATE} />);
 }
 

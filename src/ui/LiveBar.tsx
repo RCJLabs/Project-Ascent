@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ChevronRight, CircleAlert } from 'lucide-react';
-import { fromKey } from '@/engine/dates';
+import { fromKey, today } from '@/engine/dates';
+import { logHref } from './routes';
 import { describeSpan, elapsedMs, formatClock, runningSession, staleSessions } from '@/engine/live';
 import type { Session } from '@/db/sessions';
 import { useSessions } from '@/store/sessions';
@@ -47,10 +48,12 @@ export function LiveBar({ banner }: { banner: Banner }) {
   const [location] = useLocation();
   if (!banner) return null;
 
-  const href = `/log/${banner.session.date}`;
-  // Two clocks on one screen is one too many. Gym mode runs its own, larger,
-  // and it is the same session — so the bar stands down there as well.
-  if (location === href || location === '/gym') return null;
+  // Through `logHref` (PLAN.md M117): today's log is Home, and a bar that
+  // compared against `/log/<today>` showed a second clock over the day's
+  // own — found while gym mode's clause here was being retired (M120).
+  const href = logHref(banner.session.date, today());
+  // Two clocks on one screen is one too many.
+  if (location === href) return null;
 
   const day = fromKey(banner.session.date).toLocaleDateString(undefined, { weekday: 'long' });
 

@@ -30,6 +30,19 @@ export interface FieldSpec {
   ends?: [string, string];
   /** Which ladder a grade field reads from. */
   scale?: 'boulder' | 'route';
+  /**
+   * Answered by the session's own climbs rather than typed (PLAN.md M120).
+   *
+   * Three of the sixteen ask for something the climb list already says —
+   * the hardest thing sent, the hardest thing touched, how many climbs —
+   * and from M70 to M119 the logger asked anyway, so a climber who tallied
+   * eight problems was then asked how many problems they did. Declared here
+   * so `engine/sessionFields.ts` can answer per field, and the card can
+   * show the answer instead of the question whenever there are climbs to
+   * read it from. With no climbs logged the question stands, because a
+   * session written as a note has nothing to derive from.
+   */
+  derived?: 'climbs';
 }
 
 export const FIELDS: Record<FieldId, FieldSpec> = {
@@ -38,9 +51,16 @@ export const FIELDS: Record<FieldId, FieldSpec> = {
     label: 'Hardest attempted',
     kind: 'grade',
     scale: 'boulder',
+    derived: 'climbs',
   },
-  hardestGradeSent: { id: 'hardestGradeSent', label: 'Hardest sent', kind: 'grade', scale: 'boulder' },
-  sessionVolume: { id: 'sessionVolume', label: 'Climbs done', kind: 'number' },
+  hardestGradeSent: {
+    id: 'hardestGradeSent',
+    label: 'Hardest sent',
+    kind: 'grade',
+    scale: 'boulder',
+    derived: 'climbs',
+  },
+  sessionVolume: { id: 'sessionVolume', label: 'Climbs done', kind: 'number', derived: 'climbs' },
   routesCompleted: { id: 'routesCompleted', label: 'Routes completed', kind: 'number' },
   pitches: { id: 'pitches', label: 'Pitches', kind: 'number' },
   attemptsToday: { id: 'attemptsToday', label: 'Attempts', kind: 'number', unit: 'burns' },

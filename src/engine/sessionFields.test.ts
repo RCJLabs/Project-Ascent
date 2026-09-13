@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Climb, Session } from '@/db/sessions';
 import { addDays } from './dates';
+import { FIELDS } from '@/content/fields';
 import {
   ENOUGH_POINTS,
   FIELD_DAYS,
+  derivedField,
   fieldSeries,
+  fieldValue,
   gradeDisagreements,
   hardestLogged,
 } from './sessionFields';
@@ -225,5 +228,83 @@ describe('when the typed grade and the log disagree', () => {
       [climb('V5', 'send'), climb('V6', 'attempt')],
     );
     expect(found.map((d) => d.spec.id)).toEqual(['hardestGradeSent', 'hardestGradeAttempted']);
+  });
+});
+
+/**
+ * The three questions the climbs answer (PLAN.md M120), per field against
+ * the registry.
+ */
+describe('a field derived from the climbs', () => {
+  const s = session('2026-09-01', { climbs: [climb('V3', 'send'), climb('V5', 'send'), climb('V6', 'attempt'), climb('5.11a', 'send', 'YDS')] });
+
+  it('reads the hardest send on the field\u2019s own ladder', () => {
+    expect(derivedField(s, FIELDS.hardestGradeSent)).toBe('V5');
+  });
+
+  it('reads the hardest thing touched, send or not', () => {
+    expect(derivedField(s, FIELDS.hardestGradeAttempted)).toBe('V6');
+  });
+
+  it('counts every climb, sends and attempts alike', () => {
+    // Four rows, one each — and the count is of `count`, not of rows.
+    const many = session('2026-09-02', { climbs: [{ ...climb('V3', 'send'), count: 5 }, climb('V4', 'attempt')] });
+    expect(derivedField(s, FIELDS.sessionVolume)).toBe(4);
+    expect(derivedField(many, FIELDS.sessionVolume)).toBe(6);
+  });
+
+  it('has nothing to say with no climbs, so the question stands', () => {
+    const empty = session('2026-09-03', { fields: { sessionVolume: 8, hardestGradeSent: 'V2' } as never });
+    expect(derivedField(empty, FIELDS.sessionVolume)).toBeNull();
+    expect(fieldValue(empty, FIELDS.sessionVolume)).toBe(8);
+    expect(fieldValue(empty, FIELDS.hardestGradeSent)).toBe('V2');
+  });
+
+  it('is what the climbs say even when something else was typed', () => {
+    const typed = session('2026-09-04', { climbs: [climb('V4', 'send')], fields: { hardestGradeSent: 'V7', sessionVolume: 9 } as never });
+    expect(fieldValue(typed, FIELDS.hardestGradeSent)).toBe('V4');
+    expect(fieldValue(typed, FIELDS.sessionVolume)).toBe(1);
+  });
+
+  it('answers nothing for a field that is not derived', () => {
+    expect(derivedField(s, FIELDS.pumpLevel)).toBeNull();
+    expect(derivedField(s, FIELDS.location)).toBeNull();
+  });
+
+  it('reads one ladder only', () => {
+    const routes = session('2026-09-05', { climbs: [climb('5.12a', 'send', 'YDS')] });
+    expect(derivedField(routes, FIELDS.hardestGradeSent)).toBeNull();
+    expect(hardestLogged(routes, 'send', 'V')).toBeNull();
+    expect(hardestLogged(routes, 'send', 'YDS')?.grade).toBe('5.12a');
+  });
+});
+
+describe('the series, with the derived answers', () => {
+  const asked = () => ['sessionVolume'] as const;
+
+  it('counts a derived answer on a day the question was asked', () => {
+    const sessions = [
+      session('2026-09-01', { climbs: [{ ...climb('V3', 'send'), count: 4 }] }),
+      session('2026-09-03', { climbs: [{ ...climb('V3', 'send'), count: 6 }] }),
+    ];
+    const withDecl = fieldSeries({ sessions, to: TO, declares: asked });
+    expect(withDecl.find((x) => x.spec.id === 'sessionVolume')?.points.map((p) => p.value)).toEqual([4, 6]);
+  });
+
+  it('reads nothing derived when nobody says what was asked', () => {
+    const sessions = [session('2026-09-01', { climbs: [{ ...climb('V3', 'send'), count: 4 }] })];
+    expect(only(sessions, 'sessionVolume')).toBeUndefined();
+  });
+
+  it('prefers the climbs to a typed answer on the same day', () => {
+    const sessions = [session('2026-09-01', { climbs: [{ ...climb('V3', 'send'), count: 4 }], fields: { sessionVolume: 9 } as never })];
+    const points = fieldSeries({ sessions, to: TO, declares: asked }).find((x) => x.spec.id === 'sessionVolume')?.points;
+    expect(points?.map((p) => p.value)).toEqual([4]);
+  });
+
+  it('never derives a grade field into the series', () => {
+    const sessions = [session('2026-09-01', { climbs: [climb('V5', 'send')] })];
+    const all = fieldSeries({ sessions, to: TO, declares: () => ['hardestGradeSent'] });
+    expect(all.find((x) => x.spec.id === 'hardestGradeSent')).toBeUndefined();
   });
 });

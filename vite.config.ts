@@ -96,12 +96,6 @@ export default defineConfig({
             icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
           },
           {
-            name: 'Gym mode',
-            short_name: 'Gym mode',
-            url: `${BASE}#/gym`,
-            icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
-          },
-          {
             name: 'The Ascent',
             short_name: 'The Ascent',
             url: `${BASE}#/ascent`,

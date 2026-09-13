@@ -417,7 +417,21 @@ export function ProgressPage() {
     () => conversionTrend({ sessions, scale, to: today() }),
     [sessions, scale],
   );
-  const answered = useMemo(() => fieldSeries({ sessions, to: today() }), [sessions]);
+  // The derived fields count on the days their question was asked (PLAN.md
+  // M120), and which questions a session was asked is the catalogue's to
+  // say — handed in, the way `tissueLoad` is handed the words.
+  const answered = useMemo(
+    () =>
+      fieldSeries({
+        sessions,
+        to: today(),
+        declares: (s) =>
+          s.programId && s.sessionTypeId
+            ? getProgram(s.programId)?.sessionTypes.find((t) => t.id === s.sessionTypeId)?.fields
+            : undefined,
+      }),
+    [sessions],
+  );
   // The scan reads the record; the drill a session ran and the exercises its
   // program prescribed live in the catalogue, so they are fetched here and
   // handed in. Without them a program session counts only what was ticked.

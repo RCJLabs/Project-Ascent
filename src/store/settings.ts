@@ -44,6 +44,8 @@ export interface SettingsState {
   cues: boolean;
   progressView: ProgressView;
   setProgressView: (view: ProgressView) => void;
+  logView: LogView;
+  setLogView: (view: LogView) => void;
   setTheme: (theme: ThemePreference) => void;
   setThemeId: (id: string) => void;
   setTextSize: (size: TextSize) => void;
@@ -80,6 +82,9 @@ interface ClimberSettings {
 export type ProgressView = 'block' | 'grades' | 'body' | 'all';
 const PROGRESS_VIEWS: readonly ProgressView[] = ['block', 'grades', 'body', 'all'];
 
+/** The logger folded to the climbs and the effort, or the whole thing (PLAN.md M120). */
+export type LogView = 'quick' | 'full';
+
 interface DeviceSettings {
   theme: ThemePreference;
   themeId: string;
@@ -89,6 +94,7 @@ interface DeviceSettings {
    *  fact about this phone, not about the climber, and has no place in a
    *  backup. */
   progressView: ProgressView;
+  logView: LogView;
 }
 
 function climberSettings(state: SettingsState): ClimberSettings {
@@ -102,6 +108,7 @@ function deviceSettings(state: SettingsState): DeviceSettings {
     textSize: state.textSize,
     cues: state.cues,
     progressView: state.progressView,
+    logView: state.logView,
   };
 }
 
@@ -143,6 +150,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
   progressView: 'block',
   setProgressView: (view) => {
     set({ progressView: view });
+    writeDevice(deviceSettings(get()));
+  },
+  logView: 'quick',
+  setLogView: (view) => {
+    set({ logView: view });
     writeDevice(deviceSettings(get()));
   },
   setTheme: (theme) => {
@@ -212,6 +224,7 @@ export async function hydrateSettings(): Promise<void> {
       progressView: PROGRESS_VIEWS.includes(device.progressView as ProgressView)
         ? (device.progressView as ProgressView)
         : 'block',
+      logView: device.logView === 'full' ? 'full' : 'quick',
     };
 
     useSettings.setState({

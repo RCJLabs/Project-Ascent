@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Redirect } from 'wouter';
-import { AlertTriangle, Check, ChevronDown, ChevronRight, Clock, Copy, Dumbbell, Flag, Flame, Plus, RotateCw, Ruler, Snowflake, Sparkles, Timer, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Check, ChevronDown, ChevronRight, ChevronUp, Clock, Copy, Flag, Flame, Plus, RotateCw, Ruler, Snowflake, Sparkles, Timer, Trash2, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getProtocol } from '@/content/protocols';
 import { SCALE_MAX, getField, type FieldSpec } from '@/content/fields';
@@ -51,6 +51,9 @@ import { lastLogged } from '@/engine/exerciseLog';
 import { circuitPlan } from '@/engine/circuit';
 import { circuitSubject, protocolSubject, type TimerSubject } from '@/engine/timer';
 import { ExerciseNumbers } from './ExerciseNumbers';
+import { RestTimer } from './RestTimer';
+import { TallyRow } from './TallyRow';
+import { keepAwake, releaseAwake } from '@/lib/wakeLock';
 import { useTemplates } from '@/store/templates';
 import { parseCount } from '@/content/types';
 import { BackLink } from '@/ui/BackLink';
@@ -58,17 +61,17 @@ import { DisclosureButton } from '@/ui/Disclosure';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Checkbox, Input, Select, TextArea } from '@/ui/Field';
-import { CHIP_LINK, Chip } from '@/ui/Chip';
+import { Chip } from '@/ui/Chip';
 import { IconButton } from '@/ui/IconButton';
 import { announce } from '@/ui/Announce';
 import { Term } from '@/ui/Term';
 import { TimerSheet } from '@/ui/TimerSheet';
 import {useGradeLabel} from '@/ui/useGrade';
-import { gradeDisagreements } from '@/engine/sessionFields';
+import { derivedField, gradeDisagreements } from '@/engine/sessionFields';
 import { alreadySaved, applyTemplate, rankTemplates, suggestName } from '@/engine/templates';
 import { canMerge, describeSession } from '@/engine/sessionEdit';
 import { concerning, injuryPolicy } from '@/engine/injury';
-import { climbOutcome } from '@/engine/gym';
+import { climbOutcome, gymSummary } from '@/engine/gym';
 import {
   ASKED_BY_FINGERS,
   FINGER_ANSWERS,
@@ -580,6 +583,23 @@ function SessionEditor({
   const isRest = type?.isRest === true;
   const patch = (p: Partial<Session>) => onChange({ ...session, ...p });
 
+  /**
+   * Quick or full (PLAN.md M120).
+   *
+   * The logger is a long page — check-in, climbs, session questions,
+   * project burns, the prescription, the drill, the warmup, effort,
+   * cooldown, notes, photos, templates — and the three things a session
+   * needs are the climbs, the effort and the button. Quick is those, plus
+   * the prescription when the program wrote one, because on a fingerboard
+   * day the prescription *is* the session. Everything else unfolds behind
+   * "More", and the fold is remembered on the device beside the theme:
+   * a climber who fills in the check-in every time should not have to open
+   * it every time.
+   */
+  const logView = useSettings((st) => st.logView);
+  const setLogView = useSettings((st) => st.setLogView);
+  const full = logView === 'full';
+
   // Everything worth marking: what load should stay off, plus what is being
   // loaded again on purpose and wants watching.
   const editorInjuries = useProfile((s) => s.injuries);
@@ -619,6 +639,16 @@ function SessionEditor({
     return () => clearInterval(id);
   }, [live]);
   const elapsed = elapsedMs(session, now);
+
+  // The screen stays on while the session is live (PLAN.md M74, here since
+  // M120): a phone that sleeps between burns is a phone you unlock forty
+  // times a session. Not while stale — a session left open overnight is
+  // not one anybody is standing under.
+  useEffect(() => {
+    if (!live || stale) return;
+    void keepAwake();
+    return () => void releaseAwake();
+  }, [live, stale]);
 
   /** Close the session, and let the clock fill in the duration if it can. */
   function complete() {
@@ -746,6 +776,11 @@ function SessionEditor({
     patch({ climbs: session.climbs.map((c) => (c.id === climb.id ? { ...c, count: next } : c)) });
   }
 
+  const summary = gymSummary(session.climbs);
+  const summaryLine =
+    `${summary.total} climb${summary.total === 1 ? '' : 's'} · ${summary.sends} sent · ${summary.attempts} tried` +
+    (summary.hardest ? ` · hardest ${gradeLabel(summary.hardest.scale, summary.hardest.grade)}` : '');
+
   const blocks = type && day?.phase ? prescriptionFor(type, day.phase, trackId) : [];
   // What today actually loads, so the check-in does not tell a climber on a
   // legs-and-core day to leave the fingerboard alone.
@@ -783,11 +818,6 @@ function SessionEditor({
             </span>
             <span className="text-ink-soft">Live</span>
             <span className="font-bold tabular-nums text-base">{formatClock(elapsed)}</span>
-            {/* The way into gym mode, on the only screen that knows a session
-                is running (PLAN.md M74). It is the same session either way. */}
-            <Link href="/gym" className={`${CHIP_LINK} ml-auto gap-1.5`}>
-              <Dumbbell size={15} /> Gym mode
-            </Link>
           </p>
         ) : (
           <p className="text-sm text-ink-soft">In progress — fill in what you did, then mark it complete.</p>
@@ -847,12 +877,14 @@ function SessionEditor({
         </Card>
       ) : (
         <>
-          <CheckInCard
-            checkIn={session.checkIn}
-            readiness={readiness}
-            injured={askablePartsOf(editorInjuries)}
-            onAnswer={(checkIn) => patch({ checkIn })}
-          />
+          {full && (
+            <CheckInCard
+              checkIn={session.checkIn}
+              readiness={readiness}
+              injured={askablePartsOf(editorInjuries)}
+              onAnswer={(checkIn) => patch({ checkIn })}
+            />
+          )}
 
           <Card title="Climbs">
             <ClimbEntry
@@ -883,36 +915,30 @@ function SessionEditor({
                 onRepeat={(climbs) => patch({ climbs: climbs as Climb[] })}
               />
             ) : (
-              <ul className="grid grid-cols-1 gap-2">
-                {session.climbs.map((c) => (
-                  <li key={c.id} className="flex items-center gap-2 bg-sunken rounded-xl px-3 py-2">
-                    <span className="font-bold text-sm w-14">{gradeLabel(c.scale, c.grade)}</span>
-                    <span className="text-xs text-ink-soft flex-1 truncate">
-                      {c.name ? `${c.name} · ` : ''}
-                      {c.result === 'attempt'
-                        ? 'tried'
-                        : c.style === 'onsight'
-                          ? 'on-sight'
-                          : c.style === 'flash'
-                            ? 'flashed'
-                            : 'sent'}
-                    </span>
-                    <IconButton onClick={() => bump(c, -1)} label={`One fewer ${c.grade}`} className="border border-line bg-surface" inline={false}>
-                      −
-                    </IconButton>
-                    <span className="w-6 text-center font-semibold text-sm">{c.count}</span>
-                    <IconButton onClick={() => bump(c, 1)} label={`One more ${c.grade}`} className="border border-line bg-surface" inline={false}>
-                      +
-                    </IconButton>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="grid grid-cols-1 gap-2">
+                  {session.climbs.map((c) => (
+                    <TallyRow
+                      key={c.id}
+                      climb={c}
+                      label={gradeLabel(c.scale, c.grade)}
+                      onBump={(by) => bump(c, by)}
+                    />
+                  ))}
+                </ul>
+                <p className="text-sm text-ink-soft mt-3">{summaryLine}</p>
+              </>
             )}
           </Card>
 
-          <FieldsCard session={session} type={type} onChange={onChange} />
+          {/* Rest between burns, while the session is live (PLAN.md M74,
+              here since M120). Under the climbs because that is where the
+              thumb is between them. */}
+          {live && !stale && <RestTimer sessionId={session.id} now={now} />}
 
-          <ProjectBurnsCard session={session} onChange={onChange} />
+          {full && <FieldsCard session={session} type={type} onChange={onChange} />}
+
+          {full && <ProjectBurnsCard session={session} onChange={onChange} />}
 
           {blocks.length > 0 && (
             <Card title="Today's prescription">
@@ -1061,7 +1087,7 @@ function SessionEditor({
             </Card>
           )}
 
-          {day?.drill && (
+          {full && day?.drill && (
             <Card title="Drill">
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="min-w-0">
@@ -1117,7 +1143,7 @@ function SessionEditor({
             </Card>
           )}
 
-          <WarmupCard session={session} day={day} onWarmedUp={() => patch({ warmup: true })} />
+          {full && <WarmupCard session={session} day={day} onWarmedUp={() => patch({ warmup: true })} />}
 
           <Card title="Effort">
             <div className="mb-3">
@@ -1165,10 +1191,11 @@ function SessionEditor({
             </Chip>
           </Card>
 
-          <CooldownCard session={session} />
+          {full && <CooldownCard session={session} />}
         </>
       )}
 
+      {full && (
       <Card title="Notes">
         <TextArea
           value={session.notes ?? ''}
@@ -1178,16 +1205,19 @@ function SessionEditor({
           className="resize-y"
         />
       </Card>
+      )}
 
       {/* After the notes, because a photo is the other half of what the
           notes are for (PLAN.md M30). Keyed on the session id, which the
           date is part of — `sessions.move` and `sessions.merge` carry the
           pictures across when that id changes. */}
-      <MediaCard
-        owner={sessionOwner(session.id)}
-        blurb="The board you set, the wall on a trip, the sequence you want to remember. Photos are resized on the way in and live on this device — they go into a backup with everything else."
-        fullNote="That is the limit for one session. Delete one to add another — storage here is finite and nothing is backed up anywhere but your own export."
-      />
+      {full && (
+        <MediaCard
+          owner={sessionOwner(session.id)}
+          blurb="The board you set, the wall on a trip, the sequence you want to remember. Photos are resized on the way in and live on this device — they go into a backup with everything else."
+          fullNote="That is the limit for one session. Delete one to add another — storage here is finite and nothing is backed up anywhere but your own export."
+        />
+      )}
 
       {timer && (
         <TimerSheet
@@ -1213,9 +1243,29 @@ function SessionEditor({
         <RewardCard session={session} onAcknowledge={() => patch({ rewarded: true })} />
       )}
 
-      {session.completed && <SaveTemplateCard session={session} typeName={type?.name} />}
+      {full && session.completed && <SaveTemplateCard session={session} typeName={type?.name} />}
 
-      <CorrectionCard session={session} others={others} typeName={type?.name} onMoved={onMoved} />
+      {full && <CorrectionCard session={session} others={others} typeName={type?.name} onMoved={onMoved} />}
+
+      {/* The fold itself. Above the button so the button stays last
+          whichever way the page is showing. */}
+      <Button
+        variant="outline"
+        className="w-full"
+        aria-expanded={full}
+        onClick={() => setLogView(full ? 'quick' : 'full')}
+      >
+        {full ? (
+          <>
+            <ChevronUp size={16} /> Less
+          </>
+        ) : (
+          <>
+            <ChevronDown size={16} />
+            {isRest ? 'More — notes, photos' : 'More — check-in, projects, warmup, notes, photos'}
+          </>
+        )}
+      </Button>
 
       {session.completed ? (
         <Button
@@ -1458,6 +1508,38 @@ function FieldsCard({
       <div className="grid grid-cols-1 gap-3">
         {specs.map((spec) => {
           const value = session.fields?.[spec.id];
+
+          // Answered by the climbs (PLAN.md M120): the row shows the
+          // answer, and a typed one that disagrees can be cleared in a tap.
+          // Nothing is overwritten silently — see `gradeDisagreements`.
+          const derived = derivedField(session, spec);
+          if (derived !== null) {
+            const shown =
+              spec.kind === 'grade'
+                ? gradeLabel(spec.scale === 'route' ? 'YDS' : 'V', String(derived))
+                : String(derived);
+            const typedOver = value !== undefined && String(value) !== String(derived);
+            return (
+              <div key={spec.id}>
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="text-ink-soft">{spec.label}</span>
+                  <span className="font-bold tabular-nums">{shown}</span>
+                </div>
+                <p className="text-xs text-ink-soft mt-0.5">
+                  From the climbs
+                  {typedOver
+                    ? `, not the ${spec.kind === 'grade' ? gradeLabel(spec.scale === 'route' ? 'YDS' : 'V', String(value)) : String(value)} you typed.`
+                    : '.'}
+                </p>
+                {typedOver && (
+                  <Button size="sm" variant="ghost" className="mt-1" onClick={() => set(spec.id, undefined)}>
+                    Use the climbs
+                  </Button>
+                )}
+              </div>
+            );
+          }
+
           if (spec.kind === 'scale') {
             return (
               <div key={spec.id}>

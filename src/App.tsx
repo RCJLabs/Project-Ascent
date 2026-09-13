@@ -32,7 +32,6 @@ const BodyPage = lazy(() => import('@/features/body/BodyPage').then((m) => ({ de
 const CoachPage = lazy(() => import('@/features/coach/CoachPage').then((m) => ({ default: m.CoachPage })));
 const FinderPage = lazy(() => import('@/features/finder/FinderPage').then((m) => ({ default: m.FinderPage })));
 const FinishPage = lazy(() => import('@/features/finish/FinishPage').then((m) => ({ default: m.FinishPage })));
-const GymPage = lazy(() => import('@/features/gym/GymPage').then((m) => ({ default: m.GymPage })));
 const DataPage = lazy(() => import('@/features/data/DataPage').then((m) => ({ default: m.DataPage })));
 const InjuryPage = lazy(() => import('@/features/injury/InjuryPage').then((m) => ({ default: m.InjuryPage })));
 const JournalPage = lazy(() => import('@/features/journal/JournalPage').then((m) => ({ default: m.JournalPage })));
@@ -258,7 +257,10 @@ function Shell() {
           <Route path="/objectives" component={ObjectivesPage} />
           <Route path="/board" component={BoardPage} />
           <Route path="/calendar" component={CalendarPage} />
-          <Route path="/gym" component={GymPage} />
+          {/* Gym mode was a route from M74 to M119; it is the logger's quick
+              view now (PLAN.md M120), which is Home. The address stays for
+              anyone who pinned the launcher shortcut. */}
+          <Route path="/gym" component={TodayRedirect} />
           <Route path="/log/:date" component={LogPage} />
           <Route path="/attach" component={AttachPage} />
           <Route path="/today" component={TodayRedirect} />

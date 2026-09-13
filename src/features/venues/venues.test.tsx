@@ -13,6 +13,10 @@ import { DayBody } from '@/features/log/LogPage';
 import { ProjectsPage } from '@/features/projects/ProjectsPage';
 import { CareerPage } from '@/features/career/CareerPage';
 import { VENUE_LIST_ID } from './useVenues';
+import { useSettings } from '@/store/settings';
+
+/** The card under test is behind the fold (PLAN.md M120); open it. */
+const fullLog = () => useSettings.setState({ logView: 'full' });
 
 /**
  * Where you climbed (PLAN.md M88b).
@@ -56,6 +60,7 @@ async function logger(): Promise<void> {
     adaptations: {},
     injuries: [],
   });
+  fullLog();
   renderAt('/', <DayBody date={DATE} />);
 }
 

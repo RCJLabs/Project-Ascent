@@ -25,7 +25,6 @@ import { GlossaryPage } from '@/features/glossary/GlossaryPage';
 import { AttachPage } from '@/features/media/AttachPage';
 import { DrillsPage } from '@/features/drills/DrillsPage';
 import { DrillPage } from '@/features/drills/DrillPage';
-import { GymPage } from '@/features/gym/GymPage';
 import { GuideList } from '@/features/guides/GuidePage';
 import { GuidePage } from '@/features/guides/GuidePage';
 import { GamePage } from '@/features/game/GamePage';
@@ -85,7 +84,6 @@ const PAGES: [string, string, ReactElement][] = [
   ['board', '/board', <BoardPage />],
   ['calendar', '/calendar', <CalendarPage />],
   ['log', '/log/2026-03-04', <LogPage params={{ date: '2026-03-04' }} />],
-  ['gym', '/gym', <GymPage />],
   ['progress', '/progress', <ProgressPage />],
   ['finish', '/finish', <FinishPage />],
   ['journal', '/journal', <JournalPage />],

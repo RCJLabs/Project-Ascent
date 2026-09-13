@@ -61,6 +61,46 @@ export interface FieldsInput {
   sessions: readonly Session[];
   to: string;
   days?: number;
+  /**
+   * Which fields a session's type asks for, so a derived answer counts on
+   * the days the question was put (PLAN.md M120). Supplied by the caller,
+   * because the catalogue is content and this is an engine: the Progress
+   * page hands in a lookup the same way it hands `tissueLoad` the words.
+   * Without it, only what was typed is read — the pre-M120 behaviour.
+   */
+  declares?: (session: Session) => readonly FieldId[] | undefined;
+}
+
+/**
+ * What a session's own climbs say for a field that is derived from them
+ * (PLAN.md M120), or null when there is nothing to read it from.
+ *
+ * Per field, against the registry: the two grades are the hardest of the
+ * kind on the field's own ladder — `hardestLogged` below, the same reading
+ * the pyramid and the records use, which is the point — and the volume is
+ * every climb counted, sends and attempts alike, because "climbs done" has
+ * always meant problems pulled on rather than problems topped.
+ */
+export function derivedField(session: Session, spec: FieldSpec): string | number | null {
+  if (spec.derived !== 'climbs') return null;
+  if (spec.id === 'sessionVolume') {
+    const total = session.climbs.reduce((n, c) => n + c.count, 0);
+    return total > 0 ? total : null;
+  }
+  const scale: GradeScale = spec.scale === 'route' ? 'YDS' : 'V';
+  const kind = spec.id === 'hardestGradeSent' ? 'send' : 'either';
+  const best = hardestLogged(session, kind, scale);
+  return best === null ? null : best.grade;
+}
+
+/**
+ * The value a field has for a session: what the climbs say when they say
+ * anything, else what was typed. The one rule every reader shares.
+ */
+export function fieldValue(session: Session, spec: FieldSpec): string | number | undefined {
+  const derived = derivedField(session, spec);
+  if (derived !== null) return derived;
+  return session.fields?.[spec.id];
 }
 
 /** Numeric kinds only — see the note above. */
@@ -85,9 +125,17 @@ export function fieldSeries(input: FieldsInput): FieldSeries[] {
     .sort((a, b) => (a.date === b.date ? a.id.localeCompare(b.id) : a.date < b.date ? -1 : 1));
 
   for (const session of inWindow) {
-    for (const [id, raw] of Object.entries(session.fields ?? {})) {
-      const spec = FIELDS[id as FieldId];
+    // Everything typed, plus — when the caller can say which questions the
+    // session was asked — everything derived for a question it was asked.
+    const asked = new Set<FieldId>(Object.keys(session.fields ?? {}) as FieldId[]);
+    for (const id of input.declares?.(session) ?? []) {
+      if (FIELDS[id]?.derived === 'climbs') asked.add(id);
+    }
+    for (const id of asked) {
+      const spec = FIELDS[id];
       if (spec === undefined || !isQuantity(spec)) continue;
+      const raw = fieldValue(session, spec);
+      if (raw === undefined) continue;
       // The logger stores what the input produced; a restored backup can
       // hold a string where a number belongs.
       const value = typeof raw === 'number' ? raw : Number(raw);
@@ -127,10 +175,14 @@ export function fieldSeries(input: FieldsInput): FieldSeries[] {
 export function hardestLogged(
   session: Session,
   result: 'send' | 'attempt' | 'either',
+  /** One ladder only (PLAN.md M120): a boulder field reads the V grades
+   *  even in a session that also logged a route. */
+  scale?: GradeScale,
 ): { grade: string; scale: GradeScale } | null {
   let best: { grade: string; scale: GradeScale; ordinal: number } | null = null;
   for (const climb of session.climbs) {
     if (result !== 'either' && climb.result !== result) continue;
+    if (scale !== undefined && climb.scale !== scale) continue;
     const ordinal = gradeOrdinal(climb.scale, climb.grade);
     if (ordinal < 0) continue;
     // Compared inside a ladder only. A V-grade and a YDS grade have no

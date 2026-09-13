@@ -5471,14 +5471,66 @@ read by seven pages as display. A separate tab is moving, not gating.*
   The budgets were never wrong — each was checked by the test against its own number — only
   the deltas quoted in prose were.
   3,895 tests pass.
-- **M120 — Quick log, full log (M4).** *Proposed, and the largest engineering item.*
-  The logger opens as **Climbs · Effort · Complete**; everything else folds behind "More",
-  and the fold remembers itself. `hardestAttempted`, `hardestSent` and `sessionVolume`
-  derive from the climb list **per field** against the M70 registry rather than being
-  typed twice. Gym mode becomes the quick view rather than a route of its own. Done as an
-  extraction from the 2,000-line `LogPage.tsx`, not a rewrite. *Risk: the derivation has
-  to agree with what the review and the grades page already compute — the tests for those
-  are the spec.*
+- **M120 — Quick log, full log (M4).** *Done, as an extraction rather than a rewrite.*
+  **The fold.** The logger opens on the climbs, the effort and the button. The prescription
+  stays in the quick view when the program wrote one, because on a fingerboard day the
+  prescription *is* the session — the one judgement call in the assignment, and the one most
+  worth arguing with. Everything else — the check-in, the session's questions, project burns,
+  the drill, the warmup, the cooldown, notes, photos, the template and the correction card —
+  unfolds behind **More**, which sits above the button so the button stays last either way.
+  The fold is remembered on the device beside the theme (M119's mechanism), so a climber who
+  fills in the check-in every time opens it once. A rest day folds to its checklist.
+  **Three questions the climbs already answered.** Iron Grip's climbing day asked for the
+  hardest attempted, the hardest sent and the climbs done, of a climber who had just tallied
+  all three; nine programs asked at least one of them. The registry now says which fields
+  are `derived: 'climbs'` and the engine answers per field — the two grades through
+  `hardestLogged` on the field's own ladder, which is the reading the pyramid and the records
+  already use, and the volume as every climb counted, attempts included. `fieldValue` is the
+  one rule every reader shares: what the climbs say when they say anything, else what was
+  typed. The card shows the answer instead of the question, names a typed answer the climbs
+  disagree with, and clears it in a tap — never silently, which was M88's rule. With no
+  climbs the question stands: a session written as a note has nothing to derive from. The
+  Progress series counts a derived answer on the days its question was asked, with the
+  catalogue's declarations handed in the way `tissueLoad` is handed the words, so the
+  engine stays an engine.
+  **Gym mode is the quick view.** M74 built it as the logger with everything else taken
+  away plus a rest timer and a screen that stays on. The quick view is the logger with
+  everything else taken away, so the rest timer moved in (under the climbs, while the
+  session is live), the wake lock is held while live and not stale, and the tally rows are
+  gym mode's — a 56px plus for a cold hand on glass, the minus smaller because it is the
+  correction — with the session's totals in a line beneath. `GymPage` is deleted; `/gym`
+  redirects home through `TodayRedirect`, and stays in the route table so "rest timer" still
+  finds something; the launcher shortcut is gone, since "Log today" is the same screen. M74's
+  tests are the quick view's tests now, which was always the claim: it is the same session.
+  **A bug M117 left.** The live bar compared its location against `/log/<today>` to stand
+  down on the session's own page; since M117 that page is `/`, so Home showed the bar's clock
+  over the day's own. Found while retiring the bar's gym-mode clause, fixed through
+  `logHref`, and tested for the first time.
+  **Tests state their view.** Seven files read a folded card and now say so, the way M119's
+  did for Progress.
+  **Measured, not asserted.** 28 mutations, 27 killed plus the sanity no-op that must survive
+  (the two view selectors reordered): the fold forced open and forced shut, the toggle
+  disconnected, the check-in put in the quick view, the notes never shown, the prescription
+  folded, the rest timer shown on a session that is not live and never shown, its stop not
+  clearing and its end time stored as a count, the wake lock never requested and requested
+  when not live, the summary miscounting, the plus losing its target, the fold not written to
+  the device and not read back, the volume counting rows rather than counts, the hardest sent
+  reading attempts, the ladder unfiltered, a typed answer winning over the climbs, non-derived
+  fields derived, a declared derived answer not counted in the series, the registry losing
+  the volume's flag, the derived row never shown, "Use the climbs" clearing nothing, the
+  disagreement shown when they agree, and the live bar comparing against `/log/<today>`.
+  **In a browser, both themes, 430px and 1280px.** A live session on Home opens on
+  the climbs, the rest presets, the effort and the button, with no second clock in the bar
+  above; a V4 added and the plus tapped reads *2 climbs · 2 sent · 0 tried · hardest V4*; a
+  three-minute rest counts from 3:00 and stops; More unfolds the check-in, the session's
+  questions, the drill, the warmup, the cooldown, notes and photos, and the device record
+  carries `logView: "full"`; the session's questions read *Hardest attempted V4 · Hardest sent
+  V4 · Climbs done 2 · From the climbs* with no inputs; a reload opens full; Less folds it
+  back; `/gym` lands on `/`. No overflow, no page errors.
+  **Budget.** Unchanged at 204.4, measured 203.48 → 204.32KB. The fold, the rest timer and the
+  tally row moved into the eager logger; `GymPage`'s chunk was lazy and its going saved the
+  entry nothing. Slack is 0.08KB, so the next milestone to touch the entry moves the line.
+  3,912 tests pass.
 - **M121 — Program overview (M5).** *Proposed.*
   A program page that fits on one screen: what it is for, how long, what a week looks
   like, what you need, and one **Read the full guide**; the week-by-week collapses behind

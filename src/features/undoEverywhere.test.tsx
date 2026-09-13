@@ -17,8 +17,11 @@ import { InjuryPage } from '@/features/injury/InjuryPage';
 import { MediaCard } from '@/features/media/MediaCard';
 import { MetricDetailPage } from '@/features/assessments/MetricDetailPage';
 import { ObjectiveDetailPage } from '@/features/objectives/ObjectiveDetailPage';
-import { GymPage } from '@/features/gym/GymPage';
 import { DayBody } from '@/features/log/LogPage';
+import { useSettings } from '@/store/settings';
+
+/** The card under test is behind the fold (PLAN.md M120); open it. */
+const fullLog = () => useSettings.setState({ logView: 'full' });
 
 /**
  * Undo wherever it destroys (PLAN.md M79).
@@ -187,9 +190,10 @@ describe('a tally row taken to zero', () => {
     useProfile.setState({ activeProgramId: null, startDates: {} });
   }
 
-  it('in gym mode comes back, in the same place', async () => {
+  it('comes back, in the same place', async () => {
     await running();
-    renderAt('/gym', <GymPage />);
+    fullLog();
+    renderAt('/', <DayBody date={DATE} />);
     fireEvent.click(await screen.findByRole('button', { name: /One fewer V6 tried/ }));
     await waitFor(async () => expect((await getSession(ID))!.climbs.map((c) => c.id)).toEqual(['a']));
     expect(offer()?.label).toBe('V6 tried');
@@ -198,9 +202,10 @@ describe('a tally row taken to zero', () => {
     await waitFor(async () => expect((await getSession(ID))!.climbs.map((c) => c.id)).toEqual(['a', 'b']));
   });
 
-  it('in gym mode is not offered for a count that merely fell', async () => {
+  it('is not offered for a count that merely fell', async () => {
     await running();
-    renderAt('/gym', <GymPage />);
+    fullLog();
+    renderAt('/', <DayBody date={DATE} />);
     fireEvent.click(await screen.findByRole('button', { name: /One fewer V4 sent/ }));
     await waitFor(async () => expect((await getSession(ID))!.climbs[0]!.count).toBe(1));
     // 2 → 1 is not a loss; an offer for it would be noise that buries the
@@ -210,8 +215,9 @@ describe('a tally row taken to zero', () => {
 
   it('in the logger comes back too', async () => {
     await running();
+    fullLog();
     renderAt('/', <DayBody date={DATE} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'One fewer V6' }));
+    fireEvent.click(await screen.findByRole('button', { name: /One fewer V6/ }));
     await waitFor(async () => expect((await getSession(ID))!.climbs).toHaveLength(1));
     expect(offer()?.label).toBe('V6 tried');
     await offer()!.run();
@@ -229,6 +235,7 @@ describe('a project burn taken to zero', () => {
     } as never);
     await hydrate();
     useProfile.setState({ activeProgramId: null, startDates: {} });
+    fullLog();
     renderAt('/', <DayBody date={DATE} />);
     const projectsCard = (await screen.findByText('Projects')).closest('section, div') as HTMLElement;
     const minus = within(projectsCard).getAllByRole('button').find((b) => /fewer/.test(b.getAttribute('aria-label') ?? '') || b.textContent === '−')!;

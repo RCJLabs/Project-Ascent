@@ -72,7 +72,9 @@ export const ROUTES: RouteMeta[] = [
   // Log. Home is today's session; these are the other ways into a day.
   { path: '/log/:date', title: 'Log', parent: '/calendar' },
   { path: '/today', title: 'Today', parent: '/', group: 'Log', keywords: ['log a session', 'start a session'] },
-  { path: '/gym', title: 'Gym mode', parent: '/', group: 'Log', keywords: ['tally', 'rest timer', 'at the wall', 'mid-session'] },
+  // A redirect since M120: the tally and the rest timer are the logger's
+  // quick view on Home. Listed so "rest timer" still finds them.
+  { path: '/gym', title: 'Gym mode', parent: '/', group: 'Log', keywords: ['tally', 'rest timer', 'at the wall', 'mid-session', 'quick log'] },
   { path: '/attach', title: 'Add a photo', parent: '/', group: 'Log', keywords: ['photo', 'picture', 'image', 'camera', 'attach', 'upload', 'beta shot', 'share'] },
 
   // Progress

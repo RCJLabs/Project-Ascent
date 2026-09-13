@@ -403,6 +403,12 @@ describe('the bundle stays small', () => {
     // M115 and M116 bought stay bought: nothing *else* eager imports the
     // logger, and the glossary is still a tap away rather than a boot cost.
     //
+    // **Unchanged at M120**, measured 203.48 → 204.32 against 204.4: the
+    // fold, the rest timer and the tally row moved into the eager logger
+    // (0.84KB), and `GymPage`'s lazy chunk went — which the entry never
+    // carried, so it saved nothing here. Slack is 0.08KB; the next milestone
+    // to touch the entry chunk moves the line, which is the rule working.
+    //
     // **Unchanged at M119**, measured 203.43 → 203.48: the view field in
     // `settings.ts` and the picker's route through the entry chunk.
     //

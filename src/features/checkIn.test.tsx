@@ -9,6 +9,10 @@ import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { DayBody } from '@/features/log/LogPage';
 import type { BodyPart } from '@/content/warmups';
+import { useSettings } from '@/store/settings';
+
+/** The card under test is behind the fold (PLAN.md M120); open it. */
+const fullLog = () => useSettings.setState({ logView: 'full' });
 
 /**
  * The readiness check-in (PLAN.md M72).
@@ -62,6 +66,7 @@ async function logging(typeId: string, options: Options = {}): Promise<void> {
         }
       : {}),
   });
+  fullLog();
   renderAt('/', <DayBody date={DATE} />);
 }
 

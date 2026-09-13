@@ -7,6 +7,10 @@ import { useProfile, type Injury } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { DayBody } from '@/features/log/LogPage';
 import { InjuryPage } from '@/features/injury/InjuryPage';
+import { useSettings } from '@/store/settings';
+
+/** The card under test is behind the fold (PLAN.md M120); open it. */
+const fullLog = () => useSettings.setState({ logView: 'full' });
 
 /**
  * The injury as a series (PLAN.md M103).
@@ -33,6 +37,7 @@ async function logging(injuries: Injury[], sessions = [newSession(DATE, 0, { com
   for (const s of sessions) await putSession(s as never);
   await hydrate();
   useProfile.setState({ injuries });
+  fullLog();
   renderAt('/', <DayBody date={DATE} />);
 }
 

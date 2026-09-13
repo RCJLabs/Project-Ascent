@@ -5,6 +5,10 @@ import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { LogPage } from './LogPage';
+import { useSettings } from '@/store/settings';
+
+/** The card under test is behind the fold (PLAN.md M120); open it. */
+const fullLog = () => useSettings.setState({ logView: 'full' });
 
 /**
  * M112 on the page.
@@ -41,6 +45,7 @@ const buttonSaying = (view: { container: HTMLElement }, re: RegExp) =>
 describe('the cooldown card', () => {
   it('offers itself on a session day', async () => {
     await withSession();
+    fullLog();
     const view = renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
     await settle();
     expect(view.container.textContent ?? '').toMatch(/Build me a cooldown/i);
@@ -51,6 +56,7 @@ describe('the cooldown card', () => {
     // of what the climber has entered. Above Effort it would be offering a
     // generic cooldown to someone who has not logged anything yet.
     await withSession();
+    fullLog();
     const view = renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
     await settle();
     const text = view.container.textContent ?? '';
@@ -59,6 +65,7 @@ describe('the cooldown card', () => {
 
   it('builds one when asked', async () => {
     await withSession();
+    fullLog();
     const view = renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
     await settle();
 
@@ -77,6 +84,7 @@ describe('the cooldown card', () => {
     await withSession({
       climbs: [{ id: 'c1', grade: 'V4', scale: 'V', count: 3, result: 'send' }],
     });
+    fullLog();
     const view = renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
     await settle();
 
@@ -90,6 +98,7 @@ describe('the cooldown card', () => {
     await withSession({
       climbs: [{ id: 'c1', grade: 'V4', scale: 'V', count: 3, result: 'send' }],
     });
+    fullLog();
     const view = renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
     await settle();
 
@@ -119,6 +128,7 @@ describe('the cooldown card', () => {
       ],
     } as never);
 
+    fullLog();
     const view = renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
     await settle();
     buttonSaying(view, /Build me a cooldown/i)!.click();
@@ -160,6 +170,7 @@ describe('a rest day', () => {
       },
       'base_camp',
     );
+    fullLog();
     const view = renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
     await settle();
     expect(view.container.textContent ?? '').not.toMatch(/Build me a cooldown/i);
