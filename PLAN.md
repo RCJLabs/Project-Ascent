@@ -5881,8 +5881,8 @@ rests on an inference it says so.*
   place, from the plan's drill for the week (`features/log/PreSession.tsx:103`), so no climber
   can choose one for today and `DrillPage` has no action on it at all.
 
-- **M133 — the fields the app collects and never reads.** *Proposed. Four of them, and they
-  are the same bug four times.*
+- **M133 — the fields the app collects and never reads.** *Proposed, and built ninth — see the
+  Done entry below. Four of them, and they are the same bug four times.*
   **Lead against top-rope** is typed, doc-commented, chipped in the logger and merged on —
   and read by no engine, chart, record or export. Its sibling from the same milestone,
   `angle`, got a 200-line engine and its own Progress card; for a route climber this is the
@@ -6495,3 +6495,76 @@ rests on an inference it says so.*
   reason and left the descriptions. Splitting them too is a milestone of its own —
   `filterDrills` searches them and three screens render them — and not something to do in the
   commit that adds twelve. 4,143 tests pass.
+
+- **M133 — the fields the app collects and never reads.** *Done. Four of them, and they are not
+  the same bug.*
+  **The proposal's own summary is the thing to correct.** Two of the four are dead ends: a value
+  written, stored and read by nothing. `Climb.ropeStyle` had a chip in the logger, a field on the
+  record, a doc comment saying *"the same route is a different climb on each"* — and no reader in
+  the app. An objective's `projectId` was stored beside an `achievedByProject()` written for
+  exactly that question, whose only caller in its life was its own test. The third is not a dead
+  end at all: `location` is read in three places — the venue grouping, trips, the spreadsheet's
+  `Place` column — and was *asked* by seven session types out of forty-two. And the fourth is an
+  archive that forgot what the logger collected. Two dead ends, a gate and a gap, and they want
+  different fixes.
+  **Lead against top-rope, as the engine `angles.ts` got and this did not.** `ropeStyle.ts`
+  follows the same three rules and for the same reasons: an absent answer is a climber who did
+  not say rather than a top-rope, coverage is stated before any shape is, and the gap between the
+  two ceilings is reported as a fact rather than as a verdict — *"leading has its own fear in it,
+  and a log with no leads in it is as likely to be a gym with no lead wall"*. Routes only: rope
+  style is a question about a rope, the logger offers the chips on the YDS ladder alone, and a
+  boulder carrying one is a typo. It reads on Progress beside the angle card, on the route
+  ladder and not the boulder one.
+  **Where you climbed is not a program's question.** That is why it had been asked so rarely: it
+  is a `FieldSpec`, the logger renders what the running session type declares, and the seven
+  types that declare it are five Outdoor Climbing types plus two. So Iron Grip is twelve weeks
+  of sessions with no record of where a single one happened, and Career's *Where you climb* card
+  starved for most of the catalogue. Which crag, which gym, which board is a fact about the day,
+  and every reader of it wants it from every session. It is asked of all of them now, once —
+  a program that already declares it does not get it twice.
+  **The rest-day exception turned out to be a line nothing could reach.** A guard was written for
+  it, and a mutation showed it by surviving: the logger renders a recovery checklist *instead of*
+  this whole branch when the session type is a rest one, so the exclusion was already structural.
+  Deleted rather than left standing, which is the fourth time this phase — M129's zero-notch
+  return, M130's length guard, M132's kit sentence.
+  **The objective notices its project went, and does not act on it.** `achievedByProject` now has
+  a caller: an objective whose linked project is logged as sent says so, names it, and offers one
+  tap to mark itself done. It proposes and never writes, which is the rule M129 settled for the
+  readiness dose, and the reason is sharper here — a linked project can be the crux of a trip
+  rather than the whole of it, and an app that quietly marked the trip done on the strength of
+  one send is wrong in a way the climber has to go and undo.
+  **The archive carries what the logger asked.** Climbs gain `Name`, `Angle` and `Rope`; sessions
+  gain `Fingers`, `Sleep` and an `Answers` cell holding the session type's own questions as
+  labelled pairs; and **exercises get their own sheet** — date, session, name, sets, reps, hold,
+  load, note — because a session holds several and a spreadsheet row holds one thing. The numbers
+  a climber types every session had no column anywhere in a file billed as *"the same history,
+  back out"*.
+  **The round trip still holds, and the guesser passing over the new columns is the right
+  answer.** `importCsv` reads a climb back as grade, result, count, mode, place and notes; a
+  name, an angle and a rope style have nowhere to land in a `Climb` it builds. Writing them for a
+  person and a spreadsheet while the importer skips them is honest; teaching the guesser to
+  match them and then dropping them would not be. The test that pins every column the writer
+  produces now names three `skip`s and says why.
+  **One cell rather than seventeen columns**, for the answers. The questions a session type asks
+  are a different set per program, and a sheet shaped by the widest of them would be almost
+  entirely blank. Labelled with what the climber read — *Where: Malham; Pump: 4* — because a
+  column id leaking into a value is how an archive stops being readable.
+  **Measured, not asserted.** Twenty-eight mutations, every one killed: an unsaid rope style
+  counting as a top-rope, boulders counted, a row of four counted as one, an unfinished session
+  counted, top-rope listed first, no floor under the comparison, coverage never stated, the gap
+  measured backwards, a harder lead reading as a gap, an all-top-rope log saying nothing special,
+  and the sentence turned into a verdict; the card never shown and shown on the boulder ladder;
+  the field asked of nobody and asked twice; the linked send never noticed, an unsent project
+  counting as sent, the app marking the objective done itself, and any project counting whether
+  linked or not; the climb saying nothing about itself, angle and rope swapped, the check-in
+  dropped, the answers losing their labels, a blank answer written anyway, an exercise losing its
+  numbers, a zero load reading as blank, a broken record taking the sheet down, and the sheet not
+  written into the archive at all. A no-op statement reorder survived. **Three survived the first
+  round**: one was the unreachable rest-day guard above; one was a card gate no test exercised
+  from the other ladder; and one was a filter for a present-but-empty answer, which every test
+  had reached only through a session with no answers at all.
+  **In a browser, both themes, 430px and 1280px.** An Iron Grip finger day asks *Where* once,
+  from a program that has never declared it. Progress reads *16 of your 16 routes say whether
+  they were led or top-roped. 5.10d led, 5.12a top-roped — 5 rungs between them*, with a row for
+  each. An objective linked to a sent project says so and waits. No overflow, no page errors.
+  **Budget.** 168.0 holds. 4,185 tests pass.

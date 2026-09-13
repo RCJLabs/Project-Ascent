@@ -77,14 +77,20 @@ describe('a session type that asks for more', () => {
     });
   });
 
-  it('asks nothing extra when the session type asks for nothing', async () => {
+  it('asks where, and only where, when the session type asks for nothing', async () => {
+    // Until M133 this card vanished entirely for a session type with no
+    // `fields` — which is most of the catalogue — so a climber on Iron Grip
+    // was never once asked where they trained. Where you climbed is a fact
+    // about the day rather than a question a program gets to decide.
     await reset();
     await putSession(newSession(DATE, 0, { completed: false }));
     await hydrate();
     useProfile.setState({ activeProgramId: null, startDates: {}, plans: {}, weekOverrides: {}, adaptations: {} });
     fullLog();
     renderAt('/', <DayBody date={DATE} />);
-    expect(screen.queryByText('This session')).toBeNull();
+    expect(await screen.findByText('This session')).toBeTruthy();
+    expect(screen.getByLabelText('Where')).toBeTruthy();
+    expect(screen.queryByLabelText('Pump level')).toBeNull();
   });
 });
 

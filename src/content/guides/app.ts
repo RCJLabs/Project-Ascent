@@ -103,7 +103,8 @@ export const APP: Guide = {
             '**Open a day** — today is a button on Home; any other day is on the calendar. Both open the same screen.',
             '**Say what it was** — a program session, or free climbing. Indoors or outdoors.',
             '**Pick how much of it you want** — *Quick log* is the climbs, the effort and the button that finishes; *Log session* is all of it, warmup to cooldown. The same session either way, and you can swap while it is open.',
-            '**Add climbs** — grade, how many, sent or attempted, and the style if you flashed or onsighted it.',
+            '**Add climbs** — grade, how many, sent or attempted, and the style if you flashed or onsighted it. On a rope you can also say whether it was led or top-roped, and Progress reads the two ceilings back to you: the same route is a different climb on each.',
+            '**Where you climbed** is asked of every session now, not only the ones a program thought to ask. It is what groups your crags and gyms together on Career, and it is a column in the archive.',
             '**Rate it** — RPE from 1 to 10, and how long it took. These two are what training load is made of, so guessing them roughly is much better than leaving them out.',
             '**Notes** — anything. They all end up in the journal, searchable.',
             '**The numbers you type are kept and read back.** Log the sets, load or hold on a prescribed line and the app says how it compares with what the day asked, then charts the whole run of it on the block screen. Nothing is inferred: every number there is one you typed.',
@@ -470,6 +471,7 @@ export const APP: Guide = {
           kind: 'list',
           items: [
             '**Export a backup** from Settings — one file with everything, photos included.',
+            '**Five spreadsheets ride along with it** — climbs, sessions, exercises, project burns and benchmarks. Between them they carry what the logger asked you: the grade and the angle and whether you led it, the sets and the load you typed, how the fingers felt that morning, and whatever else the session type asked for.',
             '**Import it** on another device, or back onto this one.',
             '**Ask for persistent storage** in Settings so the browser does not evict the app under pressure.',
             '**Clearing site data deletes everything.** So does uninstalling, on some platforms. Back up first.',

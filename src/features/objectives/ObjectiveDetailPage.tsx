@@ -5,6 +5,7 @@ import { DRILL_CATEGORIES } from '@/content/drills';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
 import { fromKey, today } from '@/engine/dates';
 import {
+  achievedByProject,
   describeProgress,
   newRequirementId,
   objectiveProgress,
@@ -37,6 +38,51 @@ import { useGradeOptions } from '@/ui/useGrade';
 import { useSkillInput } from './ObjectivesPage';
 import { RecordNotFound } from '@/ui/RecordNotFound';
 import { PageSkeleton } from '@/ui/Skeleton';
+
+/**
+ * The linked project went, and this objective did not notice (PLAN.md M133).
+ *
+ * The select above has stored `projectId` since objectives shipped, and
+ * `achievedByProject` was written for exactly this question and had one
+ * caller in its life: its own test. So a climber could link *The Nose* to
+ * *Climb The Nose*, tick the project as sent, and come back to an objective
+ * still saying "training for it".
+ *
+ * **It proposes and does not write**, which is the rule M129 settled for the
+ * readiness dose and the reason is the same here: an objective is a thing a
+ * person decided to want, and a project's status is a fact about one route
+ * on it. A linked project can be the crux of a trip rather than the whole
+ * of it, and an app that quietly marked the trip done on the strength of one
+ * send would be wrong in a way the climber has to go and undo.
+ */
+function LinkedProjectSent({
+  objective,
+  onDone,
+}: {
+  objective: Objective;
+  onDone: () => void;
+}) {
+  const projects = useProjects((s) => s.projects);
+  const sent = useMemo(
+    () => new Set(projects.filter((p) => p.status === 'sent').map((p) => p.id)),
+    [projects],
+  );
+  if (objective.status === 'sent' || !achievedByProject(objective, sent)) return null;
+  const project = projects.find((p) => p.id === objective.projectId);
+
+  return (
+    <div className="bg-sunken rounded-xl p-3">
+      <p className="text-sm leading-relaxed mb-3">
+        <strong>{project?.name ?? 'The linked project'}</strong> is logged as sent. If that was
+        this, mark it done — the app will not do it for you, because a project can be the crux of
+        an objective rather than the whole of it.
+      </p>
+      <Button size="sm" onClick={onDone}>
+        <CircleCheck size={15} /> Mark this done
+      </Button>
+    </div>
+  );
+}
 
 const STATUSES: { value: ObjectiveStatus; label: string }[] = [
   { value: 'planning', label: 'Planning' },
@@ -307,6 +353,7 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
               </Select>
             </label>
           )}
+          <LinkedProjectSent objective={objective} onDone={() => edit({ status: 'sent' })} />
         </Card>
 
         <Button

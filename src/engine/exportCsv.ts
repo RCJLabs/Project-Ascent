@@ -37,6 +37,8 @@
 import type { MetricEntry } from '@/db/metrics';
 import type { Project } from '@/db/projects';
 import type { Session } from '@/db/sessions';
+import { getField } from '@/content/fields';
+import type { FieldId } from '@/content/types';
 import { METRICS } from '@/content/metrics';
 import { toCsv } from './csv';
 import { isRestSession } from './rest';
@@ -54,6 +56,13 @@ export const CLIMB_HEADER = [
   // first — a right answer by column order is a wrong answer waiting for
   // someone to move a column.
   'Ascent style',
+  // The three the logger has asked for since M108 and M120 and the archive
+  // never carried (PLAN.md M133). `Name` is what a climber searches their
+  // own history for; `Angle` and `Rope` are the two questions a climb
+  // answers about itself that the grade cannot.
+  'Name',
+  'Angle',
+  'Rope',
   'Mode',
   'Place',
   'Notes',
@@ -71,7 +80,33 @@ export const SESSION_HEADER = [
   'Warmup',
   'Drill',
   'Rest day',
+  // What the morning said, and what the session type asked (PLAN.md M133).
+  // The check-in drives an RPE ceiling and a dose suggestion on the day and
+  // then vanished from the archive entirely.
+  'Fingers',
+  'Sleep',
+  'Answers',
   'Notes',
+] as const;
+
+/**
+ * Every logged exercise, one per row (PLAN.md M133).
+ *
+ * Its own file rather than columns on the session sheet, for the reason
+ * climbs have one: a session holds several exercises and a spreadsheet row
+ * holds one thing. These are the numbers a climber types every session —
+ * five sets at eighty pounds — and the archive billed as "the same history,
+ * back out" had no column for any of them.
+ */
+export const EXERCISE_HEADER = [
+  'Date',
+  'Session',
+  'Exercise',
+  'Sets',
+  'Reps',
+  'Hold (s)',
+  'Load (lb)',
+  'Note',
 ] as const;
 
 export const ATTEMPT_HEADER = [
@@ -128,6 +163,9 @@ export function climbsCsv(sessions: readonly Session[]): string {
         cell(climb.result),
         cell(climb.count),
         cell(climb.style),
+        cell(climb.name),
+        cell(climb.angle),
+        cell(climb.ropeStyle),
         cell(session.mode),
         cell(session.fields?.location),
         cell(session.notes),
@@ -173,8 +211,46 @@ export function sessionsCsv(input: SessionCsvInput): string {
       // this file must survive. Not a fourteenth copy by accident — the one
       // place the shared helper cannot be used.
       yesNo(isRestSession(session)),
+      cell(session.checkIn?.fingers),
+      cell(session.checkIn?.sleep),
+      // One cell rather than seventeen mostly-empty columns: the answers a
+      // session type asks are a different set per program, and a sheet
+      // shaped by the widest of them would be almost all blank. Labelled,
+      // because `hardestGradeAttempted=V7` in a spreadsheet is a column
+      // name leaking into a value.
+      answersOf(session),
       cell(session.notes),
     ]);
+  }
+  return toCsv(rows);
+}
+
+/** The session's own field answers, as `Label: value` pairs. */
+function answersOf(session: Session): string {
+  const fields = session.fields;
+  if (fields === undefined || fields === null || typeof fields !== 'object') return '';
+  return Object.entries(fields)
+    .filter(([, value]) => value !== undefined && value !== '')
+    .map(([id, value]) => `${getField(id as FieldId)?.label ?? id}: ${String(value)}`)
+    .join('; ');
+}
+
+/** Every logged exercise, one per row. */
+export function exercisesCsv(sessions: readonly Session[]): string {
+  const rows: string[][] = [[...EXERCISE_HEADER]];
+  for (const session of chronological(sessions)) {
+    for (const exercise of listOf(session.exercises)) {
+      rows.push([
+        cell(session.date),
+        String(Number(cell(session.id).split('#')[1] ?? 0) + 1),
+        cell(exercise.name),
+        num(exercise.sets),
+        num(exercise.reps),
+        num(exercise.hold),
+        num(exercise.load),
+        cell(exercise.note),
+      ]);
+    }
   }
   return toCsv(rows);
 }
@@ -228,6 +304,7 @@ export const CSV_DIR = 'spreadsheets/';
 export const CSV_FILES = {
   climbs: `${CSV_DIR}climbs.csv`,
   sessions: `${CSV_DIR}sessions.csv`,
+  exercises: `${CSV_DIR}exercises.csv`,
   attempts: `${CSV_DIR}attempts.csv`,
   metrics: `${CSV_DIR}benchmarks.csv`,
 } as const;

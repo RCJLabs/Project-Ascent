@@ -4,7 +4,7 @@ import type { MetricEntry } from '@/db/metrics';
 import type { Project } from '@/db/projects';
 import { newSession, type Session } from '@/db/sessions';
 import { parseCsv } from './csv';
-import { attemptsCsv, climbsCsv, metricsCsv, sessionsCsv } from './exportCsv';
+import { attemptsCsv, climbsCsv, exercisesCsv, metricsCsv, sessionsCsv } from './exportCsv';
 import { guessColumns, importCsv } from './importCsv';
 
 /**
@@ -42,8 +42,29 @@ describe('every climb, one per row', () => {
 
   it('writes a header a person can read', () => {
     expect(rows(climbsCsv(log))[0]).toEqual([
-      'Date', 'Discipline', 'Grade', 'Result', 'Count', 'Ascent style', 'Mode', 'Place', 'Notes',
+      'Date', 'Discipline', 'Grade', 'Result', 'Count', 'Ascent style',
+      // The three the logger asked for and the archive forgot (M133).
+      'Name', 'Angle', 'Rope',
+      'Mode', 'Place', 'Notes',
     ]);
+  });
+
+  it('carries what the climb itself said', () => {
+    const out = rows(
+      climbsCsv([
+        day('2026-01-09', {
+          climbs: [climb('5.12a', { name: 'The Crucifix', angle: 'overhang', ropeStyle: 'lead' })],
+        }),
+      ]),
+    )[1]!;
+    expect([out[6], out[7], out[8]]).toEqual(['The Crucifix', 'overhang', 'lead']);
+  });
+
+  it('leaves them blank where the climber did not say', () => {
+    // Absent is not vertical and not a top-rope — it is unanswered, and an
+    // archive that filled it in would be inventing history.
+    const out = rows(climbsCsv([day('2026-01-09', { climbs: [climb('V4')] })]))[1]!;
+    expect([out[6], out[7], out[8]]).toEqual(['', '', '']);
   });
 
   it('writes one row per climb, oldest day first', () => {
@@ -63,14 +84,14 @@ describe('every climb, one per row', () => {
 
   it('carries the day around each climb', () => {
     const out = rows(climbsCsv(log))[1]!;
-    expect(out[6]).toBe('indoor');
-    expect(out[7]).toBe('The Works');
-    expect(out[8]).toBe('good day');
+    expect(out[9]).toBe('indoor');
+    expect(out[10]).toBe('The Works');
+    expect(out[11]).toBe('good day');
   });
 
   it('says nothing where the session said nothing', () => {
     const bare = rows(climbsCsv([day('2026-01-09', { climbs: [climb('V4')] })]))[1]!;
-    expect([bare[5], bare[7], bare[8]]).toEqual(['', '', '']);
+    expect([bare[5], bare[10], bare[11]]).toEqual(['', '', '']);
   });
 
   it('writes nothing but a header for a log with no climbs', () => {
@@ -133,8 +154,111 @@ describe('the round trip', () => {
   it('is mapped by the guesser without a hand on it', () => {
     const header = parseCsv(climbsCsv(log))[0]!;
     expect(guessColumns(header)).toEqual([
-      'date', 'discipline', 'grade', 'result', 'count', 'skip', 'mode', 'place', 'notes',
+      'date', 'discipline', 'grade', 'result', 'count', 'skip',
+      // Name, Angle and Rope: written for a person and a spreadsheet, and
+      // nothing the importer can read back into a `Climb` yet, so the
+      // guesser passing over them is the right answer rather than a gap.
+      'skip', 'skip', 'skip',
+      'mode', 'place', 'notes',
     ]);
+  });
+});
+
+describe('what the session itself said', () => {
+  /**
+   * The check-in and the field answers (PLAN.md M133).
+   *
+   * Both drive the app on the day — the check-in sets an RPE ceiling and
+   * suggests a lighter dose, the answers are what a session type asked for —
+   * and both vanished from an archive billed as "the same history, back
+   * out".
+   */
+  it('carries the morning check-in', () => {
+    const out = rows(
+      sessionsCsv({
+        sessions: [day('2026-01-09', { checkIn: { fingers: 'tender', sleep: 'short' } } as never)],
+      }),
+    )[1]!;
+    expect([out[11], out[12]]).toEqual(['tender', 'short']);
+  });
+
+  it('leaves the check-in blank when it was skipped', () => {
+    // A skipped check-in is not a good one, which is the rule the whole
+    // readiness engine is built on.
+    const out = rows(sessionsCsv({ sessions: [day('2026-01-09')] }))[1]!;
+    expect([out[11], out[12]]).toEqual(['', '']);
+  });
+
+  it('writes the answers with the labels the climber read', () => {
+    const out = rows(
+      sessionsCsv({
+        sessions: [day('2026-01-09', { fields: { location: 'Malham', pumpLevel: 4 } } as never)],
+      }),
+    )[1]!;
+    expect(out[13]).toBe('Where: Malham; Pump: 4');
+  });
+
+  it('writes nothing for a session that answered nothing', () => {
+    expect(rows(sessionsCsv({ sessions: [day('2026-01-09')] }))[1]![13]).toBe('');
+  });
+
+  it('leaves out a question that was opened and left blank', () => {
+    // An empty string in the bag is a field the climber typed into and then
+    // cleared, and `Where: ` in a spreadsheet is worse than no column.
+    const out = rows(
+      sessionsCsv({
+        sessions: [day('2026-01-09', { fields: { location: '', pumpLevel: 4 } } as never)],
+      }),
+    )[1]!;
+    expect(out[13]).toBe('Pump: 4');
+  });
+});
+
+describe('every exercise, one per row', () => {
+  const lifted = day('2026-01-09', {
+    exercises: [
+      { name: 'Max Hangs', sets: 5, hold: 10, load: 20 },
+      { name: 'Pull-ups', sets: 3, reps: 8, note: 'slow' },
+    ],
+  } as never);
+
+  it('writes a header a person can read', () => {
+    expect(rows(exercisesCsv([lifted]))[0]).toEqual([
+      'Date', 'Session', 'Exercise', 'Sets', 'Reps', 'Hold (s)', 'Load (lb)', 'Note',
+    ]);
+  });
+
+  it('writes one row per exercise', () => {
+    expect(rows(exercisesCsv([lifted])).slice(1).map((r) => r[2])).toEqual(['Max Hangs', 'Pull-ups']);
+  });
+
+  it('carries the numbers that were typed', () => {
+    const out = rows(exercisesCsv([lifted]))[1]!;
+    expect(out.slice(3, 7)).toEqual(['5', '', '10', '20']);
+  });
+
+  it('tells a zero apart from a blank', () => {
+    // Zero load is bodyweight, which is a real answer and not an absent one.
+    const out = rows(exercisesCsv([day('2026-01-09', { exercises: [{ name: 'Dips', load: 0 }] } as never)]))[1]!;
+    expect(out[6]).toBe('0');
+  });
+
+  it('numbers the sessions within a day, like the sessions sheet', () => {
+    const second = newSession('2026-01-09', 1, {
+      completed: true,
+      exercises: [{ name: 'Rows', sets: 3 }],
+    } as never);
+    expect(rows(exercisesCsv([lifted, second])).slice(1).map((r) => r[1])).toEqual(['1', '1', '2']);
+  });
+
+  it('writes nothing but a header for a log with no exercises', () => {
+    expect(rows(exercisesCsv([day('2026-01-09')]))).toHaveLength(1);
+  });
+
+  it('survives a record whose exercises are not a list', () => {
+    // The types are not wrong about what a `Session` should be; they are
+    // wrong about what is on disk.
+    expect(rows(exercisesCsv([day('2026-01-09', { exercises: 'broken' } as never)]))).toHaveLength(1);
   });
 });
 

@@ -2,7 +2,14 @@ import { APP_VERSION } from '@/version';
 import { looksLikeZip, unzip, zip, ZipError, type ZipEntry } from '@/lib/zip';
 import type { Mark } from '@/lib/marks';
 import { PROGRAMS } from '@/content/programs';
-import { attemptsCsv, climbsCsv, CSV_FILES, metricsCsv, sessionsCsv } from '@/engine/exportCsv';
+import {
+  attemptsCsv,
+  climbsCsv,
+  CSV_FILES,
+  exercisesCsv,
+  metricsCsv,
+  sessionsCsv,
+} from '@/engine/exportCsv';
 import { getDb } from './db';
 import type { MetricEntry } from './metrics';
 import type { Project } from './projects';
@@ -176,6 +183,7 @@ function spreadsheets(file: ExportFile): ZipEntry[] {
         }),
       ),
     },
+    { name: CSV_FILES.exercises, bytes: encode(exercisesCsv(sessions)) },
     { name: CSV_FILES.attempts, bytes: encode(attemptsCsv(sessions, projects)) },
     { name: CSV_FILES.metrics, bytes: encode(metricsCsv(metrics)) },
   ];

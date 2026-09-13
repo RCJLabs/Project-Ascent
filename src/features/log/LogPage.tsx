@@ -1444,7 +1444,30 @@ function FieldsCard({
   // Every place already named, so the same crag is typed the same way
   // (PLAN.md M88b). A grouping over free text is only as good as the text.
   const places = useVenues();
-  const specs = (type?.fields ?? []).map(getField).filter((f): f is FieldSpec => f !== undefined);
+  /**
+   * Where you climbed, asked of everyone (PLAN.md M133).
+   *
+   * `location` is a `FieldSpec` like any other, and the logger only renders
+   * what the running session type declares — seven types across three
+   * programs, five of them Outdoor Climbing's. So a climber on Iron Grip
+   * was never once asked where they trained, `venues()` saw only the places
+   * typed into projects and objectives, and Career's *Where you climb* card
+   * starved for most of the catalogue.
+   *
+   * It is not a program's question. Which crag, which gym, which board is a
+   * fact about the day, and every other reader of it — the venue grouping,
+   * trips, the spreadsheet's `Place` column — wants it from every session,
+   * not from the five that happen to be outdoor types.
+   *
+   * A rest day is not asked, and there is no check for it here: the logger
+   * renders a recovery checklist instead of this whole branch when the
+   * session type is a rest one. A guard was written anyway and a mutation
+   * showed it by surviving — a line no test could reach, because nothing
+   * reaches it.
+   */
+  const declared = type?.fields ?? [];
+  const asked: FieldId[] = declared.includes('location') ? declared : ['location', ...declared];
+  const specs = asked.map(getField).filter((f): f is FieldSpec => f !== undefined);
   if (specs.length === 0) return null;
 
   const set = (id: FieldId, value: string | number | undefined) => {

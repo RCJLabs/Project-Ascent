@@ -25,6 +25,7 @@ import { deriveStats } from '@/engine/stats';
 import { deriveVitality } from '@/engine/vitality';
 import { useSkillEffects } from '@/store/skills';
 import { ANGLE_LABEL, angles, describeAngles } from '@/engine/angles';
+import { ROPE_LABEL, describeRopeSplit, ropeSplit } from '@/engine/ropeStyle';
 import { describeLadders, ladders } from '@/engine/ladders';
 import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
 import { useMetrics } from '@/store/metrics';
@@ -457,6 +458,11 @@ export function ProgressPage() {
   // which is most logs — the question is new and nothing is inferred.
   const byAngle = useMemo(() => angles(sessions, scale), [sessions, scale]);
   const angleSaid = describeAngles(byAngle, display);
+  // The other question M108 asked and nothing read (PLAN.md M133). Routes
+  // only, because rope style is a question about a rope — the logger offers
+  // the chips on the YDS ladder alone.
+  const byRope = useMemo(() => ropeSplit(sessions), [sessions]);
+  const ropeSaid = scale === 'YDS' ? describeRopeSplit(byRope, display) : null;
   const ladder = scale === 'V' ? V_GRADES : YDS_GRADES;
 
   if (state.completedSessions === 0) {
@@ -740,6 +746,29 @@ export function ProgressPage() {
             </p>
           )}
         </Card>}
+
+        {on('grades') && ropeSaid !== null && (
+          <Card title="Led and top-roped">
+            <p className="text-sm leading-relaxed">{ropeSaid}</p>
+            {byRope.sides.length > 0 && (
+              <ul className="grid grid-cols-1 gap-2 mt-3">
+                {byRope.sides.map((side) => (
+                  <li
+                    key={side.style}
+                    className="flex items-baseline justify-between gap-3 bg-sunken rounded-xl px-3 py-2"
+                  >
+                    <span className="text-sm font-semibold">{ROPE_LABEL[side.style]}</span>
+                    <span className="text-xs text-ink-soft">
+                      {side.tally.best === null
+                        ? `${side.tally.totalAttempts} tried, none sent`
+                        : `${gradeLabel('YDS', side.tally.best)} · ${side.tally.totalSends} sent`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        )}
 
         {on('grades') && angleSaid !== null && (
           <Card title="The walls you climb on">

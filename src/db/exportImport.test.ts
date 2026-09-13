@@ -313,6 +313,10 @@ describe('photos', () => {
         'spreadsheets/attempts.csv',
         'spreadsheets/benchmarks.csv',
         'spreadsheets/climbs.csv',
+        // The numbers a climber types every session, which the archive had
+        // no column for anywhere (PLAN.md M133). Its own sheet, because a
+        // session holds several exercises and a row holds one thing.
+        'spreadsheets/exercises.csv',
         'spreadsheets/sessions.csv',
       ]);
     });
