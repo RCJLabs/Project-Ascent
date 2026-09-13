@@ -73,10 +73,11 @@ describe('the finder keeps what it is told', () => {
   });
 
   /**
-   * `App.tsx` reads `onboardedAt` to decide whether a climber has ever been
-   * through the first-run flow. Answering the finder is not that.
+   * Home reads `onboardedAt` to decide whether to keep offering the guided
+   * setup (PLAN.md M123). Answering the finder is not that: the setup
+   * card should still be there for a climber who only used the finder.
    */
-  it('does not claim the climber has been through onboarding', async () => {
+  it('does not claim the climber has been through the setup', async () => {
     await hydrate();
     useProfile.setState({ baseline: null, onboardedAt: null });
     renderAt('/find', <FinderPage />);

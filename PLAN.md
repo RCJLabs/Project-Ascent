@@ -5283,7 +5283,7 @@ in the code and are not the same thing.
 - *Multi-device sync, notifications, wearables, localisation* — all need a server or a
   translator, and the plan's cut list stands.
 
-### The overhaul (proposed, M117–M123)
+### The overhaul (M117–M123)
 
 *Seven milestones from the UI audit, in dependency order. The brief was the app "incredibly
 streamlined and easy to use — anyone should be able to pick it up": set up a profile in easy
@@ -5292,8 +5292,8 @@ five medium and five small overhauls; the choices were **L2** (log first), **L4*
 gets its own tab), **M2** (progress in three views), **M4** (quick log, full log), **M5**
 (program overview), **S3**, **S4**, **S5**, with three decisions taken on the plan: **Home is
 the session, and there is no Log tab**; the game is a **tab**, not a toggle; the `.ics` export
-moves to Settings. Each ships to `main` on its own, tested, mutation-checked and looked at in
-a browser, the way everything since M13 has.*
+moves to Settings. Each shipped to `main` on its own, tested, mutation-checked and looked at
+in a browser, the way everything since M13 has. All seven are in.*
 
 *The coupling check that made L4 safe to plan: the coach (`engine/coach.ts`) never reads the
 game store, and vitality is read by the coach, the injury engine, the avatar, the injuries
@@ -5605,10 +5605,37 @@ read by seven pages as display. A separate tab is moving, not gating.*
   *Slate· change* with no space, a JSX line break swallowing it — fixed before shipping.
   **Budget.** Unchanged at 204.4, measured 204.34 → 204.33KB; the page is lazy.
   3,926 tests pass.
-- **M123 — Log first (L2).** *Proposed, and deliberately last.*
-  A new install's first screen is one climb entry under General Training, not seven
-  questions. The finder, the baseline and the program catalogue become Home cards with a
-  "not now" that stays dismissed; `useFirstRunRedirect` stops requiring a program. Last on
-  purpose: it is the biggest product bet, and it should land into the already-simplified
-  app so it can be judged cleanly rather than confounded with everything else. *Risk: the
-  coach and the stats start quieter for a new climber — the trade accepted in the audit.*
+- **M123 — Log first (L2).** *Done, and deliberately last.*
+  **A new install lands on today.** It used to be sent to `/welcome` before it saw anything:
+  six steps, seven questions, a baseline battery, and a program picked at the end — the app
+  it had just installed was on the far side of all of it. `useFirstRunRedirect` is gone, and
+  with it `lib/launchFlag.ts`, which existed only so a launch-with-file could stand the
+  redirect down. The first screen is Home: the date, one card that says *Your first session.
+  Log whatever you climb — a few boulders is plenty — and everything else in the app grows
+  out of it*, and the button that logs one. The copy is gated on the log having loaded, so an
+  empty store mid-boot never reads as a climber who has never logged. A wipe from Settings
+  lands in the same place — and since nothing redirects any more, the *Deleted — N records*
+  line that M114 wrote and almost nobody read is on screen now.
+  **What onboarding front-loaded is three cards under the session,** each with its own reason
+  to stop. *Before you train* is the safety note, until *Got it* — not gated on the program,
+  because the note was only ever on the welcome screen, which a climber who restored a backup
+  never saw. *Set up your climber* offers the guided flow, until it has been finished or
+  skipped from inside it (both stamp `onboardedAt`) or waved away. *Pick a program* is the
+  finder and the catalogue, until a block is running or it is waved away; it comes back
+  between blocks if it was never dismissed, which is when it applies. The wave-aways are a
+  new profile field, `dismissedCards`, kept apart from `dismissedTips` on purpose: a tip is
+  dismissed against the fact that raised it and *Restore tips* clears the lot, and these are
+  one-way. A backup that carries junk in the field reads as the strings it holds.
+  **`/welcome` stays, opt-in and lazy.** The page is unchanged and still outside the shell; it
+  is reached from the setup card, ends in the finder or on Home, and is a 3.50KB chunk of its
+  own now that no cold start needs it. The app guide's Home row says where a fresh install
+  starts.
+  **The risk the proposal named holds.** A climber who takes the log-first route has no
+  baseline, so Strength and Mobility start at zero rather than from a hang and a flexibility
+  test, and the coach's first card is *Nothing logged yet*. Both fill from the log, which is
+  the trade the audit accepted; the setup card is one tap away for anyone who wants the
+  numbers sooner.
+  **Measured, not asserted.** Nineteen mutations against the new tests, every one killed: each card's button doing nothing or dismissing the wrong card; the setup still offered after it was finished; the programs still offered with a block running; the safety note hidden by a block; the setup linking to the finder and Browse linking home; the cards above the session; the card title demoted from a heading; the dismissal not saved, not read back, junk kept from a backup, and a wave-away recorded twice; the first-session copy shown before the log loads, shown with a log, and never shown; the welcome page eager again; the guide's Home row losing the new-install line. A no-op reorder of two selectors survived, as the sanity check should.
+  **In a browser, both themes, 430px and 1280px.** A fresh install opens on today with *Log a session* and the three cards under it, and the hash never leaves `#/`. *Got it* takes the safety note away and a reload keeps it away; *Set up* opens `/welcome` from its own chunk with its heading, and *Skip* returns to Home with the setup card gone. With a block seeded the card row is the session, the drill, the coach, the safety note and the program, and no offer of programs. Start over stays on Settings and reads *Deleted — 3 records*, then Home is a fresh install again with all three cards. No overflow, no page errors.
+  **Budget.** 204.4 → 203.0, measured 204.33 → 202.08KB — the first move down since M117. Onboarding left the entry chunk for a 3.50KB lazy chunk of its own and the launch flag went with the redirect; the three cards cost well under a kilobyte of the 2.25 that came back.
+  3,944 tests pass.

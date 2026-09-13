@@ -126,24 +126,18 @@ describe('when it does happen', () => {
   });
 
   /**
-   * The count reaches the page — and in the running app almost nobody reads
-   * it, which is worth writing down rather than discovering later.
+   * The count reaches the page, and since M123 the climber does too.
    *
-   * A wiped profile has `onboardedAt` and `activeProgramId` null and an
-   * empty log, which is exactly what `useFirstRunRedirect` in `App.tsx`
-   * keys on, so the real app navigates to `/welcome` and unmounts this page
-   * within a frame. The browser check for M114 confirmed it: the message
-   * never appeared on screen. It passes here because this test renders
-   * `SettingsPage` alone, without the shell that redirects.
-   *
-   * The message stays because `announce` puts it on an aria-live region
-   * before the unmount, and because the count is what the assertion below
-   * can see. **The redirect is the real confirmation** — landing on "let's
-   * find out where you're starting from" says everything went more plainly
-   * than a line of text would. Nobody should add a delay or a modal to make
-   * this readable; the test below is the one that matters.
+   * From M114 to M122 almost nobody read it: a wiped profile was exactly
+   * what `useFirstRunRedirect` keyed on, so the real app navigated to
+   * `/welcome` and unmounted this page within a frame, and the browser
+   * check for M114 confirmed the message never appeared on screen. The
+   * redirect was the confirmation. M123 retired it — a new install lands
+   * on Home, and so does a wiped one — so the page stays up and this line
+   * is what says everything went. `announce` also puts it on an aria-live
+   * region, for a reader that is not looking at the card.
    */
-  it('reports how much went, even though the redirect eats it', async () => {
+  it('reports how much went', async () => {
     await settings();
     deleteButton().click();
     const box = await screen.findByLabelText(/Type DELETE to confirm/i);
@@ -152,13 +146,12 @@ describe('when it does happen', () => {
     expect(await screen.findByText(/Deleted — 2 records/)).toBeTruthy();
   });
 
-  it('leaves the app in the state a first run is', async () => {
-    // What `useFirstRunRedirect` reads: no onboarding stamp, no active
-    // program, no sessions. Asserting the three inputs rather than the
-    // navigation, because the hook lives in the app shell and this page
-    // renders without it — but these are what make it fire, and a wipe that
-    // left any of them set would strand the climber on a Settings page for
-    // an app with nothing in it.
+  it('leaves the app in the state a new install is', async () => {
+    // No setup stamp, no active program, no sessions. What Home reads to
+    // offer the guided setup and the programs again (PLAN.md M123), and
+    // what the first-session copy on today's card keys on — a wipe that
+    // left any of them set would have the app describing a climber who no
+    // longer exists.
     await settings();
     deleteButton().click();
     const box = await screen.findByLabelText(/Type DELETE to confirm/i);

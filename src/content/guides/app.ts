@@ -71,7 +71,7 @@ export const APP: Guide = {
           kind: 'table',
           head: ['Tab', 'What is there'],
           rows: [
-            ['Home', "Today's session — what is planned, the button that starts it, and the log once it has. The coach, the week and your program sit under it."],
+            ['Home', "Today's session — what is planned, the button that starts it, and the log once it has. The coach, the week and your program sit under it. A fresh install starts here too: the guided setup and the programs are cards under the session, to take or to wave away."],
             ['Train', 'The program catalogue, the finder, your own programs, objectives, and projects.'],
             ['Calendar', 'The plan across weeks, and where you move sessions around.'],
             ['Progress', 'Three views of the log — This block, Grades, Body — and All for the whole page. Training load, grades, the journal, assessments, your body, career and the year in review.'],

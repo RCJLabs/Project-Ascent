@@ -17,8 +17,10 @@ const ROUTED = [...APP.matchAll(/<Route path="([^"]+)"/g)].map((m) => m[1] as st
 describe('the table matches the router', () => {
   it('covers every route the app defines', () => {
     const known = new Set(ROUTES.map((r) => r.path));
-    // /welcome is outside the shell by design — it has no back link and no
-    // business in search, because you are on it before there is an app.
+    // /welcome is outside the shell by design — no tabs, no back link, and
+    // no business in search: it is the guided setup, reached from the card
+    // on Home that offers it (PLAN.md M123), and it ends by navigating
+    // somewhere in the app rather than by being one of its pages.
     const missing = ROUTED.filter((path) => path !== '/welcome' && !known.has(path));
     expect(missing).toEqual([]);
   });

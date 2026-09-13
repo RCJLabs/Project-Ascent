@@ -332,6 +332,17 @@ describe('the app guide quotes real numbers', () => {
     }
   });
 
+  it('says where a fresh install starts', () => {
+    // M123 retired the welcome redirect; a guide that still implied the
+    // app opens with questions would send a new climber looking for them.
+    const home = (guide?.sections.flatMap((s) => s.content) ?? [])
+      .flatMap(strings)
+      .find((t) => t.startsWith("Today's session"));
+    expect(home).toBeDefined();
+    expect(home).toContain('A fresh install starts here too');
+    expect(home).toMatch(/guided setup/);
+  });
+
   it('names the three views of Progress', () => {
     // M119 split the page; a guide that still lists its cards as one page
     // sends a climber looking for the pyramid on the view that has the

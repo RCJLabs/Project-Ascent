@@ -98,7 +98,10 @@ export interface ProfileState {
   recentWarmups: string[];
   /** The avatar's colours — the only part of the figure that is stored. */
   avatarPalette: AvatarPalette;
-  /** When the first-run baseline was finished. Null until it has been. */
+  /** When the guided setup was finished, or skipped from inside it. Null
+   *  until it has been — and since M123 that is the ordinary state, not
+   *  a first-run flag: a new install lands on Home and is offered the
+   *  setup as a card, so a null here with a year of sessions is normal. */
   onboardedAt: string | null;
   /** What the climber told us on day one, so the finder never asks twice. */
   baseline: BaselineAnswers | null;
@@ -109,6 +112,17 @@ export interface ProfileState {
   dismissedTips: Record<string, string>;
   dismissTip: (id: string, signature: string) => void;
   restoreTips: () => void;
+  /**
+   * Home cards the climber has said "not now" to (PLAN.md M123).
+   *
+   * Separate from `dismissedTips` on purpose: a tip is dismissed against
+   * the fact that raised it and comes back when the fact changes, and
+   * "Restore tips" clears the lot. These are a one-way "I have seen this"
+   * — the safety note, the setup offer, the catalogue — and nothing brings
+   * them back short of starting over, which is what a wave-away means.
+   */
+  dismissedCards: string[];
+  dismissCard: (id: string) => void;
   /** ISO date of the last backup export, for the coach's nudge. */
   lastExportAt: string | null;
   markExported: () => void;
@@ -146,6 +160,7 @@ interface Persisted {
   onboardedAt: string | null;
   baseline: BaselineAnswers | null;
   dismissedTips: Record<string, string>;
+  dismissedCards: string[];
   lastExportAt: string | null;
 }
 
@@ -165,6 +180,7 @@ function snapshot(s: ProfileState): Persisted {
     onboardedAt: s.onboardedAt,
     baseline: s.baseline,
     dismissedTips: s.dismissedTips,
+    dismissedCards: s.dismissedCards,
     lastExportAt: s.lastExportAt,
   };
 }
@@ -209,6 +225,7 @@ export const useProfile = create<ProfileState>((set, get) => ({
   onboardedAt: null,
   baseline: null,
   dismissedTips: {},
+  dismissedCards: [],
   lastExportAt: null,
 
   completeOnboarding: (baseline) => {
@@ -222,8 +239,8 @@ export const useProfile = create<ProfileState>((set, get) => ({
    * The finder asks the same five questions the baseline holds and used to
    * discard every answer, so correcting "coming back" to "intermediate"
    * lasted exactly as long as the page did. `onboardedAt` is deliberately
-   * not touched: it records when onboarding finished, and `App.tsx` reads
-   * it to decide whether a climber has ever been through the flow.
+   * not touched: it records when the guided setup finished, and Home reads
+   * it to decide whether to keep offering the setup (PLAN.md M123).
    *
    * Merges rather than replaces, and starts from the empty baseline when
    * there is none — a climber who skipped onboarding has no record to
@@ -241,6 +258,13 @@ export const useProfile = create<ProfileState>((set, get) => ({
 
   restoreTips: () => {
     set({ dismissedTips: {} });
+    void save(snapshot(get()));
+  },
+
+  dismissCard: (id) => {
+    const cards = get().dismissedCards;
+    if (cards.includes(id)) return;
+    set({ dismissedCards: [...cards, id] });
     void save(snapshot(get()));
   },
 
@@ -397,6 +421,10 @@ export async function hydrateProfile(): Promise<void> {
       onboardedAt: value.onboardedAt ?? null,
       baseline: readBaseline(value.baseline),
       dismissedTips: value.dismissedTips ?? {},
+      // Strings only: a backup is whatever was in the file.
+      dismissedCards: Array.isArray(value.dismissedCards)
+        ? value.dismissedCards.filter((id): id is string => typeof id === 'string')
+        : [],
       lastExportAt: value.lastExportAt ?? null,
     });
   } catch {

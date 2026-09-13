@@ -271,6 +271,16 @@ export function DayBody({ date }: { date: string }) {
                   {day.test !== undefined ? ' · Test week' : ''}. Recovery is training — log it to
                   bank it.
                 </p>
+              ) : hydrated && Object.keys(byDate).length === 0 ? (
+                /* A new install's first screen (PLAN.md M123): this card,
+                   this button. Only once the store has loaded — before
+                   that an empty `byDate` is a log that has not arrived,
+                   not a climber who has never logged. */
+                <p className="text-sm text-ink-soft mb-3">
+                  Your first session. Log whatever you climb — a few boulders is plenty — and
+                  everything else in the app grows out of it. Nothing is planned until you pick a
+                  program, and nothing needs to be.
+                </p>
               ) : (
                 <p className="text-sm text-ink-soft mb-3">
                   Nothing planned — no program is running. Log whatever you climb and it still counts

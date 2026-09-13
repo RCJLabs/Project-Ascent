@@ -1,20 +1,22 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { Route, Router, Switch, useLocation } from 'wouter';
 import { RouteBoundary } from '@/ui/ErrorBoundary';
-import { launchedWithFile } from '@/lib/launchFlag';
 import { useHashLocation } from 'wouter/use-hash-location';
 import { HomePage } from '@/features/home/HomePage';
 import { PlaceholderPage } from '@/features/placeholder/PlaceholderPage';
 import { TodayRedirect } from '@/features/log/TodayRedirect';
-import { WelcomePage } from '@/features/onboarding/WelcomePage';
 /**
- * Every route is its own chunk but the four you cannot defer.
+ * Every route is its own chunk but the three you cannot defer.
  *
- * Home is where the app opens, onboarding is the first thing a new install
- * shows, `/today` is a launcher shortcut, and the placeholder is a few
- * lines. Everything else is a tap away at most, and the service worker
- * precaches every chunk — so after the first visit a lazy route is a cache
- * read, and the app is still fully offline.
+ * Home is where the app opens, `/today` is a launcher shortcut, and the
+ * placeholder is a few lines. Everything else is a tap away at most, and
+ * the service worker precaches every chunk — so after the first visit a
+ * lazy route is a cache read, and the app is still fully offline.
+ *
+ * Onboarding was the fourth until M123: a new install used to be sent to
+ * `/welcome` before it saw anything else, so the page had to be in the
+ * entry chunk. It is opt-in now, reached from a card on Home, and lazy
+ * like everything else that is a tap away.
  *
  * It started as six routes split by hand because they carried obvious
  * weight — the canvas game, the 844-line editor, the prose. That left
@@ -57,6 +59,7 @@ const GamePage = lazy(() => import('@/features/game/GamePage').then((m) => ({ de
 const GlossaryPage = lazy(() => import('@/features/glossary/GlossaryPage').then((m) => ({ default: m.GlossaryPage })));
 const DrillsPage = lazy(() => import('@/features/drills/DrillsPage').then((m) => ({ default: m.DrillsPage })));
 const DrillPage = lazy(() => import('@/features/drills/DrillPage').then((m) => ({ default: m.DrillPage })));
+const WelcomePage = lazy(() => import('@/features/onboarding/WelcomePage').then((m) => ({ default: m.WelcomePage })));
 /** The logger, and by a distance the largest route. Lazy here, but Home
  *  imports its body statically for today (PLAN.md M117 — measured against
  *  a split, see `perf.test.ts`), so the code is in the entry chunk and this
@@ -69,8 +72,6 @@ const AttachPage = lazy(() => import('@/features/media/AttachPage').then((m) => 
 import { sweepOrphanMedia } from '@/db/media';
 import { hydrateAll } from '@/store';
 import { loadPrograms, programsLoaded } from '@/content/programs';
-import { useProfile } from '@/store/profile';
-import { useSessions } from '@/store/sessions';
 import { applyTextSize, applyTheme, useSettings } from '@/store/settings';
 import { AppShell } from '@/ui/AppShell';
 
@@ -111,7 +112,14 @@ export function App() {
   return (
     <Router hook={useHashLocation}>
       <Switch>
-        <Route path="/welcome" component={WelcomePage} />
+        <Route path="/welcome">
+          {/* Outside the shell — no tabs, no back link — so the shell's
+              Suspense is not above it. The fallback matches the shell's:
+              quiet, and never seen on a warm cache. */}
+          <Suspense fallback={<div className="min-h-40" aria-busy="true" />}>
+            <WelcomePage />
+          </Suspense>
+        </Route>
         <Route>
           <Shell />
         </Route>
@@ -164,32 +172,6 @@ interface LaunchQueue {
 }
 
 /**
- * Send a genuinely new install to the baseline flow, once. Anyone with data
- * — including a backup imported from before onboarding existed — is left
- * alone; `onboardedAt` being null is not by itself evidence of a fresh start.
- */
-function useFirstRunRedirect(): void {
-  const [location, navigate] = useLocation();
-  const profileReady = useProfile((s) => s.hydrated);
-  const onboardedAt = useProfile((s) => s.onboardedAt);
-  const activeProgramId = useProfile((s) => s.activeProgramId);
-  const sessionsReady = useSessions((s) => s.hydrated);
-  const byDate = useSessions((s) => s.byDate);
-
-  useEffect(() => {
-    if (!profileReady || !sessionsReady) return;
-    // An app opened *with* a file is not a first run in the "show me
-    // around" sense, and the database being empty is exactly the state a
-    // restore is for (PLAN.md M111).
-    if (launchedWithFile()) return;
-    if (onboardedAt !== null || activeProgramId !== null) return;
-    if (Object.keys(byDate).length > 0) return;
-    if (location === '/welcome') return;
-    navigate('/welcome', { replace: true });
-  }, [profileReady, sessionsReady, onboardedAt, activeProgramId, byDate, location, navigate]);
-}
-
-/**
  * The router waits for the catalogue; the shell does not (PLAN.md M78).
  *
  * Twenty-two call sites read a program synchronously at render, and eight
@@ -214,7 +196,6 @@ function useCatalogue(): boolean {
 }
 
 function Shell() {
-  useFirstRunRedirect();
   useOpenedFile();
   const [location] = useLocation();
   const catalogue = useCatalogue();

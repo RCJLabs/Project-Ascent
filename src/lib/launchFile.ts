@@ -13,13 +13,11 @@
  */
 
 import { OPENS_AT, kindOfFile } from '@/engine/openWith';
-import { markLaunched } from './launchFlag';
 
 let pending: File | null = null;
 
 export function setLaunchFile(file: File): void {
   pending = file;
-  markLaunched();
 }
 
 /** The file, once. Null on every call after the first. */

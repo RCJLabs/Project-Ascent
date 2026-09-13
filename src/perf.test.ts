@@ -240,7 +240,7 @@ describe('the bundle stays small', () => {
    * Every milestone that moves this moves it to just above what it measured;
    * the history is in the comment inside the first test.
    */
-  const BUDGET = 204.4;
+  const BUDGET = 203.0;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -403,6 +403,13 @@ describe('the bundle stays small', () => {
     // M115 and M116 bought stay bought: nothing *else* eager imports the
     // logger, and the glossary is still a tap away rather than a boot cost.
     //
+    // **204.4 → 203.0 at M123**, measured 204.33 → 202.08, and the first
+    // move *down* since M117: onboarding left the entry chunk for a 3.50KB
+    // lazy chunk of its own, and `lib/launchFlag.ts` went with the
+    // redirect it existed for. The three cards Home carries instead cost
+    // well under a kilobyte of the 2.25 that came back. Unchanged at M121
+    // and M122, both lazy routes.
+    //
     // **Unchanged at M120**, measured 203.48 → 204.32 against 204.4: the
     // fold, the rest timer and the tally row moved into the eager logger
     // (0.84KB), and `GymPage`'s lazy chunk went — which the entry never
@@ -487,11 +494,13 @@ describe('the bundle stays small', () => {
 
   it('imports only the routes that cannot be deferred', () => {
     // The guard that keeps the split from eroding one convenient static
-    // import at a time. Home is where the app opens, onboarding is the first
-    // screen of a new install, the placeholder is a few lines, and
-    // `TodayRedirect` is six — a launcher shortcut points at `#/today`, so
-    // it is a cold-start entry and deferring it would put two chunk loads in
-    // front of one navigation. Everything else is a chunk.
+    // import at a time. Home is where the app opens, the placeholder is a
+    // few lines, and `TodayRedirect` is six — a launcher shortcut points at
+    // `#/today`, so it is a cold-start entry and deferring it would put two
+    // chunk loads in front of one navigation. Everything else is a chunk.
+    // Onboarding was on this list until M123: a new install was sent to
+    // `/welcome` before anything else, so the page had to be eager. It is
+    // opt-in from a Home card now, and lazy.
     //
     // **`LogPage` was on this list until M115, and Home imports it again
     // since M117** — not from here, from `HomePage.tsx`, because Home is
@@ -540,7 +549,6 @@ describe('the bundle stays small', () => {
     expect(eager.sort()).toEqual([
       'features/home/HomePage',
       'features/log/TodayRedirect',
-      'features/onboarding/WelcomePage',
       'features/placeholder/PlaceholderPage',
     ]);
   });
@@ -548,8 +556,9 @@ describe('the bundle stays small', () => {
   it('keeps the redirect out of the logger it redirects to', () => {
     // The mechanism behind the split. `TodayRedirect` used to be declared in
     // `LogPage.tsx`, so importing it imported 2,000 lines and everything
-    // they touch — the same shape as `db/demoFlag.ts` (M110) and
-    // `lib/launchFlag.ts` (M111). If it moves back, the eager list above
+    // they touch — the same shape as `db/demoFlag.ts` (M110), and as
+    // `lib/launchFlag.ts` was from M111 until M123 retired it with the
+    // redirect it served. If it moves back, the eager list above
     // still passes and the 44.81KB comes back silently.
     const redirect = readFileSync('src/features/log/TodayRedirect.tsx', 'utf8');
     expect(redirect).not.toMatch(/from '\.\/LogPage'/);

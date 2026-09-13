@@ -12,7 +12,8 @@ import { logHref } from '@/ui/routes';
  * tables. `App.tsx` imported both names from there, so the route that only
  * needs to *redirect* was holding the whole logger in the entry chunk.
  *
- * The same split as `db/demoFlag.ts` (M110) and `lib/launchFlag.ts` (M111):
+ * The same split as `db/demoFlag.ts` (M110), and as `lib/launchFlag.ts` was
+ * from M111 until M123 retired it with the redirect it served:
  * the small thing that has to be eager, separated from the large thing it
  * happened to be declared beside.
  *

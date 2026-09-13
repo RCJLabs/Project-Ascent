@@ -132,7 +132,7 @@ describe('a delete can be undone', () => {
     'src/features/finder/FinderPage.tsx':
       'a chip that toggles an injury on and off — tapping it again is the undo',
     'src/features/onboarding/WelcomePage.tsx':
-      'the same toggle, on the first-run screen',
+      'the same toggle, on the guided setup',
     'src/features/settings/SettingsPage.tsx#clearSnapshot':
       'clearing the import restore point is the climber saying they are done with undo',
     'src/features/settings/SettingsPage.tsx#clearDemo':
