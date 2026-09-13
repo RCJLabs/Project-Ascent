@@ -7481,3 +7481,344 @@ something rests on an inference it says so.*
   changed nothing. An exact name, and it dies. A fourth was a battery entry pointed at the wrong
   test file — the mutation was never run against the test that covers it.
   **Budget.** 155.0 holds: 154.09 → 154.14. 4,622 tests pass.
+
+### The fourth brainstorm (proposed, M148–M157)
+
+*The first three brainstorms each found a layer poorer than the one above it: M125–M134 found
+the model thin under the screens, M135–M144 found the week missing and the builder unable to
+author what the catalogue is made of. This pass started somewhere else, because the obvious
+source is exhausted — **every one of the twelve enhancements in §6 is built**, including the two
+I expected to find missing (the backup nudge is `coach.ts:512`, the return-to-climbing checklist
+is `returnPlan.ts` driving `InjuryPage`). Only the two marked *maybe* were never done. So this
+pass is sourced from measurement rather than from the plan's own list, and the one theme that
+came out of it is large enough to be two milestones.*
+
+***The program declares, the log records, and nothing compares them.*** *Six verified instances,
+none of them needing a new field: a session type states a length and nothing reads the duration
+beside it; it states an intensity and nothing reads the RPE; a `WeekStep` states what this week
+adds and nothing reads the load that was lifted; a deload week lightens the prescription and
+nothing checks whether the load fell; `min-gap-hours` and `not-day-before` are enforced on the
+weekly plan and never on the dates; a menu says pick five of nine and nothing counts the ticks.
+`engine/exerciseLog.ts:6-13` names this hole as its own reason for existing. That is M148, and
+M149 is the question it raises — a block whose prescription is a pure function of the calendar
+week, so two missed weeks change nothing about week seven.*
+
+*Sized as before — two large, three medium, five small. Measured on `8c54195`, every claim read
+in the code with the file and line given, and every candidate checked against this document
+before it was written down. Three were struck by that check and are listed at the end with the
+milestone that settled them; two more were struck by measurement.*
+
+**What depends on what:**
+
+- **M148 before M149.** Noticing the divergence is most of the work of responding to it, and
+  M148's joins are the evidence M149 would act on. M149 alone would be a guess with a UI.
+- **M155 and M156 together** — both are "authored or computed, and read by nothing", they touch
+  the same files, and splitting them means reading `types.ts` twice.
+- **M151 wants M155's pass over `types.ts`** if both are taken, but does not need it.
+- **On their own** — M150, M152, M153, M154, M157.
+
+- **M148 — the plan, checked against the log.** *Proposed. Large.*
+  **One shape, six times.** Every one of these is a join over data the app already stores, and
+  none of them exists:
+  - **Length.** `sessionMinutes()` (`sessionLength.ts:260`) resolves a session type into a
+    minute estimate, deload-aware and per-week. `Session.durationMin` (`db/sessions.ts:151`)
+    records what it took. No file imports both. *"Your 60-minute sessions run 95"* is unsayable.
+  - **Effort.** `SessionType.intensity` (`types.ts:374`) declares max/hard/moderate/easy, defined
+    at `types.ts:300-315` by what a climber can do the next day. `intensityOf` is read by the
+    scheduler, `priority.ts`, `week.ts:219` and `monthMarks.ts` — scheduling only. Sessions store
+    `rpe`. Nothing joins them, so *"the program calls this moderate and you log it at 9 every
+    week"* never surfaces, though `checkIns.ts:123-130` already does this exact comparison shape
+    for the readiness cap.
+  - **Progression.** `WeekStep.step` and `.dose` (`types.ts:227-230`) say what this week asks that
+    last week did not; `plan.ts:291-322` places them. `exerciseSeries` (`exerciseLog.ts:72`)
+    returns what was actually lifted, per exercise, over the block. Nothing joins the series to
+    the week the step was asked for. **That file's own header (`:6-13`) names this as the hole it
+    was written to start filling.**
+  - **Deloads.** `deloadWeeks` marks them, `plan.ts` lightens the dose, the logger stamps
+    `Session.deload`, and `LoadState.inPlannedDeload` (`derive.ts:85`) is used only to *suppress*
+    warnings — `coach.ts:237` and `:306` both bail, `ProgressPage.tsx:546-549` prints "a lighter
+    load is the point". Nothing checks whether the load fell. A deload trained at last week's
+    sRPE reads identically to a real one.
+  - **Spacing.** `validateWeek(program, plan)` (`scheduler.ts:85`) takes a day-of-week template
+    and is called from `StartProgramPage.tsx:86`, `reschedule.ts:84-85` and inside `scheduler.ts`.
+    Never from anything holding `Session[]`. So Iron Grip's *48 hours between finger sessions*
+    (`ironGrip.ts:422`) and Trip Prep's *never hang the day before the session that matters*
+    (`tripPrep.ts:209`) are enforced on the intention and never on the history — and the history
+    is a date sort away.
+  - **Menus.** `SelectionRule.pick` (`types.ts:183`) says pick five of nine and its `note` is
+    often literally *"Rotate the focus across sessions."* `Session.exercises` records which lines
+    were ticked. Nothing counts the ticks against the rule, so eight weeks of the same three
+    lines is invisible.
+  **Why it is one milestone and not six.** They are the same function with different columns —
+  read the program's claim for a week, read the log for that week, report the difference with
+  both numbers — and they want one home, one vocabulary and one rule about when to stay quiet.
+  Six separate cards would be six new opinions on six screens.
+  **The honest risk.** This is the app's largest remaining coaching gap and also the easiest
+  place to become a nag. Every one of these can fire on a climber having a normal week. The rule
+  that has held elsewhere — *every opinion shows its reasoning* (`guides/app.ts:495`) — is the
+  floor, not the ceiling: each of these needs a gate as well, and the gates are the milestone.
+
+- **M149 — a block that notices it was interrupted.** *Proposed. Large. Takes M148 first.*
+  **The prescription is a pure function of the calendar.** `prescriptionFor` (`plan.ts:275-282`)
+  takes a session type, a phase, a track, a week number and a deload flag. It takes no history.
+  Miss a fortnight and week seven prescribes week seven, at week seven's load, off a base the
+  climber no longer has.
+  **What already exists, and stops short.** `adapt.ts` remaps a program into fewer weeks — at the
+  moment you start it (`adapt.ts:1-17`). `readiness.ts` caps the effort and lightens the dose —
+  for a single day, deliberately (`readiness.ts:10-16`). `adherence.ts` measures how far behind
+  you are and `review.ts` comments on it. `reschedule.ts` moves a session inside its week.
+  **Nothing between a day and a restart touches the prescription.**
+  **The shape of the answer, and why it is a large one.** Three honest options and they are not
+  the same milestone: hold the block and shift its dates, so week seven happens in week nine;
+  re-enter at a lighter week and lose the top of the block; or carry on and say plainly that the
+  next fortnight is a step up rather than the prescribed one. Which is right depends on how long
+  the gap was, where in the block it fell, and whether the climber was hurt, away or ill — and
+  the app knows the first two exactly and the third only if it asks.
+  **The risk, stated first.** A block that rewrites itself is a block the climber can no longer
+  read ahead, and the catalogue's prose is written for the weeks as authored — `adapt.ts:13-16`
+  already records that a phase saying *"over the next four weeks"* still says it after a remap.
+  Whatever this does has to leave the program legible, which argues for shifting dates over
+  rewriting doses, and for proposing rather than applying.
+
+- **M150 — two programs the finder cannot recommend, and one climber it cannot answer.**
+  *Proposed. Medium.*
+  **`GOAL_FIT` has eleven entries and the catalogue has thirteen.** `finder.ts:180-192` maps a
+  program id to the goals it is built for; `two_day_week` and `trip_prep` are absent, and
+  `finder.ts:323` reads `GOAL_FIT[program.id] ?? []`. A missing key is an empty list, so both
+  score **nothing** of the goal points — 50 for a primary match at `:325`, and the secondary
+  tier below it. Two Days a Week can only be reached through the +10 days-fit and +15
+  discipline; Trip Prep leans entirely on `weeksAvailable` (`:413-419`).
+  **Which makes the commonest real constraint the hardest thing in the catalogue to be
+  offered.** Two Days a Week is the only program in thirteen with `min: 2`
+  (`twoDayWeek.ts:342`) and it is the one the finder is worst at reaching. Whether the fix is
+  four keys or a rethink of `Goal` is the milestone's first question: neither program is *for* a
+  goal in the sense the other eleven are — one is for a shape of week and one is for a date.
+  **And a climber who trains once a week is told no, thirteen times.** The catalogue's minimum
+  is 2, so `daysPerWeek: 1` fires `-20` and *"Asks for 2-3 days a week; you have 1"*
+  (`finder.ts:441-443`) against every program. `catalogueGap` (`finder.ts:654-658`) exists to say
+  *"the catalogue has nothing for you"* out loud and fires **only** on `goal === 'fingers'`. The
+  honest answer — General Training, logged well — is the fallback at `:633` and is never named
+  as the answer.
+  **A third, smaller, in the same file.** `experience: 'returning'` gives Ground Zero +25
+  (`finder.ts:369-376`) — a twelve-week structural block — while
+  `content/returnToClimbing.ts` and `engine/returnPlan.ts` exist and are reachable only from
+  `InjuryPage.tsx`. The finder never mentions them.
+
+- **M151 — the database presents every failure as an empty app.** *Proposed. Medium.*
+  **The plan calls data loss the existential risk (`§10`) and this is worse than losing it:
+  it is having it and being shown nothing.** Three failure modes, one appearance.
+  - **A rejected open is memoised forever.** `db.ts:39` — `dbPromise ??= openDB(...)`. There is
+    no retry and no invalidation outside `resetDbForTests` (`db.ts:59`). One transient failure at
+    boot poisons every `getDb()` for the life of the tab.
+  - **A blocked upgrade never settles.** `db.ts:39-46` passes no `blocked`, `blocking` or
+    `terminated` callback. A second tab holding the older version stalls the upgrade: the promise
+    neither resolves nor rejects, the per-store catches never run, and `hydrated` stays false —
+    the app sits on `App.tsx:213-216`'s busy state indefinitely.
+  - **A downgrade reads as a fresh install.** Opening an older build over a newer schema throws
+    `VersionError`. Nine store-level catches turn it into hydrated-with-nothing
+    (`sessions.ts:50`, `metrics.ts:30`, `projects.ts:50`, `objectives.ts:34`, `programs.ts:35`,
+    `templates.ts:48`, `game.ts:91`, `settings.ts:248`, `profile.ts:445`). The climber sees an
+    empty app. **`exportImport.ts:269-274` already refuses a backup from a newer schema with a
+    message; the database itself has no such path.**
+  **And a full disk is silent.** No `QuotaExceeded` handling anywhere in `src/`. Session and
+  metric writes have no catch at all (`sessions.ts:55-67`); `MediaCard.tsx:93-98` turns any
+  non-`ImageError` into *"That photo could not be added."*
+  **The shape of the answer.** One place that knows the difference between *no data* and *cannot
+  read the data*, and a hydration path that can say which. Not a new screen — the store flags
+  already exist, and `hydrated: true` after a catch is the lie to fix.
+
+- **M152 — doors that only open sometimes, and rooms with no way out.** *Proposed. Medium.*
+  **Reachability, measured route by route against `routes.ts`.**
+  - **The weekly review has one door.** `/review` is linked from `HomePage.tsx:71` and nowhere
+    else; its declared parent is `/progress` (`routes.ts:91`) and `ProgressPage` never links it.
+    §6 calls the review *"the retention loop"*.
+  - **Coach's Corner disappears when it is quiet.** `CoachCard` returns null with no tips
+    (`HomePage.tsx:304-305`), and `/coach` has no other link — so the page is search-only exactly
+    when a climber might go looking for advice.
+  - **The week screen is program-gated.** `/week` is linked only from `HomePage.tsx:108`, inside
+    a card that renders only when a program exists (`:76`). Log without a program and the screen
+    M135 built has no door.
+  - **The journal is a dead end.** No `BackLink` in `JournalPage.tsx`, and its empty state
+    (`:82-88`) has no action. Arrive from the calendar with nothing written and the only way out
+    is a tab.
+  - **So is a fresh install's block review.** `FinishPage.tsx:333-348` is an `EmptyState` with no
+    action, and its sibling `BlockHistory` returns null under two entries (`:74`). The `/find`
+    link lives in the other branch (`:606`).
+  - **The 404 has no link of any kind** (`PlaceholderPage.tsx:15-16`).
+  - **Four pages carry a parent and no back link**: `/find`, `/journal`, `/assessments`,
+    `/board`.
+  - **And the guide is wrong about one.** `guides/app.ts:399` calls drills *"the library under
+    Train"*; `routes.ts:112` parents `/drills` to `/settings` and `SettingsPage.tsx:817` is its
+    only in-app link.
+  **Not a redesign.** Every one is a link, an empty-state action, or a `BackLink` — the
+  milestone is deciding which of these are doors that should exist and which are pages that
+  should not be reachable at all.
+
+- **M153 — five safety rules the app was told and never reads.** *Proposed. Small.*
+  `Protocol.safety` (`types.ts:69`) is authored on five protocols — `protocols.ts:30, 45, 73, 91,
+  146` — and one of them reads *"Skip entirely with any elbow symptom — this is the highest-load
+  pulling exercise in the program."* **Nothing reads the field.** `DrillPage.tsx:204-211` renders
+  `protocol.cues` and stops; `timer.ts:179` takes `grip ?? cues[0]`. The injury engine reads drill
+  *text* for the parts it loads (M137) and has never seen a protocol's contraindication.
+  `Protocol.description` (`types.ts:64`) has no reader either. **Seven warning strings across the
+  five**, including the campus block at `protocols.ts:73-77`: *"The highest injury-risk protocol
+  in any program here"* and *"Never campus with any existing finger or elbow symptom."*
+  **A guard exists for exactly this and did not catch it.** `ui/wired.test.ts:83-100` is written
+  to hold that *"every authored field of a prescription reaches a screen… a leaf at a time, by
+  the name it is read by"*, and says in its own comment that **the list is maintained by hand**.
+  `safety` is not on the list. Whatever else this milestone does, the hand-maintained list is the
+  thing to fix, because the next field will go the same way.
+  **Why it is small and still worth doing first among the small ones.** The content exists and is
+  good; the work is rendering it on the protocol and joining the five rules to the injury the
+  climber has already told the app about. It is the only item in this pass where the thing not
+  being read is a warning.
+
+- **M154 — the update that never arrives on an installed app.** *Proposed. Small.*
+  **M19 reasoned this through and its conclusion has a hole.** It wrote: *"'Later' is honest
+  rather than a snooze: a waiting worker activates once every tab is closed, so the next launch
+  is the new version anyway."* That holds for a browser tab. An installed app is not reliably
+  closed, and **nothing polls**: `main.tsx:17-24` passes no `onRegisteredSW` and sets no
+  interval, and there is no `registration.update()` in `src/`. Update detection is left to the
+  browser's own check, which is driven by navigations — and routing is hash-based
+  (`App.tsx:114`), so no navigation ever re-fetches `sw.js`. A home-screen install can sit on a
+  stale version indefinitely.
+  **And "Later" is sticky for the whole run.** `appUpdate.ts:14,31` — `deferred` is set once and
+  cleared only by a fresh start, so the prompt cannot come back in that session.
+  **`APP_VERSION` cannot tell you either.** `version.ts:1` is hardcoded `'0.1.0'` and written
+  into `meta` on every open (`db.ts:48`), so a stale install's stored version is
+  indistinguishable from a current one.
+
+- **M155 — authored thirteen times, read never.** *Proposed. Small. With M156.*
+  Fields the catalogue carries and no engine or screen reads:
+  - **`Program.frequency`** (`types.ts:545`) — authored in **all thirteen** programs. Read only
+    by `programFile.ts:178` (its own round trip) and written as `''` by `customProgram.ts:62`.
+  - **`Program.ordering`** (`types.ts:546`) — authored in all thirteen. Same story
+    (`programFile.ts:179`).
+  - **`Program.outdoor`** (`types.ts:473`) — authored once, on `outdoorClimbing.ts:19`. Every
+    other `.outdoor` in the codebase is `session.mode` or `ladders.outdoor`.
+  - **`engine/priority.ts`** — 111 lines whose own header says it exists because *"M55 gave
+    `SessionType` a `priority` and set it on nothing"*. Imported by `priority.test.ts:3` and
+    nothing else. Named for deletion in the second brainstorm and again in the third, both times
+    *"in passing"*, and still here.
+  And three things that are not fields:
+  - **`src/__m39.ts`** — a one-off `console.log` script committed in `baa3f84` *"M39: the
+    finger-strength hole"* and never removed. No importer, no script entry, nothing.
+  - **`src/ui/Stat.tsx`** — the primitive is orphaned, because `ProgressPage.tsx:271`,
+    `YearPage.tsx:360`, `ReviewPage.tsx:254` and `ProjectDetailPage.tsx:248` each declare their
+    own private `Stat` instead. **And the guard that should have caught it passes falsely:**
+    `ui/wired.test.ts:56-81` asserts every UI primitive is used, and its `callers()` at `:31`
+    word-matches `\bStat\b` in any file — which the four local copies satisfy. A test passing
+    for the wrong reason is the defect here, not the orphan.
+  - **`GameState.award` and `.spend`** (`store/game.ts:53,59`) — neither is called anywhere.
+    `shop.test.tsx:13` already says so in prose about `spend`. **Checked, because it looks worse
+    than it is:** `award` exists to clamp a game-lane entry to `GAME_ACTION_CAP`, and `recordRun`
+    and `claim` bypass it by calling `appendLedger` directly — but the cap is *also* applied at
+    read time in `xp.ts:187-189`, which defaults a missing source to `'game'` and clamps
+    *"whatever the writer claimed"*. **The economy's non-negotiable holds.** `award` is a
+    redundant second enforcement point, not a hole.
+  - Nine more exports with no reference anywhere, tests included: `SEGMENT_LABEL`
+    (`timer.ts:126`), `displayNameFor` (`grades.ts:181`), `plannedRange` (`plan.ts:138`),
+    `OPTIONAL` (`importCsv.ts:133`), `movesAnything` (`priority.ts:107`), `ERASE_DB`
+    (`erase.ts:98`), `sessionsOn` (`store/sessions.ts:117`).
+  **Each is either wired up or deleted, and the question is per field.** `frequency` and
+  `ordering` are prose a climber would read on the program page; `outdoor` duplicates something
+  the session already says; `priority.ts` is a derivation whose only consumer is the test that
+  pins the catalogue against it.
+
+- **M156 — computed every render, shown to nobody.** *Proposed. Small. With M155.*
+  - **`TypeAdherence.extra`** (`adherence.ts:39`, computed `:126,133`) — `FinishPage.tsx:409-423`
+    renders `done` and `planned` and skips it. *"Four limit sessions the plan never placed, all
+    on the finger block's rest days"* is computed and discarded.
+  - **`WeekReview.adherence` and `.zone`** (`review.ts:68,77`) — used internally to pick a note
+    (`:304`, `:249`) and never rendered; the page shows `sessions`/`target` raw.
+  - **`ClimberState.sessionsByType`** (`derive.ts:104`) — `stats.ts:108` reduces it to
+    `Object.keys(...).length`. The per-type counts are thrown away.
+  - **Four dead exports**: `derive.zoneAt` (`:485`), `review.weeksAgo` (`:369`),
+    `radar.lopsidedness` (`:99`) — the *"all fingers, no endurance"* score its own header argues
+    for — and `progress.weeklyVolume` (`:201`).
+  - **`ProjectSummary.bestOutcome`** (`projects.ts:129`) — computed and read by nothing.
+  **Two stored fields whose own documentation names a reader that does not exist:**
+  - **`Session.imported`** (`db/sessions.ts:215`) is written by `importCsv.ts:647` and read
+    nowhere in production. Its doc at `:203-213` says it exists so *"an undo… has to know what it
+    put there"* — `store/undo.ts` carries a closure (`UndoOffer.run`, `:33`) and never reads it.
+    Every CSV-imported row is flagged for nobody.
+  - **`Project.appliedAt`** (`db/projects.ts:50`) is written at `projects.ts:243` and cleared at
+    `:226`. Its doc says *"The M4 reward pipeline reads this."* It does not — the idempotency
+    check uses `sendAppliedFrom` (`projects.ts:219,234,238`).
+  **The rule to apply is the one M140 settled**: a thing computed and not shown is either a
+  missing screen or a deletion, and saying which per item is the work. The two fields above are a
+  harder case than the rest, because deleting a field whose comment describes a reader means
+  first deciding whether the comment or the code is the mistake.
+
+- **M157 — one derivation, shared.** *Proposed. Small.*
+  **`deriveClimberState` has no cache and fourteen callers.** `BodyPage.tsx:44`,
+  `GamePage.tsx:110,145`, `ProgressPage.tsx:133,174,407`, `CareerPage.tsx:49`, `YearPage.tsx:79`,
+  `useTips.ts:41`, `useClimberAvatar.ts:38`, `skills.ts:30`, `BoardPage.tsx:42`,
+  `AscentPage.tsx:129`, `ObjectivesPage.tsx:55`, `FinderPage.tsx:153`,
+  `AchievementsCard.tsx:141` — each memoising independently on `byDate`, so a page mounting
+  several pays for several. Its own budget is **60ms at decade scale** (`perf.test.ts:173`).
+  **And most of them defeat the one cache that does exist.** `deriveXp`'s cache is keyed on
+  reference identity (`xp.ts:100-123`), and most callers rebuild `Object.values(byDate).flat()`
+  inside their own memo — a fresh array every time. `perf.test.ts:198-203` documents this exact
+  trap.
+  **The precedent is M18**, which made `useXp()` cost one derivation instead of nine and recorded
+  the number. The same move, one layer down.
+
+**Struck by checking this document, with the milestone that settled each:**
+- *Virtualising the journal* — `JournalPage.tsx:154-165` renders every entry of a decade, and
+  **M18 already decided against it with a measurement and a trigger**: every page rendered in
+  78–144ms with ten years of logs, *"if a decade of journal entries with notes on every session
+  turns out to be slow in real use, that is when it earns its place."* The trigger is real use,
+  not another audit.
+- *`/gym` has no inbound links* — **deliberate.** M120 deleted `GymPage`, pointed `/gym` at
+  `TodayRedirect` and *"stays in the route table so 'rest timer' still finds something"*. The one
+  loose end is `ship/twa-manifest.json:32`, which still shortcuts to `/#/gym` after M120 removed
+  the launcher shortcut from the web manifest.
+- *A post-session debrief* — the second brainstorm's own left-out list: *"the notes field and
+  M103's chips cover what it would ask."* The same argument covers `skillTags` from §3, since
+  the journal reads `#tags` out of the note text.
+- *Localisation* — ruled out with multi-device sync, notifications and wearables: *"all need a
+  server or a translator, and the plan's cut list stands."*
+
+**Struck by measurement:**
+- *The derive pipeline slowing down with years of data* — benchmarked at 600 sessions carrying
+  3,600 climbs: `deriveClimberState` 10–20ms, altimeter ~1.5ms, load index under 1ms, and linear.
+  There is nothing to fix. (M157 is a different claim: not that one derivation is slow, but that
+  fourteen of them run where one would do.)
+- *Photos filling the disk* — the ceiling is `8 × (sessions + projects) × ~0.6MB`
+  (`media.ts:42`), which is thousands of photos before it matters, and `storagePressure`
+  (`offline.ts:85-135`) already ranks eviction above quota and interrupts at 95%. Worth
+  remembering that `mediaBytes` (`media.ts:228-232`) does `getAll` on the photo store to sum
+  sizes, against its own file's rule at `health.ts:14-17` — one line, take it in passing.
+
+**Considered and parked, with the reason:**
+- *Gym colour circuits* — most gyms grade by a colour with a range behind it, and the app has two
+  ladders and a display conversion. This is **not** the *"Ewbank, UIAA, British"* item the second
+  brainstorm parked as *"table work, cheap, and no one has asked"* — a circuit is a local name
+  for a band, not another rung, so it is a data-shape change rather than a table. Still parked,
+  and for the same reason: no one has asked.
+- *Conditions on a session* — `§3` specified `conditions?: {tempFeel, partners, approachMin}`
+  (`PLAN.md:151`) and `§5.2` lists it in the full log; it was never built and never explicitly
+  cut. Two sessions on one route read differently and nothing records why. Left out of the ten
+  because the notes field takes it today and M142 has just finished retiring three fields that
+  duplicated something the app already asks.
+- *The mutation batteries are not in the repository* — every milestone since M13 has written one,
+  run it and thrown it away into a temp directory; there is no mutation tooling in
+  `package.json` and nothing in `scripts/`. This is the project's strongest verification practice
+  and it leaves no artifact, so none of it can be re-run against a regression. **Not proposed as a
+  product milestone because it is not one** — it is a decision about how this project works, and
+  it is yours.
+- *Two validators for one thing* — `content/validate.ts` runs over the catalogue in tests
+  (`content.test.ts:9`, `intensity.test.ts:4`, `askedOnce.test.tsx:6`) and the builder uses a
+  different `validateProgram` from `engine/customProgram.ts:98` (`BuilderList.tsx:5`,
+  `BuilderPage.tsx:29`). Two independently maintained rule sets over the same shape, which is how
+  a shipped program and a custom one start disagreeing about what is valid. Real, and a milestone
+  of its own rather than a line in M155.
+- *Photos are not deleted with what they belong to* — `deleteMediaFor` (`db/media.ts:91`) exists
+  and is imported only by tests, so `deleteSession` and `deleteProject` leave their blobs behind.
+  The boot sweep (`App.tsx:84-93`) collects them, which is why this is a leak and not a loss —
+  but the cascade is the thing that should do it, and the sweep is the safety net.
+- *A thin top of the pyramid* — still the best unbuilt coaching observation in this document, and
+  the second brainstorm already said why it is not a coda: it needs a gate or it fires for almost
+  everyone almost always, *"and that gate is a milestone's worth of thinking."* It stays on the
+  shelf until someone wants to do that thinking.
