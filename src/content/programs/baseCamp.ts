@@ -297,6 +297,10 @@ export const BASE_CAMP: Program = {
       intensity: 'hard',
       priority: 2,
       name: 'Climb: Performance',
+      // Limit bouldering, then the short core circuit. The circuit is the only
+      // part in the dose — three minutes of it — which is why this needed
+      // saying: a session the model sees a corner of reads as a short one.
+      duration: '60-75 min',
       icon: '⚡',
       description: 'Hard effort — limit bouldering or routes, then a short core circuit.',
       fields: ['hardestGradeAttempted', 'hardestGradeSent'],

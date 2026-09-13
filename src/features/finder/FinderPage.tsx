@@ -208,6 +208,8 @@ function FinderForm({
   // Weeks until whatever they are training for. Not part of the baseline: a
   // trip is a fact about this month, not about the climber (PLAN.md M57).
   const [weeksAvailable, setWeeksAvailable] = useState<number | null>(null);
+  /** Minutes an evening has in it, or null for no limit (PLAN.md M138). */
+  const [minutesPerSession, setMinutesPerSession] = useState<number | null>(null);
   // Read and write the profile directly rather than copying into local
   // state: what you tell the finder about your gear and injuries *is* your
   // profile, and a local copy seeded at mount goes stale when the store
@@ -302,6 +304,7 @@ function FinderForm({
       goal,
       daysPerWeek,
       ...(weeksAvailable !== null ? { weeksAvailable } : {}),
+      ...(minutesPerSession !== null ? { minutesPerSession } : {}),
       equipment,
       injuries: blocking,
       comingOffBreak: experience === 'returning',
@@ -490,6 +493,26 @@ function FinderForm({
           {drift.days && daysPerWeek === drift.days.stated && (
             <Note>{describeDaysDrift(drift.days)}</Note>
           )}
+        </Card>
+
+        <Card title="How long is a session for you?">
+          <p className="text-sm text-ink-soft mb-3">
+            The time an evening actually has in it. Never used to hide a program — a program whose
+            sessions run longer than this still shows, and says which ones and by how much.
+          </p>
+          <div className="grid grid-cols-5 gap-2">
+            <Chip selected={minutesPerSession === null} onClick={() => setMinutesPerSession(null)}>
+              <span className="font-semibold block text-center text-xs">Any</span>
+            </Chip>
+            {[45, 60, 90, 120].map((n) => (
+              <Chip key={n} selected={minutesPerSession === n} onClick={() => setMinutesPerSession(n)}>
+                {/* "120+" rather than 120: it is the top chip, and a
+                    projecting day that runs two and a half hours is over
+                    it and says so. */}
+                <span className="font-semibold block text-center text-xs">{n === 120 ? '120+' : n}</span>
+              </Chip>
+            ))}
+          </div>
         </Card>
 
         <Card title="What can you train on?">

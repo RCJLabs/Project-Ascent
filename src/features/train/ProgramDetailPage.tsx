@@ -7,7 +7,9 @@ import { guideSummaryFor } from '@/content/guides/summary';
 import { getMetric } from '@/content/metrics';
 import { getProtocol } from '@/content/protocols';
 import { getProgram } from '@/content/programs';
-import type { Exercise, Phase, SessionType, TrackId } from '@/content/types';
+import { INTENSITY_LABEL, type Exercise, type Phase, type Program, type SessionType, type TrackId } from '@/content/types';
+import { intensityOf } from '@/engine/scheduler';
+import { describeWork, sessionMinutes } from '@/engine/sessionLength';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -61,23 +63,35 @@ function ExerciseRow({ ex }: { ex: Exercise }) {
 
 function SessionTypeCard({
   type,
+  program,
   phase,
   blockName,
   track,
   deloadWeeks,
 }: {
   type: SessionType;
+  program: Program;
   phase: Phase;
   blockName: (blockId: string) => string;
   track: TrackId | null;
   deloadWeeks: Set<number>;
 }) {
+  // How hard and how long, on the page where a climber is choosing a
+  // program rather than starting one (PLAN.md M138). The number existed for
+  // the day you were about to do and not for the block you were picking.
+  const spent = describeWork(
+    sessionMinutes({ type, program, week: phase.weekStart, ...(track ? { trackId: track } : {}) }),
+  );
   return (
     <Card>
       <div className="flex items-baseline gap-2 mb-1">
         <span className="text-lg leading-none">{type.icon}</span>
         <h3 className="font-bold">{type.name}</h3>
       </div>
+      <p className="text-sm mb-1">
+        <span className="font-semibold">{INTENSITY_LABEL[intensityOf(type)]}</span>
+        {spent && <span className="text-ink-soft"> · {spent}</span>}
+      </p>
       <p className="text-sm text-ink-soft mb-3">{type.description}</p>
 
       {type.blocks?.map((block) => {
@@ -540,6 +554,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
                 <SessionTypeCard
                   key={type.id}
                   type={type}
+                  program={program}
                   phase={phase}
                   blockName={blockName}
                   track={activeTrack}

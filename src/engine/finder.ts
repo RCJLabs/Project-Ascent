@@ -20,6 +20,7 @@ import { DEFAULT_DISPLAY, displayRange, gradeOrdinal, type GradeDisplay, type Gr
 import { PROGRAMS } from '@/content/programs';
 import { getMetric } from '@/content/metrics';
 import { MIN_ADAPTED_WEEKS } from './adapt';
+import { describeWork, programSessionLengths, type WorkEstimate } from './sessionLength';
 import type { Discipline, Equipment, MetricId, Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import { seriesFor } from './assessments';
@@ -50,6 +51,17 @@ export interface FinderInput {
   sportGrade?: string;
   goal: Goal;
   daysPerWeek: number;
+  /**
+   * How long an evening is, in minutes (PLAN.md M138). Undefined means no
+   * limit, which is the default and most of the time.
+   *
+   * Finder-only, like `weeksAvailable` and for the same kind of reason: the
+   * answer is different on a Tuesday and a Saturday, so pinning it to the
+   * profile would be pinning the wrong half of the truth. Never a filter —
+   * telling a climber that two of a program's sessions run past their hour
+   * is coaching; hiding the program is not.
+   */
+  minutesPerSession?: number;
   /**
    * Weeks until the thing they are training for (PLAN.md M57).
    *
@@ -127,6 +139,41 @@ export interface Recommendation {
   cautions: string[];
   /** Hard reasons it cannot be run right now. Blocked programs never win. */
   blockers: string[];
+}
+
+/**
+ * Whether a program's sessions fit the time a climber has (PLAN.md M138).
+ *
+ * Its own function because the interesting branch is the one `recommend`
+ * cannot reach: every shipped program answers for every session, so the
+ * silence rule is unreachable through the catalogue and untestable there.
+ * It is reachable here, which is the difference between a guard and a
+ * comment.
+ *
+ * Ten either way, against the twenty a short week deducts: a session that
+ * runs long can be cut short, and a day that does not exist cannot be
+ * invented.
+ */
+export function fitsTheEvening(
+  lengths: { known: { type: { name: string }; estimate: WorkEstimate }[]; silent: unknown[] },
+  budget: number,
+): { score: number; reason?: string; caution?: string } {
+  const { known, silent } = lengths;
+  const over = [...known]
+    .filter((s) => s.estimate.low > budget)
+    .sort((a, b) => b.estimate.low - a.estimate.low);
+  if (over.length > 0) {
+    const longest = over[0]!;
+    const said = describeWork(longest.estimate)!.replace('about ', '').replace(' of work', '');
+    return {
+      score: -10,
+      caution: `${over.length} of ${known.length + silent.length} sessions ${over.length === 1 ? 'runs' : 'run'} past ${budget} min — ${longest.type.name} is ${said}`,
+    };
+  }
+  // Silence is not a fit. A program whose sessions the clock cannot read
+  // says nothing here rather than promising an hour it has not measured.
+  if (silent.length > 0 || known.length === 0) return { score: 0 };
+  return { score: 10, reason: `Every session fits your ${budget} min` };
 }
 
 /** Goals each program serves well. */
@@ -404,6 +451,24 @@ export function recommend(input: FinderInput): Recommendation[] {
         score += 10;
         reasons.push(`Fits ${input.daysPerWeek} days a week`);
       }
+    }
+
+    // ── How long an evening is (PLAN.md M138) ──────────────────────────
+    //
+    // Softer than the day count, and deliberately: a session that runs long
+    // can be cut short, and a day that does not exist cannot be invented.
+    // So ten either way against the twenty a short week deducts.
+    //
+    // Silence is not a fit. A program whose sessions the clock cannot read
+    // — a custom one, or a mode — says nothing here rather than claiming to
+    // fit, because "every session fits your hour" is a promise and this
+    // would be making it up.
+    const budget = input.minutesPerSession;
+    if (budget !== undefined) {
+      const fit = fitsTheEvening(programSessionLengths(program), budget);
+      score += fit.score;
+      if (fit.caution) cautions.push(fit.caution);
+      if (fit.reason) reasons.push(fit.reason);
     }
 
     // ── The block you just ran (PLAN.md M101) ──────────────────────────

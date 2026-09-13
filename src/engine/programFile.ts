@@ -44,6 +44,7 @@ import {
   type WeeklyLayout,
 } from '@/content/types';
 import { DOSE_FIELDS } from './prescription';
+import { secondsRange } from './sessionLength';
 import type { GradeScale } from './grades';
 import { MAX_WEEKS, newProgramId } from './customProgram';
 
@@ -229,6 +230,12 @@ function readSessionType(raw: unknown, reading: Reading): SessionType | null {
     type.intensity = r['intensity'] as Intensity;
   }
   if (typeof r['priority'] === 'number') type.priority = clampInt(r['priority'], 1, 99, 1);
+  // How long the session takes, where the dose cannot say (PLAN.md M138).
+  // A duration no clock can read is a string nothing would use, so it is
+  // dropped and named rather than carried.
+  const duration = str(r['duration'], 40);
+  if (duration && secondsRange(duration) !== null) type.duration = duration;
+  else if (duration) dropped.push(`a session length this version cannot read ("${duration}")`);
 
   const fields = readFields(r['fields'], dropped);
   if (fields.length > 0) type.fields = fields;

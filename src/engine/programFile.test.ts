@@ -279,6 +279,17 @@ describe('the rest of the round trip', () => {
     expect(steps(back).length).toBeGreaterThan(0);
   });
 
+  it('keeps a session length the dose cannot state, and drops one no clock can read', () => {
+    // The Cruiser authors three (PLAN.md M138).
+    expect(cruised.program.sessionTypes.map((t) => t.duration)).toEqual(cruiser.sessionTypes.map((t) => t.duration));
+    expect(cruiser.sessionTypes.some((t) => t.duration !== undefined)).toBe(true);
+    const { program, dropped } = parseProgramFile(
+      wrap({ name: 'X', sessionTypes: [{ id: 'a', name: 'A', icon: '', description: '', duration: 'a while' }] }),
+    );
+    expect(program.sessionTypes[0]!.duration).toBeUndefined();
+    expect(dropped.some((d) => /session length this version cannot read/.test(d))).toBe(true);
+  });
+
   it('keeps how hard each day is, which sessions survive a short week, and the questions it asks', () => {
     expect(back.sessionTypes.map((t) => t.intensity)).toEqual(grip.sessionTypes.map((t) => t.intensity));
     expect(back.sessionTypes.map((t) => t.priority)).toEqual(grip.sessionTypes.map((t) => t.priority));

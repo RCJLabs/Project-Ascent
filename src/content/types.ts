@@ -344,6 +344,25 @@ export interface SessionType {
    *  model let the same field hold week OR phase keys (AUDIT.md §8.2). */
   drillsByWeek?: Record<number, DrillId>;
   fields?: FieldId[];
+  /**
+   * How long this session takes, in the author's words — '60-90 min'
+   * (PLAN.md M138).
+   *
+   * **Only where the dose cannot say.** `sessionLength.ts` reads the length
+   * off the prescription, which is why a deload week is genuinely shorter
+   * and a week with its own step is as long as that step asks. An authored
+   * number cannot do either, so it is allowed only on the session types the
+   * prescription cannot state a length for — the climbing days, whose length
+   * is a coaching decision rather than a consequence of sets and reps, and
+   * which do not shorten on a deload week anyway (the intensity does).
+   * `content/validate.ts` enforces both halves: every working session type
+   * in a shipped program says how long it takes, and none says it twice.
+   *
+   * The whole session, including anything the blocks also prescribe: a
+   * limit day is ninety minutes *with* the core circuit at the end of it,
+   * not ninety plus three.
+   */
+  duration?: string;
   /** Marks the rest/recovery type so the scheduler and reward pipeline can
    *  find it without string-matching an id. */
   isRest?: boolean;

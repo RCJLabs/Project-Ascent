@@ -169,6 +169,9 @@ export const THE_CRUISER: Program = {
       intensity: 'moderate',
       priority: 3,
       name: 'Climbing: Volume & Flow',
+      // The program's own words: *drill it for 60 minutes* in Block 1, and
+      // *keep them short (45-60 min)* in Block 3.
+      duration: '45-60 min',
       icon: '🎵',
       description: 'Easy climbing with a technique focus. RPE 4-6, two to four grades below max.',
       fields: ['sessionVolume'],
@@ -206,6 +209,9 @@ export const THE_CRUISER: Program = {
       intensity: 'max',
       priority: 1,
       name: 'Climbing: Performance',
+      // *Warm up fully (20-30 min)* and then climb at RPE 7-8, says the Block
+      // 1 rationale. The warm-up is inside this, not on top of it.
+      duration: '90-120 min',
       icon: '⚡',
       description: 'Limit bouldering or hard routes. RPE 8-9.',
       fields: ['hardestGradeAttempted', 'hardestGradeSent', 'attemptsToday'],
@@ -243,6 +249,9 @@ export const THE_CRUISER: Program = {
       intensity: 'hard',
       priority: 2,
       name: 'Climbing: Endurance',
+      // An ARC session is two twenty-minute blocks and a warm-up; 4x4s and
+      // linked laps come out about the same.
+      duration: '60-75 min',
       icon: '🔥',
       description: 'ARC, 4x4s, linked laps, or circuits. RPE 6-8.',
       fields: ['routesCompleted', 'pumpLevel'],

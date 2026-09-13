@@ -6,6 +6,7 @@
  * Every rule here is one the old app could only fail at runtime.
  */
 
+import { secondsRange, sessionMinutes } from '@/engine/sessionLength';
 import { getDrill } from './drills';
 import { getMetric } from './metrics';
 import { getProtocol } from './protocols';
@@ -130,6 +131,48 @@ export function validateProgram(program: Program): string[] {
   for (const type of program.sessionTypes) {
     if (!type.isRest && type.intensity === undefined) {
       where(`session type '${type.id}' does not say how hard it is`);
+    }
+  }
+
+  /**
+   * Every working session says how long it takes (PLAN.md M138).
+   *
+   * Either the prescription adds up to a length or the author states one,
+   * and never both: an authored number cannot shorten on a deload week or
+   * follow a per-week step, so it is allowed only where the dose says
+   * nothing — the climbing days. A session with neither is the one a
+   * climber cannot plan an evening around, which is the question this
+   * whole estimate exists to answer.
+   *
+   * Modes are exempt and it is not an oversight. `general_training` is a
+   * menu with no dose at all and `outdoor_climbing` has no blocks: a day
+   * at the crag is as long as the day is, and inventing a number for it
+   * would be the app pretending to know something nobody does.
+   */
+  if (program.kind === 'program') {
+    for (const type of program.sessionTypes) {
+      if (type.isRest) continue;
+      if (type.duration !== undefined && secondsRange(type.duration) === null) {
+        where(`session type '${type.id}' has a duration the clock cannot read ('${type.duration}')`);
+        continue;
+      }
+      // Against every phase, because the dose changes shape between them
+      // and a session that goes quiet in phase three is an unanswered card
+      // for four weeks.
+      for (const phase of program.phases) {
+        const derived = sessionMinutes({
+          type: { ...type, duration: undefined },
+          program,
+          week: phase.weekStart,
+          trackId: program.tracks?.[0]?.id,
+        });
+        if (type.duration === undefined && derived === null) {
+          where(`session type '${type.id}' says how long it takes in neither its dose nor a duration, in phase '${phase.id}'`);
+        }
+        if (type.duration !== undefined && derived !== null) {
+          where(`session type '${type.id}' states a duration and its dose in phase '${phase.id}' already adds up to one`);
+        }
+      }
     }
   }
 

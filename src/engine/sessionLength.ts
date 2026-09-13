@@ -33,8 +33,9 @@
  * tonight" has an answer and it is forty minutes.
  */
 
-import type { Drill, Exercise, PhasePrescription } from '@/content/types';
-import type { BlockPrescription } from './plan';
+import { getDrill } from '@/content/drills';
+import { phaseForWeek, type Drill, type Exercise, type PhasePrescription, type Program, type SessionType } from '@/content/types';
+import { prescriptionFor, type BlockPrescription } from './plan';
 
 /** Seconds one rep takes when nothing says otherwise. */
 const REP_SECONDS = 3;
@@ -55,6 +56,16 @@ const BETWEEN_EXERCISES = 45;
  * minutes long. Trip Prep's finger primer is thirteen and is genuinely the
  * whole session, so the line sits below that and both cases are pinned by
  * tests against the real catalogue.
+ *
+ * **Per session type, not per week (PLAN.md M138).** Applied to one week's
+ * blocks it has a false positive it cannot see: Trip Prep's taper halves
+ * the primer's sets to two, which is seven minutes and is genuinely the
+ * session — the point of a taper — and the card went quiet for the last
+ * week of the block. A corner is a corner in every phase; a short week is
+ * short in one. So `sessionMinutes` lets a type through below the floor
+ * when it reads above the floor somewhere in the program, and `workMinutes`
+ * keeps the strict reading, because one week's blocks cannot tell which
+ * case they are.
  */
 const FLOOR_MINUTES = 12;
 
@@ -114,11 +125,19 @@ function isClimbing(reps: string | undefined): boolean {
  */
 function setSeconds(exercise: Exercise): { work: number; workHigh: number; rest: number; restHigh: number } | null {
   const hold = secondsRange(exercise.hold);
-  const reps = hold === null && !isClimbing(exercise.reps) ? countRange(exercise.reps) : null;
-  if (hold === null && reps === null) return null;
+  // A rep count that is really a stretch of time (PLAN.md M138). *30-40
+  // minutes* of varied volume states its own length, and `isClimbing`
+  // rejected it for saying "minutes" — a word that is there to catch
+  // "climb for a while", and caught six lines that had already answered
+  // the question. Read before the count and after the hold, because a
+  // hold is the more specific statement of the two.
+  const spell = secondsRange(exercise.reps);
+  const timed = hold ?? spell;
+  const reps = timed === null && !isClimbing(exercise.reps) ? countRange(exercise.reps) : null;
+  if (timed === null && reps === null) return null;
 
-  const work = hold ? hold.low : reps!.low * REP_SECONDS;
-  const workHigh = hold ? hold.high : reps!.high * REP_SECONDS;
+  const work = timed ? timed.low : reps!.low * REP_SECONDS;
+  const workHigh = timed ? timed.high : reps!.high * REP_SECONDS;
   const rest = secondsRange(exercise.rest);
   return {
     work,
@@ -174,6 +193,8 @@ function circuitSeconds(entry: PhasePrescription): { low: number; high: number }
 export function workMinutes(
   blocks: readonly BlockPrescription[],
   drill?: Drill,
+  /** Off for a caller that can tell a short week from a corner — see the floor. */
+  floor = true,
 ): WorkEstimate | null {
   let low = 0;
   let high = 0;
@@ -218,7 +239,92 @@ export function workMinutes(
   if (lines === 0 || read / lines < 0.75) return null;
   const minutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
   const estimate = { low: minutes(low), high: minutes(high), read, lines };
-  return estimate.low < FLOOR_MINUTES ? null : estimate;
+  return floor && estimate.low < FLOOR_MINUTES ? null : estimate;
+}
+
+/**
+ * How long a session type takes: what its author said, or what its
+ * prescription comes to (PLAN.md M138).
+ *
+ * The authored line wins, and is the only thing read when it is there —
+ * the field means *the whole session*, blocks included, so adding the
+ * blocks to it would count the core circuit at the end of a limit day
+ * twice. `validate.ts` keeps the two from overlapping in the catalogue:
+ * a type may author a duration only where the prescription cannot state
+ * one.
+ *
+ * Without a phase there is nothing to resolve a prescription from, so a
+ * caller that has a program and not a week — the catalogue page, the
+ * finder — gets the authored answer or nothing.
+ */
+export function sessionMinutes(input: {
+  type: SessionType;
+  program?: Program | undefined;
+  /** The program week, which is what turns a phase's dose into this week's. */
+  week?: number | null;
+  trackId?: string | undefined;
+  deload?: boolean;
+}): WorkEstimate | null {
+  const authored = secondsRange(input.type.duration);
+  if (authored !== null) {
+    const minutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
+    return { low: minutes(authored.low), high: minutes(authored.high), read: 1, lines: 1 };
+  }
+  const { program, type } = input;
+  if (!program) return null;
+  const week = input.week ?? null;
+  // Week one when nobody asked for a week: a program page showing a phase
+  // shows that phase's opening dose, which is what `prescriptionFor` gives
+  // for a phase with no week (PLAN.md M127).
+  const phase = phaseForWeek(program, week ?? 1);
+  if (!phase) return null;
+  const drillId = week !== null ? type.drillsByWeek?.[week] : undefined;
+  const blocks = prescriptionFor(type, phase, input.trackId, week, input.deload ?? false);
+  const here = workMinutes(blocks, drillId ? getDrill(drillId) : undefined, false);
+  if (here === null) return null;
+  return here.low >= FLOOR_MINUTES || readsAsASession(program, type, input.trackId) ? here : null;
+}
+
+/**
+ * Whether this session type reads above the floor anywhere in the program —
+ * the question that tells a taper apart from a corner. At each phase's
+ * opening week, which is the dose the phase is written around.
+ */
+function readsAsASession(program: Program, type: SessionType, trackId: string | undefined): boolean {
+  return program.phases.some((phase) => {
+    const drillId = type.drillsByWeek?.[phase.weekStart];
+    const blocks = prescriptionFor(type, phase, trackId, phase.weekStart, false);
+    const estimate = workMinutes(blocks, drillId ? getDrill(drillId) : undefined, false);
+    return estimate !== null && estimate.low >= FLOOR_MINUTES;
+  });
+}
+
+/**
+ * How long each of a program's working sessions takes (PLAN.md M138).
+ *
+ * In week one, which is the length a climber choosing a program is asking
+ * about — and a week rather than no week because a week is what resolves
+ * the drill, and for seven of the shipped programs the drill *is* the
+ * session's length. Asking without one reported Iron Grip's climbing day
+ * as unreadable and cost the finder its "every session fits".
+ *
+ * `silent` is the honest half: a custom or imported program whose dose
+ * says nothing gets no number, and a caller that treated silence as "fits"
+ * would be guessing — so it is handed back separately and named.
+ */
+export function programSessionLengths(
+  program: Program,
+  trackId?: string,
+): { known: { type: SessionType; estimate: WorkEstimate }[]; silent: SessionType[] } {
+  const known: { type: SessionType; estimate: WorkEstimate }[] = [];
+  const silent: SessionType[] = [];
+  for (const type of program.sessionTypes) {
+    if (type.isRest) continue;
+    const estimate = sessionMinutes({ type, program, trackId, week: 1 });
+    if (estimate) known.push({ type, estimate });
+    else silent.push(type);
+  }
+  return { known, silent };
 }
 
 /** The estimate as one phrase, or null when there is nothing to say. */

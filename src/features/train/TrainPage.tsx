@@ -51,7 +51,7 @@ function YourBlock() {
           <Sparkles size={20} className="shrink-0" />
           <div className="flex-1">
             <div className="font-bold">Find my program</div>
-            <div className="text-sm opacity-90">Answer seven questions and get a pick with its reasoning</div>
+            <div className="text-sm opacity-90">Answer nine questions and get a pick with its reasoning</div>
           </div>
           <ChevronRight size={18} className="shrink-0" />
         </Link>

@@ -112,6 +112,9 @@ export const TWO_DAY_WEEK: Program = {
       id: 'climb',
       intensity: 'max',
       name: 'Climb & Apply',
+      // Warm up properly, climb hard, finish on the hangboard. Two committed
+      // sessions a week is what this program is; this is the long one.
+      duration: '90-120 min',
       icon: '🧗',
       description: 'The hard day. Warm up properly, climb hard, then a short hangboard finish.',
       // Kept first when a week is short: a two-day program that loses its

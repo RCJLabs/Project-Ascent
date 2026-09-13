@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { getDrill } from '@/content/drills';
 import { loadPrograms } from '@/content/programs';
-import { GRAVITY_DEFIED, GROUND_ZERO, IRON_GRIP, PEAK_PERFORMANCE } from '@/content/programs/catalogue';
+import { GRAVITY_DEFIED, GROUND_ZERO, IRON_GRIP, PEAK_PERFORMANCE, THE_CRUISER } from '@/content/programs/catalogue';
 import type { Program } from '@/content/types';
 import { newSession, type Session } from '@/db/sessions';
 import { addDays, dayOfWeek, startOfWeek } from './dates';
@@ -231,6 +231,20 @@ describe('the week’s facts', () => {
     const o = inWeek(2);
     expect(on(o, addDays(SUNDAY, 1)).spent).toMatch(/about \d+/);
     expect(on(o, addDays(SUNDAY, 0)).spent).toBeNull();
+  });
+
+  it('estimates the week it is showing, not the week the block opened on', () => {
+    // Iron Grip's finger day is repeaters in the Anvil and max hangs in the
+    // Hammer. A row that resolved week one would put the Anvil's length
+    // under a header reading *Week 5 · The Hammer*.
+    expect(on(inWeek(2), addDays(SUNDAY, 1)).spent).toBe('about 42-51 min of work');
+    expect(on(inWeek(5), addDays(SUNDAY, 1)).spent).toBe('about 37-45 min of work');
+  });
+
+  it('estimates a session whose length its author gave', () => {
+    // The Cruiser's volume day is counted in problems (PLAN.md M138).
+    const o = outline(THE_CRUISER, { 1: 'vol' }, [], { startDate: startedFor(1) });
+    expect(on(o, addDays(SUNDAY, 1)).spent).toBe('about 45-60 min of work');
   });
 
   it('counts what a day loads of what is hurt', () => {

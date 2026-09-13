@@ -6,9 +6,9 @@ import { TEST_REASON_LABEL } from '@/engine/assessments';
 import { dayLoad, describeDayLoad } from '@/engine/bodyLoad';
 import { today } from '@/engine/dates';
 import { concerning, injuryPolicy } from '@/engine/injury';
-import { prescriptionFor, type PlannedDay } from '@/engine/plan';
+import { type PlannedDay } from '@/engine/plan';
 import { intensityOf } from '@/engine/scheduler';
-import { describeWork, workMinutes } from '@/engine/sessionLength';
+import { describeWork, sessionMinutes } from '@/engine/sessionLength';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { useSettings, type LogView } from '@/store/settings';
@@ -65,12 +65,21 @@ export interface DayPlan {
  * "have I got time for this tonight", and the honest answer for a
  * projecting session is that the app does not know.
  */
-function DayShape({ day, trackId }: { day: PlannedDay; trackId: string | undefined }) {
+function DayShape({
+  day,
+  program,
+  trackId,
+}: {
+  day: PlannedDay;
+  program: Program | undefined;
+  trackId: string | undefined;
+}) {
   const spent = useMemo(() => {
-    if (!day.sessionType || !day.phase) return null;
-    const blocks = prescriptionFor(day.sessionType, day.phase, trackId, day.week, day.isDeload);
-    return describeWork(workMinutes(blocks, day.drill));
-  }, [day, trackId]);
+    if (!day.sessionType) return null;
+    return describeWork(
+      sessionMinutes({ type: day.sessionType, program, week: day.week, trackId, deload: day.isDeload }),
+    );
+  }, [day, program, trackId]);
 
   return (
     <p className="text-sm mb-3">
@@ -184,7 +193,7 @@ export function PreSessionCard({ date, onOpen }: { date: string; onOpen?: () => 
             {day.isDeload ? ' · Deload week' : ''}
             {day.test !== undefined ? ' · Test week' : ''}
           </p>
-          <DayShape day={day} trackId={trackId} />
+          <DayShape day={day} program={program} trackId={trackId} />
         </>
       ) : day?.over ? (
         /* Before the rest-day branch, which an over day would

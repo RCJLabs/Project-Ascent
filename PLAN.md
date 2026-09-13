@@ -6750,8 +6750,8 @@ something rests on an inference it says so.*
   expectation is 12–17KB, which puts the entry around 143–147 and the budget at 152 with the
   same headroom. A tenth of the entry for a mechanical change with a test that already exists.
 
-- **M138 — minutes reach the finder and the scheduler.** *Proposed. Medium. Deferred from M131,
-  by name.*
+- **M138 — minutes reach the finder and the scheduler.** *Proposed, and built fourth — see the
+  Done entry below.*
   M131's Done entry left this named: *minutes as a scheduling constraint — `LayoutRequest`
   taking the time a climber has rather than the days, and the finder asking for it* — and the
   gate it set: the estimate answered for **twenty-five session types out of forty-two**, and
@@ -7081,3 +7081,94 @@ something rests on an inference it says so.*
   coach who wants a drill to count as loading something its text does not say edits the text,
   not the list. That is the right constraint for now — the text is what the climber reads — and
   it is a constraint, not a feature. 4,363 tests pass.
+
+- **M138 — minutes reach the finder.** *Done. The fourth of the third brainstorm, and M131's
+  deferral closed.*
+  **Through M131's gate, and the gate was the interesting part.** Re-measured first: still
+  **25 of 42** session types, exactly as M131 left it. But the proposal's account of the other
+  seventeen — *"the climbing-shaped sessions, which is an inference from the rules"* — was
+  wrong three ways, and each one changed what to build.
+  **Seven of the seventeen belong to the two modes.** `general_training` and `outdoor_climbing`
+  are `kind: 'mode'` — open-ended logging the finder never recommends — and a day at the crag is
+  as long as the day is. They are exempt, deliberately and in writing, which takes the real
+  denominator to 35.
+  **Six lines already state their own length and were thrown away.** *1 set of 30-40 minutes* of
+  varied volume is an answer; `isClimbing` refused it for containing the word "minutes", which is
+  in that vocabulary to catch *climb for a while*. Reading a duration out of the reps — after a
+  hold, which is the more specific statement, and before a count — recovered Two Days a Week's
+  second and third days and Trip Prep's movement day for nothing. Not content work at all.
+  **And one of them was the floor, not the content.** `ground_zero/mob` reads cleanly and comes
+  to eleven minutes, under M131's twelve-minute floor. Checking every phase rather than the first
+  then found a third case the floor had been getting wrong all along: **Trip Prep's taper halves
+  the finger primer's sets to two, and the card had been going quiet for the last week of the
+  block** — a taper is short because it is a taper. So the floor decides per session type now:
+  a corner of a session is a corner in every phase, a short week is short in one, and
+  `sessionMinutes` lets a type through below the floor when it reads above it somewhere.
+  `workMinutes` keeps the strict reading, because one week's blocks cannot tell which case they
+  are.
+  **So the content work was seven authored durations, not seventeen.** `SessionType.duration`
+  — prose, '60-90 min', the shape `Drill.duration` already uses — on the seven days whose
+  length the dose genuinely cannot state, five of them with the program's own words behind the
+  number: The Cruiser's volume day is *45-60 min* because its Block 3 rationale says *keep them
+  short (45-60 min)*, its performance day *90-120* because Block 1 says *warm up fully (20-30
+  min)* and then climb. **The whole session, blocks included** — a limit day is ninety minutes
+  *with* the core circuit at the end, not ninety plus three — so the authored line is the only
+  thing read when it is there.
+  **Two content rules keep the field from eating what M127 and M128 built.** Every working
+  session type in a shipped program says how long it takes, in its dose or in a duration, **in
+  every phase**; and never in both, because an authored number cannot shorten on a deload week or
+  follow a per-week step. The rule that made the app better is the second one: it is what keeps
+  `duration` on the climbing days and off the dosed ones.
+  **The number reaches where it was missing.** `sessionMinutes` is the one resolver — the day
+  card, the week screen, the catalogue page and the finder all ask it, so a deload week is
+  shorter on all four or on none. The catalogue's session rows say *Limit day · about 90-120
+  min of work* where they said nothing, and the length follows the block of weeks and the track
+  being shown. The finder asks *How long is a session for you?* — Any / 45 / 60 / 90 / 120+,
+  optional like the deadline and for the same reason: the answer is different on a Tuesday and a
+  Saturday, so pinning it to the profile would pin the wrong half of the truth.
+  **Never a filter, which is M131's rule unchanged.** A program whose sessions run long still
+  shows, and says which and by how much: *3 of 5 sessions run past 45 min — Climbing:
+  Performance is 90-120 min*. Ten either way against the twenty a short week deducts, because a
+  long session can be cut short and a day that does not exist cannot be invented. **Silence is
+  not a fit**: a program whose sessions the clock cannot read says nothing rather than promising
+  an hour it has not measured — and since every shipped program now answers, that branch is
+  unreachable through the catalogue, so the fit rule is its own pure function where it can be
+  tested at all.
+  **What the proposal asked for and did not get: `LayoutRequest.minutes`.** A layout is a shape
+  of days, and every layout of a program contains the same sessions — so a time budget cannot
+  change which one it produces. It changes which *program* fits, which is the finder. Naming it
+  a scheduling constraint was M131's mistake and this is where it gets corrected: minutes are a
+  fit signal, and putting them on `LayoutRequest` would have been a field that changed nothing.
+  **Measured, not asserted.** Forty-seven mutations, every one killed: a stretch of time refused
+  again, the rest read as the work, a plain count read as a duration, the spell beating the hold;
+  the floor gone, strict again, applied to a corner, dropped from `workMinutes`; the authored
+  line ignored, added to the blocks instead of replacing them, trusted when unreadable; the week
+  ignored so the drill never resolves, the program lengths read without a week, a rest type
+  measured, silence called a fit; each content rule silenced one at a time, the modes held to the
+  rule, only the first phase checked, the authored line counted as the dose; in the finder, the
+  budget unread, a session at the limit counted as over, the top of the range deciding, the
+  longest misnamed, silence and an empty program reading as fits, the score zeroed three ways,
+  the caution promoted to a blocker, the count taken from the wrong set, the verb not agreeing;
+  on the pages, the catalogue silent, reading week one, ignoring the track, the question renamed,
+  the default set to an hour, the answer never reaching the finder; the day card not resolving
+  or forgetting the deload, the week screen forgetting the week; and the file not reading a
+  length or carrying one no clock can read. A no-op statement reorder survived.
+  **Eight survived the first round**, and two were equivalent mutants that pointed at real
+  redundancy. The hold-before-a-spell precedence was written twice — a guard on the assignment
+  *and* a `??` — so neither could be mutated alone; it is one statement now. The fit rule's
+  silence branch and its two score deltas were unobservable through `recommend`, which is what
+  moved the rule into `fitsTheEvening`. The other five were missing assertions: a deload day on
+  the card, a week that is not week one on the week screen, a phase and a track on the catalogue
+  page, and the score moving at all.
+  **In a browser, both themes, 430px and 1280px.** The finder's new card offers Any / 45 / 60 /
+  90 / 120+ with Any selected; answering 45 puts *1 of 3 sessions runs past 45 min — Climb:
+  Performance is 60-75 min* under Base Camp and *Every session fits your 45 min* under Ground
+  Zero, with nothing hidden. The Cruiser's five sessions read their lengths on the catalogue
+  page; Iron Grip's finger day reads 42-51 in the Anvil and 37-45 in the Hammer. Home and the
+  week screen both say *Moderate day · about 45-60 min of work* on the volume day that said
+  nothing before. No overflow, no page errors.
+  **A correction in passing.** The guide and the Train tab said the finder asks *seven
+  questions* and enumerated seven. It has asked eight since M57 added the deadline and nobody
+  moved the number; it asks nine now, and both say so.
+  **Budget.** 154.0 holds: measured 153.50 → 153.82, so 0.32KB for the resolver and the fit
+  rule. 4,406 tests pass.

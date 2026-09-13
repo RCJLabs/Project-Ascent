@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
-import { screen } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import { resetDbForTests } from '@/db/db';
 import { loadPrograms } from '@/content/programs';
-import { dayOfWeek, today } from '@/engine/dates';
+import { addDays, dayOfWeek, startOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { PreSessionCard } from '@/features/log/PreSession';
@@ -30,10 +30,15 @@ beforeEach(async () => {
 });
 
 async function running(programId: string, typeId: string): Promise<void> {
+  await runningInWeek(programId, typeId, 1);
+}
+
+/** The same, with today landing in a given week of the block. */
+async function runningInWeek(programId: string, typeId: string, week: number): Promise<void> {
   await hydrate();
   useProfile.setState({
     activeProgramId: programId,
-    startDates: { [programId]: TODAY },
+    startDates: { [programId]: addDays(startOfWeek(TODAY), -(week - 1) * 7) },
     plans: { [programId]: { [DOW]: typeId } },
     weekOverrides: {},
     adaptations: {},
@@ -72,13 +77,38 @@ describe('and roughly how long it takes', () => {
     expect(TEXT()).toMatch(/about \d+(-\d+)? min of work/);
   });
 
-  it('stays quiet about one it cannot', async () => {
-    // The Cruiser's volume day is easy climbing counted in problems, and
-    // the honest answer to how long that takes is that the app does not
-    // know. It still says what kind of day it is.
+  it('says the length its author gave, where the dose cannot', async () => {
+    // The Cruiser's volume day is easy climbing counted in problems, which
+    // no clock can read — and the program's own rationale says *drill it
+    // for 60 minutes* (PLAN.md M138). It said nothing until M138 gave the
+    // session type a duration.
     await running('the_cruiser', 'vol');
     renderAt('/', <PreSessionCard date={TODAY} />);
     await screen.findByText('Moderate day');
+    expect(TEXT()).toMatch(/about 45-60 min of work/);
+  });
+
+  it('shortens on a deload week, because the prescription does', async () => {
+    // M128's property, still true through the resolver: Iron Grip's week
+    // four takes a set off every block and the card says so.
+    await runningInWeek('iron_grip', 'fp', 1);
+    renderAt('/', <PreSessionCard date={TODAY} />);
+    await screen.findByText('Hard day');
+    expect(TEXT()).toContain('about 42-51 min of work');
+    cleanup();
+    await runningInWeek('iron_grip', 'fp', 4);
+    renderAt('/', <PreSessionCard date={TODAY} />);
+    await screen.findByText(/Deload week/);
+    expect(TEXT()).toContain('about 32-33 min of work');
+  });
+
+  it('stays quiet where nobody could know', async () => {
+    // A day at the crag is as long as the day is. Outdoor Climbing is a
+    // mode with no blocks and no authored length, and inventing one would
+    // be the app pretending to know something nobody does.
+    await running('outdoor_climbing', 'outdoor_sport');
+    renderAt('/', <PreSessionCard date={TODAY} />);
+    await screen.findByText('Hard day');
     expect(TEXT()).not.toMatch(/min of work/);
   });
 });

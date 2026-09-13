@@ -383,9 +383,12 @@ describe('the app guide counts what the app has', () => {
   });
 
   it('counts the finder’s questions', () => {
-    // discipline, experience, grade, goal, days, equipment, injuries.
-    expect(allText).toContain('seven questions');
-    expect(allText.match(/seven questions — ([^—]+)—/)?.[1]?.split(',').length).toBe(7);
+    // discipline, experience, grade, goal, deadline, days, session length,
+    // equipment, injuries. It read "seven" from M16 to M138 and was two
+    // short for eighty milestones of it: M57 added the deadline and nobody
+    // moved the number.
+    expect(allText).toContain('nine questions');
+    expect(allText.match(/nine questions — ([^—]+)—/)?.[1]?.split(',').length).toBe(9);
   });
 });
 

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { getDrill } from '@/content/drills';
-import { BASE_CAMP, IRON_GRIP, TRIP_PREP } from '@/content/programs/catalogue';
+import { BASE_CAMP, IRON_GRIP, OUTDOOR_CLIMBING, THE_CRUISER, TRIP_PREP } from '@/content/programs/catalogue';
 import type { Drill, Exercise } from '@/content/types';
 import type { BlockPrescription } from './plan';
 import { prescriptionFor } from './plan';
-import { describeWork, secondsRange, workMinutes } from './sessionLength';
+import { describeWork, programSessionLengths, secondsRange, sessionMinutes, workMinutes } from './sessionLength';
 
 /**
  * How long the prescribed work takes (PLAN.md M131).
@@ -91,9 +91,34 @@ describe('a burn is not a rep', () => {
   });
 
   it('refuses the other words a climb is counted in', () => {
-    for (const reps of ['4-6 easy problems', '2 easy routes', '3-4 boulders', '4 laps', '30-40 minutes']) {
+    for (const reps of ['4-6 easy problems', '2 easy routes', '3-4 boulders', '4 laps']) {
       expect(workMinutes(block({ name: 'Volume', sets: '2', reps, rest: '3 min' })), reps).toBeNull();
     }
+  });
+
+  it('reads a count that is really a stretch of time', () => {
+    // *1 set of 30-40 minutes* of varied volume has already answered the
+    // question (PLAN.md M138). It was refused for saying "minutes", a word
+    // in the climbing vocabulary above to catch "climb for a while" — and
+    // it caught six lines across the catalogue that state their own length.
+    // Plus the 45-second gap before whatever is next, which every exercise
+    // gets — so 31 rather than 30.
+    const spell = workMinutes(block({ name: 'Varied volume', sets: '1', reps: '30-40 minutes' }));
+    expect(spell).toMatchObject({ low: 31, high: 41 });
+    // Times the sets, like any other work: three twenty-minute blocks is an
+    // hour, not twenty minutes.
+    expect(workMinutes(block({ name: 'Laps', sets: '3', reps: '20 min' }))).toMatchObject({ low: 62 });
+  });
+
+  it('reads a hold before a spell of time, and a spell before a count', () => {
+    // A hold is the more specific statement; a count of *12 per arm* is not
+    // a duration at all and `secondsRange` must not read one into it.
+    // Five 10s hangs on three minutes' rest is fourteen minutes; read as
+    // twenty-minute sets it would be an hour and a half.
+    expect(
+      workMinutes(block({ name: 'Hang', sets: '5', reps: '20 minutes', hold: '10s', rest: '3 min' })),
+    ).toMatchObject({ low: 14 });
+    expect(workMinutes(block({ name: 'Rotations', sets: '30', reps: '12 per arm' }))).toMatchObject({ low: 41 });
   });
 
   it('still reads a plain count', () => {
@@ -172,5 +197,99 @@ describe('saying it', () => {
 
   it('says nothing when there is nothing to say', () => {
     expect(describeWork(null)).toBeNull();
+  });
+});
+
+/**
+ * How long a session takes, where the dose cannot say (PLAN.md M138).
+ *
+ * The estimate answered for twenty-five of forty-two session types and the
+ * other seventeen were the climbing days, whose length is a coaching
+ * decision rather than a consequence of sets and reps. `sessionMinutes` is
+ * the one resolver every reader shares: the author's line where there is
+ * one, the prescription where there is not.
+ */
+describe('the length a session says it takes', () => {
+  it('reads the authored line, and reads only it', () => {
+    // The field means the whole session, blocks included — a limit day is
+    // ninety minutes *with* the core circuit at the end, not ninety plus
+    // three. `validate.ts` keeps the catalogue from saying both.
+    const vol = THE_CRUISER.sessionTypes.find((t) => t.id === 'vol')!;
+    expect(sessionMinutes({ type: vol, program: THE_CRUISER, week: 1 })).toMatchObject({ low: 45, high: 60 });
+    // Iron Grip's finger day reads 42-51 off its dose. Authored, it reads
+    // the authored number and not 42 more than it.
+    const fp = IRON_GRIP.sessionTypes.find((t) => t.id === 'fp')!;
+    const said = sessionMinutes({ type: { ...fp, duration: '90 min' }, program: IRON_GRIP, week: 1 });
+    expect(said).toMatchObject({ low: 90, high: 90 });
+    // And a line no clock can read is not a line: it falls through to the
+    // prescription, which for a climbing day says nothing.
+    expect(sessionMinutes({ type: { ...vol, duration: 'a while' }, program: THE_CRUISER, week: 1 })).toBeNull();
+  });
+
+  it('falls back to the prescription when nothing is authored', () => {
+    const fp = IRON_GRIP.sessionTypes.find((t) => t.id === 'fp')!;
+    expect(fp.duration).toBeUndefined();
+    const derived = sessionMinutes({ type: fp, program: IRON_GRIP, week: 1 });
+    expect(derived).toMatchObject({ low: 42, high: 51 });
+    // And it still moves with the prescription: the deload week is shorter.
+    const lighter = sessionMinutes({ type: fp, program: IRON_GRIP, week: 4, deload: true })!;
+    expect(lighter.low).toBeLessThan(derived!.low);
+  });
+
+  it('says nothing without a program to resolve a prescription from', () => {
+    const fp = IRON_GRIP.sessionTypes.find((t) => t.id === 'fp')!;
+    expect(sessionMinutes({ type: fp })).toBeNull();
+  });
+
+  it('lets a genuinely short week through where a corner of a session never gets through', () => {
+    // Trip Prep's taper halves the primer's sets to two — seven minutes,
+    // and the point of a taper. The same floor rejects Base Camp's
+    // performance day in every phase, because a corner is a corner
+    // throughout.
+    const primer = TRIP_PREP.sessionTypes.find((t) => t.id === 'fp')!;
+    const taper = TRIP_PREP.phases.find((p) => p.id === 'taper')!;
+    expect(sessionMinutes({ type: primer, program: TRIP_PREP, week: taper.weekStart })!.low).toBeLessThan(12);
+    const corner = { ...BASE_CAMP.sessionTypes.find((t) => t.id === 'perf')!, duration: undefined };
+    for (const phase of BASE_CAMP.phases) {
+      expect(sessionMinutes({ type: corner, program: BASE_CAMP, week: phase.weekStart }), phase.id).toBeNull();
+    }
+  });
+
+  it('resolves the drill, because for seven programs the drill is the session', () => {
+    // Asking without a week reported Iron Grip's climbing day as unreadable.
+    const perf = IRON_GRIP.sessionTypes.find((t) => t.id === 'perf')!;
+    expect(sessionMinutes({ type: perf, program: IRON_GRIP })).toBeNull();
+    expect(sessionMinutes({ type: perf, program: IRON_GRIP, week: 1 })).not.toBeNull();
+  });
+});
+
+describe('how long a program’s sessions run', () => {
+  it('answers for every working session of a shipped program', () => {
+    for (const program of [IRON_GRIP, THE_CRUISER, TRIP_PREP, BASE_CAMP]) {
+      const { known, silent } = programSessionLengths(program);
+      expect(silent.map((t) => t.id), program.id).toEqual([]);
+      expect(known.length).toBe(program.sessionTypes.filter((t) => !t.isRest).length);
+    }
+  });
+
+  it('hands back what it cannot read rather than calling it a fit', () => {
+    // A day at the crag is as long as the day is. Outdoor Climbing is a
+    // mode with no blocks, and it is exempt from the content rule for
+    // exactly this reason.
+    const { known, silent } = programSessionLengths(OUTDOOR_CLIMBING);
+    expect(known).toEqual([]);
+    expect(silent.length).toBeGreaterThan(3);
+  });
+
+  it('reads the track the climber is on', () => {
+    // Base Camp's strength lines are split across a bodyweight and a loaded
+    // track, so the two answers are allowed to differ — and neither may be
+    // the sum of both.
+    const both = (BASE_CAMP.tracks ?? []).map(
+      (track) => programSessionLengths(BASE_CAMP, track.id).known.find((k) => k.type.id === 'eng')!.estimate.low,
+    );
+    expect(both).toHaveLength(2);
+    const untracked = programSessionLengths(BASE_CAMP).known.find((k) => k.type.id === 'eng')!.estimate.low;
+    expect(Math.max(...both)).toBeLessThanOrEqual(untracked);
   });
 });

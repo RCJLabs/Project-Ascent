@@ -41,7 +41,7 @@ import { DELOAD_STEP, plannedDay, prescriptionFor, type PlannedDay } from './pla
 import type { WeekOverrides } from './reschedule';
 import { isRestSession } from './rest';
 import { intensityOf, type WeekPlan } from './scheduler';
-import { describeWork, workMinutes } from './sessionLength';
+import { describeWork, sessionMinutes } from './sessionLength';
 
 export type DayStatus = 'done' | 'started' | 'missed' | 'today' | 'planned' | 'rest';
 
@@ -134,15 +134,23 @@ export function weekOutline(input: WeekInput): WeekOutline {
       : undefined;
     const sessions = input.sessions.filter((s) => s.date === date);
     const training = day !== undefined && day.sessionType !== undefined && !day.isRest;
-    const blocks =
-      training && day.phase ? prescriptionFor(day.sessionType!, day.phase, input.trackId, day.week, day.isDeload) : [];
     return {
       date,
       ...(day ? { day } : {}),
       training,
       status: statusOf(date, input.today, training, sessions),
       sessions,
-      spent: training ? describeWork(workMinutes(blocks, day.drill)) : null,
+      spent: training
+        ? describeWork(
+            sessionMinutes({
+              type: day.sessionType!,
+              program: input.program,
+              week: day.week,
+              trackId: input.trackId,
+              deload: day.isDeload,
+            }),
+          )
+        : null,
       load: day ? dayLoad(day, injured) : { conflicts: [], parts: [] },
     };
   });

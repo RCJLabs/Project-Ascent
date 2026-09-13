@@ -94,6 +94,10 @@ export const TRIP_PREP: Program = {
       id: 'proj',
       intensity: 'max',
       name: 'Specific Session',
+      // Six to eight burns at four to five minutes' rest, plus the warm-up.
+      // The rest between burns is most of it and ends when you want to pull
+      // on again, which is exactly what the dose cannot state.
+      duration: '60-90 min',
       icon: '🎯',
       description: 'Climbing that looks like the trip. The session that matters.',
       priority: 1,

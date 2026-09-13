@@ -272,6 +272,11 @@ export const GROUND_ZERO: Program = {
       intensity: 'easy',
       priority: 2,
       name: 'Mobility & Core',
+      // Three rounds of the core circuit and a mobility flow. The dose adds
+      // up to eleven minutes at three seconds a rep, which is the arithmetic
+      // and not the session: the cueing, the transitions and the breathing
+      // are the session. Under the estimator's floor either way (M131).
+      duration: '15-20 min',
       icon: '🧘',
       description: 'Core circuit plus a mobility flow.',
       blocks: [

@@ -137,7 +137,7 @@ export const APP: Guide = {
         { kind: 'h', text: 'Finding one' },
         {
           kind: 'p',
-          text: 'The finder asks seven questions — what you climb, how long you have climbed, what grade, what you want, days a week, what equipment you have, and whether anything hurts — and scores every program against the answers. It shows the reasoning, and it is never a dead end: something is always recommended, with the reason it was picked and the reason the runners-up were not.',
+          text: 'The finder asks nine questions — what you climb, how long you have climbed, what grade, what you want, how long until you need it, days a week, how long a session is for you, what equipment you have, and whether anything hurts — and scores every program against the answers. The deadline and the session length are optional, and neither ever hides a program: a block whose sessions run past your hour still shows, and says which ones and by how much. It shows the reasoning, and it is never a dead end: something is always recommended, with the reason it was picked and the reason the runners-up were not.',
         },
         { kind: 'h', text: 'Starting one' },
         {

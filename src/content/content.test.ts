@@ -506,3 +506,49 @@ describe('helpers', () => {
     expect(filterDrills({ search: 'no drill mentions this', text: DRILL_TEXT })).toHaveLength(0);
   });
 });
+
+/**
+ * Every working session says how long it takes (PLAN.md M138).
+ *
+ * Either the prescription adds up to a length or the author states one, and
+ * never both — an authored number cannot shorten on a deload week or follow
+ * a per-week step, so it is allowed only where the dose says nothing.
+ */
+describe('how long a session takes', () => {
+  it('catches a session that says it in neither place', () => {
+    const broken = structuredClone(THE_CRUISER);
+    delete broken.sessionTypes.find((t) => t.id === 'vol')!.duration;
+    expect(validateProgram(broken).join(' ')).toMatch(/session type 'vol' says how long it takes in neither/);
+  });
+
+  it('catches a session that says it twice', () => {
+    // Iron Grip's finger day is nine dosed lines; a duration on top of that
+    // is a second answer that cannot follow the deload the first one does.
+    const broken = structuredClone(IRON_GRIP);
+    broken.sessionTypes.find((t) => t.id === 'fp')!.duration = '60 min';
+    expect(validateProgram(broken).join(' ')).toMatch(/'fp' states a duration and its dose in phase/);
+  });
+
+  it('catches a duration no clock can read', () => {
+    const broken = structuredClone(THE_CRUISER);
+    broken.sessionTypes.find((t) => t.id === 'vol')!.duration = 'about an hour';
+    expect(validateProgram(broken).join(' ')).toMatch(/duration the clock cannot read/);
+  });
+
+  it('checks every phase, not only the first', () => {
+    // The rule that found Trip Prep's taper: a session can go quiet in the
+    // last phase alone, and a first-phase check would never see it.
+    const broken = structuredClone(IRON_GRIP);
+    const fp = broken.sessionTypes.find((t) => t.id === 'fp')!;
+    for (const block of fp.blocks!) block.perPhase['spark']!.exercises = [{ name: 'Climb hard' }];
+    expect(validateProgram(broken).join(' ')).toMatch(/'fp' says how long it takes in neither .* in phase 'spark'/);
+  });
+
+  it('leaves the modes alone, which is not an oversight', () => {
+    // A day at the crag is as long as the day is, and `general_training` is
+    // a menu with no dose at all. Inventing a number for either would be
+    // the app pretending to know something nobody does.
+    expect(validateProgram(OUTDOOR_CLIMBING)).toEqual([]);
+    expect(OUTDOOR_CLIMBING.kind).toBe('mode');
+  });
+});

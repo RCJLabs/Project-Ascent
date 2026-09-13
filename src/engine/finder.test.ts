@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findProgram, recommend, type Experience, type FinderInput, type Goal } from './finder';
+import { findProgram, fitsTheEvening, recommend, type Experience, type FinderInput, type Goal } from './finder';
 import { PROGRAMS } from '@/content/programs';
 import type { MetricEntry } from '@/db/metrics';
 
@@ -599,5 +599,131 @@ describe('weeks available', () => {
     for (const rec of recommend(input({ weeksAvailable: 3 }))) {
       expect(rec.cautions.join(' '), rec.program.id).toMatch(/3 is too few to run it over/);
     }
+  });
+});
+
+/**
+ * How long an evening is (PLAN.md M138).
+ *
+ * A note and never a filter. M131 set the rule when it deferred this:
+ * telling someone that two of a program's sessions run past their hour is
+ * coaching, hiding the program is not.
+ */
+describe('time for a session', () => {
+  const of = (id: string, over: Partial<FinderInput>) =>
+    recommend(input(over)).find((r) => r.program.id === id)!;
+
+  it('says nothing at all when no limit is given', () => {
+    const said = recommend(input()).flatMap((r) => [...r.reasons, ...r.cautions]);
+    expect(said.filter((s) => /\bmin\b/.test(s))).toEqual([]);
+  });
+
+  it('names the sessions that run past the limit, and the longest by name', () => {
+    // The Cruiser's performance day is 90-120 min against an hour; its
+    // other four fit.
+    const cruiser = of('the_cruiser', { minutesPerSession: 60 });
+    expect(cruiser.cautions.join(' ')).toMatch(/1 of 5 sessions runs past 60 min — Climbing: Performance is 90-120 min/);
+    expect(cruiser.blockers).toEqual([]);
+  });
+
+  it('counts them, and says two run rather than two runs', () => {
+    const two = of('two_day_week', { minutesPerSession: 45 });
+    expect(two.cautions.join(' ')).toMatch(/2 of 3 sessions run past 45 min — Climb & Apply is 90-120 min/);
+  });
+
+  it('says so when every session fits', () => {
+    expect(of('iron_grip', { minutesPerSession: 60 }).reasons.join(' ')).toMatch(/Every session fits your 60 min/);
+    // And stops saying it the moment one does not: Peak Performance's
+    // projecting day is two and a half hours.
+    expect(of('peak_performance', { minutesPerSession: 90 }).cautions.join(' ')).toMatch(
+      /2 of 4 sessions run past 90 min — Projecting & Mental is 150 min/,
+    );
+  });
+
+  it('moves the score, which is the whole of what it does', () => {
+    // The sentences are the visible half; a rule that says something and
+    // ranks nothing is a rule that does not do its job.
+    const score = (id: string, over: Partial<FinderInput>) =>
+      recommend(input(over)).find((r) => r.program.id === id)!.score;
+    expect(score('iron_grip', { minutesPerSession: 60 })).toBeGreaterThan(score('iron_grip', {}));
+    expect(score('the_cruiser', { minutesPerSession: 60 })).toBeLessThan(score('the_cruiser', {}));
+  });
+
+  it('never hides a program for running long', () => {
+    const tight = recommend(input({ minutesPerSession: 45 }));
+    const open = recommend(input());
+    expect(tight.map((r) => r.program.id).sort()).toEqual(open.map((r) => r.program.id).sort());
+  });
+
+  it('moves a program without overruling the goal', () => {
+    // Ten either way against the fifty a stated goal is worth: a climber
+    // who asked for fingers and has forty-five minutes still gets fingers.
+    const { top } = findProgram(input({ boulderGrade: 'V6', goal: 'fingers', minutesPerSession: 45 }));
+    expect(top.program.id).toBe('iron_grip');
+  });
+
+  it('has a budget every shipped program can be judged against', () => {
+    // The gate M131 set before deferring this: a number absent for half the
+    // catalogue would have hidden the projecting programs from anyone who
+    // said ninety minutes. Every program the finder ranks now answers, so
+    // every one of them either fits or says what does not.
+    for (const budget of [45, 60, 90]) {
+      for (const r of recommend(input({ minutesPerSession: budget }))) {
+        const said = [...r.reasons, ...r.cautions].filter((s) => /\bmin\b/.test(s));
+        expect(said.length, `${r.program.id} at ${budget}`).toBe(1);
+      }
+    }
+  });
+});
+
+/**
+ * The fit rule on its own, where its branches are reachable (PLAN.md M138).
+ *
+ * Every shipped program answers for every session, so `recommend` can never
+ * put a silent one through — which makes the rule that matters most here
+ * untestable through the catalogue.
+ */
+describe('whether a program fits the evening', () => {
+  const est = (low: number, high = low) => ({ low, high, read: 1, lines: 1 });
+  const sessions = (...mins: [string, number][]) => mins.map(([name, low]) => ({ type: { name }, estimate: est(low) }));
+
+  it('says nothing, and scores nothing, when a session cannot be read', () => {
+    const said = fitsTheEvening({ known: sessions(['Fingers', 30]), silent: [{}] }, 60);
+    expect(said).toEqual({ score: 0 });
+  });
+
+  it('says nothing about a program with no sessions at all', () => {
+    expect(fitsTheEvening({ known: [], silent: [] }, 60)).toEqual({ score: 0 });
+  });
+
+  it('pays ten for a fit and charges ten for a session that runs long', () => {
+    // Half what a short week deducts: a long session can be cut short, and
+    // a day that does not exist cannot be invented.
+    expect(fitsTheEvening({ known: sessions(['Fingers', 30]), silent: [] }, 60).score).toBe(10);
+    expect(fitsTheEvening({ known: sessions(['Project', 90]), silent: [] }, 60).score).toBe(-10);
+  });
+
+  it('names the longest of the ones that run over', () => {
+    const said = fitsTheEvening(
+      { known: sessions(['Fingers', 30], ['Endurance', 75], ['Project', 150]), silent: [] },
+      60,
+    );
+    expect(said.caution).toBe('2 of 3 sessions run past 60 min — Project is 150 min');
+  });
+
+  it('counts every session, not only the ones it could read', () => {
+    const said = fitsTheEvening({ known: sessions(['Project', 90]), silent: [{}, {}] }, 60);
+    // Silence never makes a fit, but it is still part of the count: "1 of 1
+    // runs past your hour" would be a lie about a three-session program.
+    expect(said.caution).toBe('1 of 3 sessions runs past 60 min — Project is 90 min');
+  });
+
+  it('lets a session exactly at the limit fit', () => {
+    expect(fitsTheEvening({ known: sessions(['Endurance', 60]), silent: [] }, 60).reason).toBeTruthy();
+    expect(fitsTheEvening({ known: sessions(['Endurance', 61]), silent: [] }, 60).caution).toBeTruthy();
+  });
+
+  it('reads the bottom of a range, because that is the shortest it can be', () => {
+    expect(fitsTheEvening({ known: [{ type: { name: 'X' }, estimate: est(45, 90) }], silent: [] }, 60).reason).toBeTruthy();
   });
 });
