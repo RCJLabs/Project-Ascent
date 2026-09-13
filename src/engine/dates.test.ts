@@ -4,6 +4,8 @@ import {
   addDays,
   dayOfWeek,
   daysBetween,
+  isThisMonth,
+  isThisWeek,
   fromKey,
   isDateKey,
   isYearKey,
@@ -166,5 +168,68 @@ describe('the write path refuses what the route refuses', () => {
     const session = newSession('2026-09-01', 0);
     expect(session.id).toBe('2026-09-01#0');
     expect(session.date).toBe('2026-09-01');
+  });
+});
+
+/**
+ * The way back to now (PLAN.md M147).
+ *
+ * Here rather than inline in the two pages, because a rule that reads
+ * `today()` can only be tested on whatever day the suite runs — and both
+ * ways of getting these wrong survive on the days the wrong answer and the
+ * right one agree.
+ */
+describe('whether a month is this month', () => {
+  const ON = '2026-09-13';
+
+  it('is the month the date falls in', () => {
+    expect(isThisMonth(2026, 8, ON)).toBe(true);
+  });
+
+  it('is not the month either side of it', () => {
+    expect(isThisMonth(2026, 7, ON)).toBe(false);
+    expect(isThisMonth(2026, 9, ON)).toBe(false);
+  });
+
+  // The half that a same-year fixture cannot see: comparing the month
+  // alone calls every September this September.
+  it('is not the same month of another year', () => {
+    expect(isThisMonth(2027, 8, ON)).toBe(false);
+    expect(isThisMonth(2025, 8, ON)).toBe(false);
+  });
+
+  // And the half a same-month fixture cannot see.
+  it('is not another month of the same year', () => {
+    expect(isThisMonth(2026, 0, ON)).toBe(false);
+    expect(isThisMonth(2026, 11, ON)).toBe(false);
+  });
+});
+
+describe('whether a week is this week', () => {
+  // A Sunday, so a date comparison and a week comparison agree — which is
+  // exactly when the wrong rule looks right.
+  const SUNDAY = '2026-09-13';
+
+  it('is the week the date falls in, from any day of it', () => {
+    for (let i = 0; i < 7; i++) {
+      expect(isThisWeek(addDays(SUNDAY, i), SUNDAY), `day ${i}`).toBe(true);
+    }
+  });
+
+  it('is not the week either side', () => {
+    expect(isThisWeek(addDays(SUNDAY, -1), SUNDAY)).toBe(false);
+    expect(isThisWeek(addDays(SUNDAY, 7), SUNDAY)).toBe(false);
+  });
+
+  /**
+   * Measured from a midweek day too. Comparing the two dates rather than
+   * their Sundays is right only when the date happens to be a Sunday, so
+   * a fixture that only ever asks on a Sunday cannot tell the two apart.
+   */
+  it('reads the week from a midweek day as readily', () => {
+    const wednesday = addDays(SUNDAY, 3);
+    expect(isThisWeek(SUNDAY, wednesday)).toBe(true);
+    expect(isThisWeek(addDays(SUNDAY, 6), wednesday)).toBe(true);
+    expect(isThisWeek(addDays(SUNDAY, 7), wednesday)).toBe(false);
   });
 });

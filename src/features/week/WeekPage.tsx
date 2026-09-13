@@ -17,7 +17,16 @@ import { getProgram } from '@/content/programs';
 import { INTENSITY_LABEL, type DayOfWeek } from '@/content/types';
 import { TEST_REASON_LABEL } from '@/engine/assessments';
 import { describeDayLoad, describeParts } from '@/engine/bodyLoad';
-import { addDays, dayOfWeek, fromKey, isDateKey, shortLabel, startOfWeek, today } from '@/engine/dates';
+import {
+  addDays,
+  dayOfWeek,
+  fromKey,
+  isDateKey,
+  isThisWeek,
+  shortLabel,
+  startOfWeek,
+  today,
+} from '@/engine/dates';
 import { blockWindow, DELOAD_STEP } from '@/engine/plan';
 import { effectivePlan, previewMove, type MovePreview } from '@/engine/reschedule';
 import { intensityOf } from '@/engine/scheduler';
@@ -147,6 +156,16 @@ export function WeekPage({ params }: { params?: { start?: string } } = {}) {
           <ArrowLeft size={18} className="rotate-180" />
         </IconButton>
       </div>
+
+      {/* The same way back the month has (PLAN.md M147), and on the same
+          rule: drawn only when it would move you. */}
+      {!isThisWeek(start, now) && (
+        <div className="flex justify-end mb-2">
+          <Button size="sm" variant="ghost" onClick={() => navigate(weekHref(now))}>
+            <CalendarDays size={14} /> This week
+          </Button>
+        </div>
+      )}
 
       <WeekFacts outline={outline} program={program} startDate={startDate} planning={planning} count={count} />
 

@@ -114,6 +114,29 @@ export function monthGrid(year: number, month: number): string[] {
   return days;
 }
 
+/**
+ * Whether the period on screen is the one a date falls in (PLAN.md M147).
+ *
+ * The month and the week each page with arrows and each offer a way back,
+ * drawn only when it would move you. Pure and here rather than inline in
+ * the two pages, because the rule cannot otherwise be tested against a
+ * fixed date: written inline, both read `today()`, and both mutations that
+ * break them — comparing the month without its year, and the week by its
+ * date rather than its Sunday — survive on the days of the year where the
+ * two happen to agree.
+ */
+export function isThisMonth(year: number, month: number, on: string): boolean {
+  const now = fromKey(on);
+  // Both halves. September 2027 is not September 2026, and comparing the
+  // month alone hides the way back from every anniversary.
+  return now.getFullYear() === year && now.getMonth() === month;
+}
+
+/** Whether a week, by any date in it, is the week a date falls in. */
+export function isThisWeek(date: string, on: string): boolean {
+  return startOfWeek(date) === startOfWeek(on);
+}
+
 export function monthLabel(year: number, month: number): string {
   return new Date(year, month, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }

@@ -7451,3 +7451,33 @@ something rests on an inference it says so.*
   onto its own row, which jsdom cannot see; the browser check grew two geometry assertions for it,
   confirmed to fail against the mutation before being trusted.
   **Budget.** 155.0 holds: 154.00 → 154.09. 4,601 tests pass.
+
+- **M147 — the way back to now.** *Done. Small, and the one that came out of checking the other
+  two proposals rather than building them.*
+  **Two proposals retracted before this one.** The three ideas that came out of M145's screenshot
+  were written from the code in front of me without reading the plan, and two of them re-proposed
+  settled decisions. *Moving a day from the month* is what **M135 deliberately removed** — a
+  session cannot leave its week, so the screen that shows one week is the screen to move one on,
+  and the calendar shed 201 lines and its Rearrange button for that reason. *Projecting the plan
+  across ghost weeks* is the **named `Never`** of the ghost-weeks milestone — *"place sessions
+  beyond the active block"* — because a season's dates are derived backwards from a target and are
+  an intention, not a schedule; there is a comment in the very cell M144 edited saying a session
+  icon on a ghost day is what that rule forbids. Checking first would have cost a minute.
+  **What was actually missing.** The month and the week both page with arrows and neither had a
+  way home. Three months out was three presses back, and the further you looked the further you
+  had to walk. Nothing in the plan had ruled on it.
+  **Drawn only when it would move you.** A *Today* button on the month that already holds today is
+  a control that does nothing, and a screen reader meets it as an offer either way — the trap M135
+  named when it refused to render disabled *Move to Tuesday* rows. The week screen gets the same
+  control under the same rule, since it had the same gap.
+  **The rules are in `dates.ts`, and that is the whole lesson of the battery.** Written inline both
+  read `today()`, and the two ways of getting them wrong — comparing a month without its year, and
+  a week by its date rather than its Sunday — **both survived**, because the day the suite ran was
+  a Sunday in a month whose three-months-out is still the same year. Neither mutation was a missing
+  assertion in the ordinary sense: the tests could not see them from where they stood.
+  `isThisMonth` and `isThisWeek` are pure and tested against fixed dates, and both mutations die.
+  **A third survivor was my own test matching the wrong thing.** *Week* as a regex found the week
+  gutter's *Week of Sep 13…* links rather than the toolbar's, so removing the toolbar's label
+  changed nothing. An exact name, and it dies. A fourth was a battery entry pointed at the wrong
+  test file — the mutation was never run against the test that covers it.
+  **Budget.** 155.0 holds: 154.09 → 154.14. 4,622 tests pass.

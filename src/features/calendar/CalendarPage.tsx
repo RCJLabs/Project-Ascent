@@ -1,8 +1,16 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { BookOpen, CheckCheck, ChevronLeft, ChevronRight, Rows3 } from 'lucide-react';
+import { BookOpen, CalendarDays, CheckCheck, ChevronLeft, ChevronRight, Rows3 } from 'lucide-react';
 import { getProgram } from '@/content/programs';
-import { fromKey, monthGrid, monthLabel, shortLabel, toKey, today } from '@/engine/dates';
+import {
+  fromKey,
+  isThisMonth,
+  monthGrid,
+  monthLabel,
+  shortLabel,
+  toKey,
+  today,
+} from '@/engine/dates';
 import { blockWindow, plannedDay } from '@/engine/plan';
 import { activeObjectives } from '@/engine/objectives';
 import { blockOn, season, soonestSeason } from '@/engine/season';
@@ -226,6 +234,14 @@ export function CalendarPage() {
    */
   const weekAnchor =
     now.getFullYear() === year && now.getMonth() === month ? today() : toKey(new Date(year, month, 1));
+
+  /** Whether the month on screen is the one today is in (PLAN.md M147). */
+  const onToday = isThisMonth(year, month, today());
+
+  function goToToday() {
+    setYear(now.getFullYear());
+    setMonth(now.getMonth());
+  }
 
   function shift(by: number) {
     const d = new Date(year, month + by, 1);
@@ -522,6 +538,15 @@ export function CalendarPage() {
       </div>
 
       <div className="flex justify-end gap-2 mb-2">
+        {/* Only where it would go somewhere (PLAN.md M147). A Today button
+            on the month that already holds today is a control that does
+            nothing — and a screen reader meets it as an offer either way,
+            which is the trap M135 named for the disabled move rows. */}
+        {!onToday && (
+          <Button size="sm" variant="ghost" onClick={goToToday}>
+            <CalendarDays size={14} /> Today
+          </Button>
+        )}
         <Button
           size="sm"
           variant={marking ? 'primary' : 'ghost'}
