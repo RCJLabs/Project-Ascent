@@ -5709,3 +5709,221 @@ read by seven pages as display. A separate tab is moving, not gating.*
   than M117's, this is the thing to measure, and `HomePage.lazy.tsx` in the scratchpad is
   the harness that measured it last time.
   3,962 tests pass.
+
+### The second brainstorm (proposed, M125–M134)
+
+*The UI audit is spent: M117–M124 took the eight overhauls chosen from it, and the surface is
+in the shape the brief asked for. So this one went underneath, and it found two different
+kinds of hole. **Things the app will not let you do** — you cannot stop a program, and the
+block you are running has nowhere of its own to live. And **things the training model cannot
+say** — no dose below a four-week phase, no hardness, no minutes, no record that the fourth
+set failed. The second kind is the deeper one: the surface is now better than the model it is
+a surface for.*
+
+*Every figure below was measured and every claim read in the code, with the file and line
+given so the next person can argue with the evidence rather than the opinion. Where something
+rests on an inference it says so.*
+
+**Four of them are one piece of work in sequence, and the rest are not:**
+
+- **The dose** — M127 (a dose that moves inside a phase) is the schema change that M128 (a
+  deload that is lighter) and M129 (readiness reaching the prescription) both stand on, and
+  M130 (a set recorded as it went) is what makes M129's suggestion worth trusting. In that
+  order or not at all.
+- **On their own** — M125, M126, M131, M132, M133, M134.
+
+- **M125 — ten themes, one of which you can see.** *Proposed. The UI item, and the one that
+  was asked for.*
+  **In light mode a theme is its accent and nothing else.** Seven of the ten paint `surface`
+  — the card colour, and the most-painted colour in the app — as exactly `#ffffff`: Alpine,
+  Slate, Gritstone, Volcanic, Desert, Contrast and Midnight. All ten dark surfaces are
+  distinct. Measured across the page furniture (`bg`, `surface`, `sunken`, `line`) the mean
+  pairwise RGB distance between two themes is **13.5 in light against 25.3 in dark**, while
+  the accent and chart colours are equally far apart in both (**102.4** and **103.6**). Seven
+  of the forty-five theme pairs sit within 8 RGB points on the furniture in light; **none**
+  do in dark. The closest pairs are Gritstone against Desert and Alpine against Midnight,
+  both at **4.9** — put side by side in a browser at 430px they are the same page with a
+  differently coloured button.
+  **The weighting makes it worse than the averages suggest.** The tokens that carry the page
+  — `surface`, `sunken`, `line`, `ink`, `ink-soft` — account for about **1,473** class uses
+  across the components; the accent tokens for about **168**. So in light mode roughly
+  nine-tenths of what is painted is the same whichever theme is picked.
+  **It is a pigment problem, not a plumbing one**, which is why it is worth doing: the whole
+  `src` tree carries 22 hardcoded neutral classes and almost all are photo overlays and modal
+  scrims in `MediaCard`, `ShareSheet` and `SearchSheet`, where black is the right answer.
+  Change the values and the app changes with them.
+  **What the milestone is.** First a test, because there is a hole in the suite:
+  `ui/themes.test.ts` proves every theme is *legible* — AA 4.5:1 for text on every surface it
+  is painted on, 3:1 for borders and focus rings, the two chart series separable under three
+  colour-blindness simulations, `index.css` agreeing with the data for the first frame — and
+  **nothing in it proves any two themes are different**. A floor on structural distance per
+  mode, with Contrast exempted deliberately rather than by accident, is the half of this that
+  keeps. Then re-pigment the ten light palettes so each has a paper of its own — warm for
+  Sandstone and Desert, cool for Ice, grey for Gritstone — moving `sunken` and `line` with it,
+  against the AA suite as the guard.
+  **One thing to leave alone.** `positive`, `warn` and `danger` barely vary across themes in
+  light (six, six and four distinct values in ten), and the severity ramp is not themed at
+  all. That is deliberate and documented in `ui/themes.ts`: a status must never look like a
+  chart series, and a climber who changes theme should not have to relearn what *danger*
+  looks like. This changes the paper, not the warnings.
+
+- **M126 — the block you are running has nowhere to live, and no way out.** *Proposed. The
+  largest product hole in the app, and the one a real climber hits first.*
+  **You cannot stop a program.** `stopProgram()` exists, writes a proper `'stopped'` outcome
+  into the block history, and is reachable from exactly two places in the entire UI: clearing
+  the sample data (`features/settings/SettingsPage.tsx:309`, inside `clearDemo`) and deleting
+  a custom program you happen to be running (`features/builder/BuilderPage.tsx:352`). There is
+  no control anywhere that a climber who gets injured, goes on holiday, or simply changes
+  their mind can press. The block stays open forever and Home keeps prescribing from it.
+  Worse, the program page offers a plain *Start this program* for the program you are already
+  running, with no "week 6 of 12" state and no warning that starting another abandons this one
+  (`features/train/ProgramDetailPage.tsx:293-299`; `features/plan/StartProgramPage.tsx:89-95`
+  commits without checking for an open block).
+  **The Train tab never mentions it.** `TrainPage` reads custom programs, objectives and
+  projects and never touches `activeProgramId` — so the tab named Train is a pure catalogue,
+  offering to find you a program in week 6 of Iron Grip. Everything about the live block lives
+  on Home's card and on the calendar.
+  **And the history hangs off one conditional nudge.** `/finish` holds the block report, the
+  exercise movement, the adherence reading and *Blocks you have run* — the only record of what
+  you have ever trained — and it is linked from exactly one place: the block-over nudge, which
+  appears only once a block has run out its calendar (`features/log/PreSession.tsx:231-243`).
+  Switch early and the door shuts; the route's own search keywords still promise "history,
+  blocks you have run", so search becomes the only way back.
+  One milestone, because they are one missing screen: the block you are running, what it has
+  asked of you and what you have done, the way to pause, stop or switch it, and the way back
+  to every block before it.
+
+- **M127 — a dose that moves inside a phase.** *Proposed. The first of the dose phase, and
+  what the rest of it needs.*
+  Progression is quantised to four weeks. `ExerciseBlock.perPhase` is
+  `Record<PhaseId, PhasePrescription>` (`content/types.ts:191`) and its only reader is
+  `prescriptionFor(sessionType, phase, trackId)` (`engine/plan.ts:148-163`), which takes a
+  phase and never a week — so a climber sees byte-identical sets, reps, hold and load for four
+  weeks running. The catalogue knows, and works around it in prose the app cannot read: Iron
+  Grip's Hammer phase lists *"Progress added load weekly"* as a goal while prescribing the
+  static `load: '85-90% max added weight'`, and The Siege's rationale says *"add 2-5lbs per
+  week when the last set felt solid"* (`programs/siege.ts:146`). The only week-keyed field in
+  the whole schema is `SessionType.drillsByWeek` (`types.ts:239`). A `perWeek` overlay on
+  `PhasePrescription`, or a progression descriptor the planner can apply, turns eleven
+  programs' worth of written intent into something the app can place and check.
+
+- **M128 — a deload that is lighter, not just labelled.** *Proposed. Needs M127.*
+  `Program.deloadWeeks` is documented as driving exactly three things — a calendar marker, a
+  `deload: true` stamp on the session, and an explanation for the load dip
+  (`types.ts:380-388`) — and that is exactly what it does: `plannedDay` sets `isDeload`
+  (`plan.ts:125`), the day heading and the pre-session card print *· Deload week*, the calendar
+  draws *DL*. **Nothing reduces a set, a rep or a load.** For The Cruiser (weeks 4, 8, 12),
+  Two Days a Week (week 8) and Ground Zero (week 8) there is no `drillsByWeek` either, so a
+  deload week is **data-identical to the week before it** — the app prints "deload" over the
+  same five sets of maximal hangs. *Fold in while here:* `db/sessions.ts:195` says deload
+  sessions are "excluded from training-load maths" and `engine/derive.ts:222-225` deliberately
+  includes them and explains why. One of those comments is a lie a future reader will act on.
+
+- **M129 — the readiness cap reaches the prescription.** *Proposed. Needs M127; much better
+  after M130.*
+  `readinessFor()` already computes an RPE ceiling — `CAP = { full: null, adjusted: 7, easy: 5 }`
+  (`engine/readiness.ts:221`) — plus body-part flags and a reason to defer a test. None of it
+  touches what the climber is asked to do: `prescriptionFor` takes no climber state at all.
+  Nor does history: `engine/exerciseLog.ts:21-27` deliberately refuses to seed a starting value
+  ("parsing it into a starting value would put a number in the log that nobody did"), so last
+  week's load is available only as a manual *repeat* tap. The engine already holds the logged
+  load series, the acute-to-chronic ratio, the check-ins and block adherence, and nothing
+  anywhere turns any of it into "do this instead today". The shape is a `suggestDose` layer
+  that **proposes and never writes**, honours the readiness cap, and shows its reasoning the
+  way the coach and the finder already do.
+
+- **M130 — a set recorded as it went, and read back across the block.** *Proposed. Feeds M129.*
+  `LoggedExercise` is `{ name, sets?, reps?, load?, hold?, note? }` (`db/sessions.ts:117-136`),
+  with `reps` documented as "reps per set, *where they were the same*". So the canonical
+  hangboard session — five ascending sets, the fourth of which failed — collapses to one row
+  with no per-set record, no completed-or-failed flag and no per-exercise RPE. There is no
+  `blockId` or `phaseId` on the entry either, so nothing can ask whether the climber hit the
+  prescription, only whether they did a thing with that name; `exerciseLog.ts:30-35` states the
+  consequence itself, that a movement is reported as *from → to* and "never as better or
+  worse". **And what is already logged is never charted.** `exerciseSeries()` builds the full
+  history for one exercise and its only caller is `lastLogged` in the same module, so a climber
+  on a hangboard block cannot see their max-hang load across it. A benchmark gets a detail page
+  with a progression line; the numbers typed every session get one "last time" line.
+  *Fold in while here:* the climb-name input sits **below** the Add button it applies to
+  (`LogPage.tsx:761-781`), so the natural gesture files every climb unnamed — and named climbs
+  are what feed project suggestion (`engine/projects.ts:287`) and what `TallyRow` already
+  knows how to show.
+
+- **M131 — hardness and minutes in the model.** *Proposed. Independent, and it unblocks the
+  scheduler.*
+  `SessionType` carries `id, name, icon, description, blocks, drillsByWeek, fields, isRest,
+  priority` and nothing else (`types.ts:229-254`); `Exercise` carries `sets, reps, hold, load,
+  rest, notes` and no RPE, tempo or percentage of max (`types.ts:127-147`). The catalogue says
+  it out loud in its own escape hatches — *"intensity is not something a sets-and-reps field
+  can carry"* (`programs/cruiser.ts:179`). Three things fall out. `sessionsForDays()` fills a
+  long week by repeating types from the top of a priority list (`engine/scheduler.ts:210-232`)
+  with no notion that it just scheduled two maximal days in a row. `LayoutRequest` takes
+  `daysPerWeek` and `availableDays` (`scheduler.ts:160-171`) and not minutes, which is the
+  constraint most adults actually have. And `Constraint` has five kinds (`types.ts:275-282`),
+  which cannot say *no two hard days back to back*, *at least two full rest days*, or *this
+  session needs ninety minutes*. `validateWeek` is a faithful implementation of the five it
+  has; the gap is the vocabulary, not the checker.
+
+- **M132 — drills off the wall, and a coach that stops promising one.** *Proposed.*
+  All 144 drills require a wall: 141 declare `equipment: ['wall']` and three declare
+  `['hangboard', 'wall']`. `filterDrills` requires every listed item to be available, so a
+  climber whose equipment is `['none']` gets **nothing**, and `plateau.novelStimulus()` falls
+  through its whole preference order to a generic fallback for them
+  (`engine/plateau.ts:312-348`). Six of the thirteen programs ship no drills at all — Ground
+  Zero, The Cruiser, Two Days a Week, Trip Prep, General Training and Outdoor Climbing — and
+  yet `engine/coach.ts:423` tells any climber with eight sessions and no drills that *"Your
+  program prescribes a drill each week"*, which for six of them is false. Coverage is lopsided:
+  28 technique drills, 23 recovery, 21 strategy, 20 performance, against **4** finger-strength
+  and **3** mental. And the library is read-only — `session.drillId` is written in exactly one
+  place, from the plan's drill for the week (`features/log/PreSession.tsx:103`), so no climber
+  can choose one for today and `DrillPage` has no action on it at all.
+
+- **M133 — the fields the app collects and never reads.** *Proposed. Four of them, and they
+  are the same bug four times.*
+  **Lead against top-rope** is typed, doc-commented, chipped in the logger and merged on —
+  and read by no engine, chart, record or export. Its sibling from the same milestone,
+  `angle`, got a 200-line engine and its own Progress card; for a route climber this is the
+  difference that defines the ascent. **Where you climbed** is a `FieldSpec`, and the logger
+  only renders fields the active session type declares — only 7 session types across 3
+  programs ask it, none of them a structured block — so `engine/venues.ts` and the *Where you
+  climb* card on Career starve for anyone running Iron Grip. **The objective-to-project link**
+  is offered in a select (`features/objectives/ObjectiveDetailPage.tsx:293-308`), stored, and
+  read by nothing; `achievedByProject()` was written for exactly this and has no callers, so
+  sending the project does not move the objective. **The spreadsheet export** has no column
+  for angle, rope style or a climb's name, and none for the per-exercise numbers, the check-in
+  or the session's own field answers (`engine/exportCsv.ts:45-74`) — an archive billed as "the
+  same history, back out" that has forgotten the things the logger asked for.
+
+- **M134 — what comes next, chosen rather than recited.** *Proposed.*
+  `blockAdherence()` produces planned-against-done per session type per week
+  (`engine/adherence.ts:76-148`), which is genuinely good data, and it reaches two readers: one
+  coach tip and the finish page. Nothing acts on it — `reschedule.ts` moves a day only inside
+  its own week and `pruneOverrides` deletes overrides for weeks that have finished
+  (`reschedule.ts:132-137`), so a missed session is never re-placed. At the end, `blockEnd()`
+  returns `program.nextPrograms` verbatim and unconditionally, so a climber whose block report
+  says their fingers moved and their endurance did not is handed the same three suggestions as
+  one whose report says the opposite. The report is already computed; the recommendation
+  should read it.
+
+**Considered in this pass, and where each went:**
+- *A test week that is actually a test* — `testWeeks()` marks week 1, every phase start and
+  the final week (`engine/assessments.ts:159-177`) and nothing is inserted, swapped or pulled
+  back on those days; Trip Prep ships `assessments: []` so it gets no baseline, no final test
+  and a null block report. Real, and narrower than the ten above. Fold into M134 or take it
+  after.
+- *The two draft programs* — `twoDayWeek.ts` and `tripPrep.ts` both open with "**This is a
+  draft and is not in the shipped catalogue** … a starting point for the coach who owns this
+  app to correct, not a prescription", and both are in `CATALOGUE`, with
+  `twoNewPrograms.test.ts:23-27` asserting it under a heading reading *both are shipped*. The
+  header is false on its own terms. **Not a code milestone — this one is coaching work, and
+  it is yours.**
+- *Intensity on the calendar* — a completed day renders one ✅, so a two-hour limit session
+  and a twenty-minute flush are pixel-identical, against a consistency grid on Progress that
+  shades five levels. Verified; the claim that a climber wants more there is an inference, not
+  evidence. Cheap to fold into whatever touches `CalendarPage` next.
+- *Two stale strings* — the drills empty state offers a kit filter that was deliberately
+  removed (`features/drills/DrillsPage.tsx:105`), and `total_outdoor_days` tells the climber
+  it is "Derived from your logs" while being a number they type, next to a `state.outdoorDays`
+  that is computed and never offered. One-line fixes; take them in passing.
+- *`engine/priority.ts`* — 103 lines plus tests, and no importer anywhere but its own test. It
+  was M64's derivation evidence. Delete it in passing.
