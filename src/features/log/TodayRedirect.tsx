@@ -27,7 +27,7 @@ export function TodayRedirect() {
   useEffect(() => {
     // Through `logHref` rather than a literal `/`: the rule that today is
     // Home is written once, there, and this is one of its readers.
-    navigate(logHref(today(), today()), { replace: true });
+    navigate(logHref(today()), { replace: true });
   }, [navigate]);
   return null;
 }

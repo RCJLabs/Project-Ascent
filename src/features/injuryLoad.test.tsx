@@ -48,10 +48,10 @@ async function open({ program, typeId, injured, logged = false }: Setup): Promis
 }
 
 /**
- * Home is the logger (PLAN.md M117), and the warning lives on its
- * pre-session card. The session button is the last thing that card renders,
- * so it is the sign the card has arrived — and the sign the negative cases
- * below need before saying a warning is absent rather than merely late.
+ * The warning lives on the pre-session card, which Home shows for today
+ * (PLAN.md M117, M124). The session button is on that card, so it is the
+ * sign the card has arrived — and the sign the negative cases below need
+ * before saying a warning is absent rather than merely late.
  */
 const bodyUp = (view: { findByRole: (role: string, o: { name: RegExp }) => Promise<HTMLElement> }) =>
   view.findByRole('button', { name: /Start session|Log a session|Log rest day/ });
@@ -97,10 +97,10 @@ describe('the front door, before you travel', () => {
   it('drops it once the session is logged', async () => {
     await open({ program: 'ground_zero', typeId: 'str', injured: 'elbow', logged: true });
     const view = renderAt('/', <HomePage />);
-    // A logged day shows the editor, not the card: wait for something the
-    // editor renders, so the absence below is the card's and not the
-    // chunk's.
-    await view.findByText('Effort', { selector: 'h2' });
+    // A logged day replaces the card with the line that says where the
+    // session got to (PLAN.md M124): wait for that, so the absence below
+    // is the card being gone rather than the store being slow.
+    await view.findByRole('button', { name: 'Open the log' });
     expect(view.container.textContent ?? '').not.toMatch(/3 exercises load your elbow/);
   });
 });

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ChevronRight, CircleAlert } from 'lucide-react';
-import { fromKey, today } from '@/engine/dates';
+import { fromKey } from '@/engine/dates';
 import { logHref } from './routes';
 import { describeSpan, elapsedMs, formatClock, runningSession, staleSessions } from '@/engine/live';
 import type { Session } from '@/db/sessions';
@@ -48,10 +48,13 @@ export function LiveBar({ banner }: { banner: Banner }) {
   const [location] = useLocation();
   if (!banner) return null;
 
-  // Through `logHref` (PLAN.md M117): today's log is Home, and a bar that
-  // compared against `/log/<today>` showed a second clock over the day's
-  // own — found while gym mode's clause here was being retired (M120).
-  const href = logHref(banner.session.date, today());
+  // Through `logHref`, which is one address per day again (PLAN.md M124).
+  // From M117 to M123 today's log was Home, and a bar that compared
+  // against `/log/<today>` showed a second clock over the day's own —
+  // found while gym mode's clause here was being retired (M120). The bar
+  // *does* now show on Home during a session, which is the point of it:
+  // Home no longer carries the session it would be doubling.
+  const href = logHref(banner.session.date);
   // Two clocks on one screen is one too many.
   if (location === href) return null;
 

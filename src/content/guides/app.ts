@@ -71,7 +71,7 @@ export const APP: Guide = {
           kind: 'table',
           head: ['Tab', 'What is there'],
           rows: [
-            ['Home', "Today's session — what is planned, the button that starts it, and the log once it has. The coach, the week and your program sit under it. A fresh install starts here too: the guided setup and the programs are cards under the session, to take or to wave away."],
+            ['Home', "Where today starts. The coach's latest, the week just gone and your program at the top; under them the card for today, with **Log session** and **Quick log** on it. A fresh install starts here too: the guided setup and the programs are cards under the buttons, to take or to wave away."],
             ['Train', 'The program catalogue, the finder, your own programs, objectives, and projects.'],
             ['Calendar', 'The plan across weeks, and where you move sessions around.'],
             ['Progress', 'Three views of the log — This block, Grades, Body — and All for the whole page. Training load, grades, the journal, assessments, your body, career and the year in review.'],
@@ -100,8 +100,9 @@ export const APP: Guide = {
         {
           kind: 'list',
           items: [
-            '**Open a day** — today is Home; any other day is on the calendar.',
+            '**Open a day** — today is a button on Home; any other day is on the calendar. Both open the same screen.',
             '**Say what it was** — a program session, or free climbing. Indoors or outdoors.',
+            '**Pick how much of it you want** — *Quick log* is the climbs, the effort and the button that finishes; *Log session* is all of it, warmup to cooldown. The same session either way, and you can swap while it is open.',
             '**Add climbs** — grade, how many, sent or attempted, and the style if you flashed or onsighted it.',
             '**Rate it** — RPE from 1 to 10, and how long it took. These two are what training load is made of, so guessing them roughly is much better than leaving them out.',
             '**Notes** — anything. They all end up in the journal, searchable.',

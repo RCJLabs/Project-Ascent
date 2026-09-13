@@ -225,10 +225,13 @@ describe('the screen stays on', () => {
 });
 
 describe('the old address', () => {
-  it('sends /gym home', async () => {
+  it("sends /gym to today's log", async () => {
+    // Home from M120 to M123, when today's log was Home; today has its own
+    // page again (PLAN.md M124) and a shortcut called "gym mode" should
+    // land in the log rather than on the front door.
     await reset();
     await hydrate();
     renderAt('/gym', <TodayRedirect />);
-    await waitFor(() => expect(window.location.hash).toBe('#/'));
+    await waitFor(() => expect(window.location.hash).toBe(`#/log/${today()}`));
   });
 });

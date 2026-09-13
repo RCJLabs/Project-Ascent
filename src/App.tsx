@@ -60,12 +60,12 @@ const GlossaryPage = lazy(() => import('@/features/glossary/GlossaryPage').then(
 const DrillsPage = lazy(() => import('@/features/drills/DrillsPage').then((m) => ({ default: m.DrillsPage })));
 const DrillPage = lazy(() => import('@/features/drills/DrillPage').then((m) => ({ default: m.DrillPage })));
 const WelcomePage = lazy(() => import('@/features/onboarding/WelcomePage').then((m) => ({ default: m.WelcomePage })));
-/** The logger, and by a distance the largest route. Lazy here, but Home
- *  imports its body statically for today (PLAN.md M117 — measured against
- *  a split, see `perf.test.ts`), so the code is in the entry chunk and this
- *  `lazy()` costs a wrapper and nothing else. It stays lazy so that a
- *  future Home that does *not* need the logger gets the split back for
- *  free. */
+/** The logger, and by a distance the largest route. Lazy, and lazy for
+ *  real again since M124: from M117 to M123 Home imported its body
+ *  statically, so the whole editor sat in the entry chunk and this
+ *  `lazy()` bought a wrapper and nothing else. Home shows the pre-session
+ *  card now and the editor is behind the tap — the split M115 measured,
+ *  with M117's finding honoured, since the *button* is still eager. */
 const LogPage = lazy(() => import('@/features/log/LogPage').then((m) => ({ default: m.LogPage })));
 const AttachPage = lazy(() => import('@/features/media/AttachPage').then((m) => ({ default: m.AttachPage })));
 
@@ -239,8 +239,9 @@ function Shell() {
           <Route path="/board" component={BoardPage} />
           <Route path="/calendar" component={CalendarPage} />
           {/* Gym mode was a route from M74 to M119; it is the logger's quick
-              view now (PLAN.md M120), which is Home. The address stays for
-              anyone who pinned the launcher shortcut. */}
+              view now (PLAN.md M120), reached from Home's Quick log button
+              (M124). The address stays for anyone who pinned the launcher
+              shortcut. */}
           <Route path="/gym" component={TodayRedirect} />
           <Route path="/log/:date" component={LogPage} />
           <Route path="/attach" component={AttachPage} />

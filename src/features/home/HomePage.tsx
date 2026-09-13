@@ -1,46 +1,49 @@
-import type { ReactNode } from 'react';
-import { Link } from 'wouter';
-import { CalendarDays, ClipboardList, Compass, MessageSquare, ShieldAlert, Sparkles } from 'lucide-react';
+import { useEffect, type ReactNode } from 'react';
+import { Link, useLocation } from 'wouter';
+import { CalendarDays, ClipboardList, Compass, MessageSquare, ShieldAlert, Sparkles, Zap } from 'lucide-react';
+import type { Session } from '@/db/sessions';
 import { today } from '@/engine/dates';
+import { gymSummary } from '@/engine/gym';
 import { useTips } from '@/features/coach/useTips';
 import { DayHeading } from '@/features/log/DayHeading';
-import { DayBody } from '@/features/log/LogPage';
+import { DayNudges, PreSessionCard } from '@/features/log/PreSession';
 import { usePlannedDay } from '@/features/log/usePlannedDay';
 import { ReviewCard } from '@/features/review/ReviewPage';
 import { useProfile } from '@/store/profile';
+import { useSessions } from '@/store/sessions';
+import { useSettings, type LogView } from '@/store/settings';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageGrid } from '@/ui/PageGrid';
 
 /**
- * Home is today's session (PLAN.md M117).
+ * Home is the day, and the way into it (PLAN.md M124).
  *
- * It used to be a dashboard — the climber strip, a "Today" card that
- * summarised the plan and linked to the logger, the coach, the altimeter,
- * the board, the review, the arcade, the program. Nine cards, and the one
- * thing a climber opens the app to do was a tap away behind the third.
+ * Three shapes in eight milestones, and the middle one is worth keeping
+ * written down because it was right about the thing it fixed and wrong
+ * about the size of the fix.
  *
- * Now the front door *is* the day: the heading, the planned session with
- * everything the old card said about it, and the editor once it has
- * started. The cards that were about the training around it — the coach,
- * the review, the program — sit under the session. The four that were about
- * the game moved to the Game tab.
+ * It was a dashboard until M117 — nine cards, and the one thing a climber
+ * opens the app to do was a tap away behind the third. M117 replaced it
+ * with the logger itself: the heading, the pre-session card, and the
+ * editor in place once a session started. That put the button where it
+ * belonged, and it also put two thousand lines of editor on the front
+ * door. Home became a screen you scrolled *past* — the coach, the week
+ * and the program sat under an editor that grows as the session does, so
+ * the further into a session you were, the further down the rest of the
+ * app went.
  *
- * **The logger is back on the boot path, and this time it was measured.**
- * M115 took it off because Home did not need it; Home is the logger now.
- * The split was still tried — heading eager, body behind a `lazy()` — and
- * lost on every number: the heading painted no earlier, and the session
- * button arrived ~300ms later on a throttled cold start and ~220ms later
- * warm, behind 32 requests instead of 3. `perf.test.ts` has the table.
+ * Now: the day's heading, then what the app has to say about your
+ * training — the coach, the week, the block — then the card for today
+ * with two buttons on it. **Log session** opens the whole log;
+ * **Quick log** opens it stripped to climbs and effort. The editor lives
+ * at `/log/<date>` again, for today like every other day.
  *
- * **A new install lands here too** (PLAN.md M123). Until then it was sent
- * to `/welcome` first — six steps and seven questions before it had seen
- * a single screen of the app it had just installed. Now the first screen
- * is today, with a button that logs a session, and the things onboarding
- * used to front-load sit under it as cards: the safety note, the offer of
- * the guided setup, the program catalogue. Each has a "not now" that
- * stays dismissed. The coach and the stats start quieter for a climber who
- * takes that route, which is the trade the audit accepted.
+ * What M117 measured still holds and is still honoured: the thing that
+ * must not go behind a chunk load is the *button*, and it has not. The
+ * card and its button are in the entry chunk (`PreSession.tsx`, a few
+ * hundred bytes); only the editor is behind the tap, and the service
+ * worker has precached it before the tap comes.
  */
 
 export function HomePage() {
@@ -48,8 +51,9 @@ export function HomePage() {
   return (
     <>
       <DayHeading date={date} />
-      <DayBody date={date} />
       <AroundTheSession />
+      <TodayCard date={date} />
+      <FirstRunCards />
     </>
   );
 }
@@ -58,9 +62,8 @@ export function HomePage() {
 function AroundTheSession() {
   const { program } = usePlannedDay(today());
   return (
-    <PageGrid className="mt-3">
+    <PageGrid>
       <CoachCard />
-      <FirstRunCards program={program !== undefined} />
       <Link href="/review" className="block bg-surface border border-line rounded-2xl p-4">
         <ReviewCard />
       </Link>
@@ -82,6 +85,74 @@ function AroundTheSession() {
 }
 
 /**
+ * Today, and the two ways in.
+ *
+ * Before a session exists this is the pre-session card the logger shows,
+ * with its buttons wired to open the log rather than to stay put. Once one
+ * exists it is a line saying where the session got to, because the card's
+ * job is to say whether there is anything to come back to — the session
+ * itself is a tap away and does not belong on the front door.
+ */
+function TodayCard({ date }: { date: string }) {
+  const byDate = useSessions((s) => s.byDate);
+  const hydrated = useSessions((s) => s.hydrated);
+  const load = useSessions((s) => s.load);
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    if (!hydrated) void load();
+  }, [hydrated, load]);
+
+  const sessions = byDate[date] ?? [];
+  return (
+    <div className="mt-3 grid grid-cols-1 gap-3">
+      <DayNudges date={date} />
+      {sessions.length === 0 ? (
+        <PreSessionCard date={date} onOpen={() => navigate(`/log/${date}`)} />
+      ) : (
+        <OpenSessionCard date={date} sessions={sessions} />
+      )}
+    </div>
+  );
+}
+
+/** Where today's session got to, and the way back into it. */
+function OpenSessionCard({ date, sessions }: { date: string; sessions: Session[] }) {
+  const setLogView = useSettings((s) => s.setLogView);
+  const [, navigate] = useLocation();
+  const done = sessions.every((s) => s.completed);
+  // Through `gymSummary` rather than counted here, so "sent" means on Home
+  // exactly what it means everywhere else — an attempt is not a send, and
+  // one row of eight boulders is eight.
+  const summary = gymSummary(sessions.flatMap((s) => s.climbs ?? []));
+
+  function go(view: LogView) {
+    setLogView(view);
+    navigate(`/log/${date}`);
+  }
+
+  return (
+    <Card>
+      <p className="text-sm text-ink-soft mb-3">
+        {done ? 'Session logged' : 'Session started'}
+        {summary.total === 0
+          ? ' · no climbs entered yet'
+          : ` · ${summary.total} climb${summary.total === 1 ? '' : 's'}, ${summary.sends} sent`}
+        {sessions.length > 1 ? ` · ${sessions.length} sessions today` : ''}.
+      </p>
+      <div className="flex gap-2">
+        <Button className="flex-1" onClick={() => go('full')}>
+          {done ? 'Open the log' : 'Continue session'}
+        </Button>
+        <Button variant="outline" className="flex-1" onClick={() => go('quick')}>
+          <Zap size={15} /> Quick log
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+/**
  * What onboarding used to say before the app was allowed to start
  * (PLAN.md M123), as cards a climber can take or leave.
  *
@@ -97,14 +168,18 @@ function AroundTheSession() {
  *   running or it is waved away. It comes back if the block ends and the
  *   card was never dismissed, which is right: between blocks is exactly
  *   when it applies.
+ *
+ * Under the log buttons rather than above them (PLAN.md M124): these are
+ * the first week of the app's life, and the button is every day of it.
  */
-function FirstRunCards({ program }: { program: boolean }) {
+function FirstRunCards() {
+  const { program } = usePlannedDay(today());
   const dismissed = useProfile((s) => s.dismissedCards);
   const onboardedAt = useProfile((s) => s.onboardedAt);
   const dismissCard = useProfile((s) => s.dismissCard);
   const gone = (id: string) => dismissed.includes(id);
   return (
-    <>
+    <PageGrid className="mt-3">
       {!gone('safety') && (
         <FirstRunCard icon={<ShieldAlert size={15} className="text-warn" />} title="Before you train">
           <p className="text-sm leading-relaxed">
@@ -136,7 +211,7 @@ function FirstRunCards({ program }: { program: boolean }) {
           </div>
         </FirstRunCard>
       )}
-      {!program && !gone('programs') && (
+      {program === undefined && !gone('programs') && (
         <FirstRunCard icon={<Compass size={15} className="text-accent" />} title="Pick a program">
           <p className="text-sm leading-relaxed">
             Thirteen of them, from a first block to a peak. The finder picks one from seven
@@ -156,7 +231,7 @@ function FirstRunCards({ program }: { program: boolean }) {
           </div>
         </FirstRunCard>
       )}
-    </>
+    </PageGrid>
   );
 }
 

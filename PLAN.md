@@ -5639,3 +5639,69 @@ read by seven pages as display. A separate tab is moving, not gating.*
   **In a browser, both themes, 430px and 1280px.** A fresh install opens on today with *Log a session* and the three cards under it, and the hash never leaves `#/`. *Got it* takes the safety note away and a reload keeps it away; *Set up* opens `/welcome` from its own chunk with its heading, and *Skip* returns to Home with the setup card gone. With a block seeded the card row is the session, the drill, the coach, the safety note and the program, and no offer of programs. Start over stays on Settings and reads *Deleted — 3 records*, then Home is a fresh install again with all three cards. No overflow, no page errors.
   **Budget.** 204.4 → 203.0, measured 204.33 → 202.08KB — the first move down since M117. Onboarding left the entry chunk for a 3.50KB lazy chunk of its own and the launch flag went with the redirect; the three cards cost well under a kilobyte of the 2.25 that came back.
   3,944 tests pass.
+
+### After it (M124)
+
+- **M124 — the front door is a front door again.** *Done.*
+  **What M117 got right, and what it overcorrected.** M117 found the logger buried behind a
+  dashboard card and replaced the dashboard with the logger: Home *was* today's session,
+  editor and all. The finding was right and the measurements behind it stand — the session
+  button arrived ~300ms sooner on a throttled cold start, and that table is still in
+  `perf.test.ts`. The fix was one size too large. An editor grows as a session does, so the
+  further into a session a climber was, the further down the page everything else went; the
+  coach, the week and the block sat under a screen you scrolled past rather than read.
+  **Home is now: the day, what the app has to say, then the way in.** The heading and its
+  arrows, then Coach's Corner, the weekly review and your program, then the card for today
+  with two buttons on it. **Log session** opens the whole log; **Quick log** opens it in the
+  M120 quick view — climbs, effort, done — so the fold is chosen before arriving rather than
+  found after. Both start the planned session first, so it is still one tap from the front
+  door to logging, and the *Or a different session* chips still pick another type. Under the
+  buttons, M123's three first-run cards, unchanged and still last: they are the first week of
+  the app's life and the button is every day of it.
+  **Once a session exists Home says where it got to** — *Session started · 5 climbs, 3 sent*,
+  or *Session logged* — with **Continue session** and **Quick log** beside it. Counted
+  through `gymSummary`, so a send means on Home what it means everywhere else. The live bar
+  comes back to Home with it: from M117 to M123 the bar stood down here because Home carried
+  the session's own clock, and now it is the way back into a session from wherever you
+  wandered off to.
+  **`/log/<today>` is a page again.** It bounced to Home from M117; every day including today
+  is one address now, so `logHref` lost the rule it existed to encode and the day arrows, the
+  calendar, the `/today` shortcut and the live bar all point at the same place. Today's back
+  link says *Home* rather than *Calendar*, because that is where it was opened from. The two
+  week nudges — the block that has run its course, the test week that wants numbers — are on
+  both screens, so a finished block is visible without opening the log.
+  **The split M115 wanted, with M117's finding honoured.** `PreSession.tsx` holds the card,
+  the label logic and the start, and Home imports that instead of `DayBody`. So the *button*
+  is still eager, which is the thing M117 measured; only the editor is behind the tap, and
+  the service worker has precached its chunk before the tap comes. A source test holds the
+  import out of `HomePage.tsx`, because the budget would otherwise be the only thing to
+  notice it coming back.
+  **Measured, not asserted.** Twenty-four mutations, every one killed: the cards under the
+  buttons and the first-run cards above them; the nudges dropped from Home and from the log;
+  the today card missing over a session and shown over one; a started session reading as
+  logged; attempts counted as sends; the no-climbs line always shown; *Continue* not opening
+  the log and opening the wrong view; the card's button not opening the log; *Quick log*
+  opening the full view; the view never set, set inside the logger too, and its button shown
+  inside the logger; a chip starting the planned session instead of its own; today bouncing
+  to Home again and going back to the calendar; `logHref` reinstating the special case; the
+  live bar suppressed on Home; Home importing the editor; the guide's Home row losing the
+  buttons. A no-op reorder of two selectors survived, as the sanity check should. Two
+  survived the first run — the nudges in the log, and the fold being reset by a start inside
+  it — and both were real gaps; the tests for them are in `testWeek.test.tsx` and
+  `dayHeading.test.tsx`.
+  **In a browser, both themes, 430px and 1280px.** The order reads coach, review, program,
+  then the day's card; with a block running the *Start session* button sits at **y=551 in a
+  900px viewport** at 430px, above the fold with the chips under it. *Quick log* lands on
+  `#/log/<today>` with Climbs, Rest and Effort and the More fold shut; Home mid-session reads
+  *Session started · no climbs entered yet* with the live bar up and no editor on it;
+  *Continue session* opens the full log and its back link returns to Home. No overflow, no
+  page errors.
+  **Budget.** 203.0 → **164.0**, measured 202.08 → **163.06KB** — 39KB off, and the largest
+  single move this file has recorded. `LogPage` is a 20.48KB chunk again and everything only
+  it reaches went with it.
+  **The caveat, stated rather than buried.** One tap still starts a session, but the editor
+  now arrives over a chunk load on a first-ever visit, before the service worker has
+  precached it. Every visit after that is a cache read. If the gym-day path ever feels slower
+  than M117's, this is the thing to measure, and `HomePage.lazy.tsx` in the scratchpad is
+  the harness that measured it last time.
+  3,962 tests pass.

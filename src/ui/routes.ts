@@ -142,14 +142,14 @@ export function browsable(): RouteMeta[] {
 }
 
 /**
- * Where a day's log lives (PLAN.md M117).
+ * Where a day's log lives.
  *
- * Today is Home. Every other day is `/log/:date`. One address per day
- * rather than two for today, so the day arrows, the calendar, the coach's
- * "log today" and a launcher shortcut all land on the same screen with the
- * same cards under it — `LogPage` bounces `/log/<today>` here for the same
- * reason.
+ * Every day, including today (PLAN.md M124). It took a `todayKey` from
+ * M117 to M123, when today's log was Home and this was the one place that
+ * knew; Home shows the card and the log is a page again, so there is one
+ * address per day and no rule left to encode. The helper stays because the
+ * shape of the address is still worth writing once.
  */
-export function logHref(date: string, todayKey: string): string {
-  return date === todayKey ? '/' : `/log/${date}`;
+export function logHref(date: string): string {
+  return `/log/${date}`;
 }

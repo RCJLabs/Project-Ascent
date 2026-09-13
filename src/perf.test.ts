@@ -240,7 +240,7 @@ describe('the bundle stays small', () => {
    * Every milestone that moves this moves it to just above what it measured;
    * the history is in the comment inside the first test.
    */
-  const BUDGET = 203.0;
+  const BUDGET = 164.0;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -254,7 +254,7 @@ describe('the bundle stays small', () => {
     return (js + css) / 1024;
   }
 
-  it.runIf(built)('keeps the first load under 217.8KB gzipped', () => {
+  it.runIf(built)('keeps the first load under the budget', () => {
     const total = firstLoadKb();
 
     // 260 until M78 moved the program bodies out of the entry chunk, which
@@ -403,6 +403,24 @@ describe('the bundle stays small', () => {
     // M115 and M116 bought stay bought: nothing *else* eager imports the
     // logger, and the glossary is still a tap away rather than a boot cost.
     //
+    // **203.0 → 164.0 at M124, measured 202.08 → 163.06 — 39KB off, and
+    // the largest single move this file has recorded.** The logger is
+    // genuinely lazy again: Home shows the pre-session card and the editor
+    // is behind the tap, so `LogPage`'s 20.48KB chunk and everything only
+    // it reaches left the entry chunk.
+    //
+    // **This is not M115 being reinstated and M117 being undone, and the
+    // difference is the whole point.** M115 made the logger lazy and left
+    // Home with a card that *linked* to it, so the session button itself
+    // arrived a chunk load late — that is what M117's table below measured
+    // at ~300ms cold, and it is why the split lost. The button is eager
+    // here: `PreSession.tsx` carries the card, the label logic and the
+    // start, and Home imports that rather than `DayBody`. What went behind
+    // the tap is the editor, which nobody sees until they have pressed the
+    // button that creates the session anyway — and by then the service
+    // worker has precached the chunk. The guard below is what keeps the
+    // static import from creeping back.
+    //
     // **204.4 → 203.0 at M123**, measured 204.33 → 202.08, and the first
     // move *down* since M117: onboarding left the entry chunk for a 3.50KB
     // lazy chunk of its own, and `lib/launchFlag.ts` went with the
@@ -502,12 +520,11 @@ describe('the bundle stays small', () => {
     // `/welcome` before anything else, so the page had to be eager. It is
     // opt-in from a Home card now, and lazy.
     //
-    // **`LogPage` was on this list until M115, and Home imports it again
-    // since M117** — not from here, from `HomePage.tsx`, because Home is
-    // the logger now; the eager list below is `App.tsx`'s own imports, and
-    // the budget test above records why that import is back. What follows
-    // is the M115 record, kept because the reasoning still holds for every
-    // route that is *not* the front door.
+    // **`LogPage` was on this list until M115, Home imported it again from
+    // M117 to M123, and since M124 nothing imports it eagerly at all.**
+    // Home carries `PreSession.tsx` — the card and the button — and the
+    // editor is behind the tap; the test below holds that. What follows is
+    // the M115 record, kept because it is the reasoning M124 acted on.
     // "The logger is what it is for" read as a reason to keep it eager for
     // five milestones, and the
     // note above called it the real headroom every time without anyone
@@ -551,6 +568,20 @@ describe('the bundle stays small', () => {
       'features/log/TodayRedirect',
       'features/placeholder/PlaceholderPage',
     ]);
+  });
+
+  it('keeps the editor off the front door', () => {
+    // The import that would silently undo M124's 39KB. `HomePage.tsx`
+    // needs the pre-session card, which is its own module for exactly this
+    // reason; importing anything from `LogPage.tsx` — `DayBody` is the
+    // tempting one — puts two thousand lines of editor back in the entry
+    // chunk, and the budget test above would be the only thing to notice.
+    const home = readFileSync('src/features/home/HomePage.tsx', 'utf8');
+    expect(home).not.toMatch(/from '@\/features\/log\/LogPage'/);
+    // And the card has to stay independent of it, or Home pulls it
+    // transitively and the check above proves nothing.
+    const card = readFileSync('src/features/log/PreSession.tsx', 'utf8');
+    expect(card).not.toMatch(/from '\.\/LogPage'/);
   });
 
   it('keeps the redirect out of the logger it redirects to', () => {

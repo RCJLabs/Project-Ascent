@@ -9,6 +9,7 @@ import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { HomePage } from '@/features/home/HomePage';
+import { LogPage } from '@/features/log/LogPage';
 
 /**
  * A test week said where the climber is standing (PLAN.md M67).
@@ -80,6 +81,17 @@ describe('home', () => {
     const line = await screen.findByText(/Baseline week/, {});
     const link = line.closest('a')!;
     expect(link.getAttribute('href')).toBe('#/assessments');
+  });
+
+  it('says it in the log as well, which is where the session is', async () => {
+    // Home and the log both carry the nudge (PLAN.md M124): a climber who
+    // opened the log first should not have to go back to the front door to
+    // learn the week wants numbers.
+    await runningInWeek(1);
+    const date = today();
+    renderAt(`/log/${date}`, <LogPage params={{ date }} />);
+    const line = await screen.findByText(/Baseline week/, {});
+    expect(line.closest('a')!.getAttribute('href')).toBe('#/assessments');
   });
 
   it('says nothing on an ordinary week', async () => {

@@ -63,12 +63,12 @@ describe('with no active program', () => {
 
   it('home shows today, logged or not', async () => {
     await logged();
-    // Home *is* today's log (PLAN.md M117): with a session already logged
-    // the front door shows the session itself — the editor's own cards —
-    // rather than a route to it.
+    // Home says where today got to and offers the way back into it
+    // (PLAN.md M124): with a session already logged the front door is not
+    // a dead end, which is the thing M45 was about.
     const view = renderAt('/', <HomePage />);
-    await view.findByText('Effort', { selector: 'h2' });
-    expect(view.container.textContent ?? '').toMatch(/Add another session today/);
+    await view.findByRole('button', { name: 'Open the log' });
+    expect(view.container.textContent ?? '').toMatch(/Session logged · 2 climbs, 2 sent/);
   });
 
   it('home offers to log a session when nothing is', async () => {

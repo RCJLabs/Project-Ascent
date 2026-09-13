@@ -1,0 +1,255 @@
+import { useMemo } from 'react';
+import { Link } from 'wouter';
+import { AlertTriangle, ChevronRight, Flag, Plus, Ruler, Zap } from 'lucide-react';
+import type { Program, SessionType } from '@/content/types';
+import { TEST_REASON_LABEL } from '@/engine/assessments';
+import { dayLoad, describeDayLoad } from '@/engine/bodyLoad';
+import { today } from '@/engine/dates';
+import { concerning, injuryPolicy } from '@/engine/injury';
+import type { PlannedDay } from '@/engine/plan';
+import { useProfile } from '@/store/profile';
+import { useSessions } from '@/store/sessions';
+import { useSettings, type LogView } from '@/store/settings';
+import { Button } from '@/ui/Button';
+import { Card } from '@/ui/Card';
+import { usePlannedDay } from './usePlannedDay';
+
+/**
+ * The card you read before a session exists, and the button that makes one
+ * (PLAN.md M124).
+ *
+ * Its own module, and not `LogPage.tsx`, for the reason `usePlannedDay` and
+ * `DayHeading` have one: **Home shows this card and nothing else of the
+ * logger.** From M117 to M123 Home *was* the logger — it imported `DayBody`
+ * statically, so two thousand lines of editor sat in the entry chunk to
+ * render one card with one button on it. Home is a front door again, this
+ * card is what it shows of today, and the editor is behind the tap.
+ *
+ * Nothing about what the button *does* changed in the move. That logic is
+ * M117's, tested from the outside since, and it is quoted below rather than
+ * rewritten.
+ */
+
+export interface DayPlan {
+  program: Program | undefined;
+  day: PlannedDay | undefined;
+  /** The session the day asks for, if the day asks for one. */
+  primary: SessionType | undefined;
+  /** What the one big button says. */
+  label: string;
+  /** Every other type the program offers, for the chips under it. */
+  others: SessionType[];
+  /** The warning about what today loads, or null when there is none. */
+  loadNote: string | null;
+  start: (sessionTypeId?: string) => Promise<void>;
+}
+
+/**
+ * What the day asks for, and how to begin it.
+ *
+ * Shared by this card and by the logger's "Add another session today", so
+ * a session started from Home and one started inside the log are the same
+ * record — the same program id, track, drill and deload flag.
+ */
+export function useStartSession(date: string): DayPlan {
+  const { program, day, trackId, activeProgramId } = usePlannedDay(date);
+  const injuries = useProfile((s) => s.injuries);
+  const create = useSessions((s) => s.create);
+
+  // Counted before the session starts, because this is the card you read
+  // before you leave the house (PLAN.md M89). The per-exercise flags in the
+  // session are still there; they arrive too late to change a decision
+  // about the day. Once a session exists the card is gone, and with it the
+  // warning: after the session it is a verdict on something already
+  // climbed.
+  const hurt = useMemo(() => concerning(injuryPolicy(injuries)), [injuries]);
+  const loadNote = useMemo(() => (day ? describeDayLoad(dayLoad(day, hurt)) : null), [day, hurt]);
+
+  /**
+   * What the one big button does (PLAN.md M117, merged from Home's card).
+   *
+   * A training day starts the planned session. A rest day logs the rest —
+   * the program's rest type, which is what gives the editor its recovery
+   * checklist — whether the plan placed that type on the day or simply left
+   * the day empty: the card above the button calls both "Rest day", and a
+   * button that then said "Log a session" beside a "Rest / Recovery" chip
+   * was the browser's first finding. A program with no rest type, or no
+   * program at all, gets the plain session. A block that has run its course
+   * prescribes nothing, so whatever gets climbed is a session like any
+   * other — and `over` sets `isRest`, which is why it is checked first;
+   * before M85 that combination had Home offering to log a rest day from a
+   * block that ended three weeks ago.
+   */
+  const primary =
+    day === undefined || day.over
+      ? undefined
+      : (day.sessionType ?? program?.sessionTypes.find((t) => t.isRest === true));
+  const label =
+    primary === undefined
+      ? 'Log a session'
+      : primary.isRest === true
+        ? 'Log rest day'
+        : 'Start session';
+  const others = program?.sessionTypes.filter((t) => t.id !== primary?.id) ?? [];
+
+  async function start(sessionTypeId?: string) {
+    await create(date, {
+      // A clock only makes sense on the day it is ticking through. Logging
+      // Tuesday's session on Thursday has nothing to time.
+      ...(date === today() ? { startedAt: new Date().toISOString() } : {}),
+      ...(activeProgramId ? { programId: activeProgramId } : {}),
+      ...(sessionTypeId ? { sessionTypeId } : {}),
+      ...(trackId ? { trackId } : {}),
+      ...(day?.drill ? { drillId: day.drill.id } : {}),
+      ...(day?.isDeload ? { deload: true } : {}),
+      planned: Boolean(day?.sessionType),
+    });
+  }
+
+  return { program, day, primary, label, others, loadNote, start };
+}
+
+/**
+ * What is on today, and the way into it.
+ *
+ * `onOpen` is what tells the card where it is. Given one — Home — the
+ * buttons start the session *and* hand the climber to the logger, in the
+ * view the button names: the big one opens the whole log, *Quick log*
+ * opens it stripped to climbs and effort (the M120 fold, chosen before
+ * arriving rather than after). Without one the card is already inside the
+ * logger, so starting a session is all there is to do.
+ */
+export function PreSessionCard({ date, onOpen }: { date: string; onOpen?: () => void }) {
+  const { program, day, primary, label, others, loadNote, start } = useStartSession(date);
+  const byDate = useSessions((s) => s.byDate);
+  const hydrated = useSessions((s) => s.hydrated);
+  const setLogView = useSettings((s) => s.setLogView);
+
+  async function go(view: LogView, sessionTypeId?: string) {
+    // Only when the card is the one on Home. Inside the logger the fold is
+    // the climber's own choice, and a start button that silently reset it
+    // would undo the setting every session.
+    if (onOpen) setLogView(view);
+    await start(sessionTypeId);
+    onOpen?.();
+  }
+
+  return (
+    <Card>
+      {day?.sessionType && !day.isRest ? (
+        <>
+          <div className="flex items-baseline gap-2 mb-1">
+            <span className="text-xl leading-none">{day.sessionType.icon}</span>
+            <h2 className="font-bold text-lg">{day.sessionType.name}</h2>
+          </div>
+          <p className="text-sm text-ink-soft mb-3">
+            Week {day.week} of {program!.weeks}
+            {day.phase ? ` · ${day.phase.name}` : ''}
+            {day.isDeload ? ' · Deload week' : ''}
+            {day.test !== undefined ? ' · Test week' : ''}
+          </p>
+        </>
+      ) : day?.over ? (
+        /* Before the rest-day branch, which an over day would
+           otherwise land in — `over` sets `isRest`, so it would read
+           as a rest day. And before M85 it read "Week 12 of 12 ·
+           Test week" instead, every day, forever. */
+        <p className="text-sm text-ink-soft mb-3">
+          {program!.name} has run its course. Nothing is planned until you pick what is next.
+        </p>
+      ) : day ? (
+        <p className="text-sm text-ink-soft mb-3">
+          Rest day{day.week ? ` · week ${day.week}` : ''}
+          {day.test !== undefined ? ' · Test week' : ''}. Recovery is training — log it to bank it.
+        </p>
+      ) : hydrated && Object.keys(byDate).length === 0 ? (
+        /* A new install's first screen (PLAN.md M123): this card,
+           these buttons. Only once the store has loaded — before
+           that an empty `byDate` is a log that has not arrived,
+           not a climber who has never logged. */
+        <p className="text-sm text-ink-soft mb-3">
+          Your first session. Log whatever you climb — a few boulders is plenty — and everything
+          else in the app grows out of it. Nothing is planned until you pick a program, and nothing
+          needs to be.
+        </p>
+      ) : (
+        <p className="text-sm text-ink-soft mb-3">
+          Nothing planned — no program is running. Log whatever you climb and it still counts toward
+          everything.
+        </p>
+      )}
+
+      {loadNote !== null && (
+        <p className="text-warn text-xs mb-3 flex items-start gap-1.5">
+          <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+          <span>{loadNote}. Each one is marked in the session.</span>
+        </p>
+      )}
+
+      <div className="flex gap-2">
+        <Button className="flex-1" onClick={() => void go('full', primary?.id)}>
+          {primary === undefined && <Plus size={15} />}
+          {label}
+        </Button>
+        {onOpen && (
+          <Button variant="outline" className="flex-1" onClick={() => void go('quick', primary?.id)}>
+            <Zap size={15} /> Quick log
+          </Button>
+        )}
+      </div>
+      {others.length > 0 && (
+        <div className="mt-3">
+          <p className="text-xs text-ink-soft mb-1.5">Or a different session</p>
+          <div className="flex flex-wrap gap-2">
+            {others.map((t) => (
+              <Button key={t.id} size="sm" variant="outline" onClick={() => void go('full', t.id)}>
+                {t.icon} {t.name}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/**
+ * Two nudges about the week rather than the session (PLAN.md M67).
+ *
+ * They stay whether or not a session has started — a logged rest day in a
+ * test week is still the best day to be told the numbers are due — so they
+ * sit outside the pre-session card rather than inside it, and Home shows
+ * them above the day's card for the same reason it shows the card at all
+ * (PLAN.md M124): they are facts about where the block has got to, and a
+ * climber should not have to open the log to find out the block ended.
+ */
+export function DayNudges({ date }: { date: string }) {
+  const { program, day } = usePlannedDay(date);
+  if (!day?.over && day?.test === undefined) return null;
+  return (
+    <>
+      {day?.over && (
+        <Link
+          href="/finish"
+          className="focus-ring flex items-center gap-2 bg-surface border border-line rounded-2xl p-3"
+        >
+          <Flag size={16} className="text-accent shrink-0" />
+          <span className="flex-1 min-w-0 text-xs leading-relaxed">
+            See what the block moved, and what {program!.name} says comes after it.
+          </span>
+          <ChevronRight size={16} className="text-ink-soft shrink-0" />
+        </Link>
+      )}
+      {day?.test !== undefined && (
+        <Link
+          href="/assessments"
+          className="focus-ring flex items-center gap-2 bg-surface border border-line rounded-2xl p-3"
+        >
+          <Ruler size={16} className="text-accent shrink-0" />
+          <span className="flex-1 min-w-0 text-xs leading-relaxed">{TEST_REASON_LABEL[day.test]}</span>
+          <ChevronRight size={16} className="text-ink-soft shrink-0" />
+        </Link>
+      )}
+    </>
+  );
+}

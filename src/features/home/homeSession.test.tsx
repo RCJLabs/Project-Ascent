@@ -5,16 +5,21 @@ import { getProgram } from '@/content/programs';
 import { dayOfWeek, startOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
+import { useSettings } from '@/store/settings';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { HomePage } from './HomePage';
 
 /**
- * Home is the session (PLAN.md M117).
+ * Home's card for today, and the two buttons on it (PLAN.md M117, M124).
  *
- * The front door used to summarise the day and link to the logger; now it
- * is the logger, and the one big button on it has to do the right thing
- * for each kind of day. These drive it from the outside: what the button
- * says, and what exists in the store after it is pressed.
+ * The button logic is M117's and has not changed: what it says, and which
+ * session type it creates, for each kind of day. What changed in M124 is
+ * where it leaves you — the editor is at `/log/<date>` again, so the
+ * button starts the session *and* opens it, and Home goes back to showing
+ * a line about where the session got to.
+ *
+ * Driven from the outside: the label, the record in the store, and the
+ * address the app ends up at.
  */
 
 const PROGRAM = 'gravity_defied';
@@ -38,7 +43,7 @@ async function running(plan: Record<number, string>): Promise<void> {
 const button = () => screen.findByRole('button', { name: /Start session|Log a session|Log rest day/ });
 
 describe('the one big button', () => {
-  it('starts the planned session on a training day', async () => {
+  it('starts the planned session on a training day, and opens it', async () => {
     await running({ [DOW]: 'tech' });
     renderAt('/', <HomePage />);
     const start = await button();
@@ -46,10 +51,29 @@ describe('the one big button', () => {
     expect(screen.getByText(typeName('tech'))).toBeTruthy();
     expect(screen.getByText(/Week 1 of/)).toBeTruthy();
     fireEvent.click(start);
-    await waitFor(() => expect(useSessions.getState().byDate[TODAY]?.[0]?.sessionTypeId).toBe('tech'));
-    // The card is gone and the editor is up.
-    await screen.findByText('Effort', { selector: 'h2' });
+    // The hash settles last: `start()` writes the session and the
+    // navigation is what follows it, so waiting on the store alone races
+    // the thing being asserted.
+    await waitFor(() => expect(window.location.hash).toBe(`#/log/${TODAY}`));
+    expect(useSessions.getState().byDate[TODAY]?.[0]?.sessionTypeId).toBe('tech');
+    // The card is gone, and the app is at the log rather than showing it
+    // on the front door.
+    await screen.findByRole('button', { name: 'Continue session' });
     expect(screen.queryByRole('button', { name: 'Start session' })).toBeNull();
+  });
+
+  it('opens the whole log, or the quick view, as the button says', async () => {
+    // The M120 fold, chosen before arriving rather than after.
+    await running({ [DOW]: 'tech' });
+    renderAt('/', <HomePage />);
+    fireEvent.click(await screen.findByRole('button', { name: /Quick log/ }));
+    await waitFor(() => expect(window.location.hash).toBe(`#/log/${TODAY}`));
+    expect(useSettings.getState().logView).toBe('quick');
+
+    await running({ [DOW]: 'tech' });
+    renderAt('/', <HomePage />);
+    fireEvent.click(await button());
+    await waitFor(() => expect(useSettings.getState().logView).toBe('full'));
   });
 
   it('logs the rest on a day the plan marks as rest', async () => {
@@ -62,8 +86,7 @@ describe('the one big button', () => {
     expect(chips.textContent).not.toContain(typeName('rest'));
     expect(chips.textContent).toContain(typeName('tech'));
     fireEvent.click(rest);
-    await screen.findByText('Recovery checklist', { selector: 'h2' });
-    expect(useSessions.getState().byDate[TODAY]?.[0]?.sessionTypeId).toBe('rest');
+    await waitFor(() => expect(useSessions.getState().byDate[TODAY]?.[0]?.sessionTypeId).toBe('rest'));
   });
 
   it('logs the rest on a day the plan leaves empty, too', async () => {
@@ -78,8 +101,16 @@ describe('the one big button', () => {
     expect(chips.textContent).not.toContain(typeName('rest'));
     expect(chips.textContent).toContain(typeName('tech'));
     fireEvent.click(rest);
-    await screen.findByText('Recovery checklist', { selector: 'h2' });
-    expect(useSessions.getState().byDate[TODAY]?.[0]?.sessionTypeId).toBe('rest');
+    await waitFor(() => expect(useSessions.getState().byDate[TODAY]?.[0]?.sessionTypeId).toBe('rest'));
+  });
+
+  it('starts the session a chip names, not the planned one', async () => {
+    await running({ [DOW]: 'tech' });
+    renderAt('/', <HomePage />);
+    await button();
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(typeName('perf')) }));
+    await waitFor(() => expect(window.location.hash).toBe(`#/log/${TODAY}`));
+    expect(useSessions.getState().byDate[TODAY]?.[0]?.sessionTypeId).toBe('perf');
   });
 
   it('offers a plain session once the block has run out', async () => {

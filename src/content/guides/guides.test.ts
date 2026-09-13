@@ -332,15 +332,19 @@ describe('the app guide quotes real numbers', () => {
     }
   });
 
-  it('says where a fresh install starts', () => {
-    // M123 retired the welcome redirect; a guide that still implied the
-    // app opens with questions would send a new climber looking for them.
+  it('says what is on Home, and where a fresh install starts', () => {
+    // M123 retired the welcome redirect and M124 rearranged the page; a
+    // guide that still implied the app opens with questions, or that the
+    // log is the front door, sends a climber looking for the wrong thing.
     const home = (guide?.sections.flatMap((s) => s.content) ?? [])
       .flatMap(strings)
-      .find((t) => t.startsWith("Today's session"));
+      .find((t) => t.startsWith('Where today starts'));
     expect(home).toBeDefined();
     expect(home).toContain('A fresh install starts here too');
     expect(home).toMatch(/guided setup/);
+    for (const button of ['Log session', 'Quick log']) {
+      expect(home, `the Home row does not name ${button}`).toContain(button);
+    }
   });
 
   it('names the three views of Progress', () => {
