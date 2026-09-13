@@ -303,7 +303,7 @@ export const METRICS: Record<MetricId, Metric> = {
     unit: 'days',
     kind: 'number',
     higherIsBetter: true,
-    description: 'Distinct days logged on real rock. Derived from your logs.',
+    description: 'Days on real rock across your climbing, counted by you.',
   },
   capacity_4x4_quality: {
     id: 'capacity_4x4_quality',

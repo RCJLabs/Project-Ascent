@@ -170,15 +170,25 @@ function useIndex(): SearchItem[] {
         kind: 'drill',
         title: drill.name,
         detail: drill.focus,
-        href: '/train',
+        // The drill's own page, which has existed since M107. The index
+        // predates it and sent every drill to the catalogue tab instead
+        // (PLAN.md M143).
+        href: `/drills/${drill.id}`,
         ...(drillText?.[drill.id] ? { keywords: [drillText[drill.id]!] } : {}),
       });
     }
 
     for (const session of Object.values(byDate).flat()) {
       if (!session.completed) continue;
+      // Named first, because the name is what a climber types (PLAN.md
+      // M143). M130 made naming a climb the natural gesture on every row
+      // and the index rendered grades only, so *Moonlight* matched nothing
+      // unless it happened to also be a project.
       const climbs = session.climbs
-        .map((c) => `${displayGrade(c.scale, c.grade, display)} × ${c.count}`)
+        .map((c) => {
+          const grade = `${displayGrade(c.scale, c.grade, display)} × ${c.count}`;
+          return c.name ? `${c.name} ${grade}` : grade;
+        })
         .join(', ');
       items.push({
         id: `session:${session.id}`,

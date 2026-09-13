@@ -6841,8 +6841,8 @@ something rests on an inference it says so.*
   the three duplicates. The other eight are a coaching call, and it is yours, field by field: an
   engine reads it, or the program stops asking.
 
-- **M143 — search sends a drill to the wrong page and cannot find a climb by name.** *Proposed.
-  Small.*
+- **M143 — search sends a drill to the wrong page and cannot find a climb by name.** *Proposed,
+  and built ninth — see the Done entry below.*
   Every drill result links to `/train` (`SearchBody.tsx:156`) — the catalogue tab, not the
   drill. The drill page has existed since M107 and the library links to it
   (`DrillsPage.tsx:140`); the search index predates it and was never moved. Second, the session
@@ -7318,3 +7318,32 @@ something rests on an inference it says so.*
   logger at all: the assertions ran against an empty page. It now clicks through to a live session
   and counts the Duration inputs, which is one.
   **Budget.** 154.0 holds: 153.89 → 153.97. 4,512 tests pass.
+
+- **M143 — search lands on the thing you searched for.** *Done. The ninth of the third
+  brainstorm.*
+  **Both halves were exactly as described, which is two out of nine.** Every drill result linked
+  to `/train`, the catalogue tab — the drill page has existed since M107 and the library links to
+  it, but the index predates it and was never moved. And a session was indexed as *V5 × 2*, so a
+  climb's name, which M130 made the natural thing to type on every row, matched nothing unless it
+  happened to also be a project. The climb summary now reads *Moonlight Arete V5 × 2* and the
+  name is searched as part of the line, so nothing extra is carried to make it findable.
+  **The third item, in passing, was wrong in the useful direction.** It said `state.outdoorDays`
+  is *derived and never offered*. It is offered — on the share card, as **Outdoor**. What was
+  actually broken is only the benchmark's description: `total_outdoor_days` said *Derived from
+  your logs* over a number the climber types. Those are two different numbers with two different
+  meanings, and the second one is the right design — most of a climber's outdoor days happened
+  before this app, and no log here can know them. So the description stops claiming otherwise and
+  nothing else changes.
+  **The budget went over, and what that exposed.** 154.02 against a ceiling of 154.0, from about
+  a hundred characters of honest prose. Traced rather than waved through: `content/metrics.ts` is
+  in the **entry chunk**, so every word of every benchmark description is in the first load —
+  M137's drill-text problem, one registry over, and worth its own milestone rather than a
+  hurried fix here. `content/fields.ts` and `content/validate.ts` are not in it, so M142's
+  additions cost nothing. The replacement description is shorter than the sentence it replaced,
+  and the test pins it under eighty characters with the reason written down.
+  **Two vacuous checks, caught and fixed.** The browser check's first CLEAN was a lie twice over:
+  it clicked a Search button the stylesheet had hidden at that width, and its climb-name half
+  skipped itself silently because the sample climber names no climbs. It now clicks only a
+  visible control, and logs a named climb through the app — including finishing the session,
+  since the index holds completed days only, which is why the first attempt found nothing.
+  **Budget.** 154.0 holds: 153.97 → 153.97. 4,520 tests pass.

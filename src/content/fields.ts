@@ -100,14 +100,14 @@ export const FIELDS: Record<FieldId, FieldSpec> = {
     label: 'Project',
     kind: 'text',
     placeholder: 'What you were working',
-    retired: 'the project picked on the session, which is what links the burns to it',
+    retired: 'the project picked on the session, which links the burns to it',
   },
   routeName: {
     id: 'routeName',
     label: 'Route',
     kind: 'text',
     placeholder: 'What you climbed',
-    retired: "the climb's own name, which every climb row has carried since M130",
+    retired: "the climb's own name, on every climb row since M130",
   },
   pumpLevel: { id: 'pumpLevel', label: 'Pump', kind: 'scale', ends: ['Fresh', 'Wrecked'] },
   location: { id: 'location', label: 'Where', kind: 'text', placeholder: 'The gym, the crag, the boulder' },
@@ -132,7 +132,7 @@ export const FIELDS: Record<FieldId, FieldSpec> = {
     label: 'Time on the wall',
     kind: 'number',
     unit: 'min',
-    retired: 'the Duration input the logger shows on every session, which load, the weekly review, the career totals and the archive all read',
+    retired: "the logger's own Duration input, which load, the review, the career totals and the archive all read",
   },
 };
 
