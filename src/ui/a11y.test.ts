@@ -86,6 +86,7 @@ describe('modal dialogs', () => {
       'src/features/assessments/HoldTimer.tsx',
       'src/features/media/MediaCard.tsx',
       'src/features/search/SearchSheet.tsx',
+      'src/features/settings/PaletteSheet.tsx',
       'src/features/share/ShareSheet.tsx',
       'src/ui/TimerSheet.tsx',
     ]);

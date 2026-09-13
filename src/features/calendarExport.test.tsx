@@ -8,7 +8,7 @@ import { addDays, dayOfWeek, today } from '@/engine/dates';
 import { ENOUGH } from '@/engine/calendar';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
-import { CalendarPage } from '@/features/calendar/CalendarPage';
+import { SettingsPage } from '@/features/settings/SettingsPage';
 
 /**
  * Downloading the schedule (PLAN.md M75).
@@ -86,20 +86,21 @@ async function page(options: { active?: boolean; sessions?: Session[] } = {}): P
           adaptations: {},
         },
   );
-  renderAt('/calendar', <CalendarPage />);
+  // Under Settings › Data since M122.
+  renderAt('/settings', <SettingsPage />);
 }
 
 describe('the card', () => {
   it('offers nothing without a plan behind it', async () => {
     await page({ active: false });
-    await screen.findByText(/No active program/);
+    await screen.findByText('Your data');
     expect(screen.queryByText('Put it in your calendar')).toBeNull();
   });
 
   it('says how many sessions are in the file before writing one', async () => {
     await page();
     expect(await screen.findByText('Put it in your calendar')).toBeTruthy();
-    expect(screen.getByText(/sessions, as a calendar file/)).toBeTruthy();
+    expect(screen.getByText(/sessions of Iron Grip, as a calendar file/)).toBeTruthy();
   });
 
   it('owns up to guessing the hour when the log cannot say', async () => {

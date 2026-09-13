@@ -88,7 +88,7 @@ export const APP: Guide = {
             '**Skill trees** — from Game. Every node unlocks from real training.',
             "**Coach's Corner** — standing observations about your training, under today's session on Home.",
             '**The weekly review** — Sunday, and any past week you want to reread.',
-            '**Settings** — the gear beside the magnifier. Themes, grade scales, sound, equipment, backups, and these guides.',
+            '**Settings** — the gear beside the magnifier, in four groups: Appearance, Training, Data, About. Backups and the calendar export are under Data; these guides are under About.',
           ],
         },
       ],

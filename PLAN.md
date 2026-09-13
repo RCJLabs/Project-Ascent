@@ -5565,11 +5565,46 @@ read by seven pages as display. A separate tab is moving, not gating.*
   **Budget.** Unchanged at 204.4, measured 204.32 → 204.34KB; the page is lazy, and the two
   hundredths are the route table.
   3,917 tests pass.
-- **M122 — Settings in four groups, and the calendar export moves (S3 + S5).** *Proposed.*
-  Settings becomes **Appearance · Training · Data · About**, the palette goes into a sheet,
-  the Reference card goes (the guides, glossary and drills are one search away and listed
-  under Reference there). The `.ics` export leaves the calendar's header for Settings ›
-  Data, which is where every other "get my data out" already lives. *Risk: none material.*
+- **M122 — Settings in four groups, and the calendar export moves (S3 + S5).** *Done.*
+  **Four stretches with a heading each.** Fourteen cards in one column, and the one a climber
+  came for was somewhere in it. **Appearance** is the phone's: light or dark, the palette, the
+  text size, and sound and haptics, folded into the same card rather than kept as a fifth.
+  **Training** is the climber's: grades, weight and height, what you can train on, the session
+  templates. **Data** is every way in and out: the backup and the spreadsheet import, storage,
+  the sample climber, start over — and now the calendar export. **About** is the version,
+  and the manual in one line. The headings are `Wide`, so on a desktop a heading never lands
+  in the right-hand column above cards in the left.
+  **The palette is a sheet.** Nine palette cards sat in the middle of Appearance, between the
+  setting most people change once and the text size. The card names the one in use with a
+  *change* beside it; the sheet lists the nine, a pick applies at once so the page behind
+  shows it, and the sheet stays open so the next can be compared. `useDialog`, the same
+  contract as the search sheet, and it is in the a11y test's list of dialogs.
+  **The Reference card went.** Guides, drills and glossary are one search away and listed
+  under Reference there; About carries the three as chips in one line, because the app's own
+  reading belongs beside its version, and their back links still say Settings.
+  **The `.ics` export is under Data.** M75 put it on the calendar page as "a fact about the
+  plan and not about the data"; the audit read it the other way — the calendar is the grid,
+  and this is an export with a download button. It reads the profile itself now and renders
+  nothing without a running block. The calendar page is only the grid, and a test says so.
+  **Measured, not asserted.** 17 mutations, 16 killed plus the sanity no-op that must survive
+  (two state hooks reordered): the Training and About headings removed and the Data heading
+  moved above the templates, the sound toggle disconnected, a link dropped from About and
+  another pointed at Settings, the palette sheet never opening, the row naming the wrong
+  palette, a pick not applying and a pick closing the sheet, the export card removed from
+  Settings, shown for a program with no plan, given the wrong file type and told to export
+  the past, a copy of the card left on the calendar page, and the guide's Settings line losing
+  the groups. Two survived their first run: the guide line was unpinned, and a program that
+  is active but has no plan yet showed *Nothing left in this program to export* — reading an
+  empty plan as a finished one; both are tests now, and the second was found by the battery
+  rather than by the browser.
+  **In a browser, both themes, 430px and 1280px.** Settings reads *Appearance · Training ·
+  Data · About* with every card under its heading and the calendar export under Data; the
+  palette row names the palette in use, the sheet opens, a pick applies and the row names
+  the new one after Escape; the calendar page carries no export. No overflow, no page
+  errors. One thing the browser showed that jsdom could not: the palette row read
+  *Slate· change* with no space, a JSX line break swallowing it — fixed before shipping.
+  **Budget.** Unchanged at 204.4, measured 204.34 → 204.33KB; the page is lazy.
+  3,926 tests pass.
 - **M123 — Log first (L2).** *Proposed, and deliberately last.*
   A new install's first screen is one climb entry under General Training, not seven
   questions. The finder, the baseline and the program catalogue become Home cards with a

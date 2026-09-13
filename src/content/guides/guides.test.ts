@@ -320,6 +320,18 @@ describe('the app guide quotes real numbers', () => {
     expect(allText).toContain('Your body');
   });
 
+  it('names the four groups of Settings', () => {
+    // M122 grouped the page; a guide that still describes it as a list of
+    // things sends a climber scrolling for a heading that now exists.
+    const line = (guide?.sections.flatMap((s) => s.content) ?? [])
+      .flatMap(strings)
+      .find((t) => t.startsWith('**Settings**'));
+    expect(line).toBeDefined();
+    for (const group of ['Appearance', 'Training', 'Data', 'About']) {
+      expect(line, `the Settings line does not name ${group}`).toContain(group);
+    }
+  });
+
   it('names the three views of Progress', () => {
     // M119 split the page; a guide that still lists its cards as one page
     // sends a climber looking for the pyramid on the view that has the

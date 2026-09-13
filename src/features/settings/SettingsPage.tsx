@@ -26,13 +26,16 @@ import { useProfile } from '@/store/profile';
 import { rankTemplates } from '@/engine/templates';
 import { useTemplates } from '@/store/templates';
 import { TEXT_SCALE, useSettings, type TextSize, type ThemePreference } from '@/store/settings';
-import { PageGrid } from '@/ui/PageGrid';
 import { Button } from '@/ui/Button';
 import { announce } from '@/ui/Announce';
 import { Card } from '@/ui/Card';
 import { Meter } from '@/ui/Meter';
+import { Palette } from 'lucide-react';
 import { CHIP_LINK, Chip, SelectableCard } from '@/ui/Chip';
-import { THEMES as PALETTES } from '@/ui/themes';
+import { getTheme } from '@/ui/themes';
+import { PageGrid, Wide } from '@/ui/PageGrid';
+import { CalendarExportCard } from './CalendarExportCard';
+import { PaletteSheet } from './PaletteSheet';
 import { Input } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 import { readingProblems } from '@/db/sound';
@@ -75,7 +78,6 @@ export function SettingsPage() {
   const theme = useSettings((s) => s.theme);
   const setTheme = useSettings((s) => s.setTheme);
   const themeId = useSettings((s) => s.themeId);
-  const setThemeId = useSettings((s) => s.setThemeId);
   const textSize = useSettings((s) => s.textSize);
   const setTextSize = useSettings((s) => s.setTextSize);
   const cues = useSettings((s) => s.cues);
@@ -134,6 +136,8 @@ export function SettingsPage() {
    * thing by accident.
    */
   const [erasing, setErasing] = useState<string | null>(null);
+  /** The palette sheet (PLAN.md M122). */
+  const [picking, setPicking] = useState(false);
   // Every session key already in the log, so an imported day never lands on
   // one the climber wrote here. Memoised on the store rather than rebuilt
   // per keystroke in the preview.
@@ -456,6 +460,7 @@ export function SettingsPage() {
     <>
       <PageHeader title="Settings" />
       <PageGrid>
+        <Group title="Appearance" />
         <Card title="Appearance">
           <div className="text-xs font-semibold text-ink-soft mb-1.5">Light or dark</div>
           {/* wrap: three chips do not fit 320px at the largest text size. */}
@@ -468,27 +473,13 @@ export function SettingsPage() {
           </div>
 
           <div className="text-xs font-semibold text-ink-soft mb-1.5">Palette</div>
-          <div className="grid grid-cols-1 gap-2 mb-4">
-            {PALETTES.map((palette) => (
-              <SelectableCard
-                key={palette.id}
-                selected={themeId === palette.id}
-                onClick={() => setThemeId(palette.id)}
-                label={`${palette.name}: ${palette.blurb}`}
-                className="flex items-center gap-3 bg-sunken"
-              >
-                <span className="flex gap-1 shrink-0" aria-hidden>
-                  {([palette.light.accent, palette.light.ink, palette.light.sunken] as const).map((c) => (
-                    <span key={c} className="w-4 h-4 rounded border border-line" style={{ background: c }} />
-                  ))}
-                </span>
-                <span className="min-w-0">
-                  <span className="block font-semibold text-sm">{palette.name}</span>
-                  <span className="block text-xs text-ink-soft">{palette.blurb}</span>
-                </span>
-              </SelectableCard>
-            ))}
-          </div>
+          {/* One row and a sheet (PLAN.md M122), where nine cards were: the
+              setting most people change once sat between the one they
+              change never and the text size. */}
+          <Button variant="outline" size="sm" className="mb-4" onClick={() => setPicking(true)}>
+            <Palette size={15} /> {getTheme(themeId).name}{' '}
+            <span className="text-ink-soft font-normal">· change</span>
+          </Button>
 
           <div className="text-xs font-semibold text-ink-soft mb-1.5">Text size</div>
           <div className="flex flex-wrap gap-2">
@@ -502,7 +493,32 @@ export function SettingsPage() {
             If your system asks for more contrast, the High Contrast palette is used automatically — unless
             you have picked one yourself, in which case yours wins.
           </p>
+
+          <div className="text-xs font-semibold text-ink-soft mt-4 mb-1.5">Sound & haptics</div>
+          <p className="text-xs text-ink-soft mb-2 leading-relaxed">
+            Timer beeps, game sounds and vibration. Tones are generated on the fly, so nothing is
+            downloaded and nothing plays until you tap something.
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant={cues ? 'primary' : 'outline'}
+              size="sm"
+              onClick={() => {
+                // Turning it on is a gesture; use it to unlock audio now
+                // rather than leaving the first cue silent.
+                unlock();
+                setCues(true);
+              }}
+            >
+              On
+            </Button>
+            <Button variant={cues ? 'outline' : 'primary'} size="sm" onClick={() => setCues(false)}>
+              Off
+            </Button>
+          </div>
         </Card>
+
+        <Group title="Training" />
 
         <Card title="Grades">
           <p className="text-sm text-ink-soft mb-3">
@@ -554,30 +570,6 @@ export function SettingsPage() {
           />
         </Card>
 
-        <Card title="Sound & haptics">
-          <p className="text-sm text-ink-soft mb-3">
-            Timer beeps, game sounds and vibration. Tones are generated on the fly, so nothing is
-            downloaded and nothing plays until you tap something.
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant={cues ? 'primary' : 'outline'}
-              size="sm"
-              onClick={() => {
-                // Turning it on is a gesture; use it to unlock audio now
-                // rather than leaving the first cue silent.
-                unlock();
-                setCues(true);
-              }}
-            >
-              On
-            </Button>
-            <Button variant={cues ? 'outline' : 'primary'} size="sm" onClick={() => setCues(false)}>
-              Off
-            </Button>
-          </div>
-        </Card>
-
         <Card title="What you can train on">
           <p className="text-sm text-ink-soft mb-3">
             Used by the program finder and to build your warmups.
@@ -601,6 +593,8 @@ export function SettingsPage() {
         </Card>
 
         <TemplatesCard />
+
+        <Group title="Data" />
 
         <Card title="Your data">
           {/* Read-time repairs, said out loud (PLAN.md M44). Records that
@@ -790,56 +784,55 @@ export function SettingsPage() {
           onRequestPersist={() => void requestPersist()}
         />
 
-        <Card title="Reference">
-          <Link href="/guides" className="flex items-center gap-3 mb-3 pb-3 border-b border-line">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold">Guides</p>
-              <p className="text-xs text-ink-soft mt-0.5">
-                One per program, plus how the app works, starting out, outdoor climbing and
-                managing an injury.
-              </p>
-            </div>
-            <span className="text-ink-soft shrink-0" aria-hidden>
-              →
-            </span>
-          </Link>
-          {/* The library has always been here and never had a front door
-              (PLAN.md M107). */}
-          <Link href="/drills" className="flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold">Drills</p>
-              <p className="text-xs text-ink-soft mt-0.5">
-                Every drill the programs prescribe, how to run each one, and how many times you
-                have actually done it.
-              </p>
-            </div>
-            <span className="text-ink-soft shrink-0" aria-hidden>
-              →
-            </span>
-          </Link>
-          <Link href="/glossary" className="flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold">Glossary</p>
-              <p className="text-xs text-ink-soft mt-0.5">
-                Grades, gear, grip types, technique, and the exercises the programs name.
-              </p>
-            </div>
-            <span className="text-ink-soft shrink-0" aria-hidden>
-              →
-            </span>
-          </Link>
-        </Card>
+        {/* The .ics export, here since M122 with the other ways out. */}
+        <CalendarExportCard />
+
+        <Group title="About" />
 
         <Card title="About">
-          <p className="text-sm text-ink-soft">
+          <p className="text-sm text-ink-soft mb-3">
             Project Ascent v{APP_VERSION} · data schema v{SCHEMA_VERSION} · fully offline, no
             account, no tracking.
           </p>
+          {/* The manual, in one line. The Reference card that held these
+              three with a paragraph each went in M122; they are one search
+              away and listed under Reference there, and the app's own
+              reading belongs beside its version. */}
+          <div className="flex flex-wrap gap-2">
+            <Link href="/guides" className={CHIP_LINK}>
+              Guides
+            </Link>
+            <Link href="/drills" className={CHIP_LINK}>
+              Drills
+            </Link>
+            <Link href="/glossary" className={CHIP_LINK}>
+              Glossary
+            </Link>
+          </div>
         </Card>
 
         {message && <p className="text-sm text-ink-soft px-1">{message}</p>}
       </PageGrid>
+
+      {picking && <PaletteSheet onClose={() => setPicking(false)} />}
     </>
+  );
+}
+
+/**
+ * A group heading (PLAN.md M122).
+ *
+ * Fourteen cards in one column, and the one a climber came for was
+ * somewhere in it. Four groups — Appearance, Training, Data, About — say
+ * what each stretch is about, so the page can be skimmed for a heading
+ * rather than read for a card. Wide, so the heading never lands in the
+ * right-hand column with its cards in the left.
+ */
+function Group({ title }: { title: string }) {
+  return (
+    <Wide>
+      <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft pt-2">{title}</h2>
+    </Wide>
   );
 }
 
