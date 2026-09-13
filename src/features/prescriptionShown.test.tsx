@@ -72,6 +72,8 @@ describe('a menu, in the logger', () => {
 describe('a block whose dose never moves', () => {
   function programPage(): void {
     renderAt('/train/the_cruiser', <ProgramDetailPage params={{ id: 'the_cruiser' }} />);
+    // The week-by-week is behind What's in it (PLAN.md M121).
+    fireEvent.click(screen.getByRole('button', { name: /What's in it/ }));
   }
 
   it('says so, instead of leaving it to read as an oversight', () => {

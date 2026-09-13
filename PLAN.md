@@ -5531,11 +5531,40 @@ read by seven pages as display. A separate tab is moving, not gating.*
   tally row moved into the eager logger; `GymPage`'s chunk was lazy and its going saved the
   entry nothing. Slack is 0.08KB, so the next milestone to touch the entry moves the line.
   3,912 tests pass.
-- **M121 — Program overview (M5).** *Proposed.*
-  A program page that fits on one screen: what it is for, how long, what a week looks
-  like, what you need, and one **Read the full guide**; the week-by-week collapses behind
-  "What's in it". The builder reads the program rather than the page, so it is unaffected.
-  *Risk: low.*
+- **M121 — Program overview (M5).** *Done.*
+  **One screen.** The program page was the whole program at once — the pitch, the rhythm,
+  the rules, the week, the tracks, every phase's every session's every exercise, the
+  benchmarks, what comes after — and a climber deciding whether to run it scrolled through all
+  of that to find the button. The overview card now says what it is for (the pitch), how long
+  (the three stats), what a week looks like (the recommended layout, moved up from four cards
+  down, because it is the thing a climber with a job checks first), **what you need** (the
+  program's equipment, which the finder already refused on and the page had never said — a
+  climber arriving from the catalogue found out at the first fingerboard session), and
+  Start. Under it: the prerequisites, kept in view because they are a reason *not* to start;
+  one **Read the full guide**; and **What's in it**, behind which the rest unfolds unchanged —
+  how it runs, the tracks, the phase tabs and every session's prescription, the benchmarks,
+  what comes next. Not remembered on the device, unlike the two folds before it: a program
+  page is read once, not opened every day.
+  **The builder is untouched**, as the plan said: it reads the program, not the page.
+  **Measured, not asserted.** 11 mutations, 10 killed plus the sanity no-op that must survive
+  (two independent statements reordered): the fold open by default and never opening, the
+  week strip and what-you-need folded, the equipment labels wrong and the nothing-at-all case
+  blank, the guide link renamed, the prerequisites folded, Start shown for a log-only mode, and
+  the benchmarks left outside the fold. One survived its first run — the log-only mode's
+  "Nothing at all" was unpinned — and is asserted now. **And the sanity no-op earned its
+  keep**: a battery run interrupted mid-mutation left the working tree with Start shown for
+  a mode, the no-op came back KILLED on the next run because the test it shares failed
+  for a reason that was not the no-op, and that is what sent me to look. The tree was
+  repaired, and the battery run again clean.
+  **In a browser, both themes, 430px and 1280px.** The overview stands 1,030px tall at
+  430px against the 5,985px the page unfolds to, and 800 against 4,358 at 1,280 — a screen
+  and a third, from six and a half; the week strip, *What you need · Climbing wall ·
+  Hangboard*, the prerequisites and the guide line are on it; What's in it unfolds how it
+  runs, the track, both sessions, the benchmarks and what comes next, and Less folds them
+  back; General Training says *Nothing at all* and has no Start. No overflow, no page errors.
+  **Budget.** Unchanged at 204.4, measured 204.32 → 204.34KB; the page is lazy, and the two
+  hundredths are the route table.
+  3,917 tests pass.
 - **M122 — Settings in four groups, and the calendar export moves (S3 + S5).** *Proposed.*
   Settings becomes **Appearance · Training · Data · About**, the palette goes into a sheet,
   the Reference card goes (the guides, glossary and drills are one search away and listed

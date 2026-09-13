@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
-import { AlertTriangle, BookOpen, ChevronRight, Clock, Layers, Play, Timer } from 'lucide-react';
+import { AlertTriangle, BookOpen, ChevronDown, ChevronRight, ChevronUp, Clock, Layers, Play, Timer } from 'lucide-react';
 import { getDrill } from '@/content/drills';
 import { guideSummaryFor } from '@/content/guides/summary';
 import { getMetric } from '@/content/metrics';
@@ -14,6 +14,7 @@ import { OptionCard } from '@/ui/Chip';
 import { Term } from '@/ui/Term';
 import { PageHeader } from '@/ui/PageHeader';
 import { RecordNotFound } from '@/ui/RecordNotFound';
+import { EQUIPMENT_LABELS } from '@/engine/customProgram';
 import { displayRange } from '@/engine/grades';
 import { prescriptionLine } from '@/engine/prescription';
 import { useSettings } from '@/store/settings';
@@ -184,6 +185,18 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
   const guide = guideSummaryFor(params.id);
   const [phaseIndex, setPhaseIndex] = useState(0);
   const [track, setTrack] = useState<TrackId | null>(null);
+  /**
+   * The week-by-week, folded (PLAN.md M121).
+   *
+   * The page was the whole program at once — pitch, rhythm, rules, the
+   * week, the tracks, every phase's every session's every exercise, the
+   * benchmarks, what comes after — and a climber deciding whether to run
+   * it scrolled through all of that to find the button. One screen now:
+   * what it is for, how long, what a week looks like, what you need, the
+   * guide, and Start. What's in it is a tap, and not remembered: a program
+   * page is read once, not opened every day.
+   */
+  const [open, setOpen] = useState(false);
 
   if (!program) {
     // Was "That program has not been converted yet" — true of the prototype
@@ -210,22 +223,6 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
       />
 
       <div className="grid grid-cols-1 gap-3">
-        {guide && (
-          <Link
-            href={`/guides/${guide.id}`}
-            className="bg-surface border border-line rounded-2xl p-4 flex items-center gap-3 hover:border-accent transition-colors"
-          >
-            <BookOpen size={18} className="text-accent shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="font-bold text-sm">Read the guide</div>
-              <p className="text-xs text-ink-soft truncate">
-                {guide.sections} sections on why this program is built the way it is
-              </p>
-            </div>
-            <ChevronRight size={16} className="text-ink-soft shrink-0" />
-          </Link>
-        )}
-
         <Card>
           <div className="flex gap-4 mb-3">
             <div>
@@ -246,6 +243,53 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
             </div>
           </div>
           <p className="text-sm leading-relaxed mb-3">{program.intro.pitch}</p>
+
+          {/* What a week looks like, on the overview rather than four cards
+              down: it is the thing a climber with a job checks first. */}
+          {program.recommendedLayout && (
+            <div className="mb-3">
+              <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mb-1.5">
+                A week · {program.recommendedLayout.name}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {DAY_LABELS.map((label, day) => {
+                  const typeId = program.recommendedLayout!.slots[day as 0 | 1 | 2 | 3 | 4 | 5 | 6];
+                  const type = program.sessionTypes.find((t) => t.id === typeId);
+                  return (
+                    <div
+                      key={day}
+                      // Seven columns on a 320px phone leaves ~29px of text
+                      // room per cell. Side padding and letter-spacing are what
+                      // pushed "WED" out of it.
+                      className={`rounded-lg px-0.5 py-2 text-center overflow-hidden ${type ? 'bg-accent/10 border border-accent/30' : 'bg-sunken'}`}
+                    >
+                      <div className="text-2xs font-bold uppercase text-ink-soft">{label}</div>
+                      <div className="text-lg leading-tight mt-1">{type ? type.icon : '·'}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-ink-soft mt-1.5">{program.recommendedLayout.description}</p>
+            </div>
+          )}
+
+          {/* What you need. The finder already refuses a program on this;
+              the page said nothing, so a climber arriving from the
+              catalogue found out at the first fingerboard session. */}
+          <div className="mb-3">
+            <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mb-1.5">
+              What you need
+            </div>
+            <p className="text-sm">
+              {program.equipment.length === 0 || (program.equipment.length === 1 && program.equipment[0] === 'none')
+                ? EQUIPMENT_LABELS.none
+                : program.equipment
+                    .filter((e) => e !== 'none')
+                    .map((e) => EQUIPMENT_LABELS[e])
+                    .join(' · ')}
+            </p>
+          </div>
+
           {program.kind === 'program' && (
             <Link
               href={`/train/${program.id}/start`}
@@ -256,6 +300,47 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
           )}
         </Card>
 
+        {program.prerequisites && (
+          <Card title="Before you start">
+            <p className="text-sm leading-relaxed">{program.prerequisites.note}</p>
+          </Card>
+        )}
+
+        {guide && (
+          <Link
+            href={`/guides/${guide.id}`}
+            className="bg-surface border border-line rounded-2xl p-4 flex items-center gap-3 hover:border-accent transition-colors"
+          >
+            <BookOpen size={18} className="text-accent shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-sm">Read the full guide</div>
+              <p className="text-xs text-ink-soft truncate">
+                {guide.sections} sections on why this program is built the way it is
+              </p>
+            </div>
+            <ChevronRight size={16} className="text-ink-soft shrink-0" />
+          </Link>
+        )}
+
+        <Button
+          variant="outline"
+          className="w-full"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          {open ? (
+            <>
+              <ChevronUp size={16} /> Less
+            </>
+          ) : (
+            <>
+              <ChevronDown size={16} /> What's in it — how it runs, every session, the benchmarks
+            </>
+          )}
+        </Button>
+
+        {open && (
+          <>
         <Card title="How it runs">
           <ul className="grid grid-cols-1 gap-2 mb-3">
             {program.intro.rhythm.map((line, i) => (
@@ -274,36 +359,6 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
             ))}
           </div>
         </Card>
-
-        {program.prerequisites && (
-          <Card title="Before you start">
-            <p className="text-sm leading-relaxed">{program.prerequisites.note}</p>
-          </Card>
-        )}
-
-        {program.recommendedLayout && (
-          <Card title={`Recommended week · ${program.recommendedLayout.name}`}>
-            <p className="text-sm text-ink-soft mb-3">{program.recommendedLayout.description}</p>
-            <div className="grid grid-cols-7 gap-1">
-              {DAY_LABELS.map((label, day) => {
-                const typeId = program.recommendedLayout!.slots[day as 0 | 1 | 2 | 3 | 4 | 5 | 6];
-                const type = program.sessionTypes.find((t) => t.id === typeId);
-                return (
-                  <div
-                    key={day}
-                    // Seven columns on a 320px phone leaves ~29px of text
-                    // room per cell. Side padding and letter-spacing are what
-                    // pushed "WED" out of it.
-                    className={`rounded-lg px-0.5 py-2 text-center overflow-hidden ${type ? 'bg-accent/10 border border-accent/30' : 'bg-sunken'}`}
-                  >
-                    <div className="text-2xs font-bold uppercase text-ink-soft">{label}</div>
-                    <div className="text-lg leading-tight mt-1">{type ? type.icon : '·'}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        )}
 
         {program.tracks && (
           <Card title="Choose your track">
@@ -406,6 +461,8 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
             })}
           </ul>
         </Card>
+          </>
+        )}
       </div>
     </>
   );
