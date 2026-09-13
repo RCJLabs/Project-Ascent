@@ -28,6 +28,7 @@ const AssessmentsPage = lazy(() => import('@/features/assessments/AssessmentsPag
 const BoardPage = lazy(() => import('@/features/challenges/BoardPage').then((m) => ({ default: m.BoardPage })));
 const BuilderList = lazy(() => import('@/features/builder/BuilderList').then((m) => ({ default: m.BuilderList })));
 const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage').then((m) => ({ default: m.CalendarPage })));
+const WeekPage = lazy(() => import('@/features/week/WeekPage').then((m) => ({ default: m.WeekPage })));
 const CareerPage = lazy(() => import('@/features/career/CareerPage').then((m) => ({ default: m.CareerPage })));
 const AchievementsPage = lazy(() => import('@/features/climber/AchievementsPage').then((m) => ({ default: m.AchievementsPage })));
 const BodyPage = lazy(() => import('@/features/body/BodyPage').then((m) => ({ default: m.BodyPage })));
@@ -238,6 +239,8 @@ function Shell() {
           <Route path="/objectives" component={ObjectivesPage} />
           <Route path="/board" component={BoardPage} />
           <Route path="/calendar" component={CalendarPage} />
+          <Route path="/week/:start" component={WeekPage} />
+          <Route path="/week" component={WeekPage} />
           {/* Gym mode was a route from M74 to M119; it is the logger's quick
               view now (PLAN.md M120), reached from Home's Quick log button
               (M124). The address stays for anyone who pinned the launcher

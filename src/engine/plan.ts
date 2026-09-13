@@ -109,14 +109,19 @@ export function plannedDay(
   if (date > to) return { date, week: null, isDeload: false, isRest: true, over: true };
 
   const week = programWeek(startDate, date, program.weeks);
-  const phase = week === null ? undefined : phaseForWeek(program, week);
+  // Nor before the first week: the plan is a weekly shape, and reading it
+  // for a date the block has not reached drew next Monday's sessions onto
+  // this week's calendar. Found by the week screen (PLAN.md M135), which
+  // counted them as days to train.
+  if (week === null) return { date, week: null, isDeload: false, isRest: true };
+  const phase = phaseForWeek(program, week);
   const forWeek = effectivePlan(plan, overrides, date);
   const typeId = forWeek[dayOfWeek(date) as 0 | 1 | 2 | 3 | 4 | 5 | 6];
   const sessionType = typeId ? program.sessionTypes.find((t) => t.id === typeId) : undefined;
 
-  const drillId = week !== null && sessionType?.drillsByWeek ? sessionType.drillsByWeek[week] : undefined;
+  const drillId = sessionType?.drillsByWeek ? sessionType.drillsByWeek[week] : undefined;
   const drill = drillId ? getDrill(drillId) : undefined;
-  const test = week === null ? undefined : testWeeks(program).find((t) => t.week === week);
+  const test = testWeeks(program).find((t) => t.week === week);
 
   return {
     date,
@@ -124,7 +129,7 @@ export function plannedDay(
     ...(phase ? { phase } : {}),
     ...(sessionType ? { sessionType } : {}),
     ...(drill ? { drill } : {}),
-    isDeload: week !== null && (program.deloadWeeks ?? []).includes(week),
+    isDeload: (program.deloadWeeks ?? []).includes(week),
     ...(test ? { test: test.why } : {}),
     isRest: !sessionType || sessionType.isRest === true,
   };

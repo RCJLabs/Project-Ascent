@@ -49,7 +49,8 @@ describe('the one big button', () => {
     const start = await button();
     expect(start.textContent).toBe('Start session');
     expect(screen.getByText(typeName('tech'))).toBeTruthy();
-    expect(screen.getByText(/Week 1 of/)).toBeTruthy();
+    // Twice since M135: the day's card and the week's card both say it.
+    expect(screen.getAllByText(/Week 1 of/).length).toBeGreaterThan(0);
     fireEvent.click(start);
     // The hash settles last: `start()` writes the session and the
     // navigation is what follows it, so waiting on the store alone races

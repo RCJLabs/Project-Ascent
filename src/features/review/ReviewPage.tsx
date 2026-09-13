@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'wouter';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -25,6 +26,7 @@ import { ShareButton } from '@/features/share/ShareSheet';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
+import { weekHref } from '@/ui/routes';
 import { useGradeLabel } from '@/ui/useGrade';
 
 /** The review for a week containing `date`, assembled from every store. */
@@ -239,6 +241,12 @@ function NextWeek({ slots }: { slots: PlannedSlot[] }) {
           <span>Counts what that day loads of {describeParts(parts)}.</span>
         </p>
       )}
+      {/* The week has a screen of its own since M135 — the dose, the step,
+          what is done, and the moves. This card stays as the reading it
+          was built for; the door is the door. */}
+      <Link href={weekHref(slots[0]!.date)} className="text-accent font-semibold text-sm inline-block mt-3">
+        Open the week →
+      </Link>
     </Card>
   );
 }

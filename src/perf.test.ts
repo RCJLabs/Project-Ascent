@@ -240,7 +240,7 @@ describe('the bundle stays small', () => {
    * Every milestone that moves this moves it to just above what it measured;
    * the history is in the comment inside the first test.
    */
-  const BUDGET = 168.0;
+  const BUDGET = 170.0;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -417,6 +417,15 @@ describe('the bundle stays small', () => {
     // the cues were split is a milestone of its own — `filterDrills`
     // searches descriptions and three screens render them — and not
     // something to do in the commit that adds twelve.
+    //
+    // **168.0 → 170.0 at M135**, measured 167.92 → 169.32, so 1.40KB for
+    // the week: the engine reading (`engine/week.ts`) and the hook that
+    // feeds it are first-load because Home's card says where the week
+    // stands, and a card that counted for itself would drift from the page.
+    // The page is a lazy route at 3.9KB of its own. The calendar lost its
+    // move UI in the same change and the entry did not shrink by it,
+    // because the calendar is lazy too. M137 is the one that buys this
+    // back, and more.
     //
     // **165.0 → 166.0 at M131**, measured 164.17 → 165.29, so 1.12KB, and
     // the interesting part is the 2.3KB it is *not*. The session-length

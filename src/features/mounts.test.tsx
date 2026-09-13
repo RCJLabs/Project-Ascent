@@ -15,6 +15,7 @@ import { BoardPage } from '@/features/challenges/BoardPage';
 import { BuilderList } from '@/features/builder/BuilderList';
 import { BuilderPage } from '@/features/builder/BuilderPage';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
+import { WeekPage } from '@/features/week/WeekPage';
 import { CareerPage } from '@/features/career/CareerPage';
 import { AchievementsPage } from '@/features/climber/AchievementsPage';
 import { BodyPage } from '@/features/body/BodyPage';
@@ -83,6 +84,8 @@ const PAGES: [string, string, ReactElement][] = [
   ['objectives', '/objectives', <ObjectivesPage />],
   ['board', '/board', <BoardPage />],
   ['calendar', '/calendar', <CalendarPage />],
+  ['week', '/week', <WeekPage params={{}} />],
+  ['a week', '/week/2026-03-01', <WeekPage params={{ start: '2026-03-01' }} />],
   ['log', '/log/2026-03-04', <LogPage params={{ date: '2026-03-04' }} />],
   ['progress', '/progress', <ProgressPage />],
   ['finish', '/finish', <FinishPage />],

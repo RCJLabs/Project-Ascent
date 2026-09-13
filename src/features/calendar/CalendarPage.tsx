@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { AlertTriangle, BookOpen, CheckCheck, ChevronLeft, ChevronRight, Move, X } from 'lucide-react';
+import { BookOpen, CheckCheck, ChevronLeft, ChevronRight, Rows3 } from 'lucide-react';
 import { getProgram } from '@/content/programs';
-import type { DayOfWeek } from '@/content/types';
-import { addDays, dayOfWeek, fromKey, monthGrid, monthLabel, shortLabel, startOfWeek, today } from '@/engine/dates';
+import { fromKey, monthGrid, monthLabel, shortLabel, toKey, today } from '@/engine/dates';
 import { blockWindow, plannedDay } from '@/engine/plan';
 import { activeObjectives } from '@/engine/objectives';
 import { blockOn, season, soonestSeason } from '@/engine/season';
 import { useObjectives } from '@/store/objectives';
 import { summarise } from '@/engine/injury';
-import { effectivePlan, previewMove, type MovePreview } from '@/engine/reschedule';
 import { intensityOf } from '@/engine/scheduler';
 import { useProfile } from '@/store/profile';
 import type { Session } from '@/db/sessions';
@@ -19,6 +17,7 @@ import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { IconButton } from '@/ui/IconButton';
 import { PageHeader } from '@/ui/PageHeader';
+import { weekHref } from '@/ui/routes';
 
 const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -51,16 +50,7 @@ export function CalendarPage() {
   const plan = activeProgramId ? plans[activeProgramId] : undefined;
   const weekOverrides = useProfile((s) => s.weekOverrides);
   const injuries = useProfile((s) => s.injuries);
-  const setWeekPlan = useProfile((s) => s.setWeekPlan);
-  const setPlan = useProfile((s) => s.setPlan);
   const overrides = activeProgramId ? weekOverrides[activeProgramId] : undefined;
-
-  /** The day being moved, if any. Pick-then-place rather than drag: a 40px
-   *  cell is not a drag target on a phone, and drag is unreachable by
-   *  keyboard. */
-  const [moving, setMoving] = useState<string | null>(null);
-  const [rearranging, setRearranging] = useState(false);
-  const thisWeek = startOfWeek(today());
 
   /**
    * Days being marked as trained-but-unlogged (PLAN.md M100).
@@ -141,36 +131,14 @@ export function CalendarPage() {
     });
   }, [objectives, adaptations]);
 
-  // Landings are only meaningful inside the moving day's own week; a session
-  // cannot move to another week without changing which week it belongs to.
-  const previews = useMemo(() => {
-    if (!moving || !program || !plan) return null;
-    const week = effectivePlan(plan, overrides, moving);
-    const from = dayOfWeek(moving) as DayOfWeek;
-    const out: Record<string, MovePreview> = {};
-    for (let i = 0; i < 7; i++) {
-      const date = addDays(startOfWeek(moving), i);
-      out[date] = previewMove(program, week, from, i as DayOfWeek);
-    }
-    return out;
-  }, [moving, program, plan, overrides]);
-
-  /** Land the moving session on `date`, asking for scope first. */
-  const [pending, setPending] = useState<{ to: string; preview: MovePreview } | null>(null);
-
-  function commitMove(to: string) {
-    const preview = previews?.[to];
-    if (!preview || !moving) return;
-    setPending({ to, preview });
-  }
-
-  function applyMove(scope: 'week' | 'always') {
-    if (!pending || !moving || !activeProgramId) return;
-    if (scope === 'week') setWeekPlan(activeProgramId, startOfWeek(moving), pending.preview.plan);
-    else setPlan(activeProgramId, pending.preview.plan);
-    setPending(null);
-    setMoving(null);
-  }
+  /**
+   * Which week the "Week" link opens: this one while the month holds today,
+   * otherwise the week the month begins in. Moving a session lives on the
+   * week screen since M135 — a session was only ever able to move inside
+   * its own week, and the screen that shows one week is where that belongs.
+   */
+  const weekAnchor =
+    now.getFullYear() === year && now.getMonth() === month ? today() : toKey(new Date(year, month, 1));
 
   function shift(by: number) {
     const d = new Date(year, month + by, 1);
@@ -212,78 +180,6 @@ export function CalendarPage() {
         </Card>
       )}
 
-      {planning && rearranging && !moving && !pending && (
-        <Card className="mb-3">
-          <p className="text-sm">
-            Tap a planned session to pick it up. Logged days and finished weeks stay put — they are
-            history, not a plan.
-          </p>
-        </Card>
-      )}
-
-      {planning && moving && (
-        <Card className="mb-3">
-          <div className="flex items-start gap-2 mb-2">
-            <Move size={16} className="text-accent shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold">
-                Moving {plannedDay(program, startDate, plan, moving, overrides).sessionType?.name}
-              </p>
-              <p className="text-xs text-ink-soft mt-0.5">
-                Pick a day in the same week. Green is clear, amber is untidy, red breaks a rule.
-              </p>
-            </div>
-            <IconButton onClick={() => setMoving(null)} label="Cancel move">
-              <X size={16} />
-            </IconButton>
-          </div>
-        </Card>
-      )}
-
-      {planning && pending && (
-        <Card className="mb-3">
-          <p className="text-sm font-semibold mb-1">
-            {pending.preview.swaps ? 'Swap with' : 'Move to'} {shortLabel(pending.to)}?
-          </p>
-          {pending.preview.introduced.length > 0 ? (
-            <ul className="grid grid-cols-1 gap-1.5 my-2">
-              {pending.preview.introduced.map((v) => (
-                <li key={v.message} className="flex gap-2 text-sm">
-                  <AlertTriangle
-                    size={14}
-                    className={`shrink-0 mt-0.5 ${v.severity === 'error' ? 'text-danger' : 'text-warn'}`}
-                  />
-                  <span className="text-ink-soft">{v.message}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-ink-soft mb-2">Nothing in the program objects to this.</p>
-          )}
-          <div className="flex flex-wrap gap-2 mt-3">
-            {/* A move the program calls unsafe is still the climber's to make
-                — the app advises — but it must not look endorsed. */}
-            <Button
-              size="sm"
-              variant={pending.preview.blocking.length > 0 ? 'outline' : 'primary'}
-              onClick={() => applyMove('week')}
-            >
-              This week only
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => applyMove('always')}>
-              Every week
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setPending(null)}>
-              Cancel
-            </Button>
-          </div>
-          <p className="text-xs text-ink-soft mt-2.5 leading-relaxed">
-            This week only leaves the program's plan alone. Every week rewrites it, and drops any
-            single-week changes you had made.
-          </p>
-        </Card>
-      )}
-
       {marking && (
         <Card className="mb-3">
           <h3 className="font-bold text-sm mb-1">Days you trained but did not log</h3>
@@ -317,28 +213,16 @@ export function CalendarPage() {
           onClick={() => {
             setMarking(!marking);
             setPicked(new Set());
-            setRearranging(false);
-            setMoving(null);
-            setPending(null);
           }}
         >
           <CheckCheck size={14} /> {marking ? 'Done' : 'Mark days'}
         </Button>
-        {planning && (
-        <Button
-          size="sm"
-          variant={rearranging ? 'primary' : 'ghost'}
-          onClick={() => {
-            setRearranging(!rearranging);
-            setMarking(false);
-            setPicked(new Set());
-            setMoving(null);
-            setPending(null);
-          }}
+        <Link
+          href={weekHref(weekAnchor)}
+          className="focus-ring inline-flex items-center gap-2 font-semibold text-sm px-3 py-1.5 rounded-lg min-h-9 text-ink-soft hover:bg-sunken hover:text-ink"
         >
-          <Move size={14} /> {rearranging ? 'Done' : 'Rearrange'}
-        </Button>
-        )}
+          <Rows3 size={14} /> Week
+        </Link>
       </div>
 
       {/* The tint says *when*; this says *which*. Per-cell labels do not fit
@@ -381,7 +265,6 @@ export function CalendarPage() {
           const inMonth = fromKey(date).getMonth() === month;
           const isToday = date === today();
           const planned = day !== null && day.sessionType && !day.isRest;
-          const preview = previews?.[date];
           // Outside the running block's window and nowhere else. Both ends
           // inclusive: the block's last day is still the block's.
           //
@@ -411,14 +294,6 @@ export function CalendarPage() {
           // stronger than a day that actually happened, and neither lands
           // on `pickable` at /5.
           const ghostBand = ghost ? ghostSeason!.blocks.indexOf(ghost) % 2 : -1;
-          const isSource = moving === date;
-          const landing = previews !== null && preview !== undefined && !isSource;
-          // Before a pick, a planned day that has not been logged is
-          // pickable — but only from this week on. A finished week's plan is
-          // meaningless, and an override written against it is pruned on the
-          // way out, which would make the move silently vanish.
-          const pickable =
-            planning && rearranging && !moving && Boolean(planned) && !done && startOfWeek(date) >= thisWeek;
 
           // Folded into `tone` rather than appended to the shell: both set a
           // border colour and a background, and appending left the two
@@ -429,21 +304,11 @@ export function CalendarPage() {
           const chosen = marking && picked.has(date);
           const edge = chosen
             ? 'border-accent'
-            : isSource
+            : isToday
               ? 'border-accent'
-              : landing
-                ? preview.blocking.length > 0
-                  ? 'border-danger/60'
-                  : preview.introduced.length > 0
-                    ? 'border-warn/60'
-                    : 'border-positive/60'
-                : pickable
-                  ? 'border-accent/60'
-                  : isToday
-                    ? 'border-accent'
-                    : ghostStarts
-                      ? 'border-accent/50'
-                      : 'border-line';
+              : ghostStarts
+                ? 'border-accent/50'
+                : 'border-line';
 
           /**
            * Exactly one background class, chosen here rather than stacked.
@@ -457,25 +322,15 @@ export function CalendarPage() {
            */
           const fill = chosen
             ? 'bg-accent/30'
-            : isSource
-              ? 'bg-accent/25'
-              : landing
-                ? preview.blocking.length > 0
-                  ? 'bg-danger/10'
-                  : preview.introduced.length > 0
-                    ? 'bg-warn/10'
-                    : 'bg-positive/10'
-                : pickable
-                  ? 'bg-accent/5'
-                  : done
-                    ? 'bg-accent/15'
-                    : ghost
-                      ? ghostBand === 0
-                        ? 'bg-accent/10'
-                        : 'bg-accent/3'
-                      : inMonth
-                        ? 'bg-surface'
-                        : 'bg-transparent';
+            : done
+              ? 'bg-accent/15'
+              : ghost
+                ? ghostBand === 0
+                  ? 'bg-accent/10'
+                  : 'bg-accent/3'
+                : inMonth
+                  ? 'bg-surface'
+                  : 'bg-transparent';
 
           const body = (
             <>
@@ -535,33 +390,6 @@ export function CalendarPage() {
                 aria-pressed={chosen}
                 aria-label={`${chosen ? 'Unmark' : 'Mark'} ${shortLabel(date)} as trained`}
                 onClick={() => togglePicked(date)}
-              >
-                {body}
-              </button>
-            );
-          }
-
-          // While a move is in progress the whole grid becomes targets, so
-          // navigating away by accident is impossible.
-          if (rearranging || moving) {
-            const enabled = moving ? landing || isSource : pickable;
-            return (
-              <button
-                key={date}
-                className={shell}
-                disabled={!enabled}
-                aria-label={
-                  isSource
-                    ? `Cancel moving ${day?.sessionType?.name ?? 'session'}`
-                    : moving
-                      ? `Move to ${shortLabel(date)}`
-                      : `Move ${day?.sessionType?.name ?? 'session'} from ${shortLabel(date)}`
-                }
-                onClick={() => {
-                  if (isSource) setMoving(null);
-                  else if (moving) commitMove(date);
-                  else setMoving(date);
-                }}
               >
                 {body}
               </button>

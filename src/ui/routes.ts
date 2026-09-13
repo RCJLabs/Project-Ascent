@@ -71,6 +71,10 @@ export const ROUTES: RouteMeta[] = [
 
   // Log. Home is today's session; these are the other ways into a day.
   { path: '/log/:date', title: 'Log', parent: '/calendar' },
+  // The week between the day and the month (PLAN.md M135): what each day
+  // asks, what is done, and where a session moves.
+  { path: '/week', title: 'This week', parent: '/calendar', group: 'Log', keywords: ['week', 'week ahead', 'seven days', 'plan', 'rearrange', 'move a session', 'reschedule', 'swap days', 'limit day', 'deload'] },
+  { path: '/week/:start', title: 'Week', parent: '/calendar' },
   { path: '/today', title: 'Today', parent: '/', group: 'Log', keywords: ['log a session', 'start a session'] },
   // A redirect since M120: the tally and the rest timer are the logger's
   // quick view on Home. Listed so "rest timer" still finds them.
@@ -152,4 +156,9 @@ export function browsable(): RouteMeta[] {
  */
 export function logHref(date: string): string {
   return `/log/${date}`;
+}
+
+/** Where a week lives. Any date in it will do; the page snaps to its Sunday. */
+export function weekHref(date: string): string {
+  return `/week/${date}`;
 }

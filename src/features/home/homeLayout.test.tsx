@@ -50,7 +50,7 @@ describe('the order of the front door', () => {
     const start = await logButton();
     const coach = screen.getByText("Coach's Corner");
     const review = screen.getByText(/Nothing logged this week|logged this week/);
-    const program = screen.getByRole('heading', { name: 'Your program', level: 2 });
+    const program = screen.getByRole('heading', { name: 'Your week', level: 2 });
     expect(before(coach, start), 'the coach is under the buttons').toBe(true);
     expect(before(review, start), 'the review is under the buttons').toBe(true);
     expect(before(program, start), 'the program is under the buttons').toBe(true);

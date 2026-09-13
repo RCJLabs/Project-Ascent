@@ -179,7 +179,7 @@ describe('the cards know when they no longer apply', () => {
       plans: { iron_grip: {} },
     });
     renderAt('/', <HomePage />);
-    await screen.findByRole('heading', { name: 'Your program', level: 2 });
+    await screen.findByRole('heading', { name: 'Your week', level: 2 });
     expect(card('Pick a program')).toBeNull();
     // The note was only ever on the welcome screen, which a climber who
     // restored a backup never saw. A running block is not "Got it".

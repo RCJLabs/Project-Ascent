@@ -73,7 +73,7 @@ export const APP: Guide = {
           rows: [
             ['Home', "Where today starts. The coach's latest, the week just gone and your program at the top; under them the card for today, with **Log session** and **Quick log** on it. A fresh install starts here too: the guided setup and the programs are cards under the buttons, to take or to wave away."],
             ['Train', 'The block you are running sits at the top, with the way into it. Under that, the catalogue, the finder, your own programs, objectives, and projects.'],
-            ['Calendar', 'The plan across weeks, and where you move sessions around.'],
+            ['Calendar', 'The months. Where you mark days you trained without logging, and the way into any week.'],
             ['Progress', 'Three views of the log — This block, Grades, Body — and All for the whole page. Training load, grades, the journal, assessments, your body, career and the year in review.'],
             ['Game', 'Your climber, the level, the altimeter, the board, skill trees, achievements, and The Ascent.'],
           ],
@@ -87,6 +87,7 @@ export const APP: Guide = {
             '**Your body** — from Progress. Vitality, anything that hurts, and the five stats the log builds.',
             '**Skill trees** — from Game. Every node unlocks from real training.',
             "**Coach's Corner** — standing observations about your training, under today's session on Home.",
+            '**Your week** — from Home, or from the calendar. The seven days of this program week: what each asks, how hard it is and roughly how long, what is done and what was missed — and where you move a session to another day.',
             '**The weekly review** — Sunday, and any past week you want to reread.',
             '**Settings** — the gear beside the magnifier, in four groups: Appearance, Training, Data, About. Backups and the calendar export are under Data; these guides are under About.',
           ],

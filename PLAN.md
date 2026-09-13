@@ -6666,7 +6666,7 @@ something rests on an inference it says so.*
   fixes); take them together or back to back.
 - **On their own** — M136, M139, M140, M141, M142, M144.
 
-- **M135 — the week, as a screen.** *Proposed. Large.*
+- **M135 — the week, as a screen.** *Proposed, and built first — see the Done entry below.*
   **The program model is week-shaped and the app has no week.** The routes are today (`/`), a
   day (`/log/:date`), a month (`/calendar`) and a block (`/train/:id`) — `App.tsx:217-264` —
   and nothing between the day and the month. Meanwhile everything a program says, it says per week:
@@ -6877,3 +6877,81 @@ something rests on an inference it says so.*
 - *The logger at 2,200 lines and sixteen cards* — a decomposition is a phase with no
   user-visible change, and the cards are already separate functions. Not proposed; do it when a
   milestone has to open the file anyway.
+
+- **M135 — the week, as a screen.** *Done. The first of the third brainstorm.*
+  **The premise held, and the audit had missed one thing.** The program model is week-shaped
+  — `perWeek`, `deloadWeeks`, `testWeeks`, `drillsByWeek`, `no-back-to-back`, weekly
+  adherence, week-keyed overrides — and the routes were a day, a month and a block. But
+  *nothing* between them was not quite true: the weekly review has carried a *Next week*
+  card since M89, seven rows of next week's plan with the injury load per day, for next week
+  only, with no status, no dose, no step and no moves. The week screen carries that load
+  reading rather than becoming a fourth list without it, and the review's card links to the
+  week now. The door is the door.
+  **What it is.** `/week` and `/week/:start` — any date in the week, snapped to its Sunday,
+  junk reading as this week. A header with the arrows the day has: *Week 2 of 12 · Sep 13 –
+  19 · Iron Grip · The Anvil*. A card of the week's facts: *0 of 3 training days done, 3 to
+  come*, the deload and what it took off, the test week linked to the battery, *what this
+  week asks that last week did not* in the program's own words, and the drill. Then seven
+  rows — the day, the session, how hard it is with the limit day marked as the calendar marks
+  it, roughly how long, the drill, what it loads of what is hurt, and what happened on it —
+  each a door to the day. Then the moves. Then the month, the block, and the weekly shape.
+  **The moves came off the month.** They were confined to a week the whole time — a session
+  cannot leave its week without changing which week it belongs to — so the screen that shows
+  one week is the screen to move one on. Pick-then-place as before, the same preview, the same
+  *This week only / Every week* question with the same copy; the calendar lost 201 lines and
+  its Rearrange button and gained a *Week* link that opens the week the month shown begins
+  in. One change in the rules: a day already logged is not a landing and cannot be picked up,
+  and a row that cannot be picked or landed on is not a control at all — a disabled button
+  labelled *Move to Tuesday* is a promise a screen reader hears and cannot act on.
+  **One reading, two readers.** `engine/week.ts` is pure — the profile, the log and a date in,
+  seven days and the week's facts out — and `useWeekOutline` reads it for both the page and
+  Home's card, which was *Your program* (the name and the subtitle, which a climber running a
+  block already knows) and is *Your week* now: *Iron Grip · Week 2 of 12 · The Anvil · 0 of 3
+  training days done, 3 to come · Limit day Thursday*. A card that counted for itself would
+  drift from the page.
+  **What a day is.** What happened on it before what was planned for it: anything completed
+  is *done* whatever the plan said, a record that is not finished is *started*; only then a
+  planned day that has gone by empty is *missed*, today with nothing yet is *today*, the rest
+  of the week is *planned*, and a day with nothing planned and nothing logged is *rest*. The
+  count is days, not sessions by type — the block screen's stricter reading — and it is
+  labelled *training days* so the two cannot be read as one number. They sit two cards apart
+  on Home with the review's *0 of 4 sessions*, whose 4 is the program's minimum
+  (`sessions-per-week.min`) rather than the plan's placed days; a plan of three under a
+  program that asks four is a week the validator already flags, and the review's target
+  feeds the streak, so it stays what it was. Named here rather than papered over.
+  **A fault the week found in the day.** `plannedDay` read the weekly plan for any date,
+  including dates before the block began, so a program started next Monday drew its
+  sessions onto this week's calendar and the pre-session card printed *Week  of 12* over
+  them. The week screen counted them as days to train, which is how it was noticed. Nothing
+  is prescribed before the first week now, the way M85 made nothing prescribed after the
+  last; pinned in `plan.test.ts`.
+  **Measured, not asserted.** Forty-one mutations, every one killed: a started session
+  reading as done, a rest day as missed, today as missed or as planned; a planned rest day
+  counted as training, an unplanned session as done, a logged rest as extra; a step said
+  twice, the derived deload listed as a step, a finished block reading as not started or
+  never over, the clock and the load silenced; the tenses swapped, today not still to come,
+  a week with nothing planned counted, one day as days, the unplanned unmentioned; a hard day
+  as the limit day, a limit day already gone still named; the plan drawn before the block;
+  and on the page, a finished week rearrangeable, the two scopes swapped, a logged day as a
+  landing or a pick, every deload saying a set came off, a missed day silent, the count
+  unsaid, the test week and the drill and every row linking to the wrong place, the arrows
+  walking backwards, junk in the address trusted, the limit day unmarked, the load badge
+  undrawn; and on Home, the limit day unnamed, the card opening the month, the count unsaid;
+  and the calendar's link ignoring the month shown. A no-op statement reorder survived.
+  **Three survived the first round.** The training-day predicate was written twice — once
+  per day for the status, once over the week for the count — so dropping the rest-day clause
+  from one left the other to pass the test; it is one field on the day now, `training`, and
+  the count filters on it. The limit-day mark and the load badge had engine tests and no page
+  test, which is a page rendering nothing a test could see; both have one.
+  **In a browser, both themes, 430px and 1280px.** Week 2 of Iron Grip lists Sunday to
+  Saturday with the finger days at *about 42-51 min of work*, the climbing day with its
+  drill, and the program's week-two step over the rows. Week 4 says *Deload* in the header
+  and the sentence about the set that came off. Picking Monday's finger session colours
+  Sunday, Wednesday and Friday green and Tuesday, Thursday and Saturday red — each of those
+  puts two hard days back to back, the M131 rule — and landing on Sunday, *This week only*,
+  writes the override the profile store shows and moves the row. Home's card reads *Iron
+  Grip · Week 2 of 12 · The Anvil (Repeaters) · 0 of 3 training days done, 3 to come*; the
+  calendar has a *Week* link and no *Rearrange*. No overflow, no page errors.
+  **Budget.** 168.0 → 170.0, measured 167.92 → 169.32: 1.40KB for the reading and the hook,
+  first-load because Home's card says where the week stands. The page itself is a lazy route
+  at 3.9KB. M137 is the one that buys this back. 4,290 tests pass.

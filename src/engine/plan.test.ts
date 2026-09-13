@@ -112,6 +112,10 @@ describe('plannedDay', () => {
     const before = plannedDay(IRON_GRIP, START, IG_PLAN, '2026-03-01');
     expect(before.week).toBeNull();
     expect(before.phase).toBeUndefined();
+    // And no session: the weekly shape is the block's, and a date the block
+    // has not reached is not one it prescribes for (PLAN.md M135).
+    expect(before.sessionType).toBeUndefined();
+    expect(before.isRest).toBe(true);
   });
 
   it('handles a program whose deloads sit mid-phase', () => {

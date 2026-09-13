@@ -65,6 +65,8 @@ function findAll(
 const BESPOKE: Record<string, string> = {
   'src/features/calendar/CalendarPage.tsx':
     'a calendar day is a grid cell with its own state shell — a Button would be a worse abstraction, not a better one',
+  'src/features/week/WeekPage.tsx':
+    'a day row is a full-width list row that is a link, a pick, a landing or nothing, sharing one shell — the calendar cell’s reason, one grain up',
   'src/features/ascent/AscentPage.tsx':
     'the game canvas and its overlay controls are their own visual language',
   'src/features/log/ClimbEntry.tsx':

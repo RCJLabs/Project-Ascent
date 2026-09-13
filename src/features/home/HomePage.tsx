@@ -9,6 +9,10 @@ import { DayHeading } from '@/features/log/DayHeading';
 import { DayNudges, PreSessionCard } from '@/features/log/PreSession';
 import { usePlannedDay } from '@/features/log/usePlannedDay';
 import { ReviewCard } from '@/features/review/ReviewPage';
+import { useWeekOutline } from '@/features/week/useWeekOutline';
+import { describeWeekDays, nextLimitDay } from '@/engine/week';
+import { fromKey } from '@/engine/dates';
+import type { Program } from '@/content/types';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
@@ -67,20 +71,51 @@ function AroundTheSession() {
       <Link href="/review" className="block bg-surface border border-line rounded-2xl p-4">
         <ReviewCard />
       </Link>
-      {program && (
-        <Card title="Your program">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="font-bold">{program.name}</div>
-              <p className="text-sm text-ink-soft">{program.subtitle}</p>
-            </div>
-            <Link href="/calendar" className="text-accent shrink-0" aria-label="Open calendar">
-              <CalendarDays size={20} />
-            </Link>
-          </div>
-        </Card>
-      )}
+      {program && <YourWeekCard program={program} />}
     </PageGrid>
+  );
+}
+
+/**
+ * The week the block is in, and the way into it (PLAN.md M135).
+ *
+ * This was *Your program* — the name, the subtitle, and an icon to the
+ * month — which said the one thing a climber running a block already knows.
+ * What they open the app on a Sunday to find out is where the week stands:
+ * which week, which phase, what is done, and which day is the hard one.
+ * The month is still a tap away, on the same icon.
+ */
+function YourWeekCard({ program }: { program: Program }) {
+  const now = today();
+  const outline = useWeekOutline(now);
+  const count = describeWeekDays(outline, now);
+  const limit = nextLimitDay(outline);
+  const where =
+    outline.week !== null
+      ? `Week ${outline.week} of ${program.weeks}${outline.phase ? ` · ${outline.phase.name}` : ''}${outline.isDeload ? ' · Deload' : ''}`
+      : outline.over
+        ? 'Has run its course'
+        : 'Not started yet';
+  const line = [
+    count,
+    limit ? `Limit day ${fromKey(limit.date).toLocaleDateString(undefined, { weekday: 'long' })}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    <Card title="Your week">
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/week" className="focus-ring flex-1 min-w-0 rounded-lg">
+          <div className="font-bold">
+            {program.name} · {where}
+          </div>
+          <p className="text-sm text-ink-soft">{line || program.subtitle}</p>
+        </Link>
+        <Link href="/calendar" className="text-accent shrink-0" aria-label="Open calendar">
+          <CalendarDays size={20} />
+        </Link>
+      </div>
+    </Card>
   );
 }
 
