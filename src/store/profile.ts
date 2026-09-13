@@ -133,6 +133,16 @@ export interface ProfileState {
   /** Change one week without touching the program's plan. */
   setWeekPlan: (programId: string, weekStart: string, plan: WeekPlan) => void;
   stopProgram: () => void;
+  /**
+   * Put back exactly what `stopProgram` closed, for an undo (PLAN.md M126).
+   *
+   * Whole state rather than a fresh start, for the same reason
+   * `restoreInjury` takes the whole record: re-starting the program would
+   * mint a new block row and lose the one the climber had been filling,
+   * and the undo has to be a reversal rather than a second way to do
+   * something similar.
+   */
+  restoreProgram: (snapshot: { activeProgramId: string | null; blocks: BlockRecord[] }) => void;
   setEquipment: (equipment: Equipment[]) => void;
   addInjury: (part: BodyPart, note?: string) => void;
   updateInjury: (id: string, patch: Partial<Injury>) => void;
@@ -315,6 +325,11 @@ export const useProfile = create<ProfileState>((set, get) => ({
 
   stopProgram: () => {
     set({ activeProgramId: null, blocks: closeBlock(get().blocks, today(), 'stopped') });
+    void save(snapshot(get()));
+  },
+
+  restoreProgram: ({ activeProgramId, blocks }) => {
+    set({ activeProgramId, blocks });
     void save(snapshot(get()));
   },
 

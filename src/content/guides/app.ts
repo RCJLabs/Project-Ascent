@@ -72,7 +72,7 @@ export const APP: Guide = {
           head: ['Tab', 'What is there'],
           rows: [
             ['Home', "Where today starts. The coach's latest, the week just gone and your program at the top; under them the card for today, with **Log session** and **Quick log** on it. A fresh install starts here too: the guided setup and the programs are cards under the buttons, to take or to wave away."],
-            ['Train', 'The program catalogue, the finder, your own programs, objectives, and projects.'],
+            ['Train', 'The block you are running sits at the top, with the way into it. Under that, the catalogue, the finder, your own programs, objectives, and projects.'],
             ['Calendar', 'The plan across weeks, and where you move sessions around.'],
             ['Progress', 'Three views of the log — This block, Grades, Body — and All for the whole page. Training load, grades, the journal, assessments, your body, career and the year in review.'],
             ['Game', 'Your climber, the level, the altimeter, the board, skill trees, achievements, and The Ascent.'],

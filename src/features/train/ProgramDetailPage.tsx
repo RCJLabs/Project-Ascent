@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
-import { AlertTriangle, BookOpen, ChevronDown, ChevronRight, ChevronUp, Clock, Layers, Play, Timer } from 'lucide-react';
+import { Activity, AlertTriangle, BookOpen, ChevronDown, ChevronRight, ChevronUp, Clock, Layers, Play, Timer } from 'lucide-react';
 import { getDrill } from '@/content/drills';
 import { guideSummaryFor } from '@/content/guides/summary';
 import { getMetric } from '@/content/metrics';
@@ -17,6 +17,8 @@ import { RecordNotFound } from '@/ui/RecordNotFound';
 import { EQUIPMENT_LABELS } from '@/engine/customProgram';
 import { displayRange } from '@/engine/grades';
 import { prescriptionLine } from '@/engine/prescription';
+import { today } from '@/engine/dates';
+import { usePlannedDay } from '@/features/log/usePlannedDay';
 import { useSettings } from '@/store/settings';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -179,6 +181,80 @@ function SessionTypeCard({
   );
 }
 
+/**
+ * What the button says when you are already running something
+ * (PLAN.md M126).
+ *
+ * It said *Start this program* unconditionally — on the program you are in
+ * week 6 of, with no sign that you are, and on a second program with no
+ * sign that starting it ends the first. `startProgram` closes the open row
+ * with `'switched'` and always did; the record was honest and the screen
+ * said nothing, so the climber was the only one who did not know.
+ *
+ * Three states: this is the block you are on, another block is open, or
+ * nothing is running. Only the last one is the plain button it used to be.
+ */
+function StartOrOpen({ programId, kind }: { programId: string; kind: string }) {
+  const { program: runningProgram, day } = usePlannedDay(today());
+  if (kind !== 'program') return null;
+
+  const mine = runningProgram?.id === programId;
+  const week =
+    day === undefined || day.over
+      ? null
+      : `Week ${day.week} of ${runningProgram?.weeks ?? '?'}${day.phase ? ` · ${day.phase.name}` : ''}`;
+  // Without the phase, because this one reads mid-sentence. Lowercasing the
+  // full line to make it fit turned The Anvil (Repeaters) into "the anvil
+  // (repeaters)", which the browser caught and jsdom could not.
+  const weekShort =
+    day === undefined || day.over ? null : `week ${day.week} of ${runningProgram?.weeks ?? '?'}`;
+
+  if (mine) {
+    return (
+      <div className="grid grid-cols-1 gap-2">
+        <Link
+          href="/finish"
+          className="focus-ring inline-flex items-center justify-center gap-2 w-full bg-accent text-accent-ink font-semibold rounded-xl py-3 hover:bg-accent-strong transition-colors"
+        >
+          <Activity size={16} /> {day?.over === true ? 'See how it went' : 'How this block is going'}
+        </Link>
+        <p className="text-xs text-ink-soft text-center">
+          {day?.over === true
+            ? 'You are on this one, and it has run its weeks.'
+            : `You are on this one${week ? ` · ${week}` : ''}.`}
+        </p>
+        <Link
+          href={`/train/${programId}/start`}
+          className="focus-ring inline-flex items-center justify-center gap-2 w-full bg-transparent text-ink border border-line font-semibold rounded-xl py-2.5 hover:bg-sunken transition-colors"
+        >
+          Change my week
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-2">
+      <Link
+        href={`/train/${programId}/start`}
+        className="focus-ring inline-flex items-center justify-center gap-2 w-full bg-accent text-accent-ink font-semibold rounded-xl py-3 hover:bg-accent-strong transition-colors"
+      >
+        <Play size={16} /> Start this program
+      </Link>
+      {runningProgram !== undefined && (
+        <p className="text-xs text-warn flex items-start gap-1.5">
+          <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+          <span>
+            Starting this ends {runningProgram.name}
+            {weekShort ? ` in ${weekShort}` : ''}. Your history keeps it, and you can pick it up
+            again where you left off.
+          </span>
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function ProgramDetailPage({ params }: { params: { id: string } }) {
   const display = useSettings((s) => s.display);
   const program = getProgram(params.id);
@@ -290,14 +366,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
             </p>
           </div>
 
-          {program.kind === 'program' && (
-            <Link
-              href={`/train/${program.id}/start`}
-              className="inline-flex items-center justify-center gap-2 w-full bg-accent text-accent-ink font-semibold rounded-xl py-3 hover:bg-accent-strong transition-colors"
-            >
-              <Play size={16} /> Start this program
-            </Link>
-          )}
+          <StartOrOpen programId={program.id} kind={program.kind} />
         </Card>
 
         {program.prerequisites && (

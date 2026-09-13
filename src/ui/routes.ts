@@ -57,7 +57,7 @@ export const ROUTES: RouteMeta[] = [
 
   // Train
   { path: '/find', title: 'Find my program', parent: '/train', group: 'Train', keywords: ['finder', 'recommend', 'which program'] },
-  { path: '/finish', title: 'Block review', parent: '/train', group: 'Train', keywords: ['finished', 'block end', 'what next', 'graduation', 'last week', 'history', 'blocks you have run'] },
+  { path: '/finish', title: 'Block review', parent: '/train', group: 'Train', keywords: ['finished', 'block end', 'what next', 'graduation', 'last week', 'history', 'blocks you have run', 'stop', 'quit', 'switch program', 'how is my block going'] },
   { path: '/finish/:id', title: 'Block', parent: '/finish' },
   { path: '/train/:id', title: 'Program', parent: '/train' },
   { path: '/train/:id/start', title: 'Start a program', parent: '/train/:id' },

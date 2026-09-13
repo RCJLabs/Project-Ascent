@@ -1,15 +1,110 @@
+import { useMemo } from 'react';
 import { Link } from 'wouter';
-import { ChevronRight, Flag, PenLine, Sparkles, Target, TriangleAlert } from 'lucide-react';
+import { Activity, ChevronRight, Flag, History, PenLine, Sparkles, Target, TriangleAlert } from 'lucide-react';
 import { PROGRAMS, STAGE_META, STAGE_ORDER } from '@/content/programs';
 import { canRun } from '@/engine/customProgram';
+import { sortBlocks } from '@/engine/blocks';
+import { today } from '@/engine/dates';
 import { activeObjectives } from '@/engine/objectives';
 import { activeProjects } from '@/engine/projects';
+import { usePlannedDay } from '@/features/log/usePlannedDay';
 import { useObjectives } from '@/store/objectives';
+import { useProfile } from '@/store/profile';
 import { useCustomPrograms } from '@/store/programs';
 import { useProjects } from '@/store/projects';
 import { PageHeader } from '@/ui/PageHeader';
 import { displayRange } from '@/engine/grades';
 import { useSettings } from '@/store/settings';
+
+const HERO = 'bg-accent text-accent-ink rounded-2xl p-4 flex items-center gap-3 hover:bg-accent-strong transition-colors';
+const ROW = 'bg-surface border border-line rounded-2xl p-4 flex items-center gap-3 hover:border-accent transition-colors';
+
+/**
+ * The block you are running, on the tab named after it (PLAN.md M126).
+ *
+ * `TrainPage` read custom programs, objectives and projects and never
+ * `activeProgramId`, so the tab called Train was a pure catalogue — it
+ * offered to find you a program in week 6 of Iron Grip, and everything
+ * about the block you were actually on lived on Home's card and the
+ * calendar. A climber looking for *how is my block going* had nowhere to
+ * look, and the one door to the block screen was a nudge that appears only
+ * once a block has run out its weeks.
+ *
+ * So the running block is the hero here, and the finder steps down to a row
+ * beneath it. When nothing is running the finder is the hero again, as it
+ * was, with the history behind it if there is any.
+ */
+function YourBlock() {
+  const { program, day } = usePlannedDay(today());
+  const blocks = useProfile((s) => s.blocks);
+  // Every row, not only the closed ones: this branch runs when nothing is
+  // active, so there is no block to exclude — and a row left open by a
+  // block that simply ran out its weeks is still one the climber ran
+  // (`outcomeOf` reads that state as 'completed'). Newest first, the order
+  // `sortBlocks` gives and the block screen relies on.
+  const past = useMemo(() => sortBlocks(blocks), [blocks]);
+
+  if (program === undefined) {
+    return (
+      <>
+        <Link href="/find" className={`${HERO} mb-2`}>
+          <Sparkles size={20} className="shrink-0" />
+          <div className="flex-1">
+            <div className="font-bold">Find my program</div>
+            <div className="text-sm opacity-90">Answer seven questions and get a pick with its reasoning</div>
+          </div>
+          <ChevronRight size={18} className="shrink-0" />
+        </Link>
+        {past.length > 0 && (
+          <Link href="/finish" className={`${ROW} mb-5`}>
+            <History size={18} className="shrink-0 text-accent" />
+            <div className="flex-1 min-w-0">
+              <div className="font-bold">Blocks you have run</div>
+              <p className="text-sm text-ink-soft truncate">
+                {past.length} behind you. The last was {past[0]!.name}.
+              </p>
+            </div>
+            <ChevronRight size={18} className="text-ink-soft shrink-0" />
+          </Link>
+        )}
+      </>
+    );
+  }
+
+  // `day` is undefined when a program is active with no start date or plan,
+  // which a restored backup can be. Saying "running" and nothing more is the
+  // honest answer; the screen behind the link says the rest.
+  const line =
+    day === undefined
+      ? 'Running now'
+      : day.over
+        ? 'Has run its course — see what it moved'
+        : `Week ${day.week} of ${program.weeks}${day.phase ? ` · ${day.phase.name}` : ''}${day.isDeload ? ' · Deload' : ''}`;
+
+  return (
+    <>
+      <Link href="/finish" className={`${HERO} mb-2`}>
+        <Activity size={20} className="shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="text-2xs font-bold uppercase tracking-widest opacity-80">Your block</div>
+          <div className="font-bold">{program.name}</div>
+          <div className="text-sm opacity-90">{line}</div>
+        </div>
+        <ChevronRight size={18} className="shrink-0" />
+      </Link>
+      <Link href="/find" className={`${ROW} mb-5`}>
+        <Sparkles size={18} className="shrink-0 text-accent" />
+        <div className="flex-1 min-w-0">
+          <div className="font-bold">Find another program</div>
+          <p className="text-sm text-ink-soft">
+            Starting one ends this block. Your history keeps it either way.
+          </p>
+        </div>
+        <ChevronRight size={18} className="text-ink-soft shrink-0" />
+      </Link>
+    </>
+  );
+}
 
 export function TrainPage() {
   const display = useSettings((st) => st.display);
@@ -21,17 +116,7 @@ export function TrainPage() {
   return (
     <>
       <PageHeader title="Train" subtitle="Structured climbing programs" />
-      <Link
-        href="/find"
-        className="bg-accent text-accent-ink rounded-2xl p-4 flex items-center gap-3 mb-5 hover:bg-accent-strong transition-colors"
-      >
-        <Sparkles size={20} className="shrink-0" />
-        <div className="flex-1">
-          <div className="font-bold">Find my program</div>
-          <div className="text-sm opacity-90">Answer seven questions and get a pick with its reasoning</div>
-        </div>
-        <ChevronRight size={18} className="shrink-0" />
-      </Link>
+      <YourBlock />
       {/* Objectives and projects side by side (PLAN.md M117): the thing a
           program is for, and the climbs it is for. Projects had a tab of
           their own until the bar went to five; a project is training, so

@@ -5767,8 +5767,8 @@ rests on an inference it says so.*
   chart series, and a climber who changes theme should not have to relearn what *danger*
   looks like. This changes the paper, not the warnings.
 
-- **M126 — the block you are running has nowhere to live, and no way out.** *Proposed. The
-  largest product hole in the app, and the one a real climber hits first.*
+- **M126 — the block you are running has nowhere to live, and no way out.** *Proposed, and
+  the first of these built — see the Done entry at the end of this file.*
   **You cannot stop a program.** `stopProgram()` exists, writes a proper `'stopped'` outcome
   into the block history, and is reachable from exactly two places in the entire UI: clearing
   the sample data (`features/settings/SettingsPage.tsx:309`, inside `clearDemo`) and deleting
@@ -5927,3 +5927,75 @@ rests on an inference it says so.*
   that is computed and never offered. One-line fixes; take them in passing.
 - *`engine/priority.ts`* — 103 lines plus tests, and no importer anywhere but its own test. It
   was M64's derivation evidence. Delete it in passing.
+
+- **M126 — the block you are running has nowhere to live, and no way out.** *Done.*
+  **Three holes that were one missing idea:** the app had a block, and no screen that was
+  about it.
+  **You could not stop a program.** `stopProgram()` shipped in M87, writes a proper
+  `'stopped'` outcome into the block history, and was reachable from exactly two places in
+  the whole UI — clearing the sample data, and deleting a custom program you happened to be
+  running. A climber who got injured, went away, or simply changed their mind had no control
+  to press; the block stayed open and the log went on prescribing from it. It is a card at
+  the foot of the block screen now, and **it offers an undo**, because it is a destructive
+  call with a record behind it. The undo puts the whole state back rather than starting the
+  program again: a re-start mints a new block row and abandons the one being filled, which is
+  a second way to do something similar rather than a reversal — the rule `restoreInjury` has
+  followed since M79, now with `restoreProgram` beside it.
+  **The copy does not make it frightening, because stopping costs almost nothing.** Nothing
+  is planned afterwards, everything logged stays, the block keeps its place in the history,
+  and `StartProgramPage` already offers resume against restart — so coming back picks up the
+  week you were on. The reason nobody could find the control was never a reason to guard it.
+  **The Train tab never mentioned the block.** `TrainPage` read custom programs, objectives
+  and projects and never `activeProgramId`, so the tab named after training offered to find
+  you a program in week 6 of Iron Grip. The running block is the hero there now — name, week,
+  phase, deload — and the finder steps down to a row under it that says what starting another
+  one costs. With nothing running the finder is the hero again, as it was, with the history
+  behind it when there is any.
+  **And the history hung off one conditional nudge.** `/finish` holds the block report, the
+  exercise movement, the adherence reading and *Blocks you have run*, and it was linked from
+  exactly one place: the block-over nudge, which appears only once a block has run out its
+  calendar. Switch early and the door shut, while the route's own search keywords went on
+  promising "history, blocks you have run". Two permanent doors now, one from the block hero
+  and one from the Train tab when nothing is running.
+  **The program page knows whether you are on it.** It said *Start this program*
+  unconditionally — on the program you were in week 6 of, and on a second program with no
+  sign that starting it ends the first. `startProgram` closes the open row with `'switched'`
+  and always did, so the record was honest and the screen was the only thing that said
+  nothing. Three states now: this is your block (open it, or change your week), another block
+  is open (start, with a line naming what it ends), or nothing is running (the plain button).
+  **The destructive-call net grew to cover it.** `ui/safety.test.ts` scans every feature
+  component for a destructive call and demands an undo within a dozen lines or a written
+  reason; `stopProgram` was not in its vocabulary. It is now, which took a backward look at
+  the surrounding lines to tell which function a call sits in — `stopProgram()` inside
+  `clearDemo` is two lines *after* the `wipeDemo()` that identifies it, and a forward-only
+  window cannot see what it belongs to.
+  **Measured, not asserted.** Twenty-two mutations, every one killed, and the first round is
+  worth recording because three survived it and two of those were real. *The history named
+  the oldest block a climber had ever run as "the last"* — `sortBlocks` is newest-first and
+  the code read the other end of it — and the same mutation showed the filter beneath it was
+  wrong in the other direction: nothing closes a row when its weeks simply run out, so
+  counting only closed rows told a climber who saw a block through that they had run none.
+  *And the destructive-site floor was set to seventeen, which is exactly the count without
+  `stopProgram`*, so dropping it from the regex passed — the ceiling-cannot-notice-being-raised
+  trap `perf.test.ts` names, in a second file. It is twenty now. The third survivor is an
+  equivalent mutant and is left standing deliberately: the `activeProgramId !== null` clause
+  in the running check is unreachable given the early return above it, and it stays as a
+  guard for a fallback path that may change.
+  **In a browser, both themes, 430px and 1280px.** Train leads with *Your block · Iron Grip ·
+  Week 2 of 12 · The Anvil (Repeaters)* linking to the block screen, with the finder under it.
+  The program page reads *You are on this one* with *Change my week* beneath, and Lockdown
+  warns what starting it ends. Stopping closes the row in IndexedDB with `reason: 'stopped'`
+  and clears the active program; undo puts `endedAt` and `reason` back to null and the hero
+  returns to Train. No overflow, no page errors.
+  **One thing the browser caught that jsdom could not:** the switch warning read *"Starting
+  this ends Iron Grip, week 2 of 12 · the anvil (repeaters)"* — the whole week line was being
+  lowercased to sit mid-sentence, and it took the phase name with it. The warning drops the
+  phase now, and a test pins the sentence.
+  **One thing it turned up that is not this milestone's:** the shell renders `UndoBar`,
+  `StorageWarning`, `UpdatePrompt` and `LiveBar` twice, once per breakpoint, with exactly one
+  visible at any width. That is the shell's responsive pattern and it is correct on screen,
+  but it puts two `role="status"` regions in the DOM and fires the announcement twice. Worth
+  a look when something next touches `AppShell`.
+  **Budget.** Unchanged at 164.0, measured 163.06 → 163.44. Every screen this touches is a
+  lazy route; what reaches the entry chunk is `restoreProgram` in the profile store.
+  3,983 tests pass.

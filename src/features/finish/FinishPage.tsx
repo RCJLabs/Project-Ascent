@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Link } from 'wouter';
-import { ChevronRight, Ruler, Search } from 'lucide-react';
+import { ChevronRight, CircleStop, Ruler, Search } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { blockEnd, describeBlockEnd, programForRecord } from '@/engine/blockEnd';
 import {
@@ -17,6 +17,7 @@ import { formatEntry } from '@/engine/assessments';
 import { fromKey, today } from '@/engine/dates';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
+import { offerUndo } from '@/store/undo';
 import { useSessions } from '@/store/sessions';
 import { blockAdherence, describeAdherence } from '@/engine/adherence';
 import { useSettings } from '@/store/settings';
@@ -97,6 +98,53 @@ function BlockHistory({ history, current }: { history: BlockRecord[]; current: B
           );
         })}
       </ul>
+    </Card>
+  );
+}
+
+/**
+ * The way out of a block (PLAN.md M126).
+ *
+ * `stopProgram` shipped in M87 and was reachable from exactly two places in
+ * the app: clearing the sample data, and deleting a custom program you
+ * happened to be running. A climber who got injured, went away, or simply
+ * changed their mind had no control to press — the block stayed open and
+ * Home went on prescribing from it. This is that control, on the screen
+ * that is about the block.
+ *
+ * **It offers an undo, because it is a destructive call with a record
+ * behind it**, and the undo puts the whole state back rather than starting
+ * the program again: a re-start mints a new block row and abandons the one
+ * being filled, which is a second way to do something similar rather than
+ * a reversal (the same rule `restoreInjury` follows).
+ *
+ * The copy says what stopping costs, which is almost nothing, because the
+ * reason nobody could find this control is not a reason to make it
+ * frightening: `StartProgramPage` already offers resume against restart for
+ * a program with a start date, so coming back picks up the week you were on.
+ */
+function StopBlockCard({ name }: { name: string }) {
+  const activeProgramId = useProfile((s) => s.activeProgramId);
+  const blocks = useProfile((s) => s.blocks);
+  const stopProgram = useProfile((s) => s.stopProgram);
+  const restoreProgram = useProfile((s) => s.restoreProgram);
+
+  function stop() {
+    const before = { activeProgramId, blocks };
+    stopProgram();
+    offerUndo(name, async () => restoreProgram(before), 'stopped');
+  }
+
+  return (
+    <Card title="Stop this block">
+      <p className="text-sm text-ink-soft leading-relaxed mb-3">
+        Nothing is planned after you stop, and the log goes back to counting whatever you climb.
+        Everything you have logged stays where it is, this block keeps its place in your history,
+        and starting {name} again later resumes the week you were on rather than beginning it over.
+      </p>
+      <Button variant="outline" onClick={stop}>
+        <CircleStop size={15} /> Stop {name}
+      </Button>
     </Card>
   );
 }
@@ -214,6 +262,18 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
   }
 
   const { status, report, graduation, owed, next } = end;
+
+  /**
+   * Whether the block on screen is the one the climber is on.
+   *
+   * `chosen === null` is the fallback path above, where there is no history
+   * and the live program is being reported — which is a running block by
+   * definition. Otherwise it has to be both open and the active one: a past
+   * row must not offer to stop something it is not.
+   */
+  const running =
+    activeProgramId !== null &&
+    (chosen === null || (chosen.endedAt === null && chosen.programId === activeProgramId));
 
   /**
    * What the climber already decided (PLAN.md M112c).
@@ -439,6 +499,8 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
             </Button>
           </Link>
         </Card>
+        {running && <StopBlockCard name={end.program.name} />}
+
       </PageGrid>
     </>
   );

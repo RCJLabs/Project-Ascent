@@ -125,7 +125,7 @@ describe('a delete can be undone', () => {
    * where every one of the fourteen sites puts it.
    */
   const DESTRUCTIVE =
-    /\b(removeInjury|deleteMedia|clearSnapshot)\(|\bremove\((?!\))|setMarks\([^)]*, \[\]\)|requirements\.filter\(|climbs: before\.filter|projectAttempts: before\.filter/;
+    /\b(removeInjury|deleteMedia|clearSnapshot|stopProgram)\(|\bremove\((?!\))|setMarks\([^)]*, \[\]\)|requirements\.filter\(|climbs: before\.filter|projectAttempts: before\.filter/;
 
   /** Sites that destroy without an offer, each with the reason it may. */
   const ALLOWED: Record<string, string> = {
@@ -149,6 +149,11 @@ describe('a delete can be undone', () => {
         sites += 1;
         const window = lines.slice(i, i + 12).join('\n');
         if (window.includes('offerUndo(')) return;
+        // A few lines back as well, only to name the function this call is
+        // in. `stopProgram()` inside `clearDemo` is two lines after the
+        // `wipeDemo()` that identifies it, and a forward-only window cannot
+        // see what it belongs to (PLAN.md M126).
+        const context = lines.slice(Math.max(0, i - 8), i + 12).join('\n');
         // A button that calls a local `remove` is covered by the offer that
         // `remove` makes after its write — the photo delete works that way,
         // so the store call and the offer sit together in one function.
@@ -156,7 +161,7 @@ describe('a delete can be undone', () => {
         if (local) return;
         const fn = /clearSnapshot/.test(line)
           ? '#clearSnapshot'
-          : /demoInjuries\(\)/.test(line)
+          : /demoInjuries\(\)/.test(line) || /wipeDemo\(/.test(context)
             ? '#clearDemo'
             : '';
         if (ALLOWED[path + fn] !== undefined || ALLOWED[path] !== undefined) return;
@@ -164,8 +169,14 @@ describe('a delete can be undone', () => {
       });
     }
     expect(misses).toEqual([]);
-    // A scan that matches nothing passes for the wrong reason.
-    expect(sites).toBeGreaterThanOrEqual(14);
+    // A scan that matches nothing passes for the wrong reason — and a floor
+    // set below what the regex actually finds cannot notice a *kind* of
+    // destructive call being dropped from it, which is how a ceiling test
+    // fails silently (the same trap `perf.test.ts` names). Seventeen sites
+    // until M126 added the three `stopProgram` calls, so twenty. Set it to
+    // seventeen and dropping `stopProgram` from the regex above still
+    // passes, which is exactly what a mutation showed.
+    expect(sites).toBeGreaterThanOrEqual(20);
   });
 
   it('keeps every allowance pointing at a line that still exists', () => {
