@@ -5793,8 +5793,8 @@ rests on an inference it says so.*
   asked of you and what you have done, the way to pause, stop or switch it, and the way back
   to every block before it.
 
-- **M127 — a dose that moves inside a phase.** *Proposed. The first of the dose phase, and
-  what the rest of it needs.*
+- **M127 — a dose that moves inside a phase.** *Proposed, and built third — see the Done
+  entry at the end of this file.*
   Progression is quantised to four weeks. `ExerciseBlock.perPhase` is
   `Record<PhaseId, PhasePrescription>` (`content/types.ts:191`) and its only reader is
   `prescriptionFor(sessionType, phase, trackId)` (`engine/plan.ts:148-163`), which takes a
