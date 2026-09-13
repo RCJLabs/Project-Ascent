@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { BookOpen, CheckCheck, ChevronLeft, ChevronRight, Rows3 } from 'lucide-react';
 import { getProgram } from '@/content/programs';
@@ -11,6 +11,7 @@ import { summarise } from '@/engine/injury';
 import { INTENSITY_LABEL } from '@/content/types';
 import { effortOfDay } from '@/engine/effort';
 import { monthMarks, worthExplaining } from '@/engine/monthMarks';
+import { tallied, weekTally, type WeekTally } from '@/engine/weekTally';
 import { intensityOf } from '@/engine/scheduler';
 import { useProfile } from '@/store/profile';
 import type { Session } from '@/db/sessions';
@@ -18,11 +19,94 @@ import { useSessions } from '@/store/sessions';
 import { offerUndo } from '@/store/undo';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { Meter } from '@/ui/Meter';
 import { IconButton } from '@/ui/IconButton';
 import { PageHeader } from '@/ui/PageHeader';
 import { weekHref } from '@/ui/routes';
 
 const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+/**
+ * Seven day columns and a narrow gutter (PLAN.md M146).
+ *
+ * `2.2rem` rather than a fraction: the days keep equal shares of what is
+ * left, so the gutter costs the same on a phone and a desktop instead of
+ * one seventh of the grid at every width. Measured at 430px it takes the
+ * squares from 52px to 47px, which still clears the 44px tap target the
+ * cells are sized to.
+ */
+const GRID = 'grid-cols-[repeat(7,minmax(0,1fr))_2.2rem]';
+
+/**
+ * How the week went, beside the week (PLAN.md M146).
+ *
+ * A meter and a fraction, not one or the other: the bar is what makes a
+ * month scannable without reading it — five rows of fill you take in at a
+ * glance — and the numbers under it are what make it exact.
+ *
+ * ## A week that has not happened is not a week you missed
+ *
+ * The first build read *0/4* down every future row, which is true and
+ * reads as failure. A week whose Sunday is still ahead shows what it asks
+ * for and nothing about what was done, because nothing has been.
+ *
+ * ## And a week can hold more than it asked for
+ *
+ * *2/4* on a week where two more sessions were logged off-plan under-reports
+ * the training in it, so `+2` goes under the fraction. Off-plan sessions are
+ * kept separate rather than folded into the numerator: the fraction is
+ * adherence to a plan, and a week that did four different sessions did not
+ * do the four it was asked for.
+ */
+function WeekGutter({ start, tally, today }: { start: string; tally: WeekTally; today: string }) {
+  // Nothing planned and nothing logged: a week before the block, after it,
+  // or with no program at all. An empty gutter beats "0/0" on every row.
+  if (!tallied(tally)) return <div aria-hidden />;
+  const { planned, done, extra } = tally;
+  const ahead = start > today;
+  const label = ahead
+    ? `Week of ${shortLabel(start)}: ${planned} session${planned === 1 ? '' : 's'} planned`
+    : planned === 0
+      ? `Week of ${shortLabel(start)}: ${extra} session${extra === 1 ? '' : 's'} logged, none planned`
+      : `Week of ${shortLabel(start)}: ${done} of ${planned} planned session${
+          planned === 1 ? '' : 's'
+        } done${extra > 0 ? `, and ${extra} more off the plan` : ''}`;
+
+  return (
+    <Link
+      href={weekHref(start)}
+      aria-label={label}
+      className="focus-ring flex flex-col items-center justify-center gap-1 rounded-lg py-1 hover:bg-sunken"
+    >
+      {!ahead && (
+        // `Meter`, not a hand-rolled bar: `ui.test.ts` holds feature files
+        // to the primitive, and the reason is the half a class string
+        // cannot carry — a value and a text form for anyone who cannot see
+        // the fill. Its own label is the short form, since the link around
+        // it already carries the sentence.
+        <Meter
+          value={planned === 0 ? 0 : done / planned}
+          label={`${done} of ${planned} done`}
+          valueText={`${done} of ${planned}`}
+          size="sm"
+          tone={planned > 0 && done >= planned ? 'positive' : 'accent'}
+          className="w-full"
+        />
+      )}
+      <span
+        className={`text-2xs tabular-nums leading-none ${ahead ? 'text-ink-soft/60' : 'text-ink-soft'}`}
+        aria-hidden
+      >
+        {ahead ? planned : planned === 0 ? `+${extra}` : `${done}/${planned}`}
+      </span>
+      {!ahead && planned > 0 && extra > 0 && (
+        <span className="text-2xs tabular-nums leading-none text-ink-soft/70" aria-hidden>
+          +{extra}
+        </span>
+      )}
+    </Link>
+  );
+}
 
 function JournalLink() {
   return (
@@ -196,6 +280,199 @@ export function CalendarPage() {
 
   const marks = useMemo(() => monthMarks(cells), [cells]);
 
+  /**
+   * How each week of the grid went, from the same pass (PLAN.md M146).
+   *
+   * A training week and a rest week looked alike until you counted icons.
+   * The count comes from `weekTally`, the rule the week screen reads, so
+   * the gutter here and "three of four" there cannot disagree — the fault
+   * M145 spent a milestone removing from the legend, not reintroduced one
+   * column to the right.
+   */
+  const weeks = useMemo(
+    () =>
+      Array.from({ length: Math.ceil(cells.length / 7) }, (_, row) => {
+        const week = cells.slice(row * 7, row * 7 + 7);
+        return {
+          start: week[0]!.date,
+          tally: weekTally(week.map((c) => ({ training: c.type !== undefined, sessions: c.logged }))),
+        };
+      }),
+    [cells],
+  );
+
+  function renderDay({ date, logged, done, inMonth, type, isDeload, test }: (typeof cells)[number]) {
+        const isToday = date === today();
+        const planned = type !== undefined;
+        // Outside the running block's window and nowhere else. Both ends
+        // inclusive: the block's last day is still the block's.
+        //
+        // A `day.week === null` check stood here too and no mutation could
+        // kill it — `blockWindow` and `plannedDay` both take their length
+        // from the same `program` object, so they describe the same window
+        // and the second test could never disagree with the first.
+        const inRunningBlock =
+          running !== null && running.from <= date && date <= running.to;
+        const ghost = ghostSeason && !inRunningBlock ? blockOn(ghostSeason, date) : null;
+        // Which block, not just that there is one. A season is eight to
+        // twelve weeks a block, so a whole month is usually inside one and
+        // a single tint says nothing you could not have guessed — the
+        // first build shaded thirty-five of thirty-five cells in a grey two
+        // percent off the page and read as "the calendar is broken".
+        // Alternating puts the boundary on screen, which is the thing
+        // worth knowing.
+        // The day a block begins, which is the information. A single tint
+        // over a whole month says nothing — the first build shaded
+        // thirty-five of thirty-five cells in a grey two percent off the
+        // page and read as "the calendar is broken". The boundary is what
+        // a climber is looking for, so that is what gets the emphasis.
+        const ghostStarts = ghost !== null && ghost.from === date;
+        // Alternating, so the hand-off from one block to the next is a
+        // change you can see rather than a border you have to find. Both
+        // sit below `done` at /15: an intention must never read as
+        // stronger than a day that actually happened, and neither lands
+        // on `pickable` at /5.
+        const ghostBand = ghost ? ghostSeason!.blocks.indexOf(ghost) % 2 : -1;
+
+        // Folded into `tone` rather than appended to the shell: both set a
+        // border colour and a background, and appending left the two
+        // fighting on Tailwind's emit order rather than on class order —
+        // so a picked day rendered exactly like an unpicked one. A browser
+        // showed that; jsdom has no cascade and the `aria-pressed` test
+        // passed either way. `Field.tsx` records the same trap.
+        const chosen = marking && picked.has(date);
+        const edge = chosen
+          ? 'border-accent'
+          : isToday
+            ? 'border-accent'
+            : ghostStarts
+              ? 'border-accent/50'
+              : 'border-line';
+
+        /**
+         * Exactly one background class, chosen here rather than stacked.
+         *
+         * This cell used to emit up to three — a state tint, the
+         * in-month fill, and the logged tint — and which one you saw came
+         * down to the order Tailwind happened to emit them in rather than
+         * the order they were written. M100's picked day was invisible
+         * because of it, and the `done` and in-month pair had the same
+         * coin flip latent. `Field.tsx` records the trap for type sizes.
+         */
+        /**
+         * How hard the day was, as the one channel a 40px cell has left
+         * (PLAN.md M144). M131 turned down four hues for planned
+         * intensity and was right to: this is a monochrome ramp of the
+         * same accent, which reads as *more* rather than as *different*,
+         * and it is the shade the ✅ sits on rather than a fifth marker.
+         * The accessible name carries the same fact in words, because a
+         * tint alone says nothing to a reader who cannot see it.
+         */
+        const effort = done ? effortOfDay(logged, type) : null;
+        const fill = chosen
+          ? 'bg-accent/30'
+          : done
+            ? effort === 'max'
+              ? 'bg-accent/50'
+              : effort === 'hard'
+                ? 'bg-accent/32'
+                : effort === 'moderate'
+                  ? 'bg-accent/20'
+                  : effort === 'easy'
+                    ? 'bg-accent/8'
+                    : 'bg-accent/15'
+            : ghost
+              ? ghostBand === 0
+                ? 'bg-accent/10'
+                : 'bg-accent/3'
+              : inMonth
+                ? 'bg-surface'
+                : 'bg-transparent';
+
+        const body = (
+          <>
+            <span className={`text-xs ${isToday ? 'font-black text-accent' : 'text-ink-soft'}`}>
+              {fromKey(date).getDate()}
+            </span>
+            {done ? (
+              <span className="text-sm leading-none">✅</span>
+            ) : planned ? (
+              <span className="text-sm leading-none">{type!.icon}</span>
+            ) : (
+              <span className="text-sm leading-none text-ink-soft/40">·</span>
+            )}
+            {/* The limit days, and only those (PLAN.md M131). Session
+                types carry an intensity now, and the tempting thing was
+                to paint all four of them — four colours on a 40px cell
+                in a seven-column grid, encoding the one thing a climber
+                most wants to see at a glance in nothing but hue. One
+                mark for the hardest day answers the question the week
+                view is actually asked (*where are my hard days*) and
+                leaves the grid readable. */}
+            {inMonth && planned && intensityOf(type) === 'max' && (
+              <span className="text-2xs font-bold uppercase text-warn leading-none">LIMIT</span>
+            )}
+            {/* Both, when a week is both (PLAN.md M67). Suppressing the
+                test marker on a deload week sounded tidy and lost Peak
+                Performance *both* of its mid-block tests: it deloads on
+                weeks 5 and 9, which are the two weeks its phases start.
+                A deload is also the week you are freshest to test in. */}
+            {inMonth && (isDeload || test !== undefined) && (
+              <span className="flex items-center gap-0.5 leading-none">
+                {isDeload && (
+                  <span className="text-2xs font-bold uppercase text-warn leading-none">DL</span>
+                )}
+                {test !== undefined && (
+                  <span className="text-2xs font-bold uppercase text-accent leading-none">T</span>
+                )}
+              </span>
+            )}
+          </>
+        );
+
+        const shell = `focus-ring aspect-square rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-colors ${edge} ${fill}${
+          inMonth ? '' : ' opacity-40'
+        }`;
+
+        // Marking turns the grid into a picker (PLAN.md M100). Only days
+        // that are past and empty: you cannot have trained tomorrow, and a
+        // day that is already logged is already answered.
+        if (marking) {
+          const selectable = date <= today() && logged.length === 0;
+          return (
+            <button
+              key={date}
+              className={shell}
+              disabled={!selectable}
+              aria-pressed={chosen}
+              aria-label={`${chosen ? 'Unmark' : 'Mark'} ${shortLabel(date)} as trained`}
+              onClick={() => togglePicked(date)}
+            >
+              {body}
+            </button>
+          );
+        }
+
+        return (
+          <Link
+            key={date}
+            href={`/log/${date}`}
+            className={shell}
+            // The shade is the only thing that says how hard the day was,
+            // and a shade is nothing to a screen reader (PLAN.md M144).
+            {...(done
+              ? {
+                  'aria-label': `${shortLabel(date)} — logged${
+                    effort ? `, ${INTENSITY_LABEL[effort].toLowerCase()}` : ''
+                  }`,
+                }
+              : {})}
+          >
+            {body}
+          </Link>
+        );
+  }
+
   return (
     <>
       <PageHeader
@@ -287,186 +564,23 @@ export function CalendarPage() {
         </p>
       )}
 
-      <div className="grid grid-cols-7 gap-1 mb-1">
+      <div className={`grid ${GRID} gap-1 mb-1`}>
         {DAY_INITIALS.map((d, i) => (
           <div key={i} className="text-center text-2xs font-bold uppercase text-ink-soft py-1">
             {d}
           </div>
         ))}
+        {/* The gutter's own heading, so the column is not a mystery. */}
+        <div className="text-center text-2xs font-bold uppercase text-ink-soft py-1">Wk</div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
-        {cells.map(({ date, logged, done, inMonth, type, isDeload, test }) => {
-          const isToday = date === today();
-          const planned = type !== undefined;
-          // Outside the running block's window and nowhere else. Both ends
-          // inclusive: the block's last day is still the block's.
-          //
-          // A `day.week === null` check stood here too and no mutation could
-          // kill it — `blockWindow` and `plannedDay` both take their length
-          // from the same `program` object, so they describe the same window
-          // and the second test could never disagree with the first.
-          const inRunningBlock =
-            running !== null && running.from <= date && date <= running.to;
-          const ghost = ghostSeason && !inRunningBlock ? blockOn(ghostSeason, date) : null;
-          // Which block, not just that there is one. A season is eight to
-          // twelve weeks a block, so a whole month is usually inside one and
-          // a single tint says nothing you could not have guessed — the
-          // first build shaded thirty-five of thirty-five cells in a grey two
-          // percent off the page and read as "the calendar is broken".
-          // Alternating puts the boundary on screen, which is the thing
-          // worth knowing.
-          // The day a block begins, which is the information. A single tint
-          // over a whole month says nothing — the first build shaded
-          // thirty-five of thirty-five cells in a grey two percent off the
-          // page and read as "the calendar is broken". The boundary is what
-          // a climber is looking for, so that is what gets the emphasis.
-          const ghostStarts = ghost !== null && ghost.from === date;
-          // Alternating, so the hand-off from one block to the next is a
-          // change you can see rather than a border you have to find. Both
-          // sit below `done` at /15: an intention must never read as
-          // stronger than a day that actually happened, and neither lands
-          // on `pickable` at /5.
-          const ghostBand = ghost ? ghostSeason!.blocks.indexOf(ghost) % 2 : -1;
-
-          // Folded into `tone` rather than appended to the shell: both set a
-          // border colour and a background, and appending left the two
-          // fighting on Tailwind's emit order rather than on class order —
-          // so a picked day rendered exactly like an unpicked one. A browser
-          // showed that; jsdom has no cascade and the `aria-pressed` test
-          // passed either way. `Field.tsx` records the same trap.
-          const chosen = marking && picked.has(date);
-          const edge = chosen
-            ? 'border-accent'
-            : isToday
-              ? 'border-accent'
-              : ghostStarts
-                ? 'border-accent/50'
-                : 'border-line';
-
-          /**
-           * Exactly one background class, chosen here rather than stacked.
-           *
-           * This cell used to emit up to three — a state tint, the
-           * in-month fill, and the logged tint — and which one you saw came
-           * down to the order Tailwind happened to emit them in rather than
-           * the order they were written. M100's picked day was invisible
-           * because of it, and the `done` and in-month pair had the same
-           * coin flip latent. `Field.tsx` records the trap for type sizes.
-           */
-          /**
-           * How hard the day was, as the one channel a 40px cell has left
-           * (PLAN.md M144). M131 turned down four hues for planned
-           * intensity and was right to: this is a monochrome ramp of the
-           * same accent, which reads as *more* rather than as *different*,
-           * and it is the shade the ✅ sits on rather than a fifth marker.
-           * The accessible name carries the same fact in words, because a
-           * tint alone says nothing to a reader who cannot see it.
-           */
-          const effort = done ? effortOfDay(logged, type) : null;
-          const fill = chosen
-            ? 'bg-accent/30'
-            : done
-              ? effort === 'max'
-                ? 'bg-accent/50'
-                : effort === 'hard'
-                  ? 'bg-accent/32'
-                  : effort === 'moderate'
-                    ? 'bg-accent/20'
-                    : effort === 'easy'
-                      ? 'bg-accent/8'
-                      : 'bg-accent/15'
-              : ghost
-                ? ghostBand === 0
-                  ? 'bg-accent/10'
-                  : 'bg-accent/3'
-                : inMonth
-                  ? 'bg-surface'
-                  : 'bg-transparent';
-
-          const body = (
-            <>
-              <span className={`text-xs ${isToday ? 'font-black text-accent' : 'text-ink-soft'}`}>
-                {fromKey(date).getDate()}
-              </span>
-              {done ? (
-                <span className="text-sm leading-none">✅</span>
-              ) : planned ? (
-                <span className="text-sm leading-none">{type!.icon}</span>
-              ) : (
-                <span className="text-sm leading-none text-ink-soft/40">·</span>
-              )}
-              {/* The limit days, and only those (PLAN.md M131). Session
-                  types carry an intensity now, and the tempting thing was
-                  to paint all four of them — four colours on a 40px cell
-                  in a seven-column grid, encoding the one thing a climber
-                  most wants to see at a glance in nothing but hue. One
-                  mark for the hardest day answers the question the week
-                  view is actually asked (*where are my hard days*) and
-                  leaves the grid readable. */}
-              {inMonth && planned && intensityOf(type) === 'max' && (
-                <span className="text-2xs font-bold uppercase text-warn leading-none">LIMIT</span>
-              )}
-              {/* Both, when a week is both (PLAN.md M67). Suppressing the
-                  test marker on a deload week sounded tidy and lost Peak
-                  Performance *both* of its mid-block tests: it deloads on
-                  weeks 5 and 9, which are the two weeks its phases start.
-                  A deload is also the week you are freshest to test in. */}
-              {inMonth && (isDeload || test !== undefined) && (
-                <span className="flex items-center gap-0.5 leading-none">
-                  {isDeload && (
-                    <span className="text-2xs font-bold uppercase text-warn leading-none">DL</span>
-                  )}
-                  {test !== undefined && (
-                    <span className="text-2xs font-bold uppercase text-accent leading-none">T</span>
-                  )}
-                </span>
-              )}
-            </>
-          );
-
-          const shell = `focus-ring aspect-square rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-colors ${edge} ${fill}${
-            inMonth ? '' : ' opacity-40'
-          }`;
-
-          // Marking turns the grid into a picker (PLAN.md M100). Only days
-          // that are past and empty: you cannot have trained tomorrow, and a
-          // day that is already logged is already answered.
-          if (marking) {
-            const selectable = date <= today() && logged.length === 0;
-            return (
-              <button
-                key={date}
-                className={shell}
-                disabled={!selectable}
-                aria-pressed={chosen}
-                aria-label={`${chosen ? 'Unmark' : 'Mark'} ${shortLabel(date)} as trained`}
-                onClick={() => togglePicked(date)}
-              >
-                {body}
-              </button>
-            );
-          }
-
-          return (
-            <Link
-              key={date}
-              href={`/log/${date}`}
-              className={shell}
-              // The shade is the only thing that says how hard the day was,
-              // and a shade is nothing to a screen reader (PLAN.md M144).
-              {...(done
-                ? {
-                    'aria-label': `${shortLabel(date)} — logged${
-                      effort ? `, ${INTENSITY_LABEL[effort].toLowerCase()}` : ''
-                    }`,
-                  }
-                : {})}
-            >
-              {body}
-            </Link>
-          );
-        })}
+      <div className={`grid ${GRID} gap-1`}>
+        {weeks.map((week, row) => (
+          <Fragment key={week.start}>
+            {cells.slice(row * 7, row * 7 + 7).map((cell) => renderDay(cell))}
+            <WeekGutter start={week.start} tally={week.tally} today={today()} />
+          </Fragment>
+        ))}
       </div>
 
       {/* The .ics export lived here from M75 to M121. It is under

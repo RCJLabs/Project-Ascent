@@ -7419,3 +7419,35 @@ something rests on an inference it says so.*
   154.0 had three bytes of room left — smaller than one lazy chunk's hash churn — and a ceiling
   that close fails on builds that changed nothing worth failing over. 1.00KB of slack, inside the
   1.5KB the headroom test allows. 4,568 tests pass.
+
+- **M146 — how each week went, beside the week.** *Done. The first of the three the calendar
+  screenshot prompted.*
+  **What the month could not say.** A training week and a rest week looked alike until you counted
+  icons. The grid was a record of what was planned and what was ticked; it had no answer to *am I
+  keeping up*, which is the question a month view is actually asked. The week screen has answered
+  *three of four* since M135 — for one week at a time, which is the part a month can improve on.
+  **The rule is lifted, not copied.** Adding the count meant either deriving it a second time —
+  the fault M145 had just finished removing from the legend — or pulling it out of `weekOutline`
+  so both screens read one rule. `weekTally` is that rule: planned days, how many carry a finished
+  session, and training logged on days the plan left empty. The week screen now reads it too, so
+  the gutter and *three of four* cannot drift.
+  **A week that has not happened is not a week you missed.** The first build read *0/4* down every
+  future row, which is true and reads as failure. Caught by looking at the build rather than by a
+  test — a week whose Sunday is still ahead now shows what it asks for and no meter at all.
+  **And a week can hold more than it asked for.** *2/4* on a week with two extra sessions
+  under-reports the training in it, so `+2` sits under the fraction. Deliberately not folded into
+  the numerator: the fraction is adherence to a plan, and a week that did four different sessions
+  did not do the four it was asked for.
+  **An eighth column, sized in `rem` rather than as a fraction.** `2.2rem` keeps the gutter the
+  same width at every breakpoint instead of taking one eighth of the grid; measured at 430px the
+  day squares go from 52px to **47.8px**, which still clears the 44px tap target they are sized to.
+  **A project rule the suite caught, and it was right to.** The first build hand-rolled the bar,
+  which `ui.test.ts` forbids in feature files. `ui/Meter` exists for the half a class string cannot
+  carry — a value and a text form for anyone who cannot see the fill — and the gutter uses it.
+  **What the battery found.** Sixty-five mutations. Three survivors were missing assertions: the
+  meter's fill was never checked, nor its tone on a finished week, and no fixture planned a session
+  on the last day of the week, so reading six days instead of seven went unnoticed. One is CSS-only
+  and stays that way — dropping the eighth column leaves the DOM identical and wraps every gutter
+  onto its own row, which jsdom cannot see; the browser check grew two geometry assertions for it,
+  confirmed to fail against the mutation before being trusted.
+  **Budget.** 155.0 holds: 154.00 → 154.09. 4,601 tests pass.

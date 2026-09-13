@@ -39,8 +39,8 @@ import { dayLoad, type DayLoad } from './bodyLoad';
 import { weekDays } from './dates';
 import { DELOAD_STEP, plannedDay, prescriptionFor, type PlannedDay } from './plan';
 import type { WeekOverrides } from './reschedule';
-import { isRestSession } from './rest';
 import { intensityOf, type WeekPlan } from './scheduler';
+import { weekTally } from './weekTally';
 import { describeWork, sessionMinutes } from './sessionLength';
 
 export type DayStatus = 'done' | 'started' | 'missed' | 'today' | 'planned' | 'rest';
@@ -108,11 +108,6 @@ export interface WeekInput {
   injured?: readonly BodyPart[];
 }
 
-/** A finished session that is training rather than a logged rest. */
-function trained(session: Session): boolean {
-  return session.completed && !isRestSession(session);
-}
-
 function statusOf(date: string, today: string, planned: boolean, sessions: readonly Session[]): DayStatus {
   if (sessions.some((s) => s.completed)) return 'done';
   if (sessions.length > 0) return 'started';
@@ -164,11 +159,9 @@ export function weekOutline(input: WeekInput): WeekOutline {
   const before = planning && week === null && !over;
 
   const trainingDays = days.filter((d) => d.training);
-  const planned = trainingDays.length;
-  const done = trainingDays.filter((d) => d.status === 'done').length;
-  const extra = days
-    .filter((d) => !trainingDays.includes(d))
-    .reduce((n, d) => n + d.sessions.filter(trained).length, 0);
+  // Through the shared rule, so the month grid's gutter and this screen
+  // cannot say different things about one week (PLAN.md M146).
+  const { planned, done, extra } = weekTally(days);
 
   // Once per session type rather than once per day: a week with two
   // Fingerboard sessions asks the same thing of both, and saying it twice
