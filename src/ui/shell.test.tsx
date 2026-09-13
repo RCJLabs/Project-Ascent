@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { offerUndo } from '@/store/undo';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { AppShell } from './AppShell';
 import { SearchSheet } from '@/features/search/SearchSheet';
@@ -13,8 +14,9 @@ import { SearchSheet } from '@/features/search/SearchSheet';
  * checks the arrangement rather than trusting the file, because a sixth
  * tab or a search button that went nowhere would each look fine in review.
  */
+const shell = readFileSync('src/ui/AppShell.tsx', 'utf8');
+
 describe('the shell', () => {
-  const shell = readFileSync('src/ui/AppShell.tsx', 'utf8');
 
   it('has five tabs, and they are these', () => {
     const tabs = [...shell.matchAll(/href: '([^']+)', label: '([^']+)'/g)].map((m) => `${m[2]} ${m[1]}`);
@@ -111,5 +113,138 @@ describe('the search sheet', () => {
     }
     expect(hrefs).not.toContain('#/climber');
     expect(hrefs).not.toContain('#/search');
+  });
+});
+
+/**
+ * Every banner mounted once, not once per breakpoint (PLAN.md M141).
+ *
+ * The shell rendered `StorageWarning`, `UndoBar`, `UpdatePrompt` and
+ * `LiveBar` twice — a phone copy and a sidebar copy, one of them always
+ * `display: none`. That hid the duplication perfectly from anything that
+ * reads the accessibility tree, because a hidden element is not in it.
+ * Effects do not care about `display`.
+ */
+describe('the banners are mounted once', () => {
+  /** A storage reading the browser would give, counted as it is asked for. */
+  function countStorageReads(): { calls: () => number; restore: () => void } {
+    let calls = 0;
+    const had = Object.getOwnPropertyDescriptor(navigator, 'storage');
+    Object.defineProperty(navigator, 'storage', {
+      configurable: true,
+      value: {
+        estimate: async () => {
+          calls += 1;
+          return { usage: 1_000, quota: 1_000_000 };
+        },
+        persisted: async () => true,
+      },
+    });
+    return {
+      calls: () => calls,
+      restore: () => {
+        if (had) Object.defineProperty(navigator, 'storage', had);
+        else Reflect.deleteProperty(navigator as unknown as Record<string, unknown>, 'storage');
+      },
+    };
+  }
+
+  it('asks the browser for its storage reading once per page, not twice', async () => {
+    const storage = countStorageReads();
+    try {
+      await reset();
+      await hydrate();
+      renderAt('/train', <AppShell><p>page</p></AppShell>);
+      await waitFor(() => expect(storage.calls()).toBeGreaterThan(0));
+      // Settle, so a second copy's effect would have run by now.
+      await new Promise((r) => setTimeout(r, 20));
+      expect(storage.calls()).toBe(1);
+    } finally {
+      storage.restore();
+    }
+  });
+
+  it('hangs one visibility listener, not two', async () => {
+    const added: string[] = [];
+    const real = document.addEventListener.bind(document);
+    document.addEventListener = ((type: string, ...rest: unknown[]) => {
+      added.push(type);
+      return real(type, ...(rest as [EventListenerOrEventListenerObject]));
+    }) as typeof document.addEventListener;
+    try {
+      await reset();
+      await hydrate();
+      renderAt('/train', <AppShell><p>page</p></AppShell>);
+      await waitFor(() => expect(added.length).toBeGreaterThan(0));
+      expect(added.filter((t) => t === 'visibilitychange')).toHaveLength(1);
+    } finally {
+      document.addEventListener = real;
+    }
+  });
+
+  /**
+   * One offer, one clock. `UndoBar` runs a one-second interval to count the
+   * window down, so a second copy is a second interval waking the app every
+   * second for the same fifteen seconds — and a second `announce()` call
+   * handing the announcer the same sentence twice.
+   */
+  it('runs one countdown for one undo offer', async () => {
+    await reset();
+    await hydrate();
+    renderAt('/train', <AppShell><p>page</p></AppShell>);
+    const intervals: number[] = [];
+    const real = globalThis.setInterval;
+    globalThis.setInterval = ((fn: () => void, ms?: number, ...rest: unknown[]) => {
+      intervals.push(ms ?? 0);
+      return real(fn, ms, ...rest);
+    }) as typeof globalThis.setInterval;
+    try {
+      act(() => offerUndo('The session', async () => undefined));
+      // One clock per offer. Two copies meant two, both waking the app every
+      // second for the same fifteen seconds.
+      expect(intervals.filter((ms) => ms === 1000)).toHaveLength(1);
+    } finally {
+      globalThis.setInterval = real;
+    }
+  });
+
+  it('draws one undo bar, not one per breakpoint', async () => {
+    await reset();
+    await hydrate();
+    renderAt('/train', <AppShell><p>page</p></AppShell>);
+    act(() => offerUndo('The session', async () => undefined));
+    // By its button, not its text: the offer is also announced, and the
+    // announcer's live region is a `role="status"` carrying the same words.
+    expect(await screen.findAllByRole('button', { name: /Undo/ })).toHaveLength(1);
+  });
+
+  /**
+   * Above the tabs, which is where a phone shows them. Which side of the
+   * tabs they land on at desktop width is `order`, and CSS is not something
+   * jsdom applies — the browser check holds that half.
+   */
+  it('puts the banners before the tab row in the markup', async () => {
+    await reset();
+    await hydrate();
+    renderAt('/train', <AppShell><p>page</p></AppShell>);
+    const nav = document.querySelector('nav[aria-label="Main"]')!;
+    const kids = [...nav.children];
+    const banners = kids.findIndex((el) => el.querySelector('[class*="px-3"]') && el.className.includes('order-first'));
+    const tabs = kids.findIndex((el) => el.className.includes('grid-cols-5'));
+    expect(banners).toBeGreaterThanOrEqual(0);
+    expect(tabs).toBeGreaterThanOrEqual(0);
+    expect(banners).toBeLessThan(tabs);
+  });
+
+  /**
+   * And the source carries one of each. The effects above are the reason
+   * this matters, but they only catch the two components that have one —
+   * a second `LiveBar` would cost nothing measurable and still be a second
+   * live region racing the first.
+   */
+  it('names each banner once in the shell', () => {
+    for (const banner of ['<StorageWarning', '<UndoBar', '<UpdatePrompt', '<LiveBar']) {
+      expect(shell.split(banner).length - 1, `${banner} is mounted more than once`).toBe(1);
+    }
   });
 });

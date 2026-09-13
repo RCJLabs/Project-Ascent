@@ -134,21 +134,39 @@ export function AppShell({ children }: { children: ReactNode }) {
           // Phone: a bar pinned to the bottom. Desktop: a column pinned to
           // the left, which is why the same element carries both sets of
           // positioning rather than there being two of them.
-          'fixed bottom-0 inset-x-0 z-30 bg-surface/95 backdrop-blur border-t border-line ' +
+          // `flex flex-col` at both widths so the banners can be placed by
+          // order rather than mounted twice (PLAN.md M141). The children
+          // stack exactly as they did in block flow.
+          'fixed bottom-0 inset-x-0 z-30 flex flex-col bg-surface/95 backdrop-blur border-t border-line ' +
           'lg:static lg:inset-auto lg:w-60 lg:shrink-0 lg:border-t-0 lg:border-r lg:h-dvh lg:sticky lg:top-0 lg:backdrop-blur-none'
         }
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <div className="max-w-2xl mx-auto lg:hidden">
+        {/**
+         * One instance of each banner, above the tabs on a phone and below
+         * them in the sidebar (PLAN.md M141).
+         *
+         * It used to be two, one per breakpoint, and `display: none` takes
+         * the hidden copy out of the accessibility tree — so nothing was
+         * announced twice and the duplication was invisible. Effects do not
+         * care about `display`: `StorageWarning` asked the browser for a
+         * storage estimate twice on every page and hung two
+         * `visibilitychange` listeners, and `UndoBar` ran two one-second
+         * intervals per offer and handed the announcer the same sentence
+         * twice.
+         */}
+        <div className="order-first lg:order-last w-full max-w-2xl mx-auto lg:max-w-none lg:mt-3 lg:[&>*:not(:empty)+*]:mt-2">
           {/* Its own box: LiveBar is a full-bleed bar with its own padding
               and a bottom border, and sharing a padded container with it
               would inset the bar. */}
-          <div className="px-3 pt-3 empty:hidden [&>*+*]:mt-2">
+          <div className="px-3 pt-3 lg:pt-0 empty:hidden [&>*+*]:mt-2">
             <StorageWarning />
             <UndoBar />
             <UpdatePrompt live={live} />
           </div>
-          <LiveBar banner={banner} />
+          <div className="lg:px-3">
+            <LiveBar banner={banner} />
+          </div>
         </div>
 
         <div className="hidden lg:block px-5 pt-6 pb-4">
@@ -156,7 +174,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="text-xs text-ink-soft mt-1">Train. Understand. Grow.</p>
         </div>
 
-        <div className="max-w-2xl mx-auto grid grid-cols-5 lg:flex lg:flex-col lg:gap-0.5 lg:px-3 lg:max-w-none">
+        <div className="w-full max-w-2xl mx-auto grid grid-cols-5 lg:flex lg:flex-col lg:gap-0.5 lg:px-3 lg:max-w-none">
           {TABS.map(({ href, label, icon: Icon }) => {
             const active = isActive(href, location);
             return (
@@ -201,12 +219,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
         </div>
 
-        <div className="hidden lg:block px-3 mt-3 [&>*+*]:mt-2">
-          <StorageWarning />
-          <UndoBar />
-          <UpdatePrompt live={live} />
-          <LiveBar banner={banner} />
-        </div>
       </nav>
 
       {/* `tabIndex={-1}` so the skip link can actually move focus here —

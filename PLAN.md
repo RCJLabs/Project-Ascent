@@ -6811,7 +6811,8 @@ something rests on an inference it says so.*
   project page it reads *Week: Sep 3 · Hardest grade: 60%*. One `head` prop defaulting to the
   old pair, each caller naming its columns, and a test that the header agrees with the label.
 
-- **M141 — the shell mounts every bar twice.** *Proposed. Small.*
+- **M141 — the shell mounts every bar twice.** *Proposed, and built seventh — see the Done
+  entry below.*
   `AppShell.tsx:142-151` (`lg:hidden`) and `:204-208` (`hidden lg:block`) each render
   `StorageWarning`, `UndoBar`, `UpdatePrompt` and `LiveBar`. `display: none` takes the hidden
   copy out of the accessibility tree, so the two `role="status"` regions do not double-announce
@@ -7252,3 +7253,32 @@ something rests on an inference it says so.*
   two callers happen to pass is a key waiting for a third — and the comment says so rather than
   claiming to fix a live bug.
   **Budget.** 154.0 holds: 153.81 → 153.82, so 0.01KB for the date formatter. 4,493 tests pass.
+
+- **M141 — one of each banner, placed rather than duplicated.** *Done. The seventh of the third
+  brainstorm.*
+  **The proposal's account held up, which is worth saying since the last five did not.**
+  `StorageWarning`, `UndoBar`, `UpdatePrompt` and `LiveBar` were each rendered twice — a
+  `lg:hidden` phone copy and a `hidden lg:block` sidebar copy — and `display: none` takes the
+  hidden one out of the accessibility tree, so nothing was announced twice and the duplication
+  was invisible to every check that reads that tree. Effects do not care about `display`:
+  measured again here, the shell asked the browser for a storage estimate twice on every page,
+  hung two `visibilitychange` listeners, and ran two one-second intervals for one undo offer.
+  **One instance, placed by `order`.** The nav is a flex column at both widths now, the banners
+  are `order-first lg:order-last`, and everything else keeps its natural position. The phone
+  keeps them above the tab bar and the sidebar keeps them at the bottom, which is where each was.
+  **A detail the layout change nearly cost.** A flex item with auto cross-axis margins does not
+  stretch — `mx-auto` turns stretch off — so the tab row needs its own `w-full` or the five tabs
+  shrink to their content and huddle in the middle of the screen. Measured in the browser at
+  **64% of the nav's width** with it removed. The same applies to the banner block.
+  **Where each half is verified.** Five mutations died against the unit tests: each banner put
+  back as a second copy, and the block moved after the tabs in the markup. Two could not, because
+  they are pure CSS and jsdom applies none — dropping `flex flex-col`, and dropping the tab row's
+  `w-full`. Rather than leave them as unexplained survivors, the browser check grew two
+  assertions that catch both, and both were confirmed to fail against the mutation before being
+  trusted: the nav's computed `flex-direction`, and the tab row's width as a fraction of the
+  nav's. A survivor that no test environment can see belongs in the environment that can, not in
+  a summary.
+  **Budget.** 154.0 holds: 153.82 → 153.89. Removing a copy of four components' JSX cost 0.07KB,
+  which is the Tailwind classes the one remaining instance needs to do two jobs — `order-first
+  lg:order-last`, the width rules, and the sibling-margin selector — against four short JSX tags
+  that gzip against their twins. Worth it for the effects, not for the bytes. 4,499 tests pass.
