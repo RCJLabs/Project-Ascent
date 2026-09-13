@@ -189,14 +189,19 @@ function LineHistory({
       // The date itself, not a label: `ProgressionLine` formats it for the
       // read-out above the chart, and a pre-formatted string came back as
       // Invalid Date there.
-      week: p.date,
+      at: p.date,
       value: value ?? null,
       display: value === undefined ? null : format(value),
     };
   });
   return (
     <div className="mt-2.5 pt-2.5 border-t border-line">
-      <ProgressionLine points={plotted} label={`${name}, ${dimension}`} formatValue={format} />
+      <ProgressionLine
+        points={plotted}
+        label={`${name}, ${dimension}`}
+        head={['Session', dimension === 'load' ? 'Weight' : dimension === 'hold' ? 'Hold' : 'Reps']}
+        formatValue={format}
+      />
     </div>
   );
 }

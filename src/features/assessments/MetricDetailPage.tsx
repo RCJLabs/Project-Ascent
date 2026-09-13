@@ -48,7 +48,7 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
   const latest = series.at(-1);
   const overall = first && latest && first !== latest ? latest.value - first.value : null;
   const points = series.map((e) => ({
-    week: e.date,
+    at: e.date,
     value: e.value,
     display: formatEntry(metric, e, display, units),
   }));
@@ -77,6 +77,7 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
             <ProgressionLine
               points={points}
               label={`${metric.label} over time`}
+              head={['Date tested', metric.label]}
               formatValue={(v) => formatEntry(metric, { metricId: metric.id, date: '', value: v }, display, units)}
             />
             {overall !== null && (

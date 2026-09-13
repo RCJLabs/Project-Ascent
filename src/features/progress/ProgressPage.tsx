@@ -553,6 +553,7 @@ export function ProgressPage() {
           <LoadBars
             data={state.load.daily.map((d) => ({ date: d.date, value: d.load, ...(d.deload ? { muted: true } : {}) }))}
             label="Daily training load over the last 28 days"
+            head={['Day', 'Load']}
             formatValue={(n) => `${n.toFixed(1)} load`}
           />
           <p className="text-xs text-ink-soft mt-2">
@@ -677,11 +678,12 @@ export function ProgressPage() {
             <>
               <ProgressionLine
                 points={points.map((p) => ({
-                  week: p.week,
+                  at: p.week,
                   value: p.ordinal,
                   display: p.grade === null ? null : gradeLabel(scale, p.grade),
                 }))}
                 label="Hardest grade sent per week over the last twelve weeks"
+                head={['Week', 'Hardest grade']}
                 formatValue={(v) => (ladder[v] ? gradeLabel(scale, ladder[v]) : String(v))}
               />
               <p className="text-sm text-ink-soft mt-2 flex items-start gap-2">

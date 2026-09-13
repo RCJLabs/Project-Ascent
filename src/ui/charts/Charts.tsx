@@ -18,6 +18,24 @@ const SURFACE_GAP = 2;
 /** Vertical room reserved inside the plot for direct labels. */
 const LABEL_ROOM = 14;
 
+/**
+ * How a date reads in the table beside the chart.
+ *
+ * *Sep 3* everywhere the series sits inside one calendar year, which is
+ * every chart on Progress. A benchmark history runs for as long as the
+ * climber has been testing, and two readings a year apart both reading
+ * "Sep 3" is the accessible table saying less than the picture — so the
+ * year comes back as soon as the series crosses one.
+ */
+function dateColumn(dates: readonly string[]): (date: string) => string {
+  const years = new Set(dates.map((d) => d.slice(0, 4)));
+  const options: Intl.DateTimeFormatOptions =
+    years.size > 1
+      ? { year: 'numeric', month: 'short', day: 'numeric' }
+      : { month: 'short', day: 'numeric' };
+  return (date) => new Date(`${date}T00:00`).toLocaleDateString(undefined, options);
+}
+
 function niceCeil(value: number): number {
   if (value <= 0) return 1;
   const magnitude = 10 ** Math.floor(Math.log10(value));
@@ -40,6 +58,15 @@ function DataTable({
   rows,
 }: {
   caption: string;
+  /**
+   * What the two columns are, in this chart's own words.
+   *
+   * Required, with no default. A default is how the old pair — *Week* and
+   * *Hardest grade* — ended up under a project's high point per day and a
+   * benchmark's history, right for the one caller it was written for and
+   * wrong for the four that came after (PLAN.md M140). A prop the compiler
+   * insists on cannot be inherited by accident.
+   */
   head: [string, string];
   rows: [string, string][];
 }) {
@@ -59,8 +86,13 @@ function DataTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map(([key, value]) => (
-            <tr key={key}>
+          {/* Keyed by position. The row's own text would do while every
+              caller dates its rows through `dateColumn`, which is unique
+              per row by construction — but a key that holds only because
+              of what today's two callers happen to pass is a key waiting
+              for a third (PLAN.md M140). */}
+          {rows.map(([key, value], i) => (
+            <tr key={i}>
               <th scope="row">{key}</th>
               <td>{value}</td>
             </tr>
@@ -74,10 +106,13 @@ function DataTable({
 export function LoadBars({
   data,
   label,
+  head,
   formatValue = (n) => String(Math.round(n)),
 }: {
   data: { date: string; value: number; muted?: boolean }[];
   label: string;
+  /** What the two columns of the accessible table are (PLAN.md M140). */
+  head: [string, string];
   formatValue?: (n: number) => string;
 }) {
   const [active, setActive] = useState<number | null>(null);
@@ -87,6 +122,7 @@ export function LoadBars({
   const slot = width / Math.max(1, data.length);
   const barWidth = Math.min(BAR_MAX_THICKNESS, Math.max(2, slot - SURFACE_GAP));
   const shown = active !== null ? data[active] : null;
+  const column = dateColumn(data.map((d) => d.date));
 
   return (
     <figure className="m-0">
@@ -142,9 +178,9 @@ export function LoadBars({
       </svg>
       <DataTable
         caption={label}
-        head={['Day', 'Load']}
+        head={head}
         rows={data.map((d) => [
-          new Date(`${d.date}T00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+          column(d.date),
           d.muted ? `${formatValue(d.value)} (deload)` : formatValue(d.value),
         ])}
       />
@@ -174,10 +210,21 @@ function prevKnown(points: LinePoint[], from: number): number | null {
 export function ProgressionLine({
   points,
   label,
+  head,
   formatValue,
 }: {
-  points: { week: string; value: number | null; display: string | null }[];
+  /**
+   * `at` is a date, not a week.
+   *
+   * It was called `week` for the one caller that passes one; the project
+   * page, the finish page and a benchmark's history all pass a plain date
+   * and always have, and every use inside here reads it as one
+   * (PLAN.md M140).
+   */
+  points: { at: string; value: number | null; display: string | null }[];
   label: string;
+  /** What the two columns of the accessible table are (PLAN.md M140). */
+  head: [string, string];
   formatValue: (v: number) => string;
 }) {
   const [active, setActive] = useState<number | null>(null);
@@ -215,6 +262,7 @@ export function ProgressionLine({
   const lastIndex = lastKnown ? points.lastIndexOf(lastKnown) : -1;
   const firstIndex = points.findIndex((p) => p.value !== null);
   const shown = active !== null ? points[active] : null;
+  const column = dateColumn(points.map((p) => p.at));
 
   return (
     <figure className="m-0">
@@ -222,7 +270,7 @@ export function ProgressionLine({
       <div className="flex items-baseline justify-between mb-1.5 min-h-5">
         <span className="text-xs text-ink-soft">
           {shown?.value !== null && shown
-            ? new Date(`${shown.week}T00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+            ? new Date(`${shown.at}T00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
             : ''}
         </span>
         <span className="text-xs font-semibold">{shown?.display ?? ''}</span>
@@ -235,7 +283,7 @@ export function ProgressionLine({
         {points.map((p, i) =>
           p.value === null ? null : (
             <circle
-              key={p.week}
+              key={p.at}
               cx={x(i)}
               cy={y(p.value)}
               r={i === lastIndex ? 5 : 4}
@@ -270,7 +318,7 @@ export function ProgressionLine({
         })}
         {points.map((p, i) => (
           <rect
-            key={`hit-${p.week}`}
+            key={`hit-${p.at}`}
             x={x(i) - 14}
             y={0}
             width={28}
@@ -289,11 +337,8 @@ export function ProgressionLine({
       )}
       <DataTable
         caption={label}
-        head={['Week', 'Hardest grade']}
-        rows={points.map((p) => [
-          new Date(`${p.week}T00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-          p.display ?? 'nothing logged',
-        ])}
+        head={head}
+        rows={points.map((p) => [column(p.at), p.display ?? 'nothing logged'])}
       />
     </figure>
   );

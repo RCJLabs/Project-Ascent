@@ -59,7 +59,7 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
   }
 
   const points = summary.highPointByDay.map((d) => ({
-    week: d.date,
+    at: d.date,
     value: d.value,
     display: `${d.value}%`,
   }));
@@ -131,7 +131,12 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
 
         {points.length >= 2 && (
           <Card title="High point">
-            <ProgressionLine points={points} label="High point per day" formatValue={(v) => `${v}%`} />
+            <ProgressionLine
+              points={points}
+              label="High point per day"
+              head={['Day tried', 'High point']}
+              formatValue={(v) => `${v}%`}
+            />
             <p className="text-xs text-ink-soft mt-2">
               One point per day you tried it, in order — not to scale in time. Rehearsal days are
               left out, since working moves is not a high point.

@@ -6802,7 +6802,7 @@ something rests on an inference it says so.*
   attempts are optional; if they are left out, say so on the Data page rather than by omission.
 
 - **M140 — the chart's table says Week / Hardest grade under four charts, three of which are
-  neither.** *Proposed. Small.*
+  neither.** *Proposed, and built sixth — see the Done entry below.*
   `ProgressionLine` hard-codes `head={['Week', 'Hardest grade']}` (`Charts.tsx:292`). Four
   callers: the grade line it was written for (`ProgressPage.tsx:677`); a project's high point
   per day, in percent (`ProjectDetailPage.tsx:134`); an exercise's load or hold across a block
@@ -7220,3 +7220,35 @@ something rests on an inference it says so.*
   **Budget.** 154.0 holds: 153.82 → 153.81, no change. The exporter's `CSV_FILES` is imported by
   `importCsv.ts` so the two lists cannot drift, and rollup shakes the exporter's body back out.
   4,479 tests pass.
+
+- **M140 — the table under the chart names its own columns.** *Done. The sixth of the third
+  brainstorm, and the first of its five small ones.*
+  **The proposal named four callers of one primitive. There are six, across two.** `LoadBars`
+  has the same hard-coded pair — *Day* and *Load* — and the altimeter plots **feet per week**
+  through it, so the accessible form of that chart read *Day: Sep 3 · Load: 1,200 ft*. Same
+  defect, same file, found by checking the sibling rather than taking the proposal's list.
+  **The fix is not a default, which is how this happened.** The proposal said *"one `head` prop
+  defaulting to the old pair"*. A default that is right for one caller and wrong for five is
+  exactly the shape of the bug: the pair was correct when `ProgressionLine` had one caller, and
+  each new one inherited it silently. The prop is **required**, with no default, so the compiler
+  names every site that has to answer. It found all six on the first run.
+  **A prop called `week` that three of four callers pass a date to.** The same lie one level
+  down, and the component already read it as a date everywhere inside — the read-out above the
+  chart formats it with `toLocaleDateString`. Renamed to `at`, which costs four call sites and
+  makes the wrong thing impossible to pass without noticing.
+  **And a date column that could not tell two years apart.** Both tables formatted as *Sep 3*
+  with no year. On Progress and the altimeter the series is twelve weeks and that is right; a
+  benchmark's history runs for as long as the climber has been testing, so two readings a year
+  apart both read *Sep 3* — the accessible table saying strictly less than the picture, for the
+  readers it exists for. `dateColumn` brings the year back as soon as the series crosses one, and
+  leaves it off otherwise.
+  **What the battery found.** Thirty mutations. Three survivors were missing assertions: the bar
+  chart's year handling was never exercised (its tests all sat inside one year), and both page
+  tests checked the *header* without ever checking that the right dates arrived under it — a
+  header naming the correct axis over the wrong column is the same failure. One survivor is an
+  **equivalent mutant and stays that way**: keying the table rows by their own text instead of by
+  position is now harmless, because `dateColumn` makes every row's first cell unique by
+  construction. The position key is kept anyway — a key that holds only because of what today's
+  two callers happen to pass is a key waiting for a third — and the comment says so rather than
+  claiming to fix a live bug.
+  **Budget.** 154.0 holds: 153.81 → 153.82, so 0.01KB for the date formatter. 4,493 tests pass.

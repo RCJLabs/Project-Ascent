@@ -122,6 +122,7 @@ export function AltimeterPage() {
             <LoadBars
               data={weeks.map((w) => ({ date: w.week, value: w.feet }))}
               label="Feet climbed per week over the last twelve weeks"
+              head={['Week', 'Height climbed']}
               formatValue={(n) => formatHeight(n, units)}
             />
             <p className="text-xs text-ink-soft mt-2">
