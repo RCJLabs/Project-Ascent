@@ -242,7 +242,7 @@ describe('the bundle stays small', () => {
    * Every milestone that moves this moves it to just above what it measured;
    * the history is in the comment inside the first test.
    */
-  const BUDGET = 158.6;
+  const BUDGET = 158.9;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -428,6 +428,19 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **Unchanged at M153**, measured 158.16 → 158.37: a part-name table
+    // beside the load rules, the split that sorts a protocol's safety rules
+    // by whether they are about this climber, and the note the logger draws
+    // them in. 0.21KB, inside the 0.23 that was left.
+    //
+    // **158.6 → 158.9 at M154**, measured 158.37 → 158.68: 0.31KB, and all
+    // of it is first-load by construction. `main.tsx` is the entry point, so
+    // the module that asks whether a new version exists cannot be anywhere
+    // else — there is no lazy boundary to put a service-worker registration
+    // behind. Two thirds of it is `lib/swUpdate.ts` and its injected clock;
+    // the rest is two constants and two predicates in `engine/offline.ts`,
+    // which the prompt already pulls in. 0.22KB of slack.
     //
     // **155.0 → 158.6 at M148**, measured 154.13 → 158.10: 3.97KB, and the
     // largest single-milestone cost to first load since M117. Worth the

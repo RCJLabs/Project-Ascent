@@ -34,7 +34,7 @@ export function UpdatePrompt({ live }: { live: boolean }) {
           <Button size="sm" onClick={() => apply?.()}>
             Update now
           </Button>
-          <Button size="sm" variant="outline" onClick={defer}>
+          <Button size="sm" variant="outline" onClick={() => defer()}>
             Later
           </Button>
         </div>

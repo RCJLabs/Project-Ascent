@@ -45,8 +45,68 @@ export function updateVisible(gate: UpdateGate): boolean {
  * A waiting service worker activates on its own once every tab of the app is
  * closed, so "later" costs nothing — the next launch is the new version. Say
  * that rather than nagging.
+ *
+ * **Closed and reopened, not opened** (PLAN.md M154). The old wording said
+ * *"the next time you open the app"*, which is what a climber does to an
+ * installed app every day without ever closing it — and the worker waits
+ * for the closing, not the opening. The sentence was describing a browser
+ * tab to someone holding a phone.
  */
-export const DEFERRED_NOTE = 'It will be applied the next time you open the app.';
+export const DEFERRED_NOTE = 'It will be applied once you close the app and open it again.';
+
+// ── Noticing there is one at all (PLAN.md M154) ───────────────────────────
+
+/**
+ * How often to ask the server whether a new worker exists.
+ *
+ * **What M19 got right, and where it stops.** Its *"the next launch is the
+ * new version anyway"* is true of a launch: a launch is a navigation, and a
+ * navigation is when the browser re-fetches `sw.js` on its own. The gap is
+ * the app that is never launched because it is never closed — a home-screen
+ * install resumed out of the task switcher for a week, or a tab left open.
+ * Nothing in this app has ever asked: `main.tsx` passed no `onRegisteredSW`
+ * and there is no `registration.update()` in the source, and hash routing
+ * means no in-app navigation re-requests the document either.
+ *
+ * Six hours because the browser itself caps its own `sw.js` check at
+ * twenty-four, and a check costs one conditional request for a file that is
+ * a few kilobytes. More often than that is asking a question whose answer
+ * cannot have changed.
+ */
+export const UPDATE_CHECK_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * How long "later" lasts before the app may ask again.
+ *
+ * A deferral that never expires is the current behaviour and was defensible
+ * while nothing polled — *"the next launch is the new version"* made the
+ * cost zero. Once the app can notice an update days into a run, a permanent
+ * deferral is the same silence this milestone exists to fix. A day, because
+ * the deferral is a real answer and re-asking inside one is nagging.
+ */
+export const DEFER_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Whether to ask now.
+ *
+ * Never while the document is hidden: a backgrounded app checking on a timer
+ * spends a climber's data to learn something it cannot act on until they
+ * look at it again. Coming back into view is the trigger that matters, and
+ * the elapsed test is what keeps a run of tab switches to one request.
+ */
+export function shouldCheckForUpdate(input: {
+  visible: boolean;
+  lastCheckedAt: number | null;
+  now: number;
+}): boolean {
+  if (!input.visible) return false;
+  return input.lastCheckedAt === null || input.now - input.lastCheckedAt >= UPDATE_CHECK_MS;
+}
+
+/** Whether a "later" has run out and the prompt may come back. */
+export function deferralExpired(deferredAt: number | null, now: number): boolean {
+  return deferredAt !== null && now - deferredAt >= DEFER_MS;
+}
 
 export interface StorageReading {
   /** Bytes in use, if the browser will say. */

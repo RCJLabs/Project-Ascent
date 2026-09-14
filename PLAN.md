@@ -7675,7 +7675,8 @@ milestone that settled them; two more were struck by measurement.*
   climber has already told the app about. It is the only item in this pass where the thing not
   being read is a warning.
 
-- **M154 — the update that never arrives on an installed app.** *Proposed. Small.*
+- **M154 — the update that never arrives on an installed app.** *Proposed, and built third — see
+  the entry at the end of this document.*
   **M19 reasoned this through and its conclusion has a hole.** It wrote: *"'Later' is honest
   rather than a snooze: a waiting worker activates once every tab is closed, so the next launch
   is the new version anyway."* That holds for a browser tab. An installed app is not reliably
@@ -7955,3 +7956,52 @@ milestone that settled them; two more were struck by measurement.*
   **Budget.** 158.6 holds: 158.16 → 158.37, so 0.21KB for a part-name table, a split and a note in
   the logger. 0.23KB of slack — tight, and an order of magnitude above the lazy-chunk hash churn
   M145 measured at 0.02KB, so it stays. 4,712 tests pass.
+
+- **M154 — the app asks whether there is a new version.** *Done. The third of the fourth
+  brainstorm.*
+  **The proposal overstated it, and the correction is the design.** *"A home-screen install can sit
+  on a stale version indefinitely"* is not quite true: a launch **is** a navigation, and a
+  navigation is exactly when the browser re-fetches `sw.js` on its own. M19's *"the next launch is
+  the new version anyway"* holds for an app that is genuinely closed and opened. The gap is the app
+  that is never launched **because it is never closed** — a home-screen install resumed out of the
+  task switcher for a week, a tab left open — and there hash routing seals it: the document is
+  requested once, at launch, and no in-app navigation ever asks again. `registerSW` took two
+  callbacks, no `onRegisteredSW`, and `registration.update()` appears nowhere in the source.
+  **Only when the app is looked at.** The trigger is *became visible*, plus *still visible, six
+  hours on*, both through one elapsed test — so a run of tab switches costs one request and a
+  backgrounded app costs none. A timer that fires in the background spends a climber's data to
+  learn something they cannot act on until they come back, and on a phone that is the common case.
+  Six hours because the browser caps its own `sw.js` check at twenty-four, and a check is one
+  conditional request for a few kilobytes. The check is deliberately **not** gated on a live
+  session: asking is silent, and `engine/offline.ts` already refuses to let the answer interrupt
+  anyone mid-hangboard.
+  **"Later" now runs out.** It was permanent for the run, which was honest while nothing polled —
+  the next launch was the new version. Once the app can notice an update days into a run, a
+  deferral that never expires is the same silence this milestone exists to fix. A day, because a
+  deferral is a real answer and re-asking inside one is nagging; and a **newer** version clears it
+  outright, because "later" was an answer about the version that was waiting then. The expiry is
+  checked by the polling loop rather than by a clock in the component, so the prompt needs no timer
+  of its own.
+  **A sentence that was describing a browser tab to someone holding a phone.** `DEFERRED_NOTE` said
+  *"It will be applied the next time you open the app"* — which is what a climber does to an
+  installed app daily without ever closing it, and the waiting worker takes over on the **closing**.
+  It now says so.
+  **`APP_VERSION` is raised and left alone, with the reason.** `version.ts` is a hardcoded
+  `'0.1.0'`, so a stale install's stored version is indistinguishable from a current one — true,
+  and it is not what tells you. The service worker's own hash is, which is what this builds on.
+  Deriving the constant from `package.json` is a build-config change that would help a release
+  process and not this, so it stays a find.
+  **What the battery found.** Twenty-four mutations, three real survivors, all of them the same
+  shape: nothing tested the wiring. The corrected note had no test pinning its claim, `main.tsx`
+  had no test at all, and nothing had ever clicked *Later*. Two source-level assertions in
+  `ui/offline.test.ts` — the technique that file already uses — and a render test that clicks the
+  button and watches the deferral expire.
+  **And one the browser check found about itself.** The first end-to-end attempt deployed a second
+  build by appending a comment to a source file; the bundle came out **byte-identical**, because
+  minification strips it, so `update()` correctly found nothing and the check reported a bug that
+  was not there. It changes the version string now. A second false failure came from asserting on
+  `registration.waiting` read back through a fresh `getRegistration()` — it lags the event the app
+  reacts to, and reported a failure while the prompt was on screen. The check asserts the prompt.
+  **Budget: 158.6 → 158.9**, measured 158.37 → 158.68, so 0.31KB and all of it first-load by
+  construction: `main.tsx` is the entry point, and there is no lazy boundary to put a service-worker
+  registration behind. 0.22KB of slack. 4,740 tests pass.

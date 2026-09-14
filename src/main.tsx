@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import { App } from './App';
+import { watchForUpdates } from './lib/swUpdate';
 import { useAppUpdate } from './store/appUpdate';
 import './index.css';
 
@@ -20,6 +21,15 @@ const updateSW = registerSW({
   },
   onOfflineReady() {
     useAppUpdate.getState().markOfflineReady();
+  },
+  /**
+   * Nothing here had ever asked whether a new version existed (PLAN.md
+   * M154). The browser asks on a navigation, and an installed app resumed
+   * from the task switcher never makes one — hash routing means the
+   * document is requested exactly once, at launch.
+   */
+  onRegisteredSW(_url, registration) {
+    if (registration) watchForUpdates(registration);
   },
 });
 

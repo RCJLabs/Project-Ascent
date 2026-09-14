@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DEFER_MS,
   FULL_RATIO,
   TIGHT_RATIO,
+  UPDATE_CHECK_MS,
+  deferralExpired,
   formatBytes,
   pressureIsUrgent,
+  shouldCheckForUpdate,
   storagePressure,
   updateHold,
   updateVisible,
@@ -14,6 +18,61 @@ const gate = (patch: Partial<Parameters<typeof updateHold>[0]> = {}) => ({
   live: false,
   deferred: false,
   ...patch,
+});
+
+/**
+ * Noticing there is an update at all (PLAN.md M154).
+ *
+ * M19's rules decide whether to *show* one. Until this, nothing decided
+ * whether to *look*.
+ */
+describe('asking whether a new version exists', () => {
+  const NOW = 1_700_000_000_000;
+  const ask = (patch: Partial<Parameters<typeof shouldCheckForUpdate>[0]> = {}) =>
+    shouldCheckForUpdate({ visible: true, lastCheckedAt: null, now: NOW, ...patch });
+
+  it('asks on the first look, having never asked', () => {
+    expect(ask()).toBe(true);
+  });
+
+  it('never asks while the app is out of sight', () => {
+    // The case that matters most on a phone: a backgrounded app spending
+    // data to learn something nobody can act on until they come back.
+    expect(ask({ visible: false })).toBe(false);
+    expect(ask({ visible: false, lastCheckedAt: NOW - UPDATE_CHECK_MS * 10 })).toBe(false);
+  });
+
+  it('does not ask again inside the interval', () => {
+    expect(ask({ lastCheckedAt: NOW })).toBe(false);
+    expect(ask({ lastCheckedAt: NOW - UPDATE_CHECK_MS + 1 })).toBe(false);
+  });
+
+  it('asks once the interval has passed', () => {
+    expect(ask({ lastCheckedAt: NOW - UPDATE_CHECK_MS })).toBe(true);
+    expect(ask({ lastCheckedAt: NOW - UPDATE_CHECK_MS * 4 })).toBe(true);
+  });
+
+  it('stays under the daily cap the browser puts on checking sw.js on checking sw.js', () => {
+    expect(UPDATE_CHECK_MS).toBeLessThan(24 * 60 * 60 * 1000);
+  });
+});
+
+describe('a "later" that runs out', () => {
+  const NOW = 1_700_000_000_000;
+
+  it('is not expired while it is fresh', () => {
+    expect(deferralExpired(NOW, NOW)).toBe(false);
+    expect(deferralExpired(NOW - DEFER_MS + 1, NOW)).toBe(false);
+  });
+
+  it('expires on the day', () => {
+    expect(deferralExpired(NOW - DEFER_MS, NOW)).toBe(true);
+    expect(deferralExpired(NOW - DEFER_MS * 30, NOW)).toBe(true);
+  });
+
+  it('is not a deferral at all when nobody deferred', () => {
+    expect(deferralExpired(null, NOW)).toBe(false);
+  });
 });
 
 describe('holding an update', () => {

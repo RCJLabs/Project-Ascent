@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { DEFERRED_NOTE } from '@/engine/offline';
 
 /**
  * M19's "done when", made executable.
@@ -66,6 +67,41 @@ describe('an update never interrupts a session', () => {
 
   it('offers a way out that is not "not now, forever"', () => {
     expect(PROMPT).toContain('DEFERRED_NOTE');
+  });
+
+  /**
+   * The note used to say *"the next time you open the app"* — which is what
+   * a climber does to an installed app daily without ever closing it, and
+   * the waiting worker takes over on the closing (PLAN.md M154).
+   */
+  it('says what actually applies a held update', () => {
+    expect(DEFERRED_NOTE).toMatch(/close/i);
+    expect(DEFERRED_NOTE).not.toMatch(/next time you open/i);
+  });
+});
+
+/**
+ * The app asking whether there is one at all (PLAN.md M154).
+ *
+ * The rule is tested in `engine/offline.test.ts` and the loop in
+ * `lib/swUpdate.test.ts`. What is left is the wiring, which is where this
+ * milestone's bug was: `registerSW` took two callbacks and no
+ * `onRegisteredSW`, so nothing in the app ever called `update()` and an
+ * installed PWA — resumed rather than launched, hash-routed so it never
+ * navigates — could run for a week on a replaced version.
+ */
+describe('the app asks whether there is an update', () => {
+  const MAIN = read('src/main.tsx');
+
+  it('takes the registration and watches it', () => {
+    expect(MAIN).toContain('onRegisteredSW');
+    expect(MAIN).toContain('watchForUpdates(registration)');
+  });
+
+  it('keeps the asking out of the registration callback', () => {
+    // The loop has a clock and a visibility rule, both of which need to be
+    // injectable; inline in `main.tsx` neither could be tested at all.
+    expect(MAIN).toContain("from './lib/swUpdate'");
   });
 });
 
