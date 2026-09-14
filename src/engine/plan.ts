@@ -135,16 +135,6 @@ export function plannedDay(
   };
 }
 
-export function plannedRange(
-  program: Program,
-  startDate: string,
-  plan: WeekPlan,
-  dates: string[],
-  overrides?: WeekOverrides,
-): PlannedDay[] {
-  return dates.map((d) => plannedDay(program, startDate, plan, d, overrides));
-}
-
 export interface BlockPrescription {
   blockId: string;
   name: string;

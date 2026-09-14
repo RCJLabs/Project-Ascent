@@ -332,9 +332,6 @@ export const THE_SIEGE: Program = {
   // week 11 is a refining week with no backing off in it (PLAN.md M34).
   deloadWeeks: [4, 8],
 
-  frequency: '4 sessions/week. Hard/Easy alternation is mandatory.',
-  ordering:
-    'Project Session when fresh. Power-Endurance 48hrs after Project. Fingerboard + Structural on a non-climbing day. Never two hard climbing days back-to-back.',
 
   constraints: [
     {

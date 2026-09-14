@@ -287,9 +287,6 @@ export const THE_LONG_GAME: Program = {
 
   deloadWeeks: [4, 8, 11],
 
-  frequency: '4 sessions/week. Endurance and Performance should not be on consecutive days.',
-  ordering:
-    'Endurance session when fresh. Strength/Armor on a non-climbing day. Performance climbing after at least one easy day.',
 
   constraints: [
     { kind: 'sessions-per-week', min: 4, max: 4, note: 'Four sessions per week.' },

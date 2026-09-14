@@ -697,6 +697,19 @@ function SessionEditor({
             <Trash2 size={16} />
           </IconButton>
         </div>
+        {/* Where this session came from, when it was not typed here
+            (PLAN.md M155). The field has been written by the importer since
+            M105 and its own comment names two readers — *"the climber
+            reading their own calendar"*, and an undo — and neither existed:
+            `store/undo.ts` carries a closure and never reads it. The
+            calendar cell is 40px and already carries the day's effort and
+            its marks; this is the screen a climber actually reads a session
+            on. */}
+        {session.imported === 'csv' && (
+          <p className="text-xs text-ink-soft mb-1.5">
+            Imported from a spreadsheet — the numbers here were not typed in the app.
+          </p>
+        )}
         {session.completed ? (
           <p className="text-sm text-positive flex items-center gap-1.5">
             <Check size={15} /> Logged

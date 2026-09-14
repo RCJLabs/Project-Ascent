@@ -16,7 +16,7 @@ import type { Program } from '@/content/types';
 import type { Session } from '@/db/sessions';
 import type { Project } from '@/db/projects';
 import { weeklyChallenges, type Challenge } from './challenges';
-import { addDays, daysBetween, startOfWeek, today as todayKey } from './dates';
+import { addDays, startOfWeek, today as todayKey } from './dates';
 import { buildLoadIndex, deriveClimberState, loadStateAt, sessionLoad, type AcwrZone } from './derive';
 import { sessionHeight } from './altimeter';
 import { dayLoad, type DayLoad } from './bodyLoad';
@@ -363,9 +363,4 @@ function nextWeekLayout(input: ReviewInput, weekEnd: string): PlannedSlot[] {
     });
   }
   return slots;
-}
-
-/** Is the week under review finished, and how long ago? */
-export function weeksAgo(review: WeekReview, today = todayKey()): number {
-  return Math.max(0, Math.floor(daysBetween(review.to, today) / 7));
 }

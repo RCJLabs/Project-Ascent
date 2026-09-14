@@ -473,45 +473,6 @@ export function zonesFor(index: LoadIndex, dates: readonly string[]): AcwrZone[]
   return loadSeries(index, dates).map((point) => point.zone);
 }
 
-/**
- * Just the zone, for callers that only want the zone.
- *
- * `deriveXp` prices every session against the load it was done under, and
- * was calling `loadStateAt` to read one field off a full `LoadState` — a
- * 28-element array of objects, each built with a fresh `Date` and a string
- * format. At ten years of logs that is forty-four thousand Date objects per
- * derivation, for four bytes of answer.
- */
-export function zoneAt(index: LoadIndex, date: string): AcwrZone {
-  let acute = 0;
-  let chronic = 0;
-  let chronicDays = 0;
-  let inPlannedDeload = false;
-
-  for (let i = 0; i < 28; i += 1) {
-    const day = addDays(date, -i);
-    const entry = index.byDate.get(day);
-    if (entry === undefined) continue;
-    chronic += entry.load;
-    if (entry.load > 0) chronicDays += 1;
-    if (i < 7) {
-      acute += entry.load;
-      if (entry.deload) inPlannedDeload = true;
-    }
-  }
-
-  const { earliest } = index;
-  const daysOfHistory = earliest === null || earliest > date ? 0 : daysBetween(earliest, date) + 1;
-  const baseline = chronic / 4;
-  if (daysOfHistory < 21 || chronicDays < MIN_CHRONIC_DAYS || baseline <= 0) return 'unknown';
-
-  const acwr = acute / baseline;
-  if (acwr < ACWR_BOUNDS.optimalFrom) return inPlannedDeload ? 'optimal' : 'detraining';
-  if (acwr <= ACWR_BOUNDS.optimalTo) return 'optimal';
-  if (acwr <= ACWR_BOUNDS.cautionTo) return 'caution';
-  return 'danger';
-}
-
 function deriveLoad(
   index: LoadIndex,
   today: string,

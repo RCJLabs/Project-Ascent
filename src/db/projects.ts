@@ -46,8 +46,6 @@ export interface Project {
    * project you shelve after sending is not silently flipped back.
    */
   sendAppliedFrom?: string;
-  /** When that fold happened. The M4 reward pipeline reads this. */
-  appliedAt?: string;
   /**
    * Written by the demo climber, and the only thing the wipe deletes
    * (PLAN.md M110).

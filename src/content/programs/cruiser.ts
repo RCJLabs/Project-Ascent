@@ -530,9 +530,6 @@ export const THE_CRUISER: Program = {
 
   deloadWeeks: [4, 8, 12],
 
-  frequency: 'Up to 5 days/week. 3-4 climbing + 1-2 strength. Minimum 2 rest days.',
-  ordering:
-    'Performance and Endurance not on consecutive days. Strength & Armor on non-climbing days. Hangboard: 48hrs before hard climbing. Week 4 of every block is a deload — no Performance, volume -40%, RPE 4-6 max.',
 
   constraints: [
     {

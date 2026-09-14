@@ -345,9 +345,6 @@ export const BASE_CAMP: Program = {
 
   deloadWeeks: [8],
 
-  frequency: '4-5 sessions/week. Consistency beats intensity.',
-  ordering:
-    'Technique before Performance. Engine Room on a non-climbing day. At least 1 rest day between hard sessions.',
 
   constraints: [
     { kind: 'sessions-per-week', min: 4, max: 5, note: '4-5 sessions per week. Consistency beats intensity.' },

@@ -59,8 +59,6 @@ export function blankProgram(name = 'My program'): Program {
     phases: [{ id: 'phase1', name: 'Block 1', weekStart: 1, weekEnd: 8, description: '', goals: [] }],
     sessionTypes: [],
     constraints: [],
-    frequency: '',
-    ordering: '',
     assessments: [],
     nextPrograms: [],
   };

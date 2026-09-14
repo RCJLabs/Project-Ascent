@@ -6,12 +6,18 @@
  * attempts, so it is recomputed, never stored, and can never drift.
  *
  * Exactly one thing is not derivable: the moment a send is accepted. That
- * flips status, stamps a send date, and (in M4) pays out. It must happen
- * once and stay happened even if the climber later shelves the project. So
- * that, and only that, uses the `appliedAt` idempotency marker the
- * prototype got right (AUDIT.md §6.14): the fold is recorded against the
- * session id that caused it, replays no-op, and a retraction is possible
- * when the attempt is actually deleted.
+ * flips status and stamps a send date. It must happen once and stay
+ * happened even if the climber later shelves the project. So that, and only
+ * that, uses the idempotency marker the prototype got right (AUDIT.md
+ * §6.14): `sendAppliedFrom` records the fold against the session id that
+ * caused it, replays no-op, and a retraction is possible when the attempt
+ * is actually deleted.
+ *
+ * There was an `appliedAt` timestamp beside it, whose own comment said *"the
+ * M4 reward pipeline reads this"* (PLAN.md M155). Nothing read it — the
+ * idempotency check is `sendAppliedFrom === send.sessionId` and always has
+ * been — so it was a stored field, a clock parameter and a false sentence
+ * describing a reader that does not exist.
  *
  * Pure: records in, records out. No storage, no React.
  */
@@ -47,7 +53,6 @@ export const OUTCOME_LABEL: Record<AttemptOutcome, string> = {
 };
 
 /** Ordering used for "was that a better burn?" — never for storage. */
-const OUTCOME_RANK: AttemptOutcome[] = ['worked', 'fell-low', 'fell-mid', 'fell-high', 'fell-crux', 'send'];
 
 export function highPointOf(attempt: ProjectAttempt): number | null {
   return attempt.highPoint ?? OUTCOME_HIGH_POINT[attempt.outcome];
@@ -128,7 +133,6 @@ export interface ProjectSummary {
    * none of it, and until this the app could not tell that from a send.
    */
   bestLink: { from: number; to: number } | null;
-  bestOutcome: AttemptOutcome | null;
   sendDate: string | null;
   /** Best high point per day, for the progression line. */
   highPointByDay: DayHighPoint[];
@@ -143,7 +147,6 @@ export function summariseProject(
   const byDay = new Map<string, number>();
   let highPoint: number | null = null;
   let bestLink: { from: number; to: number } | null = null;
-  let bestOutcome: AttemptOutcome | null = null;
   let burns = 0;
 
   for (const attempt of attempts) {
@@ -161,9 +164,6 @@ export function summariseProject(
       const day = byDay.get(attempt.date);
       if (day === undefined || hp > day) byDay.set(attempt.date, hp);
     }
-    if (bestOutcome === null || OUTCOME_RANK.indexOf(attempt.outcome) > OUTCOME_RANK.indexOf(bestOutcome)) {
-      bestOutcome = attempt.outcome;
-    }
   }
 
   const dates = [...new Set(attempts.map((a) => a.date))];
@@ -180,7 +180,6 @@ export function summariseProject(
     daysSinceLast: lastDate === null ? null : Math.max(0, daysBetween(lastDate, today)),
     highPoint,
     bestLink,
-    bestOutcome,
     sendDate: send?.date ?? null,
     highPointByDay: [...byDay.entries()].map(([date, value]) => ({ date, value })),
   };
@@ -205,11 +204,7 @@ export interface ProjectPatch {
  * - `retracted`: the send attempt was deleted, so the fold is undone. A
  *   project the climber shelved keeps that status; only `sent` reverts.
  */
-export function reconcileProjects(
-  projects: Project[],
-  sessions: Session[],
-  now: string = new Date().toISOString(),
-): ProjectPatch[] {
+export function reconcileProjects(projects: Project[], sessions: Session[]): ProjectPatch[] {
   const patches: ProjectPatch[] = [];
 
   for (const project of projects) {
@@ -223,7 +218,6 @@ export function reconcileProjects(
           changes: {
             sendAppliedFrom: undefined,
             sentDate: undefined,
-            appliedAt: undefined,
             ...(project.status === 'sent' ? { status: 'active' as const } : {}),
           },
         });
@@ -240,7 +234,6 @@ export function reconcileProjects(
         status: 'sent',
         sentDate: send.date,
         sendAppliedFrom: send.sessionId,
-        appliedAt: now,
       },
     });
   }

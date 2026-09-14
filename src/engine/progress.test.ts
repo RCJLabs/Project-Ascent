@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newSession, type Session } from '@/db/sessions';
 import { addDays, startOfWeek } from './dates';
 import { deriveClimberState } from './derive';
-import { projectGrade, pyramid, weeklyProgression, weeklyVolume } from './progress';
+import { projectGrade, pyramid, weeklyProgression } from './progress';
 
 const TODAY = '2026-09-13';
 let counter = 0;
@@ -143,17 +143,3 @@ describe('projectGrade', () => {
   });
 });
 
-describe('weeklyVolume', () => {
-  it('sums minutes and sessions per week', () => {
-    const thisWeek = startOfWeek(TODAY);
-    const sessions = [
-      sessionWith(thisWeek, [{ grade: 'V3' }]),
-      sessionWith(addDays(thisWeek, 1), [{ grade: 'V3' }]),
-      sessionWith(addDays(thisWeek, -7), [{ grade: 'V3' }]),
-    ];
-    const volume = weeklyVolume(sessions, 2, TODAY);
-    expect(volume).toHaveLength(2);
-    expect(volume[0]).toMatchObject({ minutes: 60, sessions: 1 });
-    expect(volume[1]).toMatchObject({ minutes: 120, sessions: 2 });
-  });
-});

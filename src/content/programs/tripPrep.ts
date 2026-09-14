@@ -196,8 +196,6 @@ export const TRIP_PREP: Program = {
   ],
 
   deloadWeeks: [],
-  frequency: '3 sessions/week, 4 if the fourth is easy. Week 4 is a taper, not a training week.',
-  ordering: 'Specific Session first in the week. Finger Primer never the day before it.',
   recommendedLayout: {
     name: 'Recommended',
     description: 'Hard Tuesday, fingers Thursday, easy Saturday.',

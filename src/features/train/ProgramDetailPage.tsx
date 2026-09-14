@@ -487,14 +487,22 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
               </li>
             ))}
           </ul>
-          <div className="bg-sunken rounded-xl p-3 grid grid-cols-1 gap-1.5">
-            {program.constraints.map((c, i) => (
-              <p key={i} className="text-sm flex gap-2 items-start">
-                <AlertTriangle size={14} className="text-warn shrink-0 mt-0.5" />
-                {c.note}
-              </p>
-            ))}
-          </div>
+          {/* Only where there is something to put in it (PLAN.md M155).
+              The two programs with no constraints are the logging modes,
+              General Training and Outdoor Climbing, and for them this was a
+              grey panel with nothing in it under a heading promising to say
+              how the program runs. What they have to say is the rhythm
+              above, which is where they say it. */}
+          {program.constraints.length > 0 && (
+            <div className="bg-sunken rounded-xl p-3 grid grid-cols-1 gap-1.5">
+              {program.constraints.map((c, i) => (
+                <p key={i} className="text-sm flex gap-2 items-start">
+                  <AlertTriangle size={14} className="text-warn shrink-0 mt-0.5" />
+                  {c.note}
+                </p>
+              ))}
+            </div>
+          )}
         </Card>
 
         {program.tracks && (

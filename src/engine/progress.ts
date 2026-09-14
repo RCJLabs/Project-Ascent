@@ -197,19 +197,3 @@ export interface VolumePoint {
   minutes: number;
   sessions: number;
 }
-
-export function weeklyVolume(sessions: Session[], weeks = 12, today = todayKey()): VolumePoint[] {
-  const byWeek = new Map<string, { minutes: number; sessions: number }>();
-  for (const s of sessions) {
-    if (!s.completed) continue;
-    const week = startOfWeek(s.date);
-    const entry = byWeek.get(week) ?? { minutes: 0, sessions: 0 };
-    byWeek.set(week, { minutes: entry.minutes + (s.durationMin ?? 0), sessions: entry.sessions + 1 });
-  }
-  const thisWeek = startOfWeek(today);
-  return Array.from({ length: weeks }, (_, i) => {
-    const week = addDays(thisWeek, -7 * (weeks - 1 - i));
-    const entry = byWeek.get(week);
-    return { week, minutes: entry?.minutes ?? 0, sessions: entry?.sessions ?? 0 };
-  });
-}

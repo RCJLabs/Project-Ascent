@@ -4,7 +4,7 @@ import { getProgram } from '@/content/programs';
 import { newProject } from '@/db/projects';
 import { newSession, type Session } from '@/db/sessions';
 import { addDays, startOfWeek } from './dates';
-import { buildReview, weeksAgo, type ReviewInput } from './review';
+import { buildReview, type ReviewInput } from './review';
 
 const TODAY = '2026-09-09'; // a Wednesday
 const THIS_WEEK = startOfWeek(TODAY);
@@ -48,15 +48,6 @@ describe('the week window', () => {
     expect(r.from).toBe(THIS_WEEK);
     expect(r.to).toBe(addDays(THIS_WEEK, 6));
     expect(r.inProgress).toBe(true);
-  });
-
-  it('rebuilds an old week exactly, and knows it is finished', () => {
-    const lastWeek = addDays(THIS_WEEK, -7);
-    const r = review([session(addDays(lastWeek, 1))], { date: lastWeek });
-    expect(r.from).toBe(lastWeek);
-    expect(r.inProgress).toBe(false);
-    expect(r.sessions).toBe(1);
-    expect(weeksAgo(r, TODAY)).toBe(0);
   });
 
   it('counts only what happened inside the window', () => {

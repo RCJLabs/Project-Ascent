@@ -469,8 +469,6 @@ export interface Program {
    * phase, which made every completion and adherence calculation lie.
    */
   kind: 'program' | 'mode';
-  /** Real rock rather than plastic. */
-  outdoor?: boolean;
   stage: ProgramStage;
   discipline: Discipline;
   /**
@@ -541,9 +539,6 @@ export interface Program {
    * `adaptProgram` and by nothing else.
    */
   adaptedFrom?: number;
-  /** Human-readable scheduling prose, kept verbatim alongside `constraints`. */
-  frequency: string;
-  ordering: string;
   recommendedLayout?: WeeklyLayout;
   assessments: MetricId[];
   /** Progression graph: which programs follow, and why (AUDIT.md §6.12). */

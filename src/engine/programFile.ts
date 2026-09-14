@@ -175,8 +175,6 @@ function readProgram(raw: Record<string, unknown>, dropped: string[]): Program {
     phases: readPhases(raw['phases'], weeks, dropped),
     sessionTypes,
     constraints: readConstraints(raw['constraints'], knownTypes, dropped),
-    frequency: str(raw['frequency'], LIMITS.text),
-    ordering: str(raw['ordering'], LIMITS.text),
     assessments: readAssessments(raw['assessments'], dropped),
     // Only successors the catalogue ships, because a shipped id is the same
     // on every install and a written one is not (PLAN.md M136). Its
@@ -203,7 +201,6 @@ function readProgram(raw: Record<string, unknown>, dropped: string[]): Program {
   const layout = readLayout(raw['recommendedLayout'], knownTypes, dropped);
   if (layout) program.recommendedLayout = layout;
 
-  if (raw['outdoor'] === true) program.outdoor = true;
   return program;
 }
 

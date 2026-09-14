@@ -355,9 +355,6 @@ export const PEAK_PERFORMANCE: Program = {
 
   deloadWeeks: [5, 9],
 
-  frequency: '4 days/week. Hard/Easy alternation is mandatory at this level.',
-  ordering:
-    'Max Intensity and Fingerboard need 48+ hrs between them. Technique day is low-intensity. Projecting day should follow rest.',
 
   constraints: [
     {

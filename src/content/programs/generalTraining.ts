@@ -257,9 +257,6 @@ export const GENERAL_TRAINING: Program = {
     },
   ],
 
-  frequency: 'Flexible. Log whatever you train. No weekly minimum or maximum.',
-  ordering:
-    'Log your sessions as they happen. Focus on consistency and listening to your body. When you are ready for structure, pick a program — your history stays with you.',
 
   constraints: [],
 

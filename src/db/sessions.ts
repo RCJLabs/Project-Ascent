@@ -208,9 +208,13 @@ export interface Session {
    *
    * Absent for everything the climber logged here, which is the common
    * case and the one worth keeping cheap. Set on a row built from a
-   * spreadsheet, so an import can be told apart from a history afterwards
-   * — by the climber reading their own calendar, and by an undo that has
-   * to know what it put there.
+   * spreadsheet, so an import can be told apart from a history afterwards.
+   *
+   * Read by the logger, which says so on the session (PLAN.md M155). The
+   * two readers this comment used to name were the climber's *calendar* and
+   * an undo — the first was the wrong screen for it, a 40px cell already
+   * carrying the day's effort and its marks, and the second never existed:
+   * `store/undo.ts` carries a closure and has never looked at this.
    */
   imported?: 'csv';
   /**

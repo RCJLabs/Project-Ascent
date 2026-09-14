@@ -27,10 +27,31 @@ const SOURCES = walk('src')
   .filter((p) => /\.tsx?$/.test(p) && !p.endsWith('.test.ts') && !p.endsWith('.test.tsx'))
   .map((path) => ({ path, source: readFileSync(path, 'utf8') }));
 
-/** Every place a name is mentioned outside the file that declares it. */
+/**
+ * Every place a name is **called** outside the file that declares it.
+ *
+ * A word match was the first version and it passed for the wrong reason
+ * (PLAN.md M155). `ui/Stat.tsx` was orphaned while four screens each
+ * declared their own private `Stat`, and `\bStat\b` found all four — so the
+ * check reported the primitive as used by the very files that had replaced
+ * it. A call is `name(` or `<name`; a mention is not.
+ */
+export function calls(source: string, name: string): boolean {
+  return new RegExp(`\\b${name}\\s*\\(|<${name}[\\s/>]`).test(source);
+}
+
 function callers(name: string, declaredIn: string): string[] {
+  return SOURCES.filter((file) => file.path !== declaredIn && calls(file.source, name)).map(
+    (f) => f.path,
+  );
+}
+
+/** Every file that imports something from this module. */
+function importers(path: string): string[] {
+  const specifier = path.replace(/^src\//, '@/').replace(/\.tsx?$/, '');
+  const relative = `./${path.split('/').pop()!.replace(/\.tsx?$/, '')}`;
   return SOURCES.filter(
-    (file) => file.path !== declaredIn && new RegExp(`\\b${name}\\b`).test(file.source),
+    (f) => f.source.includes(`from '${specifier}'`) || f.source.includes(`from '${relative}'`),
   ).map((f) => f.path);
 }
 
@@ -61,7 +82,6 @@ describe('every UI primitive is used', () => {
     'src/ui/Skeleton.tsx',
     'src/ui/Chip.tsx',
     'src/ui/Meter.tsx',
-    'src/ui/Stat.tsx',
     'src/ui/Disclosure.tsx',
     'src/ui/IconButton.tsx',
     'src/ui/PageGrid.tsx',
@@ -76,6 +96,35 @@ describe('every UI primitive is used', () => {
       }
     }
     expect(orphans).toEqual([]);
+  });
+
+  /**
+   * And somebody has to import the file (PLAN.md M155).
+   *
+   * `Stat` was declared four more times, privately, in the screens that
+   * should have used it — so every name-based check found it "used" while
+   * the module itself was reachable from nothing. A primitive nobody
+   * imports is a primitive nobody has.
+   */
+  /**
+   * Named, so the self-check below runs the same one (PLAN.md M155).
+   *
+   * A guard passes until the day it does not, so the real list being empty
+   * is also what a neutered version returns — the two tests share this
+   * function for the same reason `expectRendered` above is a function: a
+   * weakened check here fails there.
+   */
+  const unreachable = (list: readonly string[]): string[] =>
+    list.filter((path) => importers(path).length === 0);
+
+  it('has an importer for each file', () => {
+    expect(unreachable(FILES)).toEqual([]);
+  });
+
+  it('would name a primitive nothing imports', () => {
+    expect(unreachable([...FILES, 'src/ui/NobodyImportsThis.tsx'])).toEqual([
+      'src/ui/NobodyImportsThis.tsx',
+    ]);
   });
 });
 
@@ -249,6 +298,30 @@ describe('the check itself works', () => {
 
   it('does not count the declaring file as a caller', () => {
     expect(callers('recordCard', 'src/ui/shareCard.ts')).not.toContain('src/ui/shareCard.ts');
+  });
+
+  it('does not count a bare mention as a call', () => {
+    expect(calls('// Stat is nice', 'Stat')).toBe(false);
+    expect(calls('const label = "Stat";', 'Stat')).toBe(false);
+    expect(calls('type X = { Stat: number };', 'Stat')).toBe(false);
+  });
+
+  it('counts a call and a JSX element', () => {
+    expect(calls('return Stat(props);', 'Stat')).toBe(true);
+    expect(calls('<Stat label="x" />', 'Stat')).toBe(true);
+    expect(calls('<Stat>\n</Stat>', 'Stat')).toBe(true);
+  });
+
+  /**
+   * And what a name check still cannot do (PLAN.md M155).
+   *
+   * Four screens declared their own private `Stat` and rendered it, so
+   * every name-based check — word or call — found the orphaned
+   * `ui/Stat.tsx` "used" by the very files that had replaced it. Only the
+   * import tells them apart, which is why the primitives check asks for one.
+   */
+  it('would notice a module nothing imports', () => {
+    expect(importers('src/ui/NothingImportsThis.tsx')).toEqual([]);
   });
 
   // The prescription scan is a test checking content, which means nothing

@@ -177,11 +177,6 @@ export function displayRange(
   return `${lo}-${hi}`;
 }
 
-/** Which notation a ladder is currently being read in. */
-export function displayNameFor(scale: GradeScale, display: GradeDisplay): string {
-  return scale === 'V' ? display.boulder : display.route;
-}
-
 /**
  * Parse either notation back to the stored ladder, so a climber reading in
  * Font can also type in Font. Canonical input keeps working regardless of

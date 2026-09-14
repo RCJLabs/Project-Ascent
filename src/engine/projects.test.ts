@@ -50,8 +50,7 @@ describe('summariseProject', () => {
     expect(s.lastDate).toBe('2026-09-07');
     expect(s.daysSinceLast).toBe(2);
     expect(s.highPoint).toBe(90);
-    expect(s.bestOutcome).toBe('fell-crux');
-    expect(s.sendDate).toBeNull();
+        expect(s.sendDate).toBeNull();
   });
 
   it('graphs the best high point per day, skipping rehearsal-only days', () => {
@@ -82,54 +81,53 @@ describe('summariseProject', () => {
   });
 });
 
-describe('reconcileProjects — the appliedAt fold', () => {
+describe('reconcileProjects — the send fold', () => {
   it('applies a send once and never again', () => {
     const sessions = [session('2026-09-04', [burn({ outcome: 'send' })], 0)];
-    const first = reconcileProjects([project()], sessions, 'NOW');
+    const first = reconcileProjects([project()], sessions);
     expect(first).toHaveLength(1);
     expect(first[0]).toMatchObject({ reason: 'sent' });
     expect(first[0]!.changes).toMatchObject({
       status: 'sent',
       sentDate: '2026-09-04',
       sendAppliedFrom: '2026-09-04#0',
-      appliedAt: 'NOW',
     });
 
     // The whole point: replaying over unchanged data changes nothing.
     const sent = applyPatch(project(), first[0]!);
-    expect(reconcileProjects([sent], sessions, 'LATER')).toEqual([]);
-    expect(reconcileProjects([sent], sessions, 'LATER')).toEqual([]);
+    expect(reconcileProjects([sent], sessions)).toEqual([]);
+    expect(reconcileProjects([sent], sessions)).toEqual([]);
   });
 
   it('does not resurrect a project the climber shelved after sending', () => {
     const sessions = [session('2026-09-04', [burn({ outcome: 'send' })], 0)];
-    const sent = applyPatch(project(), reconcileProjects([project()], sessions, 'NOW')[0]!);
+    const sent = applyPatch(project(), reconcileProjects([project()], sessions)[0]!);
     const shelved: Project = { ...sent, status: 'shelved' };
-    expect(reconcileProjects([shelved], sessions, 'LATER')).toEqual([]);
+    expect(reconcileProjects([shelved], sessions)).toEqual([]);
   });
 
   it('retracts when the send attempt is deleted', () => {
     const sessions = [session('2026-09-04', [burn({ outcome: 'send' })], 0)];
-    const sent = applyPatch(project(), reconcileProjects([project()], sessions, 'NOW')[0]!);
+    const sent = applyPatch(project(), reconcileProjects([project()], sessions)[0]!);
 
     const withoutSend = [session('2026-09-04', [burn({ outcome: 'fell-crux' })], 0)];
-    const patches = reconcileProjects([sent], withoutSend, 'LATER');
+    const patches = reconcileProjects([sent], withoutSend);
     expect(patches[0]).toMatchObject({ reason: 'retracted' });
     const back = applyPatch(sent, patches[0]!);
     expect(back.status).toBe('active');
     expect(back.sendAppliedFrom).toBeUndefined();
     expect(back.sentDate).toBeUndefined();
     // And the retraction, too, happens exactly once.
-    expect(reconcileProjects([back], withoutSend, 'LATER')).toEqual([]);
+    expect(reconcileProjects([back], withoutSend)).toEqual([]);
   });
 
   it('keeps a manual shelve when retracting', () => {
     const sent = applyPatch(
       project(),
-      reconcileProjects([project()], [session('2026-09-04', [burn({ outcome: 'send' })], 0)], 'NOW')[0]!,
+      reconcileProjects([project()], [session('2026-09-04', [burn({ outcome: 'send' })], 0)])[0]!,
     );
     const shelved: Project = { ...sent, status: 'shelved' };
-    const back = applyPatch(shelved, reconcileProjects([shelved], [], 'LATER')[0]!);
+    const back = applyPatch(shelved, reconcileProjects([shelved], [])[0]!);
     expect(back.status).toBe('shelved');
     expect(back.sendAppliedFrom).toBeUndefined();
   });
@@ -137,13 +135,13 @@ describe('reconcileProjects — the appliedAt fold', () => {
   it('re-points when the send moves to another session', () => {
     const sent = applyPatch(
       project(),
-      reconcileProjects([project()], [session('2026-09-04', [burn({ outcome: 'send' })], 0)], 'NOW')[0]!,
+      reconcileProjects([project()], [session('2026-09-04', [burn({ outcome: 'send' })], 0)])[0]!,
     );
     const moved = [session('2026-09-06', [burn({ outcome: 'send' })], 1)];
-    const patches = reconcileProjects([sent], moved, 'LATER');
+    const patches = reconcileProjects([sent], moved);
     expect(patches[0]).toMatchObject({ reason: 'moved' });
     expect(patches[0]!.changes.sentDate).toBe('2026-09-06');
-    expect(reconcileProjects([applyPatch(sent, patches[0]!)], moved, 'LATER')).toEqual([]);
+    expect(reconcileProjects([applyPatch(sent, patches[0]!)], moved)).toEqual([]);
   });
 
   it('credits the first send when a project is sent twice', () => {
@@ -151,11 +149,11 @@ describe('reconcileProjects — the appliedAt fold', () => {
       session('2026-09-04', [burn({ outcome: 'send' })], 0),
       session('2026-09-11', [burn({ outcome: 'send' })], 1),
     ];
-    expect(reconcileProjects([project()], sessions, 'NOW')[0]!.changes.sentDate).toBe('2026-09-04');
+    expect(reconcileProjects([project()], sessions)[0]!.changes.sentDate).toBe('2026-09-04');
   });
 
   it('leaves untouched projects alone', () => {
-    expect(reconcileProjects([project()], [session('2026-09-04', [burn()], 0)], 'NOW')).toEqual([]);
+    expect(reconcileProjects([project()], [session('2026-09-04', [burn()], 0)])).toEqual([]);
   });
 });
 

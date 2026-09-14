@@ -374,9 +374,6 @@ export const GROUND_ZERO: Program = {
   // 2", and the prescription table already halves the sets there. The
   // program simply never declared it, so the app never marked the week.
   deloadWeeks: [8],
-  frequency: '3-4 sessions/week + rest days as needed',
-  ordering:
-    'Alternate Structural Integrity and Mobility/Core days. Never do two Structural days back-to-back.',
 
   constraints: [
     { kind: 'sessions-per-week', min: 3, max: 4, note: '3-4 sessions per week, plus rest days as needed.' },

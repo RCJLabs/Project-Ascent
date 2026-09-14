@@ -115,7 +115,9 @@ describe('grades still written into prose', () => {
 
   it('is exactly this much, and no more', () => {
     const prose = PROGRAMS.reduce(
-      (n, p) => n + count(p.intro) + count(p.nextPrograms) + count(p.frequency) + count(p.ordering),
+      // `frequency` and `ordering` went with M155: prose the constraints
+      // and the rhythm already said, read by nothing.
+      (n, p) => n + count(p.intro) + count(p.nextPrograms),
       0,
     );
     expect(prose, 'grades in program prose: fix them or update the count deliberately').toBe(37);

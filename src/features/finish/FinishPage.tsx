@@ -444,6 +444,17 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
                       }`}
                     >
                       {t.done} of {t.planned}
+                      {/* Sessions of this type beyond what the weeks asked
+                          for (PLAN.md M155). M91 computed it and this card
+                          printed `done` and `planned` and dropped it — so
+                          "4 of 8" was said to a climber who did twelve, and
+                          the four extra were counted nowhere a person could
+                          see. Not folded into the fraction: that is
+                          adherence to a plan, and a week that did something
+                          else did not do what it was asked. */}
+                      {t.extra > 0 && (
+                        <span className="text-ink-soft font-normal"> +{t.extra}</span>
+                      )}
                     </dd>
                   </div>
                 ))}

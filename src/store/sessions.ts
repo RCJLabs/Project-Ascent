@@ -113,7 +113,3 @@ export const useSessions = create<SessionsState>((set, get) => ({
     return merged;
   },
 }));
-
-export function sessionsOn(byDate: Record<string, Session[]>, date: string): Session[] {
-  return byDate[date] ?? [];
-}

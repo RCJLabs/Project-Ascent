@@ -88,18 +88,3 @@ export function strongestIndex(values: readonly number[]): number {
   });
   return best;
 }
-
-/**
- * How lopsided the shape is, 0 (a circle) to 1 (a single spike).
- *
- * Reported rather than judged. A specialist's shape is not a worse shape —
- * a boulderer who has trained fingers for a year *should* look spiky — and
- * the app has no idea what the climber is training for.
- */
-export function lopsidedness(values: readonly number[]): number {
-  if (values.length === 0) return 0;
-  const max = Math.max(...values);
-  if (max <= 0) return 0;
-  const min = Math.min(...values);
-  return (max - min) / max;
-}

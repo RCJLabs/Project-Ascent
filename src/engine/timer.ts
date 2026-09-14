@@ -123,13 +123,6 @@ export function formatClock(ms: number): string {
   return m > 0 ? `${m}:${String(s).padStart(2, '0')}` : String(s);
 }
 
-export const SEGMENT_LABEL: Record<SegmentKind, string> = {
-  prepare: 'Get ready',
-  work: 'Hang',
-  rest: 'Rest',
-  setRest: 'Set rest',
-};
-
 /** Work-phase wording differs by protocol; hangs "hang", others "work". */
 export function workLabel(protocolName: string): string {
   return /hang|repeater|density|edge/i.test(protocolName) ? 'Hang' : 'Work';

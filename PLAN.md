@@ -7691,7 +7691,8 @@ milestone that settled them; two more were struck by measurement.*
   into `meta` on every open (`db.ts:48`), so a stale install's stored version is
   indistinguishable from a current one.
 
-- **M155 — authored thirteen times, read never.** *Proposed. Small. With M156.*
+- **M155 — authored thirteen times, read never.** *Proposed, and built fourth with M156 — see
+  the entry at the end of this document.*
   Fields the catalogue carries and no engine or screen reads:
   - **`Program.frequency`** (`types.ts:545`) — authored in **all thirteen** programs. Read only
     by `programFile.ts:178` (its own round trip) and written as `''` by `customProgram.ts:62`.
@@ -7728,7 +7729,8 @@ milestone that settled them; two more were struck by measurement.*
   the session already says; `priority.ts` is a derivation whose only consumer is the test that
   pins the catalogue against it.
 
-- **M156 — computed every render, shown to nobody.** *Proposed. Small. With M155.*
+- **M156 — computed every render, shown to nobody.** *Proposed, and built fourth with M155 — see
+  the entry at the end of this document.*
   - **`TypeAdherence.extra`** (`adherence.ts:39`, computed `:126,133`) — `FinishPage.tsx:409-423`
     renders `done` and `planned` and skips it. *"Four limit sessions the plan never placed, all
     on the finger block's rest days"* is computed and discarded.
@@ -8005,3 +8007,64 @@ milestone that settled them; two more were struck by measurement.*
   **Budget: 158.6 → 158.9**, measured 158.37 → 158.68, so 0.31KB and all of it first-load by
   construction: `main.tsx` is the entry point, and there is no lazy boundary to put a service-worker
   registration behind. 0.22KB of slack. 4,740 tests pass.
+
+- **M155 + M156 — wired up or gone.** *Done. The fourth of the fourth brainstorm, taken together
+  as the dependency note said, because they are the same question about the same files.*
+  **Every claim checked first, and two of them moved.** The sweep listed twenty-odd items and the
+  cost of acting on a wrong one is a deletion, so each was read in the code before anything was
+  touched. *"Nine more exports with no reference anywhere"* listed **seven**; all seven were dead.
+  *"Every other `.outdoor` in the codebase is `session.mode` or `ladders.outdoor`"* missed
+  `programFile.ts:206`, which round-trips it on import — a round trip, not a reader, so the verdict
+  stood. And `WeekReview.adherence`/`.zone` are **not** unread: `review.ts:249,304,322` pick the
+  week's note from them, which *is* their rendering. They stay, and so does
+  `ClimberState.sessionsByType`, whose one consumer reads `Object.keys(...).length` — a legitimate
+  read whose values the block report already answers better.
+  **Net: 642 lines out, 327 in, and four files gone.** `src/__m39.ts` was a `console.log` script
+  committed in M39 and never removed. `engine/priority.ts` was 111 lines whose own header said it
+  existed because *"M55 gave `SessionType` a `priority` and set it on nothing"*, imported by its
+  own test alone and named for deletion in two previous brainstorms. Ten dead exports:
+  `SEGMENT_LABEL`, `displayNameFor`, `plannedRange`, `OPTIONAL`, `ERASE_DB`, `sessionsOn`,
+  `weeksAgo`, `lopsidedness`, `weeklyVolume`, `zoneAt`. Two store methods, `GameState.award` and
+  `.spend` — the second superseded by `buy`, which writes the wallet **once** on purpose so a
+  purchase cannot leave the coins gone and the kit unowned; a second way to move the same number,
+  with no caller and no such guarantee, was a hole waiting for one.
+  **`zoneAt` is the interesting deletion.** It was an optimisation written for `deriveXp`, and
+  `zonesFor` then replaced it by batching — so the app carried two fast paths and a test pinning
+  the newer against the older. It now pins `zonesFor` against `loadStateAt`, the reference
+  implementation, which is a stronger check than two optimisations agreeing with each other.
+  **Two stored fields whose own comments named readers that do not exist.**
+  `Project.appliedAt` said *"the M4 reward pipeline reads this"*. Nothing did — the idempotency
+  check is `sendAppliedFrom === send.sessionId` and always was — so the field, the `now` parameter
+  that stamped it, and the sentence all went. `Session.imported` named two readers, *"the climber
+  reading their own calendar"* and an undo; the undo carries a closure and has never looked at it,
+  and the calendar cell is 40px already carrying the day's effort and its marks. **The logger is
+  where a climber reads a session**, so it says there that the numbers came from a spreadsheet.
+  **What the render killed, again.** `Program.frequency` and `Program.ordering` are authored in
+  **all thirteen** programs and were the obvious thing to wire up. They are not wired up: for
+  eleven of them they are the sentences the machine-readable `constraints` were *derived from* —
+  Iron Grip's *"48 hours between finger sessions"* is its `frequency`, its `ordering` and two
+  constraint notes — and for the two with no constraints at all they restate `intro.rhythm`,
+  rendered as a numbered list **on the same card, directly above**. Written, rendered, looked at,
+  deleted. What the looking did find is a real defect: that card mapped over `constraints`
+  unconditionally, so General Training and Outdoor Climbing got an **empty grey panel** under a
+  heading promising to say how the program runs. The panel is now conditional.
+  **`TypeAdherence.extra`, computed since M91 and printed nowhere.** The block report said *"4 of
+  12"* to a climber who did eight. It now says `4 of 12 +4`, beside the fraction and not inside
+  it — the fraction is adherence to a plan, and a week that did something else did not do what it
+  was asked.
+  **The guard that let `ui/Stat.tsx` sit orphaned, and why the file is gone rather than adopted.**
+  Four screens each declared their own private `Stat`, and `callers()` word-matched `\bStat\b` — so
+  the check reported the primitive as used *by the very files that had replaced it*. A call is now
+  `name(` or `<name`, extracted as a testable `calls()`; and because four screens rendering their
+  own `Stat` still satisfy that, the primitives check also asks for an **importer**. As for the
+  file: the four want two different layouts and two different sizes, which is the case
+  `ui/Disclosure.tsx` already settled in its own header — *"forcing a common look would be worse
+  than the duplication"*. The speculative primitive is deleted; the guard that should have said so
+  is fixed.
+  **What the battery found.** Twenty-one mutations, three survivors. One was a real gap — nothing
+  pinned the block report's *fraction*, only the `+4` beside it, so folding the extras into the
+  numerator went unnoticed. One was a redundant `f.path !== path` in `importers`, gone. The third
+  is the shape every guard has: neutering `unreachable` to `[]` passes, because the real list is
+  empty too. Fixed the way `expectRendered` already does it in that file — one named function,
+  used by both the real check and a self-check that asks it about a name deliberately not there.
+  **Budget.** 158.9 holds and the number went **down**: 158.68 → 158.61. 4,730 tests pass.

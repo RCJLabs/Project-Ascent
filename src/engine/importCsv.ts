@@ -129,9 +129,6 @@ export const REQUIRED: Record<CsvKind, ColumnKind[]> = {
   benchmarks: ['date', 'metric', 'value'],
 };
 
-/** A column the importer will fill in from nothing if it has to. */
-export const OPTIONAL: ColumnKind[] = ['result', 'count', 'discipline', 'mode', 'place', 'notes'];
-
 /**
  * The archive's five spreadsheets, and which of them come back in.
  *

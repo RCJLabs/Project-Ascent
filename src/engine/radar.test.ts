@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   axisPoints,
-  lopsidedness,
   polygonPath,
   radarPoints,
   strongestIndex,
@@ -138,21 +137,3 @@ describe('which axis is the point', () => {
   });
 });
 
-describe('how lopsided a shape is', () => {
-  it('calls an even shape even', () => {
-    expect(lopsidedness([50, 50, 50, 50, 50])).toBe(0);
-  });
-
-  it('calls a spike a spike', () => {
-    expect(lopsidedness([100, 0, 0, 0, 0])).toBe(1);
-  });
-
-  it('sits in between for a lean', () => {
-    expect(lopsidedness([100, 50, 50, 50, 50])).toBeCloseTo(0.5, 6);
-  });
-
-  it('does not divide by an empty climber', () => {
-    expect(lopsidedness([0, 0, 0])).toBe(0);
-    expect(lopsidedness([])).toBe(0);
-  });
-});

@@ -16,7 +16,6 @@ export const OUTDOOR_CLIMBING: Program = {
   name: 'Outdoor Climbing',
   subtitle: 'Log Real Rock',
   kind: 'mode',
-  outdoor: true,
   stage: 'ongoing',
   discipline: 'both',
   gradeRange: { scale: 'V', min: 'V0', max: 'V17', label: 'All Levels' },
@@ -100,10 +99,6 @@ export const OUTDOOR_CLIMBING: Program = {
     },
   ],
 
-  frequency:
-    'Flexible. Log every day you climb outside — weekend trips, weeklong expeditions, one-off crag days.',
-  ordering:
-    'Log the session at the crag if you can, or same-day from memory — names and grades fade fast. Check the outdoor guide for projecting tactics, skin management, and safety protocols.',
 
   constraints: [],
 

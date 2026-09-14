@@ -331,8 +331,6 @@ export const TWO_DAY_WEEK: Program = {
   ],
 
   deloadWeeks: [8],
-  frequency: '2 climbing sessions/week, 48 hours apart. A third easy day is optional.',
-  ordering: 'Climb & Apply first in the week while you are fresh; Climb & Build at least two days later.',
   recommendedLayout: {
     name: 'Recommended',
     description: 'Tuesday hard, Saturday volume — two days apart in both directions.',

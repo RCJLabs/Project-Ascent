@@ -384,8 +384,11 @@ describe('modes versus programs', () => {
     }
   });
 
-  it('marks the outdoor mode and gives every discipline its own fields', () => {
-    expect(OUTDOOR_CLIMBING.outdoor).toBe(true);
+  it('gives every discipline in the outdoor mode its own fields', () => {
+    // `kind: 'mode'` is what marks it. A `Program.outdoor` flag sat beside
+    // that, authored once, read by nothing but its own file round trip
+    // (PLAN.md M155) — the sessions say where they happened.
+    expect(OUTDOOR_CLIMBING.kind).toBe('mode');
     const climbing = OUTDOOR_CLIMBING.sessionTypes.filter((t) => !t.isRest);
     expect(climbing).toHaveLength(5);
     for (const type of climbing) {

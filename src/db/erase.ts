@@ -43,7 +43,6 @@
  */
 
 import { getDb } from './db';
-import { DB_NAME, SCHEMA_VERSION } from './schema';
 
 /**
  * Every store, which is deliberately not `EXPORTABLE_STORES`.
@@ -95,4 +94,3 @@ export async function storeNames(): Promise<string[]> {
 }
 
 export const ERASED_STORES: readonly string[] = ALL_STORES;
-export const ERASE_DB = { name: DB_NAME, version: SCHEMA_VERSION };

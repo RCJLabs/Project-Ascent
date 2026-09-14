@@ -21,7 +21,6 @@ import { dayRun, recordDay, recoverDays } from '@/engine/ascent/history';
 import { payoutFor, type AscentPayout } from '@/engine/ascent/rewards';
 import type { BountySpec, Challenge, AcceptedBounty } from '@/engine/challenges';
 import { today } from '@/engine/dates';
-import { GAME_ACTION_CAP } from '@/engine/economy';
 import { deriveXp, type XpState } from '@/engine/xp';
 import { useProjects } from './projects';
 import { useSessions } from './sessions';
@@ -48,15 +47,11 @@ export interface GameState {
     /** The inputs, so the day's best can be raced (PLAN.md M81). */
     tape?: Tape;
   }) => Promise<AscentPayout | null>;
-  /** Append a game-lane award. The id is the idempotency guard, and the
-   *  cap is applied on write so a bad caller cannot inflate the economy. */
-  award: (entry: LedgerEntry) => Promise<void>;
   /** Bank a finished challenge. Ids are the challenge's own, so claiming
    *  twice is a no-op even across a reload. */
   claim: (challenge: Challenge) => Promise<void>;
   acceptBounty: (spec: BountySpec, cap?: number) => Promise<void>;
   abandonBounty: (id: string) => Promise<void>;
-  spend: (amount: number) => Promise<void>;
   /**
    * Buy a kit. Returns false when the balance will not cover it, or when it
    * is already owned — a caller that asks twice must not be charged twice.
@@ -91,11 +86,6 @@ export const useGame = create<GameState>((set, get) => ({
     } catch {
       set({ hydrated: true });
     }
-  },
-
-  award: async (entry) => {
-    const capped = { ...entry, units: Math.min(entry.units, GAME_ACTION_CAP), source: 'game' as const };
-    set({ ledger: await appendLedger(capped) });
   },
 
   recordRun: async ({ mode, metres, coins, pure, date, rested, tape }) => {
@@ -166,11 +156,14 @@ export const useGame = create<GameState>((set, get) => ({
     set({ bounties: await putBounties(get().bounties.filter((b) => b.id !== id)) });
   },
 
-  spend: async (amount) => {
-    const wallet = await putWallet({ ...get().wallet, spent: get().wallet.spent + amount });
-    set({ wallet });
-  },
-
+  /**
+   * Buying is the only thing that spends (PLAN.md M155).
+   *
+   * There was a `spend(amount)` beside this and nothing ever called it —
+   * `buy` writes the wallet once on purpose, so a purchase cannot leave the
+   * coins gone and the kit unowned. A second way to move the same number,
+   * with no caller and no such guarantee, was a hole waiting for a caller.
+   */
   buy: async (outfit, balance) => {
     const price = outfit.price;
     if (price === undefined || price <= 0) return false;
