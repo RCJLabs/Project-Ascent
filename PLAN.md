@@ -8322,3 +8322,56 @@ after those: 18 of 18 killed, sanity no-op alive.
 **Budget.** 159.59 → 159.73, inside the 160.6 raised beforehand. 0.14KB for two caches, both
 first-load by construction since the store and the engine are what every screen goes through.
 4,874 tests pass.
+
+### M158 — the rejection M151 left, and the six behind it ✅
+
+M151 ended with one thing measured and not resolved: *"A `VersionError` boot still leaves **exactly
+one** unhandled rejection… the raw `DOMException` carries no stack, and I did not trace it to its
+caller."* This traces it.
+
+**How, since the error carries no stack.** Chrome's DevTools protocol will attach async frames if
+asked: `Debugger.setAsyncCallStackDepth`, then listen for `Runtime.exceptionThrown` and walk
+`stackTrace.parent` through the `Promise.then` boundary. Against the dev server, where the frames
+still have names. The first app frame was `ui/DemoBanner.tsx` — twenty seconds of work once the
+question was *how do I see this* rather than *where might it be*.
+
+**And "exactly one" was one on the boot screen.** Walking the app under the same fault found
+**six more**: `/data`'s health read, three on Settings, the journal's photo strips, and — on a page
+the sweep did not reach — the photo list on any session or project card. Every one the same shape:
+
+```ts
+void read().then(setState);
+```
+
+`void` satisfies the linter's no-floating-promises rule and handles nothing. The stores never had
+this bug because M151 gave all eight of them a catch; these are the reads with **no store above
+them**, living in `db/` and called straight from an effect. `demoFlag.ts` is the sharpest case —
+it is its own module *because* M110 split it out to keep 4.3KB of demo generator out of the entry
+chunk, and being its own module is exactly how it escaped the convention.
+
+**The fix is one helper, applied to the reads rather than the callers.** `readOr(read, fallback)`
+in `db/db.ts` catches, calls `reportDbError` so the banner still has its reason, and answers with
+the fallback. Wrapping reads rather than call sites, for the reason M151 gave for not wrapping
+twenty-nine writes: caller-by-caller is churn with a missed site at the end of it. And the
+knowledge belongs at the read — a count over a database that will not open is not a missing error,
+it is zero, and `DbFaultBanner` is already saying why. Seven reads wrapped: `hasDemo`,
+`canLoadDemo`, `mediaBytes`, `mediaByIds`, `mediaOwners`, `listMedia`, `readSnapshot`, plus
+`readDbHealth`.
+
+**A write is the opposite case, and got the opposite fix.** `/data`'s tidy-up had `try/finally`
+with no `catch`, so pressing the button on a full disk stopped the spinner and said nothing. The
+climber asked for that one, so it says so where they are looking. `readOr` is explicitly not for
+writes, and the guard's exemption table names eleven climber-initiated calls with the reason each
+reports its own failure.
+
+**What the battery moved.** Four real survivors of twenty-one. Two were the new scan passing while
+exempting everything and while accepting any function body — so the decision is a function now,
+fed a synthetic module. **That self-check immediately found a bug in the guard itself**: the
+400-character window from a declaration ran past the closing brace and matched the `readOr` in the
+*next* function, so an unwrapped read sitting above a wrapped one passed. It reads to the body's
+own closing brace now. The other two were the tidy-up catch, which nothing rendered, and one
+meaningless mutation (deleting an assertion from a test). Second run: 21 of 21 killed.
+
+**Verified by the method that found it.** The same CDP sweep across eight screens under a real
+`VersionError`, both themes: **zero** unhandled rejections, every page still rendering, and the
+banner still on each one. 159.73 → 159.83 against the 160.6 ceiling. 4,892 tests pass.

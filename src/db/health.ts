@@ -1,4 +1,4 @@
-import { getDb } from './db';
+import { getDb, readOr } from './db';
 import { readingProblems } from './sound';
 import { findOrphanMedia, mediaBytes } from './media';
 import { SNAPSHOT_KEY } from './schema';
@@ -18,6 +18,19 @@ import { HEALTH_STORES, type DataHealthInput, type HealthStore } from '@/engine/
 export type DbHealth = Pick<DataHealthInput, 'counts' | 'problems' | 'orphans' | 'mediaBytes'>;
 
 export async function readDbHealth(): Promise<DbHealth> {
+  // `/data` reads this at mount as `void readDbHealth().then(setDb)`, so a
+  // database that refuses used to reject into nothing (PLAN.md M158). The
+  // empty report is the honest answer — no counts, because none could be
+  // taken — and `DbFaultBanner` above it says why.
+  return await readOr(readDbHealthUncaught, {
+    counts: {},
+    problems: readingProblems(),
+    orphans: { count: 0, bytes: 0 },
+    mediaBytes: 0,
+  });
+}
+
+async function readDbHealthUncaught(): Promise<DbHealth> {
   const db = await getDb();
   const counts: Partial<Record<HealthStore, number>> = {};
   for (const store of HEALTH_STORES) {

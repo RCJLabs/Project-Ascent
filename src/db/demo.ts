@@ -21,7 +21,7 @@
  * else, which is why this does not use one.
  */
 
-import { getDb } from './db';
+import { getDb, readOr } from './db';
 import { hasRealData } from './exportImport';
 import { demoClimber, DEMO_SEED } from '@/engine/demoClimber';
 import { today as todayKey } from '@/engine/dates';
@@ -34,7 +34,10 @@ export interface DemoProfile {
 }
 
 export async function canLoadDemo(): Promise<boolean> {
-  return !(await hasRealData());
+  // `false` on a database that will not open (PLAN.md M158): Settings asks
+  // this on mount beside `hasDemo`, and offering to write sample data into
+  // storage that cannot be read would be the wrong answer anyway.
+  return await readOr(async () => !(await hasRealData()), false);
 }
 
 /** Write the sample climber. Returns what the profile has to be told. */

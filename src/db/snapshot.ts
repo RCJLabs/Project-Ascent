@@ -1,4 +1,4 @@
-import { getDb } from './db';
+import { getDb, readOr } from './db';
 import { exportAll, importAll, type ExportFile } from './exportImport';
 import { SNAPSHOT_KEY } from './schema';
 
@@ -46,11 +46,16 @@ export async function takeSnapshot(replacedWith: string): Promise<void> {
 }
 
 export async function readSnapshot(): Promise<{ takenAt: string; replacedWith: string } | null> {
-  const db = await getDb();
-  const record = await db.get('meta', SNAPSHOT_KEY);
-  const snapshot = record?.value as Snapshot | undefined;
-  if (!snapshot || typeof snapshot.takenAt !== 'string' || !snapshot.file) return null;
-  return { takenAt: snapshot.takenAt, replacedWith: snapshot.replacedWith };
+  // Settings reads this on mount to decide whether to offer the undo, so a
+  // database that refuses answers `null` — there is no restore point it can
+  // reach — rather than rejecting into nothing (PLAN.md M158).
+  return await readOr(async () => {
+    const db = await getDb();
+    const record = await db.get('meta', SNAPSHOT_KEY);
+    const snapshot = record?.value as Snapshot | undefined;
+    if (!snapshot || typeof snapshot.takenAt !== 'string' || !snapshot.file) return null;
+    return { takenAt: snapshot.takenAt, replacedWith: snapshot.replacedWith };
+  }, null);
 }
 
 /**

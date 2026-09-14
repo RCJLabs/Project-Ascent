@@ -17,7 +17,7 @@
  */
 
 import type { MediaRecord } from './schema';
-import { getDb } from './db';
+import { getDb, readOr } from './db';
 
 /** Owner keys are namespaced so the index is unambiguous across types. */
 export function projectOwner(projectId: string): string {
@@ -42,6 +42,10 @@ const OWNER_STORES = { project: 'projects', session: 'sessions' } as const;
 export const MAX_PER_OWNER = 8;
 
 export async function listMedia(ownerId: string): Promise<MediaRecord[]> {
+  return await readOr(() => listMediaUncaught(ownerId), []);
+}
+
+async function listMediaUncaught(ownerId: string): Promise<MediaRecord[]> {
   const db = await getDb();
   const rows = await db.getAllFromIndex('media', 'by-owner', ownerId);
   // Oldest first, and the id breaks a tie. `createdAt` has millisecond
@@ -136,6 +140,10 @@ export async function moveMediaOwner(from: string, to: string): Promise<number> 
  * to show.
  */
 export async function mediaOwners(): Promise<Map<string, string[]>> {
+  return await readOr(mediaOwnersUncaught, new Map());
+}
+
+async function mediaOwnersUncaught(): Promise<Map<string, string[]>> {
   const db = await getDb();
   const out = new Map<string, string[]>();
   const scan = db.transaction('media', 'readonly');
@@ -153,9 +161,14 @@ export async function mediaOwners(): Promise<Map<string, string[]>> {
 
 /** The records named, in the climber's own order. Missing ids are skipped. */
 export async function mediaByIds(ids: readonly string[]): Promise<MediaRecord[]> {
-  const db = await getDb();
-  const rows = await Promise.all(ids.map((id) => db.get('media', id)));
-  return rows.filter((r): r is MediaRecord => r !== undefined);
+  // Thumbnails fetch these in an effect as the list scrolls, so on a
+  // refusing database this was one rejection per strip (PLAN.md M158). No
+  // photos is what a strip shows when it cannot read any.
+  return await readOr(async () => {
+    const db = await getDb();
+    const rows = await Promise.all(ids.map((id) => db.get('media', id)));
+    return rows.filter((r): r is MediaRecord => r !== undefined);
+  }, []);
 }
 
 /**
@@ -224,9 +237,16 @@ function sizeOf(blob: Blob | undefined): number {
   return typeof size === 'number' && Number.isFinite(size) ? size : 0;
 }
 
-/** Total bytes held, so the UI can be honest about what it is costing. */
+/**
+ * Total bytes held, so the UI can be honest about what it is costing.
+ *
+ * Zero on a database that will not open: Settings reads this at mount and
+ * did not catch it (PLAN.md M158).
+ */
 export async function mediaBytes(): Promise<number> {
-  const db = await getDb();
-  const rows = await db.getAll('media');
-  return rows.reduce((sum, r) => sum + sizeOf(r.blob), 0);
+  return await readOr(async () => {
+    const db = await getDb();
+    const rows = await db.getAll('media');
+    return rows.reduce((sum, r) => sum + sizeOf(r.blob), 0);
+  }, 0);
 }

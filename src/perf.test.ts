@@ -470,6 +470,12 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M158**, measured 159.73 → 159.83: 0.10KB, nearly all of
+    // it `readOr` in `db/db.ts` and the seven one-line wrappings it enables.
+    // First-load by construction — `db/db.ts` is what every read goes through
+    // — and the cheapest kind of copy there is, since the fallbacks are a
+    // `false`, a `0`, two `[]`s, a `null` and an empty `Map`.
+    //
     // **Unchanged at M157**, measured 159.59 → 159.73: 0.14KB for two
     // reference-identity caches — one flattening of the log in the sessions
     // store, one derivation in `engine/derive.ts` — both of them first-load

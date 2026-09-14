@@ -66,6 +66,14 @@ export function DataPage() {
       setDone(said);
       announce(said);
       refresh();
+    } catch {
+      // A tidy-up is a write, and the climber pressed the button — so this
+      // says so where they are looking rather than taking the `readOr` route
+      // of a quiet fallback (PLAN.md M158). `try/finally` with no `catch`
+      // left the rejection to nobody.
+      const said = 'That could not be tidied up — the app cannot write to its storage right now.';
+      setDone(said);
+      announce(said, 'assertive');
     } finally {
       setBusy(false);
     }
