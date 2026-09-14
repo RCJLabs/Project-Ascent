@@ -52,6 +52,7 @@ import { useSessions } from '@/store/sessions';
 import { againstPrescription, lastLogged } from '@/engine/exerciseLog';
 import { circuitPlan } from '@/engine/circuit';
 import { circuitSubject, protocolSubject, type TimerSubject } from '@/engine/timer';
+import { hasAuthoredWarning, protocolsIn, SafetyNote } from './SafetyNote';
 import { ExerciseNumbers } from './ExerciseNumbers';
 import { RestTimer } from './RestTimer';
 import { TallyRow } from './TallyRow';
@@ -943,6 +944,14 @@ function SessionEditor({
                       </div>
                     );
                   })()}
+                  {/* What the protocol's author wrote about not getting
+                      hurt (PLAN.md M153). Once per method rather than once
+                      per line: three campus exercises share three campus
+                      rules, and repeating them nine times is how a warning
+                      stops being read. */}
+                  {protocolsIn(b.entry.exercises, getProtocol).map((protocol) => (
+                    <SafetyNote key={protocol.id} protocol={protocol} injured={hurtParts} />
+                  ))}
                   <ul className="grid grid-cols-1 gap-2">
                     {b.entry.exercises.map((ex, i) => {
                       const protocol = ex.protocolId ? getProtocol(ex.protocolId) : undefined;
@@ -979,6 +988,11 @@ function SessionEditor({
                             </div>
                             {ex.notes && <div className="text-ink-soft/80 text-xs italic mt-0.5">{ex.notes}</div>}
                             {(() => {
+                              // An authored rule about the same injury has
+                              // already been said, in the words of the person
+                              // who wrote the program. The scan's guess under
+                              // it is noise (PLAN.md M153).
+                              if (hasAuthoredWarning(protocol, hurtParts)) return null;
                               // Advisory, never a refusal to show the program.
                               const clash = exerciseConflict(ex, hurtParts);
                               if (clash) {
@@ -1084,15 +1098,26 @@ function SessionEditor({
               </div>
               <p className="text-sm text-ink-soft leading-relaxed">{drillText(drill.id)}</p>
               {(() => {
-                const clash = drillConflict(drill!, hurtParts);
-                return clash ? (
-                  <p className="text-warn text-xs mt-2 flex items-start gap-1.5">
-                    <AlertTriangle size={12} className="shrink-0 mt-0.5" />
-                    <span>
-                      Loads {describeParts(clash.parts)} — {clash.because}.
-                    </span>
-                  </p>
-                ) : null;
+                // The drill's own protocol, if it names one: eleven of the
+                // 144 do, and the rules on them are the ones this screen
+                // was never showing (PLAN.md M153).
+                const protocol = drill!.protocolId ? getProtocol(drill!.protocolId) : undefined;
+                const clash = hasAuthoredWarning(protocol, hurtParts)
+                  ? null
+                  : drillConflict(drill!, hurtParts);
+                return (
+                  <>
+                    <SafetyNote protocol={protocol} injured={hurtParts} />
+                    {clash ? (
+                      <p className="text-warn text-xs mt-2 flex items-start gap-1.5">
+                        <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                        <span>
+                          Loads {describeParts(clash.parts)} — {clash.because}.
+                        </span>
+                      </p>
+                    ) : null}
+                  </>
+                );
               })()}
               {(() => {
                 const protocol = drill.protocolId ? getProtocol(drill.protocolId) : undefined;

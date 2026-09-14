@@ -7655,7 +7655,8 @@ milestone that settled them; two more were struck by measurement.*
   milestone is deciding which of these are doors that should exist and which are pages that
   should not be reachable at all.
 
-- **M153 — five safety rules the app was told and never reads.** *Proposed. Small.*
+- **M153 — five safety rules the app was told and never reads.** *Proposed, and built second —
+  see the entry at the end of this document.*
   `Protocol.safety` (`types.ts:69`) is authored on five protocols — `protocols.ts:30, 45, 73, 91,
   146` — and one of them reads *"Skip entirely with any elbow symptom — this is the highest-load
   pulling exercise in the program."* **Nothing reads the field.** `DrillPage.tsx:204-211` renders
@@ -7892,3 +7893,65 @@ milestone that settled them; two more were struck by measurement.*
   comment reading *"a backup is whatever was in the file"*. A restored or hand-edited export can
   put a malformed key there and the coach prints `NaN`. One line and an `isDateKey` guard, in a
   file this milestone has no other business in.
+
+- **M153 — the rules the app was told.** *Done. The second of the fourth brainstorm, and the one
+  where the proposal's premise was half wrong.*
+  **What was actually silent.** The proposal implied a climber with a sore elbow got no warning on
+  One-Arm Negatives. Not so: `exerciseConflict` has fired there for milestones and the logger
+  prints *"Loads your elbow — one-arm work doubles the load through a single side."* What was
+  silent is the **author's own instruction** — *"Skip entirely with any elbow symptom"* — which is
+  a categorically stronger statement than a keyword scan's guess and was hidden behind it. And
+  **three of the seven rules name no body part at all** (*"The highest injury-risk protocol in any
+  program here"*, *"Miss a rung twice in a row and the session is over"*, *"If you pump out, you
+  went too hard"*), so no injury path could ever have reached them however the ranking was
+  written. That, not the elbow, is the hole.
+  **A second table in `bodyLoad.ts`, not a second file.** `LOAD_RULES` matches an **activity** and
+  says what it loads; `PART_WORDS` matches the **part itself**, for a sentence that names one.
+  Running the load scan over *"Never campus with any existing finger or elbow symptom"* answers
+  the wrong question confidently — it matches `campus` and reports four parts, three of which the
+  author never mentioned. One file, because that file's own header says the table is the whole
+  thing: one place to argue with, one place to fix.
+  **One rule added to the row's order.** *One warning a line* has held on the logger's exercise row
+  since M89 — an injury outranks a check-in. Now an **authored** rule about the climber's injury
+  outranks the **derived** flag about the same injury, and the scan's guess is suppressed under it.
+  Everything else is unchanged, including the over-flagging: Explosive Pull-Ups and Push-Ups say
+  the word "campus" in their notes and are still flagged for it, which is exactly what
+  `bodyLoad.ts` declares in its own header.
+  **Once per method, not once per line — found by looking at the render.** The first build put the
+  rules under every exercise naming a protocol, which Iron Grip's Spark phase turns into **nine
+  warning lines in a row**: three campus exercises repeating the same three campus rules. A safety
+  rule belongs to the method, so it is said once, above the lines it governs, with the method
+  named. And every rule is shown rather than the worst one — three of seven can never be ranked
+  up, and a safety rule behind a tap is not a safety rule.
+  **The drill page was built and then removed.** It got the protocol's definition and its rules,
+  and the render killed both. Every one of the eleven drills that names a protocol names **ARCing**
+  — whose description is already the drill's own opening paragraph, and whose single rule restates
+  a cue the page has rendered since M107b. `Protocol.description` stays unread, and correctly: the
+  climber-facing definition is the **glossary term**, and `glossary.test.ts:167` already holds that
+  as a contract for *"every protocol the logger can open a timer for"*. Two cards saying a third
+  time what the page said twice is worse than nothing. The reason is pinned by a test, so a drill
+  naming any other protocol fails and points back here.
+  **The guard is the half that matters, and fixing the list was not enough.** `ui/wired.test.ts`
+  kept its leaves in a hand-maintained array, and its own comment said so. Roots are now named and
+  their fields **derived from `types.ts`**, so a field is checked by default and has to be argued
+  out in `EXEMPT` with a reason. That alone would not have caught this: `readers()` word-matched
+  the leaf anywhere in a file, and `safety` appears in `HomePage.tsx`, in the Ascent game and in a
+  program's prose — so the check was **green on the very field it exists to catch**. A read is now
+  a property access or a destructure, with comments stripped first, because this file's own
+  *"`Protocol.safety` got past it"* is a property access as far as a regex is concerned. Verified
+  by reverting the feature: the guard fails.
+  **What it still cannot see, written down rather than papered over.** A leaf is matched by its
+  last segment, so `name` and `description` are satisfied by any type's field of that name. A
+  `Protocol.description` exemption was written and removed again — it **survived its own
+  mutation**, which is the tell that it bought comfort rather than coverage. Telling those apart
+  needs the type of the thing being read, which is a type-checker's job and not a regex's.
+  **What the battery found.** Forty-two mutations across two passes. Six survivors on the first:
+  two drill-page assertions that passed off the drill's own prose (the vacuity that led to looking
+  at the render, which led to the revert), a `seen.has(id)` guard beside a Map keyed on the same id
+  — dedup the Map already did, now gone — an untested injury path on a page that no longer exists,
+  and both halves of the guard's new matcher, which had no self-check. `reads()` is now a named
+  function with its own tests: a comment is not a read, a bare word is not a read, an access and a
+  destructure are.
+  **Budget.** 158.6 holds: 158.16 → 158.37, so 0.21KB for a part-name table, a split and a note in
+  the logger. 0.23KB of slack — tight, and an order of magnitude above the lazy-chunk hash churn
+  M145 measured at 0.02KB, so it stays. 4,712 tests pass.

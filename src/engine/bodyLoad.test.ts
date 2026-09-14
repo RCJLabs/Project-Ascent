@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DRILLS } from '@/content/drills';
+import { PROTOCOLS } from '@/content/protocols';
 import { PROGRAMS } from '@/content/programs';
 import type { Drill, Exercise, SessionType } from '@/content/types';
 import {
@@ -10,6 +11,8 @@ import {
   dayLoad,
   describeDayLoad,
   partsInText,
+  partsNamedIn,
+  protocolSafety,
   drillFindings,
   drillLoads,
   scanText,
@@ -290,5 +293,106 @@ describe('what a whole planned day loads', () => {
         '1 exercise and the drill load your back and knee',
       );
     });
+  });
+});
+
+/**
+ * The rules the author wrote down (PLAN.md M153).
+ *
+ * `LOAD_RULES` answers *what does this activity load*; this answers *what
+ * part does this sentence talk about*. Keeping them apart is the whole
+ * design, and the tests either side of that line are what hold it.
+ */
+describe('the parts a sentence names outright', () => {
+  it('reads the part the author wrote', () => {
+    expect(partsNamedIn('Never campus with any existing finger or elbow symptom.')).toEqual([
+      'fingers',
+      'pulley',
+      'elbow',
+    ]);
+  });
+
+  it('does not answer the activity question by mistake', () => {
+    // The same sentence through the load scan reports four parts, three of
+    // which the author never mentioned — because it matched "campus".
+    expect(partsInText('Never campus with any existing finger or elbow symptom.')).toEqual([
+      'fingers',
+      'pulley',
+      'elbow',
+      'shoulder',
+    ]);
+  });
+
+  it('counts a pulley as a finger and a finger as a pulley', () => {
+    expect(partsNamedIn('a pulley strain')).toEqual(['fingers', 'pulley']);
+    expect(partsNamedIn('sharp finger pain')).toEqual(['fingers', 'pulley']);
+  });
+
+  it('names nothing in a rule that is about conduct', () => {
+    expect(partsNamedIn('Miss a rung twice in a row and the session is over.')).toEqual([]);
+    expect(partsNamedIn('If you pump out, you went too hard.')).toEqual([]);
+  });
+
+  it('does not match a word inside a longer one', () => {
+    expect(partsNamedIn('backcountry approach')).toEqual([]);
+  });
+});
+
+describe("a protocol's safety rules, split by whether they are about you", () => {
+  const campus = PROTOCOLS['campus_ladder']!;
+  const oneArm = PROTOCOLS['one_arm_negatives']!;
+
+  it('leads with the rule that names the injury the app was told about', () => {
+    const { urgent, standing } = protocolSafety(campus, ['elbow']);
+    expect(urgent).toEqual(['Never campus with any existing finger or elbow symptom.']);
+    expect(standing).toHaveLength(2);
+  });
+
+  it('holds every rule when nothing is hurt', () => {
+    const { urgent, standing } = protocolSafety(campus, []);
+    expect(urgent).toEqual([]);
+    expect(standing).toEqual(campus.safety);
+  });
+
+  it('loses nothing: every rule comes back in one half or the other', () => {
+    for (const protocol of Object.values(PROTOCOLS)) {
+      for (const injured of [[], ['elbow'], ['fingers'], ['knee']] as const) {
+        const { urgent, standing } = protocolSafety(protocol, injured);
+        expect([...urgent, ...standing].sort()).toEqual([...(protocol.safety ?? [])].sort());
+      }
+    }
+  });
+
+  it('says nothing about a protocol with no rules, or no protocol at all', () => {
+    expect(protocolSafety(PROTOCOLS['front_lever'], ['elbow'])).toEqual({ urgent: [], standing: [] });
+    expect(protocolSafety(undefined, ['elbow'])).toEqual({ urgent: [], standing: [] });
+  });
+
+  it('does not raise a rule about a part that is not hurt', () => {
+    expect(protocolSafety(oneArm, ['knee']).urgent).toEqual([]);
+    expect(protocolSafety(oneArm, ['elbow']).urgent).toHaveLength(1);
+  });
+
+  /**
+   * The catalogue's own count, pinned. If a protocol gains a rule this
+   * number moves and the milestone's claim moves with it.
+   */
+  it('covers seven authored rules across five protocols', () => {
+    const withRules = Object.values(PROTOCOLS).filter((p) => (p.safety ?? []).length > 0);
+    expect(withRules).toHaveLength(5);
+    expect(withRules.flatMap((p) => p.safety!)).toHaveLength(7);
+  });
+
+  /**
+   * The half that no injury path could ever have reached, which is why
+   * rendering the rules rather than ranking them is the design.
+   */
+  it('has three rules that name no body part at all', () => {
+    const all = Object.values(PROTOCOLS).flatMap((p) => p.safety ?? []);
+    expect(all.filter((rule) => partsNamedIn(rule).length === 0)).toEqual([
+      'The highest injury-risk protocol in any program here.',
+      'Miss a rung twice in a row and the session is over.',
+      'If you pump out, you went too hard — drop a grade rather than pushing through.',
+    ]);
   });
 });
