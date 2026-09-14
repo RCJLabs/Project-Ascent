@@ -68,11 +68,24 @@ describe('what gets erased', () => {
     expect(await storeNames()).toEqual([...ERASED_STORES].sort());
   });
 
-  it('counts what it removed', async () => {
+  /**
+   * Seven of the eight rows the fixture writes (PLAN.md M170).
+   *
+   * The eighth is in `meta`, which is emptied like everything else and does
+   * not count as a record: its rows are the app talking to itself —
+   * `appVersion`, `createdAt`, `createdWith`, the flag that says the
+   * one-time `mode` repair has run — so counting them told a climber wiping
+   * forty sessions that forty-three went.
+   */
+  it('counts what it removed, and not its own bookkeeping', async () => {
     await seed();
+    const db = await getDb();
+    expect(await db.count('meta'), 'no bookkeeping to exclude, so this proves nothing').toBe(1);
     const { records, photos } = await eraseEverything();
-    expect(records).toBe(8);
+    expect(records).toBe(7);
     expect(photos).toBe(1);
+    // Excluded from the count, never from the wipe.
+    expect(await db.count('meta')).toBe(0);
   });
 
   it('says nothing was removed from an empty database', async () => {

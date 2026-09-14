@@ -9064,3 +9064,74 @@ the session type. They agree for every session the app makes, and they are two
 answers to one question in two files.
 
 **Budget.** 161.56 → 161.87, inside 162.5. 5,105 tests pass.
+
+---
+
+### M170 — every session the app logged was an indoor session ✅
+
+**Recorded as a finding during M163 and built here, because it is bigger than
+the milestone that found it.** `Session.mode` has been `'indoor' | 'outdoor'`
+since M0. **Nothing in the app ever wrote it.** `newSession` defaults to
+`'indoor'`, and the only other writers are `importCsv` (a spreadsheet column),
+`demoClimber`, `applyTemplate` (which copies whatever the source session had)
+and `sessionEdit`'s merge (which propagates it). No control, no inference,
+nothing — `PreSession.start` wrote `programId`, `sessionTypeId`, `trackId` and
+`drillId` and never `mode`. So **every session a climber has ever logged by
+hand is indoors**, including one logged against Outdoor Climbing's *Outdoor
+Bouldering*, whose description is *"Bouldering on real rock."*
+
+**What was reading it.** The outdoor grade ladder (M106's two ladders), the
+*"N days since you were on rock"* coach tip, the altimeter's outdoor height
+multiplier, Career's whole outdoor category, the *"Get outside"* weekly
+challenge, the first-outdoor and outdoor-onsight achievements, the consistency
+chart's marker, the search result's *"Outdoors"* badge, `applyTemplate`'s
+*"Outdoor day"* name, the photo label, and the `outdoor-days` objective
+requirement. Every one of them has been reading a climber who has never been
+outside. Two are worth naming: `outdoorReentry` asks how long since the last
+`mode === 'outdoor'` session and returns null when there has never been one, so
+**that tip could not fire for anybody**; and M106's two-ladder toggle is
+rendered only when there are outdoor sends, so **it has never appeared on
+anyone's screen**. The browser check for this milestone is what proves it does
+now.
+
+**Three parts.** `SessionType` gains a declared `outdoor?: boolean` and the five
+Outdoor Climbing types carry it. Declared rather than read off the `outdoor_`
+prefix those five happen to share: an id is a name, not a fact, and a program
+written in the builder would never follow the convention — a test greps this
+module to hold that line. Starting a day writes the mode from the type the
+climber actually picked, which is the planned one or any of the others the card
+offers. And the logger carries two chips, because a program cannot know that
+this particular Saturday was at the crag — labelled *"Indoors or out"* rather
+than *"Where"*, since the `location` field already owns that word and asks for
+the name of the place rather than the kind of it.
+
+**And the log already written, repaired once.** A session whose type declares
+`outdoor` and whose mode is still the default was never asked, and its answer is
+knowable, so boot rewrites it — after the catalogue and the log are both in,
+because it reads one against the other. **Once**, flagged in `meta` the same
+write-once way `createdWith` is, because after this milestone `'indoor'` on an
+outdoor type is a sentence the climber may have said — a session on Outdoor
+Bouldering's type that happened on plastic — and a repair that ran every boot
+would overwrite them forever. The flag is written **after** the sessions, so a
+failure part-way leaves the repair still to do rather than silently abandoned.
+
+**A wipe stopped counting its own bookkeeping.** The repair's flag is a row in
+`meta`, and `eraseEverything` counted `meta` in the *"Deleted — N records"*
+line — so the new flag made a wipe of one session and one project claim three
+records. `meta` is still erased, and has to be, but its rows are the app talking
+to itself (`appVersion`, `createdAt`, `createdWith`, and now this), so they are
+out of the count. A climber wiping forty sessions was already being told
+forty-three went; this milestone made that wrong enough to fix.
+
+**What the battery moved.** Twenty-seven mutants, three survivors plus one
+invalid. The invalid one added `hidden` to the control's *label* rather than
+removing the control, which hides nothing that a test queries; it was replaced
+with one that empties the chip list. Of the three real ones, one was a missing
+test file in the battery's own list — `db/erase.test.ts`, which has held "every
+store the database declares is in the erase list" since M114 and was simply not
+being run. The other two were the same equivalent-mutant shape, **for the third
+time this session**: `programId === undefined` and `sessionTypeId === undefined`
+were both the same check the optional chain already makes, so `typeIsOutdoor`
+collapsed to one lookup with a `?? ''` and no guards at all.
+
+**Budget.** 161.87 → 162.11, inside 162.5. 5,140 tests pass.

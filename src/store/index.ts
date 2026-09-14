@@ -43,6 +43,12 @@ export async function hydrateAll(): Promise<void> {
   } finally {
     endHydration();
   }
+  // Sessions logged against an outdoor session type before the app had any
+  // way to record that (PLAN.md M170). After the catalogue and the log are
+  // both in, because it reads one against the other; once ever, and a no-op
+  // for the great majority of climbers, who have no outdoor type in their
+  // log at all.
+  await useSessions.getState().repairOutdoorModes();
   // The reconcile the subscription deliberately skipped, run once now that
   // both stores are loaded and the answer means something. Cheap and a
   // no-op on an empty log: `reconcile` returns early with no projects.

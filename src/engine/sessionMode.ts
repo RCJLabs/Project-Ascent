@@ -1,0 +1,77 @@
+/**
+ * Where a session happened, and the logs that were never asked (PLAN.md M170).
+ *
+ * `Session.mode` has been `'indoor' | 'outdoor'` since M0. A dozen features
+ * read it — the outdoor grade ladder (M106's two ladders), the *"N days since
+ * you were on rock"* coach tip, the altimeter's outdoor height multiplier,
+ * Career's whole outdoor category, the *"Get outside"* weekly challenge, the
+ * first-outdoor and outdoor-onsight achievements, the consistency chart's
+ * marker, the search result badge, and the `outdoor-days` objective
+ * requirement.
+ *
+ * **Nothing in the app ever wrote it.** `newSession` defaults to `'indoor'`,
+ * and the only other writers are `importCsv` (which reads a spreadsheet
+ * column), `demoClimber`, `applyTemplate` (which copies whatever the source
+ * session had) and `sessionEdit`'s merge (which propagates it). No control, no
+ * inference, nothing. So every session logged by hand in the life of the app
+ * is `'indoor'` — including one logged against Outdoor Climbing's *Outdoor
+ * Bouldering*, whose whole description is *"Bouldering on real rock"*.
+ *
+ * Which means every one of those features has been reading a climber who has
+ * never been outside, and the coach tip in particular could not fire for
+ * anybody: it asks how long since the last `mode === 'outdoor'` session and
+ * returns null when there has never been one.
+ *
+ * ## The repair, and why it is one-time
+ *
+ * Going forward the session type sets the mode and the logger can correct it.
+ * That leaves the log already written, which this repairs once: a session
+ * whose session type declares `outdoor` and whose stored mode is the default
+ * is a session that was never asked, and its answer is knowable.
+ *
+ * **Once**, and never again on later boots, because after this milestone
+ * `'indoor'` on an outdoor type is a sentence the climber may have said — a
+ * bouldering session on Outdoor Climbing's type that actually happened in the
+ * gym. A repair that ran every boot would overwrite them forever. The flag
+ * lives in `meta`, the same write-once shape `createdWith` uses.
+ */
+
+import { getProgram } from '@/content/programs';
+import type { Session } from '@/db/sessions';
+
+/** The `meta` key that records the one-time repair as done. */
+export const MODE_REPAIR_KEY = 'outdoorModeRepairedAt';
+
+/**
+ * Whether the session type this session was logged against says it happened
+ * outdoors.
+ *
+ * Reads the declared flag, never the `outdoor_` id prefix that the five
+ * shipped types happen to share: an id is a name, and a program written in
+ * the builder would not follow the convention.
+ */
+export function typeIsOutdoor(session: Pick<Session, 'programId' | 'sessionTypeId'>): boolean {
+  // No guards, and that is deliberate: both were the same check written
+  // twice, and the battery showed it by surviving their deletion. A missing
+  // programId becomes `''`, which the registry has no entry for; a missing
+  // sessionTypeId matches no type, so `find` returns undefined. Either way
+  // the optional chain arrives at `undefined` and the answer is false —
+  // exactly what the guards spelled out at greater length.
+  const type = getProgram(session.programId ?? '')?.sessionTypes.find(
+    (t) => t.id === session.sessionTypeId,
+  );
+  return type?.outdoor === true;
+}
+
+/**
+ * The sessions the repair would rewrite, already rewritten.
+ *
+ * Returns only the changed ones, so the caller writes what it has to and no
+ * more — a log of two thousand sessions with three outdoor days in it is
+ * three writes, not two thousand.
+ */
+export function outdoorRepairs(sessions: readonly Session[]): Session[] {
+  return sessions
+    .filter((session) => session.mode !== 'outdoor' && typeIsOutdoor(session))
+    .map((session) => ({ ...session, mode: 'outdoor' as const }));
+}

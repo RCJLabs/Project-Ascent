@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { reportDbError } from '@/db/db';
+import { getDb, reportDbError } from '@/db/db';
 import {
   deleteSession,
   listSessions,
@@ -10,6 +10,7 @@ import {
 } from '@/db/sessions';
 import { moveMediaOwner, sessionOwner } from '@/db/media';
 import { mergeSessions, moveSession } from '@/engine/sessionEdit';
+import { MODE_REPAIR_KEY, outdoorRepairs } from '@/engine/sessionMode';
 
 /**
  * Logged sessions, held in memory keyed by date so the calendar and logger
@@ -21,6 +22,11 @@ export interface SessionsState {
   hydrated: boolean;
   byDate: Record<string, Session[]>;
   load: () => Promise<void>;
+  /**
+   * The one-time `mode` repair (PLAN.md M170). A no-op after the first run,
+   * and on a log with no outdoor session types in it — which is most.
+   */
+  repairOutdoorModes: () => Promise<number>;
   create: (date: string, patch?: Partial<Session>) => Promise<Session>;
   update: (session: Session) => Promise<void>;
   remove: (session: Session) => Promise<void>;
@@ -87,6 +93,42 @@ export const useSessions = create<SessionsState>((set, get) => ({
       // instead of letting it read as a fresh install (PLAN.md M151).
       reportDbError(error);
       set({ hydrated: true });
+    }
+  },
+
+  /**
+   * Fill in `mode` for sessions logged against an outdoor session type before
+   * the app had any way to say so (PLAN.md M170).
+   *
+   * Guarded by a `meta` key rather than re-derived every boot, because once
+   * the logger can set `mode`, `'indoor'` on an outdoor type is an answer the
+   * climber may have given — a session on Outdoor Bouldering's type that
+   * actually happened on a plastic wall. A repair that ran forever would
+   * overwrite them forever.
+   */
+  repairOutdoorModes: async () => {
+    try {
+      const db = await getDb();
+      if (await db.get('meta', MODE_REPAIR_KEY)) return 0;
+      const repaired = outdoorRepairs(Object.values(get().byDate).flat());
+      for (const session of repaired) await putSession(session);
+      // After the writes, so a failure part-way leaves the flag unset and the
+      // rest of the repair still to do rather than silently abandoned.
+      await db.put('meta', { key: MODE_REPAIR_KEY, value: new Date().toISOString() });
+      if (repaired.length > 0) {
+        const byDate = { ...get().byDate };
+        for (const session of repaired) {
+          byDate[session.date] = (byDate[session.date] ?? []).map((s) =>
+            s.id === session.id ? session : s,
+          );
+        }
+        set({ byDate });
+      }
+      return repaired.length;
+    } catch (error) {
+      // A repair that cannot run is not a reason the app cannot start.
+      reportDbError(error);
+      return 0;
     }
   },
 

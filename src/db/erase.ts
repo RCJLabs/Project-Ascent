@@ -64,8 +64,21 @@ const ALL_STORES = [
   'media',
 ] as const;
 
+/**
+ * Bookkeeping, not a record (PLAN.md M170).
+ *
+ * `meta` is emptied like every other store — it is in the list above and it
+ * has to be, or a wipe would leave the app remembering which version created
+ * a database that no longer exists. But its rows are the app talking to
+ * itself: `appVersion`, `createdAt`, `createdWith`, and the flag that says
+ * the one-time `mode` repair has run. Counting them told a climber wiping
+ * forty sessions that forty-three records went, and the fourth arrived with
+ * M170's flag and made the line wronger.
+ */
+const NOT_A_RECORD: readonly string[] = ['meta'];
+
 export interface Erased {
-  /** Records removed, for the confirmation line. */
+  /** Records removed, for the confirmation line. Bookkeeping excluded. */
   records: number;
   /** Photos among them, counted separately because they are what someone
    *  deleting a phone's contents actually pictures. */
@@ -78,7 +91,11 @@ export async function eraseEverything(): Promise<Erased> {
   const counts = await Promise.all(ALL_STORES.map((store) => tx.objectStore(store).count()));
   const photos = counts[ALL_STORES.indexOf('media')] ?? 0;
   await Promise.all([...ALL_STORES.map((store) => tx.objectStore(store).clear()), tx.done]);
-  return { records: counts.reduce((n, c) => n + c, 0), photos };
+  const records = counts.reduce(
+    (n, c, i) => (NOT_A_RECORD.includes(ALL_STORES[i]!) ? n : n + c),
+    0,
+  );
+  return { records, photos };
 }
 
 /**

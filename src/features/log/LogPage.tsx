@@ -1588,6 +1588,39 @@ function FieldsCard({
           ))}
         </ul>
       )}
+      {/* Indoors or out (PLAN.md M170).
+          Above the place, because it is the same question at its coarsest:
+          the place names the crag or the gym, this says which kind it was.
+          Asked of every session, like `location` since M133, because a
+          climber on Iron Grip who went to the crag on Saturday is the case
+          the session type cannot know about — the type sets the default
+          when the day is started, and this is how the day gets corrected.
+
+          Everything downstream of `mode` — the outdoor grade ladder, the
+          "days since you were on rock" tip, the altimeter's multiplier,
+          Career's outdoor counter, the "Get outside" challenge — had no
+          writer at all before this, so every one of them read a climber who
+          had never been outside. */}
+      <div className="mb-3">
+        {/* Not "Where": the `location` field below already carries that
+            label, and it asks for the name of the place. This asks which
+            kind of place it was. */}
+        <span className="text-sm text-ink-soft block mb-1.5">Indoors or out</span>
+        <div className="flex flex-wrap gap-2">
+          {([
+            ['indoor', 'Indoors'],
+            ['outdoor', 'On rock'],
+          ] as const).map(([value, label]) => (
+            <Chip
+              key={value}
+              active={session.mode === value}
+              onClick={() => onChange({ ...session, mode: value })}
+            >
+              {label}
+            </Chip>
+          ))}
+        </div>
+      </div>
       <div className="grid grid-cols-1 gap-3">
         {specs.map((spec) => {
           const value = session.fields?.[spec.id];

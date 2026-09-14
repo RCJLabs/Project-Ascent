@@ -146,6 +146,35 @@ describe('when it does happen', () => {
     expect(await screen.findByText(/Deleted — 2 records/)).toBeTruthy();
   });
 
+  /**
+   * Two records, for one session and one project — and not four, which is
+   * what the store holds (PLAN.md M170).
+   *
+   * `meta` is emptied like everything else, and has to be: a wipe that left
+   * the app remembering which version created a database that no longer
+   * exists would be lying about a different thing. But its rows are the app
+   * talking to itself, and counting them told a climber wiping forty
+   * sessions that forty-three went. M170's one-time repair flag was the
+   * fourth such row and the one that made the line worth fixing.
+   */
+  it('does not count its own bookkeeping as the climber\'s records', async () => {
+    await settings();
+    const db = await getDb();
+    expect(await db.count('meta'), 'no bookkeeping to exclude, so this proves nothing')
+      .toBeGreaterThan(0);
+    expect(await db.count('sessions')).toBe(1);
+    expect(await db.count('projects')).toBe(1);
+
+    deleteButton().click();
+    const box = await screen.findByLabelText(/Type DELETE to confirm/i);
+    fireEvent.change(box, { target: { value: 'DELETE' } });
+    deleteButton().click();
+    expect(await screen.findByText(/Deleted — 2 records/)).toBeTruthy();
+    // And the bookkeeping is still gone, which is the half the count must
+    // not be allowed to change.
+    await waitFor(async () => expect(await db.count('sessions')).toBe(0));
+  });
+
   it('leaves the app in the state a new install is', async () => {
     // No setup stamp, no active program, no sessions. What Home reads to
     // offer the guided setup and the programs again (PLAN.md M123), and

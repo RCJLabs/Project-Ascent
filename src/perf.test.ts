@@ -470,6 +470,14 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M170**, measured 161.87 → 162.11: 0.24KB. `engine/
+    // sessionMode.ts` is nine lines of logic and the rest is prose; it is
+    // first-load because `store/index.ts` runs the one-time repair at boot,
+    // and that has to be the boot path — it is the only place that has both
+    // the catalogue and the whole log in hand. The two chips in the logger
+    // are on a lazy route. The `outdoor` flag on five session types costs
+    // nothing here: the catalogue is fetched, not imported.
+    //
     // **Unchanged at M164**, measured 161.56 → 161.87: 0.31KB. `engine/
     // restDrill.ts` is first-load because `PreSession` is — Home renders that
     // card and nothing else of the logger — and the drill registry it reads

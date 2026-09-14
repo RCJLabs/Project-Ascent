@@ -367,6 +367,27 @@ export interface SessionType {
    *  find it without string-matching an id. */
   isRest?: boolean;
   /**
+   * This session happens on real rock (PLAN.md M170).
+   *
+   * `Session.mode` has been `'indoor' | 'outdoor'` since M0 and is read by a
+   * dozen features — the outdoor grade ladder, the *"days since you were on
+   * rock"* tip, the altimeter's height multiplier, Career's outdoor counter,
+   * the *"Get outside"* challenge, two achievements — and **nothing in the
+   * app ever wrote it.** `newSession` defaulted to `'indoor'` and no control
+   * existed, so a climber logging Outdoor Bouldering from Outdoor Climbing
+   * filed an indoor session, every time, for the life of the app.
+   *
+   * A declared flag rather than the `outdoor_` id prefix those five types
+   * happen to share: an id is a name, not a fact, and a program written in
+   * the builder would never follow the convention. Declared, so a custom
+   * program can say it too.
+   *
+   * It sets the session's mode when the day is started; the climber can
+   * still say otherwise in the logger, because a program cannot know that
+   * this particular Tuesday was at the crag.
+   */
+  outdoor?: boolean;
+  /**
    * How hard this day is (PLAN.md M131). Rest types may leave it out — a
    * rest day is `easy` by definition — and every other type in the shipped
    * catalogue declares one, which `validateProgram` enforces.
