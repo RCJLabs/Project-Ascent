@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useObjectives } from '@/store/objectives';
 import { useProjects } from '@/store/projects';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { venueSuggestions, venues, type Venue } from '@/engine/venues';
 
 /**
@@ -18,7 +18,7 @@ export function useVenues(): Venue[] {
   const projects = useProjects((s) => s.projects);
   const objectives = useObjectives((s) => s.objectives);
   return useMemo(
-    () => venues({ sessions: Object.values(byDate).flat(), projects, objectives }),
+    () => venues({ sessions: allSessions(byDate), projects, objectives }),
     [byDate, projects, objectives],
   );
 }

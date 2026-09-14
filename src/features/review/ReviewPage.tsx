@@ -21,7 +21,7 @@ import { useXp } from '@/store/game';
 import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';
 import { useProjects } from '@/store/projects';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -43,7 +43,7 @@ export function useReview(date: string): WeekReview {
   return useMemo(() => {
     const program = activeProgramId ? getProgram(activeProgramId) : undefined;
     return buildReview({
-      sessions: Object.values(byDate).flat(),
+      sessions: allSessions(byDate),
       date,
       program,
       startDate: activeProgramId ? startDates[activeProgramId] : undefined,

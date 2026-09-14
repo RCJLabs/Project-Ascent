@@ -7758,7 +7758,7 @@ milestone that settled them; two more were struck by measurement.*
   harder case than the rest, because deleting a field whose comment describes a reader means
   first deciding whether the comment or the code is the mistake.
 
-- **M157 — one derivation, shared.** *Proposed. Small.*
+- **M157 — one derivation, shared.** *Done — see the entry at the end of this document.*
   **`deriveClimberState` has no cache and fourteen callers.** `BodyPage.tsx:44`,
   `GamePage.tsx:110,145`, `ProgressPage.tsx:133,174,407`, `CareerPage.tsx:49`, `YearPage.tsx:79`,
   `useTips.ts:41`, `useClimberAvatar.ts:38`, `skills.ts:30`, `BoardPage.tsx:42`,
@@ -8272,3 +8272,53 @@ Second run: 17 of 17 killed, the sanity no-op alive.
 and a two-row card — all markup on pages already in the tree — and the routing change cost
 nothing. 0.11KB of slack, the tightest it has been; the next milestone raises the line. 4,857
 tests pass.
+
+### M157 — one derivation, shared ✅
+
+The brainstorm said `deriveClimberState` has no cache and fourteen callers. Both halves were
+understated, and the interesting part was not the count.
+
+**Eighteen call sites, not fourteen** — the list missed `review.ts:139`, `statHistory.ts:32` and
+`WelcomePage.tsx:86`. And the pattern behind them, `Object.values(byDate).flat()`, appeared in
+**forty-three places**, because everything that reads the log flattens it first, not only the
+things that derive from it.
+
+**The finding that changed the milestone.** The brainstorm's precedent was M18: *"made `useXp()`
+cost one derivation instead of nine and recorded the number."* That cache is real and keyed on
+reference identity, and the number was measured by calling `deriveXp` in a loop with one array.
+That is not what the app does. `useMemo` is **per component instance**, so nine components each
+built their own flattened array and each missed the cache — it made nine *renders of one
+component* cost one derivation, and nine components cost nine. A probe rendering two `useXp()`
+components got two different `XpState` objects back. So the milestone is not "add a cache like
+the one that works"; it is that the one that works has never worked across components, and the
+fix has to be the array, not the derivation.
+
+**So the flattening moved into the store.** `allSessions(byDate)` caches on the store's own
+object identity — the same single-entry, reference-keyed shape `deriveXp` uses, sound for the
+same reason: the stores replace `byDate` rather than mutating it. All forty-three sites call it
+now, `useAllSessions()` where a hook is wanted. `deriveClimberState` then gets the same cache,
+and `deriveXp`'s finally hits across components.
+
+**Two things caching could have broken quietly.** `today` defaults to the real date, so a key
+holding `options.today` reads `undefined` both sides of midnight and hands an app left open
+overnight yesterday's answer — the streak and the 30-day count both move at midnight with nothing
+logged. And `weeklyTarget` is passed as `3` by one Progress card and omitted by its neighbours,
+which are the same question keyed two ways. The key holds **resolved** values for both.
+
+**Measured, by rendering.** Progress with every card mounted asks four times and derives once;
+`/body` asks twice and derives once. The test wraps the module and counts distinct *results*
+rather than calls, because fourteen calls returning one object is one derivation and that is the
+claim. M18's version of this check could not have passed.
+
+**What the battery moved.** Six survivors of eighteen on the first run, five of them real gaps in
+the tests rather than the code. The midnight test passed on the broken key, because with `today`
+omitted both spellings key on `undefined` — only rolling the clock with `vi.setSystemTime`
+separates them. Nothing asserted that clearing the cache clears it. The anti-regression scan
+passed when made to discard every line, so the filtering is a function now with a synthetic
+offender fed through it. And dropping `clearClimberStateCache()` from the 60ms benchmark left it
+green while measuring nanoseconds, so that entry has a **floor** as well as a ceiling. Second run
+after those: 18 of 18 killed, sanity no-op alive.
+
+**Budget.** 159.59 → 159.73, inside the 160.6 raised beforehand. 0.14KB for two caches, both
+first-load by construction since the store and the engine are what every screen goes through.
+4,874 tests pass.

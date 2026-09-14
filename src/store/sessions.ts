@@ -41,6 +41,39 @@ function index(sessions: Session[]): Record<string, Session[]> {
   return out;
 }
 
+/**
+ * The whole log as one array, the same array every time (PLAN.md M157).
+ *
+ * Forty-three places wrote `Object.values(byDate).flat()`, and where it sat
+ * inside a component's own `useMemo` it built a **fresh array per component
+ * instance** — `useMemo` is per-instance, so two components reading the same
+ * store got two arrays holding the same objects.
+ *
+ * That is what defeated `deriveXp`'s cache, which is keyed on reference
+ * identity (`engine/xp.ts`). M18 recorded that cache as making nine callers
+ * cost one derivation; it made nine *renders of one component* cost one, and
+ * nine components cost nine. A probe rendering two `useXp()` components got
+ * two different `XpState` objects back.
+ *
+ * So the flattening moves here, cached on the store's own object identity.
+ * The stores replace `byDate` rather than mutating it, which is what makes
+ * an identity key sound — the same reasoning `deriveXp` already relies on.
+ * One entry rather than a map: two different logs are never live at once.
+ */
+let flattened: { key: Record<string, Session[]>; value: Session[] } | null = null;
+
+export function allSessions(byDate: Record<string, Session[]>): Session[] {
+  if (flattened !== null && flattened.key === byDate) return flattened.value;
+  const value = Object.values(byDate).flat();
+  flattened = { key: byDate, value };
+  return value;
+}
+
+/** The whole log, shared. Use this rather than flattening at the call site. */
+export function useAllSessions(): Session[] {
+  return allSessions(useSessions((s) => s.byDate));
+}
+
 export const useSessions = create<SessionsState>((set, get) => ({
   hydrated: false,
   byDate: {},

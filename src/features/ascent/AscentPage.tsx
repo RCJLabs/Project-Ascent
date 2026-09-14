@@ -39,7 +39,7 @@ import { useGame, useXp } from '@/store/game';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
-import { useSessions } from '@/store/sessions';
+import { useAllSessions } from '@/store/sessions';
 import { useSkills } from '@/store/skills';
 import { unitsToXp } from '@/engine/economy';
 import { BackLink } from '@/ui/BackLink';
@@ -83,7 +83,6 @@ const EMPTY_HUD: Hud = {
 };
 
 export function AscentPage() {
-  const byDate = useSessions((s) => s.byDate);
   const metricEntries = useMetrics((s) => s.entries);
   const projects = useProjects((s) => s.projects);
   const injuries = useProfile((s) => s.injuries);
@@ -124,7 +123,7 @@ export function AscentPage() {
     if (!hydrated) void loadGame();
   }, [hydrated, loadGame]);
 
-  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const sessions = useAllSessions();
   const derived = useMemo(() => {
     const state = deriveClimberState(sessions);
     const stats = deriveStats({ state, metrics: metricEntries, projects });

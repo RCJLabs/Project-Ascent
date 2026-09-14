@@ -6,7 +6,7 @@ import { attachTargets, describeEmpty, type Target } from '@/engine/attach';
 import { takeSharedPhoto } from '@/lib/sharedPhoto';
 import { today } from '@/engine/dates';
 import { useProjects } from '@/store/projects';
-import { useSessions } from '@/store/sessions';
+import { useSessions, useAllSessions } from '@/store/sessions';
 import { announce } from '@/ui/Announce';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
@@ -32,7 +32,6 @@ import { PageSkeleton } from '@/ui/Skeleton';
  * answered a question about a photo that was never going to work.
  */
 export function AttachPage() {
-  const byDate = useSessions((s) => s.byDate);
   const sessionsReady = useSessions((s) => s.hydrated);
   const projects = useProjects((s) => s.projects);
   const projectsReady = useProjects((s) => s.hydrated);
@@ -89,7 +88,7 @@ export function AttachPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const sessions = useAllSessions();
   const targets = useMemo(
     () => attachTargets({ sessions, projects, counts: counts ?? new Map(), today: today() }),
     [sessions, projects, counts],

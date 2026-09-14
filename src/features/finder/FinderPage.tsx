@@ -15,7 +15,7 @@ import {
 import type { Session } from '@/db/sessions';
 import { today } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
-import { useSessions } from '@/store/sessions';
+import { useSessions, useAllSessions } from '@/store/sessions';
 import { injuryPolicy } from '@/engine/injury';
 import type { Discipline, Equipment } from '@/content/types';
 import type { BodyPart } from '@/content/warmups';
@@ -144,12 +144,11 @@ export function FinderPage() {
   // from the one the same climber gets a second later (PLAN.md M35).
   const metricsReady = useMetrics((s) => s.hydrated);
   const baseline = useProfile((s) => s.baseline);
-  const byDate = useSessions((s) => s.byDate);
   const sessionsReady = useSessions((s) => s.hydrated);
   // The grades the log says, where they beat the ones typed at onboarding
   // (PLAN.md M85). Computed here rather than inside the form so the form
   // keeps taking plain values and stays easy to test.
-  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const sessions = useAllSessions();
   const logged = useMemo(
     () => gradesFromLog(baseline, deriveClimberState(sessions)),
     [baseline, sessions],

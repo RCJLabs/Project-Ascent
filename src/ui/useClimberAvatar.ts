@@ -5,7 +5,7 @@ import { deriveClimberState } from '@/engine/derive';
 import { deriveStats } from '@/engine/stats';
 import { deriveVitality } from '@/engine/vitality';
 import { useProfile } from '@/store/profile';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { useSkillEffects } from '@/store/skills';
 import { useXp } from '@/store/game';
 
@@ -34,7 +34,7 @@ export function useClimberAvatar(enabled = true): AvatarConfig | undefined {
 
   return useMemo(() => {
     if (!enabled) return undefined;
-    const sessions = Object.values(byDate).flat();
+    const sessions = allSessions(byDate);
     const state = deriveClimberState(sessions);
     const vitality = deriveVitality({
       state,

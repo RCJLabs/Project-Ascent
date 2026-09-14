@@ -22,7 +22,7 @@ import { AchievementsCard } from '@/features/climber/AchievementsCard';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { useCurrency, useXp } from '@/store/game';
 import { useProfile } from '@/store/profile';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { useNextUnlock, useSkills } from '@/store/skills';
 import { Avatar } from '@/ui/Avatar';
@@ -107,7 +107,7 @@ export function GamePage() {
 function AltimeterCard() {
   const units = useSettings((st) => st.units);
   const byDate = useSessions((s) => s.byDate);
-  const alt = useMemo(() => deriveAltimeter(Object.values(byDate).flat()), [byDate]);
+  const alt = useMemo(() => deriveAltimeter(allSessions(byDate)), [byDate]);
 
   return (
     <Link href="/altimeter" className="block bg-surface border border-line rounded-2xl p-4">
@@ -142,7 +142,7 @@ function AltimeterCard() {
 function AscentCard() {
   const byDate = useSessions((s) => s.byDate);
   const rested = useMemo(
-    () => deriveClimberState(Object.values(byDate).flat()).restedWithin24h,
+    () => deriveClimberState(allSessions(byDate)).restedWithin24h,
     [byDate],
   );
 

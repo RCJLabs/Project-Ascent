@@ -13,7 +13,7 @@ import { groupResults, search, type SearchItem } from '@/engine/search';
 import { useCustomPrograms } from '@/store/programs';
 import { useObjectives } from '@/store/objectives';
 import { useProjects } from '@/store/projects';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { EmptyState } from '@/ui/EmptyState';
 import { CHIP_LINK } from '@/ui/Chip';
@@ -178,7 +178,7 @@ function useIndex(): SearchItem[] {
       });
     }
 
-    for (const session of Object.values(byDate).flat()) {
+    for (const session of allSessions(byDate)) {
       if (!session.completed) continue;
       // Named first, because the name is what a climber types (PLAN.md
       // M143). M130 made naming a climb the natural gesture on every row

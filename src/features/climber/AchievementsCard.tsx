@@ -12,7 +12,7 @@ import { deriveClimberState } from '@/engine/derive';
 import { getProgram } from '@/content/programs';
 import { fromKey } from '@/engine/dates';
 import { useProjects } from '@/store/projects';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { Card } from '@/ui/Card';
 import { ShareButton } from '@/features/share/ShareSheet';
@@ -38,7 +38,7 @@ export function useAchievements() {
     () =>
       sortAchievements(
         deriveAchievements({
-          sessions: Object.values(byDate).flat(),
+          sessions: allSessions(byDate),
           projects,
           programWeeks: (id) => getProgram(id)?.weeks,
         }),
@@ -137,7 +137,7 @@ export function CareerLinkCard() {
   const byDate = useSessions((s) => s.byDate);
   const display = useSettings((s) => s.display);
   const career = useMemo(() => {
-    const sessions = Object.values(byDate).flat();
+    const sessions = allSessions(byDate);
     return deriveCareer({ sessions, records: deriveClimberState(sessions).personalRecords, display });
   }, [byDate, display]);
   const latest = career.achieved[0];

@@ -14,7 +14,7 @@ import { projectOwner, sessionOwner } from '@/db/media';
 import { PhotoStrip, useMediaOwners } from '@/features/media/Thumbnails';
 import { useMetrics } from '@/store/metrics';
 import { useProjects } from '@/store/projects';
-import { useSessions } from '@/store/sessions';
+import { useSessions, useAllSessions } from '@/store/sessions';
 import { PageGrid } from '@/ui/PageGrid';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -36,7 +36,6 @@ const KINDS: { value: JournalKind; label: string; Icon: typeof BookOpen }[] = [
 ];
 
 export function JournalPage() {
-  const byDate = useSessions((s) => s.byDate);
   const sessionsHydrated = useSessions((s) => s.hydrated);
   const loadSessions = useSessions((s) => s.load);
   const projects = useProjects((s) => s.projects);
@@ -57,7 +56,7 @@ export function JournalPage() {
     if (!metricsHydrated) void loadMetrics();
   }, [sessionsHydrated, loadSessions, projectsHydrated, loadProjects, metricsHydrated, loadMetrics]);
 
-  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const sessions = useAllSessions();
   const journal = useMemo(
     () => buildJournal({ sessions, projects, metrics }),
     [sessions, projects, metrics],

@@ -7,7 +7,7 @@ import { deriveClimberState } from '@/engine/derive';
 import { describeVenues } from '@/engine/venues';
 import { useGradeLabel } from '@/ui/useGrade';
 import { useVenues } from '@/features/venues/useVenues';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
@@ -45,7 +45,7 @@ export function CareerPage() {
 
 
   const career = useMemo(() => {
-    const sessions = Object.values(byDate).flat();
+    const sessions = allSessions(byDate);
     const state = deriveClimberState(sessions);
     return deriveCareer({ sessions, records: state.personalRecords, display });
   }, [byDate, display]);

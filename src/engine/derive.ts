@@ -161,7 +161,54 @@ export interface DeriveOptions {
   deloadDates?: Set<string>;
 }
 
+/**
+ * One result, reused while the inputs are identical (PLAN.md M157).
+ *
+ * Eighteen call sites, each memoising on its own — so a page mounting
+ * several derivations walked the whole log several times. The cache is the
+ * one `deriveXp` uses and works for the same reason: the stores replace
+ * their arrays rather than mutating them, so if the same array comes back
+ * the answer cannot have changed.
+ *
+ * It only pays once the callers share an array, which is what
+ * `store/sessions.ts`'s `allSessions` is for — a caller flattening
+ * `byDate` itself passes a fresh array and gets nothing from this.
+ *
+ * One entry, not a map: two different logs are never live at once, and an
+ * unbounded cache of ten-year derivations is a memory leak wearing a
+ * performance costume.
+ */
+let cached: { key: readonly unknown[]; value: ClimberState } | null = null;
+
+/** Exported for tests and benchmarks that need to measure the real work. */
+export function clearClimberStateCache(): void {
+  cached = null;
+}
+
 export function deriveClimberState(sessions: Session[], options: DeriveOptions = {}): ClimberState {
+  // Resolved values in the key, never the raw options.
+  //
+  // `today` is the one that could go wrong quietly: `todayKey()` is its
+  // default, so keying on `options.today` would read `undefined` both sides
+  // of midnight and hand an app left open overnight yesterday's answer — the
+  // streak and the 30-day count both move at midnight with nothing logged.
+  //
+  // `weeklyTarget` is the one that made the cache miss for free: Progress
+  // passes `3` where its own cards omit it, and an unresolved key calls
+  // those two different questions when they are the same question.
+  const resolved = {
+    ...options,
+    today: options.today ?? todayKey(),
+    weeklyTarget: options.weeklyTarget ?? 3,
+  };
+  const key = [sessions, resolved.today, resolved.weeklyTarget, resolved.deloadDates] as const;
+  if (cached !== null && cached.key.every((v, i) => v === key[i])) return cached.value;
+  const value = deriveClimberStateUncached(sessions, resolved);
+  cached = { key, value };
+  return value;
+}
+
+function deriveClimberStateUncached(sessions: Session[], options: DeriveOptions): ClimberState {
   const today = options.today ?? todayKey();
   const weeklyTarget = options.weeklyTarget ?? 3;
 

@@ -10,7 +10,7 @@ import {
   type AltimeterState,
 } from '@/engine/altimeter';
 import { ShareButton } from '@/features/share/ShareSheet';
-import { useSessions } from '@/store/sessions';
+import { useSessions, useAllSessions } from '@/store/sessions';
 import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
@@ -25,7 +25,6 @@ import { useSettings } from '@/store/settings';
 
 export function AltimeterPage() {
   const units = useSettings((st) => st.units);
-  const byDate = useSessions((s) => s.byDate);
   const hydrated = useSessions((s) => s.hydrated);
   const load = useSessions((s) => s.load);
 
@@ -33,7 +32,7 @@ export function AltimeterPage() {
     if (!hydrated) void load();
   }, [hydrated, load]);
 
-  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const sessions = useAllSessions();
   const alt = useMemo(() => deriveAltimeter(sessions), [sessions]);
   const weeks = useMemo(() => weeklyHeight(sessions, 12), [sessions]);
   const hasHeight = alt.feet > 0;

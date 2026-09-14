@@ -42,7 +42,7 @@ import { useMetrics } from '@/store/metrics';
 import { useProjects } from '@/store/projects';
 import { useProfile } from '@/store/profile';
 import { useSettings, type ProgressView } from '@/store/settings';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions, useAllSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
 import { PageHeader } from '@/ui/PageHeader';
@@ -142,11 +142,10 @@ function SaidCard() {
 
 /** Entry point into the journal, counting what there is to read. */
 function JournalCard() {
-  const byDate = useSessions((s) => s.byDate);
   const projects = useProjects((s) => s.projects);
   const metrics = useMetrics((s) => s.entries);
 
-  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const sessions = useAllSessions();
   const journal = useMemo(
     () => buildJournal({ sessions, projects, metrics }),
     [sessions, projects, metrics],
@@ -184,7 +183,7 @@ function CareerCard() {
   const display = useSettings((s) => s.display);
 
   const career = useMemo(() => {
-    const sessions = Object.values(byDate).flat();
+    const sessions = allSessions(byDate);
     const state = deriveClimberState(sessions);
     return deriveCareer({ sessions, records: state.personalRecords, display });
   }, [byDate, display]);
@@ -226,7 +225,7 @@ function BodyCard() {
   const injuries = useProfile((s) => s.injuries);
   const restBonus = useSkillEffects().restRecovery;
   const vitality = useMemo(() => {
-    const state = deriveClimberState(Object.values(byDate).flat());
+    const state = deriveClimberState(allSessions(byDate));
     return deriveVitality({ state, endurance: deriveStats({ state }).END, injuries, restBonus });
   }, [byDate, injuries, restBonus]);
   const hurt = injuries.length;
@@ -250,8 +249,7 @@ function BodyCard() {
 
 /** The year, summarised — and honestly compared with the one before it. */
 function YearCard() {
-  const byDate = useSessions((s) => s.byDate);
-  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const sessions = useAllSessions();
   const years = useMemo(() => availableYears(sessions), [sessions]);
   const year = years[0];
   if (year === undefined) return null;
@@ -435,7 +433,6 @@ function ViewPicker({ view, onPick }: { view: ProgressView; onPick: (view: Progr
 export function ProgressPage() {
   const gradeLabel = useGradeLabel();
   const display = useSettings((s) => s.display);
-  const byDate = useSessions((s) => s.byDate);
   const hydrated = useSessions((s) => s.hydrated);
   const load = useSessions((s) => s.load);
   const activeProgramId = useProfile((s) => s.activeProgramId);
@@ -451,7 +448,7 @@ export function ProgressPage() {
     if (!hydrated) void load();
   }, [hydrated, load]);
 
-  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const sessions = useAllSessions();
   const program = activeProgramId ? getProgram(activeProgramId) : undefined;
   const weeklyTarget = useMemo(() => {
     const c = program?.constraints.find((x) => x.kind === 'sessions-per-week');

@@ -18,7 +18,7 @@ import { hasDemo } from '@/db/demoFlag';
 import { takeLaunchFile } from '@/lib/launchFile';
 import { getProgram } from '@/content/programs';
 import { layoutsFor, planFromLayout } from '@/engine/scheduler';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { mediaBytes } from '@/db/media';
 import type { Equipment } from '@/content/types';
 import { displayGrade } from '@/engine/grades';
@@ -147,7 +147,7 @@ export function SettingsPage() {
   // one the climber wrote here. Memoised on the store rather than rebuilt
   // per keystroke in the preview.
   const occupiedIds = useMemo(
-    () => new Set(Object.values(byDate).flat().map((s) => s.id)),
+    () => new Set(allSessions(byDate).map((s) => s.id)),
     [byDate],
   );
 

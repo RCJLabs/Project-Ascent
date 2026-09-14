@@ -14,7 +14,7 @@ import {
   type Finding,
 } from '@/engine/dataHealth';
 import { ARCHIVE_SHEETS } from '@/engine/importCsv';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { announce } from '@/ui/Announce';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
@@ -47,7 +47,7 @@ export function DataPage() {
   useEffect(refresh, [refresh]);
 
   const stale = useMemo(() => {
-    const sessions = Object.values(byDate).flat();
+    const sessions = allSessions(byDate);
     return staleSessions(sessions).map((s) => ({ id: s.id, date: s.date, ms: elapsedMs(s) }));
   }, [byDate]);
 

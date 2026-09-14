@@ -9,7 +9,7 @@ import { EQUIPMENT_LABELS } from '@/engine/customProgram';
 import type { Drill, DrillId } from '@/content/types';
 import { today } from '@/engine/dates';
 import { describeRecord, drillHistory, prescribedBy } from '@/engine/drillHistory';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
@@ -121,7 +121,7 @@ export function DrillPage({ params }: { params: { id: string } }) {
 
   const record = useMemo(() => {
     if (!drill) return null;
-    return drillHistory({ sessions: Object.values(byDate).flat(), today: today() }).get(drill.id) ?? null;
+    return drillHistory({ sessions: allSessions(byDate), today: today() }).get(drill.id) ?? null;
   }, [byDate, drill]);
 
   if (!ready) return <PageSkeleton title="Drill" />;

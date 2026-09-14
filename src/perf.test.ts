@@ -12,7 +12,7 @@ import { checkInHistory } from '@/engine/checkIns';
 import { conversionTrend } from '@/engine/conversion';
 import { blockReport } from '@/engine/blockReport';
 import { fieldSeries } from '@/engine/sessionFields';
-import { deriveClimberState } from '@/engine/derive';
+import { clearClimberStateCache, deriveClimberState } from '@/engine/derive';
 import { deriveStats } from '@/engine/stats';
 import { clearXpCache, deriveXp } from '@/engine/xp';
 
@@ -170,7 +170,13 @@ describe('ten years of logs stays cheap', () => {
 
   it('derives everything else in single-digit-to-low milliseconds', () => {
     const budgets: [string, number, () => void][] = [
-      ['climberState', 60, () => deriveClimberState(sessions)],
+      // Cleared each time, or this measures the M157 cache rather than the
+      // work — the same array goes in on every iteration, which is exactly
+      // the case the cache exists to make free.
+      ['climberState', 60, () => {
+        clearClimberStateCache();
+        deriveClimberState(sessions);
+      }],
       ['altimeter', 20, () => deriveAltimeter(sessions)],
       ['career', 20, () => deriveCareer({ sessions, records: state.personalRecords })],
       ['stats', 10, () => deriveStats({ state, metrics: [], projects: [] })],
@@ -188,18 +194,52 @@ describe('ten years of logs stays cheap', () => {
         today: '2025-04-01',
       })],
     ];
-    const over = budgets
-      .map(([name, budget, fn]) => ({ name, budget, ms: median(fn) }))
+    const results = budgets.map(([name, budget, fn]) => ({ name, budget, ms: median(fn) }));
+    const over = results
       .filter((r) => r.ms > r.budget)
       .map((r) => `${r.name} ${r.ms.toFixed(1)}ms > ${r.budget}ms`);
     expect(over).toEqual([]);
+
+    // A floor as well as a ceiling, for the one entry with a cache behind it
+    // (PLAN.md M157). Drop the `clearClimberStateCache()` above and this
+    // measures a cache hit — nanoseconds, comfortably under 60ms, green and
+    // measuring nothing. The battery showed it. Ten years of sessions cost
+    // ~13ms cold here and a warm lookup is four reference comparisons, so
+    // 0.5ms separates them with two orders of magnitude to spare either way.
+    const climber = results.find((r) => r.name === 'climberState')!;
+    expect(climber.ms, `climberState ${climber.ms.toFixed(4)}ms — measuring the cache?`).toBeGreaterThan(0.5);
+  });
+
+  /**
+   * The same measurement for the climber state (PLAN.md M157), and the
+   * reason the benchmark above clears the cache.
+   *
+   * Without this, dropping `clearClimberStateCache()` from that benchmark
+   * passes — a warm cache is nanoseconds and nanoseconds are under 60ms. The
+   * battery showed exactly that. A cold measurement that has to stay well
+   * above a warm one is what makes the budget above measure the work.
+   */
+  it('caches the climber state so a page costs one derivation', () => {
+    const cold = median(() => {
+      clearClimberStateCache();
+      deriveClimberState(sessions);
+    });
+    deriveClimberState(sessions);
+    const warm = median(() => deriveClimberState(sessions));
+    expect(cold, `cold ${cold.toFixed(1)}ms`).toBeGreaterThan(0.5);
+    expect(warm, `warm ${warm.toFixed(3)}ms vs cold ${cold.toFixed(1)}ms`).toBeLessThan(
+      Math.max(cold / 10, 0.5),
+    );
   });
 
   it('caches so nine callers cost one derivation', () => {
     // The cache is keyed on reference identity, which is sound because the
     // stores replace their arrays rather than mutating them — and which
     // means a caller passing a fresh `[]` each time silently gets nothing.
-    // `useXp` memoises the flattened sessions for exactly this reason.
+    // Before M157 this was measured with one array in a loop, which is not
+    // what the app does: `useMemo` is per-component-instance, so each
+    // component built its own array and missed. `useAllSessions` is what
+    // makes the number real.
     const projects: never[] = [];
     const ledger: never[] = [];
     const cold = median(() => {
@@ -429,6 +469,14 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **Unchanged at M157**, measured 159.59 → 159.73: 0.14KB for two
+    // reference-identity caches — one flattening of the log in the sessions
+    // store, one derivation in `engine/derive.ts` — both of them first-load
+    // by construction, since the store and the engine are what every screen
+    // goes through. It buys back far more than it costs at runtime: a page
+    // that asked four times for the climber state walked a decade of
+    // sessions four times and now walks it once.
     //
     // **159.7 → 160.6, raised rather than spent.** The one entry here that
     // records no feature. M152 came in at 159.59 and left 0.11KB, which is

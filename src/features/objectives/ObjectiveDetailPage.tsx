@@ -17,7 +17,7 @@ import type { SkillRequirement } from '@/engine/skills';
 import { WEEK_LABEL, describePeak, keepsFitness, peakPlan, type PeakPlan } from '@/engine/peak';
 import { loadTrend } from '@/engine/loadTrend';
 import { getProgram } from '@/content/programs';
-import { useSessions } from '@/store/sessions';
+import { useSessions, useAllSessions } from '@/store/sessions';
 import { useProfile } from '@/store/profile';
 import { LoadTrendLine } from '@/ui/charts/LoadTrendLine';
 import { VENUE_LIST_ID, VenueOptions, useVenues } from '@/features/venues/useVenues';
@@ -469,7 +469,6 @@ function RequirementFields({
  * starting point for the same question.
  */
 function RunwayCard({ target }: { target: string }) {
-  const byDate = useSessions((s) => s.byDate);
   const hydrated = useSessions((s) => s.hydrated);
   const load = useSessions((s) => s.load);
   const activeProgramId = useProfile((s) => s.activeProgramId);
@@ -479,7 +478,7 @@ function RunwayCard({ target }: { target: string }) {
     if (!hydrated) void load();
   }, [hydrated, load]);
 
-  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const sessions = useAllSessions();
   const program = activeProgramId ? getProgram(activeProgramId) : undefined;
   const startDate = activeProgramId ? startDates[activeProgramId] : undefined;
 

@@ -9,7 +9,7 @@ import {
   type ResumeOption,
 } from '@/engine/resume';
 import { useProfile } from '@/store/profile';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
@@ -52,7 +52,7 @@ export function PickItUp() {
   const found = interruption({
     program,
     startDate,
-    sessions: Object.values(byDate).flat(),
+    sessions: allSessions(byDate),
     today: today(),
     reason,
     resumedAt: activeProgramId ? resumedAt[activeProgramId] : undefined,

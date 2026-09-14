@@ -19,7 +19,7 @@ import { planVsLog } from '@/engine/planVsLog';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 
 /** Everything the board needs, derived in one place. */
@@ -39,7 +39,7 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
   const display = useSettings((s) => s.display);
 
   return useMemo(() => {
-    const sessions = Object.values(byDate).flat();
+    const sessions = allSessions(byDate);
     const state = deriveClimberState(sessions);
     const program = activeProgramId ? getProgram(activeProgramId) : undefined;
     // Planned against done, per type, for M104's skipped-type rule. Null

@@ -12,7 +12,7 @@ import {
   reviewYear,
   type Change,
 } from '@/engine/yearReview';
-import { useSessions } from '@/store/sessions';
+import { useAllSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
@@ -57,7 +57,6 @@ export function YearPage({ params }: { params: { year?: string } }) {
 
 function YearReview({ year: requested }: { year?: string }) {
   const params = { year: requested };
-  const byDate = useSessions((s) => s.byDate);
   const display = useSettings((s) => s.display);
   const blocks = useProfile((s) => s.blocks);
   const projects = useProjects((s) => s.projects);
@@ -70,7 +69,7 @@ function YearReview({ year: requested }: { year?: string }) {
     if (!projectsReady) void loadProjects();
   }, [projectsReady, loadProjects]);
 
-  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const sessions = useAllSessions();
   const years = useMemo(() => availableYears(sessions), [sessions]);
   const thisYear = Number(todayKey().slice(0, 4));
   const year = Number(params.year) || years[0] || thisYear;

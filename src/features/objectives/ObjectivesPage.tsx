@@ -22,7 +22,7 @@ import { useXp } from '@/store/game';
 import { useMetrics } from '@/store/metrics';
 import { useObjectives } from '@/store/objectives';
 import { useProjects } from '@/store/projects';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
@@ -51,7 +51,7 @@ export function useSkillInput(): SkillInput {
   const display = useSettings((s) => s.display);
 
   return useMemo(() => {
-    const sessions = Object.values(byDate).flat();
+    const sessions = allSessions(byDate);
     const state = deriveClimberState(sessions);
     return {
       state,

@@ -4,7 +4,7 @@ import { Plus, ShieldAlert, Trash2 } from 'lucide-react';
 import { RETURN_DISCLAIMER } from '@/content/returnToClimbing';
 import { fromKey, shortLabel, today } from '@/engine/dates';
 import { badDays, describeInjuryHistory, injuryHistory } from '@/engine/injuryLog';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { PROGRAMS as programs } from '@/content/programs';
 import type { TissueFeel } from '@/engine/readiness';
 import { describeInjury } from '@/engine/injury';
@@ -93,7 +93,7 @@ export function InjuryPage({ params }: { params: { id: string } }) {
   const steps = stepsFor(injury);
   const { done, total } = progress(injury);
   // How it has been, which nothing recorded before M103.
-  const sessions = Object.values(byDate).flat();
+  const sessions = allSessions(byDate);
   const nameOf = (id: string): string | undefined =>
     programs.flatMap((p) => p.sessionTypes).find((t) => t.id === id)?.name;
   const history = injuryHistory({ part: injury.part, since: injury.since, sessions, to: today() });

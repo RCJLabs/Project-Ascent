@@ -10,7 +10,7 @@ import { useSettings } from '@/store/settings';
 import { BackLink } from '@/ui/BackLink';
 import { PageSkeleton } from '@/ui/Skeleton';
 import { projectCard } from '@/ui/shareCard';
-import { useSessions } from '@/store/sessions';
+import { useAllSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';
 import { TextArea } from '@/ui/Field';
 import { IconButton } from '@/ui/IconButton';
@@ -32,7 +32,6 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
   const update = useProjects((s) => s.update);
   const remove = useProjects((s) => s.remove);
   const restore = useProjects((s) => s.restore);
-  const byDate = useSessions((s) => s.byDate);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -40,7 +39,7 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
   }, [hydrated, load]);
 
   const project = projects.find((p) => p.id === params.id);
-  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const sessions = useAllSessions();
   const summary = useMemo(
     () => (project ? summariseProject(project.id, sessions) : null),
     [project, sessions],

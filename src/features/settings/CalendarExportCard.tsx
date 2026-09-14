@@ -12,7 +12,7 @@ import { today } from '@/engine/dates';
 import { downloadFile } from '@/lib/download';
 import { icsCalendar } from '@/lib/ics';
 import { useProfile } from '@/store/profile';
-import { useSessions } from '@/store/sessions';
+import { useAllSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 
@@ -34,7 +34,6 @@ export function CalendarExportCard() {
   const startDates = useProfile((s) => s.startDates);
   const plans = useProfile((s) => s.plans);
   const weekOverrides = useProfile((s) => s.weekOverrides);
-  const byDate = useSessions((s) => s.byDate);
   const [message, setMessage] = useState<string | null>(null);
 
   const program = activeProgramId ? getProgram(activeProgramId) : undefined;
@@ -42,7 +41,7 @@ export function CalendarExportCard() {
   const plan = activeProgramId ? plans[activeProgramId] : undefined;
   const overrides = activeProgramId ? weekOverrides[activeProgramId] : undefined;
 
-  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const sessions = useAllSessions();
   const usual = useMemo(() => usualSession(sessions), [sessions]);
   const events = useMemo(
     () =>

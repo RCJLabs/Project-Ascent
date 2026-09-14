@@ -9,7 +9,7 @@ import { InjuriesCard } from '@/features/injury/InjuriesCard';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { useSkills } from '@/store/skills';
 import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
@@ -41,7 +41,7 @@ export function BodyPage() {
   const injuries = useProfile((s) => s.injuries);
   const skills = useSkills();
 
-  const state = useMemo(() => deriveClimberState(Object.values(byDate).flat()), [byDate]);
+  const state = useMemo(() => deriveClimberState(allSessions(byDate)), [byDate]);
   const stats = useMemo(() => deriveStats({ state, metrics, projects }), [state, metrics, projects]);
   const statValues = useMemo(
     () => ({
@@ -56,7 +56,7 @@ export function BodyPage() {
   const comparison = useMemo(
     () =>
       compareStats({
-        sessions: Object.values(byDate).flat(),
+        sessions: allSessions(byDate),
         metrics,
         projects,
         today: today(),

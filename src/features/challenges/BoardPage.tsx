@@ -14,7 +14,7 @@ import { BOUNTY_CAP, useGame } from '@/store/game';
 import { injuryPolicy } from '@/engine/injury';
 import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { useSkillEffects } from '@/store/skills';
 import { PageGrid } from '@/ui/PageGrid';
 import { Button } from '@/ui/Button';
@@ -39,7 +39,7 @@ export function useBoard() {
   );
 
   return useMemo(() => {
-    const sessions = Object.values(byDate).flat();
+    const sessions = allSessions(byDate);
     const state = deriveClimberState(sessions);
     const program = activeProgramId ? getProgram(activeProgramId) : undefined;
     const rule = program?.constraints.find((c) => c.kind === 'sessions-per-week');

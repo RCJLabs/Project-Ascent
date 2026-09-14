@@ -48,7 +48,7 @@ import { useProjects } from '@/store/projects';
 import { useSkillEffects } from '@/store/skills';
 import { useProfile, type Injury } from '@/store/profile';
 import type { BodyPart } from '@/content/warmups';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { againstPrescription, lastLogged } from '@/engine/exerciseLog';
 import { circuitPlan } from '@/engine/circuit';
 import { circuitSubject, protocolSubject, type TimerSubject } from '@/engine/timer';
@@ -1860,7 +1860,7 @@ function useSessionMilestones(session: Session, detail: SessionXp | undefined): 
 
   return useMemo(() => {
     if (!detail) return [];
-    const all = Object.values(byDate).flat();
+    const all = allSessions(byDate);
     const earlier = all.filter(
       (s) => s.completed && (s.date < session.date || (s.date === session.date && s.id < session.id)),
     );

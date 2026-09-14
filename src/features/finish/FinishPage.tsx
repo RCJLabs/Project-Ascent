@@ -19,7 +19,7 @@ import { ProgressionLine } from '@/ui/charts/Charts';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { offerUndo } from '@/store/undo';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { blockAdherence, describeAdherence } from '@/engine/adherence';
 import { JOIN_WORD, planVsLog } from '@/engine/planVsLog';
 import { chooseNext } from '@/engine/nextBlock';
@@ -278,7 +278,7 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
       startDate,
       plan,
       overrides: weekOverrides[programId],
-      sessions: Object.values(byDate).flat(),
+      sessions: allSessions(byDate),
       today: today(),
     });
     return measured === null ? null : { measured, ownLayout: chosen?.plan !== undefined };
@@ -302,7 +302,7 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
     return planVsLog({
       program: end.program,
       startDate,
-      sessions: Object.values(byDate).flat(),
+      sessions: allSessions(byDate),
       trackId: chosen?.trackId ?? tracks[programId],
       today: today(),
     });
@@ -333,14 +333,14 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
   const movement = useMemo(() => {
     if (end === null) return [];
     const through = today() < end.status.to ? today() : end.status.to;
-    return exerciseMovement(Object.values(byDate).flat(), end.status.from, through);
+    return exerciseMovement(allSessions(byDate), end.status.from, through);
   }, [end, byDate]);
 
   /** Every reading for one line inside the block's own window. */
   const seriesFor = (name: string) => {
     if (end === null) return [];
     const through = today() < end.status.to ? today() : end.status.to;
-    return exerciseSeries(Object.values(byDate).flat(), name).filter(
+    return exerciseSeries(allSessions(byDate), name).filter(
       (p) => p.date >= end.status.from && p.date <= through,
     );
   };

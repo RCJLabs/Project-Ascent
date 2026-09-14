@@ -24,7 +24,7 @@ import type { BountySpec, Challenge, AcceptedBounty } from '@/engine/challenges'
 import { today } from '@/engine/dates';
 import { deriveXp, type XpState } from '@/engine/xp';
 import { useProjects } from './projects';
-import { useSessions } from './sessions';
+import { useAllSessions } from './sessions';
 import { useSettings } from './settings';
 
 export interface GameState {
@@ -193,15 +193,17 @@ export const useGame = create<GameState>((set, get) => ({
  * disagree with the history behind it.
  */
 export function useXp(): XpState {
-  const byDate = useSessions((s) => s.byDate);
   const projects = useProjects((s) => s.projects);
   const ledger = useGame((s) => s.ledger);
   const display = useSettings((s) => s.display);
 
-  // `flat()` builds a new array every call, which would miss the cache in
-  // engine/xp.ts on identical input — so the flattening is memoised on the
-  // store's own object identity and the cache sees the same reference.
-  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  // `flat()` builds a new array every call, which misses the cache in
+  // engine/xp.ts on identical input. This was a `useMemo` here until M157,
+  // which only helped across *this component's* re-renders: `useMemo` is
+  // per-instance, so two components calling `useXp()` built two arrays and
+  // both missed. `useAllSessions` caches on the store's own object identity,
+  // one entry for the whole app, so every caller passes the same reference.
+  const sessions = useAllSessions();
   return useMemo(
     () => deriveXp({ sessions, projects, ledger, display }),
     [sessions, projects, ledger, display],

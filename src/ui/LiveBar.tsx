@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ChevronRight, CircleAlert } from 'lucide-react';
 import { fromKey } from '@/engine/dates';
 import { logHref } from './routes';
 import { describeSpan, elapsedMs, formatClock, runningSession, staleSessions } from '@/engine/live';
 import type { Session } from '@/db/sessions';
-import { useSessions } from '@/store/sessions';
+import { useAllSessions } from '@/store/sessions';
 
 export type Banner =
   | { kind: 'running'; session: Session; ms: number }
@@ -18,10 +18,9 @@ export type Banner =
  * a decision outranks a timer.
  */
 export function useLiveBanner(): Banner {
-  const byDate = useSessions((s) => s.byDate);
   const [now, setNow] = useState(() => Date.now());
 
-  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const sessions = useAllSessions();
   const stale = staleSessions(sessions, now)[0];
   const running = stale ? undefined : runningSession(sessions, now);
 

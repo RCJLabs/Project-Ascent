@@ -8,7 +8,7 @@ import { deriveStats } from '@/engine/stats';
 import { useXp } from './game';
 import { useMetrics } from './metrics';
 import { useProjects } from './projects';
-import { useSessions } from './sessions';
+import { useSessions, allSessions } from './sessions';
 import { useSettings } from './settings';
 
 /**
@@ -26,7 +26,7 @@ export function useSkills(): SkillState {
   const display = useSettings((s) => s.display);
 
   return useMemo(() => {
-    const sessions = Object.values(byDate).flat();
+    const sessions = allSessions(byDate);
     const state = deriveClimberState(sessions);
     return evaluateSkills(SKILL_TREES, {
       state,

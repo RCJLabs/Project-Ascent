@@ -6,7 +6,7 @@ import { DRILL_TEXT } from '@/content/drillText';
 import type { DrillCategory } from '@/content/types';
 import { drillHistory } from '@/engine/drillHistory';
 import { today } from '@/engine/dates';
-import { useSessions } from '@/store/sessions';
+import { useSessions, allSessions } from '@/store/sessions';
 import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
@@ -52,7 +52,7 @@ export function DrillsPage() {
   const [search, setSearch] = useState('');
 
   const history = useMemo(
-    () => drillHistory({ sessions: Object.values(byDate).flat(), today: today() }),
+    () => drillHistory({ sessions: allSessions(byDate), today: today() }),
     [byDate],
   );
 

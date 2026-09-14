@@ -12,7 +12,7 @@ import { useSettings } from '@/store/settings';
 import { VENUE_LIST_ID, VenueOptions, useVenues } from '@/features/venues/useVenues';
 import { useProjects } from '@/store/projects';
 import { useSkillEffects } from '@/store/skills';
-import { useSessions } from '@/store/sessions';
+import { useAllSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { EmptyState } from '@/ui/EmptyState';
@@ -26,14 +26,13 @@ export function ProjectsPage() {
   const hydrated = useProjects((s) => s.hydrated);
   const load = useProjects((s) => s.load);
   const dismiss = useProjects((s) => s.dismiss);
-  const byDate = useSessions((s) => s.byDate);
   const [adding, setAdding] = useState<Partial<Project> | null>(null);
 
   useEffect(() => {
     if (!hydrated) void load();
   }, [hydrated, load]);
 
-  const sessions = useMemo(() => Object.values(byDate).flat(), [byDate]);
+  const sessions = useAllSessions();
   const suggestions = useMemo(
     () => suggestProjects(sessions, projects, dismissed),
     [sessions, projects, dismissed],
