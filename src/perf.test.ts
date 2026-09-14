@@ -72,47 +72,133 @@ function median(fn: () => void): number {
 }
 
 /**
- * Two measurements taken alternately, fastest of each.
+ * How many alternating samples each side of a ratio gets. Fifteen, and the
+ * number is measured rather than picked — see below.
+ */
+const RATIO_RUNS = 15;
+
+/**
+ * Two measurements of **the same amount of work**, taken alternately,
+ * fastest of each.
  *
- * The fastest of five is the run with the least interference from everything
- * else on the machine, and so the closest estimate of what the work itself
- * costs. An absolute budget wants the conservative number and keeps the
- * median; a ratio of two medians divides one noisy measurement by another,
- * and with a three-millisecond denominator that is enough to fail a green
- * build. It did, twice in a day (PLAN.md M41).
+ * The fastest of a batch is the run with the least interference from
+ * everything else on the machine, and so the closest estimate of what the
+ * work itself costs. An absolute budget wants the conservative number and
+ * keeps the median; a ratio of two medians divides one noisy measurement by
+ * another, and with a three-millisecond denominator that is enough to fail a
+ * green build. It did, twice in a day (PLAN.md M41).
  *
  * Taking the fastest of each was not enough on its own (PLAN.md M112d). A
- * `fastest(a)` then `fastest(b)` runs all five of one and then all five of
- * the other, so a runner that gets busier between the two batches inflates
- * *every* sample of the second — and a minimum over five equally inflated
- * samples is still inflated. That is a ratio failing for a reason that has
- * nothing to do with the code, which is what happened on CI at 2.0ms →
- * 7.2ms while the same commit measured 2.3 → 4.9 on a quiet machine.
+ * `fastest(a)` then `fastest(b)` runs all of one and then all of the other,
+ * so a runner that gets busier between the two batches inflates *every*
+ * sample of the second — and a minimum over equally inflated samples is
+ * still inflated. That is a ratio failing for a reason that has nothing to
+ * do with the code, which is what happened on CI at 2.0ms → 7.2ms while the
+ * same commit measured 2.3 → 4.9 on a quiet machine. Alternating was the fix
+ * for that, and it held for it.
  *
- * `fastest` alone was not enough. It runs all five of one and then all five
- * of the other, so a runner that gets busier between the two batches
- * inflates *every* sample of the second — and a minimum over five equally
- * inflated samples is still inflated. That is a ratio failing for a reason
- * that has nothing to do with the code, which is what happened on CI at
- * 2.0ms → 7.2ms while the same commit measured 2.3 → 4.9 on a quiet machine.
+ * ## And it was still not enough (PLAN.md M172)
  *
- * Alternating puts both sides in the same conditions, so drift cancels in
- * the division instead of landing entirely on the numerator.
+ * The ratio kept failing, and it is the only wall-clock assertion in this
+ * file that ever has: **five failures, all of them this one** — 3.58, 3.61,
+ * 4.04, 4.25 and 4.41 against a ceiling of 3. No absolute budget in this
+ * file has flaked once in the life of the project.
+ *
+ * All five have the same fingerprint. The denominator sits flat at 1.6–2.1ms
+ * while the numerator goes to 5.6, 7.2, 8.0, 8.3, 8.5 against a quiet 3.9.
+ * **The contention lands almost entirely on the longer side**, and the
+ * reason is that the two sides were not the same length: a four-millisecond
+ * window is exposed to about twice as much preemption as a two-millisecond
+ * one, and taking the minimum only helps if some sample got a clean window
+ * to be the minimum of. On a busy machine the long side has fewer of those
+ * to pick from. Alternating puts both sides in the same *conditions*; it
+ * cannot put them in the same *duration*, and that is what the division
+ * needed.
+ *
+ * So the rule this function now depends on, and which its one caller has to
+ * keep: **`a` and `b` must do equal work.** A ratio of two equal-duration
+ * measurements is what makes drift cancel in the division rather than
+ * landing on whichever side takes longer.
+ *
+ * ## What each change was worth
+ *
+ * Measured by running this file under eight spinning loops on four cores —
+ * three times the machine — which is harsher than any runner it has failed
+ * on. Each row is runs of the whole file that ended with this assertion
+ * over its line:
+ *
+ *   unequal sides, 5 samples                    2 of 3
+ *   equal sides, 15 samples                     1 of 5
+ *   equal sides, 15 samples, order swapped      1 of 8
+ *   + one retry                                 1 of 12
+ *   **+ two half-logs instead of one twice**    **0 of 12**
+ *
+ * And at *four* times the machine, where the absolute budgets in this file
+ * start failing on their own: 0 of 12 again. The assertion that used to be
+ * the only one that ever broke is now not the first one to.
+ *
+ * The sample count and the equal sides are each necessary and neither is
+ * sufficient — an isolated harness put unequal-but-15-samples at 1 in 15 and
+ * equal-but-5-samples at 5 in 12, while equal at 15 cleared 27 rounds. The
+ * order swap and the second array are what closed the rest, and the reason
+ * for both is in the caller. Fifteen samples cost about 120ms.
  */
 function ratioOf(a: () => void, b: () => void): { one: number; two: number } {
   const as: number[] = [];
   const bs: number[] = [];
-  for (let i = 0; i < 5; i += 1) {
+  for (let i = 0; i < RATIO_RUNS; i += 1) {
+    // Swapped every other round, so neither side is always the one that
+    // lands in the second half of a timeslice.
+    const [first, second] = i % 2 === 0 ? [a, b] : [b, a];
+    const firstInto = i % 2 === 0 ? as : bs;
+    const secondInto = i % 2 === 0 ? bs : as;
     let start = performance.now();
-    a();
-    as.push(performance.now() - start);
+    first();
+    firstInto.push(performance.now() - start);
     start = performance.now();
-    b();
-    bs.push(performance.now() - start);
+    second();
+    secondInto.push(performance.now() - start);
   }
   as.sort((x, y) => x - y);
   bs.sort((x, y) => x - y);
   return { one: as[0] as number, two: bs[0] as number };
+}
+
+/**
+ * One retry, for the assertions that read a clock (PLAN.md M172).
+ *
+ * Only the wall-clock tests carry it. The byte counts below do not and must
+ * not: a bundle measurement is deterministic, so a retry there could only
+ * make a real failure take twice as long to report.
+ *
+ * It is a backstop rather than the fix, and it is not what fixed the ratio:
+ * the row in `ratioOf`'s table with the retry in place still failed one run
+ * in twelve, and the change after it is the one that cleared. What the retry
+ * is for is the absolute budgets, which have never flaked in the life of the
+ * project but are the assertions that break first when the machine is four
+ * times oversubscribed — `deriveXp` at 26–35ms of 25, `climberState` at
+ * 60–70ms of 60.
+ *
+ * What retrying cannot hide is a regression: the code is identical on both
+ * attempts, so anything real fails twice — as those four-times-oversubscribed
+ * failures did. The margins make that true in practice as well as in
+ * principle. Nothing here is set within a retry's worth of its measurement:
+ * the ratio reads 0.95 against a ceiling of 1.5, `deriveXp` 6.5ms against 25.
+ * A derivation that had genuinely gone quadratic lands past 2, not at 1.51.
+ */
+const WALL_CLOCK = { retry: 1 };
+
+/**
+ * A workload with a known answer, for the self-check on `ratioOf` below.
+ * Arithmetic into a sink the optimiser cannot drop, about 1.6ms a unit.
+ */
+let burnt = 0;
+let spikes = 0;
+function burn(units: number): void {
+  let x = 0;
+  const steps = units * 400_000;
+  for (let i = 0; i < steps; i += 1) x = (x + i * 7) % 1_000_003;
+  burnt += x;
 }
 
 const TEN_YEARS = 1560;
@@ -141,7 +227,7 @@ describe('ten years of logs stays cheap', () => {
   const metricEntries = results(520);
   const state = deriveClimberState(sessions);
 
-  it('derives XP in single-digit milliseconds', () => {
+  it('derives XP in single-digit milliseconds', WALL_CLOCK, () => {
     // Was 106.9ms before M18, and it runs on every session write. The cost
     // was `loadStateAt` walking 28 days per session with Date arithmetic:
     // 43,680 Date constructions per derivation. One sliding pass instead.
@@ -152,23 +238,51 @@ describe('ten years of logs stays cheap', () => {
     expect(ms, `deriveXp took ${ms.toFixed(1)}ms`).toBeLessThan(25);
   });
 
-  it('scales linearly rather than superlinearly', () => {
-    const half = log(TEN_YEARS / 2);
-    const { one, two } = ratioOf(
-      () => {
+  it('scales linearly rather than superlinearly', WALL_CLOCK, () => {
+    // The two sides have to be the same length or the division measures the
+    // machine — see `ratioOf`. So the short log is derived *twice*, which is
+    // the same 1,560 sessions of work the long one does in a single pass,
+    // and the question becomes whether doing them together costs more than
+    // doing them apart. That is superlinearity, asked the other way round.
+    //
+    // Two separate arrays rather than the same one twice, and that is not a
+    // detail: deriving one 780-session array twice runs the second pass over
+    // memory the first pass just warmed, so on a contended machine the short
+    // side keeps its cache while the long side loses its larger one. The
+    // residual failures said so plainly — the whole-log side inflated to
+    // 7.5–12.2ms while the half-log side came in at 2.8–3.7ms, *below* its
+    // own quiet figure of 4.0. Two arrays give both sides the same 1,560
+    // sessions of footprint as well as the same count of them, and that is
+    // the change that took the stress failures to none.
+    //
+    // Both sides are declared once and the guard reads the same declaration
+    // the measurement runs, which is the rule `content/authored.test.ts`
+    // states for its own sweeps: a check and the thing it checks held as two
+    // copies is a check that can be rewired without anything noticing. With
+    // the lengths asserted against separate literals, pointing the long side
+    // at a half-log would have read 0.5 and passed.
+    const split = [log(TEN_YEARS / 2), log(TEN_YEARS / 2)];
+    const whole = [sessions];
+    const count = (logs: Session[][]) => logs.reduce((n, l) => n + l.length, 0);
+    expect(count(split), 'the two sides are no longer equal work').toBe(count(whole));
+
+    const derive = (logs: Session[][]) => () => {
+      for (const part of logs) {
         clearXpCache();
-        deriveXp({ sessions: half, projects: [], ledger: [] });
-      },
-      () => {
-        clearXpCache();
-        deriveXp({ sessions, projects: [], ledger: [] });
-      },
-    );
-    // Twice the log should not cost more than three times the work.
-    expect(two / Math.max(one, 0.01), `${one.toFixed(1)}ms → ${two.toFixed(1)}ms`).toBeLessThan(3);
+        deriveXp({ sessions: part, projects: [], ledger: [] });
+      }
+    };
+    const { one, two } = ratioOf(derive(split), derive(whole));
+    // Twice the log should not cost more than three times the work — which,
+    // against two half-logs instead of one, is 1.5. The claim is the one it
+    // has always been: `full / half < 3` is `full / (2 × half) < 1.5`.
+    expect(
+      two / Math.max(one, 0.01),
+      `two halves ${one.toFixed(1)}ms → one whole ${two.toFixed(1)}ms`,
+    ).toBeLessThan(1.5);
   });
 
-  it('derives everything else in single-digit-to-low milliseconds', () => {
+  it('derives everything else in single-digit-to-low milliseconds', WALL_CLOCK, () => {
     const budgets: [string, number, () => void][] = [
       // Cleared each time, or this measures the M157 cache rather than the
       // work — the same array goes in on every iteration, which is exactly
@@ -219,7 +333,7 @@ describe('ten years of logs stays cheap', () => {
    * battery showed exactly that. A cold measurement that has to stay well
    * above a warm one is what makes the budget above measure the work.
    */
-  it('caches the climber state so a page costs one derivation', () => {
+  it('caches the climber state so a page costs one derivation', WALL_CLOCK, () => {
     const cold = median(() => {
       clearClimberStateCache();
       deriveClimberState(sessions);
@@ -232,7 +346,7 @@ describe('ten years of logs stays cheap', () => {
     );
   });
 
-  it('caches so nine callers cost one derivation', () => {
+  it('caches so nine callers cost one derivation', WALL_CLOCK, () => {
     // The cache is keyed on reference identity, which is sound because the
     // stores replace their arrays rather than mutating them — and which
     // means a caller passing a fresh `[]` each time silently gets nothing.
@@ -260,6 +374,105 @@ describe('ten years of logs stays cheap', () => {
     const grown = [...sessions, { ...sessions[0]!, id: 'extra', date: '2027-01-01' }];
     const after = deriveXp({ sessions: grown, projects, ledger });
     expect(after.total).toBeGreaterThan(before.total);
+  });
+});
+
+/**
+ * And the measurements themselves work (PLAN.md M172).
+ *
+ * Every assertion in this file that reads a clock passes today because the
+ * code is fast, which is indistinguishable from passing because the
+ * measurement is broken — and `ratioOf` is now the most rewritten thing here.
+ * `return { one: x, two: x }` would make the scaling check green for ever and
+ * nothing else in the suite would notice; the battery for this milestone
+ * showed the same of taking the slowest sample instead of the fastest, and of
+ * not sorting the samples at all.
+ *
+ * So the helper is run on workloads whose answers are known.
+ */
+describe('the clock the budgets are read off', () => {
+  it('reports a real difference and no false one', WALL_CLOCK, () => {
+    const even = ratioOf(
+      () => burn(2),
+      () => burn(2),
+    );
+    const evenRatio = even.two / Math.max(even.one, 0.01);
+    expect(evenRatio, `the same work read as ${evenRatio.toFixed(2)}`).toBeLessThan(1.5);
+
+    // The second case deliberately breaks the equal-work rule the caller
+    // keeps, because an unequal pair is exactly what this has to still see.
+    const doubled = ratioOf(
+      () => burn(1),
+      () => burn(2),
+    );
+    const doubledRatio = doubled.two / Math.max(doubled.one, 0.01);
+    expect(doubledRatio, `twice the work read as ${doubledRatio.toFixed(2)}`).toBeGreaterThan(1.5);
+
+    // And the burn ran, rather than being optimised into nothing — which
+    // would make both readings the ratio of two empty loops.
+    expect(burnt, 'the workload did no work').toBeGreaterThan(0);
+  });
+
+  /**
+   * The property the whole design rests on: the number reported is the
+   * *fastest* sample, so a side that is occasionally interrupted still reads
+   * as what it costs. That is what makes a ratio survivable on a shared
+   * runner, and until this test nothing held it — taking the slowest sample,
+   * or never sorting them, both survived the battery.
+   *
+   * The spike is on the first sample as well as every fifth, because an
+   * unsorted helper reads sample zero and a sorted one reads the minimum:
+   * only a spike in both places tells them apart.
+   */
+  it('reads the fastest sample, whichever side is interrupted', WALL_CLOCK, () => {
+    const spiky = () => {
+      spikes += 1;
+      burn(spikes === 1 || spikes % 5 === 0 ? 4 : 1);
+    };
+
+    spikes = 0;
+    const slowTwo = ratioOf(() => burn(1), spiky);
+    const two = slowTwo.two / Math.max(slowTwo.one, 0.01);
+    expect(two, `an interrupted long side read as ${two.toFixed(2)}`).toBeLessThan(1.5);
+
+    spikes = 0;
+    const slowOne = ratioOf(spiky, () => burn(1));
+    const one = slowOne.two / Math.max(slowOne.one, 0.01);
+    expect(one, `an interrupted short side read as ${one.toFixed(2)}`).toBeGreaterThan(0.67);
+
+    // Fifteen samples is the measured figure, not a preference — the stress
+    // table in `ratioOf` is what it was chosen against, and three samples
+    // survived the battery because a quiet machine cannot tell the
+    // difference. The literal is the pin.
+    expect(RATIO_RUNS, 'the stress table in ratioOf is measured at fifteen').toBeGreaterThanOrEqual(15);
+    expect(spikes, 'the helper did not take a sample per run').toBe(RATIO_RUNS);
+  });
+
+  /**
+   * Wall clock retries, bytes do not. Stated in `WALL_CLOCK`'s own docblock
+   * and, until this, held by nothing: removing the retry outright survived
+   * the battery, and so would adding it to a budget test.
+   */
+  it('retries the clocks and not the byte counts', () => {
+    const self = readFileSync('src/perf.test.ts', 'utf8');
+    const declared = [...self.matchAll(/^ {2}it(\.runIf\(built\))?\('([^']+)',( WALL_CLOCK,)?/gm)].map(
+      (m) => ({ name: m[2]!, reads: m[1] !== undefined, retries: m[3] !== undefined }),
+    );
+    expect(declared.length, 'no tests matched — the pattern has rotted').toBeGreaterThanOrEqual(15);
+    expect(WALL_CLOCK.retry, 'one attempt over, not a loop until green').toBe(1);
+    expect(
+      declared.filter((d) => d.reads && d.retries).map((d) => d.name),
+      'a byte count cannot flake, so a retry there only delays the report',
+    ).toEqual([]);
+    expect(declared.filter((d) => d.retries).map((d) => d.name)).toEqual([
+      'derives XP in single-digit milliseconds',
+      'scales linearly rather than superlinearly',
+      'derives everything else in single-digit-to-low milliseconds',
+      'caches the climber state so a page costs one derivation',
+      'caches so nine callers cost one derivation',
+      'reports a real difference and no false one',
+      'reads the fastest sample, whichever side is interrupted',
+    ]);
   });
 });
 
@@ -469,6 +682,11 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **Unchanged at M172**, measured 162.29 → 162.29, and it could not have
+    // been anything else: the milestone changes one file and that file is
+    // this one. Recorded anyway, because an entry saying a milestone cost
+    // nothing is also the record that the line was read.
     //
     // **Unchanged at M169**, measured 162.27 → 162.29: 0.02KB, which is one
     // `retired` string on a field spec. Everything else the milestone did is

@@ -9508,3 +9508,104 @@ survived. Each predicate is one named function now, called by both.
 **Budget.** 162.27 → 162.29: one `retired` string on a field spec, in the
 catalogue's chunk rather than the entry one. Everything else is tests, which
 weigh nothing. 5,359 tests pass.
+
+### M172 — the one assertion in the suite that ever failed for no reason ✅
+
+**Not a milestone from a brainstorm: a defect in the method itself.** The suite
+is what every milestone in this file is checked against, and one assertion in it
+had been failing on green code since M41. A gate that cries wolf is a gate that
+gets raised in a hurry — this file says so already, in the note beside the M145
+budget move — and the same argument applies with more force to a timing check
+than to a byte count.
+
+**Measured before touching anything, because "the perf test is flaky" is a
+claim.** Every wall-clock failure in the project's history was read out of the
+session log, and they are all the same assertion: *scales linearly rather than
+superlinearly*, five times, at 3.58, 3.61, 4.04, 4.25 and 4.41 against a ceiling
+of 3. **No absolute budget in `perf.test.ts` has flaked once** — not the 25ms on
+`deriveXp`, not the 60ms on the climber state, not one of the eight in the
+budget list. The problem was never "wall-clock budgets are flaky". It was one
+ratio.
+
+**And the five failures have one fingerprint.** The denominator sits flat at
+1.6–2.1ms across all of them while the numerator goes to 5.6, 7.2, 8.0, 8.3 and
+8.5 against a quiet 3.9. The contention lands almost entirely on the longer
+side, every time, which is not what noise looks like.
+
+**The cause is in the helper's own docblock, one line below where it stops.**
+`ratioOf` takes its two measurements alternately and keeps the fastest of each,
+and the reasoning it records for that — *"alternating puts both sides in the
+same conditions, so drift cancels in the division"* — is true of conditions and
+false of duration. The two sides were **not the same length**: one derived 780
+sessions and the other 1,560. A four-millisecond window is exposed to about
+twice as much preemption as a two-millisecond one, and taking the minimum only
+helps if some sample got a clean window to be the minimum of. On a busy machine
+the long side has fewer of those to find.
+
+**So the sides are equal work now, and the assertion is unchanged.** The short
+log is derived twice against the long log once — `full / half < 3` is
+`full / (2 × half) < 1.5`, the same claim with the same threshold — and the
+guard that they really are equal reads the same declaration the measurement
+runs, which is the rule `content/authored.test.ts` states for its own sweeps.
+Held as two separate literals, pointing the long side at a half-log would have
+read 0.5 and passed.
+
+**Four changes, each measured, none of them sufficient alone.** Runs of the
+whole file under eight spinning loops on four cores that ended with this
+assertion over its line:
+
+| | over the line |
+|---|---|
+| unequal sides, 5 samples | 2 of 3 |
+| equal sides, 15 samples | 1 of 5 |
+| equal sides, 15 samples, order swapped | 1 of 8 |
+| + one retry | 1 of 12 |
+| **+ two half-logs instead of one twice** | **0 of 12** |
+
+An isolated harness separated the first two: unequal-but-fifteen-samples still
+failed 1 in 15, and equal-but-five-samples 5 in 12, so neither the count nor the
+equal sides is the fix on its own.
+
+**The last row is the one worth keeping.** Deriving *one* 780-session array
+twice runs the second pass over memory the first pass just warmed, so on a
+contended machine the short side keeps its cache while the long side loses its
+larger one — and the residual failures said exactly that, with the long side at
+7.5–12.2ms and the short side at 2.8–3.7ms, *below its own quiet figure of 4.0*.
+Two separate arrays give both sides the same 1,560 sessions of footprint as well
+as the same count of them.
+
+**At four times the machine it still does not fail, and the absolute budgets
+do** — `deriveXp` at 26–35ms of 25, `climberState` at 60–70ms of 60. The
+assertion that used to be the only one that ever broke is now not the first one
+to break. That is what the retry is actually for, and it is on the wall-clock
+tests only: a byte count is deterministic, so a retry there could only make a
+real failure take twice as long to report.
+
+**The retry cannot hide a regression, and the margins are why.** The code is
+identical on both attempts, so anything real fails twice — as those
+four-times-oversubscribed failures did, twice each. And nothing here is set
+within a retry's worth of its measurement: the ratio reads 0.95 against a
+ceiling of 1.5 and `deriveXp` 6.5ms against 25. A derivation that had genuinely
+gone quadratic lands past 2, not at 1.51 — the battery confirmed it by making
+one.
+
+**What the battery moved, which was most of the milestone.** Eleven mutants.
+The first pass killed six and left four, and every one of the four was the same
+shape: **nothing checked the measurement itself.** Taking the slowest sample
+instead of the fastest survived. Never sorting the samples survived. Dropping
+the count from fifteen to three survived. Removing the retry survived. A quiet
+machine cannot tell any of those from the real thing, which is precisely why
+they had to be pinned rather than trusted.
+
+So `ratioOf` is now run on workloads whose answers are known — the same burn on
+both sides has to read as one, twice the burn on one side has to read as two,
+and a side spiked on its first sample and every fifth still has to read as what
+it costs, because that last one is the property the whole design rests on. The
+sample count carries a literal floor, the way M165 pinned `ESTABLISHED` after a
+self-referential test survived. And a short scan of this file holds the rule
+`WALL_CLOCK` states: every clock retries, no byte count does. Second pass:
+eleven of eleven killed, sanity no-op survived.
+
+**No browser check, and that is not a skipped step.** The milestone changes one
+file, `src/perf.test.ts`, and it is not shipped to a browser. Budget 162.29 →
+162.29 for the same reason. 5,362 tests pass, three more than before.
