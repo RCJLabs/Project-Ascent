@@ -17,6 +17,21 @@
  *   absent — exactly the "excluded from the ratio" the proposal asked for
  * - the coach's detraining tip disappears and a streak tip replaces it
  *
+ * **Two of those four were only true of the fixture** (PLAN.md M162). A
+ * `sessionLoad` of zero is not an exclusion, it is a rest day, and the
+ * ratio divided by it happily. The measurement above holds because *that*
+ * log had no scored sessions left in the window to build a baseline from,
+ * so `MIN_CHRONIC_DAYS` caught it. Put the bare days after eight weeks of
+ * properly scored training — the far more likely case, and the one the
+ * detraining tip's own *"mark those days on the calendar"* produces — and
+ * the baseline survives, the acute window reads zero, and the app answers
+ * *"training has dropped off"*. Marking the days made the app wrong.
+ *
+ * `sessionLoad` returns `null` now, and the window reports a range rather
+ * than a number when part of it was unscored, so the exclusion this
+ * paragraph claimed is real. The grid says the same thing: a day with no
+ * score is no longer painted as a rest day.
+ *
  * So a flag would have been a second way to say what the record already says,
  * which is the duplication M98 refused and M99b had to undo.
  *

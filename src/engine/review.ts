@@ -17,7 +17,7 @@ import type { Session } from '@/db/sessions';
 import type { Project } from '@/db/projects';
 import { weeklyChallenges, type Challenge } from './challenges';
 import { addDays, startOfWeek, today as todayKey } from './dates';
-import { buildLoadIndex, deriveClimberState, loadStateAt, sessionLoad, type AcwrZone } from './derive';
+import { buildLoadIndex, deriveClimberState, loadOrZero, loadStateAt, type AcwrZone } from './derive';
 import { sessionHeight } from './altimeter';
 import { dayLoad, type DayLoad } from './bodyLoad';
 import { DEFAULT_DISPLAY, displayGrade, maxGrade, type GradeDisplay, type GradeScale } from './grades';
@@ -126,8 +126,8 @@ export function buildReview(input: ReviewInput): WeekReview {
   const prior = all.filter((s) => s.date >= priorFrom && s.date < from);
 
   const training = week.filter((s) => !isRestSession(s));
-  const load = week.reduce((sum, s) => sum + sessionLoad(s), 0);
-  const loadPrior = prior.reduce((sum, s) => sum + sessionLoad(s), 0);
+  const load = week.reduce((sum, s) => sum + loadOrZero(s), 0);
+  const loadPrior = prior.reduce((sum, s) => sum + loadOrZero(s), 0);
 
   const index = buildLoadIndex(all);
   // ACWR as of the end of the week under review, not today — an old week

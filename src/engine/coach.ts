@@ -132,6 +132,7 @@ export function buildTips(input: CoachInput): Tip[] {
     ...projectBurns(input, today),
     outdoorReentry(input, today),
     detraining(input, today),
+    unscoredEffort(input),
     loadSpike(input),
     staleBenchmarks(input, today),
     skippedType(input),
@@ -277,14 +278,24 @@ function detraining({ state, sessions }: CoachInput, today: string): Tip | null 
     };
   }
 
-  if (acwr !== null && acwr < DETRAINING_ACWR) {
+  // The **zone**, not the raw ratio (PLAN.md M162).
+  //
+  // Unscored sessions pull the ratio down, so `acwr < DETRAINING_ACWR` was
+  // the one reading this data could produce without the training having
+  // dropped off at all. The zone is the answer that survives the missing
+  // sessions: `derive.ts` reports 'detraining' only when the ratio lands
+  // there however those sessions actually went, and 'unknown' when they
+  // could change it. So a genuine drop is still called — with the number
+  // hedged, because a range has no second decimal.
+  if (state.load.zone === 'detraining' && acwr !== null) {
+    const figure = state.load.estimated ? `about ${acwr.toFixed(1)}×` : `${acwr.toFixed(2)}×`;
     return {
       id: 'detraining',
       signature: acwr < 0.5 ? 'deep' : 'shallow',
       tone: 'caution',
       weight: 58,
       headline: 'Training has dropped off',
-      body: `You are at ${acwr.toFixed(2)}× your own baseline. A week or two here is recovery; a month is losing what you built. The way back up is more sessions, not harder ones — the same ratio punishes a change in either direction.`,
+      body: `You are at ${figure} your own baseline. A week or two here is recovery; a month is losing what you built. The way back up is more sessions, not harder ones — the same ratio punishes a change in either direction.`,
       action: { label: 'Plan the week', href: '/calendar' },
     };
   }
@@ -312,6 +323,43 @@ function detraining({ state, sessions }: CoachInput, today: string): Tip | null 
  * A spike outranks every tip that fires on real data: a plateau is a
  * months-long problem and this is a this-week one.
  */
+/**
+ * The effort field, left blank often enough that the ratio cannot be read
+ * (PLAN.md M162).
+ *
+ * This is the tip that replaces a wrong one. The load model used to read an
+ * unscored session as a day off, so a climber who logged everything except
+ * the effort was told their training had dropped off — and the app's own
+ * advice, *"mark those days on the calendar and everything here follows"*,
+ * was what produced the sessions that broke it.
+ *
+ * It only speaks when the silence is actually costing something: the window
+ * has to hold unscored training **and** the zone has to have gone unknown
+ * because of it. A climber who leaves one session blank in a month still
+ * gets their number, because the bracket in `derive.ts` can still place it.
+ */
+function unscoredEffort({ state }: CoachInput): Tip | null {
+  const { unmeasuredDays, unknownBecause, daysOfHistory } = state.load;
+  if (unknownBecause !== 'unscored' || unmeasuredDays === 0) return null;
+  // Nothing useful to say to someone three sessions in — `firstSession` and
+  // the empty states are already talking to them.
+  if (daysOfHistory < 21 && state.completedSessions < MIN_SESSIONS_FOR_SCORE) return null;
+
+  const days = `${unmeasuredDays} ${unmeasuredDays === 1 ? 'day' : 'days'}`;
+  return {
+    id: 'unscored-effort',
+    signature: `${unmeasuredDays}`,
+    tone: 'neutral',
+    weight: 60,
+    headline: `Effort is missing on ${days} of the last month`,
+    body: 'Training load is how hard against how long, so a session without an effort score cannot go into it — and the app would rather say so than count those days as rest and tell you that you have eased off. Add the RPE to those sessions and the load chart, the ratio and everything built on them fill back in. It is one tap per session at the bottom of the logger.',
+    action: { label: 'Open the calendar', href: '/calendar' },
+  };
+}
+
+/** Enough of a log that a missing score is worth mentioning at all. */
+const MIN_SESSIONS_FOR_SCORE = 6;
+
 function loadSpike({ state }: CoachInput): Tip | null {
   const { acwr, zone, inPlannedDeload } = state.load;
   // A deload is a deliberate change of load in the other direction, and the

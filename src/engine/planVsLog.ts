@@ -426,11 +426,27 @@ function deloads(input: PlanVsLogInput, from: string, through: string): Finding 
   if (weeks.length === 0) return null;
 
   const load = new Map<number, number>();
+  /**
+   * Weeks holding training that was never scored (PLAN.md M162).
+   *
+   * This finding is a ratio of one week's load to the weeks before it, so an
+   * unscored session in *either* half moves it: in the deload week it reads
+   * lighter than it was and the finding goes quiet, and in the baseline it
+   * reads lighter and the deload looks heavy by comparison. Neither is worth
+   * a sentence this confident, so a week with a hole in it is skipped.
+   */
+  const holes = new Set<number>();
   for (const session of input.sessions) {
     if (!session.completed || session.date < from || session.date > through) continue;
     const week = programWeek(input.startDate, session.date, input.program.weeks);
     if (week === null) continue;
-    load.set(week, (load.get(week) ?? 0) + sessionLoad(session));
+    if (isRestSession(session)) continue;
+    const measured = sessionLoad(session);
+    if (measured === null) {
+      holes.add(week);
+      continue;
+    }
+    load.set(week, (load.get(week) ?? 0) + measured);
   }
 
   let found: { week: number; ratio: number; baseline: number; here: number } | null = null;
@@ -438,11 +454,12 @@ function deloads(input: PlanVsLogInput, from: string, through: string): Finding 
     // Only a week that has finished. Half a deload measured against three
     // whole weeks reads light for the reason the arithmetic says it does.
     if (addDays(weekStart(from, week), 6) > through) continue;
+    if (holes.has(week)) continue;
     const here = load.get(week) ?? 0;
     if (here <= 0) continue;
     const before: number[] = [];
     for (let w = week - 1; w >= 1 && before.length < 3; w -= 1) {
-      if (weeks.includes(w)) continue;
+      if (weeks.includes(w) || holes.has(w)) continue;
       const earlier = load.get(w) ?? 0;
       if (earlier > 0) before.push(earlier);
     }

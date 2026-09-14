@@ -1,4 +1,5 @@
 import type { Session } from '@/db/sessions';
+import { isRestSession } from './rest';
 import { coverage, describeCoverage } from './thinLog';
 import { addDays, fromKey, startOfWeek, today as todayKey } from './dates';
 import { sessionLoad } from './derive';
@@ -142,13 +143,22 @@ export function buildHeatGrid(input: HeatInput): HeatGrid {
   for (const session of input.sessions) {
     if (!session.completed) continue;
     if (session.date < from || session.date > to) continue;
-    const load = sessionLoad(session);
+    const measured = sessionLoad(session);
     const existing = byDate.get(session.date);
+    /**
+     * Three cases, where there used to be two (PLAN.md M162).
+     *
+     * A rest session is a rest day, and so is a session the climber scored
+     * as zero — typing RPE 0 is a statement about the day. A session with
+     * **no** score is neither: nothing was said about it, and the old
+     * `load <= 0` test read that silence as a rest day, painting the grid
+     * and labelling the square "rest day" for an afternoon of training.
+     */
+    const rested = isRestSession(session) || measured === 0;
     byDate.set(session.date, {
-      load: (existing?.load ?? 0) + load,
+      load: (existing?.load ?? 0) + (measured ?? 0),
       sessions: (existing?.sessions ?? 0) + 1,
-      // A day is "rested" only while nothing on it carried load.
-      rested: (existing?.rested ?? true) && load <= 0,
+      rested: (existing?.rested ?? true) && rested,
       outdoor: (existing?.outdoor ?? false) || session.mode === 'outdoor',
       deload: (existing?.deload ?? false) || session.deload === true,
     });

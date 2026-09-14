@@ -86,6 +86,19 @@ export interface LoadState {
   inPlannedDeload: boolean;
   /** Days of history available — ACWR is meaningless below ~21. */
   daysOfHistory: number;
+  /**
+   * Training days in the 28-day window with no effort recorded
+   * (PLAN.md M162).
+   */
+  unmeasuredDays: number;
+  /**
+   * `acwr` is the best available estimate rather than a measurement,
+   * because some of the window was not scored. The zone is still reported
+   * only when it holds across the whole plausible range — see `bracket`.
+   */
+  estimated: boolean;
+  /** Why the zone is 'unknown', when it is. */
+  unknownBecause: 'history' | 'unscored' | null;
 }
 
 export interface PersonalRecord {
@@ -239,8 +252,9 @@ function deriveClimberStateUncached(sessions: Session[], options: DeriveOptions)
   const outdoorDates = new Set<string>();
   const drillsByCategory: Record<string, number> = {};
 
-  const loadByDate = new Map<string, { load: number; deload: boolean }>();
+  const loadByDate = new Map<string, DayEntry>();
   let earliestLoad: string | null = null;
+  let earliestTrained: string | null = null;
 
   for (const session of completed) {
     const isRest = isRestSession(session);
@@ -270,14 +284,30 @@ function deriveClimberStateUncached(sessions: Session[], options: DeriveOptions)
     // genuinely lighter, and the flag is used to explain the dip rather than
     // to hide it. The prototype excluded them, which made a planned deload
     // read as detraining.
-    const load = (session.rpe ?? 0) * ((session.durationMin ?? 0) / 60);
-    if (load > 0) {
+    //
+    // Through `sessionLoad` rather than repeating its arithmetic: this was a
+    // second copy of the formula, in the file whose own header exists
+    // because the prototype computed the same number three ways. It meant
+    // M162's change had to be made twice to be made at all.
+    if (!isRest) {
+      if (earliestTrained === null || session.date < earliestTrained) earliestTrained = session.date;
+      const load = sessionLoad(session);
       const existing = loadByDate.get(session.date);
-      loadByDate.set(session.date, {
-        load: (existing?.load ?? 0) + load,
-        deload: existing?.deload || session.deload === true,
-      });
-      if (earliestLoad === null || session.date < earliestLoad) earliestLoad = session.date;
+      const deload = existing?.deload === true || session.deload === true;
+      if (load === null || load <= 0) {
+        loadByDate.set(session.date, {
+          load: existing?.load ?? 0,
+          deload,
+          unmeasured: true,
+        });
+      } else {
+        loadByDate.set(session.date, {
+          load: (existing?.load ?? 0) + load,
+          deload,
+          unmeasured: existing?.unmeasured === true,
+        });
+        if (earliestLoad === null || session.date < earliestLoad) earliestLoad = session.date;
+      }
     }
 
     for (const climb of session.climbs) {
@@ -333,7 +363,11 @@ function deriveClimberStateUncached(sessions: Session[], options: DeriveOptions)
     sessionsByType,
     boulder,
     sport,
-    load: deriveLoad({ byDate: loadByDate, earliest: earliestLoad }, today, options.deloadDates ?? new Set()),
+    load: deriveLoad(
+      { byDate: loadByDate, earliest: earliestLoad, earliestSeen: earliestTrained },
+      today,
+      options.deloadDates ?? new Set(),
+    ),
     streakWeeks: deriveStreak(completed, today, weeklyTarget),
     longestStreakWeeks: deriveLongestStreak(completed, weeklyTarget),
     outdoorDays: outdoorDates.size,
@@ -354,13 +388,116 @@ function deriveClimberStateUncached(sessions: Session[], options: DeriveOptions)
  *  anything — roughly a session and a half a week. */
 const MIN_CHRONIC_DAYS = 6;
 
-/** sRPE for one session: RPE × hours. Zero when either is missing. */
-export function sessionLoad(session: Session): number {
-  return (session.rpe ?? 0) * ((session.durationMin ?? 0) / 60);
+/** The zone a ratio falls in. One definition, read from two windows. */
+function zoneOf(acwr: number, inDeload: boolean): AcwrZone {
+  if (acwr < ACWR_BOUNDS.optimalFrom) return inDeload ? 'optimal' : 'detraining';
+  if (acwr <= ACWR_BOUNDS.optimalTo) return 'optimal';
+  if (acwr <= ACWR_BOUNDS.cautionTo) return 'caution';
+  return 'danger';
+}
+
+interface Bracket {
+  acwr: number | null;
+  zone: AcwrZone;
+  estimated: boolean;
+  unknownBecause: 'history' | 'unscored' | null;
+}
+
+/**
+ * The ratio when part of the window was not scored (PLAN.md M162).
+ *
+ * Unscored training pulls **both** halves of the ratio down, so it can
+ * mislead in either direction: an unscored week makes the numerator small
+ * and reads as detraining; unscored weeks further back make the denominator
+ * small and read as a spike. Neither error is one to guess at.
+ *
+ * So the window is answered as a range rather than a number. The unscored
+ * days are worth somewhere between nothing and a typical day — and the
+ * climber's own measured days say what typical is — which gives a lowest and
+ * a highest plausible ratio. When both ends land in the same zone the zone
+ * is reported, because it holds however the missing sessions actually went;
+ * the number is the midpoint and is flagged `estimated`, because it is one.
+ * When the ends disagree the honest answer is that the app does not know.
+ *
+ * This is the same rule `MIN_CHRONIC_DAYS` follows one level up — do not
+ * divide until the division means something — applied to which days went
+ * into it rather than to how many there were.
+ */
+function bracket(
+  acute: number,
+  chronicTotal: number,
+  measuredDays: number,
+  unmeasuredAcute: number,
+  unmeasuredChronic: number,
+  inDeload: boolean,
+): Bracket {
+  const exact = acute / (chronicTotal / 4);
+  if (unmeasuredChronic === 0) {
+    return { acwr: exact, zone: zoneOf(exact, inDeload), estimated: false, unknownBecause: null };
+  }
+  // What a day of this climber's training is worth, from the days that were
+  // scored. Both callers gate on `chronicDays >= MIN_CHRONIC_DAYS` before
+  // reaching here and `measuredDays` is that same count, so there is always
+  // something to estimate from — a guard for the zero case looked prudent
+  // and was a branch nothing could reach, which the battery said by leaving
+  // it alive under every mutation.
+  const typical = chronicTotal / measuredDays;
+  // Low: the unscored days were rest in all but name, so they add nothing to
+  // the numerator and everything they might have been to the denominator.
+  const low = acute / ((chronicTotal + unmeasuredChronic * typical) / 4);
+  // High: they were ordinary training, which lifts the numerator most.
+  const high = (acute + unmeasuredAcute * typical) / (chronicTotal / 4);
+  const zone = zoneOf(low, inDeload);
+  if (zone !== zoneOf(high, inDeload)) {
+    return { acwr: null, zone: 'unknown', estimated: true, unknownBecause: 'unscored' };
+  }
+  return { acwr: (low + high) / 2, zone, estimated: true, unknownBecause: null };
+}
+
+/**
+ * sRPE for one session: RPE × hours. **Null when either is missing**
+ * (PLAN.md M162).
+ *
+ * Not zero. A session that recorded no effort has no load; a rest day has a
+ * load of zero. Those are different facts and this used to return the same
+ * number for both — so a completed session with climbs, a duration and
+ * notes but no RPE was arithmetically a day off, and the ratio built on it
+ * said so.
+ */
+export function sessionLoad(session: Session): number | null {
+  if (session.rpe === undefined || session.durationMin === undefined) return null;
+  return session.rpe * (session.durationMin / 60);
+}
+
+/** The same, as a number, for callers summing a window. */
+export function loadOrZero(session: Session): number {
+  return sessionLoad(session) ?? 0;
+}
+
+/** One day in the load index. */
+export interface DayEntry {
+  load: number;
+  deload: boolean;
+  /**
+   * Training happened on this day that carries no load (PLAN.md M162).
+   *
+   * A day can be both: two sessions, one scored and one not. `load` is what
+   * was measured and this says the figure is a floor rather than a total.
+   */
+  unmeasured: boolean;
 }
 
 export interface LoadIndex {
-  byDate: Map<string, { load: number; deload: boolean }>;
+  byDate: Map<string, DayEntry>;
+  /**
+   * The earliest training day of any kind, scored or not (PLAN.md M162).
+   *
+   * `earliest` below is measured history, which is what a baseline can be
+   * built from. This is what the *climber* has done, and the difference is
+   * how `unknownBecause` tells "you have not trained long enough" from
+   * "you have, and none of it is scored".
+   */
+  earliestSeen: string | null;
   /**
    * The earliest day carrying load, or null for an empty log.
    *
@@ -382,20 +519,40 @@ export interface LoadIndex {
  * you did it, not the load you are carrying today.
  */
 export function buildLoadIndex(sessions: Session[]): LoadIndex {
-  const byDate = new Map<string, { load: number; deload: boolean }>();
+  const byDate = new Map<string, DayEntry>();
   let earliest: string | null = null;
+  let earliestSeen: string | null = null;
   for (const session of sessions) {
     if (!session.completed) continue;
+    // A rest day is not unrecorded training, and carrying no load is the
+    // truth about it rather than a gap in the record.
+    if (isRestSession(session)) continue;
+    if (earliestSeen === null || session.date < earliestSeen) earliestSeen = session.date;
     const load = sessionLoad(session);
-    if (load <= 0) continue;
     const existing = byDate.get(session.date);
+    const deload = existing?.deload === true || session.deload === true;
+    if (load === null || load <= 0) {
+      // Kept, where it used to be skipped (PLAN.md M162). A day the climber
+      // turned up and did not score is a day the ratio has to know about,
+      // or it reads as a rest day and drags the average down with it.
+      byDate.set(session.date, {
+        load: existing?.load ?? 0,
+        deload,
+        unmeasured: true,
+      });
+      continue;
+    }
     byDate.set(session.date, {
       load: (existing?.load ?? 0) + load,
-      deload: existing?.deload || session.deload === true,
+      deload,
+      unmeasured: existing?.unmeasured === true,
     });
+    // `earliest` stays a property of *measured* history, so a log made
+    // entirely of unscored days still answers "not enough history" rather
+    // than claiming a baseline it cannot compute.
     if (earliest === null || session.date < earliest) earliest = session.date;
   }
-  return { byDate, earliest };
+  return { byDate, earliest, earliestSeen };
 }
 
 export function loadStateAt(
@@ -439,6 +596,8 @@ export interface LoadPoint {
   chronic: number;
   /** A planned deload day sits inside the acute window. */
   deload: boolean;
+  /** The ratio is an estimate: part of the window was not scored (M162). */
+  estimated: boolean;
 }
 
 /**
@@ -456,7 +615,12 @@ export interface LoadPoint {
  */
 export function loadSeries(index: LoadIndex, dates: readonly string[]): LoadPoint[] {
   const entries = [...index.byDate.entries()]
-    .map(([date, entry]) => ({ day: dayNumber(date), load: entry.load, deload: entry.deload }))
+    .map(([date, entry]) => ({
+      day: dayNumber(date),
+      load: entry.load,
+      deload: entry.deload,
+      unmeasured: entry.unmeasured,
+    }))
     .sort((a, b) => a.day - b.day);
 
   const earliestDay = index.earliest === null ? null : dayNumber(index.earliest);
@@ -468,6 +632,8 @@ export function loadSeries(index: LoadIndex, dates: readonly string[]): LoadPoin
   let chronicDays = 0;
   let acute = 0;
   let deloadDays = 0;
+  let unmeasured28 = 0;
+  let unmeasured7 = 0;
 
   return dates.map((date) => {
     const today = dayNumber(date);
@@ -476,6 +642,10 @@ export function loadSeries(index: LoadIndex, dates: readonly string[]): LoadPoin
       const entry = entries[hi]!;
       chronic += entry.load;
       if (entry.load > 0) chronicDays += 1;
+      if (entry.unmeasured) {
+        unmeasured28 += 1;
+        unmeasured7 += 1;
+      }
       acute += entry.load;
       if (entry.deload) deloadDays += 1;
       hi += 1;
@@ -484,12 +654,14 @@ export function loadSeries(index: LoadIndex, dates: readonly string[]): LoadPoin
       const entry = entries[lo28]!;
       chronic -= entry.load;
       if (entry.load > 0) chronicDays -= 1;
+      if (entry.unmeasured) unmeasured28 -= 1;
       lo28 += 1;
     }
     while (lo7 < hi && entries[lo7]!.day < today - 6) {
       const entry = entries[lo7]!;
       acute -= entry.load;
       if (entry.deload) deloadDays -= 1;
+      if (entry.unmeasured) unmeasured7 -= 1;
       lo7 += 1;
     }
 
@@ -497,21 +669,19 @@ export function loadSeries(index: LoadIndex, dates: readonly string[]): LoadPoin
     const baseline = chronic / 4;
     const deload = deloadDays > 0;
     if (daysOfHistory < 21 || chronicDays < MIN_CHRONIC_DAYS || baseline <= 0) {
-      return { date, acwr: null, zone: 'unknown', acute, chronic: baseline, deload };
+      return { date, acwr: null, zone: 'unknown', acute, chronic: baseline, deload, estimated: false };
     }
 
-    const acwr = acute / baseline;
-    const zone: AcwrZone =
-      acwr < ACWR_BOUNDS.optimalFrom
-        ? deload
-          ? 'optimal'
-          : 'detraining'
-        : acwr <= ACWR_BOUNDS.optimalTo
-          ? 'optimal'
-          : acwr <= ACWR_BOUNDS.cautionTo
-            ? 'caution'
-            : 'danger';
-    return { date, acwr, zone, acute, chronic: baseline, deload };
+    const read = bracket(acute, chronic, chronicDays, unmeasured7, unmeasured28, deload);
+    return {
+      date,
+      acwr: read.acwr,
+      zone: read.zone,
+      acute,
+      chronic: baseline,
+      deload,
+      estimated: read.estimated,
+    };
   });
 }
 
@@ -527,6 +697,7 @@ function deriveLoad(
 ): LoadState {
   const loadByDate = index.byDate;
   const daily: DayLoad[] = [];
+  const unmeasured: boolean[] = [];
   for (let i = 27; i >= 0; i--) {
     const date = addDays(today, -i);
     const entry = loadByDate.get(date);
@@ -535,11 +706,14 @@ function deriveLoad(
       load: entry?.load ?? 0,
       deload: entry?.deload === true || deloadDates.has(date),
     });
+    unmeasured.push(entry?.unmeasured === true);
   }
 
   const acute = daily.slice(-7).reduce((sum, d) => sum + d.load, 0);
   const chronicTotal = daily.reduce((sum, d) => sum + d.load, 0);
   const chronic = chronicTotal / 4;
+  const unmeasuredDays = unmeasured.filter(Boolean).length;
+  const unmeasuredAcute = unmeasured.slice(-7).filter(Boolean).length;
 
   // The earliest day is a property of the index, not of this call: the
   // minimum over `d <= today` is the global minimum whenever that minimum
@@ -555,18 +729,46 @@ function deriveLoad(
   // sessions in it produces arithmetic like 4.0 — true division, no
   // meaning — so density is a condition, not just span.
   const ready = daysOfHistory >= 21 && chronicDays >= MIN_CHRONIC_DAYS && chronic > 0;
-  const acwr = ready ? acute / chronic : null;
   const inPlannedDeload = daily.slice(-7).some((d) => d.deload);
 
-  let zone: AcwrZone = 'unknown';
-  if (acwr !== null) {
-    if (acwr < ACWR_BOUNDS.optimalFrom) zone = inPlannedDeload ? 'optimal' : 'detraining';
-    else if (acwr <= ACWR_BOUNDS.optimalTo) zone = 'optimal';
-    else if (acwr <= ACWR_BOUNDS.cautionTo) zone = 'caution';
-    else zone = 'danger';
+  if (!ready) {
+    // Which of the two reasons, decided by whether filling in the blanks
+    // would actually answer the question (PLAN.md M162). Telling a climber
+    // three weeks in to score their sessions is advice that does not work;
+    // telling one with four months of unscored training to do it is the
+    // whole of what stands between them and a number.
+    const span =
+      index.earliestSeen === null || index.earliestSeen > today
+        ? 0
+        : daysBetween(index.earliestSeen, today) + 1;
+    const wouldAnswer = span >= 21 && chronicDays + unmeasuredDays >= MIN_CHRONIC_DAYS;
+    return {
+      daily,
+      acute,
+      chronic,
+      acwr: null,
+      zone: 'unknown',
+      inPlannedDeload,
+      daysOfHistory,
+      unmeasuredDays,
+      estimated: false,
+      unknownBecause: unmeasuredDays > 0 && wouldAnswer ? 'unscored' : 'history',
+    };
   }
 
-  return { daily, acute, chronic, acwr, zone, inPlannedDeload, daysOfHistory };
+  const read = bracket(acute, chronicTotal, chronicDays, unmeasuredAcute, unmeasuredDays, inPlannedDeload);
+  return {
+    daily,
+    acute,
+    chronic,
+    acwr: read.acwr,
+    zone: read.zone,
+    inPlannedDeload,
+    daysOfHistory,
+    unmeasuredDays,
+    estimated: read.estimated,
+    unknownBecause: read.unknownBecause,
+  };
 }
 
 /** The longest run of target-meeting weeks anywhere in the history. */

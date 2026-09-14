@@ -234,6 +234,37 @@ describe('a deload week where the load did not fall', () => {
     expect(of(block(1), 'deload', on(4, 6))).not.toBeNull();
   });
 
+  /**
+   * A week with a session the climber never scored is a week whose load is
+   * a floor rather than a total (PLAN.md M162). This finding is a ratio of
+   * one week to the three before it, so a hole in either half moves it —
+   * quiet where it should speak, or speaking on a comparison that is half
+   * guesswork. Skipped rather than guessed.
+   */
+  it('skips a deload week with a session that was never scored', () => {
+    const holed = [...block(1), did(on(4, 4), 'board', {})];
+    expect(of(holed, 'deload')).toBeNull();
+  });
+
+  it('drops a holed baseline week and compares against the clean ones', () => {
+    // Weeks 1 and 3 are still whole, which is a baseline. Excluding week 2
+    // is the point — averaging a week that reads light because it was not
+    // scored would make the deload look heavy against it.
+    const holed = [...block(1), did(on(2, 5), 'board', {})];
+    expect(of(holed, 'deload')).not.toBeNull();
+  });
+
+  it('goes quiet when dropping the holed weeks leaves too little', () => {
+    const holed = [...block(1), did(on(2, 5), 'board', {}), did(on(3, 5), 'board', {})];
+    expect(of(holed, 'deload')).toBeNull();
+  });
+
+  it('is unmoved by an unscored week outside the comparison', () => {
+    // Week 5 is neither the deload nor one of the three before it.
+    const elsewhere = [...block(1), did(on(5, 1), 'board', {})];
+    expect(of(elsewhere, 'deload', on(5, 6))).not.toBeNull();
+  });
+
   it('needs two weeks of baseline before it means anything', () => {
     const thin = [
       did(on(3, 1), 'board', { rpe: 8, durationMin: 90 }),

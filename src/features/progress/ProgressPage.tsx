@@ -55,7 +55,7 @@ import { FieldSeriesChart } from '@/ui/charts/FieldSeriesChart';
 import { LoadTrendLine } from '@/ui/charts/LoadTrendLine';
 import { TissueBars, TissueNote } from '@/ui/charts/TissueBars';
 import { BlockCompareTable } from '@/ui/charts/BlockCompare';
-import { ZONE } from '@/ui/loadZone';
+import { UNKNOWN_NOTE, ZONE } from '@/ui/loadZone';
 
 
 /**
@@ -592,10 +592,29 @@ export function ProgressPage() {
               <div className="flex items-baseline gap-2 flex-wrap">
                 <span className="font-bold">{zone.label}</span>
                 {acwr !== null && (
-                  <span className="text-sm text-ink-soft tabular-nums">ratio {acwr.toFixed(2)}</span>
+                  <span className="text-sm text-ink-soft tabular-nums">
+                    {/* "About" and not a second decimal: with part of the
+                        window unscored this is the middle of a range, and
+                        printing 1.07 for it would be false precision
+                        (PLAN.md M162). */}
+                    {state.load.estimated ? 'about ' : 'ratio '}
+                    {acwr.toFixed(2)}
+                  </span>
                 )}
               </div>
-              <p className="text-sm text-ink-soft mt-0.5 leading-relaxed">{zone.note}</p>
+              <p className="text-sm text-ink-soft mt-0.5 leading-relaxed">
+                {state.load.unknownBecause === null
+                  ? zone.note
+                  : UNKNOWN_NOTE[state.load.unknownBecause]}
+              </p>
+              {state.load.estimated && state.load.unknownBecause === null && (
+                <p className="text-sm text-ink-soft mt-1.5">
+                  {state.load.unmeasuredDays}{' '}
+                  {state.load.unmeasuredDays === 1 ? 'day' : 'days'} in the last month have no
+                  effort score, so this is a range rather than a number — it lands in the same
+                  band either way.
+                </p>
+              )}
               {state.load.inPlannedDeload && (
                 <p className="text-sm text-ink-soft mt-1.5">
                   This is a planned deload week, so a lighter load is the point.

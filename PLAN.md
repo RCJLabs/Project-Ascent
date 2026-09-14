@@ -7895,7 +7895,7 @@ the end with what killed them. Sized as before: two large, six medium, two small
   Base Camp, its neighbours, use `dead_hang`. Either the stage or the assessment is wrong, and
   only you can say which.
 
-- **M162 — a session with no RPE is a rest day to the load engine.** *Proposed. Large.*
+- **M162 — a session with no RPE is a rest day to the load engine.** *Done — see the entry at the end of this document.*
   **`sessionLoad` is `(rpe ?? 0) × (durationMin ?? 0) / 60`** (`derive.ts:358`), and `rpe` is
   optional on `Session`. `complete()` in `LogPage.tsx:528` sets `completed: true` with no
   requirement that either field be filled — duration can be recovered from the clock, effort
@@ -8636,3 +8636,71 @@ deletes none of them and would otherwise read all of them for nothing.
 
 **Budget.** 159.83 → 159.83. No movement: a guard, a meta key, a card on a lazy route, and a
 literal swapped for a define that minifies to the same literal. 4,911 tests pass.
+
+### M162 — a session with no effort score is not a rest day ✅
+
+**The proposal understated it, and the understatement was the interesting part.** The brainstorm
+said a completed session missing RPE contributes zero load. True. What it missed is that
+`thinLog.ts` — M100's module, written to let a climber mark days they trained but did not log —
+claims in its own header that this case is already handled: *"ACWR stays `null`, because
+`sessionLoad` is RPE × hours and both are absent — exactly the 'excluded from the ratio' the
+proposal asked for."*
+
+**That was true of M100's fixture and of nothing else.** A load of zero is not an exclusion, it is
+a rest day, and the ratio divides by it happily. It held there because *that* log had no scored
+sessions left in the window, so `MIN_CHRONIC_DAYS` caught it. Put the bare days after eight weeks
+of properly scored training and the baseline survives, the acute window reads zero, and the app
+answers *"Training has dropped off — you are at 0.00× your own baseline."*
+
+**Which makes the app's own advice the thing that breaks it.** The detraining tip says *"If you
+have been training and not writing it down, mark those days on the calendar and everything here
+follows"*, with a button that does exactly that. Measured, both halves of the same log:
+
+| | acwr | zone | the coach says |
+|---|---|---|---|
+| gap left unmarked | 0 | detraining | "16 days since you logged anything" ✓ |
+| gap **marked** | 0 | detraining | **"Training has dropped off"** ✗ |
+
+Doing what the app asked turned an honest sentence into a false one. *"Everything here follows"*
+was the claim, and it did not.
+
+**`sessionLoad` returns `null` now** — a session that recorded no effort has no load, where a rest
+day has a load of zero, and those are different facts. `buildLoadIndex` keeps those days instead
+of skipping them, flagged `unmeasured`, so the window knows they are there.
+
+**The ratio is answered as a range.** Unscored training pulls *both* halves down, so it misleads in
+either direction: an unscored week shrinks the numerator and reads as detraining; unscored weeks
+further back shrink the denominator and read as a spike. So `bracket` values the missing days at
+between nothing and a typical day — typical being what the climber's own *scored* days say — and
+reports the zone only when both ends of that range land in it. One blank session in a month still
+gets you your number, flagged as the middle of a range; a blank fortnight gets you *"not enough to
+say"* and a reason. That is `MIN_CHRONIC_DAYS`'s rule — do not divide until the division means
+something — applied to which days went in rather than how many.
+
+**And the reason had to be the right reason.** `unknown` had one note, *"three weeks of logged
+sessions and this becomes meaningful"*, because it had one cause. Telling a climber with four
+months of history to log three weeks is worse than silence. The classification asks whether
+filling in the blanks would actually answer the question — which needs the span of *all* training,
+scored or not, so the index tracks that too.
+
+**Two more places read a zero the same way.** The consistency grid painted an unscored training day
+as a rest day and labelled the square one; it now distinguishes a rest session, an explicit zero
+(the climber typed RPE 0, which is a statement) and a blank. And `planVsLog`'s deload check is a
+ratio of one week to the three before it, so a hole in either half moves it — holed weeks are
+skipped, and a holed baseline week is dropped in favour of the clean ones.
+
+**What the battery moved.** Ten survivors of twenty-six on the first run, and two were bugs in the
+new code rather than gaps in the tests. `bracket`'s `measuredDays === 0` guard was unreachable —
+both callers gate on `chronicDays >= MIN_CHRONIC_DAYS` and that *is* the count — a branch that
+looked prudent and could not run. Worse, `detraining` was suppressed whenever the reading was
+estimated, which would have hidden a real drop: the guard is the **zone** now, which is exactly
+the answer that survives the missing sessions. The other eight were missing cases, including the
+one that made the `unknownBecause` classification wrong for the climber in the middle — a month of
+history, three scored days and five blank ones, where the blanks are precisely what stands between
+them and a number. Second run: 25 of 26 killed. The survivor is equivalent and worth naming: with
+zones as contiguous intervals the midpoint always shares its ends' band, so reading the zone and
+reading the raw ratio cannot disagree. The zone form stays because it keeps one definition of the
+boundary, not because it changes an answer.
+
+**Budget.** 159.83 → 160.55, inside the 160.6 raised before M158 — which is now spent, with 0.05KB
+left. 4,937 tests pass.

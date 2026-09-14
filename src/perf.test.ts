@@ -470,6 +470,15 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M162**, measured 159.83 → 160.55: 0.72KB, and the
+    // headroom raised on its own before M158 is now spent — 0.05KB left,
+    // tighter than the 0.11 that prompted the raise. The next milestone
+    // moves the line again, and should do it on its own for the same reason.
+    // The cost is honesty rather than feature: a bracket in the load window,
+    // three fields on `LoadState`, a coach rule and a second `unknown` note,
+    // all of it in `derive.ts` and `coach.ts`, which are first-load because
+    // Home's card reads them.
+    //
     // **Unchanged at M159**, measured 159.83 → 159.83 — no movement at all.
     // A date guard, a write-once meta key and a card on a lazy route, and
     // `version.ts` swapped a string literal for a build-time define, which

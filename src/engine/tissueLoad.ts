@@ -2,7 +2,7 @@ import type { Session } from '@/db/sessions';
 import type { BodyPart } from '@/content/warmups';
 import { addDays, daysBetween } from './dates';
 import { partsInText } from './bodyLoad';
-import { sessionLoad } from './derive';
+import { loadOrZero } from './derive';
 
 /**
  * Which tissue has been taking the work (PLAN.md M27).
@@ -142,8 +142,10 @@ export function tissueLoad(input: TissueInput): TissueLoad {
       continue;
     }
 
-    // The session's own load, whole, to each tissue it touched.
-    const amount = sessionLoad(session);
+    // The session's own load, whole, to each tissue it touched. An unscored
+    // session contributes nothing, which is what `unreadSessions` above is
+    // for — the count of sessions this cannot speak for.
+    const amount = loadOrZero(session);
     for (const part of parts) {
       load.set(part, (load.get(part) ?? 0) + amount);
       counts.set(part, (counts.get(part) ?? 0) + 1);
