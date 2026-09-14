@@ -28,6 +28,7 @@ import type { ClimberState } from './derive';
 import type { Diagnosis } from './plateau';
 import { activeProjects, attemptsFor, highPointOf } from './projects';
 import type { BlockAdherence } from './adherence';
+import type { Finding } from './planVsLog';
 import { isRestSession } from './rest';
 
 export type TipTone = 'good' | 'neutral' | 'caution';
@@ -79,6 +80,17 @@ export interface CoachInput {
    * one tip.
    */
   prescribesDrills?: boolean;
+  /**
+   * What the program asked against what the log says (PLAN.md M148).
+   *
+   * Passed in already computed for the reason `adherence` and `diagnosis`
+   * are: building it needs the program, its start date and the climber's
+   * track, and the coach has no business holding a program to write one
+   * tip. Already sorted, already gated — everything in the list has earned
+   * a sentence, and this file's job is only to decide how many of them get
+   * one.
+   */
+  findings?: Finding[];
   today?: string;
 }
 
@@ -123,6 +135,7 @@ export function buildTips(input: CoachInput): Tip[] {
     loadSpike(input),
     staleBenchmarks(input, today),
     skippedType(input),
+    planVsLog(input),
     ...missingDomains(input),
     lateSessions(input),
     backupNudge(input, today),
@@ -383,6 +396,41 @@ function skippedType({ adherence }: CoachInput): Tip | null {
 
 function isRestDay(session: Session): boolean {
   return isRestSession(session);
+}
+
+/**
+ * The plan against the log, one divergence at a time (PLAN.md M148).
+ *
+ * `engine/planVsLog.ts` joins six things the app stored in halves that never
+ * met — a minute estimate and a logged duration, a declared intensity and a
+ * typed RPE, a weekly step and a series of readings, a deload marker and a
+ * load index, a spacing constraint and a list of dates, a menu and a set of
+ * ticks. Every one of them can fire on a climber having a normal week, which
+ * is why the module gates each join and returns only its worst subject, and
+ * why this takes only the heaviest of what survives.
+ *
+ * **One, and not the list.** `missingDomains` slices to one because five
+ * things you are not doing reads as an indictment; six ways your block is
+ * not the block you are running reads as a worse one. The full set is not
+ * lost — it is the block report's, at the end, where a list is a record
+ * rather than a verdict.
+ *
+ * The copy is the module's rather than this file's on purpose: both surfaces
+ * say the same thing about the same fact, in the same vocabulary, and a
+ * second wording here would be a second opinion.
+ */
+function planVsLog({ findings }: CoachInput): Tip | null {
+  const worst = (findings ?? [])[0];
+  if (!worst) return null;
+  return {
+    id: worst.id,
+    signature: worst.signature,
+    tone: worst.tone,
+    weight: worst.weight,
+    headline: worst.headline,
+    body: worst.body,
+    ...(worst.action ? { action: worst.action } : {}),
+  };
 }
 
 function staleBenchmarks(input: CoachInput, today: string): Tip | null {

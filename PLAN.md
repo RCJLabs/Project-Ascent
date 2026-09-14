@@ -7517,7 +7517,8 @@ milestone that settled them; two more were struck by measurement.*
 - **M151 wants M155's pass over `types.ts`** if both are taken, but does not need it.
 - **On their own** — M150, M152, M153, M154, M157.
 
-- **M148 — the plan, checked against the log.** *Proposed. Large.*
+- **M148 — the plan, checked against the log.** *Proposed, and built first — see the entry at the
+  end of this document.*
   **One shape, six times.** Every one of these is a join over data the app already stores, and
   none of them exists:
   - **Length.** `sessionMinutes()` (`sessionLength.ts:260`) resolves a session type into a
@@ -7822,3 +7823,72 @@ milestone that settled them; two more were struck by measurement.*
   the second brainstorm already said why it is not a coda: it needs a gate or it fires for almost
   everyone almost always, *"and that gate is a milestone's worth of thinking."* It stays on the
   shelf until someone wants to do that thinking.
+
+- **M148 — the plan, checked against the log.** *Done. The first of the fourth brainstorm, and the
+  largest single piece of coaching the app has gained.*
+  **Six joins, none of which existed.** The app has stored both halves of each of these for
+  milestones and never imported them into the same file. `engine/planVsLog.ts` is that file:
+  **length** (`sessionMinutes` against `Session.durationMin`), **effort** (`SessionType.intensity`
+  against the logged RPE, through M144's `effortOfRpe` so there is one vocabulary and not two),
+  **progression** (a `WeekStep` against the readings on either side of the week it asks about),
+  **deloads** (`deloadWeeks` against the load index), **spacing** (`min-gap-hours` and
+  `not-day-before` against the dates), and **menus** (`SelectionRule.pick` against the ticks in
+  `Session.exercises`). One shape six times: read the program's claim for a week, read the log for
+  the same week, report the difference with both numbers.
+  **The proposal's own example is a sentence this app is not entitled to.** *"Your 60-minute
+  sessions run 95"* compares a **work** estimate to a **session** duration, and `sessionLength.ts`
+  says at length that the estimate excludes the warm-up, the walk to the wall and the rest between
+  burns that ends when you want to climb again. Every real session runs over it, so reporting that
+  as drift would be the app calling its own omission the climber's fault. Length is read in one
+  direction only — a session logged *under* the work it was prescribed — with one exception: a
+  type whose author wrote a `duration`, because that field means the whole session, and there the
+  long direction is a real reading. Seven types across five programs author one.
+  **What the catalogue can actually answer, measured before it was built.** Menus are healthy — 29
+  selection rules across four programs. Progression is thin: nine `step` lines across three
+  programs, of which `ironGrip` and `siege` hold ten of the eleven. So the progression join was
+  built against the **step** rather than against `WeekStep.dose`, which only two programs author:
+  the step is the ask in the program's own words, and whether the numbers moved is the log's
+  answer to it. That widened the join from two programs to three and cost nothing.
+  **The gates are the milestone.** Every one of these fires on a climber having a normal week if it
+  is allowed to. Four sessions before a per-type reading is a pattern; three quarters of them have
+  to miss; two breaches, not one, because one is a week that went wrong; a deload has to come in at
+  or above 0.95× the weeks before it; two flat steps, not one. Each join returns **its single worst
+  subject** — the rule `skippedType` and `missingDomains` both set — and the coach shows **one** of
+  what survives, because six ways your block is not the block you are running reads as an
+  indictment and nobody acts on an indictment.
+  **Two homes with different jobs.** The coach board takes the heaviest one, live, as a standing
+  observation — which is what its own header says it is for, and these have no shelf life. The
+  block report takes **the whole list**, at the end, where a list is a record rather than a verdict,
+  and where the four quiet ones are exactly what a climber choosing the next program wants in front
+  of them. The copy lives in the engine so both surfaces say the same thing in the same words; a
+  second wording on the page would be a second opinion.
+  **What the build itself found.** Two findings about one session type rendered as the same bold
+  heading twice — *Finger Protocol* over the gap between them and *Finger Protocol* over the effort
+  — which only the browser check could show. `JOIN_WORD` puts the join's own name beside the
+  subject.
+  **What the battery found.** Forty-five mutations, **sixteen survivors on the first pass**, which
+  is the most any milestone here has had. One was a genuine bug the tests then caught: an exercise
+  logged with *sets* one week and *load* the next has no dimension in common, and the first draft
+  read that as *nothing moved* and called the step ignored. One was real redundancy — an explicit
+  `through < from` guard, which every join's own date filter already makes true, and it is gone.
+  The other fourteen were fixtures too uniform to see the code: one deload week where two were
+  needed, two phases prescribing the same dose so the week never mattered, RPEs all equal so the
+  median could not be wrong, and a rest day that was filtered by its *type* so the rest-*session*
+  guard was never exercised. Nine new tests and a wider fixture; second pass kills all forty-five,
+  sanity no-op aside.
+  **Budget: 155.0 → 158.6**, measured 154.13 → 158.16, and the largest first-load cost since M117.
+  Split by rebuilding twice: **2.56KB is the six joins** and **1.41KB is their copy**. No import
+  did it — stubbing `sessionLength` out changed nothing, because the logger already carries it. It
+  lands in the entry chunk because `HomePage` renders the top tip's *body*, so `useTips` is eager
+  and the whole coach is first-load. M104 made the `/coach` route's lazy boundary real; the
+  boundary still notional is Home's own card, and putting it behind one would take this,
+  `coach.ts`, `plateau.ts` and `adherence.ts` off the boot path together. That is a perf milestone
+  with a suspense boundary to get right, and doing it inside this one would tangle two
+  measurements. 0.50KB of slack. 4,683 tests pass.
+  **One find, recorded and not fixed.** The browser check printed *"NaN days since your last
+  backup"* against a seeded profile whose `lastExportAt` was an ISO timestamp. The app never writes
+  one — `profile.ts:282` writes `today()` — but `hydrate` at `:443` takes `value.lastExportAt ??
+  null` with no key check, two lines under a sibling that filters `dismissedCards` for type and a
+  comment reading *"a backup is whatever was in the file"*. A restored or hand-edited export can
+  put a malformed key there and the coach prints `NaN`. One line and an `isDateKey` guard, in a
+  file this milestone has no other business in.

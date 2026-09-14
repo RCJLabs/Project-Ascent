@@ -15,6 +15,7 @@ import { buildTips, visibleTips, type Tip } from '@/engine/coach';
 import { today } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { diagnose } from '@/engine/plateau';
+import { planVsLog } from '@/engine/planVsLog';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
@@ -32,6 +33,7 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
   const startDates = useProfile((s) => s.startDates);
   const plans = useProfile((s) => s.plans);
   const weekOverrides = useProfile((s) => s.weekOverrides);
+  const tracks = useProfile((s) => s.tracks);
   const lastExportAt = useProfile((s) => s.lastExportAt);
   const dismissed = useProfile((s) => s.dismissedTips);
   const display = useSettings((s) => s.display);
@@ -56,12 +58,27 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
             today: today(),
           })
         : null;
+    // The plan against the log (PLAN.md M148). Same three things the
+    // adherence call needs and nothing more, so it is null for exactly the
+    // climbers that one is: no live block, no claim to check anything
+    // against.
+    const findings =
+      program && startDate
+        ? planVsLog({
+            program,
+            startDate,
+            sessions,
+            trackId: activeProgramId ? tracks[activeProgramId] : undefined,
+            today: today(),
+          })
+        : [];
     const all = buildTips({
       state,
       sessions,
       projects,
       metrics,
       adherence,
+      findings,
       lastExportAt,
       // Whether this climber's program ever puts a drill in a week, so the
       // drill tip stops asserting one for the six programs that do not
@@ -81,5 +98,5 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
     });
     const visible = visibleTips(all, dismissed);
     return { all, visible, hidden: all.length - visible.length };
-  }, [byDate, projects, metrics, injuries, equipment, activeProgramId, startDates, plans, weekOverrides, lastExportAt, dismissed, display]);
+  }, [byDate, projects, metrics, injuries, equipment, activeProgramId, startDates, plans, weekOverrides, tracks, lastExportAt, dismissed, display]);
 }

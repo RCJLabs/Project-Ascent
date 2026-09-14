@@ -21,6 +21,7 @@ import { useProfile } from '@/store/profile';
 import { offerUndo } from '@/store/undo';
 import { useSessions } from '@/store/sessions';
 import { blockAdherence, describeAdherence } from '@/engine/adherence';
+import { JOIN_WORD, planVsLog } from '@/engine/planVsLog';
 import { chooseNext } from '@/engine/nextBlock';
 import { useSettings } from '@/store/settings';
 import type { UnitSystem } from '@/engine/units';
@@ -218,6 +219,7 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
   const blocks = useProfile((s) => s.blocks);
   const plans = useProfile((s) => s.plans);
   const weekOverrides = useProfile((s) => s.weekOverrides);
+  const tracks = useProfile((s) => s.tracks);
   const byDate = useSessions((s) => s.byDate);
   const sessionsReady = useSessions((s) => s.hydrated);
   const loadSessions = useSessions((s) => s.load);
@@ -281,6 +283,30 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
     });
     return measured === null ? null : { measured, ownLayout: chosen?.plan !== undefined };
   }, [end, chosen, activeProgramId, startDates, plans, weekOverrides, byDate]);
+
+  /**
+   * Where the block diverged from the program that wrote it (PLAN.md M148).
+   *
+   * The whole list, which the coach board deliberately will not show: one
+   * at a time is right for a standing nudge and wrong for a report. At the
+   * end of a block these are a record of how it actually ran, and the four
+   * quiet ones — a session type that came in short every week, a menu never
+   * rotated, a step never taken — are exactly the ones a climber choosing
+   * what to run next wants in front of them.
+   */
+  const divergences = useMemo(() => {
+    const programId = chosen?.programId ?? activeProgramId;
+    if (end === null || !programId) return [];
+    const startDate = chosen?.startDate ?? startDates[programId];
+    if (!startDate) return [];
+    return planVsLog({
+      program: end.program,
+      startDate,
+      sessions: Object.values(byDate).flat(),
+      trackId: chosen?.trackId ?? tracks[programId],
+      today: today(),
+    });
+  }, [end, chosen, activeProgramId, startDates, tracks, byDate]);
 
   // The same window the report covers, read off the block rather than the
   // report: a block still running has a window and no finished report.
@@ -428,6 +454,33 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
                 one it started with.
               </p>
             )}
+          </Card>
+        )}
+
+        {divergences.length > 0 && (
+          <Card title="Where it drifted from the plan">
+            <p className="text-sm leading-relaxed mb-3">
+              Each of these is a claim the program made about a week beside what the log says about
+              the same week. None of them is a failure on its own — a block that survived a real
+              year has drifted — and all of them are worth knowing before you pick the next one.
+            </p>
+            <dl className="grid grid-cols-1 gap-2.5">
+              {divergences.map((f) => (
+                <div key={f.id} className="text-sm">
+                  <dt className="font-semibold">
+                    {f.subject}{' '}
+                    <span className="font-normal text-ink-soft">· {JOIN_WORD[f.kind]}</span>
+                  </dt>
+                  <dd className="text-ink-soft flex flex-wrap items-baseline gap-x-1.5">
+                    <span>{f.asked}</span>
+                    <span aria-hidden="true">→</span>
+                    <span className={f.tone === 'caution' ? 'text-warn font-semibold' : 'font-semibold'}>
+                      {f.did}
+                    </span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </Card>
         )}
 

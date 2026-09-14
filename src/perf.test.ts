@@ -242,7 +242,7 @@ describe('the bundle stays small', () => {
    * Every milestone that moves this moves it to just above what it measured;
    * the history is in the comment inside the first test.
    */
-  const BUDGET = 155.0;
+  const BUDGET = 158.6;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -428,6 +428,33 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **155.0 → 158.6 at M148**, measured 154.13 → 158.10: 3.97KB, and the
+    // largest single-milestone cost to first load since M117. Worth the
+    // paragraph, because the number is not an accident and the fix for it
+    // is not this milestone.
+    //
+    // Split by rebuilding twice: **2.56KB is the six joins themselves** —
+    // a minute estimate against a logged duration, a declared intensity
+    // against a typed RPE, a weekly step against a series of readings, a
+    // deload marker against the load index, spacing constraints against
+    // the dates, a menu against the ticks — and **1.41KB is their copy**,
+    // eight bodies at the length every other coach rule is written to. No
+    // import did this: stubbing `sessionLength` out changed the figure by
+    // nothing, because `PreSession` already carries it.
+    //
+    // It lands in the entry chunk because `HomePage` renders the top tip's
+    // headline *and* its body, so `useTips` is eager and everything the
+    // coach reads is first-load. M104 made the `/coach` route's lazy
+    // boundary real by splitting the hook out of the page; the boundary
+    // that is still notional is Home's own card, and moving it behind one
+    // would take this, `coach.ts`, `plateau.ts` and `adherence.ts` off the
+    // boot path together. That is a perf milestone with its own suspense
+    // boundary to get right, and doing it inside this one would leave two
+    // measurements tangled in each other.
+    //
+    // 0.50KB of slack, which is the tightest this line has been set: the
+    // next milestone to touch the entry chunk moves it and says what for.
     //
     // **154.0 → 155.0 at M145**, measured 153.98 → 154.00, and the 0.02KB
     // is not weight. The calendar's legend is in `CalendarPage`, a lazy
