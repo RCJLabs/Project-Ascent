@@ -7831,6 +7831,220 @@ milestone that settled them; two more were struck by measurement.*
   everyone almost always, *"and that gate is a milestone's worth of thinking."* It stays on the
   shelf until someone wants to do that thinking.
 
+### The fifth brainstorm (proposed, M160–M169)
+
+*The fourth pass was sourced from measurement because the plan's own list was exhausted. This one
+is sourced from a different question again: **what would a coach notice that a code reader would
+not?** Four brainstorms have audited the app as software — dead fields, unreachable screens,
+uncaught rejections — and the app is now in good repair by that standard. Six of the ten below are
+about the training rather than the code, and four of those are things the app already has every
+input for and does not say.*
+
+***The running theme: the app knows the rule and applies it in one place only.*** *M153 taught it
+to read a protocol's authored safety line, and it reads it on the logger and nowhere else. Eleven
+programs declare a 48-hour finger gap, and it is checked inside a block and nowhere else. The
+climber's injuries gate a drill and not a maximal test. The builder checks that a program is
+complete and never that it is safe. Each of those is a small milestone on its own; together they
+say the safety knowledge in this app is stored as content and applied as a special case.*
+
+*Measured on `0887a69`. Every claim below was read in the code with the file and line given, and
+five candidates were struck by that reading before they were written down — they are listed at
+the end with what killed them. Sized as before: two large, six medium, two small.*
+
+**What depends on what:**
+
+- **M160 before M167.** The builder cannot warn about spacing until spacing is checkable outside a
+  shipped program's constraint list, which is M160's whole job.
+- **M162 before M168.** Arguing about which ACWR formula to use is premature while the inputs are
+  wrong; fixing the input may move more numbers than changing the formula would.
+- **M164 wants M166** but does not need it — the rest-day drills and the modes are the same
+  climber, met on different days.
+- **On their own** — M161, M163, M165, M169.
+
+- **M160 — the 48-hour rule the app only knows inside a block.** *Proposed. Medium.*
+  **Eleven of thirteen programs declare a finger gap and one engine checks it.** `min-gap-hours`
+  is read by the scheduler when it lays out a week (`scheduler.ts:115`) and by `planVsLog`'s
+  `spacing` (`planVsLog.ts:481`) when it compares the dates to the plan. `useTips.ts:66` gates
+  that entire call on `program && startDate`, which is correct for adherence and wrong for safety:
+  **the rule is a fact about tendons, not about whether you are following a block.**
+  **And the one catalogue entry most likely to need it has no constraints at all.** General
+  Training (`generalTraining.ts:34`) is a `mode`: zero constraints, and a session type `hb`
+  — *"Hangboard / Finger"* (`:182`). A climber can log a hangboard session every day for a month
+  inside the app's own open-ended mode and never be told. A climber with **no** program gets the
+  same silence.
+  **The data needed is the log.** Session dates and session types are all `spacing` reads; what it
+  additionally needs is the program's constraint, and for a climber without one the app would have
+  to hold a default. That default is the milestone's one real decision — 48 hours between
+  finger-loading sessions is the number eleven of its own programs already chose.
+
+- **M161 — a maximal test is the one thing the app will not warn you about.** *Proposed. Medium.*
+  **`Metric` has no safety field** (`types.ts:36`): `id`, `label`, `unit`, `kind`, `scale`,
+  `higherIsBetter`, `description`. No body part, no contraindication, no prerequisite.
+  **So M153's machinery reaches the logger and stops.** `partsNamedIn` and `protocolSafety` have
+  exactly two callers, both in `LogPage.tsx` (`:966`, `:1123`). Nothing in
+  `features/assessments/` mentions injuries, safety or body parts — verified by grep, not
+  assumed.
+  **What that means in practice.** `max_hang_20mm_7s` is *"added weight for a 7-second half-crimp
+  hang on a 20mm edge"* and is prescribed by five programs. `min_edge` is *"smallest edge held for
+  7 seconds at bodyweight"*. `front_lever_hold`, `weighted_pullup_3rm`, `explosive_pullups`. A
+  climber who has told the app their finger is injured — the app has an injury tracker, a return
+  plan and a body page — can be walked into a maximal crimp test with no word said. **These are
+  the sessions people get hurt in**, because a test is a maximal effort taken deliberately.
+  **One oddity worth a coach's eye while the file is open.** Two Days a Week is a `foundations`
+  program and it is the only one at that stage prescribing `max_hang_20mm_7s`; Ground Zero and
+  Base Camp, its neighbours, use `dead_hang`. Either the stage or the assessment is wrong, and
+  only you can say which.
+
+- **M162 — a session with no RPE is a rest day to the load engine.** *Proposed. Large.*
+  **`sessionLoad` is `(rpe ?? 0) × (durationMin ?? 0) / 60`** (`derive.ts:358`), and `rpe` is
+  optional on `Session`. `complete()` in `LogPage.tsx:528` sets `completed: true` with no
+  requirement that either field be filled — duration can be recovered from the clock, effort
+  cannot, because it is subjective.
+  **Measured, not reasoned.** A synthetic climber training every other day for eight weeks, who
+  scored the first five weeks and left the field blank for the last fortnight:
+
+  ```
+  sessions logged: 29     in last 30 days: 16
+  acwr: 0                 zone: detraining
+  ```
+
+  `DETRAINING_ACWR` is 0.8 (`coach.ts:107`), so the coach says **"Training has dropped off — you
+  are at 0.00× your own baseline"** to someone who trained eight times in the last fortnight and
+  logged every one. Progress prints *"16 sessions in 30 days"* in the header above it. The app
+  contradicts itself on one screen.
+  **It is not only the coach.** `effortMultiplier` (`economy.ts:157`) withholds the effort bonus,
+  the load chart paints a flat line, and `zonesFor` marks the calendar. Every one of them reads
+  zero as *easy* where the truth is *unmeasured*.
+  **The app has already solved this exact ambiguity once.** M100 refused to let `detraining` say
+  *"24 days since you trained"* when the log could only support *"24 days since you logged
+  anything"*. This is the same distinction one level down, and the same fix: a load of `null`
+  rather than `0`, and every consumer made to say which it has.
+
+- **M163 — the app plans the peak and then warns against it.** *Proposed. Small.*
+  `loadSpike` suppresses itself for exactly one reason — `inPlannedDeload` (`coach.ts:319`) —
+  with the comment that *"a deload is a deliberate change of load in the other direction, and the
+  ratio moving is the point of it rather than a surprise."* **The same sentence is true of a trip,
+  and the app knows when the trip is.** `Objective` carries `kind: 'trip'` and a `targetDate`
+  (`objectives.ts:65`), `peak.ts` exists to plan the weeks up to it and computes *"the ratio on
+  the trip, if the plan is followed"* (`peak.ts:111`). `CoachInput` (`coach.ts:53`) has no
+  objectives field, so the coach cannot see any of it.
+  **The result is the app's strongest warning, fired at its own plan.** A climber on the trip the
+  app peaked them for reads *"Load spike — a jump this size is the pattern most associated with
+  injury"*. One field on `CoachInput` and one clause beside `inPlannedDeload`.
+
+- **M164 — twelve drills for the day you cannot train, prescribed by nothing.** *Proposed.
+  Medium.*
+  **144 of 156 drills are prescribed by a program. The twelve that are not are exactly the twelve
+  that need no wall** — verified by set comparison, not by reading the ids: `off_shoulder_cars`,
+  `off_wrist_forearm_prep`, `off_ninety_ninety_hips`, `off_thoracic_opening`, `off_extensor_work`,
+  `off_skin_repair`, `off_easy_aerobic`, `off_tension_holds`, `off_sequence_rehearsal`,
+  `off_box_breathing`, `off_rehearsing_the_fall`, `off_ten_minute_debrief`. Recovery, mental and
+  strategy work, all `equipment: ['none']`, all with an empty `sources` array because no program
+  claims them.
+  **Every program schedules rest days.** Thirteen session types across the catalogue carry
+  `isRest`, and `PreSession.tsx:208` renders a rest day as the words *"Rest day · week 3"*. The
+  drills written for precisely that day are three taps away in a library and the app never once
+  offers them.
+  **The Train page already advertises them** — *"A hundred and fifty-odd, twelve of which need no
+  wall"* — which is the app describing a feature it does not connect to anything.
+
+- **M165 — the pyramid is drawn and never read.** *Proposed. Medium.*
+  **This is the shelved one, and this is the thinking it was shelved for.** The second brainstorm
+  parked *a thin top of the pyramid* because *"it needs a gate or it fires for almost everyone
+  almost always, and that gate is a milestone's worth of thinking."* That remains true of *thin
+  top*. It is not true of the reading actually worth making.
+  **The data is already the right shape.** `GradeTally.sends` is `Record<grade, number>`
+  (`derive.ts:20`) — the pyramid, per mode, already separated indoor from rock. Nothing reads its
+  *shape*: grep for a base-versus-top comparison across `src/` returns nothing. `plateau.ts`
+  diagnoses five states and none of them is about distribution.
+  **The gate, proposed rather than deferred.** Do not fire on a thin top, which is every climber
+  in a good month. Fire on an **inversion** — a grade with more sends than the grade below it,
+  where the lower band is not merely thin but thinner than the one above — and only once the top
+  band is established. `conversion.ts` already holds the vocabulary for this: `ENOUGH_TRIES = 6`
+  and a `tooThin` predicate. An inversion is rare, it is unambiguous, and it is the one pyramid
+  sentence a coach says the same way every time.
+
+- **M166 — the two modes are the emptiest entries in the catalogue.** *Proposed. Medium.*
+  A `mode` is what a climber uses when they are not running a block — between programs, in the
+  off-season, or because they do not want one. Measured across the catalogue, they are the two
+  entries with the least of everything: **zero constraints** each, no deload weeks, no phases
+  worth the name (one each), and no adherence by definition. **General Training has no guide at
+  all** — the only program in the catalogue without one, verified against `guideFor`. Outdoor
+  Climbing has three sections where the shipped programs average ten.
+  **These two are the app's own answer to *"what do I do now?"*** and they answer it with a
+  session-type picker. M160 covers the safety half of this; the rest is that a climber choosing
+  the open-ended option gets the app's least-considered product, and they chose it because they
+  wanted less structure, not less thought.
+
+- **M167 — the builder checks that a program is complete, never that it is safe.** *Proposed.
+  Medium.*
+  `contentIssues` (`prescription.ts:219`) is a thorough structural validator: empty blocks,
+  unnamed blocks, circuits with no rounds, a block folded into itself, a step numbered past its
+  phase, an exercise on a track the program does not have. **Not one of its checks is about
+  training.** Grep of `BuilderPage.tsx` for *safety*, *injury*, *gap* or *48* returns only CSS
+  class names.
+  **So the app will help a climber author a program it would refuse to schedule for them** — a
+  finger session every day, no rest day in a week, no deload in twelve weeks, a maximal protocol
+  on consecutive days — and the same app that warns about a campus board in the logger says
+  nothing while the program is being written. M136 gave the builder the catalogue's full
+  expressive power; this is the other half of that gift.
+
+- **M168 — the ratio the app calls a safety signal is the contested form of it.** *Proposed.
+  Small.*
+  `acute` is the rolling 7-day load and `chronic` is the 28-day load ÷ 4 (`derive.ts:497`), so the
+  acute week sits **inside** the chronic window. That is the *coupled* ACWR, and the coupling is
+  the specific thing the method's critics name: the same load appears in numerator and
+  denominator, which induces correlation independent of any injury relationship. The uncoupled
+  form — acute against the 21 days before it — is the standard response, and there is a broader
+  literature arguing the ratio should not carry this much weight at all.
+  **The app's language is stronger than the method supports.** *"The pattern most associated with
+  injury"* (`coach.ts:330`) is a claim, and the app repeats it in the coach, the XP brake, the
+  load chart and the calendar. **This milestone is not necessarily a recomputation.** It may be
+  the honest paragraph next to the number, and a decision recorded about which form to use — but
+  it should be a decision, and at the moment it is a default.
+
+- **M169 — the guard against unread content covers three types of twelve.** *Proposed. Small.*
+  `wired.test.ts:280` walks `ROOTS = ['PhasePrescription', 'ExerciseBlock', 'Protocol']`, and its
+  own header says why it stops there: an array of objects is *"a different question (M155's, and
+  it is a much longer list)"*. `Program`, `SessionType`, `Drill`, `Metric`, `Phase`, `Exercise`,
+  `Track`, `Constraint` and `ProgramIntro` have never had M155's sweep.
+  **Two known orphans, found while looking for something else.** `flexibility`
+  (`metrics.ts:194`) is defined and prescribed by none of the thirteen programs. The twelve
+  `off_` drills of M164 carry an empty `sources`. Both are the shape M155 deleted ten of.
+  A small milestone that ends with either the fields read or the fields gone, and the guard
+  widened so the next one cannot hide.
+
+**Struck by reading the code, with what killed each:**
+- *Dialogs can be tabbed out of* — **wrong, and M14 already did it properly.** `ui/useDialog.ts`
+  moves focus in, traps Tab at both ends, closes on Escape in the capture phase and restores focus
+  to the opener. All six `aria-modal` dialogs call it. A grep for `keydown` in the dialog files
+  found nothing because the handler is in the hook.
+- *Charts are pictures with no text alternative* — **wrong.** Eight of ten carry `role`/`aria`,
+  and the two that do not — `BlockCompare` and `TissueBars` — are `<table>`s already, one with an
+  `sr-only` caption and one with an `aria-hidden` list beside an `sr-only` table.
+  `chartTable.test.tsx` tests the tables.
+- *The check-in is collected and ignored* — **wrong.** `readinessFor` (`readiness.ts:295`) drives
+  `easedDose`, `exerciseConflict` and an RPE cap in the logger (`LogPage.tsx:993`, `:1025`,
+  `:1182`). M72 and M129 built it.
+- *A backup does not carry the climber's preferences* — **deliberate and documented.** M60 split
+  `ClimberSettings` (grade display, units — in the exportable profile) from `DeviceSettings`
+  (theme, text size, sound, which view you left open — in `localStorage`), because importing
+  someone's backup used to change your theme.
+- *The guide-versus-program allow-lists are unpaid debt* — **already paid.** `EXERCISE_GAPS` in
+  `guides/accuracy.test.ts:260` is `{}`. The header still describes the allow-lists as debt, which
+  is a stale comment rather than a milestone.
+
+**Considered and parked, with the reason:**
+- *A finger-load trend line* — the obvious build does not work for the reason `coach.ts:361-364`
+  already gives: `tissueLoad` attributes fingers to every climbing session, so a fingers trend is
+  a climbing trend. A version that counted only prescribed finger work would be real, and it is a
+  milestone rather than a chart.
+- *One active program at a time* — `activeProgramId` is singular, and a coached climber commonly
+  runs a climbing block alongside a separate finger protocol. Parked because it is a data-model
+  change with a UI on top, not because it is wrong.
+- *`meta.appVersion` as a staleness signal* — settled by M159. It is written on every open; the
+  version that can differ is `createdWith`, and `/data` now shows both.
+
 - **M148 — the plan, checked against the log.** *Done. The first of the fourth brainstorm, and the
   largest single piece of coaching the app has gained.*
   **Six joins, none of which existed.** The app has stored both halves of each of these for
