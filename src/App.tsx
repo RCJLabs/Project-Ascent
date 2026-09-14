@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
+import { reportDbError } from '@/db/db';
 import { Route, Router, Switch, useLocation } from 'wouter';
 import { RouteBoundary } from '@/ui/ErrorBoundary';
 import { useHashLocation } from 'wouter/use-hash-location';
@@ -82,7 +83,16 @@ export function App() {
   const textSize = useSettings((s) => s.textSize);
 
   useEffect(() => {
-    void hydrateAll().then(() => {
+    void hydrateAll()
+      .catch((error: unknown) => {
+        // Boot must not end in an unhandled rejection (PLAN.md M151).
+        // `hydrateAll` finishes with a project reconcile, which *writes* —
+        // so a database that refuses takes the rest of boot down with it,
+        // into a promise nothing was listening to. Every store's own read
+        // is caught; this is the one step after them.
+        reportDbError(error);
+      })
+      .then(() => {
       // Photos outlive a deleted owner so an undo can hand them back
       // (PLAN.md M20, M30). Boot is the moment no undo can be pending, so
       // it is where the leftovers are collected. Deliberately not inside

@@ -242,7 +242,7 @@ describe('the bundle stays small', () => {
    * Every milestone that moves this moves it to just above what it measured;
    * the history is in the comment inside the first test.
    */
-  const BUDGET = 158.9;
+  const BUDGET = 159.7;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -428,6 +428,20 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **158.9 → 159.7 at M151**, measured 158.61 → 159.44: 0.83KB, and
+    // first-load by construction twice over. `db/db.ts` is what every read
+    // and write goes through, and the banner lives in `AppShell`, which is
+    // the shell itself — there is no boundary to put either behind. Most of
+    // it is the copy: four faults, each with a headline, a body and, for
+    // the full disk, somewhere to go, because the four need different
+    // things done and a single message would be the same shrug this
+    // milestone exists to remove. 0.26KB of slack.
+    //
+    // **Unchanged at M155+M156**, measured 158.68 → 158.61 — the number
+    // went *down*. 642 lines left the tree and almost none of them were on
+    // the boot path, which is the honest reading: dead code is mostly not
+    // expensive, it is just dead.
     //
     // **Unchanged at M153**, measured 158.16 → 158.37: a part-name table
     // beside the load rules, the split that sorts a protocol's safety rules

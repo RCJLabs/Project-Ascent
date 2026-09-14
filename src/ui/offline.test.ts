@@ -98,6 +98,13 @@ describe('the app asks whether there is an update', () => {
     expect(MAIN).toContain('watchForUpdates(registration)');
   });
 
+  it('watches for a write that failed with nobody listening', () => {
+    // Twenty-nine places write to the database and most have no catch, so
+    // a full disk rejects the transaction and the climber watches nothing
+    // happen (PLAN.md M151).
+    expect(MAIN).toContain('watchForFullDisk(window)');
+  });
+
   it('keeps the asking out of the registration callback', () => {
     // The loop has a clock and a visibility rule, both of which need to be
     // injectable; inline in `main.tsx` neither could be tested at all.

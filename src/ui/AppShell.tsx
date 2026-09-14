@@ -5,6 +5,7 @@ import { Announcer } from './Announce';
 import { IconButton } from './IconButton';
 import { LiveBar, useLiveBanner } from './LiveBar';
 import { DemoBanner } from './DemoBanner';
+import { DbFaultBanner } from './DbFaultBanner';
 import { StorageWarning } from './StorageWarning';
 import { UndoBar } from './UndoBar';
 import { UpdatePrompt } from './UpdatePrompt';
@@ -160,6 +161,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               and a bottom border, and sharing a padded container with it
               would inset the bar. */}
           <div className="px-3 pt-3 lg:pt-0 empty:hidden [&>*+*]:mt-2">
+            {/* First of the banners: a disk filling up is a warning, a
+                database that will not answer is already happening. */}
+            <DbFaultBanner />
             <StorageWarning />
             <UndoBar />
             <UpdatePrompt live={live} />

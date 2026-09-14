@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getDb } from '@/db';
+import { reportDbError } from '@/db/db';
 import type { Objective } from '@/engine/objectives';
 
 /**
@@ -31,7 +32,11 @@ export const useObjectives = create<ObjectivesState>((set, get) => ({
       const record = await db.get('profile', KEY);
       const value = record?.value;
       set({ objectives: Array.isArray(value) ? (value as Objective[]) : [], hydrated: true });
-    } catch {
+    } catch (error) {
+      // Hydrated, because the app has to render — but the reason is kept
+      // rather than swallowed, so the shell can say why the log is empty
+      // instead of letting it read as a fresh install (PLAN.md M151).
+      reportDbError(error);
       set({ hydrated: true });
     }
   },

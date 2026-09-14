@@ -7605,7 +7605,8 @@ milestone that settled them; two more were struck by measurement.*
   `content/returnToClimbing.ts` and `engine/returnPlan.ts` exist and are reachable only from
   `InjuryPage.tsx`. The finder never mentions them.
 
-- **M151 — the database presents every failure as an empty app.** *Proposed. Medium.*
+- **M151 — the database presents every failure as an empty app.** *Proposed, and built fifth —
+  see the entry at the end of this document.*
   **The plan calls data loss the existential risk (`§10`) and this is worse than losing it:
   it is having it and being shown nothing.** Three failure modes, one appearance.
   - **A rejected open is memoised forever.** `db.ts:39` — `dbPromise ??= openDB(...)`. There is
@@ -8068,3 +8069,59 @@ milestone that settled them; two more were struck by measurement.*
   empty too. Fixed the way `expectRendered` already does it in that file — one named function,
   used by both the real check and a self-check that asks it about a name deliberately not there.
   **Budget.** 158.9 holds and the number went **down**: 158.68 → 158.61. 4,730 tests pass.
+
+- **M151 — telling *no data* from *cannot read the data*.** *Done. The fifth of the fourth
+  brainstorm, and the one where every claim held.*
+  **Four faults, because four different things need doing.** `blocked` — two tabs on two schema
+  versions, close the other one. `newer-schema` — this device's log was written by a later build,
+  it is intact, update the app. `no-room` — the disk is full, nothing new can be saved.
+  `unavailable` — the browser will not open storage at all. Classified by `error.name`, which the
+  spec fixes, and never by the message, which is browser prose. Anything unrecognised is
+  `unavailable` rather than a guess: *the storage cannot be opened* is true of every case that
+  reaches there.
+  **A rejection is no longer memoised.** `dbPromise ??= openDB(...)` kept the **failed** promise,
+  so one refusal at boot — a locked profile, a browser mid-restart — poisoned every read and write
+  for the life of the tab, with no retry short of a reload. The catch clears the cache before
+  rethrowing, so the next thing to ask tries again.
+  **And `open` is `async`, which is not a formality.** `openDB` calls `indexedDB.open` in its own
+  body, so a browser that refuses outright **throws synchronously** — past the `.catch`, leaving
+  `dbPromise` unset and the fault unrecorded, in exactly the case this module exists for. The
+  first draft had that bug and the first test found it.
+  **Three branches nothing could reach, made reachable.** `blocked`, `blocking` and `terminated`
+  cannot be *provoked* from a test — one wants two connections on two schema versions, another
+  wants the browser to drop the connection underneath you — and written inline they survived every
+  mutation, which is the battery saying *this code is not tested, it is merely present*. They are
+  `OPEN_EVENTS` now: ordinary functions with ordinary tests, wired to the events in one line each.
+  `blocking` also closes the connection, because a tab that has been asked to let go must not
+  quietly reopen at its own older version and block the new one right back.
+  **`hydrated: true` after a catch is the lie, and it stays — with the reason attached.** The app
+  still has to render, so the stores still hydrate; what they no longer do is throw away *why*
+  there is nothing to show. Eight catches call `reportDbError` first. That matters for the half
+  `getDb` cannot see: a connection that opened fine and a read that threw anyway — an aborted
+  transaction, a record the shape check rejects — which is a different failure and now says so.
+  **A write that failed with nobody listening.** Twenty-nine places write and most have no catch,
+  so a full disk rejects the transaction and the climber taps *Mark complete* and watches nothing
+  happen. Wrapping all of them is churn with a missed site at the end of it; an unhandled
+  rejection is precisely the signal being described, so one listener claims it — and claims
+  **only** `QuotaExceeded`, because that is the only reason it can attribute to the database with
+  certainty.
+  **The banner is never dismissible.** Every one of these means *your training is not being
+  saved*, and a banner that can be waved away is waved away once and forgotten for a fortnight.
+  `role="alert"`, not `status`: a disk filling up is a warning and `StorageWarning` beside it
+  handles that; this is already happening.
+  **What the browser check found that nothing else could.** Bumping the stored schema past this
+  build and reloading is a real `VersionError`, and it showed the fix working end to end — the
+  shell renders, the log reads empty, and the banner says the data is on the device and intact.
+  It also showed `hydrateAll` finishing with a project **reconcile**, which writes: a database
+  that refuses takes the rest of boot down with it into a promise nothing was listening to. Boot
+  has a terminal catch now.
+  **One thing measured and not resolved, stated rather than papered over.** A `VersionError` boot
+  still leaves **exactly one** unhandled rejection — measured, not estimated, and one rather than
+  the storm the new retry might have caused. The reason is the raw `DOMException`, which carries
+  no stack, and I did not trace it to its caller. It is pre-existing, the app renders correctly
+  around it, and the climber now gets a sentence instead of an empty screen; the console line is
+  diagnostic. The browser check allows the two failures it induces on purpose and nothing else.
+  **Budget: 158.9 → 159.7**, measured 158.61 → 159.42. First-load by construction twice over:
+  `db/db.ts` is what every read and write goes through, and the banner is in `AppShell`, which is
+  the shell. Most of the 0.81KB is the copy, and the copy is the milestone — four faults needing
+  four different things done. 0.28KB of slack. 4,756 tests pass.

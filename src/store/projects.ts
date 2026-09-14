@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { reportDbError } from '@/db/db';
 import { getDb } from '@/db';
 import {
   deleteProject,
@@ -47,7 +48,11 @@ export const useProjects = create<ProjectsState>((set, get) => ({
       const record = await db.get('profile', DISMISSED_KEY);
       set({ projects, dismissed: (record?.value as string[] | undefined) ?? [], hydrated: true });
       await get().reconcile();
-    } catch {
+    } catch (error) {
+      // Hydrated, because the app has to render — but the reason is kept
+      // rather than swallowed, so the shell can say why the log is empty
+      // instead of letting it read as a fresh install (PLAN.md M151).
+      reportDbError(error);
       set({ hydrated: true });
     }
   },

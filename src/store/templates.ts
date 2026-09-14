@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { reportDbError } from '@/db/db';
 import { getDb } from '@/db';
 import type { Session } from '@/db/sessions';
 import {
@@ -45,7 +46,11 @@ export const useTemplates = create<TemplatesState>((set, get) => ({
       const record = await db.get('profile', KEY);
       const value = record?.value;
       set({ templates: Array.isArray(value) ? (value as Template[]) : [], hydrated: true });
-    } catch {
+    } catch (error) {
+      // Hydrated, because the app has to render — but the reason is kept
+      // rather than swallowed, so the shell can say why the log is empty
+      // instead of letting it read as a fresh install (PLAN.md M151).
+      reportDbError(error);
       set({ hydrated: true });
     }
   },

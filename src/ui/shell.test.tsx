@@ -243,7 +243,7 @@ describe('the banners are mounted once', () => {
    * live region racing the first.
    */
   it('names each banner once in the shell', () => {
-    for (const banner of ['<StorageWarning', '<UndoBar', '<UpdatePrompt', '<LiveBar']) {
+    for (const banner of ['<DbFaultBanner', '<StorageWarning', '<UndoBar', '<UpdatePrompt', '<LiveBar']) {
       expect(shell.split(banner).length - 1, `${banner} is mounted more than once`).toBe(1);
     }
   });

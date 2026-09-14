@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { reportDbError } from '@/db/db';
 import { getDb } from '@/db';
 import { registerAdaptations } from '@/content/programs';
 import type { BodyPart } from '@/content/warmups';
@@ -442,7 +443,9 @@ export async function hydrateProfile(): Promise<void> {
         : [],
       lastExportAt: value.lastExportAt ?? null,
     });
-  } catch {
+  } catch (error) {
+    // The reason is kept rather than swallowed (PLAN.md M151).
+    reportDbError(error);
     useProfile.setState({ hydrated: true });
   }
 }

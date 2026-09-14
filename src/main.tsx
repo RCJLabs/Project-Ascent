@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import { App } from './App';
+import { watchForFullDisk } from './db/db';
 import { watchForUpdates } from './lib/swUpdate';
 import { useAppUpdate } from './store/appUpdate';
 import './index.css';
@@ -45,6 +46,17 @@ if ('serviceWorker' in navigator) {
     useAppUpdate.getState().markOfflineReady();
   });
 }
+
+/**
+ * A write that failed with nobody listening (PLAN.md M151).
+ *
+ * Twenty-nine places write to the database and most have no catch, so a
+ * full disk rejects the transaction and the climber taps *Mark complete*
+ * and watches nothing happen. Wrapping every one of them is churn with a
+ * missed site at the end of it; an unhandled rejection is precisely the
+ * signal, and only `QuotaExceeded` is claimed from it.
+ */
+watchForFullDisk(window);
 
 // Ask once, early: an offline-only app must not be evictable. Browsers
 // grant this silently for installed PWAs; declines are retryable from
