@@ -109,7 +109,13 @@ export const ROUTES: RouteMeta[] = [
   // A section of one, which is where a search hit on the prose lands.
   { path: '/guides/:id/:section', title: 'Guide', parent: '/guides' },
   { path: '/glossary', title: 'Glossary', parent: '/settings', group: 'Reference', keywords: ['terms', 'jargon', 'what does', 'definition'] },
-  { path: '/drills', title: 'Drills', parent: '/settings', group: 'Reference', keywords: ['library', 'exercises', 'technique', 'session ideas', 'what to do'] },
+  // Under Train, which is what the app's own guide has always said
+  // (`guides/app.ts:399`) and where a climber looking for *what should I do
+  // today* goes. Parented to `/settings` and grouped as Reference since
+  // M107, it was the manual's neighbour — but drills are prescribed by
+  // programs and put on today's session, which is training rather than
+  // documentation (PLAN.md M152).
+  { path: '/drills', title: 'Drills', parent: '/train', group: 'Train', keywords: ['library', 'exercises', 'technique', 'session ideas', 'what to do'] },
   { path: '/drills/:id', title: 'Drill', parent: '/drills' },
   { path: '/data', title: 'Your data', parent: '/settings', group: 'Reference', keywords: ['storage', 'records', 'health', 'orphaned', 'unreadable', 'tidy'] },
 ];

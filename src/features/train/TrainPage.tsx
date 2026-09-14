@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'wouter';
-import { Activity, ChevronRight, Flag, History, PenLine, Sparkles, Target, TriangleAlert } from 'lucide-react';
+import { Activity, ChevronRight, Dumbbell, Flag, History, PenLine, Sparkles, Target, TriangleAlert } from 'lucide-react';
 import { PROGRAMS, STAGE_META, STAGE_ORDER } from '@/content/programs';
 import { canRun } from '@/engine/customProgram';
 import { sortBlocks } from '@/engine/blocks';
@@ -153,6 +153,24 @@ export function TrainPage() {
               {working.length === 0
                 ? 'Climbs you are working, with their burns and high points.'
                 : working.map((p) => p.name).join(' · ')}
+            </p>
+          </div>
+          <ChevronRight size={18} className="text-ink-soft shrink-0" />
+        </Link>
+        {/* The library, where the app's own guide has always said it is
+            (PLAN.md M152). Its one in-app door was a chip in Settings'
+            reference row, beside the guides and the glossary — but a drill
+            is prescribed by a program and put on today's session, which is
+            training rather than documentation. */}
+        <Link
+          href="/drills"
+          className="bg-surface border border-line rounded-2xl p-4 flex items-center gap-3 hover:border-accent transition-colors sm:col-span-2"
+        >
+          <Dumbbell size={18} className="shrink-0 text-accent" />
+          <div className="flex-1 min-w-0">
+            <div className="font-bold">Drills</div>
+            <p className="text-sm text-ink-soft truncate">
+              A hundred and fifty-odd, twelve of which need no wall. Any of them can go on today.
             </p>
           </div>
           <ChevronRight size={18} className="text-ink-soft shrink-0" />

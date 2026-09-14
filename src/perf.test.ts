@@ -429,6 +429,13 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M152**, measured 159.44 → 159.59: 0.15KB for five back
+    // links, three empty-state actions and a card of two rows on Progress —
+    // all of it markup on pages that were already in the tree, and the
+    // routing change that moved the drill library cost nothing at all. It
+    // leaves 0.11KB, which is the tightest this has been; the next milestone
+    // raises the line rather than squeezing under it.
+    //
     // **158.9 → 159.7 at M151**, measured 158.61 → 159.44: 0.83KB, and
     // first-load by construction twice over. `db/db.ts` is what every read
     // and write goes through, and the banner lives in `AppShell`, which is

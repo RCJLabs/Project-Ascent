@@ -21,6 +21,7 @@ import { Button } from '@/ui/Button';
 import { announce } from '@/ui/Announce';
 import { Card } from '@/ui/Card';
 import { Meter } from '@/ui/Meter';
+import { BackLink } from '@/ui/BackLink';
 import { PageHeader } from '@/ui/PageHeader';
 
 /** Everything the board shows comes from the log, so this hook is the board. */
@@ -68,6 +69,7 @@ export function BoardPage() {
 
   return (
     <>
+      <BackLink />
       <PageHeader
         title="Board"
         subtitle={open > 0 ? `${open} ready to claim` : 'Everything here resolves from your log'}

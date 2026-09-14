@@ -7631,7 +7631,7 @@ milestone that settled them; two more were struck by measurement.*
   read the data*, and a hydration path that can say which. Not a new screen — the store flags
   already exist, and `hydrated: true` after a catch is the lie to fix.
 
-- **M152 — doors that only open sometimes, and rooms with no way out.** *Proposed. Medium.*
+- **M152 — doors that only open sometimes, and rooms with no way out.** *Done — see below.*
   **Reachability, measured route by route against `routes.ts`.**
   - **The weekly review has one door.** `/review` is linked from `HomePage.tsx:71` and nowhere
     else; its declared parent is `/progress` (`routes.ts:91`) and `ProgressPage` never links it.
@@ -8216,3 +8216,59 @@ milestone that settled them; two more were struck by measurement.*
   another program, and a shift of zero or less.
   **Budget.** 159.7 holds: 159.43 → 159.54. The card and its copy are on the Train route; what
   reaches first load is the profile store's new field. 4,804 tests pass.
+
+### M152 — doors that only open sometimes, and rooms with no way out ✅
+
+Reachability, walked route by route against `routes.ts` rather than page by page. Eight claims
+in the brainstorm; seven held, one was already fixed and I had missed it.
+
+**The one that was wrong.** *"The week screen is program-gated."* It is not. `/week` has three
+doors, and two of them are on the Calendar tab: `weekHref(start)` at `CalendarPage.tsx:85` and
+`:561`, which M146 added one milestone before the brainstorm was written. Home's card is the
+third and the only gated one. Nothing to do.
+
+**The two screens where the app talks back.** `/review` declares `/progress` as its parent and
+Progress never linked it, so the weekly note — §6 calls it *"the retention loop"* — was reachable
+from one card on Home. Coach's Corner was worse: its only link is `CoachCard`, which returns null
+when there is nothing to say, so `/coach` went missing exactly when a climber might go looking for
+advice. `SaidCard` on Progress carries both, with the coach row saying in its own copy that quiet
+is a good answer — otherwise a climber follows the link, finds an empty page and reads it as
+broken. One card rather than two, because from the climber's side they are one thing: the app's
+reading of what they have been doing. The engine keeps the distinction that matters — `review.ts`
+writes about the week just gone, `coach.ts` about the training as a whole.
+
+**Rooms with no way out.** Five pages declared a parent and rendered no `BackLink`: `/find`,
+`/journal`, `/assessments`, `/board`, `/settings` — the brainstorm named four and the scan found
+the fifth. The finder gets two, in the order a climber wants them: out of the finder entirely,
+then back into the questions. Three empty states got an action: the journal offers *Write one on
+today*, a fresh install's block review offers *Find a program* (the `/find` link lived in the
+other branch only, so a climber who had never run a block was told to start one and given nowhere
+to start it), and the 404 — the one page in the app with no link of any kind — offers *Go to
+today*.
+
+**The library, where the guide always said it was.** `guides/app.ts:399` calls drills *"the
+library under Train"*. `routes.ts` parented `/drills` to `/settings` and grouped it as Reference,
+and a chip in Settings' About row was its only in-app link. A drill is prescribed by a program and
+put on today's session; that is training, not documentation. `/drills` is `parent: '/train',
+group: 'Train'` now, the chip is gone, and Train has a row for it. The guide needed no edit.
+
+**The guard.** `ui/reachable.test.ts` scans `routes.ts` rather than listing pages — for the reason
+M153 rewrote the prescription guard. It reads each parented route's screen through `App.tsx`'s
+`<Route component={…}>` and asserts the file renders a `BackLink`; a route is checked *by default*
+and has to be argued out of it, which two redirects are, in a table that also states why. 45 cases
+where a list would have been seven names and would pass the day a new page appears.
+
+**What the battery moved.** Nine survivors of twenty on the first run. Four were mutations to the
+test file itself — deleting an assertion trivially passes — and they came out of the battery as
+meaningless. The one that mattered: the guard matched `/BackLink/`, which **the import satisfies**,
+so removing `<BackLink />` from Assessments and Settings passed. It is `/<BackLink/` now, shared
+with a self-check that feeds it an import-only file, so loosening the pattern is itself caught.
+Two more were real gaps in the tests, not the code: `{on('block') && <SaidCard />}` could be
+deleted because the only Progress test rendered the *empty* branch, and `/drills`' new parent was
+asserted by nothing. A populated-Progress case and a back-link-reads-Train case close both.
+Second run: 17 of 17 killed, the sanity no-op alive.
+
+**Budget.** 159.7 holds: 159.44 → 159.59. 0.15KB for five back links, three empty-state actions
+and a two-row card — all markup on pages already in the tree — and the routing change cost
+nothing. 0.11KB of slack, the tightest it has been; the next milestone raises the line. 4,857
+tests pass.

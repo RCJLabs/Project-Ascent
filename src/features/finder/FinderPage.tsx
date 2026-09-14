@@ -25,6 +25,7 @@ import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { OptionCard } from '@/ui/Chip';
 import { Select } from '@/ui/Field';
+import { BackLink } from '@/ui/BackLink';
 import { PageHeader } from '@/ui/PageHeader';
 import { useSettings } from '@/store/settings';
 import { useIntent } from '@/store/intent';
@@ -321,6 +322,9 @@ function FinderForm({
   if (result) {
     return (
       <>
+        {/* Two different backs, in the order a climber wants them: out of
+            the finder entirely, then back into the questions (PLAN.md M152). */}
+        <BackLink />
         <Button variant="ghost" size="sm" onClick={() => setResult(null)} className="mb-1.5 -ml-3">
           <ArrowLeft size={15} /> Change my answers
         </Button>
@@ -391,6 +395,7 @@ function FinderForm({
 
   return (
     <>
+      <BackLink />
       <PageHeader title="Find your program" subtitle="Seven questions. No account, nothing sent anywhere." />
 
       <div className="grid grid-cols-1 gap-4">

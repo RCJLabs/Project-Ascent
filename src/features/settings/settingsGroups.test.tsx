@@ -62,11 +62,18 @@ describe('the four groups', () => {
     expect(useSettings.getState().cues).toBe(false);
   });
 
-  it('dropped the Reference card and kept its three doors on About', async () => {
+  /**
+   * Drills left this row in M152: the app's own guide has always called
+   * them *"the library under Train"*, and a drill is prescribed by a
+   * program and put on today's session, which is training rather than
+   * documentation. The manual stayed.
+   */
+  it('dropped the Reference card and kept the manual on About', async () => {
     await open();
     expect(screen.queryByText('Reference')).toBeNull();
     const about = screen.getByText('About', { selector: 'h2:not(.pt-2)' }).closest('section')!;
-    for (const [name, href] of [['Guides', '#/guides'], ['Drills', '#/drills'], ['Glossary', '#/glossary']]) {
+    expect(within(about).queryByRole('link', { name: 'Drills' })).toBeNull();
+    for (const [name, href] of [['Guides', '#/guides'], ['Glossary', '#/glossary']]) {
       expect(within(about).getByRole('link', { name: name! }).getAttribute('href')).toBe(href);
     }
   });

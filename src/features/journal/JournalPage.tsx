@@ -21,7 +21,12 @@ import { Card } from '@/ui/Card';
 import { EmptyState } from '@/ui/EmptyState';
 import { Chip } from '@/ui/Chip';
 import { Input } from '@/ui/Field';
+import { BackLink } from '@/ui/BackLink';
 import { PageHeader } from '@/ui/PageHeader';
+
+/** The one-line link an `EmptyState` action wants (PLAN.md M152). */
+const CHIP_LINK =
+  'focus-ring inline-flex items-center gap-1 text-sm font-semibold text-accent rounded-lg';
 
 const KINDS: { value: JournalKind; label: string; Icon: typeof BookOpen }[] = [
   { value: 'session', label: 'Sessions', Icon: Dumbbell },
@@ -68,6 +73,7 @@ export function JournalPage() {
 
   return (
     <>
+      <BackLink />
       <PageHeader
         title="Journal"
         subtitle={
@@ -80,7 +86,13 @@ export function JournalPage() {
       />
 
       {journal.length === 0 ? (
-        <EmptyState>
+        <EmptyState
+          action={
+            <Link href="/today" className={CHIP_LINK}>
+              Write one on today
+            </Link>
+          }
+        >
           Nothing written yet. Notes you add to a session, beta you save on a project, and notes
           beside an assessment result all land here — nothing to fill in twice. Add{' '}
           <span className="text-ink font-semibold">#tags</span> as you write and they become filters.

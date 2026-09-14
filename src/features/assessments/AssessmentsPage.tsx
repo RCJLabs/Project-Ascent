@@ -28,6 +28,7 @@ import { EmptyState } from '@/ui/EmptyState';
 import { SelectableCard } from '@/ui/Chip';
 import { DisclosureButton } from '@/ui/Disclosure';
 import { Input, Select } from '@/ui/Field';
+import { BackLink } from '@/ui/BackLink';
 import { PageHeader } from '@/ui/PageHeader';
 import { BlockReportChart, BlockReportRest } from '@/ui/charts/BlockReportChart';
 import { unitLabel } from '@/engine/units';
@@ -66,6 +67,7 @@ export function AssessmentsPage() {
 
   return (
     <>
+      <BackLink />
       <PageHeader
         title="Assessments"
         subtitle={

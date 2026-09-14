@@ -362,7 +362,19 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
         <BackLink />
         <PageHeader title="Block review" />
         <PageGrid>
-          <EmptyState>
+          {/* The way out was in the other branch only (PLAN.md M152): a
+              climber who has never run a block got a sentence telling them
+              to start one and nowhere to start one from. */}
+          <EmptyState
+            action={
+              <Link
+                href="/find"
+                className="focus-ring inline-flex items-center gap-1 text-sm font-semibold text-accent rounded-lg"
+              >
+                Find a program →
+              </Link>
+            }
+          >
             {chosen === null
               ? 'No program has been run yet, so there is no block to review. Start one and this page fills in as it goes.'
               : `${chosen.name} ran from ${chosen.startDate}, and the app no longer has the program itself — so there is nothing left to measure it against.`}

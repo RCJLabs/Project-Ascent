@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { Activity, BookOpen, CalendarRange, ChevronRight, HeartPulse, Ruler, Trophy } from 'lucide-react';
+import {
+  Activity,
+  BookOpen,
+  CalendarRange,
+  ChevronRight,
+  HeartPulse,
+  MessageSquare,
+  Ruler,
+  Trophy,
+} from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getDrill } from '@/content/drills';
 import { drillText } from '@/content/drillText';
@@ -82,6 +91,52 @@ function OverCapList({ history }: { history: CheckInHistory }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * The two screens where the app talks back, which had one door each
+ * (PLAN.md M152).
+ *
+ * `/review` declares `/progress` as its parent and this page never linked
+ * it, so the weekly note — §6 calls it *"the retention loop"* — was reachable
+ * from one card on Home and nowhere else. Coach's Corner was worse: its only
+ * link is a card that **renders nothing when there is nothing to say**, so
+ * the page went missing exactly when a climber might go looking for advice.
+ *
+ * One card, because they are one thing from the climber's side: the app's
+ * own reading of what they have been doing. The line against them stands in
+ * the engine — `review.ts` writes about the week just gone, `coach.ts` about
+ * the training as a whole — and that is a distinction about what each says,
+ * not about where each lives.
+ */
+function SaidCard() {
+  return (
+    <Card title="What the app makes of it">
+      <div className="grid grid-cols-1 gap-3">
+        <Link href="/review" className="flex items-center gap-3">
+          <CalendarRange size={18} className="text-accent shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">This week's note</p>
+            <p className="text-xs text-ink-soft mt-0.5">
+              What the week just gone came to, and how it compares with the one before it.
+            </p>
+          </div>
+          <ChevronRight size={18} className="text-ink-soft shrink-0" />
+        </Link>
+        <Link href="/coach" className="flex items-center gap-3">
+          <MessageSquare size={18} className="text-accent shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">Coach's Corner</p>
+            <p className="text-xs text-ink-soft mt-0.5">
+              Standing observations — the things that stay true until they are dealt with. Quiet is
+              a good answer.
+            </p>
+          </div>
+          <ChevronRight size={18} className="text-ink-soft shrink-0" />
+        </Link>
+      </div>
+    </Card>
   );
 }
 
@@ -481,6 +536,7 @@ export function ProgressPage() {
               you start training is the point of them. */}
           <AssessmentsCard />
           <BodyCard />
+          <SaidCard />
           <JournalCard />
         </PageGrid>
       </>
@@ -797,6 +853,7 @@ export function ProgressPage() {
         )}
 
         {on('body') && <AssessmentsCard />}
+        {on('block') && <SaidCard />}
         {on('block') && <JournalCard />}
 
         {on('grades') && state.personalRecords.length > 0 && (

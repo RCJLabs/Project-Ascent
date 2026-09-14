@@ -41,6 +41,7 @@ import { PageGrid, Wide } from '@/ui/PageGrid';
 import { CalendarExportCard } from './CalendarExportCard';
 import { PaletteSheet } from './PaletteSheet';
 import { Input } from '@/ui/Field';
+import { BackLink } from '@/ui/BackLink';
 import { PageHeader } from '@/ui/PageHeader';
 import { readingProblems } from '@/db/sound';
 import { describeProblem } from '@/engine/dataHealth';
@@ -470,6 +471,7 @@ export function SettingsPage() {
 
   return (
     <>
+      <BackLink />
       <PageHeader title="Settings" />
       <PageGrid>
         <Group title="Appearance" />
@@ -807,15 +809,15 @@ export function SettingsPage() {
             account, no tracking.
           </p>
           {/* The manual, in one line. The Reference card that held these
-              three with a paragraph each went in M122; they are one search
-              away and listed under Reference there, and the app's own
-              reading belongs beside its version. */}
+              with a paragraph each went in M122; they are one search away
+              and listed under Reference there, and the app's own reading
+              belongs beside its version. Drills left this row in M152: they
+              are prescribed by programs and put on today's session, which
+              is training rather than documentation, and they live under
+              Train now. */}
           <div className="flex flex-wrap gap-2">
             <Link href="/guides" className={CHIP_LINK}>
               Guides
-            </Link>
-            <Link href="/drills" className={CHIP_LINK}>
-              Drills
             </Link>
             <Link href="/glossary" className={CHIP_LINK}>
               Glossary
