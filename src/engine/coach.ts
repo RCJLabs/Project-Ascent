@@ -29,6 +29,7 @@ import type { Diagnosis } from './plateau';
 import { activeProjects, attemptsFor, highPointOf } from './projects';
 import type { BlockAdherence } from './adherence';
 import type { Finding } from './planVsLog';
+import { FINGER_GAP_HOURS, fingerGaps } from './fingerGap';
 import { isRestSession } from './rest';
 
 export type TipTone = 'good' | 'neutral' | 'caution';
@@ -132,6 +133,7 @@ export function buildTips(input: CoachInput): Tip[] {
     ...projectBurns(input, today),
     outdoorReentry(input, today),
     detraining(input, today),
+    fingerGap(input, today),
     unscoredEffort(input),
     loadSpike(input),
     staleBenchmarks(input, today),
@@ -323,6 +325,45 @@ function detraining({ state, sessions }: CoachInput, today: string): Tip | null 
  * A spike outranks every tip that fires on real data: a plateau is a
  * months-long problem and this is a this-week one.
  */
+/**
+ * Two finger sessions inside the gap, for a climber the program rules cannot
+ * reach (PLAN.md M160).
+ *
+ * Eleven programs declare `min-gap-hours` and `planVsLog` checks it, behind
+ * `program && startDate`. This is the same rule for everyone else: the two
+ * open-ended modes, which carry no constraints at all, and a climber running
+ * no program. General Training ships a *Hangboard / Finger* session type
+ * whose own rationale says *"48 hours between hangboard sessions"* and has
+ * nothing that could check it.
+ *
+ * Silent when `planVsLog` already has something to say about spacing —
+ * being told the same thing twice in two voices is worse than once.
+ */
+function fingerGap(input: CoachInput, today: string): Tip | null {
+  if ((input.findings ?? []).some((f) => f.kind === 'spacing')) return null;
+  const found = fingerGaps(input.sessions, today);
+  if (found === null) return null;
+
+  const tightest =
+    found.tightestHours === 0 ? 'twice in one day' : `${found.tightestHours} hours apart`;
+  return {
+    id: 'finger-gap',
+    signature: `${found.breaches}`,
+    tone: 'caution',
+    // Above `plateau` (88) and below `recovery` (92) and a danger-zone
+    // `load-spike` (93). Home shows one tip, so the order is the editorial
+    // decision: the two above this are happening to the climber right now,
+    // and a stalled grade is a training-quality observation. This is a
+    // repeated behaviour the app's own programs forbid and its own Home
+    // copy warns about — *"hangboarding and campusing injure fingers and
+    // elbows when loaded too soon"* — which puts it above the grade.
+    weight: 90,
+    headline: `${found.breaches} finger sessions inside the ${FINGER_GAP_HOURS}-hour gap`,
+    body: `Out of ${found.sessions} in the last eight weeks — the closest ${tightest}. Connective tissue adapts slower than the muscle that makes a hang feel easy, and the gap is what lets it: the programs here that prescribe fingerboarding all ask for ${FINGER_GAP_HOURS} hours between sessions, and this is the same rule when you are not running one of them. Climbing on the days between is fine; hanging is what needs the space.`,
+    action: { label: 'See the week', href: '/calendar' },
+  };
+}
+
 /**
  * The effort field, left blank often enough that the ratio cannot be read
  * (PLAN.md M162).

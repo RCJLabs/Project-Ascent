@@ -7861,7 +7861,7 @@ the end with what killed them. Sized as before: two large, six medium, two small
   climber, met on different days.
 - **On their own** — M161, M163, M165, M169.
 
-- **M160 — the 48-hour rule the app only knows inside a block.** *Proposed. Medium.*
+- **M160 — the 48-hour rule the app only knows inside a block.** *Done — see the entry at the end of this document.*
   **Eleven of thirteen programs declare a finger gap and one engine checks it.** `min-gap-hours`
   is read by the scheduler when it lays out a week (`scheduler.ts:115`) and by `planVsLog`'s
   `spacing` (`planVsLog.ts:481`) when it compares the dates to the plan. `useTips.ts:66` gates
@@ -8704,3 +8704,58 @@ boundary, not because it changes an answer.
 
 **Budget.** 159.83 → 160.55, inside the 160.6 raised before M158 — which is now spent, with 0.05KB
 left. 4,937 tests pass.
+
+### M160 — the 48-hour rule the app only knew inside a block ✅
+
+**The rule is in eleven programs and was enforced for none of the rest.** `min-gap-hours` is a
+machine-readable constraint the scheduler honours when it lays out a week and `planVsLog`'s
+`spacing` checks against the dates once the week has been lived. All of it runs behind
+`program && startDate` (`useTips.ts:66`) — right for adherence, since nothing was placed so nothing
+was skipped, and wrong for this. **A tendon does not know whether you are following a block.**
+
+**And the sharpest version of it was in the content.** General Training is a `mode`: zero
+constraints, and a session type called *Hangboard / Finger*. Its own block rationale reads —
+
+> Hangboarding is the most injury-prone self-directed work in climbing. RULES: half crimp or open
+> hand grip only… **48 hours between hangboard sessions.** Stop immediately at any sharp finger
+> pain.
+
+The rule is written out, in prose, in the one program that has nothing able to check it. A climber
+running no program at all got the same silence.
+
+**What counts as a finger session, and the trap that had to be avoided.** M132 recorded why the
+obvious build fails: `tissueLoad` attributes fingers to **every** climbing session by definition
+(`CLIMBING_PARTS`), so a fingers gap computed that way is a climbing gap — and the app would be
+telling climbers to stop climbing. The distinction that makes this work is one `bodyLoad` already
+draws, between what a session's *words* say it did and what having climbs on it implies. So
+`loadsFingersDirectly` reads the words — the session type the climber picked, the exercises they
+ticked, the drill they ran — and counts only the three `LOAD_RULES` that mean deliberate high-force
+finger work: `campus`, `one-arm`, `fingers`. Not `sustained`: ARC and laps are the low end on
+purpose and no program's own gap protects them. Not `open-hand`: a sloper is a grip, not a
+protocol. Both exclusions are pinned by tests, because widening the set is how this becomes the
+rule that fires at everyone.
+
+**The number is held against the catalogue rather than a comment.** Every `min-gap-hours` in the
+thirteen programs is 48, asserted — if one ever asks for something else, the default is the thing
+to revisit and the test says so. A second test holds the General Training rationale that states it
+in words, so rewording that sentence makes someone re-read this milestone's premise rather than
+pass silently.
+
+**It stands down where the program already speaks.** `planVsLog` reports spacing with the
+program's own note attached, which is the better of the two sentences, so the tip is silent when a
+spacing finding is present — and only that kind, since being silenced by a note about menus or
+deloads would be going quiet for no reason.
+
+**Where it sits was the editorial decision.** Home shows exactly one tip. At its first weight it
+was outranked by *"The line has gone flat"* — the browser check caught that, which no unit test
+would have, because the plateau diagnosis is passed in by `useTips` and not by a fixture. It is
+weight 90 now: below a danger-zone load spike (93) and compromised recovery (92), which are
+happening to the climber right now, and above a plateau (88), which is about grades rather than
+tendons. Home already carries *"hangboarding and campusing injure fingers and elbows when loaded
+too soon"* in its standing safety note; this is the app noticing it.
+
+**Battery.** 19 of 19 killed after one real gap closed — nothing had tested that a *non*-spacing
+finding leaves the tip speaking. Two survivors were assertion-deletions inside the test file and
+came out as meaningless.
+
+**Budget.** 160.55 → 161.02, inside the 161.6 raised beforehand. 4,965 tests pass.

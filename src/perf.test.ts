@@ -470,6 +470,13 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M160**, measured 160.55 → 161.02: 0.47KB for
+    // `engine/fingerGap.ts` and the coach rule that reads it. First-load
+    // because the coach is — Home's card is the first thing that asks it a
+    // question — and the module is small because the work is done by
+    // `bodyLoad`'s existing rules; what is new is which three of them count
+    // and the arithmetic over the dates.
+    //
     // **160.6 → 161.6, raised rather than spent** — the second entry here to
     // record no feature, and for the same reason as the first. M162 came in
     // at 160.55, which left 0.05KB: the next change of any size would have
