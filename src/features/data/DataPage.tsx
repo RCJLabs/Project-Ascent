@@ -171,6 +171,35 @@ export function DataPage() {
         </table>
       </Card>
 
+      {/* The version that made this database, beside the one reading it
+          (PLAN.md M159). `meta.appVersion` was written on every open, so it
+          was always the running version and told nobody anything;
+          `createdWith` is written once and is the only one of the two that
+          can differ. Said here because this is the page that describes the
+          database rather than the app. */}
+      <Card title="Versions" className="mt-3">
+        <dl className="text-sm grid grid-cols-1 gap-1.5">
+          <div className="flex items-baseline justify-between gap-3">
+            <dt className="text-ink-soft">Created by</dt>
+            <dd className="font-semibold tabular-nums">
+              {db.versions.createdWith === null
+                ? 'before the app recorded it'
+                : `v${db.versions.createdWith}`}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-3">
+            <dt className="text-ink-soft">Reading it now</dt>
+            <dd className="font-semibold tabular-nums">v{db.versions.running}</dd>
+          </div>
+        </dl>
+        {db.versions.createdWith !== null && db.versions.createdWith !== db.versions.running && (
+          <p className="text-xs text-ink-soft mt-2 leading-relaxed">
+            Different, which is ordinary — the app has been updated since this database was made,
+            and the migrations have run. It is worth knowing when something looks wrong.
+          </p>
+        )}
+      </Card>
+
       {/* Which of the archive's spreadsheets can come back in (PLAN.md
           M139). Said here rather than left to be discovered: a climber with
           five exported files and three importable ones will otherwise find

@@ -8375,3 +8375,50 @@ meaningless mutation (deleting an assertion from a test). Second run: 21 of 21 k
 **Verified by the method that found it.** The same CDP sweep across eight screens under a real
 `VersionError`, both themes: **zero** unhandled rejections, every page still rendering, and the
 banner still on each one. 159.73 → 159.83 against the 160.6 ceiling. 4,892 tests pass.
+
+### M159 — three loose ends, one of which was not there ✅
+
+The three finds left recorded and unfixed across M148, M154 and this document's own margin. Two
+were what they said. The third was a claim worth checking, and checking it is the result.
+
+**"NaN days since your last backup."** M148's browser check printed that against a hand-seeded
+profile and recorded it without fixing it. `hydrateProfile` took `value.lastExportAt ?? null`
+unchecked, two lines under a sibling that filters `dismissedCards` for type beneath a comment
+reading *"a backup is whatever was in the file"*. The app only ever writes `today()`, so nothing
+it does on its own reaches this — a restored or hand-edited export does. `backupNudge` then does
+`daysBetween` on it and prints the result. It is `typeof … === 'string' && isDateKey(…)` now, and
+**both halves are load-bearing**: the battery dropped the `typeof` check and every row of the
+table still passed, because `isDateKey` coerces for its shape regex and then calls `.split` — so
+`["2026-03-09"]` passes the regex and *throws*, which M151's catch would turn into a whole profile
+hydrating empty behind a "cannot open storage" banner, over a date field.
+
+**The version that was two copies and one useless write.** `version.ts` held `'0.1.0'` as a
+literal beside `package.json`'s own, and that string goes into every backup file, every exported
+program and the foot of Settings — so a release that bumped one would label its backups with the
+other for ever. It comes from `package.json` through a Vite `define` now, with the fallback
+spelled `unknown` rather than a second plausible number.
+
+M154 had recorded the symptom — *"a stale install's stored version is indistinguishable from a
+current one"* — and blamed the constant. **The constant was half of it.** `meta.appVersion` is
+written on *every open*, so it equals the running version by construction and would have gone on
+doing so however the constant was derived. `createdWith` is written once, beside `createdAt` and
+for the same reason, and it is the only one of the two that can ever differ. `/data` shows both,
+because a fact recorded with no reader is what M155 and M156 spent a milestone deleting.
+
+**The third was a self-contradiction whose reason was wrong.** `db/health.ts` opens by saying
+`getAll` on a store of photos *"would pull every blob into memory… the thing a page about storage
+health should least do"*, and then calls `mediaBytes()`, which does exactly that. The
+contradiction is real; the reason is not. **Measured in Chromium**: 150 photos totalling 44MB
+summed in **3.3ms**, against 0.5ms to read the keys alone — Blob handles come back, not bytes. The
+cost tracks record *count*, not size: 2,000 photos took 57ms where their keys alone took 24ms, so
+the blobs are about half of it and the rest is deserialising 2,000 records at all.
+
+That is the entire case for a `bytes` field and an index on it, and it does not pay — a schema
+migration, a backfill, and a field every write has to keep true, to save ~34ms on a page the
+climber opened on purpose, at a photo count few libraries reach. So the code stands and **the
+comment changed**, which is the actual defect: a file that justified a design with something that
+is not true. `findOrphanMedia` keeps its key cursor for the reason that does hold — it usually
+deletes none of them and would otherwise read all of them for nothing.
+
+**Budget.** 159.83 → 159.83. No movement: a guard, a meta key, a card on a lazy route, and a
+literal swapped for a define that minifies to the same literal. 4,911 tests pass.

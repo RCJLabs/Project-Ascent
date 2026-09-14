@@ -92,6 +92,10 @@ describe('a database that refuses', () => {
     expect(health.counts).toEqual({});
     expect(health.mediaBytes).toBe(0);
     expect(health.orphans).toEqual({ count: 0, bytes: 0 });
+    // Null rather than the running version: nothing could be read, so the
+    // database's own origin is unknown and the page must not claim this
+    // build made it (PLAN.md M159).
+    expect(health.versions.createdWith).toBeNull();
     expect(dbFault()).toBe('newer-schema');
   });
 

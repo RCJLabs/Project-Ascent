@@ -470,6 +470,12 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M159**, measured 159.83 → 159.83 — no movement at all.
+    // A date guard, a write-once meta key and a card on a lazy route, and
+    // `version.ts` swapped a string literal for a build-time define, which
+    // minifies to the same literal. The one entry here that bought something
+    // for nothing.
+    //
     // **Unchanged at M158**, measured 159.73 → 159.83: 0.10KB, nearly all of
     // it `readOr` in `db/db.ts` and the seven one-line wrappings it enables.
     // First-load by construction — `db/db.ts` is what every read goes through

@@ -192,10 +192,24 @@ async function open(): Promise<IDBPDatabase<AscentDB>> {
     blocking: (_current, _blocked, event) => OPEN_EVENTS.blocking(event.target),
     terminated: OPEN_EVENTS.terminated,
   }).then(async (db) => {
+    // `appVersion` is what opened it last; `createdWith` is what made it.
+    //
+    // Only the second can ever differ from the version running, and until
+    // M159 only the first existed — written on *every* open, so it was the
+    // current version by construction and could not answer the one question
+    // it looked like it answered. M154 recorded the symptom (*"a stale
+    // install's stored version is indistinguishable from a current one"*)
+    // without noticing that the write was the reason.
     await db.put('meta', { key: 'appVersion', value: APP_VERSION });
     const created = await db.get('meta', 'createdAt');
     if (!created) {
       await db.put('meta', { key: 'createdAt', value: new Date().toISOString() });
+    }
+    // Write-once, like `createdAt` above and for the same reason: a fact
+    // about this database's origin, not about this session.
+    const createdWith = await db.get('meta', 'createdWith');
+    if (!createdWith) {
+      await db.put('meta', { key: 'createdWith', value: APP_VERSION });
     }
     setFault(null);
     return db;

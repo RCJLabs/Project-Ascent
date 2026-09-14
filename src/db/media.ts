@@ -242,6 +242,10 @@ function sizeOf(blob: Blob | undefined): number {
  *
  * Zero on a database that will not open: Settings reads this at mount and
  * did not catch it (PLAN.md M158).
+ *
+ * `getAll` rather than a key cursor, deliberately — see the header of
+ * `db/health.ts` for the measurement that settles it. Every size is wanted
+ * here, unlike `findOrphanMedia` above, which usually wants none of them.
  */
 export async function mediaBytes(): Promise<number> {
   return await readOr(async () => {

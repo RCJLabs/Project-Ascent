@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { readFileSync } from 'node:fs';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
@@ -22,6 +23,19 @@ import { VitePWA } from 'vite-plugin-pwa';
  * Hash routing keeps deep links working without a 404 fallback.
  */
 const BASE = '/';
+
+/**
+ * The released version, from the one place that already names it.
+ *
+ * `src/version.ts` held a second copy as a string literal, and two copies of
+ * a version number is one copy plus a thing to forget: `APP_VERSION` goes
+ * into every backup file, every exported program and the line at the foot of
+ * Settings, so a release that bumped `package.json` alone would label its
+ * backups with the old number for ever (PLAN.md M159).
+ */
+const { version: APP_VERSION } = JSON.parse(
+  readFileSync(path.resolve(import.meta.dirname, 'package.json'), 'utf8'),
+) as { version: string };
 
 export default defineConfig({
   base: BASE,
@@ -136,6 +150,9 @@ export default defineConfig({
       },
     }),
   ],
+  define: {
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+  },
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, 'src'),

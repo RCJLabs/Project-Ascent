@@ -4,7 +4,7 @@ import { getDb } from '@/db';
 import { registerAdaptations } from '@/content/programs';
 import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
-import { addDays, today } from '@/engine/dates';
+import { addDays, today, isDateKey } from '@/engine/dates';
 import { EMPTY_BASELINE, readBaseline, type BaselineAnswers } from '@/engine/onboarding';
 import { closeBlock, openBlock, reconstructBlocks, type BlockRecord, moveBlockStart } from '@/engine/blocks';
 import { getProgram } from '@/content/programs';
@@ -476,7 +476,16 @@ export async function hydrateProfile(): Promise<void> {
       dismissedCards: Array.isArray(value.dismissedCards)
         ? value.dismissedCards.filter((id): id is string => typeof id === 'string')
         : [],
-      lastExportAt: value.lastExportAt ?? null,
+      // Guarded like the sibling above it, and for the same reason: a backup
+      // is whatever was in the file. `backupNudge` does `daysBetween` on
+      // this and prints the result, so a malformed key — an ISO timestamp,
+      // an unpadded `2026-9-1` — reached the climber as "NaN days since your
+      // last backup". Found by M148's browser check against a hand-seeded
+      // profile; the app itself only ever writes `today()` (PLAN.md M159).
+      lastExportAt:
+        typeof value.lastExportAt === 'string' && isDateKey(value.lastExportAt)
+          ? value.lastExportAt
+          : null,
       resumedAt: typeof value.resumedAt === 'object' && value.resumedAt !== null ? value.resumedAt : {},
     });
   } catch (error) {
