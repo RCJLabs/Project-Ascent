@@ -103,15 +103,22 @@ export interface AltimeterState {
   meters: number;
   reached: Milestone[];
   next: Milestone | null;
-  /** Height already banked toward `next`, and the span it sits in. */
-  intoSegment: number;
+  /**
+   * The span toward `next`, and how far through it (PLAN.md M179).
+   *
+   * `intoSegment` — the raw feet banked into this segment — used to be
+   * published here too, and `etaWeeks` beside `etaLabel` below. Nothing
+   * outside this file ever read either: `fraction` and `etaLabel` are the
+   * forms a screen wants, and both raw numbers existed only to compute them.
+   * `everest` two fields down had already settled the question the other
+   * way, publishing the derived forms and neither intermediate.
+   */
   segment: number;
   fraction: number;
   toNext: number;
   /** Feet per week, measured over recent history. */
   pace: number;
   /** Null when there is not enough history, or no pace to project from. */
-  etaWeeks: number | null;
   etaLabel: string | null;
   everest: { reached: boolean; fraction: number; toGo: number; etaLabel: string | null };
   /** Complete laps of the whole ladder. */
@@ -174,12 +181,10 @@ export function deriveAltimeter(
     meters: Math.round(feet * 0.3048),
     reached,
     next,
-    intoSegment,
     segment,
     fraction: segment === 0 ? 1 : intoSegment / segment,
     toNext,
     pace: Math.round(pace),
-    etaWeeks,
     etaLabel: etaWeeks === null ? null : describeWeeks(etaWeeks),
     everest: {
       reached: feet >= EVEREST.feet,

@@ -683,6 +683,14 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M179**, measured 163.07 → 163.04: **down** 0.03KB. The
+    // milestone is two sweeps in `ui/wired.test.ts`, and a test weighs
+    // nothing; what moved the number is the other half — `AltimeterState`
+    // lost `intoSegment` and `etaWeeks`, two fields the sweep found published
+    // and read by nothing, and `altimeter.ts` is first-load because Home's
+    // strip reads it. 0.26KB of slack, so the raise the entry below defers
+    // is still the next thing.
+    //
     // **163.3 holds at M174**, measured 162.85 → 163.07: 0.22KB, and all of
     // it is one tip body. `coach.ts` is first-load because Home reads the top
     // tip, so a rule's prose is entry-chunk prose — the same 0.19KB-a-body

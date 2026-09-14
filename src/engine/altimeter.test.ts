@@ -71,7 +71,7 @@ describe('sessionHeight', () => {
 describe('deriveAltimeter', () => {
   it('is empty and honest with nothing logged', () => {
     const a = deriveAltimeter([], { today: TODAY });
-    expect(a).toMatchObject({ feet: 0, laps: 0, pace: 0, etaWeeks: null, etaLabel: null });
+    expect(a).toMatchObject({ feet: 0, laps: 0, pace: 0, etaLabel: null });
     expect(a.next).toBe(MILESTONES[0]);
     expect(a.everest.reached).toBe(false);
   });
@@ -83,8 +83,11 @@ describe('deriveAltimeter', () => {
     expect(a.reached.map((m) => m.name)).toEqual(['First gym wall']);
     expect(a.next!.name).toBe('Devils Tower');
     expect(a.toNext).toBe(867 - 600);
-    expect(a.intoSegment).toBe(600 - 45);
     expect(a.segment).toBe(867 - 45);
+    // The read form rather than the raw one (PLAN.md M179). `intoSegment`
+    // and `etaWeeks` were published on the state and read by nothing outside
+    // this file — these two assertions were the whole of their audience.
+    expect(a.fraction).toBeCloseTo((600 - 45) / (867 - 45), 10);
   });
 
   it('converts to metres', () => {

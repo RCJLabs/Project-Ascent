@@ -312,6 +312,207 @@ describe('every authored content field reaches a screen', () => {
   it.each(LEAVES)('%s is read somewhere a climber can see it', (leaf) => expectRendered(leaf));
 });
 
+/**
+ * The two sweeps that only existed as throwaway scripts (PLAN.md M179).
+ *
+ * This file's header names three things built and left unreachable, and the
+ * milestones since have each found another by hand: M155 and M156 deleted ten
+ * dead exports, M169 swept every authored content field and value, and M174
+ * found `CoachInput.programMetrics` — a field declared with a docblock saying
+ * what it was for, read by nothing and filled by nothing.
+ *
+ * **Both sweeps were run against real history rather than argued for.**
+ *
+ * The field sweep, pointed at the tree as it stood before M174, reports
+ * `CoachInput.programMetrics` — the thing it took a milestone to notice.
+ * Pointed at the tree before **M155**, the milestone explicitly titled
+ * *"wired up or gone"*, it reports the same field: it was already dead there,
+ * and that pass did not cover interface fields. It was introduced in the
+ * commit that added Coach's Corner, **229 commits** before anything read it.
+ *
+ * The module sweep, pointed at the tree before M155, reports `engine/
+ * priority.ts`, `ui/Stat.tsx` and a stray `__m39.ts` — which is most of what
+ * that milestone found by hand.
+ *
+ * Neither finds those today, and both find something: see the allowlist below
+ * and, for the field sweep, the two fields M179 deleted from
+ * `AltimeterState`.
+ */
+
+/**
+ * Every module something imports, resolved rather than guessed.
+ *
+ * The first version of this built a module's likely specifiers — `@/lib/x`,
+ * `./x`, `../x` — and asked whether any file contained one. It reported
+ * `lib/swUpdate.ts` as an orphan, because `main.tsx` imports it as
+ * `'./lib/swUpdate'`: a relative path with a directory in it, which is a
+ * spelling the guess did not produce. Resolving the specifier the way the
+ * bundler does has no such list to be short of, and is a single pass rather
+ * than one scan per module.
+ *
+ * **Dynamic imports count**, and that is not a detail either: a draft
+ * matching only `from '…'` called **every lazy route page** an orphan —
+ * forty files — because `App.tsx` reaches them through `lazy(() =>
+ * import('…'))`.
+ */
+export function importedPaths(
+  sources: readonly { path: string; source: string }[],
+): Set<string> {
+  const known = new Set(sources.map((f) => f.path));
+  const out = new Set<string>();
+  const resolve = (from: string, spec: string): string | null => {
+    let base: string;
+    if (spec.startsWith('@/')) base = `src/${spec.slice(2)}`;
+    else if (spec.startsWith('.')) {
+      const parts = from.split('/').slice(0, -1);
+      for (const step of spec.split('/')) {
+        if (step === '.') continue;
+        else if (step === '..') parts.pop();
+        else parts.push(step);
+      }
+      base = parts.join('/');
+    } else return null;
+    for (const candidate of [`${base}.ts`, `${base}.tsx`, `${base}/index.ts`, `${base}/index.tsx`]) {
+      if (known.has(candidate)) return candidate;
+    }
+    return null;
+  };
+  for (const file of sources) {
+    for (const m of file.source.matchAll(/(?:from|import)\s*\(?\s*'([^']+)'/g)) {
+      const target = resolve(file.path, m[1]!);
+      if (target !== null && target !== file.path) out.add(target);
+    }
+  }
+  return out;
+}
+
+/**
+ * Modules nothing imports, and why each is allowed to be one.
+ *
+ * Exact rather than a floor: a list that only says "at most two" lets the
+ * third through.
+ */
+const TEST_ONLY: Record<string, string> = {
+  'src/content/validate.ts': 'its own header: runs over the whole catalog in tests',
+  'src/test/render.tsx': 'the harness the screen tests render through, imported only by tests',
+  'src/test/setup.ts': 'named by vite.config.ts as setupFiles, so the runner loads it, not the app',
+  'src/ui/paletteRules.ts': 'moved out of a script at M61 so the tool could itself be tested',
+};
+
+/** The app's two entry points, which nothing imports by design. */
+const ENTRY = ['src/main.tsx', 'src/App.tsx'];
+
+/**
+ * Modules nothing imports and nothing explains — the assertion itself, named
+ * so the self-check below runs the same one.
+ *
+ * `ui/wired.test.ts` states the rule this follows a hundred lines up, and
+ * M169's battery proved it: with a sweep and its self-check holding separate
+ * copies of one filter, weakening the sweep's copy survives everything.
+ */
+export function unexplainedOrphans(
+  sources: readonly { path: string; source: string }[],
+  allowed: readonly string[],
+): string[] {
+  const imported = importedPaths(sources);
+  return sources
+    .filter((f) => !ENTRY.includes(f.path) && !imported.has(f.path) && !allowed.includes(f.path))
+    .map((f) => f.path)
+    .sort();
+}
+
+describe('every module is reachable from the app', () => {
+  const modules = SOURCES.filter((f) => !ENTRY.includes(f.path));
+
+  it('finds enough modules to be checking anything', () => {
+    expect(modules.length).toBeGreaterThan(200);
+  });
+
+  it('has an importer for every one, or a reason', () => {
+    expect(unexplainedOrphans(SOURCES, Object.keys(TEST_ONLY))).toEqual([]);
+  });
+
+  it('gives each exception a reason rather than a line', () => {
+    for (const [path, why] of Object.entries(TEST_ONLY)) {
+      expect(why.length, path).toBeGreaterThan(20);
+    }
+    // And the one reason that can be checked rather than read: the runner
+    // loads this file because the config says so.
+    expect(readFileSync('vite.config.ts', 'utf8')).toContain('./src/test/setup.ts');
+  });
+});
+
+/** Every `name:` declared directly inside an `export interface`. */
+const DECLARATION = /export interface (\w+)\s*\{([\s\S]*?)\n\}/g;
+
+export function declaredFields(
+  sources: readonly { path: string; source: string }[],
+): { path: string; type: string; field: string }[] {
+  const out: { path: string; type: string; field: string }[] = [];
+  for (const { path, source } of sources) {
+    for (const type of stripComments(source).matchAll(DECLARATION)) {
+      for (const field of type[2]!.matchAll(/^ {2}(\w+)\??\s*:/gm)) {
+        out.push({ path, type: type[1]!, field: field[1]! });
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Every name the app uses as a property, a key or a destructure, with the
+ * interface bodies taken out first — so a field's own declaration is not
+ * what proves it is read.
+ *
+ * Deliberately permissive in the one direction that matters. A shorthand
+ * property in an object literal counts (`return { claimable }`), because the
+ * first draft without it called four live fields dead. A guard whose failure
+ * mode is *missing something* is worth having; one that cries wolf gets
+ * deleted.
+ */
+export function namesInUse(sources: readonly { path: string; source: string }[]): Set<string> {
+  const corpus = sources.map((f) => stripComments(f.source).replace(DECLARATION, '')).join('\n');
+  const used = new Set<string>();
+  for (const m of corpus.matchAll(/\.(\w+)/g)) used.add(m[1]!);
+  for (const m of corpus.matchAll(/(\w+)\s*:/g)) used.add(m[1]!);
+  for (const m of corpus.matchAll(/\{([^{}]*)\}/g)) {
+    for (const part of m[1]!.split(',')) {
+      const name = part.split(':')[0]!.replace('...', '').trim();
+      if (/^\w+$/.test(name)) used.add(name);
+    }
+  }
+  return used;
+}
+
+/** Fields declared and read by nothing — named for the same reason. */
+export function unreadFields(sources: readonly { path: string; source: string }[]): string[] {
+  const used = namesInUse(sources);
+  return declaredFields(sources)
+    .filter((f) => !used.has(f.field))
+    .map((f) => `${f.type}.${f.field}`)
+    .sort();
+}
+
+describe('every declared field is read somewhere', () => {
+  const fields = declaredFields(SOURCES);
+
+  it('finds enough fields to be checking anything', () => {
+    expect(fields.length).toBeGreaterThan(1500);
+    expect(fields.some((f) => f.type === 'CoachInput' && f.field === 'programMetrics')).toBe(true);
+  });
+
+  /**
+   * Nothing on the list, and the two that were on it are gone. `AltimeterState`
+   * published `intoSegment` and `etaWeeks` — the raw numbers behind `fraction`
+   * and `etaLabel` — and the only things that ever read them were two lines of
+   * their own test. `everest`, two fields down the same object, had already
+   * settled it the other way.
+   */
+  it('has no field declared and read by nothing', () => {
+    expect(unreadFields(SOURCES)).toEqual([]);
+  });
+});
+
 describe('the check itself works', () => {
   it('would notice a name nothing mentions', () => {
     // A test that cannot fail is the thing it is meant to prevent.
@@ -373,5 +574,84 @@ describe('the check itself works', () => {
   it('does not treat every file in the tree as a screen', () => {
     expect(SCREENS.length).toBeLessThan(SOURCES.length);
     expect(SCREENS.map((f) => f.path)).not.toContain('src/main.tsx');
+  });
+
+  /**
+   * And the two sweeps M179 added, run against a tree made to fail them.
+   *
+   * Both were clean on the day they shipped, which is the state a guard is
+   * least checkable in — the same argument `content/authored.test.ts` makes
+   * for its own self-checks, and the same shared-function rule: the sweeps
+   * above and the checks below call the *same* `importedPaths`,
+   * `declaredFields` and `namesInUse`, because M169's battery showed that
+   * two copies of one predicate let the used copy be weakened alone.
+   */
+  const file = (path: string, source: string) => ({ path, source });
+
+  it('resolves every spelling an import can have', () => {
+    const tree = [
+      file('src/a/one.ts', "import { x } from '@/b/two';"),
+      file('src/a/three.ts', "import { y } from './one';"),
+      file('src/b/four.ts', "import { z } from '../a/three';"),
+      file('src/b/two.ts', 'export const x = 1;'),
+      file('src/App.tsx', "const P = lazy(() => import('@/b/four'));"),
+    ];
+    expect([...importedPaths(tree)].sort()).toEqual([
+      'src/a/one.ts',
+      'src/a/three.ts',
+      'src/b/four.ts',
+      'src/b/two.ts',
+    ]);
+  });
+
+  /**
+   * The spelling that caught the first draft out: a relative path with a
+   * directory in it. `main.tsx` imports `'./lib/swUpdate'`, and a check that
+   * guessed `./swUpdate` called the module an orphan.
+   */
+  it('resolves a relative path with a directory in it', () => {
+    const tree = [
+      file('src/main.tsx', "import { watchForUpdates } from './lib/swUpdate';"),
+      file('src/lib/swUpdate.ts', 'export const watchForUpdates = () => {};'),
+    ];
+    expect(importedPaths(tree).has('src/lib/swUpdate.ts')).toBe(true);
+  });
+
+  it('would notice a module nothing imports at all', () => {
+    // `main.tsx` is an entry point, so nothing importing it is the normal
+    // case rather than a finding — which the first draft of this fixture got
+    // wrong, and the shared filter said so.
+    const tree = [file('src/main.tsx', "import './b';"), file('src/b.ts', ''), file('src/c.ts', '')];
+    expect(importedPaths(tree).has('src/c.ts')).toBe(false);
+    expect(unexplainedOrphans(tree, [])).toEqual(['src/c.ts']);
+    expect(unexplainedOrphans(tree, ['src/c.ts']), 'a reason stops being one').toEqual([]);
+  });
+
+  it('would notice a field declared and read by nothing', () => {
+    const tree = [
+      file('src/x.ts', 'export interface Thing {\n  used: number;\n  forgotten: number;\n}\n'),
+      file('src/y.ts', 'export const f = (t: Thing) => t.used;'),
+    ];
+    expect(unreadFields(tree)).toEqual(['Thing.forgotten']);
+  });
+
+  it('counts a key, a shorthand and a destructure as reaching a field', () => {
+    const tree = [file('src/x.ts', 'const a = { keyed: 1 };\nconst b = { shorthand };\nconst { pulled } = c;\nd.accessed;')];
+    const used = namesInUse(tree);
+    for (const name of ['keyed', 'shorthand', 'pulled', 'accessed']) {
+      expect(used.has(name), name).toBe(true);
+    }
+  });
+
+  it('does not count a field named only in a comment or a string', () => {
+    const tree = [file('src/x.ts', '/** `Thing.forgotten` is unread. */\nconst label = "forgotten";')];
+    expect(namesInUse(tree).has('forgotten')).toBe(false);
+  });
+
+  /** And a field's own declaration never counts as reading it. */
+  it('does not count the interface body it came from', () => {
+    const tree = [file('src/x.ts', 'export interface Thing {\n  lonely: number;\n}\n')];
+    expect(namesInUse(tree).has('lonely')).toBe(false);
+    expect(declaredFields(tree)).toEqual([{ path: 'src/x.ts', type: 'Thing', field: 'lonely' }]);
   });
 });

@@ -8584,7 +8584,7 @@ two large, three medium, five small.*
   and those are the three things `streakPraise` does not have.
   *Large.*
 
-- **M179 — the orphan sweep exists only as a throwaway script.**
+- **M179 — the orphan sweep exists only as a throwaway script.** *Done — see the entry at the end of this document. Widened to fields after M174, and it was not clean: two published intermediates on `AltimeterState` were read by nothing.*
   **M155 and M156 deleted dead exports, M169 swept every content field and every authored value,
   and nothing sweeps modules.** The script written for this brainstorm resolves every static *and
   dynamic* import — the dynamic half matters, because a first draft that missed `lazy(() =>
@@ -10062,3 +10062,75 @@ baseline* lands on the battery, and a climber with no program sees none of it.
 **Budget** 162.85 → 163.07: 0.22KB, all of it the tip body, at the same
 0.19KB-a-body rate M173 paid. **0.23KB of slack, the tightest since M152** —
 the next milestone raises the line first, on its own. 5,436 tests pass.
+
+### M179 — the sweeps that only existed as scripts, and what they found ✅
+
+**Widened before it was built, because M174 had just proved the proposed scope
+too narrow.** The proposal was a sweep for *modules* nothing imports. Two
+milestones later M174 found `CoachInput.programMetrics` — a **field**,
+declared with a docblock saying what it was for, read by nothing and filled by
+nothing. M169's sweep covers `content/types.ts`; nothing covered engine
+interfaces. So this builds both halves.
+
+**Both were validated against real history rather than argued for**, which is
+what turned "clean today is the argument for building it" into something
+stronger:
+
+| sweep, pointed at | finds |
+|---|---|
+| field sweep, the tree before **M174** | `CoachInput.programMetrics` |
+| field sweep, the tree before **M155** — *"wired up or gone"* | the same field, already dead there |
+| module sweep, the tree before **M155** | `engine/priority.ts`, `ui/Stat.tsx`, a stray `__m39.ts` |
+
+The field was introduced in the commit that added Coach's Corner — **229
+commits** before anything read it — and it survived the one milestone
+explicitly titled *wired up or gone* and the one that swept every authored
+content field. The module sweep's three are most of what M155 and M156 found by
+hand.
+
+**And it was not clean today.** The field sweep found two:
+`AltimeterState.intoSegment` and `AltimeterState.etaWeeks` — the raw numbers
+behind `fraction` and `etaLabel`, published on the state and read outside the
+module by nothing at all. Their entire audience was two lines of their own
+test. `everest`, two fields down the same object, had already settled the
+question the other way: it publishes `fraction`, `toGo` and `etaLabel` and
+neither intermediate. Both are gone, and the two assertions moved onto the
+forms a screen reads.
+
+**Two drafts of the module sweep were wrong, and the way they were wrong is the
+record worth keeping.** The first matched only `from '…'` and called **every
+lazy route page** an orphan — forty files — because `App.tsx` reaches them
+through `lazy(() => import('…'))`. The second guessed a module's likely
+specifiers and called `lib/swUpdate.ts` an orphan, because `main.tsx` imports
+it as `'./lib/swUpdate'`: a relative path with a directory in it, which the
+guess did not produce. Resolving the specifier the way a bundler does has no
+list of spellings to be short of, and is one pass rather than one scan per
+module.
+
+**The field sweep needed the opposite correction.** A first version called four
+live fields dead — `Board.claimable` among them — because a shorthand property
+in an object literal (`return { claimable }`) is not a key, a destructure or an
+access. It counts them now, and the module's docblock says why the sweep leans
+permissive: a guard that misses something is worth having, and one that cries
+wolf gets deleted.
+
+**Four exceptions, each with a reason rather than a line**: two deliberate
+test-only modules (`content/validate.ts`, `ui/paletteRules.ts`) and the two
+files in `src/test/`, which the runner loads rather than the app — and that
+last reason is checked rather than read, by asserting `vite.config.ts` names
+the setup file.
+
+**What the battery moved.** Twelve mutants. The first pass left one survivor
+and it was the exact shape M169 named: weakening the module sweep's own
+assertion to a floor survived, because the sweep and its self-check held
+separate copies of the filter. `unexplainedOrphans` and `unreadFields` are one
+named function each now, called by both — the rule this file states a hundred
+lines further up. Second pass: eleven of eleven killed, sanity no-op survived.
+
+**Browser-checked** on both themes at 430px and 1280px, because deleting two
+fields from a first-load engine module is the kind of change `tsc` clears and a
+render still fails: the altimeter, the game tab and Progress all draw, and the
+climb bar still reads.
+
+**Budget** 163.07 → 163.04, down 0.03KB: the sweeps are tests and weigh
+nothing, and the two deleted fields gave a little back. 5,448 tests pass.
