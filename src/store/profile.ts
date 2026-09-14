@@ -4,9 +4,9 @@ import { getDb } from '@/db';
 import { registerAdaptations } from '@/content/programs';
 import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';
-import { today } from '@/engine/dates';
+import { addDays, today } from '@/engine/dates';
 import { EMPTY_BASELINE, readBaseline, type BaselineAnswers } from '@/engine/onboarding';
-import { closeBlock, openBlock, reconstructBlocks, type BlockRecord } from '@/engine/blocks';
+import { closeBlock, openBlock, reconstructBlocks, type BlockRecord, moveBlockStart } from '@/engine/blocks';
 import { getProgram } from '@/content/programs';
 import { pruneOverrides, withOverride, type WeekOverrides } from '@/engine/reschedule';
 import type { WeekPlan } from '@/engine/scheduler';
@@ -128,6 +128,10 @@ export interface ProfileState {
   lastExportAt: string | null;
   markExported: () => void;
   startProgram: (programId: string, plan: WeekPlan, trackId?: string, restart?: boolean) => void;
+  /** When each block was last picked up after a gap (PLAN.md M149). */
+  resumedAt: Record<string, string>;
+  /** Move an interrupted block's dates so today is an earlier week (M149). */
+  resumeBlock: (programId: string, shiftWeeks: number) => void;
   setPlan: (programId: string, plan: WeekPlan) => void;
   /** Run a program over a different number of weeks, or as written. */
   setProgramLength: (programId: string, weeks: number | null) => void;
@@ -173,6 +177,7 @@ interface Persisted {
   dismissedTips: Record<string, string>;
   dismissedCards: string[];
   lastExportAt: string | null;
+  resumedAt: Record<string, string>;
 }
 
 function snapshot(s: ProfileState): Persisted {
@@ -193,6 +198,7 @@ function snapshot(s: ProfileState): Persisted {
     dismissedTips: s.dismissedTips,
     dismissedCards: s.dismissedCards,
     lastExportAt: s.lastExportAt,
+    resumedAt: s.resumedAt,
   };
 }
 
@@ -238,6 +244,7 @@ export const useProfile = create<ProfileState>((set, get) => ({
   dismissedTips: {},
   dismissedCards: [],
   lastExportAt: null,
+  resumedAt: {},
 
   completeOnboarding: (baseline) => {
     set({ baseline, onboardedAt: new Date().toISOString() });
@@ -281,6 +288,34 @@ export const useProfile = create<ProfileState>((set, get) => ({
 
   markExported: () => {
     set({ lastExportAt: today() });
+    void save(snapshot(get()));
+  },
+
+  /**
+   * Pick an interrupted block up again (PLAN.md M149).
+   *
+   * The whole operation is the start date: every week in the app is derived
+   * from it, so pushing it back by `shiftWeeks` puts today on an earlier
+   * program week and the calendar, the prescription and the adherence all
+   * follow. Nothing rewrites a dose, so the block stays the block the
+   * climber read last week.
+   *
+   * The open block row moves with it rather than being closed and reopened:
+   * this is the same run, interrupted, and a second row would tell the
+   * history otherwise.
+   */
+  resumeBlock: (programId, shiftWeeks) => {
+    const s = get();
+    const from = s.startDates[programId];
+    if (from === undefined || shiftWeeks <= 0) return;
+    const startDate = addDays(from, shiftWeeks * 7);
+    set({
+      startDates: { ...s.startDates, [programId]: startDate },
+      blocks: moveBlockStart(s.blocks, programId, startDate),
+      // A shift is a translation and cannot close the gap it was asked
+      // about, so the answer is recorded rather than re-derived (M149).
+      resumedAt: { ...s.resumedAt, [programId]: today() },
+    });
     void save(snapshot(get()));
   },
 
@@ -442,6 +477,7 @@ export async function hydrateProfile(): Promise<void> {
         ? value.dismissedCards.filter((id): id is string => typeof id === 'string')
         : [],
       lastExportAt: value.lastExportAt ?? null,
+      resumedAt: typeof value.resumedAt === 'object' && value.resumedAt !== null ? value.resumedAt : {},
     });
   } catch (error) {
     // The reason is kept rather than swallowed (PLAN.md M151).

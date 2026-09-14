@@ -12,6 +12,7 @@ import { useObjectives } from '@/store/objectives';
 import { useProfile } from '@/store/profile';
 import { useCustomPrograms } from '@/store/programs';
 import { useProjects } from '@/store/projects';
+import { PickItUp } from './PickItUp';
 import { PageHeader } from '@/ui/PageHeader';
 import { displayRange } from '@/engine/grades';
 import { useSettings } from '@/store/settings';
@@ -116,6 +117,10 @@ export function TrainPage() {
   return (
     <>
       <PageHeader title="Train" subtitle="Structured climbing programs" />
+      {/* Above the block it is about, and only when there is a gap to talk
+          about (PLAN.md M149). The coach says on Home that you have been
+          away; this is the tab where something can be done about it. */}
+      <PickItUp />
       <YourBlock />
       {/* Objectives and projects side by side (PLAN.md M117): the thing a
           program is for, and the climbs it is for. Projects had a tab of

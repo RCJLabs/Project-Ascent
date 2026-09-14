@@ -11,6 +11,7 @@ import {
   rowWindow,
   sortBlocks,
   weeksRun,
+  moveBlockStart,
   type BlockRecord,
 } from './blocks';
 
@@ -267,5 +268,48 @@ describe('reconstructing from the old shape', () => {
 
   it('makes nothing from nothing', () => {
     expect(rebuild({}, null)).toEqual([]);
+  });
+});
+
+/**
+ * Moving an interrupted block's dates (PLAN.md M149).
+ *
+ * The row's `id` is `programId#startDate`, so a block picked up again would
+ * become a *second* block in the history unless the identity moves with the
+ * date.
+ */
+describe('moving an open block', () => {
+  const open = (programId: string, startDate: string) => ({
+    id: blockId(programId, startDate),
+    programId,
+    name: programId,
+    startDate,
+    weeks: 12,
+    endedAt: null,
+  });
+
+  it('keeps one row and gives it the new identity', () => {
+    const moved = moveBlockStart([open('iron_grip', '2026-03-08')], 'iron_grip', '2026-03-22');
+    expect(moved).toHaveLength(1);
+    expect(moved[0]!.id).toBe(blockId('iron_grip', '2026-03-22'));
+    expect(moved[0]!.startDate).toBe('2026-03-22');
+    expect(moved[0]!.endedAt).toBeNull();
+  });
+
+  it('leaves the snapshots the block is running on alone', () => {
+    const row = { ...open('iron_grip', '2026-03-08'), weeks: 8, trackId: 'board' };
+    const moved = moveBlockStart([row], 'iron_grip', '2026-03-22');
+    expect(moved[0]!.weeks).toBe(8);
+    expect(moved[0]!.trackId).toBe('board');
+  });
+
+  it('will not move a block belonging to another program', () => {
+    const rows = [open('iron_grip', '2026-03-08')];
+    expect(moveBlockStart(rows, 'the_siege', '2026-03-22')).toEqual(rows);
+  });
+
+  it('does nothing when no block is open', () => {
+    const closed = [{ ...open('iron_grip', '2026-03-08'), endedAt: '2026-04-01' }];
+    expect(moveBlockStart(closed, 'iron_grip', '2026-03-22')).toEqual(closed);
   });
 });

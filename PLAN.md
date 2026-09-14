@@ -7559,7 +7559,8 @@ milestone that settled them; two more were struck by measurement.*
   that has held elsewhere — *every opinion shows its reasoning* (`guides/app.ts:495`) — is the
   floor, not the ceiling: each of these needs a gate as well, and the gates are the milestone.
 
-- **M149 — a block that notices it was interrupted.** *Proposed. Large. Takes M148 first.*
+- **M149 — a block that notices it was interrupted.** *Proposed, and built seventh — see the
+  entry at the end of this document. It was not Large in the end, and the entry says why.*
   **The prescription is a pure function of the calendar.** `prescriptionFor` (`plan.ts:275-282`)
   takes a session type, a phase, a track, a week number and a deload flag. It takes no history.
   Miss a fortnight and week seven prescribes week seven, at week seven's load, off a base the
@@ -8170,3 +8171,48 @@ milestone that settled them; two more were struck by measurement.*
   when it lost `project`, and nothing failed when it claimed `maintain` as well.
   **Budget.** 159.7 holds: 159.42 → 159.43. The finder is a lazy route and its chunk is where
   this lands. 4,769 tests pass.
+
+- **M149 — a block that notices it was interrupted.** *Done. The seventh of the fourth
+  brainstorm, sized Large and not one, because two of its three options turned out to be the same
+  operation.*
+  **Both answers are one number.** The proposal offered three: hold the block and shift its dates,
+  re-enter at a lighter week, or say plainly that the next fortnight is a step up. The second was
+  the expensive one — it seemed to mean touching `prescriptionFor`, which `adapt.ts` deliberately
+  does only at start time, and which is what makes a block unreadable ahead. It does not. Every
+  week in this app is derived from `programWeek(startDate, date, weeks)`, so **moving the start
+  date moves the block**: shift by the gap and today is the week you were going to do next; shift
+  by more and today is an earlier week, at an earlier week's load. Same field, different number,
+  no dose rewritten, and the catalogue's prose stays true.
+  **A shift cannot close the gap, and the first build did not know that.** A shift is a
+  *translation*: it takes `nowWeek` and `lastTrainedWeek` down by the same amount, so
+  `nowWeek - lastTrainedWeek` is exactly what it was. A card that fires on that difference fires
+  again the moment it has been dealt with, and offers to shift again, forever — which is what the
+  screen test found. What a shift actually does is re-point the **prescription**; the missed
+  fortnight stays in the history where `adherence.ts` already reports it. So the question is one
+  the climber answers once and `resumedAt` records that they did. It clears itself: train again
+  and the gap genuinely closes; go away again and it reopens against the new one.
+  **Proposed, never applied.** The whole operation being one field is exactly why it is offered
+  rather than done. A block that slides itself back while nobody is looking is a block you cannot
+  trust to be the thing you read last week — and every number would agree with it, which makes it
+  worse rather than better.
+  **It asks why, because it cannot know.** Away, ill or hurt. The app has the gap's length and its
+  position exactly and the reason not at all, and the three do not want the same answer: a
+  fortnight's holiday costs very little, an illness costs more than it felt like, and a climber
+  whose fingers are only now quiet should not re-enter at the week that hurt them. The answer
+  **reorders the choices and changes the sentence; it never removes one**, which a test holds.
+  **The rewind is a phase opening, not a fixed number of weeks back.** A phase is the unit the
+  catalogue writes progressions in, so re-entering at one gives a run-up instead of dropping the
+  climber into the middle of a ramp. It costs the weeks already done inside that phase, and the
+  card says so in weeks rather than leaving it to be worked out.
+  **And the block is moved, not restarted.** `BlockRecord.id` is `programId#startDate`, so moving
+  the date moves the identity — a caller writing two fields by hand would find out later that the
+  history had two rows for one run. `moveBlockStart` is the one place that knows.
+  **What the battery found.** Thirty-four mutations, five survivors. One was genuinely dead code:
+  a `Math.min(lastTrainedWeek + 1, program.weeks)` that cannot fire, because an interruption needs
+  a whole empty week and `programWeek` clamps today — so the next week is at most
+  `program.weeks - 1`. Gone. Two were fixtures too clean to see the filters: no test logged a rest
+  day during the gap, and the out-of-block session was dated *before* the block, where sorting
+  hides it rather than the window filter. Two were guards nothing exercised — a block belonging to
+  another program, and a shift of zero or less.
+  **Budget.** 159.7 holds: 159.43 → 159.54. The card and its copy are on the Train route; what
+  reaches first load is the profile store's new field. 4,804 tests pass.

@@ -108,6 +108,30 @@ export function activeBlock(rows: readonly BlockRecord[]): BlockRecord | null {
   return rows.find((r) => r.endedAt === null) ?? null;
 }
 
+/**
+ * Move the open block's start date, keeping it the same block (PLAN.md M149).
+ *
+ * A block that was interrupted and picked up again is not a new block and
+ * must not become one: its history, its adherence and its place in the
+ * record are all the same run. But the row's `id` is `programId#startDate`,
+ * so moving the date moves the identity — which is why this exists rather
+ * than the caller writing two fields and finding out later that the block
+ * report has two rows for one block.
+ *
+ * Nothing else on the row changes. `weeks`, `plan` and `trackId` are
+ * snapshots of what the block is running and none of that moved.
+ */
+export function moveBlockStart(
+  rows: readonly BlockRecord[],
+  programId: string,
+  startDate: string,
+): BlockRecord[] {
+  const open = activeBlock(rows);
+  if (open === null || open.programId !== programId) return [...rows];
+  const moved: BlockRecord = { ...open, id: blockId(programId, startDate), startDate };
+  return rows.map((row) => (row.id === open.id ? moved : row));
+}
+
 export function findBlock(rows: readonly BlockRecord[], id: string): BlockRecord | null {
   return rows.find((r) => r.id === id) ?? null;
 }
