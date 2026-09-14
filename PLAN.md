@@ -8490,7 +8490,7 @@ two large, three medium, five small.*
   sentence, which is the shape M168 removed from the load windows.
   *Medium.*
 
-- **M174 — nothing ever asks for a first benchmark.**
+- **M174 — nothing ever asks for a first benchmark.** *Done — see the entry at the end of this document. The early return was a symptom: `CoachInput.programMetrics` was declared for this job and never filled.*
   **The rule can only notice a number going stale, never a number that was never taken.**
   `staleBenchmarks` (`coach.ts:564`) opens `if (entries.length === 0) return null;`. A climber with
   no benchmarks has nothing stale, so the coach is silent — permanently, because the condition
@@ -10000,3 +10000,65 @@ with the inline rule gone.
 **Budget** 162.86 → 162.85, down 0.01KB. `sessionMode.ts` was already first-load
 because the boot repair reads it, `db/sessions.ts` is first-load by
 construction, and the inline copy came out. 5,416 tests pass.
+
+### M174 — the battery the coach was never shown ✅
+
+**The proposal found a symptom.** It said the rule *"can only notice a number
+going stale, never a number that was never taken"* and pointed at
+`if (entries.length === 0) return null;`. True — but the reason it could only
+read the entries is that it had nothing else to read.
+
+**`CoachInput.programMetrics` was declared for exactly this and never filled.**
+It has carried its own reason since it was written — *"Program assessment ids,
+so staleness is judged on what you were asked"* — and **nothing read it and
+nothing passed it**. `useTips` assembles nine inputs for the board, including
+three it has to compute from the program, the start date and the plan; this one
+needed `program.assessments` and a comma, and it was not there. M169's sweep
+would have caught a dead field like it in `content/types.ts`; that sweep does
+not cover engine interfaces, and M179 is the proposal that would.
+
+**Which broke the rule twice, in opposite directions.** A prescribed number
+nobody has taken is invisible to a rule reading the entries — twelve of the
+thirteen programs prescribe a battery, from three numbers to nine — and a
+number the climber took once out of curiosity is nagged about for ever even on
+a program that never asked for it. `flexibility` is the one metric in the
+registry no program prescribes, which M169 measured, and it was the one most
+likely to be nagging.
+
+**So there are two asks now, and only one can fire.** A first baseline goes
+first because its window closes: a number taken in week one is the only
+*before* a twelve-week block will ever have, and one taken in week six compares
+against nothing. Two ids rather than two signatures under one, so waving away
+*"nothing measured yet"* does not also wave away *"three are out of date"* two
+months later — they are different facts about different climbers.
+
+**The weight was the hard part, and it is recorded in the rule rather than
+settled quietly.** 52 rather than 58, so M173's `cold-start` still leads the
+front door while the load model warms up. Both sit on the board throughout and
+the only difference is which card Home shows for three weeks — and a single
+Home card reading *"take nine measurements"* on day two is a worse first
+impression than one explaining why the app looks quiet. Measured: at seven days
+the front door shows the countdown with the ask behind it; at thirty it shows
+the ask.
+
+**What it does not do.** A climber who has taken one of nine is left alone —
+the ask is for a *first* benchmark, and the Assessments screen lists the rest.
+A climber with no program, or on Trip Prep (four weeks, the one entry that
+prescribes no battery), is asked nothing, because nothing asked them. That is
+`prescribesDrills`'s precedent from M132: a tip that asserts a program did
+something it did not is worse than no tip.
+
+**What the battery moved.** Thirteen mutants, **thirteen killed on the first
+pass** — the first clean first pass in this brainstorm, and the reason is that
+the screen test was written before the battery rather than after it. Emptying
+`programMetrics` in the hook, or dropping the line entirely, both die there:
+the rule can be perfectly right and say nothing if nobody hands it the battery,
+which is the whole shape of the finding.
+
+**Browser-checked** on both themes at 430px and 1280px: the ask leads Home on
+Iron Grip with nothing measured, the board carries its reason, *Take a
+baseline* lands on the battery, and a climber with no program sees none of it.
+
+**Budget** 162.85 → 163.07: 0.22KB, all of it the tip body, at the same
+0.19KB-a-body rate M173 paid. **0.23KB of slack, the tightest since M152** —
+the next milestone raises the line first, on its own. 5,436 tests pass.

@@ -86,6 +86,12 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
       // Hydrated at boot in `store/index.ts` like every other store here,
       // so Home has it on the first render rather than a beat later.
       objectives,
+      // What the program asked to be measured (PLAN.md M174). The field has
+      // carried its own reason since it was written — *"so staleness is
+      // judged on what you were asked"* — and this hook never filled it, so
+      // the benchmark rule could only see numbers already recorded. That is
+      // why it had nothing to say to a climber who had recorded none.
+      programMetrics: program?.assessments ?? [],
       // Whether this climber's program ever puts a drill in a week, so the
       // drill tip stops asserting one for the six programs that do not
       // (PLAN.md M132).

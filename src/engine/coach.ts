@@ -150,7 +150,7 @@ export function buildTips(input: CoachInput): Tip[] {
     fingerGap(input, today),
     unscoredEffort(input),
     loadSpike(input, today),
-    staleBenchmarks(input, today),
+    benchmarks(input, today),
     skippedType(input),
     planVsLog(input),
     ...missingDomains(input),
@@ -659,13 +659,79 @@ function planVsLog({ findings }: CoachInput): Tip | null {
   };
 }
 
-function staleBenchmarks(input: CoachInput, today: string): Tip | null {
+/** Sessions before the coach asks for a first benchmark (PLAN.md M174). */
+const MIN_SESSIONS_FOR_BASELINE = 2;
+
+/**
+ * The battery, and the two things that can be wrong with it (PLAN.md M174).
+ *
+ * ## The field that was declared for this and never filled
+ *
+ * `CoachInput.programMetrics` has carried the comment *"Program assessment
+ * ids, so staleness is judged on what you were asked"* since it was written.
+ * Nothing read it and nothing passed it — `useTips` built every other input
+ * the board needs and skipped this one — so the rule below could only ever
+ * look at metrics the climber had **already recorded**, which is why it had
+ * nothing to say to a climber who had recorded none.
+ *
+ * It matters twice over. A prescribed number nobody has taken is invisible
+ * to a rule reading the entries, and a number the climber took once out of
+ * curiosity is nagged about for ever even though no program asked for it.
+ * Both are the same missing input.
+ *
+ * ## Never taken beats gone stale
+ *
+ * They are two ids rather than two branches of one, so a dismissal of either
+ * is about its own fact — and only one can fire, because the file's own rule
+ * is one gap at a time and *"a list of five things you are not doing reads
+ * as an indictment"*.
+ *
+ * A first baseline goes first because the window for it closes: a number
+ * taken in week one is the only *before* a twelve-week block will ever have,
+ * and one taken in week six compares against nothing. That is also the
+ * argument for the weight, and it was the hard part. **52 rather than 58**,
+ * so M173's `cold-start` still leads the front door while the load model is
+ * warming up: both sit on the board throughout, and the difference is only
+ * which card Home shows for the first three weeks. A single Home card
+ * reading *"take seven measurements"* on day two is a worse first
+ * impression than one explaining why the app looks quiet, and the ask is
+ * not lost — it becomes the top card the moment the countdown resolves.
+ */
+function benchmarks(input: CoachInput, today: string): Tip | null {
   const entries = input.metrics ?? [];
-  if (entries.length === 0) return null;
-  const seen = [...new Set(entries.map((e) => e.metricId))].filter((id) => METRICS[id]);
-  const due = seen
+  const prescribed = input.programMetrics ?? [];
+  // What the climber was asked for. With nothing asked — no program, or
+  // Trip Prep, the one entry in the catalogue that prescribes none — fall
+  // back to what they have chosen to track, which is the behaviour this rule
+  // had before and the only honest reading when nobody set a battery.
+  const ids = prescribed.length > 0 ? prescribed : [...new Set(entries.map((e) => e.metricId))];
+  const known = [...new Set(ids)].filter((id) => METRICS[id]);
+  if (known.length === 0) return null;
+
+  const statuses = known
     .map((id) => assessmentStatus(id, entries, { today }))
-    .filter((s) => s !== null && s.due === 'stale');
+    .filter((s): s is NonNullable<ReturnType<typeof assessmentStatus>> => s !== null);
+
+  // Nothing in the battery has ever been measured. `assessmentStatus` has
+  // reported this as `due: 'baseline'` since it was written; no rule had
+  // ever asked it.
+  if (statuses.every((s) => s.latest === null)) {
+    if (input.state.completedSessions < MIN_SESSIONS_FOR_BASELINE) return null;
+    const n = statuses.length;
+    return {
+      id: 'no-baseline',
+      // The size of the battery, so a climber who switches to a program
+      // asking for more is asked again.
+      signature: `${n}`,
+      tone: 'neutral',
+      weight: 52,
+      headline: `No baseline for the ${n} number${n === 1 ? '' : 's'} your training is meant to move`,
+      body: 'Every one of them is a measurement the app will chart, compare and put in the block report — and none of it can happen without a first reading to compare against. Taken now it is a before; taken in two months it is just a number. Most of the battery is one session.',
+      action: { label: 'Take a baseline', href: '/assessments' },
+    };
+  }
+
+  const due = statuses.filter((s) => s.due === 'stale');
   if (due.length === 0) return null;
   return {
     id: 'stale-benchmarks',

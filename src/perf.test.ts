@@ -683,6 +683,17 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **163.3 holds at M174**, measured 162.85 → 163.07: 0.22KB, and all of
+    // it is one tip body. `coach.ts` is first-load because Home reads the top
+    // tip, so a rule's prose is entry-chunk prose — the same 0.19KB-a-body
+    // rate M173 paid for three of them. The logic is free by comparison: the
+    // rule reads a field `CoachInput` already declared, and `useTips` fills
+    // it from a program it was already holding.
+    //
+    // **0.23KB of slack, which is the tightest this line has been since
+    // M152.** The next milestone raises it, on its own and before it starts,
+    // for the reason the three raises below all give.
+    //
     // **Unchanged at M180**, measured 162.86 → 162.85: **down** 0.01KB, which
     // is rounding on a rebuild and not a saving — the point is that moving a
     // rule onto the write path cost nothing at all. `engine/sessionMode.ts`
