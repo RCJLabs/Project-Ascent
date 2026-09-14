@@ -37,7 +37,15 @@
 
 import type { Session } from '@/db/sessions';
 import type { Program } from '@/content/types';
-import { ACWR_BOUNDS, buildLoadIndex, type LoadIndex } from './derive';
+import {
+  ACWR_BOUNDS,
+  CHRONIC_DAYS,
+  MIN_CHRONIC_DAYS,
+  MIN_HISTORY_DAYS,
+  RATIO_NEEDS,
+  buildLoadIndex,
+  type LoadIndex,
+} from './derive';
 import { addDays, daysBetween, programWeek, today as todayKey } from './dates';
 
 /**
@@ -252,19 +260,25 @@ function isProgramDeload(date: string, request: PeakRequest): boolean {
  * find that out.
  */
 function hasBaseline(index: LoadIndex, from: string, baseline: number): boolean {
+  // The same three conditions `deriveLoad` applies, read off the index
+  // rather than off a daily array — and until M173 written here with three
+  // bare literals, which is how a second copy of a rule starts drifting from
+  // the first. `loadModel.test.ts` holds the two answers together.
   if (baseline <= 0) return false;
-  if (index.earliest === null || daysBetween(index.earliest, from) + 1 < 21) return false;
+  if (index.earliest === null || daysBetween(index.earliest, from) + 1 < MIN_HISTORY_DAYS) {
+    return false;
+  }
   let days = 0;
-  for (let i = 0; i < 28; i += 1) {
+  for (let i = 0; i < CHRONIC_DAYS; i += 1) {
     if ((index.byDate.get(addDays(from, -i))?.load ?? 0) > 0) days += 1;
   }
-  return days >= 6;
+  return days >= MIN_CHRONIC_DAYS;
 }
 
 export const WITHHELD_REASON: Record<WithheldReason, string> = {
   past: 'That date has been and gone.',
   'too-far': `More than ${MAX_RUNWAY_WEEKS} weeks out is a training block, not a peak. Pick a program for the first part of it and come back when the trip is closer.`,
-  'no-baseline': 'Three weeks of logged sessions, with the effort and the time filled in, and this becomes meaningful.',
+  'no-baseline': `${RATIO_NEEDS} A session with no effort or no duration on it is not one of them.`,
 };
 
 export const WEEK_LABEL: Record<WeekKind, string> = {

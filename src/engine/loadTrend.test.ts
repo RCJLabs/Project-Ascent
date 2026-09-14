@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Session } from '@/db/sessions';
-import { ACWR_BOUNDS } from './derive';
+import { ACWR_BOUNDS, RATIO_NEEDS } from './derive';
 import { addDays } from './dates';
 import { TREND_DAYS, describeTrend, loadTrend, trendCeiling } from './loadTrend';
 
@@ -72,8 +72,17 @@ describe('when the ratio does not exist', () => {
     expect(trend.unknownDays).toBeLessThanOrEqual(30);
   });
 
+  /**
+   * And it says it in the app's words rather than its own. This line held a
+   * fourth copy of the promise M173 retired — *"three weeks of logged
+   * sessions and this becomes meaningful"* — which is why the Progress page
+   * still made it after `ui/loadZone.ts` had stopped. The browser check
+   * found that; this test had been asserting the copy was there.
+   */
   it('says so rather than inventing a summary', () => {
-    expect(describeTrend(loadTrend({ sessions: [], to: TO }))).toMatch(/three weeks/i);
+    const said = describeTrend(loadTrend({ sessions: [], to: TO }));
+    expect(said).toBe(RATIO_NEEDS);
+    expect(said, 'the retired promise is back').not.toMatch(/becomes meaningful/);
   });
 });
 

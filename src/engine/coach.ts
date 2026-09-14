@@ -24,7 +24,7 @@ import type { MetricId } from '@/content/types';
 import { METRICS } from '@/content/metrics';
 import { assessmentStatus } from './assessments';
 import { daysBetween, today as todayKey } from './dates';
-import type { ClimberState } from './derive';
+import { MIN_CHRONIC_DAYS, MIN_HISTORY_DAYS, type ClimberState } from './derive';
 import type { Diagnosis } from './plateau';
 import { activeProjects, attemptsFor, highPointOf } from './projects';
 import type { BlockAdherence } from './adherence';
@@ -142,6 +142,7 @@ export function buildTips(input: CoachInput): Tip[] {
   const today = input.today ?? todayKey();
   const tips = [
     firstSession(input),
+    coldStart(input),
     plateau(input),
     ...projectBurns(input, today),
     outdoorReentry(input, today),
@@ -178,6 +179,103 @@ function firstSession({ state }: CoachInput): Tip | null {
     headline: 'Nothing logged yet',
     body: 'Three of your five stats are built from what you log, and none of them can move until there is a session to read. It does not have to be a good one.',
     action: { label: 'Log today', href: '/today' },
+  };
+}
+
+/**
+ * What the app can say before it can model anything (PLAN.md M173).
+ *
+ * ## The hole this fills, measured
+ *
+ * A probe built four climbers and asked `buildTips` what it had on each day
+ * of their first two months. A climber training three times a week gets
+ * `firstSession` on day zero and then **nothing at all until day eighteen**
+ * — and `HomePage`'s `CoachCard` renders `null` on an empty list, so
+ * Coach's Corner is not a quiet card in that window. It is **gone**. The
+ * single act of logging a first session removes the feature from the front
+ * door.
+ *
+ * Opening it deliberately was no better. The page's empty state read *"Every
+ * rule here has looked at your log and found nothing worth interrupting you
+ * about, which is the good outcome"* — a clean bill of health, issued to a
+ * climber whose log no rule here is able to read yet.
+ *
+ * ## And for some climbers it is not a window
+ *
+ * A readable ratio needs both of `derive.ts`'s conditions: `MIN_HISTORY_DAYS`
+ * of span *and* `MIN_CHRONIC_DAYS` of scored training inside the rolling
+ * 28-day window. Density is the one nobody had counted against a real
+ * schedule. **At one session a week it tops out at four**, so the second
+ * condition is never met — not at three weeks, not at a year. Measured: that
+ * climber's first tip of any kind arrives on **day 56**, and the ratio never
+ * arrives at all.
+ *
+ * `ui/loadZone.ts` used to tell them *"three weeks of logged sessions and
+ * this becomes meaningful"*. It does not become meaningful. Saying so is the
+ * point of the third branch below.
+ *
+ * ## Why this is a rule and not a copy change
+ *
+ * Because the honest answer differs by climber, and the app already holds
+ * everything needed to tell them apart: whether anything is scored at all,
+ * how much span there is, and how dense it is. M162 made the same argument
+ * one condition over — *"telling a climber three weeks in to score their
+ * sessions is advice that does not work"* — and this is that argument
+ * applied to the other half.
+ *
+ * It sits below every rule that reads real data and above the domain gaps,
+ * because in this window nothing else can fire; once something can, it
+ * should win.
+ */
+function coldStart({ state }: CoachInput): Tip | null {
+  const { zone, unknownBecause, daysOfHistory, scoredDays, unmeasuredDays } = state.load;
+  // `unscoredEffort` owns the other reason, and `firstSession` owns a log
+  // with nothing in it. This rule is the gap between them.
+  if (zone !== 'unknown' || unknownBecause !== 'history') return null;
+  if (state.completedSessions === 0) return null;
+
+  // Nothing is counting. Said first because a countdown that never moves is
+  // worse than no countdown — `daysOfHistory` is measured from the earliest
+  // *scored* day, so for this climber it reads zero however long they log.
+  if (scoredDays === 0 && unmeasuredDays > 0) {
+    return {
+      id: 'cold-start',
+      signature: `unscored:${unmeasuredDays}`,
+      tone: 'caution',
+      weight: 55,
+      headline: 'None of what you have logged is counting yet',
+      body: 'Load is effort × hours, so a session with no effort score contributes nothing to it — and every screen built on load is waiting on those numbers rather than on more training. An RPE is one tap at the bottom of the logger, and it is worth adding to the sessions already logged while you can still remember how they felt.',
+      action: { label: 'Open the calendar', href: '/calendar' },
+    };
+  }
+
+  // Span short: a real countdown, from a number the app already holds and
+  // no screen has ever shown.
+  if (daysOfHistory < MIN_HISTORY_DAYS) {
+    const left = MIN_HISTORY_DAYS - daysOfHistory;
+    return {
+      id: 'cold-start',
+      // Weekly, so setting it aside in week one does not also set aside
+      // week two. Dismissal is against a fact, and the fact here is how far
+      // in you are.
+      signature: `history:${Math.floor(daysOfHistory / 7)}`,
+      tone: 'neutral',
+      weight: 55,
+      headline: `${left} more ${left === 1 ? 'day' : 'days'} before the load ratio can say anything`,
+      body: `The ratio compares your last week against your own four-week baseline, and you do not have four weeks yet — so the app would rather show nothing than divide one small number by another. What it needs is ${MIN_HISTORY_DAYS} days of span and at least ${MIN_CHRONIC_DAYS} days of scored training inside the last four weeks. Everything else works now: the grades, the pyramid, the projects and the log itself do not wait on this.`,
+    };
+  }
+
+  // Span is there and density is not, which is a fact about the schedule
+  // rather than about how long they have been at it.
+  return {
+    id: 'cold-start',
+    signature: `rate:${scoredDays}`,
+    tone: 'neutral',
+    weight: 55,
+    headline: 'The load ratio needs more training weeks than yours have',
+    body: `You have the history for it — what it also needs is ${MIN_CHRONIC_DAYS} days of scored training inside any four-week window, and at your current rate there are ${scoredDays}. That is not a fault and it is not a reason to train more than suits you; it is a number that simply does not apply at this frequency. The grade pyramid, the benchmarks and the consistency grid all read your log as it is.`,
+    action: { label: 'See what does read it', href: '/progress' },
   };
 }
 

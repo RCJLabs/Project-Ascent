@@ -1,5 +1,5 @@
 import { AlertTriangle, CheckCircle2, Info, TrendingDown } from 'lucide-react';
-import type { AcwrZone } from '@/engine/derive';
+import { RATIO_NEEDS, type AcwrZone } from '@/engine/derive';
 
 /**
  * Status presentation for ACWR, in one place (PLAN.md M46).
@@ -11,16 +11,24 @@ import type { AcwrZone } from '@/engine/derive';
  * the line at 1.4.
  */
 /**
- * Why the ratio is unreadable, when it is (PLAN.md M162).
+ * Why the ratio is unreadable, when it is (PLAN.md M162, M173).
  *
  * `unknown` had one note — *"three weeks of logged sessions"* — because it
  * had one cause. There are two now, and telling a climber with four months
  * of history that they need three weeks of it is worse than saying nothing:
  * the thing they can actually do is fill in the effort on the sessions they
  * already logged.
+ *
+ * **And the history note was a promise the app could not keep (M173).**
+ * Three weeks of *span* is one of two conditions; the other is
+ * `MIN_CHRONIC_DAYS` of scored training inside the rolling 28-day window,
+ * which a climber training once a week never reaches — measured, they top
+ * out at four. So the note says what it needs rather than when it arrives,
+ * and the `cold-start` coach rule is what tells a given climber which of the
+ * two they are short of.
  */
 export const UNKNOWN_NOTE: Record<'history' | 'unscored', string> = {
-  history: 'Three weeks of logged sessions and this becomes meaningful.',
+  history: RATIO_NEEDS,
   unscored:
     'Some of the last month has no effort score on it, and load is effort × hours — so the ratio would be a guess. Add the RPE to those sessions and it fills in.',
 };
@@ -28,7 +36,11 @@ export const UNKNOWN_NOTE: Record<'history' | 'unscored', string> = {
 export const ZONE: Record<AcwrZone, { label: string; note: string; color: string; Icon: typeof Info }> = {
   unknown: {
     label: 'Not enough to say',
-    note: 'Three weeks of logged sessions and this becomes meaningful.',
+    // The same sentence, not a second copy of it (PLAN.md M173). This one
+    // was left behind when M162 split the reason in two: `ProgressPage`
+    // overrides it at the call site, so the retired wording sat one
+    // `ZONE[zone].note` away from a screen for ten milestones.
+    note: UNKNOWN_NOTE.history,
     color: 'var(--c-ink-soft)',
     Icon: Info,
   },

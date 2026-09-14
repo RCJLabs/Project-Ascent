@@ -1,6 +1,13 @@
 import type { Session } from '@/db/sessions';
 import { addDays } from './dates';
-import { ACWR_BOUNDS, buildLoadIndex, loadSeries, type AcwrZone, type LoadPoint } from './derive';
+import {
+  ACWR_BOUNDS,
+  RATIO_NEEDS,
+  buildLoadIndex,
+  loadSeries,
+  type AcwrZone,
+  type LoadPoint,
+} from './derive';
 
 /**
  * The acute:chronic ratio, as a trajectory (PLAN.md M25).
@@ -103,7 +110,7 @@ const ZONE_WORD: Record<AcwrZone, string> = {
  */
 export function describeTrend(trend: LoadTrend): string {
   if (trend.latest === null) {
-    return 'Three weeks of logged sessions and this becomes meaningful.';
+    return RATIO_NEEDS;
   }
   const now = trend.latest.toFixed(2);
   const zone = ZONE_WORD[trend.points[trend.points.length - 1]!.zone];

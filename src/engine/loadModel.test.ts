@@ -9,11 +9,14 @@ import {
   ACWR_BOUNDS,
   CHRONIC_DAYS,
   CHRONIC_WEEKS,
+  MIN_CHRONIC_DAYS,
+  MIN_HISTORY_DAYS,
+  RATIO_NEEDS,
   buildLoadIndex,
   deriveClimberState,
   loadSeries,
 } from './derive';
-import { MAX_BUILD, RAMP } from './peak';
+import { MAX_BUILD, RAMP, peakPlan } from './peak';
 
 /**
  * Which ACWR the app computes, and what it is allowed to say about it
@@ -332,5 +335,142 @@ describe('what the app is allowed to claim about it', () => {
     expect(guide).toContain(`${ACWR_BOUNDS.optimalFrom} - ${ACWR_BOUNDS.optimalTo}`);
     expect(guide).toContain(`${ACWR_BOUNDS.optimalTo} - ${ACWR_BOUNDS.cautionTo}`);
     expect(guide).toContain(`> ${ACWR_BOUNDS.cautionTo}`);
+  });
+});
+
+/**
+ * The other two windows, named for the same reason as the first two
+ * (PLAN.md M173).
+ *
+ * M168 found `ACUTE_DAYS` and `CHRONIC_DAYS` written twice and proved it by
+ * mutation. `21` was written **three** times — the readiness check in
+ * `deriveLoad`, the same check inside `loadSeries`, and M162's `wouldAnswer`
+ * — and `MIN_CHRONIC_DAYS` was private to the module while the coach had to
+ * say which of the two conditions a climber was short of.
+ */
+describe('the two conditions on a readable ratio', () => {
+  it('reads the same span from the source rather than from a literal', () => {
+    const source = readFileSync('src/engine/derive.ts', 'utf8');
+    const body = source.slice(source.indexOf('export const MIN_HISTORY_DAYS'));
+    expect(MIN_HISTORY_DAYS).toBe(21);
+    expect(MIN_CHRONIC_DAYS).toBe(6);
+    // A floor rather than a count: an exact number fails the next time
+    // something legitimately reads the constant, which is what happened the
+    // first time this ran — `RATIO_NEEDS` interpolates it. What actually
+    // matters is that no comparison went back to a literal.
+    expect(body.match(/MIN_HISTORY_DAYS/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
+    expect(body).not.toMatch(/(daysOfHistory|span|chronicDays) [<>]=? \d/);
+    expect(readFileSync('src/engine/peak.ts', 'utf8')).not.toMatch(/\+ 1 < 21|days >= 6|i < 28/);
+  });
+
+  /**
+   * And the density figure the coach reads is the one the readiness check
+   * uses, not a second count over `daily`. A recount would be the M168
+   * defect in a new place: two numbers that agree today and drift later.
+   */
+  it('publishes the density it checks, counted once', () => {
+    const sessions: Session[] = [];
+    for (let d = 40; d >= 0; d -= 3) {
+      sessions.push({ ...newSession(addDays('2026-03-01', -d), 0), completed: true, rpe: 7, durationMin: 60 });
+    }
+    const state = deriveClimberState(sessions, { today: '2026-03-01' });
+    const counted = state.load.daily.filter((day) => day.load > 0).length;
+    expect(state.load.scoredDays).toBe(counted);
+    expect(state.load.scoredDays).toBeGreaterThan(0);
+  });
+
+  /**
+   * The measurement M173 turned on: density is counted inside the rolling
+   * window, so a frequency below it is a permanent answer rather than a
+   * waiting period. One session a week is four scored days in twenty-eight,
+   * whatever the age of the log.
+   */
+  it('is unreachable by frequency alone, which is why the note stopped promising', () => {
+    const weekly: Session[] = [];
+    for (let d = 364; d >= 0; d -= 7) {
+      weekly.push({ ...newSession(addDays('2026-03-01', -d), 0), completed: true, rpe: 7, durationMin: 60 });
+    }
+    const state = deriveClimberState(weekly, { today: '2026-03-01' });
+    expect(state.load.daysOfHistory).toBeGreaterThan(MIN_HISTORY_DAYS);
+    expect(state.load.scoredDays).toBeLessThan(MIN_CHRONIC_DAYS);
+    expect(state.load.zone).toBe('unknown');
+    expect(state.load.unknownBecause).toBe('history');
+  });
+
+  /**
+   * So the note says what it needs, and never when it will arrive — **in
+   * every module that says it.**
+   *
+   * The first version of this read `ui/loadZone.ts` alone and passed while
+   * the Progress page still carried the retired sentence, because
+   * `describeTrend` had its own copy. The **browser check** is what found
+   * that, which is the argument for running one: a source assertion can only
+   * be as wide as the file it was pointed at. Four copies, in the end —
+   * `loadZone` twice, `loadTrend`, and `peak` — so the sweep is over the
+   * whole tree now.
+   */
+  it('leaves no promise anywhere a climber reads', () => {
+    const live = sourceFiles('src').filter((f) => !/\.test\.tsx?$/.test(f));
+    expect(live.length).toBeGreaterThan(200);
+    const saying: string[] = [];
+    for (const file of live) {
+      const text = readFileSync(file, 'utf8');
+      // Docblocks quote the retired sentence to record the decision; only
+      // code that could reach a screen counts.
+      const code = text
+        .split('\n')
+        .filter((line) => !/^\s*(\*|\/\*|\/\/)/.test(line))
+        .join('\n');
+      if (/becomes meaningful/.test(code)) saying.push(file);
+    }
+    expect(saying, 'the promise is still in the app').toEqual([]);
+  });
+
+  /** And the sentence has one definition, interpolated from the conditions. */
+  it('states it once, built from the two numbers', () => {
+    expect(RATIO_NEEDS).toBe(
+      `Needs ${MIN_HISTORY_DAYS} days of logging and at least ${MIN_CHRONIC_DAYS} scored training days inside the last ${CHRONIC_DAYS}.`,
+    );
+    const zone = readFileSync('src/ui/loadZone.ts', 'utf8');
+    expect(zone).toContain('history: RATIO_NEEDS');
+    // The `unknown` zone carried M162's retired wording for ten milestones
+    // because `ProgressPage` overrode it at the call site.
+    expect(zone).toContain('note: UNKNOWN_NOTE.history');
+    expect(readFileSync('src/engine/loadTrend.ts', 'utf8')).toContain('return RATIO_NEEDS;');
+    expect(readFileSync('src/engine/peak.ts', 'utf8')).toContain('${RATIO_NEEDS}');
+  });
+
+  /**
+   * And the condition is implemented twice — `deriveLoad` over a daily array
+   * and `peak.hasBaseline` over the index — so the two have to agree. They
+   * did, on three bare literals, which is the state M168 found the acute and
+   * chronic windows in.
+   */
+  it('withholds a peak runway exactly when the ratio is unreadable', () => {
+    const shapes: [string, number][] = [
+      ['three a week', 3],
+      ['twice a week', 4],
+      ['once a week', 7],
+      ['every other day', 2],
+    ];
+    for (const [label, every] of shapes) {
+      for (const span of [7, 20, 27, 60, 200]) {
+        const sessions: Session[] = [];
+        for (let d = span; d >= 0; d -= every) {
+          sessions.push({
+            ...newSession(addDays('2026-03-01', -d), 0),
+            completed: true,
+            rpe: 7,
+            durationMin: 60,
+          });
+        }
+        const state = deriveClimberState(sessions, { today: '2026-03-01' });
+        const plan = peakPlan({ sessions, target: addDays('2026-03-01', 42), from: '2026-03-01' });
+        expect(
+          plan.withheld === 'no-baseline',
+          `${label}, ${span} days: zone ${state.load.zone}, withheld ${String(plan.withheld)}`,
+        ).toBe(state.load.zone === 'unknown');
+      }
+    }
   });
 });

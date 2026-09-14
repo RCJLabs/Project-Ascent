@@ -683,6 +683,19 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **163.3 holds at M173**, measured 162.29 → 162.86: 0.57KB, and the
+    // headroom raised on its own two commits ago is what it was raised for.
+    // Nearly all of it is English. `coach.ts` is first-load because Home's
+    // card reads the top tip, and the milestone adds three tip bodies to it —
+    // the same reason M163's two rewrote bodies cost 0.45KB. The logic is
+    // nine lines and `scoredDays` is a number the derivation already had.
+    //
+    // It is not all spending. `MIN_HISTORY_DAYS` replaced three bare
+    // literals, `MIN_CHRONIC_DAYS` stopped being private, and `RATIO_NEEDS`
+    // replaced **four** copies of one sentence across `loadZone`,
+    // `loadTrend` and `peak` — so some of the 0.57 was bought back by the
+    // deduplication in the same commit. 0.44KB of slack.
+    //
     // **162.5 → 163.3, raised rather than spent** — the fourth entry here to
     // record no feature, and for the same reason as the first three. M172
     // left the line where M163's raise put it and the measurement at 162.29,

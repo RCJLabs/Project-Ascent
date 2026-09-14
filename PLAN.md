@@ -8465,7 +8465,7 @@ two large, three medium, five small.*
 - **M180 wants nothing**, and it is the smallest thing here that is actually a defect.
 - **On their own** — M176, M177, M179.
 
-- **M173 — the first three weeks say nothing at all.**
+- **M173 — the first three weeks say nothing at all.** *Done — see the entry at the end of this document. It is not three weeks and for one climber it is not a window: measured, a once-a-week log can never satisfy the ratio's second condition.*
   **Measured, not inferred.** A probe built a normal beginner — three sessions a week, RPE 7, an
   hour each — and asked `buildTips` what it had to say on day 1, 7, 14, 21, 28 and 56. Days 1, 7
   and 14 return **zero tips**. Day 21 returns one (`domain:drills`, weight 45). The load ratio
@@ -9847,3 +9847,88 @@ eleven of eleven killed, sanity no-op survived.
 **No browser check, and that is not a skipped step.** The milestone changes one
 file, `src/perf.test.ts`, and it is not shipped to a browser. Budget 162.29 →
 162.29 for the same reason. 5,362 tests pass, three more than before.
+
+### M173 — logging your first session made Coach's Corner disappear ✅
+
+**The proposal said three weeks and understated it twice.** A probe built four
+climbers and asked `buildTips` what it had for each of them on each day of
+their first two months. A climber training three times a week gets
+`first-session` on day zero and then **nothing at all until day eighteen** —
+and `HomePage`'s `CoachCard` returns `null` on an empty list, so this was not a
+quiet card. **Coach's Corner was not on the front door.** The single act of
+logging a first session removed the feature, and it came back seventeen days
+later.
+
+**Opening it deliberately was worse than finding it gone.** The page's empty
+state read *"Every rule here has looked at your log and found nothing worth
+interrupting you about, which is the good outcome"* — a clean bill of health,
+issued to a climber whose log no rule in the file is able to read yet. That is
+the same class of defect M162 and M168 were: the app making a claim it has not
+earned.
+
+**And for one climber it is not a window at all.** A readable ratio needs both
+of `derive.ts`'s conditions — three weeks of span **and** six scored training
+days inside the rolling 28-day window. Density is the one nobody had counted
+against a real schedule: at one session a week it tops out at **four**, so the
+second condition is never satisfied. Measured at 28, 56, 120, 365 and 1,000
+days, the answer is the same four. That climber's first tip of any kind arrived
+on **day 56** and their ratio never arrives at all — while the app told them
+*"three weeks of logged sessions and this becomes meaningful"*.
+
+| | first tip | ratio readable |
+|---|---|---|
+| five a week | day 14 | day 21 |
+| three a week | day 18 | day 22 |
+| three a week, unscored | day 21 | never, until scored |
+| **once a week** | **day 56** | **never** |
+
+**So the fix is a rule, not a copy change**, because the honest answer differs
+by climber and the app already holds everything needed to tell them apart.
+`cold-start` fires whenever the ratio is unreadable for want of history and
+there is at least one session, in three branches: **nothing is counting**
+(scored days zero, which is said in week one rather than week five, because
+`daysOfHistory` is measured from the earliest *scored* day and a countdown that
+never moves is worse than none); **the span is short** (a real countdown, from
+a number that sat on `LoadState` and reached no screen); and **the span is
+there and the rate is not** — which says so, points at the pyramid and the
+benchmarks, and explicitly does not tell a climber to train more than suits
+them.
+
+**Between the three of them and the two rules either side, nothing is ever
+empty again**, which is how the *"good outcome"* sentence was fixed: not
+reworded, but made true. A test asserts it across five climber shapes at
+thirteen ages each.
+
+**What the browser check found that the tests could not.** The promise was
+written **four** times — `ui/loadZone.ts` twice, `loadTrend.ts` for the line on
+Progress, `peak.ts` for a withheld runway. Two were fixed and the Progress page
+went on saying it, because `describeTrend` had its own copy and the source
+assertion had been pointed at one file. `RATIO_NEEDS` is the one definition
+now, interpolated from both constants so the sentence cannot drift from the
+condition.
+
+**And the condition behind it was implemented twice.** `peak.hasBaseline`
+reimplemented `deriveLoad`'s readiness check with three bare literals — `< 21`,
+`i < 28`, `>= 6` — which is exactly the state M168 found the acute and chronic
+windows in. `MIN_HISTORY_DAYS` is named (it was a literal in three places),
+`MIN_CHRONIC_DAYS` is exported rather than private, and a test drives twenty
+logs through both implementations and requires them to agree.
+
+**What the battery moved.** Twenty mutants, and the first pass left two — both
+the same weak assertion, and both about ranking. The test claiming the tip
+*"loses to a rule with a real number behind it"* asserted that `load-spike`
+topped a five-a-week board; it did, because that climber's ratio is readable
+and `cold-start` was not in the list at all. A ranking claim needs both rules in
+hand, so the weights are read off real firings now and every branch is compared
+against both neighbours. Second pass: twenty of twenty killed, sanity no-op
+survived.
+
+**Browser-checked** on both themes at 430px and 1280px: the Corner is on Home a
+week in, the countdown reads there, the Coach page carries the body and no
+longer issues the all-clear, Progress states both conditions, and a year of
+Wednesdays gets the frequency answer.
+
+**Budget** 162.29 → 162.86 of the 163.3 raised for it: 0.57KB, nearly all of it
+the three tip bodies, since `coach.ts` is first-load because Home reads the top
+tip. Some was bought back in the same commit — four copies of a sentence became
+one. 5,400 tests pass.
