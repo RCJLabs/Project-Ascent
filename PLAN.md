@@ -9135,3 +9135,68 @@ were both the same check the optional chain already makes, so `typeIsOutdoor`
 collapsed to one lookup with a `?? ''` and no guards at all.
 
 **Budget.** 161.87 → 162.11, inside 162.5. 5,140 tests pass.
+
+---
+
+### M171 — a privacy page, and the tests that make it true ✅
+
+**Asked for directly, and the right time to ask.** The app guide has said
+*"nothing leaves the device"* since M0, in passing, inside a manual read once.
+A privacy statement is a different document: the one a climber looks for before
+trusting an app with a year of training, and the one a store listing has to be
+able to link to. So `/privacy` is its own route, under Settings, in search
+under twelve keywords a climber would actually type — *tracking*, *who can
+see*, *is my data safe*, *policy*.
+
+**Every strong sentence was verified before it was written.** The claims on the
+page are all one fact — the app makes no network requests — and that was
+measured first, not assumed: `src/` contains no `fetch`, no `XMLHttpRequest`,
+no `sendBeacon`, no `WebSocket`, no `EventSource`; the built bundle names no
+external host but XML namespace URIs, which are identifiers rather than
+requests; `index.html` loads no remote font or script; no runtime dependency
+talks to a network. The one thing that looks like a call and is not is M78's
+catalogue, *"fetched, not imported"* — a dynamic `import()` of a chunk this app
+ships.
+
+**So the page does not promise, it points at a check.** `privacy.test.ts`
+sweeps every non-test file under `src/`, strips comments and string literals so
+that the sentence *"the catalogue is fetched, not imported"* cannot pass for a
+call, and fails if any of the above stops being true. The browser check does
+the other half from outside the source entirely: it records **every request the
+page makes** while walking seven routes and asserts that not one is off-origin.
+A future feature that sends anything anywhere breaks this file before it breaks
+the promise.
+
+**And the awkward half, which is what makes the rest believable.** A page that
+says only the comfortable things is the kind this milestone exists not to
+write, so the limits are stated and pinned by their own tests: whoever hosts
+the web version sees the requests for the app's own files, the way every
+website does; an installed copy still asks for updates; a backup put into cloud
+storage is a copy of the whole log outside this app; the share sheet hands one
+image to whichever app you pick; there is no sync, no recovery, and no password
+reset because there is no password. What hosting never sees is the contents,
+because there is no code that would put them in a request.
+
+**What is never asked for, and the two things that are.** No email, no name, no
+sign-in, no location, no contacts, no microphone, no device health data, and no
+camera unless a photo is picked. The app asks the browser for exactly two
+permissions — storage that will not be evicted, and a wake lock while a rest
+timer runs — and a page claiming to ask for nothing would be lying about both.
+
+**Three sentences it deliberately does not say.** *Encrypted*, *anonymised* and
+*we never share* are what a privacy page reaches for when it has run out of
+true ones. None of them applies here: there is no transmission to encrypt, no
+data set to anonymise, and no "we". A test asserts their absence, which is an
+odd-looking assertion and the most useful one in the file.
+
+**What the battery moved.** Sixteen mutants, no survivors on the first pass —
+the copy is held claim by claim, including the uncomfortable ones, so deleting
+the hosting paragraph or the backup caveat fails as loudly as deleting the
+headline. The full suite caught the one thing the battery could not:
+`features/mounts.test.tsx` has held "every page the router can reach is mounted
+by some test" since M40, and it failed the moment the route existed and the
+list did not know about it.
+
+**Budget.** 162.11 → 162.26, inside 162.5 — and the page is none of it. The
+whole statement is in its own lazy chunk; what is first-load is the route entry
+and its search keywords, which is how anyone finds the page. 5,184 tests pass.

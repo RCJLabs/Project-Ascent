@@ -655,6 +655,12 @@ export function SettingsPage() {
             <Link href="/data" className={CHIP_LINK}>
               What is stored
             </Link>
+            {/* Beside it, because they are the two halves of one question
+                (PLAN.md M171): that page says what the app is holding, this
+                one says who else can see it. */}
+            <Link href="/privacy" className={CHIP_LINK}>
+              Privacy
+            </Link>
             <Input
               ref={fileRef}
               type="file"

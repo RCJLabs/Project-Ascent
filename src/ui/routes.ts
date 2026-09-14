@@ -118,6 +118,10 @@ export const ROUTES: RouteMeta[] = [
   { path: '/drills', title: 'Drills', parent: '/train', group: 'Train', keywords: ['library', 'exercises', 'technique', 'session ideas', 'what to do'] },
   { path: '/drills/:id', title: 'Drill', parent: '/drills' },
   { path: '/data', title: 'Your data', parent: '/settings', group: 'Reference', keywords: ['storage', 'records', 'health', 'orphaned', 'unreadable', 'tidy'] },
+  // Its own route rather than a paragraph in the app guide (PLAN.md M171):
+  // it is the page a climber looks for before trusting an app with a year
+  // of training, and the one a store listing has to be able to link to.
+  { path: '/privacy', title: 'Privacy', parent: '/settings', group: 'Reference', keywords: ['privacy', 'data', 'tracking', 'analytics', 'offline', 'account', 'server', 'sync', 'who can see', 'is my data safe', 'gdpr', 'policy'] },
 ];
 
 const BY_PATH = new Map(ROUTES.map((route) => [route.path, route]));

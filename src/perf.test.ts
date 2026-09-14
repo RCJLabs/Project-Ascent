@@ -470,6 +470,13 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M171**, measured 162.11 → 162.26: 0.15KB, and the page
+    // itself is none of it — the whole privacy statement lands in
+    // `PrivacyPage-*.js`, a lazy route. What is first-load is the route table
+    // entry and its twelve search keywords, which is how a climber typing
+    // "tracking" or "who can see" finds the page at all, and which the search
+    // sheet reads before any route has been chosen.
+    //
     // **Unchanged at M170**, measured 161.87 → 162.11: 0.24KB. `engine/
     // sessionMode.ts` is nine lines of logic and the rest is prose; it is
     // first-load because `store/index.ts` runs the one-time repair at boot,

@@ -37,6 +37,7 @@ const CoachPage = lazy(() => import('@/features/coach/CoachPage').then((m) => ({
 const FinderPage = lazy(() => import('@/features/finder/FinderPage').then((m) => ({ default: m.FinderPage })));
 const FinishPage = lazy(() => import('@/features/finish/FinishPage').then((m) => ({ default: m.FinishPage })));
 const DataPage = lazy(() => import('@/features/data/DataPage').then((m) => ({ default: m.DataPage })));
+const PrivacyPage = lazy(() => import('@/features/privacy/PrivacyPage').then((m) => ({ default: m.PrivacyPage })));
 const InjuryPage = lazy(() => import('@/features/injury/InjuryPage').then((m) => ({ default: m.InjuryPage })));
 const JournalPage = lazy(() => import('@/features/journal/JournalPage').then((m) => ({ default: m.JournalPage })));
 const MetricDetailPage = lazy(() => import('@/features/assessments/MetricDetailPage').then((m) => ({ default: m.MetricDetailPage })));
@@ -274,6 +275,7 @@ function Shell() {
           <Route path="/drills/:id" component={DrillPage} />
           <Route path="/drills" component={DrillsPage} />
           <Route path="/data" component={DataPage} />
+          <Route path="/privacy" component={PrivacyPage} />
           <Route path="/settings" component={SettingsPage} />
           <Route>
             <PlaceholderPage title="Not found" subtitle="" body="That page does not exist." />
