@@ -30,6 +30,8 @@ import { activeProjects, attemptsFor, highPointOf } from './projects';
 import type { BlockAdherence } from './adherence';
 import type { Finding } from './planVsLog';
 import { FINGER_GAP_HOURS, fingerGaps } from './fingerGap';
+import type { Objective } from './objectives';
+import { tripNow } from './trip';
 import { isRestSession } from './rest';
 
 export type TipTone = 'good' | 'neutral' | 'caution';
@@ -92,6 +94,17 @@ export interface CoachInput {
    * one.
    */
   findings?: Finding[];
+  /**
+   * The climber's objectives, so the coach can tell a trip from a Tuesday
+   * (PLAN.md M163).
+   *
+   * Passed in whole rather than as a pre-computed "on a trip" boolean,
+   * unlike `adherence` and `findings`, because the reading is three lines
+   * over a list the store already holds — there is no program, no start
+   * date and no plan to assemble — and because the tip names the trip, so
+   * it needs the objective and not a verdict about it.
+   */
+  objectives?: Objective[];
   today?: string;
 }
 
@@ -135,7 +148,7 @@ export function buildTips(input: CoachInput): Tip[] {
     detraining(input, today),
     fingerGap(input, today),
     unscoredEffort(input),
-    loadSpike(input),
+    loadSpike(input, today),
     staleBenchmarks(input, today),
     skippedType(input),
     planVsLog(input),
@@ -401,7 +414,7 @@ function unscoredEffort({ state }: CoachInput): Tip | null {
 /** Enough of a log that a missing score is worth mentioning at all. */
 const MIN_SESSIONS_FOR_SCORE = 6;
 
-function loadSpike({ state }: CoachInput): Tip | null {
+function loadSpike({ state, objectives }: CoachInput, today: string): Tip | null {
   const { acwr, zone, inPlannedDeload } = state.load;
   // A deload is a deliberate change of load in the other direction, and the
   // ratio moving is the point of it rather than a surprise.
@@ -409,7 +422,23 @@ function loadSpike({ state }: CoachInput): Tip | null {
   if (zone !== 'caution' && zone !== 'danger') return null;
 
   const ratio = acwr.toFixed(2);
+  // A trip is the other way round: the ratio moving is still a surprise to
+  // nobody, but what it describes is *more* likely on a trip, not less. So
+  // nothing is suppressed and nothing is downgraded — the advice changes,
+  // because "an easier week" and "plan the week" are two things a climber
+  // four days into nine in Céüse cannot do (PLAN.md M163).
+  const trip = tripNow(objectives, today);
   if (zone === 'danger') {
+    if (trip) {
+      return {
+        id: 'load-spike',
+        signature: `trip:${trip.id}:${acwr >= STEEP_ACWR ? 'steep' : 'danger'}`,
+        tone: 'caution',
+        weight: 93,
+        headline: 'Load spike',
+        body: `You are at ${ratio}× your own four-week baseline, which is most of what ${trip.name} is for: a taper took the baseline down while the days on took the load up, so part of this number is the plan working. The pattern is real all the same, and a trip is where it usually lands — day four or five, on skin and finger tendons. What is still yours to choose is the shape of the days: a rest day between the hard ones rather than saved for the end, stopping while there is skin left, and the limit goes on the mornings you are fresh.`,
+      };
+    }
     return {
       id: 'load-spike',
       signature: acwr >= STEEP_ACWR ? 'danger-steep' : 'danger',
@@ -418,6 +447,16 @@ function loadSpike({ state }: CoachInput): Tip | null {
       headline: 'Load spike',
       body: `You are at ${ratio}× your own four-week baseline, and a jump this size is the pattern most associated with injury — not the training itself, the speed of the change. An easier week now costs a week. Fingers and tendons adapt slower than the muscles that made this feel possible.`,
       action: { label: 'Plan the week', href: '/calendar' },
+    };
+  }
+  if (trip) {
+    return {
+      id: 'load-spike',
+      signature: `trip:${trip.id}:caution`,
+      tone: 'caution',
+      weight: 62,
+      headline: 'Ramping quickly',
+      body: `You are at ${ratio}× your own four-week baseline, which for a trip is a gentle start: if ${trip.name} has days left in it, most of the jump is still ahead. Nothing to change today — the day this matters is the one after two big days back to back.`,
     };
   }
   return {

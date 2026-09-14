@@ -470,6 +470,16 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M163**, measured 161.11 → 161.56: 0.45KB, and nearly all
+    // of it is English. `engine/trip.ts` is nine lines of logic; what costs is
+    // the two rewritten tip bodies in `coach.ts`, which is first-load because
+    // Home's card reads it, and prose does not minify. The first draft was
+    // 161.63 — over the old line — and the fix was to cut the danger body from
+    // roughly seven hundred characters to under five hundred, which the card
+    // needed anyway: a paragraph that long on Home is one nobody finishes.
+    // `store/objectives` was already on the boot path (`store/index.ts`
+    // hydrates it), so the hook reading it added nothing.
+    //
     // **161.6 → 162.5, raised rather than spent** — the third entry here to
     // record no feature, and for the same reason as the first two. M163 came
     // in at 161.56 after its prose was cut, which leaves 0.04KB: below the

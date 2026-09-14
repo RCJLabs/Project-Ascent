@@ -7920,7 +7920,7 @@ the end with what killed them. Sized as before: two large, six medium, two small
   anything"*. This is the same distinction one level down, and the same fix: a load of `null`
   rather than `0`, and every consumer made to say which it has.
 
-- **M163 — the app plans the peak and then warns against it.** *Proposed. Small.*
+- **M163 — the app plans the peak and then warns against it.** *Done — see the entry at the end of this document. The premise was wrong twice; the entry says how.*
   `loadSpike` suppresses itself for exactly one reason — `inPlannedDeload` (`coach.ts:319`) —
   with the comment that *"a deload is a deliberate change of load in the other direction, and the
   ratio moving is the point of it rather than a surprise."* **The same sentence is true of a trip,
@@ -8880,3 +8880,106 @@ climber has actually written down.
 
 **Budget.** 161.06 → 161.11, inside 161.6 — and all 0.05KB of it is the one-arm regex. The module,
 its five rules and its paragraphs land in the builder's chunk, which is lazy. 5,037 tests pass.
+
+---
+
+### M163 — the app fired its strongest warning at the trip it planned ✅
+
+**The proposal for this milestone was wrong twice, and measuring is what said
+so.** It read: *"`loadSpike` suppresses itself for exactly one reason —
+`inPlannedDeload` — with the comment that a deload is a deliberate change of
+load in the other direction. The same sentence is true of a trip, and the app
+knows when the trip is. One field on `CoachInput` and one clause beside
+`inPlannedDeload`."*
+
+**First: the peak plan does not cause a spike.** Run forwards over a real
+ninety-day log, `peakPlan` lands on `arriveAt: 0.62` — `staysInBand` holds the
+build and hold weeks between 0.8 and 1.3 and the last week is a `TAPER` at 0.55
+of level, so the plan arrives *under* the band, not over it. The app does not
+warn against its own plan. What it warns against is the **trip**, and measured
+day by day the ratio goes 1.68 on day one, 2.45 by day three, **3.21 by day
+seven** — `danger`, weight 93, the loudest thing the coach says.
+
+**And the taper makes it worse, which is the app's own doing.** The same trip
+logged without a taper first reads 3.04; with the taper it reads 3.21, because
+the taper takes the chronic baseline down while the days on take the acute load
+up. So peaking for a trip raises the number the app then alarms at — a sharper
+version of the proposal's claim than the proposal's own.
+
+**Second: the fix it asked for would have been a regression.** `inPlannedDeload`
+is safe to suppress on because a deload's ratio moves *down* and nothing is at
+risk while it moves. A trip's moves *up*, and the thing the rule is about —
+tissue loaded faster than it adapted — is genuinely *more* likely on a trip:
+more days on, longer days, rock nobody's fingers are used to, and skin as the
+only thing that says stop. Silencing the app's loudest warning across the
+highest-risk fortnight of a climber's year is not a fix. **So nothing here is
+suppressed and nothing is downgraded**: same id, same headline, same weight of
+93, same ratio quoted, and a test holds all four equal to the at-home tip.
+
+**What was actually wrong is the advice.** The body said *"An easier week now
+costs a week"* and the action was *Plan the week → /calendar*. Four days into
+nine in Céüse a climber can do neither — they cannot take an easier week, they
+did not fly there to rest, and the calendar is not the screen that helps. Both
+go. What replaces them is the part of a trip still open to choose: a rest day
+between the hard days rather than saved for the end, stopping while there is
+skin left, and keeping the limit goes for the mornings you are fresh. The trip
+branch carries **no action at all**, because there is no screen that helps and a
+button that goes somewhere useless is worse than none.
+
+**Why it needs no corroboration from the log.** The only evidence is the
+climber's own objective — a date typed weeks ago for a trip that may have been
+cancelled. That is far too thin to *suppress* a warning on, and it is enough to
+*reword* one, because a false positive then costs a sentence rather than a
+warning. The tip names the trip out loud (*"which is most of what Magic Wood is
+for"*), so a climber whose trip fell through can see exactly which fact the app
+has wrong, and the spike underneath it never went anywhere.
+
+**A signal that looked obvious and is not there.** The first design corroborated
+from the log via `Session.mode === 'outdoor'`, and the search for where that
+gets written came back empty: `importCsv`, `demoClimber`, `sessionEdit`'s merge
+and `applyTemplate` are the only writers in the app. **No UI path sets it** —
+`PreSession.start` writes `programId`, `sessionTypeId`, `trackId` and `drillId`
+and never `mode`, so every session a climber logs by hand is `'indoor'`, even
+when the session type they picked is `outdoor_boulder`. Gating on it would have
+shipped a branch that never fires. Recorded below as its own milestone, because
+it is much larger than this one.
+
+**What the battery moved.** Twenty-three mutants, one real survivor, and it was
+the equivalent kind: `target === undefined || !isDateKey(target)` was the same
+check written twice, since `isDateKey('')` is already false — so the code
+collapsed to `objective.targetDate ?? ''` and one condition, which narrows the
+type and guards the shape in the same line. The guard itself is load-bearing:
+`fromKey` of a half-typed date is an Invalid Date, its arithmetic is `NaN`, and
+`NaN > 10` is false — so without it every malformed objective would read as a
+trip you are on, silently and forever.
+
+**Budget.** 161.11 → 161.56. The line was raised to 162.5 in its own commit
+first, because the first draft came in at 161.63 — over the old 161.6 — and
+0.04KB of headroom is below the 0.05 this app's own notes already called too
+tight to ship on. The prose was cut anyway: seven hundred characters is more
+than a card on Home should ask anyone to read. 5,077 tests pass.
+
+**Recorded, not built.**
+
+- **`Session.mode` has no writer in the app.** Nothing a climber does sets a
+  session to `outdoor`. Downstream of that field: `state.outdoorDays`, the
+  outdoor personal-record ladder, the `outdoor-reentry` coach tip (*"N days
+  since you were on rock"*, which can therefore never fire for anyone), the
+  `first-outdoor` and outdoor-onsight achievements, the altimeter's height
+  multiplier, the whole `outdoor` career category, the *"Get outside"* weekly
+  challenge, the consistency chart's outdoor marker, Progress's indoor/outdoor
+  two-ladder view from M106, the search result's *"Outdoors"* badge, and the
+  `outdoor-days` objective requirement. The likely shape of the fix is a
+  declared flag on `SessionType` rather than an `outdoor_` id prefix, since a
+  custom program's type would not follow the convention.
+- **The week after a trip reads as detraining.** Measured seven days after a
+  nine-day trip: `acwr` 0.00, zone `detraining`, and the tip offers *"come back
+  at about two-thirds of the volume you left"* to a climber who is doing exactly
+  the right thing. The same `tripNow` reading would fix it, but through a
+  different window — *recently* on a trip rather than on one — so it is a
+  separate change rather than one more clause here.
+- **The plateau blocker repeats the spike's number one card down.** *"Recovery
+  is the blocker: your load has jumped to 2.96× your baseline"* sits directly
+  under the spike on the board, saying the same thing with the same figure. It
+  is not wrong on a trip — a plateau genuinely cannot be read through one — but
+  two cards quoting one number is the kind of noise the board exists to avoid.

@@ -19,6 +19,7 @@ import { planVsLog } from '@/engine/planVsLog';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
+import { useObjectives } from '@/store/objectives';
 import { useSessions, allSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 
@@ -36,6 +37,7 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
   const tracks = useProfile((s) => s.tracks);
   const lastExportAt = useProfile((s) => s.lastExportAt);
   const dismissed = useProfile((s) => s.dismissedTips);
+  const objectives = useObjectives((s) => s.objectives);
   const display = useSettings((s) => s.display);
 
   return useMemo(() => {
@@ -80,6 +82,10 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
       adherence,
       findings,
       lastExportAt,
+      // So the spike tip can tell a trip from a Tuesday (PLAN.md M163).
+      // Hydrated at boot in `store/index.ts` like every other store here,
+      // so Home has it on the first render rather than a beat later.
+      objectives,
       // Whether this climber's program ever puts a drill in a week, so the
       // drill tip stops asserting one for the six programs that do not
       // (PLAN.md M132).
@@ -98,5 +104,5 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
     });
     const visible = visibleTips(all, dismissed);
     return { all, visible, hidden: all.length - visible.length };
-  }, [byDate, projects, metrics, injuries, equipment, activeProgramId, startDates, plans, weekOverrides, tracks, lastExportAt, dismissed, display]);
+  }, [byDate, projects, metrics, injuries, equipment, activeProgramId, startDates, plans, weekOverrides, tracks, lastExportAt, dismissed, display, objectives]);
 }
