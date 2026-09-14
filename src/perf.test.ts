@@ -496,7 +496,7 @@ describe('the bundle stays small', () => {
    * with one exception recorded below — the history is in the comment inside
    * the first test.
    */
-  const BUDGET = 162.5;
+  const BUDGET = 163.3;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -682,6 +682,28 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **162.5 → 163.3, raised rather than spent** — the fourth entry here to
+    // record no feature, and for the same reason as the first three. M172
+    // left the line where M163's raise put it and the measurement at 162.29,
+    // which is 0.21KB: less than the hash churn M145 recorded when a lazy
+    // chunk's filename changed inside the entry's module map, and a ceiling
+    // that close fails on builds that changed nothing worth failing over.
+    //
+    // 1.01KB, which is deliberately short of the 1.5 the slack guard allows.
+    // At the cap the guard sits on its own ceiling with nothing left for that
+    // churn, and a raise that has to be re-made on the next rebuild is not a
+    // raise. What it buys, measured rather than guessed: the eight milestones
+    // since the last raise cost 161.56 → 162.29 between them — a median of
+    // 0.03KB and a largest of 0.31 — so 1.01KB is three of the heaviest or
+    // thirty of the typical, not the "one milestone's headroom" the entries
+    // below call it. Worth naming as that rather than repeating the phrase:
+    // what a milestone costs has fallen by an order of magnitude since the
+    // lazy routes went in, and the same slack now lasts far longer.
+    //
+    // The line moves in its own commit, ahead of the milestone rather than
+    // inside it, because the one condition a budget should never be moved
+    // under is pressure from the change that needs it.
     //
     // **Unchanged at M172**, measured 162.29 → 162.29, and it could not have
     // been anything else: the milestone changes one file and that file is
