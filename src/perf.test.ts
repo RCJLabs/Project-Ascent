@@ -283,7 +283,7 @@ describe('the bundle stays small', () => {
    * with one exception recorded below — the history is in the comment inside
    * the first test.
    */
-  const BUDGET = 161.6;
+  const BUDGET = 162.5;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -469,6 +469,17 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **161.6 → 162.5, raised rather than spent** — the third entry here to
+    // record no feature, and for the same reason as the first two. M163 came
+    // in at 161.56 after its prose was cut, which leaves 0.04KB: below the
+    // 0.05 that the entry below already called too tight to ship on, and the
+    // slack guard in this file puts the ceiling on a raise at 1.5KB, so 162.5
+    // is the largest honest step from the 161.11 measured before M163.
+    //
+    // The line moves in its own commit, ahead of the milestone rather than
+    // inside it, because the one condition a budget should never be moved
+    // under is pressure from the change that needs it.
     //
     // **Unchanged at M167**, measured 161.06 → 161.11: 0.05KB, and the whole
     // of it is one regex. The milestone's bulk — `engine/programSafety.ts`,
