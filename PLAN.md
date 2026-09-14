@@ -7877,7 +7877,7 @@ the end with what killed them. Sized as before: two large, six medium, two small
   to hold a default. That default is the milestone's one real decision — 48 hours between
   finger-loading sessions is the number eleven of its own programs already chose.
 
-- **M161 — a maximal test is the one thing the app will not warn you about.** *Proposed. Medium.*
+- **M161 — a maximal test is the one thing the app will not warn you about.** *Done — see the entry at the end of this document.*
   **`Metric` has no safety field** (`types.ts:36`): `id`, `label`, `unit`, `kind`, `scale`,
   `higherIsBetter`, `description`. No body part, no contraindication, no prerequisite.
   **So M153's machinery reaches the logger and stops.** `partsNamedIn` and `protocolSafety` have
@@ -8759,3 +8759,55 @@ finding leaves the tip speaking. Two survivors were assertion-deletions inside t
 came out as meaningless.
 
 **Budget.** 160.55 → 161.02, inside the 161.6 raised beforehand. 4,965 tests pass.
+
+### M161 — a maximal test was the one thing the app would not warn you about ✅
+
+**`Metric` has no safety field** (`types.ts:36`): `id`, `label`, `unit`, `kind`, `scale`,
+`higherIsBetter`, `description`. No body part, no contraindication. So M153's machinery — which
+reads a protocol's authored warning and shows it while the climber decides whether to pull on —
+had exactly two callers, both in `LogPage`, and nothing in `features/assessments/` mentioned
+injuries at all.
+
+**Which left the most maximal thing the app asks for as the only one it said nothing about.**
+`max_hang_20mm_7s` is *"added weight for a 7-second half-crimp hang on a 20mm edge"* and five
+programs prescribe it. `min_edge` is the smallest edge held at bodyweight. `front_lever_hold` and
+`weighted_pullup_3rm` are failure-point efforts through the elbow and shoulder. A test is a
+maximal effort taken deliberately, on a day chosen for it, often after a layoff — the exact shape
+of the session people get hurt in — and a climber who had told the app their finger was hurt could
+walk into one with nothing said.
+
+**No new field, because the metrics already say what they load.** Measured before building:
+`partsInText` over each metric's label and description reads **27 of 37**. Of the ten it could not,
+**nine are not tests at all** — a redpoint grade, a flash grade, a count of outdoor days — things
+you *record* rather than *take*. They name no movement, so they warn about nothing, and no list of
+which metrics are tests has to be kept true. The tenth was Toe Touch, a straight-leg forward fold
+that names neither a hip nor a hamstring; the `hip` rule was widened by two words rather than a
+`loads` field added to a type for the sake of one metric — which would have been the shape M169
+exists to clear up.
+
+**It warns, it does not block, and it does not prescribe.** `returnToClimbing.ts` sets the rule the
+app follows — nothing here prescribes an exercise, a dose or a load for an injury — so the note
+says what the test loads, that the climber told the app it is hurt, and stops. Both screens carry
+it: one line in the list, where it is enough to decide not to open the row, and the full note on
+the page the test is taken from, above the form rather than below it, because the decision comes
+before the number.
+
+**What the battery moved.** Nine survivors of eighteen, and **five of them were the same gap**:
+nothing rendered `AssessmentsPage` or `MetricDetailPage`, so the component was proved in isolation
+and never proved to be *on* the screens — M152's lesson (an import satisfies a name check while
+rendering nothing) in a new costume. Two more were real: nothing needed a metric's *description*,
+though six metrics name parts their label does not and two name nothing without it; and nothing
+covered a climber with two injuries where the test loads only one. One survivor was dead code of
+mine — `firstConflict` already narrows `parts` to the injured ones, so filtering again in the
+component was careful-looking and inert. Second run: 16 of 16 killed.
+
+**And the browser found a sentence the tests could not.** *"You have told the app your fingers is
+hurt"* — `fingers` is the only plural in `BodyPart`, and the verb was agreeing with the number of
+parts. The sentence has no verb to agree now, and a test holds it that way.
+
+**One thing recorded and not changed.** Two Days a Week is a `foundations` program and the only one
+at that stage prescribing a maximal hang; its neighbours Ground Zero and Base Camp use `dead_hang`.
+Whether the stage or the assessment is wrong is a coaching decision rather than a code one, so a
+test pins the current state and will fail if it changes silently.
+
+**Budget.** 161.02 → 161.06, inside 161.6. 5,004 tests pass.

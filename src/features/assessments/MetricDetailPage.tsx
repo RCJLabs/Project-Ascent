@@ -1,4 +1,7 @@
 import { useEffect, useMemo } from 'react';
+import { TestSafety } from './TestSafety';
+import { concerning, injuryPolicy } from '@/engine/injury';
+import { useProfile } from '@/store/profile';
 
 import { Trash2 } from 'lucide-react';
 import { getMetric } from '@/content/metrics';
@@ -30,6 +33,8 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
   }, [hydrated, load]);
 
   const metric = getMetric(params.id as MetricId);
+  const injuries = useProfile((st) => st.injuries);
+  const hurt = useMemo(() => concerning(injuryPolicy(injuries)), [injuries]);
   const series = useMemo(
     () => (metric ? seriesFor(entries, metric.id) : []),
     [entries, metric],
@@ -71,6 +76,11 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
             <p className="text-sm leading-relaxed">{metric.description}</p>
           </Card>
         )}
+
+        {/* First of the cards, above the history and the form: this is the
+            screen a climber opens to take the test, and the decision comes
+            before the number (PLAN.md M161). */}
+        <TestSafety metric={metric} injured={hurt} />
 
         {isChartable(metric) && points.length >= 2 && (
           <Card title="History">

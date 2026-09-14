@@ -20,7 +20,7 @@
  */
 
 import type { BodyPart } from '@/content/warmups';
-import type { Drill, DrillLoad, Equipment, Exercise, Protocol, SessionType } from '@/content/types';
+import type { Drill, DrillLoad, Equipment, Exercise, Metric, Protocol, SessionType } from '@/content/types';
 
 export interface LoadRule {
   /** The name a drill's `loads` refers to it by (PLAN.md M137). */
@@ -107,7 +107,10 @@ export const LOAD_RULES: LoadRule[] = [
   },
   {
     id: 'hip',
-    pattern: /hip|hamstring|adductor|frog|pigeon|split|straddle/i,
+    // `forward fold` and `toe touch` added at M161: the Toe Touch assessment
+    // is a straight-leg forward fold and named neither a hip nor a hamstring,
+    // so the scan read nothing off the one flexibility test in the catalogue.
+    pattern: /hip|hamstring|adductor|frog|pigeon|split|straddle|forward fold|toe touch/i,
     parts: ['hip'],
     because: 'it works through the hip',
   },
@@ -177,6 +180,37 @@ export function exerciseLoads(exercise: Exercise): BodyPart[] {
  */
 export function exerciseConflict(exercise: Exercise, injured: readonly BodyPart[]): LoadFinding | null {
   return firstConflict(scanText(joinExercise(exercise)), injured);
+}
+
+function joinMetric(metric: Pick<Metric, 'label' | 'description'>): string {
+  return [metric.label, metric.description].filter(Boolean).join(' ');
+}
+
+/** Every part an assessment loads, by its own words (PLAN.md M161). */
+export function metricLoads(metric: Pick<Metric, 'label' | 'description'>): BodyPart[] {
+  return partsInText(joinMetric(metric));
+}
+
+/**
+ * Whether taking a test would load something the climber says is hurt.
+ *
+ * The same shape as `exerciseConflict` and `drillConflict`, and deliberately
+ * so — an assessment *is* a prescription, and the most maximal one the app
+ * ever asks for. `max_hang_20mm_7s` is added weight on a 7-second half-crimp
+ * hang; `min_edge` is the smallest edge you can hold. Those are the sessions
+ * people get hurt in, because a test is a maximal effort taken on purpose.
+ *
+ * Null when nothing collides, so a caller renders nothing without checking a
+ * length. A metric that is a *record* rather than a test — a redpoint grade,
+ * a count of outdoor days — names no movement, so it reads as no parts and
+ * warns about nothing, which is the right answer without a taxonomy to
+ * maintain.
+ */
+export function metricConflict(
+  metric: Pick<Metric, 'label' | 'description'>,
+  injured: readonly BodyPart[],
+): LoadFinding | null {
+  return firstConflict(scanText(joinMetric(metric)), injured);
 }
 
 /**

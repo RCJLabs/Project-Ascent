@@ -470,6 +470,11 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M161**, measured 161.02 → 161.06: 0.04KB — a component
+    // on a lazy route, two call sites, and three functions in `bodyLoad.ts`,
+    // which the logger already pulls in. The cheapest safety milestone of
+    // the three, because the reading it needed was already there.
+    //
     // **Unchanged at M160**, measured 160.55 → 161.02: 0.47KB for
     // `engine/fingerGap.ts` and the coach rule that reads it. First-load
     // because the coach is — Home's card is the first thing that asks it a

@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { TestSafety } from './TestSafety';
+import { concerning, injuryPolicy } from '@/engine/injury';
 import { Link } from 'wouter';
 import { Check, ChevronRight, Plus, Timer, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
@@ -182,6 +184,8 @@ function MetricRow({
   onToggle: () => void;
 }) {
   const display = useSettings((s) => s.display);
+  const injuries = useProfile((s) => s.injuries);
+  const hurt = useMemo(() => concerning(injuryPolicy(injuries)), [injuries]);
   const { metric, latest, change } = status;
   return (
     <li className="bg-sunken rounded-xl">
@@ -192,6 +196,8 @@ function MetricRow({
             {latest ? `${shortLabel(latest.date)}` : 'Never tested'}
             {status.dueLabel ? ` · ${status.dueLabel}` : ''}
           </p>
+          {/* One line, closed — enough to decide not to open it (M161). */}
+          <TestSafety metric={metric} injured={hurt} compact />
         </div>
         <div className="text-right shrink-0">
           <div className="font-bold text-sm tabular-nums">{latest ? formatEntry(metric, latest, display) : '—'}</div>
@@ -217,6 +223,11 @@ function MetricRow({
           {metric.description && (
             <p className="text-xs text-ink-soft mb-1 leading-relaxed">{metric.description}</p>
           )}
+          {/* Above the form, not below it: the decision is whether to take
+              the test, and it is made before the number is typed. */}
+          <div className="mb-2">
+            <TestSafety metric={metric} injured={hurt} />
+          </div>
           <ResultForm metric={metric} onDone={onToggle} />
           {status.series.length > 0 && (
             <Link
