@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { findProgram, fitsTheEvening, recommend, type Experience, type FinderInput, type Goal } from './finder';
+import {
+  catalogueMinDays,
+  minDaysIn,
+  findProgram,
+  fitsTheEvening,
+  recommend,
+  type Experience,
+  type FinderInput,
+  type Goal,
+} from './finder';
 import { PROGRAMS } from '@/content/programs';
 import type { MetricEntry } from '@/db/metrics';
 
@@ -725,5 +734,141 @@ describe('whether a program fits the evening', () => {
 
   it('reads the bottom of a range, because that is the shortest it can be', () => {
     expect(fitsTheEvening({ known: [{ type: { name: 'X' }, estimate: est(45, 90) }], silent: [] }, 60).reason).toBeTruthy();
+  });
+});
+
+/**
+ * The two the map did not name, and the climber it could not answer
+ * (PLAN.md M150).
+ */
+describe('the programs a constraint is the whole point of', () => {
+  it('puts Two Days a Week first for a climber with two days', () => {
+    const { top } = findProgram(input({ daysPerWeek: 2, goal: 'maintain' }));
+    expect(top.program.id).toBe('two_day_week');
+  });
+
+  it('puts Trip Prep first for a climber with four weeks', () => {
+    const { top } = findProgram(input({ weeksAvailable: 4, goal: 'project', boulderGrade: 'V5' }));
+    expect(top.program.id).toBe('trip_prep');
+  });
+
+  /**
+   * With weeks enough for anything, the goal is what decides — and Trip
+   * Prep scoring nothing for the goal it is actually written around is the
+   * defect this milestone started from.
+   */
+  it('lets Trip Prep compete on the goal it is written around', () => {
+    const ranked = recommend(input({ goal: 'project', boulderGrade: 'V5', weeksAvailable: 24 }));
+    const trip = ranked.find((r) => r.program.id === 'trip_prep')!;
+    expect(trip.reasons.join(' ')).toMatch(/Built for exactly this goal/);
+  });
+
+  /**
+   * And claims nothing else. A generous goal list is not a harmless one:
+   * a climber who wants to maintain what they have should meet the two
+   * programs written for that, not a four-week peaking block.
+   */
+  it('does not let Trip Prep answer a maintenance question', () => {
+    const ranked = recommend(input({ goal: 'maintain' }));
+    const trip = ranked.find((r) => r.program.id === 'trip_prep')!;
+    expect(trip.reasons.join(' ')).not.toMatch(/goal/i);
+    expect(ranked[0]!.program.id).not.toBe('trip_prep');
+  });
+
+  /**
+   * The regression the first draft caused and the measurement caught.
+   * Giving Two Days a Week a second goal put it *above* Trip Prep for a
+   * climber with four weeks before a trip, because a secondary goal match
+   * is worth 30 and running exactly the right number of weeks is worth 10.
+   */
+  it('does not let a second goal outrank the weeks a trip actually has', () => {
+    const { top } = findProgram(input({ weeksAvailable: 4, goal: 'fundamentals', boulderGrade: 'V5' }));
+    expect(top.program.id).toBe('trip_prep');
+  });
+
+  /**
+   * The guard that would have caught this: a program added without a goal
+   * silently scores nothing of the 50 a primary match is worth.
+   */
+  it('has a goal entry for every program it can recommend', () => {
+    const scored = PROGRAMS.filter((p) => p.kind !== 'mode');
+    const without = scored.filter((p) => recommend(input()).every((r) => r.program.id !== p.id));
+    // Everything scored is reachable, and every scored program is in the
+    // ranking the finder built — which is only true because the map covers
+    // them. A missing key is silent: it costs points, not a crash.
+    expect(without).toEqual([]);
+    for (const program of scored) {
+      const ranked = recommend(input({ goal: 'maintain' })).find((r) => r.program.id === program.id);
+      expect(ranked, program.id).toBeTruthy();
+    }
+  });
+});
+
+describe('the climber the catalogue has nothing for', () => {
+  /**
+   * The rule, against catalogues that are not this one — because a test
+   * that only compares against today's twelve programs passes a constant
+   * that happens to match today's answer.
+   */
+  const asks = (kind: 'program' | 'mode', min: number) =>
+    ({ kind, constraints: [{ kind: 'sessions-per-week', min, max: min + 1, note: '' }] }) as unknown as (typeof PROGRAMS)[number];
+
+  it('takes the smallest minimum any written program asks for', () => {
+    expect(minDaysIn([asks('program', 4), asks('program', 3), asks('program', 5)])).toBe(3);
+  });
+
+  it('does not let a logging mode set the floor', () => {
+    expect(minDaysIn([asks('mode', 1), asks('program', 3)])).toBe(3);
+  });
+
+  it('answers zero for a catalogue with nothing to ask', () => {
+    expect(minDaysIn([])).toBe(0);
+    expect(minDaysIn([asks('mode', 1)])).toBe(0);
+  });
+
+  /**
+   * And the adapter reads the catalogue rather than restating its answer.
+   *
+   * `catalogueMinDays()` is one line, and a constant that happens to equal
+   * today's answer passes every comparison against today's catalogue — the
+   * battery said so. `PROGRAMS` is the array `loadPrograms` splices into,
+   * so the honest check is to put a program in it and ask again.
+   */
+  it('reads the real catalogue through the same rule', () => {
+    expect(catalogueMinDays()).toBe(minDaysIn(PROGRAMS));
+    expect(catalogueMinDays()).toBe(2);
+
+    PROGRAMS.push(asks('program', 1));
+    try {
+      expect(catalogueMinDays()).toBe(1);
+    } finally {
+      PROGRAMS.pop();
+    }
+    expect(catalogueMinDays()).toBe(2);
+  });
+
+  it('names the gap rather than pointing at a program anyway', () => {
+    const result = findProgram(input({ daysPerWeek: 1 }));
+    expect(result.top.program.id).toBe('general_training');
+    expect(result.fallback).toBe(true);
+    expect(result.gap).toMatch(/at least 2 days a week, and you have 1/);
+    expect(result.gap).toMatch(/log what you climb/i);
+  });
+
+  /**
+   * Before this, every program fired `-20` and *"Asks for 2-3 days a week;
+   * you have 1"*, and the top pick was whichever structured block disliked
+   * them least — a twelve-week power block, scoring 30.
+   */
+  it('does not hand a twelve-week block to someone with one day', () => {
+    const { top } = findProgram(input({ daysPerWeek: 1, goal: 'power' }));
+    expect(top.program.weeks).toBeLessThanOrEqual(52);
+    expect(top.program.kind).toBe('mode');
+  });
+
+  it('still recommends a real program at the floor itself', () => {
+    const result = findProgram(input({ daysPerWeek: catalogueMinDays(), goal: 'maintain' }));
+    expect(result.top.program.kind).toBe('program');
+    expect(result.gap).toBeUndefined();
   });
 });

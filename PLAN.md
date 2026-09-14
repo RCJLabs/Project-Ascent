@@ -7582,7 +7582,8 @@ milestone that settled them; two more were struck by measurement.*
   rewriting doses, and for proposing rather than applying.
 
 - **M150 — two programs the finder cannot recommend, and one climber it cannot answer.**
-  *Proposed. Medium.*
+  *Proposed, and built sixth — see the entry at the end of this document. Its headline was wrong
+  and the measurement is in that entry.*
   **`GOAL_FIT` has eleven entries and the catalogue has thirteen.** `finder.ts:180-192` maps a
   program id to the goals it is built for; `two_day_week` and `trip_prep` are absent, and
   `finder.ts:323` reads `GOAL_FIT[program.id] ?? []`. A missing key is an empty list, so both
@@ -8125,3 +8126,47 @@ milestone that settled them; two more were struck by measurement.*
   `db/db.ts` is what every read and write goes through, and the banner is in `AppShell`, which is
   the shell. Most of the 0.81KB is the copy, and the copy is the milestone — four faults needing
   four different things done. 0.28KB of slack. 4,756 tests pass.
+
+- **M150 — the climber the catalogue has nothing for.** *Done. The sixth of the fourth
+  brainstorm, and the one whose headline the measurement refuted.*
+  **"Two programs the finder cannot recommend" is false, and it took four lines of probe to find
+  out.** Both are absent from `GOAL_FIT`, both score nothing of the 50 a primary goal match is
+  worth, and both **already win for the climbers they are for**: a two-day climber gets Two Days a
+  Week first at 50, and a four-week climber gets Trip Prep first at 60. The constraint scoring
+  carries them there without the goal. Written down before building anything, because the fix for
+  a problem that is not happening is usually worse than the problem.
+  **Where the missing keys did bite.** A climber with the constraint *and* a goal somebody else
+  owns: two days a week wanting power ranked Lockdown 80 to Two Days a Week's 50. So each gets
+  the one goal it genuinely serves — `maintain` for Two Days a Week, which is a maintenance block
+  with the week compressed; `project` for Trip Prep, which is four weeks of getting ready to
+  perform on something.
+  **The first draft gave each of them two goals, and that was a regression.** Adding
+  `fundamentals` to Two Days a Week put it **above Trip Prep for a climber with four weeks before
+  a trip** — 82 to 70 — because a secondary goal match is worth 30 and running exactly the right
+  number of weeks is worth 10. A generous list is not a harmless one, and only the probe said so.
+  One goal each.
+  **The real defect is the climber with one day.** Every written program asks for at least two,
+  so `daysPerWeek: 1` fired `-20` and *"Asks for 2-3 days a week; you have 1"* against all
+  eleven, and the top pick was whichever structured block disliked them least — measured at
+  Lockdown, a twelve-week power block, scoring 30. Now the floor is read off the catalogue
+  (`minDaysIn`, so a new program cannot make a constant wrong), the gap says *"Every program here
+  is written for at least 2 days a week, and you have 1"* and names the answer, and the pick is
+  open logging — reached by the same path as when every program is blocked, because no program
+  can be run as written either way. Saying *no program fits* is not a failure of the finder;
+  pointing at one anyway is.
+  **The third item is real and is not built, and here is why.** `experience: 'returning'` gives
+  Ground Zero +25 while `returnToClimbing.ts` and `returnPlan.ts` are reachable only from
+  `InjuryPage`. But the return plan is **injury-keyed** — `stepsFor(injury)`, `defaultSteps(part)`,
+  a route at `/injury/:id` — and `FinderInput.injuries` is `string[]`: body parts, no ids. The
+  finder cannot link to the thing, and a returning climber who is not injured has no checklist to
+  be pointed at. Ground Zero's +25 also survives inspection: a twelve-week structural block is a
+  reasonable answer for someone coming back. Recorded rather than half-built.
+  **What the battery found.** Nineteen mutations, four survivors, all the same shape — a test
+  comparing against today's catalogue cannot see a constant that happens to match it.
+  `catalogueMinDays()` hardcoded to `2` passed everything. The rule is `minDaysIn(programs)` now,
+  tested against catalogues that are not this one; and the one-line adapter is tested by pushing a
+  program into `PROGRAMS` and asking again, which is the only thing that can tell *reads the
+  catalogue* from *states its answer*. The other two were Trip Prep's goal list: nothing failed
+  when it lost `project`, and nothing failed when it claimed `maintain` as well.
+  **Budget.** 159.7 holds: 159.42 → 159.43. The finder is a lazy route and its chunk is where
+  this lands. 4,769 tests pass.

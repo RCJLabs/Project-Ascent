@@ -189,7 +189,52 @@ const GOAL_FIT: Record<string, Goal[]> = {
   the_cruiser: ['maintain'],
   general_training: ['maintain'],
   outdoor_climbing: [],
+  /**
+   * The two that were missing, and what the measurement said about it
+   * (PLAN.md M150).
+   *
+   * Both were absent, so `GOAL_FIT[id] ?? []` scored them **nothing** of
+   * the 50 a primary match is worth. The obvious reading is that the finder
+   * could not recommend them — and that turns out to be false: a climber
+   * with two days already gets Two Days a Week first (50), and one with
+   * four weeks already gets Trip Prep first (60), both carried there by the
+   * constraint scoring rather than the goal.
+   *
+   * Where it bit is the climber who has the constraint **and** a goal
+   * somebody else owns: two days a week and wanting power ranked Lockdown
+   * 80 to Two Days a Week's 50.
+   *
+   * **One goal each, and the first draft had two.** Giving Two Days a Week
+   * `fundamentals` as well made it outrank Trip Prep *for a climber with
+   * four weeks before a trip* — 82 to 70 — because a secondary goal match
+   * is worth 30 and running exactly the right number of weeks is worth 10.
+   * A generous list is not a harmless one. So each keeps the single goal it
+   * actually serves while doing its real job: Two Days a Week is a
+   * maintenance block with the week compressed, and Trip Prep is four weeks
+   * of getting ready to perform on something.
+   */
+  two_day_week: ['maintain'],
+  trip_prep: ['project'],
 };
+
+/**
+ * The fewest days any written program in the catalogue asks for.
+ *
+ * Derived rather than stated: the answer is a fact about the catalogue, and
+ * a constant here would be a second copy of it that a new program could
+ * make wrong without anything noticing.
+ */
+export function minDaysIn(programs: readonly Program[]): number {
+  const mins = programs
+    .filter((p) => p.kind !== 'mode')
+    .map((p) => sessionsPerWeek(p)?.min)
+    .filter((n): n is number => n !== undefined);
+  return mins.length === 0 ? 0 : Math.min(...mins);
+}
+
+export function catalogueMinDays(): number {
+  return minDaysIn(PROGRAMS);
+}
 
 /**
  * Injury rules. A finger or pulley injury is a hard stop on finger-strength
@@ -652,6 +697,21 @@ function openLogging(input: FinderInput, blocked: Recommendation[]): Recommendat
  * for it — including which single piece of kit changes the answer.
  */
 function catalogueGap(input: FinderInput): string | undefined {
+  /**
+   * The second hole, and the one the catalogue cannot close (PLAN.md M150).
+   *
+   * Every written program asks for at least two days a week, so a climber
+   * with one got `-20` and *"Asks for 2-3 days a week; you have 1"* thirteen
+   * times over, and the top pick was whichever structured block disliked
+   * them least — measured at Lockdown, a twelve-week power block, scoring
+   * 30. The honest answer has always been in the app and was never named:
+   * log what you climb, and the stats, projects and altimeter all still
+   * work. Saying *no program fits* is not a failure of the finder; pointing
+   * at one anyway is.
+   */
+  if (input.daysPerWeek < catalogueMinDays()) {
+    return `Every program here is written for at least ${catalogueMinDays()} days a week, and you have ${input.daysPerWeek}. Rather than run one badly, log what you climb: the stats, the projects and the altimeter are all built from sessions and none of them need a plan. Come back when the week has more room in it.`;
+  }
   if (input.goal !== 'fingers') return undefined;
   if (input.equipment.includes('hangboard')) return undefined;
   return 'Nothing here trains fingers without a hangboard — off the wall, finger strength needs a load you can measure and repeat. A hangboard is the one piece of kit that opens Iron Grip, and the cheapest thing you can buy for this goal.';
@@ -662,7 +722,11 @@ export function findProgram(input: FinderInput): FinderResult {
   const viable = ranked.filter((r) => r.blockers.length === 0);
   const blocked = ranked.filter((r) => r.blockers.length > 0);
 
-  const best = viable[0];
+  // Below the catalogue's floor no written program can be run as written,
+  // so there is no best — the same answer as when every one is blocked, and
+  // reached by the same path (PLAN.md M150).
+  const runnable = input.daysPerWeek >= catalogueMinDays();
+  const best = runnable ? viable[0] : undefined;
   const weak = !best || best.score < 40;
 
   const gap = catalogueGap(input);
