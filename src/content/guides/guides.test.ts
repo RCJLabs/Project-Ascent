@@ -178,12 +178,19 @@ describe('guides and programs', () => {
     expect(getProgram('iron_grip')).toBeDefined();
   });
 
-  it('has a guide for every program but the ones we know about', () => {
+  /**
+   * All thirteen, since M166.
+   *
+   * This used to list `general_training` as a known exception, on the
+   * reasoning that a log-only mode has no progression to explain. True, and
+   * not the same as having nothing to explain: what replaces the progression
+   * is the question of what stops open-ended training becoming the same
+   * session forever, which is the harder half and now has six sections.
+   */
+  it('has a guide for every program', () => {
     const without = PROGRAMS.filter((p) => guideFor(p.id) === undefined).map((p) => p.id);
-    // general_training is the one program with no guide written: it is the
-    // log-only mode rather than a twelve-week block, so there is no
-    // progression to explain. If another id appears here, one is missing.
-    expect(without).toEqual(['general_training']);
+    expect(without).toEqual([]);
+    expect(PROGRAMS.length).toBe(13);
   });
 
   it('returns nothing for an unknown id rather than throwing', () => {
@@ -435,6 +442,10 @@ describe('the summary index matches the guides', () => {
 
   it('resolves a program to its guide without loading one', () => {
     expect(guideSummaryFor('iron_grip')?.name).toBe('IRON GRIP');
-    expect(guideSummaryFor('general_training')).toBeUndefined();
+    // And the mode, which had no summary because it had no guide (M166).
+    // The program detail page reads this list to decide whether to show a
+    // link at all, so a guide missing from here is a guide nobody reaches.
+    expect(guideSummaryFor('general_training')?.name).toBe('GENERAL TRAINING');
+    expect(guideSummaryFor('not_a_program')).toBeUndefined();
   });
 });

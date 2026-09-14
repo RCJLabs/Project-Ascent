@@ -258,7 +258,29 @@ export const GENERAL_TRAINING: Program = {
   ],
 
 
-  constraints: [],
+  /**
+   * The one rule this mode already states and never declared (PLAN.md M166).
+   *
+   * The Finger Protocol's own rationale says *"48 hours between hangboard
+   * sessions"*, in prose, where nothing can read it — so the scheduler could
+   * place two hangboard days back to back, `planVsLog` had nothing to check,
+   * and M167's builder rule flagged this program and only this program out of
+   * all thirteen. M160 had to reach the same climber from the logging side
+   * instead, because the constraint that would have caught it did not exist.
+   *
+   * Nothing else is added. A mode says *"there is no weekly minimum or
+   * maximum here"* and means it, so it gets no `sessions-per-week`: an
+   * open-ended entry with a weekly quota would be a program wearing a mode's
+   * name.
+   */
+  constraints: [
+    {
+      kind: 'min-gap-hours',
+      between: ['hb'],
+      hours: 48,
+      note: '48 hours between hangboard sessions. Connective tissue adapts slower than the muscle that makes a hang feel easy.',
+    },
+  ],
 
   assessments: [
     'max_hang_20mm_7s',

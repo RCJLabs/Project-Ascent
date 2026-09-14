@@ -58,22 +58,34 @@ describe('the rules are the catalogue’s own practice', () => {
    * rule that fired on the app's own programs would be an opinion with a
    * warning icon.
    */
-  it('says nothing about eleven of the thirteen shipped programs', () => {
+  it('says nothing about any of the thirteen shipped programs', () => {
     const noisy = CATALOGUE.filter((p) => safetyIssues(p).length > 0).map((p) => p.id);
-    expect(noisy).toEqual(['general_training']);
+    expect(noisy).toEqual([]);
   });
 
   /**
-   * And the one it does flag is M160's finding, found again from the other
-   * end: General Training ships a *Hangboard / Finger* session type, states
-   * *"48 hours between hangboard sessions"* in its own prose, and declares
-   * no constraint at all. The builder rule reaches it without being told.
+   * **This rule found a real one, and M166 fixed it.**
+   *
+   * On the day it shipped, General Training was the single program it
+   * flagged out of thirteen: a *Hangboard / Finger* session type, the words
+   * *"48 hours between hangboard sessions"* in a block's own rationale, and
+   * no constraint at all — M160's finding reached from the other end.
+   * Declaring the constraint is what silenced it, which is the outcome a
+   * safety check is for.
+   *
+   * The two halves are kept apart here so the silence stays meaningful: the
+   * program still has finger work, so the rule still *looks* at it, and it
+   * is the declared gap and nothing else that makes it quiet.
    */
-  it('flags General Training for the gap M160 had to work around', () => {
+  it('is quiet about General Training because the gap is declared now', () => {
     const gt = CATALOGUE.find((p) => p.id === 'general_training')!;
-    expect(fingerTypes(gt).map((t) => t.id)).toEqual(['hb']);
-    expect(messages(gt)).toMatch(/Hangboard \/ Finger loads the fingers directly/);
-    expect(messages(gt)).toContain(`${FINGER_GAP_HOURS} hours`);
+    expect(fingerTypes(gt).map((t) => t.id), 'nothing to be quiet about').toEqual(['hb']);
+    expect(safetyIssues(gt)).toEqual([]);
+
+    // Take the constraint away and the finding comes straight back.
+    const undeclared = { ...gt, constraints: [] } as Program;
+    expect(messages(undeclared)).toMatch(/Hangboard \/ Finger loads the fingers directly/);
+    expect(messages(undeclared)).toContain(`${FINGER_GAP_HOURS} hours`);
   });
 
   it('holds the numbers it quotes against the catalogue', () => {

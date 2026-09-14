@@ -209,9 +209,15 @@ describe('the app and its own content', () => {
   });
 
   /**
-   * And the prose that says it in the program that could not check it. This
-   * is the sentence the milestone exists for; if it is ever reworded, the
-   * milestone's premise deserves re-reading rather than a silent pass.
+   * And the prose that says it in the program that could not check it.
+   *
+   * **M166 closed this.** General Training stated the rule in a block's
+   * rationale and declared no constraint, so the scheduler could place two
+   * hangboard days back to back and `planVsLog` had nothing to check — which
+   * is why this rule had to reach that climber from the logging side at all.
+   * Both halves are pinned now: the prose that says it, and the constraint
+   * that finally backs it. The rule here still earns its place, for the other
+   * two programs and for every written one.
    */
   it('backs the rationale General Training writes out in words', () => {
     const gt = CATALOGUE.find((p) => p.id === 'general_training')!;
@@ -221,6 +227,10 @@ describe('the app and its own content', () => {
       .map((p) => p?.rationale ?? '')
       .join(' ');
     expect(prose).toContain(`${FINGER_GAP_HOURS} hours between hangboard sessions`);
-    expect(gt.constraints, 'it still declares none, which is why this exists').toEqual([]);
+    const gap = gt.constraints.find((c) => c.kind === 'min-gap-hours');
+    expect(gap, 'the constraint M166 added is gone again').toBeTruthy();
+    if (gap?.kind !== 'min-gap-hours') throw new Error('unreachable: checked above');
+    expect(gap.hours).toBe(FINGER_GAP_HOURS);
+    expect(gap.between).toEqual(['hb']);
   });
 });

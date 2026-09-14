@@ -7963,7 +7963,7 @@ the end with what killed them. Sized as before: two large, six medium, two small
   and a `tooThin` predicate. An inversion is rare, it is unambiguous, and it is the one pyramid
   sentence a coach says the same way every time.
 
-- **M166 — the two modes are the emptiest entries in the catalogue.** *Proposed. Medium.*
+- **M166 — the two modes are the emptiest entries in the catalogue.** *Done — see the entry at the end of this document. The "least of everything" half did not survive measurement; the entry says which parts did.*
   A `mode` is what a climber uses when they are not running a block — between programs, in the
   off-season, or because they do not want one. Measured across the catalogue, they are the two
   entries with the least of everything: **zero constraints** each, no deload weeks, no phases
@@ -9274,4 +9274,91 @@ one caller and both it and its paragraph land in the lazy Progress chunk.
 Putting the reading where the drawing already is was the right answer for the
 climber and happens to be the free one — the same sentence as a coach tip would
 have been first-load prose and would have needed the line raised. 5,217 tests
+pass.
+
+---
+
+### M166 — the two modes were the emptiest entries in the catalogue ✅
+
+**Measured first, and the proposal is half right.** *"The entries with the
+least of everything"* holds for constraints (zero each), deload weeks (none),
+and phases (one each). It does not hold for assessments — General Training
+ships seven and Outdoor Climbing five, inside the catalogue's ordinary range of
+three to nine — nor for drills, where four *programs* ship none either. Both
+halves are now tests, because a finding that reads as "the modes are the empty
+ones" has to survive being checked against the rest, and half of it does not.
+
+**And most of what is left is correct rather than thin.** One phase over
+fifty-two weeks, no deloads, no recommended week, no adherence: that is the
+definition of a mode, not a gap in one. `programSafety` already excludes modes
+from its deload rule on exactly this reasoning — *"open-ended logging with no
+progression to deload from"* — so a milestone that added deloads would have
+been adding something another module is written to ignore. Recorded as a test
+rather than fixed.
+
+**What was genuinely wrong was two things.**
+
+**One: General Training stated a safety rule in prose and declared nothing.**
+The Finger Protocol's own rationale says *"48 hours between hangboard
+sessions"*, inside a `perPhase.rationale` where nothing can read it — so the
+scheduler could place two hangboard days back to back and `planVsLog` had
+nothing to check. The app had already found this twice from two directions:
+M160 had to reach that climber from the logging side because the constraint did
+not exist, and M167's builder rule flagged this program **and only this
+program** out of thirteen. Declaring the constraint silences it: the safety
+check is now quiet about the entire shipped catalogue, and a test takes the
+constraint away again to prove the silence is the constraint's doing and not
+the rule going soft.
+
+Nothing else was added. A mode says *"there is no weekly minimum or maximum
+here"* and means it, so it gets no `sessions-per-week` — open-ended means no
+quota, it never meant no rules.
+
+**And Outdoor Climbing gets none, deliberately.** Its rest type notes that skin
+takes about 48 hours between hard sessions on rock, which reads like the same
+case and is not: a gap rule built on it would fire on every trip, where
+consecutive days on rock are the point — the thing M163 had to teach the coach
+about the load ratio three milestones ago. Building the obvious constraint here
+would have put two parts of the app in direct disagreement.
+
+**Two: General Training was the only entry in the catalogue with no guide.**
+Every other program and the outdoor mode carried six to thirteen sections; this
+one carried nothing, so `guideSummaryFor` returned undefined and the program
+page showed no link at all. The entry with no guide is the one a climber picks
+when they do not want a program — which is exactly when they have fewest other
+places to look.
+
+It is written from the program rather than invented. General Training already
+holds more coaching than most blocks — *"push work is INJURY PREVENTION, not
+bodybuilding"*, *"legs are the most under-trained body part for climbers"*, the
+whole hangboard rule set — and every line of it was trapped inside a
+`perPhase.rationale`, visible only after a climber has picked that block on that
+session, which is after the decision a guide exists to inform. Six sections lift
+it out. The two rules that are not menus are `warn` blocks, which render so they
+cannot be skimmed past, and one section is **What this is bad at** — peaking for
+a date, fixing a named weakness, progressive overload, and knowing when to back
+off — because an app that only lists what a thing is good for is selling rather
+than coaching.
+
+**What the battery moved.** Twenty-three mutants, three real survivors, all of
+them **weak assertions rather than missing behaviour**, which is a pattern worth
+naming: prose is easy to test badly. Retitling a section survived because the
+test grepped the whole guide for a phrase that also appears in a
+cross-reference to that section. Changing one of two mentions of IRON GRIP
+survived because the test was a checklist of names rather than a scan — it now
+asserts that *every* shouted phrase in the guide resolves to a real program.
+And downgrading a safety `warn` block to a plain list survived because nothing
+read the block kinds at all.
+
+**Seven tests elsewhere pinned the old state, and all seven were the tests that
+recorded these defects** — "the one program with no guide", "it still declares
+none, which is why this exists", "flags General Training for the gap M160 had
+to work around". Each was rewritten to record the fix rather than deleted,
+including `readAtLast.test.tsx`, whose "a program with no rules" example simply
+moved to the other mode.
+
+**Budget.** 162.24 → 162.24: nothing, to two decimal places. A six-section
+guide is about 9KB of prose and none of it is first-load — `guides/summary.ts`
+exists precisely so the program page can ask *"is there a guide?"* without
+pulling 150KB of bodies, and the new summary row is four fields. 5,237 tests
 pass.

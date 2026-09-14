@@ -60,10 +60,16 @@ const PAIRS = PROGRAMS.flatMap((program) => {
 });
 
 describe('a program guide and its program', () => {
-  it('covers every program but the one with no guide', () => {
-    expect(PAIRS.length).toBeGreaterThan(0);
+  /**
+   * Every program, with none left over (PLAN.md M166). General Training was
+   * the exception this test used to name — the one catalogue entry with no
+   * guide, and the one a climber picks when they do not want a program,
+   * which is when they have fewest other places to look.
+   */
+  it('covers every program in the catalogue', () => {
+    expect(PAIRS.length).toBe(PROGRAMS.length);
     const uncovered = PROGRAMS.filter((p) => guideFor(p.id) === undefined).map((p) => p.id);
-    expect(uncovered).toEqual(['general_training']);
+    expect(uncovered).toEqual([]);
   });
 
   it('agrees on how many weeks the block runs', () => {
@@ -387,9 +393,12 @@ describe('exercises the guide prescribes', () => {
     ).map((p) => p.program.id);
     // Two Days a Week and Trip Prep name no exercises in prose at all: the
     // programs carry the doses and a guide restating them would be a second
-    // place for one to be wrong (PLAN.md M95).
+    // place for one to be wrong (PLAN.md M95). General Training's guide
+    // joined them at M166 for the same reason — its five menus are dozens of
+    // exercises deep and the program is where they belong.
     expect(unchecked.sort()).toEqual([
       'base_camp',
+      'general_training',
       'outdoor_climbing',
       'the_siege',
       'trip_prep',

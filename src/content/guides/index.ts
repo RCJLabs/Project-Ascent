@@ -2,6 +2,7 @@ import { APP } from './app';
 import { BASE_CAMP } from './baseCamp';
 import { THE_CRUISER } from './cruiser';
 import { GRAVITY_DEFIED } from './gravityDefied';
+import { GENERAL_TRAINING_GUIDE } from './generalTraining';
 import { GROUND_ZERO } from './groundZero';
 import { INJURY } from './injury';
 import { IRON_GRIP } from './ironGrip';
@@ -35,6 +36,9 @@ export const GUIDES: Guide[] = [
   THE_SIEGE,
   TRIP_PREP,
   THE_CRUISER,
+  // The two modes, after the ladder of programs: a climber reads these when
+  // they have decided not to run one (PLAN.md M166).
+  GENERAL_TRAINING_GUIDE,
   OUTDOOR,
   INJURY,
 ];

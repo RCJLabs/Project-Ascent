@@ -470,6 +470,15 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M166**, measured 162.24 → 162.24: nothing at all, to two
+    // decimal places. A six-section guide is about 9KB of prose and none of it
+    // is here — `content/guides/index.ts` imports all sixteen guide modules,
+    // which is exactly why `guides/summary.ts` exists: the program page reads
+    // the summary list to decide whether to show a link, and the bodies stay in
+    // the guides chunk until someone opens one. The new summary row is four
+    // fields. The constraint on General Training rides in the catalogue, which
+    // is fetched rather than imported.
+    //
     // **Unchanged at M165**, measured 162.26 → 162.24: **down** 0.02KB, which
     // is chunk-hash churn rather than a saving — the point is that a Medium
     // milestone cost nothing at all. `engine/pyramidShape.ts` has exactly one

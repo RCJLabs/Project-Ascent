@@ -371,17 +371,43 @@ describe('scheduling constraint semantics', () => {
 });
 
 describe('modes versus programs', () => {
+  /**
+   * What a mode is, and what M166 corrected about it.
+   *
+   * No finish line, so no deloads, no recommended week and one phase — all
+   * still true, and all *correct* rather than thin: `programSafety` excludes
+   * modes from its deload rule for exactly this reason.
+   *
+   * **A safety rule is not a finish line, though**, and that was the mistake.
+   * General Training stated a 48-hour hangboard gap in a block's prose and
+   * declared no constraint, so nothing could enforce it — the one program the
+   * builder's own safety check flagged out of thirteen. Open-ended means no
+   * weekly quota; it never meant no rules.
+   */
   it('separates open-ended logging modes from structured programs', () => {
     const modes = PROGRAMS.filter((p) => p.kind === 'mode').map((p) => p.id);
     expect(modes).toEqual(['general_training', 'outdoor_climbing']);
-    // Modes have no finish line, so no deloads and no scheduling constraints.
     for (const id of modes) {
       const mode = PROGRAMS.find((p) => p.id === id)!;
-      expect(mode.constraints).toEqual([]);
-      expect(mode.deloadWeeks).toBeUndefined();
-      expect(mode.recommendedLayout).toBeUndefined();
-      expect(mode.phases).toHaveLength(1);
+      expect(mode.deloadWeeks, id).toBeUndefined();
+      expect(mode.recommendedLayout, id).toBeUndefined();
+      expect(mode.phases, id).toHaveLength(1);
+      // No quota, ever: that is what open-ended means.
+      expect(mode.constraints.some((c) => c.kind === 'sessions-per-week'), id).toBe(false);
     }
+  });
+
+  /**
+   * And the one constraint a mode is allowed, which is the one it already
+   * said out loud (PLAN.md M166). Outdoor Climbing gets none, deliberately:
+   * its rest type notes that skin takes about 48 hours, and a gap rule built
+   * on that would fire on every trip — where consecutive days on rock are the
+   * point, as M163 had to teach the coach.
+   */
+  it('lets a mode declare a safety rule and nothing else', () => {
+    const gt = PROGRAMS.find((p) => p.id === 'general_training')!;
+    expect(gt.constraints.map((c) => c.kind)).toEqual(['min-gap-hours']);
+    expect(PROGRAMS.find((p) => p.id === 'outdoor_climbing')!.constraints).toEqual([]);
   });
 
   it('gives every discipline in the outdoor mode its own fields', () => {

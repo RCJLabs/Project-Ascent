@@ -34,6 +34,7 @@ export const GUIDE_SUMMARIES: GuideSummary[] = [
   { id: 'the_siege', name: 'THE SIEGE', sections: 11 },
   { id: 'trip_prep', name: 'TRIP PREP', sections: 6 },
   { id: 'the_cruiser', name: 'THE CRUISER', sections: 8 },
+  { id: 'general_training', name: 'GENERAL TRAINING', sections: 6 },
   { id: 'outdoor_climbing', name: 'Outdoor Climbing Guide', sections: 3 },
   { id: 'injury_management', name: 'Injury Management & ACWR', sections: 3 },
 ];

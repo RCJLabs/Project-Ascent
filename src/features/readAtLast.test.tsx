@@ -57,12 +57,35 @@ describe('how a program runs', () => {
     expect(screen.getByText(/Leave at least 48 hours between finger sessions/)).toBeTruthy();
   });
 
+  /**
+   * Outdoor Climbing, since M166. General Training was the example here
+   * until it declared the 48-hour hangboard gap it had been stating in prose
+   * — so the entry with genuinely no rules is now the other mode, and the
+   * behaviour under test is unchanged.
+   */
   it('leaves no empty panel for a program with no rules', async () => {
-    expect(getProgram('general_training')!.constraints).toHaveLength(0);
+    expect(getProgram('outdoor_climbing')!.constraints).toHaveLength(0);
+    await program('outdoor_climbing');
+    const rhythm = screen.getByText(/Log the session at the crag/);
+    const card = rhythm.closest('section')!;
+    expect(card.querySelector('.bg-sunken')).toBeNull();
+  });
+
+  /**
+   * And the mode that does have one shows it, like any program.
+   *
+   * Scoped to the rules panel rather than the page: the same sentence is in
+   * the Finger Protocol's rationale, which is where it lived alone until
+   * M166 — so a page-wide match would pass whether or not the constraint
+   * reached the panel, which is the only half that is new.
+   */
+  it('shows the one rule a mode declares, in the rules panel', async () => {
+    expect(getProgram('general_training')!.constraints).toHaveLength(1);
     await program('general_training');
     const rhythm = screen.getByText(/Log your sessions as they happen/);
     const card = rhythm.closest('section')!;
-    expect(card.querySelector('.bg-sunken')).toBeNull();
+    const rules = [...card.querySelectorAll('.bg-sunken')].map((n) => n.textContent ?? '');
+    expect(rules.some((t) => /48 hours between hangboard sessions/.test(t))).toBe(true);
   });
 
   it('still says how the logging modes run, in the rhythm above it', async () => {
