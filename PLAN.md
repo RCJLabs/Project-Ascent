@@ -7976,8 +7976,7 @@ the end with what killed them. Sized as before: two large, six medium, two small
   the open-ended option gets the app's least-considered product, and they chose it because they
   wanted less structure, not less thought.
 
-- **M167 — the builder checks that a program is complete, never that it is safe.** *Proposed.
-  Medium.*
+- **M167 — the builder checks that a program is complete, never that it is safe.** *Done — see the entry at the end of this document.*
   `contentIssues` (`prescription.ts:219`) is a thorough structural validator: empty blocks,
   unnamed blocks, circuits with no rounds, a block folded into itself, a step numbered past its
   phase, an exercise on a track the program does not have. **Not one of its checks is about
@@ -8811,3 +8810,73 @@ Whether the stage or the assessment is wrong is a coaching decision rather than 
 test pins the current state and will fail if it changes silently.
 
 **Budget.** 161.02 → 161.06, inside 161.6. 5,004 tests pass.
+
+---
+
+### M167 — the builder checked that a program was complete, never that it was safe ✅
+
+**`contentIssues` (`prescription.ts:219`) is a thorough structural validator**: empty blocks,
+unnamed blocks, a circuit with no rounds, a block folded into itself, a step numbered past its
+phase, an exercise on a track the program does not have. **Not one of its checks is about
+training.** A grep of `BuilderPage.tsx` for *safety*, *injury*, *gap* or *48* returned only CSS
+class names.
+
+**So the app would help a climber author a block it would refuse to schedule for them.** Twelve
+weeks of fingerboarding with no gap declared, no rest type to put a day off on, no deload — and
+the same app that warns about a campus board in the logger (M153), about the 48-hour gap outside a
+block (M160) and about a maximal test on a hurt finger (M161) said nothing while the program was
+being written. M136 gave the builder the catalogue's full expressive power; this is the other half
+of that gift.
+
+**Every rule here is the catalogue's own practice, and the tests hold it there.** A builder that
+lectured would be worse than one that stayed quiet, so `programSafety.ts` says nothing the thirteen
+shipped programs do not already do, and `programSafety.test.ts` measures each claim against
+`CATALOGUE` rather than asserting it: every `min-gap-hours` in the app is 48; the busiest program
+asks for five sessions a week; all thirteen have a rest type; every twelve-week block takes a
+deload, usually two. The one number the catalogue does not settle is `DELOAD_FROM_WEEKS` — the only
+shipped block without a deload is four weeks long, and the app ships nothing between four and
+twelve — so eight is named as a judgement in the module's own prose rather than buried as a
+constant, because it is the one rule here a coach could reasonably disagree with.
+
+**It rediscovered M160's finding from the other end.** Run over the whole catalogue, the new rule
+flags exactly one program: General Training, which ships a *Hangboard / Finger* session type, states
+*"48 hours between hangboard sessions"* in its own prose, and declares no constraint at all. M160
+had to work around that gap from the logging side; the builder rule reaches it without being told,
+and `it('says nothing about eleven of the thirteen shipped programs')` pins the list at exactly
+`['general_training']`, so a fourteenth program that trips a rule shows up here.
+
+**A third level, not a third warning.** `Issue` had `error` and `warning`; safety notes as
+`warning` would have shown *"No subtitle — the catalog card will look bare"* and *"no deload in
+twelve weeks"* with the same grey icon, which is how the second stops being read. So `IssueLevel`
+gained `safety`, `ISSUE_RANK` sorts it between the two, and the panel gives it the warn triangle
+and full-strength ink while nits keep the soft info icon. None of it blocks: `canRun` keys on
+`error`, and a coach writing a deliberately brutal block for themselves is allowed to.
+
+**And widening the scan to a program's prose found a live bug in the shared injury engine.**
+`bodyLoad.ts`'s `one-arm` rule was `/one[- ]?arm|1[- ]?arm|unilateral hang/i`, which matched
+"One-Arm Row (DB)" and claimed it loads the fingers and the pulley — so a climber with a pulley
+injury was being warned off dumbbell rows, in the logger, today. The exclusion is the *implement*,
+not the movement: a first narrowing keyed on "hang or lock-off" passed the rows and lost
+`offset_pull_practice`'s *"one-armed pulling strength"*, where the fingers are exactly what is
+under load. The rule now excludes a bounded row/press/carry/curl/raise and keeps everything else.
+
+**What the battery moved.** Twenty-four mutants, five survivors. Two were missing assertions in the
+rules: nothing checked that a rest type is skipped by the finger scan (so a program spelling its
+rest day *"Recovery hangs"* would have read as one that fingerboards on it), and nothing read a
+session type's *description*, though a type called "Tuesday" described as *"max hangs on a 20mm
+edge"* is finger work by every measure except its title. The other three were the wiring, and they
+were M161's lesson again in a third costume: `safetyIssues` was imported by `BuilderPage` and
+nothing rendered the page, so removing the call, removing the sort, and rendering safety with the
+nit's own icon all passed. `safetyPanel.test.tsx` renders the builder and reads the ranking off the
+icons rather than the words — and the sort mutant only dies because a blank program's *"No
+recommended week"* comes out of `validateProgram`, which sits **ahead** of the safety notes in the
+unsorted array.
+
+**A limitation, stated.** The scan reads movements, not the word "finger" — a type named *"Finger
+Protocol"* with no exercises in it is missed. That is the right way round (a drill saying *"keep
+your fingers relaxed"* would otherwise read as finger loading), and such a type already trips
+`contentIssues` for having nothing prescribed, but it means the check is only as good as what the
+climber has actually written down.
+
+**Budget.** 161.06 → 161.11, inside 161.6 — and all 0.05KB of it is the one-arm regex. The module,
+its five rules and its paragraphs land in the builder's chunk, which is lazy. 5,037 tests pass.

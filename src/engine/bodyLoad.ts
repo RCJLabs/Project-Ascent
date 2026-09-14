@@ -45,7 +45,22 @@ export const LOAD_RULES: LoadRule[] = [
   },
   {
     id: 'one-arm',
-    pattern: /one[- ]?arm|1[- ]?arm|unilateral hang/i,
+    // On holds, not with a dumbbell (PLAN.md M167).
+    //
+    // This was `/one[- ]?arm|1[- ]?arm|unilateral hang/` and matched
+    // "One-Arm Row (DB)", which it then claimed loads the fingers and the
+    // pulley — so a climber with a pulley injury was warned off rows. The
+    // first narrowing went too far the other way and lost "one-armed
+    // pulling" on overhanging terrain, where the fingers really are the
+    // thing under load.
+    //
+    // So the exclusion is the implement rather than the movement: a row, a
+    // press, a carry, a curl and a raise are done holding a weight, and
+    // every one of them still reads as elbow, shoulder and back through the
+    // `pull` and `shoulder` rules, which is what they are. The lookahead
+    // reaches a short way rather than one word, because "One-arm farmer
+    // carry" puts the implement two words out.
+    pattern: /(one|1)[- ]?arm(?:ed)?(?![^.]{0,20}?\b(rows?|press|carry|curl|raise)\b)|unilateral hang/i,
     parts: ['fingers', 'pulley', 'elbow', 'shoulder'],
     because: 'one-arm work doubles the load through a single side',
   },

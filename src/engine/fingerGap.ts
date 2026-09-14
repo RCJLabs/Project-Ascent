@@ -70,6 +70,18 @@ function isDirect(ids: readonly DrillLoad[]): boolean {
 }
 
 /**
+ * Whether some text describes deliberate, high-force finger work.
+ *
+ * Exported so the builder asks the same question of a *prescription* that
+ * this asks of a *log* (PLAN.md M167). One definition, or a custom program
+ * could be warned about spacing it would never be checked against — or the
+ * reverse, which is worse.
+ */
+export function directFingerWork(text: string): boolean {
+  return isDirect(rulesInText(text));
+}
+
+/**
  * Everything the log itself says about what a session was.
  *
  * The session type's name is the most reliable of the three: a climber who
@@ -89,12 +101,12 @@ function words(session: Session): string {
 /** Whether a session loaded the fingers directly, by what the log says. */
 export function loadsFingersDirectly(session: Session): boolean {
   if (!session.completed || isRestSession(session)) return false;
-  if (isDirect(rulesInText(words(session)))) return true;
+  if (directFingerWork(words(session))) return true;
   if (session.drillId !== undefined) {
     const drill = getDrill(session.drillId);
     // A drill's own words *and* its kit: a hangboard drill loads fingers
     // whatever it is called.
-    if (drill && drillLoads(drill).includes('fingers') && isDirect(rulesInText(`${drill.name} ${drill.focus}`))) {
+    if (drill && drillLoads(drill).includes('fingers') && directFingerWork(`${drill.name} ${drill.focus}`)) {
       return true;
     }
   }

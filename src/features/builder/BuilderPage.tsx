@@ -16,20 +16,9 @@ import { PROGRAMS, getProgram } from '@/content/programs';
 import { allMetrics } from '@/engine/assessments';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
 import { DAY_SHORT } from '@/engine/scheduler';
-import {
-  EQUIPMENT_LABELS,
-  MAX_WEEKS,
-  canRun,
-  nextPhaseId,
-  removeSessionType,
-  removeTrack,
-  retile,
-  sessionTypeId,
-  trackIdFor,
-  validateProgram,
-  type Issue,
-} from '@/engine/customProgram';
+import { EQUIPMENT_LABELS, MAX_WEEKS, canRun, nextPhaseId, removeSessionType, removeTrack, retile, sessionTypeId, trackIdFor, validateProgram, type Issue, ISSUE_RANK } from '@/engine/customProgram';
 import { contentIssues, reconcileProgramPhases, trimDrills } from '@/engine/prescription';
+import { safetyIssues } from '@/engine/programSafety';
 import { buildProgramFile, fileName } from '@/engine/programFile';
 import { useCustomPrograms } from '@/store/programs';
 import { BackLink } from '@/ui/BackLink';
@@ -66,7 +55,12 @@ export function BuilderPage({ params }: { params: { id: string } }) {
 
   const program = custom.find((p) => p.id === params.id);
   const issues = useMemo(
-    () => (program ? [...validateProgram(program), ...contentIssues(program)] : []),
+    () =>
+      program
+        ? [...validateProgram(program), ...safetyIssues(program), ...contentIssues(program)].sort(
+            (a, b) => ISSUE_RANK[a.level] - ISSUE_RANK[b.level],
+          )
+        : [],
     [program],
   );
 
@@ -477,10 +471,14 @@ function IssuePanel({ issues, runnable }: { issues: Issue[]; runnable: boolean }
           <li key={`${issue.field}-${i}`} className="flex gap-2 text-sm">
             {issue.level === 'error' ? (
               <TriangleAlert size={14} className="text-danger shrink-0 mt-0.5" />
+            ) : issue.level === 'safety' ? (
+              <TriangleAlert size={14} className="text-warn shrink-0 mt-0.5" />
             ) : (
               <Info size={14} className="text-ink-soft shrink-0 mt-0.5" />
             )}
-            <span className="text-ink-soft">{issue.message}</span>
+            <span className={issue.level === 'safety' ? 'text-ink' : 'text-ink-soft'}>
+              {issue.message}
+            </span>
           </li>
         ))}
       </ul>

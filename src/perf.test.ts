@@ -470,6 +470,17 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M167**, measured 161.06 → 161.11: 0.05KB, and the whole
+    // of it is one regex. The milestone's bulk — `engine/programSafety.ts`,
+    // its five rules and the paragraphs they say — lands in the builder's
+    // chunk, and `ISSUE_RANK` lands in `customProgram`'s; neither is on the
+    // first-load path, which is `index-*.js` and the stylesheet and nothing
+    // else. What *is* first-load is `bodyLoad.ts`, because the logger reads
+    // it, and the only change there is the `one-arm` pattern growing a
+    // lookahead. The cheapest of the three safety milestones by a wide
+    // margin, and the reason is that a builder check is read while writing a
+    // program, which is the one screen nobody reaches on a cold start.
+    //
     // **Unchanged at M161**, measured 161.02 → 161.06: 0.04KB — a component
     // on a lazy route, two call sites, and three functions in `bodyLoad.ts`,
     // which the logger already pulls in. The cheapest safety milestone of

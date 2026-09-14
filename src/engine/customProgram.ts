@@ -77,7 +77,19 @@ export function forkProgram(source: Program, name?: string): Program {
   };
 }
 
-export type IssueLevel = 'error' | 'warning';
+/**
+ * Three, not two (PLAN.md M167).
+ *
+ * `error` stops a program running and `warning` is a nit a coach would
+ * raise. A safety note is neither: it never blocks — a coach writing a
+ * deliberately brutal block for themselves is allowed to — but showing
+ * *"nothing prescribed for Anvil"* and *"no rest day in the week"* with the
+ * same grey icon is how the second one stops being read.
+ */
+export type IssueLevel = 'error' | 'safety' | 'warning';
+
+/** Worst first. Errors block, safety is about the climber, warnings are tidying. */
+export const ISSUE_RANK: Record<IssueLevel, number> = { error: 0, safety: 1, warning: 2 };
 
 export interface Issue {
   level: IssueLevel;
