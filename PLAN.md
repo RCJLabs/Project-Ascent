@@ -8428,6 +8428,244 @@ the end with what killed them. Sized as before: two large, six medium, two small
   **Budget.** 159.7 holds: 159.43 → 159.54. The card and its copy are on the Train route; what
   reaches first load is the profile store's new field. 4,804 tests pass.
 
+### The sixth brainstorm (proposed, M173–M182)
+
+*The fifth pass asked what a coach would notice that a code reader would not, and it worked: six
+of its ten were about the training rather than the code. That question is not exhausted, but the
+shape it kept finding is — **built and never connected** — because M169 swept all 107 content
+fields across sixteen types and every authored value and found nothing left to connect, and the
+module sweep written for this brainstorm found two files nothing outside a test imports, both of
+them deliberate.*
+
+***So the question this time is time itself: what does the app say in the sequence, rather than in
+the moment?*** *Four findings were already carried in prose before this pass started — the eager
+coach card, two definitions of "rest session", the week after a trip reading as `detraining`, and
+the plateau blocker repeating the spike — and three of those four are about a reading that is
+right on one day and wrong across a run of them. That is not a coincidence; it is the theme, and
+the ten below were found by looking for more of it.*
+
+***The running theme: every feature here is correct at the moment it was designed for and
+unattended afterwards.*** *The load model is right from day 28 and silent before it. The rank
+ladder is well-paced for a first season and finished before the tenth. An injury record is
+complete while the injury is live and deleted when it heals. A dismissal is correct on the day it
+is made and permanent after it. A migration is right on the device it ran on and absent from every
+import since. The app is written for a moment and lived in as a sequence.*
+
+*Measured on `6483839`. Every claim below was read in the code with the file and line given, and
+four of them are numbers from a probe rather than from reading — those say so. Sized as before:
+two large, three medium, five small.*
+
+**What depends on what:**
+
+- **M173 before M174 and M178.** All three add coach rules, and M173 is the one that establishes
+  what the Corner may say from a log too short to model. Deciding that once is cheaper than
+  deciding it three times.
+- **M175 with M181 and M182** if any of them is taken — they are one mechanism (a dismissal that
+  cannot age) seen from three angles, and the fix for one is most of the fix for the others.
+- **M180 wants nothing**, and it is the smallest thing here that is actually a defect.
+- **On their own** — M176, M177, M179.
+
+- **M173 — the first three weeks say nothing at all.**
+  **Measured, not inferred.** A probe built a normal beginner — three sessions a week, RPE 7, an
+  hour each — and asked `buildTips` what it had to say on day 1, 7, 14, 21, 28 and 56. Days 1, 7
+  and 14 return **zero tips**. Day 21 returns one (`domain:drills`, weight 45). The load ratio
+  reads `unknown` until day 28.
+  **And the one rule written for a beginner leaves after the first session.** `firstSession`
+  (`coach.ts:171`) is weight 95, the highest in the table, and gates on
+  `state.completedSessions > 0` — so the app's most prominent piece of coaching is addressed to a
+  climber who has done nothing, and there is no second thing to say to the climber who has now
+  done one thing.
+  **The cold start is a real constraint and the silence is not.** `daysOfHistory < 21` and
+  `MIN_CHRONIC_DAYS = 6` (`derive.ts:445`, `:727`) are honest: a ratio from nine days is a guess,
+  and M162 already argued that an estimate offered as a number is worse than nothing. What is not
+  honest is that `daysOfHistory` sits on `LoadState` and **no screen renders it**, so the note
+  *"Three weeks of logged sessions and this becomes meaningful"* reads identically on day one and
+  day twenty. A countdown is not a model; it is a fact the app already holds.
+  **What it could say in that window, from data it already has:** whether the warm-up was ticked,
+  whether the plan was followed, which session types have been touched, whether the drill was done,
+  what the check-in said. None of that needs 28 days.
+  **One loose end to sweep while here.** `ZONE.unknown.note` (`ui/loadZone.ts`) is still the single
+  sentence M162 replaced with `UNKNOWN_NOTE`'s two, and `ProgressPage.tsx:616` overrides it at the
+  call site — so the retired wording is one `ZONE[zone].note` away from a screen. Two copies of one
+  sentence, which is the shape M168 removed from the load windows.
+  *Medium.*
+
+- **M174 — nothing ever asks for a first benchmark.**
+  **The rule can only notice a number going stale, never a number that was never taken.**
+  `staleBenchmarks` (`coach.ts:564`) opens `if (entries.length === 0) return null;`. A climber with
+  no benchmarks has nothing stale, so the coach is silent — permanently, because the condition
+  never changes on its own.
+  **And the only proactive prompt is gated on a test week.** `DayNudges` (`PreSession.tsx`) points
+  at `/assessments` when `day.test !== undefined`, which requires a block, a start date and the
+  right week. A climber in week one, between blocks, or in either mode is never asked.
+  **The app has already written this finding down.** M166's General Training guide says
+  *"Benchmarks. Seven of them here. Retest every eight to twelve weeks; without a block boundary to
+  prompt it, nothing else will."* That is content describing a gap in the engine, which is the most
+  reliable kind of finding in this document.
+  **What exists:** `ProgressPage.tsx:310` says *"Take a baseline"* when the battery is empty — on a
+  tab the climber has to choose to open. The missing half is the coach saying it unprompted, once,
+  early, when a baseline is still worth having a before for.
+  *Small.*
+
+- **M175 — a domain gap waved away is waved away for ever.**
+  **Every other rule's signature encodes the fact that raised it. This one is a string literal.**
+  `missingDomains` (`coach.ts:653`) sets `signature: 'missing'` for all five domains, where
+  `late-sessions` uses `${late}`, `stale-benchmarks` uses `${due.length}`, and `load-spike` uses the
+  zone. `visibleTips` (`coach.ts:166`) hides a tip when `dismissed[id] === signature`, so a constant
+  signature is a permanent dismissal.
+  **Which means the five rules aimed at a climber's habits are the five that cannot come back.**
+  *No rest days logged, ever*, *No drills yet*, *Everything so far is indoors*, *Every send is a
+  redpoint*, *Nothing logged as an attempt* (`coach.ts:598`) each gate on 8–25 completed sessions —
+  they are written for the climber who has been at it long enough to have a pattern, and they get
+  exactly one chance to be read.
+  **The fix is the mechanism the file already has**, and the interesting part is choosing what the
+  fact is: the count at the time, a month key, or the streak of sessions since the gap closed.
+  *Small.*
+
+- **M176 — the rank ladder runs out before the climber does.**
+  **Measured.** A probe ran `deriveXp` over the same three-a-week climber and read the level off
+  `economy.ts`:
+
+  | | sessions | level | rank |
+  |---|---|---|---|
+  | 1 year | 156 | 35 | Project Hunter (10th of 24) |
+  | 3 years | 468 | 59 | Highball Veteran (14th) |
+  | 5 years | 780 | 77 | Alpine Journeyman (18th) |
+  | 10 years | 1,560 | **108** | **GOAT** (24th of 24) |
+  | 25 years | 3,900 | 172 | GOAT |
+
+  **So forty per cent of an authored ladder is spent in the first twelve months, and the last rung
+  is permanent from somewhere in year nine.** `RANKS` (`economy.ts:63`) has 24 entries topping out
+  at level 100; `levelFor` is `floor(sqrt(xp / 100))`, which is unbounded, so the number keeps
+  climbing past the last title for ever.
+  **The caveat, stated because it moves the answer.** That fixture is a diligent climber — every
+  session completed, a warm-up every time, a drill every third. A climber who logs less earns less
+  and the ladder lasts longer. What does not change with the fixture is the shape: sublinear levels
+  against linear XP means the titles are front-loaded whatever the rate, and the top one is
+  terminal.
+  **This is a decision rather than a defect, and it is the author's.** Re-curve so the ladder
+  covers a decade; extend it past 100; or say in the app that the ranks are a first-few-seasons
+  thing and the altimeter is the long arc. The third is a paragraph and is not obviously wrong —
+  `career.ts` already argues that a climber is *"better than being told they are 45 feet from their
+  first gym wall again"*.
+  *Large, and blocked on that decision.*
+
+- **M177 — an injury that heals is deleted, so nothing counts the second time.**
+  **There is no healed state.** `InjuryStatus = 'active' | 'returning'` (`profile.ts:26`), and
+  ending an injury means `removeInjury` (`profile.ts:397`), which filters the record out of the
+  array. `restoreInjury` exists only to undo that within a session.
+  **So the record dies with the record.** `injuryHistory` (`injuryLog.ts:90`) builds a real reading
+  — bad days, session types, check-ins — from `since` on a **live** injury. Heal, delete, and every
+  bit of it goes, including the thing a coach would most want: that this is the third time.
+  **The app already says why that matters.** M166's guide: *"Golfer's elbow, tennis elbow and
+  rotator cuff trouble are the three things that end more seasons than falling off does"*, and
+  finger injuries are *"slow to heal and quick to recur"*. Recurrence is the whole clinical picture
+  of climbing injury and the app cannot see it.
+  **What it would need:** a third status or a closed-episode store, and a reading over episodes
+  rather than inside one. The honest scope question is whether the second episode changes any
+  *advice* — if it only produces a sentence, it is a small milestone; if it should gate a maximal
+  test the way M161's injuries do, it is not.
+  *Medium.*
+
+- **M178 — fifteen coach rules, one of which is good news, at the lowest weight in the table.**
+  **`streakPraise` (`coach.ts:703`) is the only rule with `tone: 'good'`, at weight 20**, below
+  every other rule in `buildTips` (`coach.ts:141`). Everything ranked above it is a fault, a gap, a
+  risk or a nag. Over a year the Corner is a list of what is wrong with you.
+  **And the app already computes the other half and hands it to nobody.** `assessments.ts:104`
+  produces `improved` with a delta and a percent; `loadTrend.ts:114` already phrases *"up from"*;
+  `blockCompare` answers what a block moved and is rendered only on Progress. The coach reads none
+  of the three.
+  **This is a coaching failure rather than a UI one**, which is why it is worth a milestone and not
+  a copy change. A coach who only speaks when something is wrong trains a climber to stop reading —
+  and the rules most worth reading in this app are the safety ones.
+  **The hard part is the gate**, and it is the same one the second brainstorm parked *a thin top of
+  the pyramid* over: praise that fires for almost everyone almost always is worth nothing. A rule
+  that says *your hangboard number went up 8% in eleven weeks* has a subject, a size and a window,
+  and those are the three things `streakPraise` does not have.
+  *Large.*
+
+- **M179 — the orphan sweep exists only as a throwaway script.**
+  **M155 and M156 deleted dead exports, M169 swept every content field and every authored value,
+  and nothing sweeps modules.** The script written for this brainstorm resolves every static *and
+  dynamic* import — the dynamic half matters, because a first draft that missed `lazy(() =>
+  import(...))` reported every lazy route page as an orphan, forty files — and lists what nothing outside a test
+  imports.
+  **Today the answer is two files and both are deliberate:** `content/validate.ts`, whose own
+  header says it *"runs over the whole catalog in tests"*, and `ui/paletteRules.ts`, which was
+  moved out of a script at M61 precisely so it could be tested.
+  **Clean today is the argument for building it, not against.** It is the case `wired.test.ts`
+  makes for itself: a check is worth having when it finds nothing, because the alternative is
+  finding out three milestones later. Cheap — the script is about forty lines and already written.
+  *Small.*
+
+- **M180 — M170's repair ran once, and the importers never learned the rule.**
+  **A hole in a milestone from this same session, which is the reason it is listed rather than
+  quietly patched.** `repairOutdoorModes` (`store/sessions.ts`) opens with
+  `if (await db.get('meta', MODE_REPAIR_KEY)) return 0;` — correct for a migration, and it means
+  the repair runs exactly once per device, for ever.
+  **But the rule it applied is not enforced anywhere a session is written.**
+  `importCsv.ts:618` sets `mode` only when the file has a mode column (`readMode(at(row, 'mode'))`);
+  it never reads `SessionType.outdoor`, which is the field M170 added. So a CSV imported the day
+  after the flag is set can put outdoor sessions back into the log stamped `indoor`, and nothing
+  will ever notice.
+  **The shape of the fix is the finding.** M170 built a migration where it should have built an
+  invariant: the rule belongs on the write path, with the migration as the one-off that catches up
+  the history — which is exactly the relationship `db/demoFlag.ts` and `db/demo.ts` already have.
+  *Small, and the only unambiguous defect in this list.*
+
+- **M181 — the safety card can be dismissed for the life of the install, and nothing brings it
+  back.**
+  **Three Home cards are permanently dismissible** — `dismissCard('safety')`, `('setup')` and
+  `('programs')` at `HomePage.tsx:232`, `:249`, `:269`. `profile.ts:119` states the design
+  deliberately: these are *"a one-way 'I have seen this' … and nothing brings them back short of
+  starting over"*.
+  **That reasoning is right for the setup offer and the catalogue and wrong for the safety note.**
+  `restoreTips()` exists and is wired to a button on `CoachPage.tsx:59`, and it clears
+  `dismissedTips` only — `dismissedCards` is untouched by it and by everything else short of
+  erasing the database.
+  **The question the milestone answers is not "should it come back" but "against what".** A tip
+  comes back when the fact that raised it changes; a card has no fact. The smallest honest fix is a
+  restore control beside the tips one; the better one is giving the safety card a fact — a new
+  injury, a first hangboard session, a first maximal test — and letting it behave like a tip.
+  *Small.*
+
+- **M182 — the backup nudge re-arms only on the thing it is nagging you to do.**
+  **`backupNudge` (`coach.ts`) signs itself `lastExportAt ?? 'never'`.** Dismiss it before you have
+  ever exported and the signature stays `'never'` for as long as you never export — which is
+  precisely the climber it is for. `BACKUP_INTERVAL_DAYS = 30` (`coach.ts:118`) re-fires the rule,
+  and the dismissal outlives every one of those firings.
+  **Every other rule re-arms on a fact the climber's training changes.** This one re-arms on the
+  action being asked for, so a single tap in month one silences it through a decade of logging.
+  **The stakes are the app's own.** `/privacy` and this rule's own body say it: everything is on
+  one device, there is no account, and a cleared browser takes the lot. This is the highest-cost
+  dismissal in the app and the easiest one to make by accident, since it sits under a heading that
+  reads like a nag.
+  **Cheap fix, one decision:** sign it with the session count or the month instead, and decide
+  whether a dismissal should survive *any* interval at all when the loss is total.
+  *Small.*
+
+**Considered and struck before being written down:**
+
+- *Modules nothing imports* — the sweep found two and both are deliberate test-only validators. It
+  became M179, which is the check rather than the finding.
+- *`blockCompare` is an orphan* — it looked like one under a grep that excluded its own filename;
+  `ProgressPage.tsx:26` imports it. A reminder that the exclusion in a grep is where the false
+  positive hides.
+- *`restoreTips` has no caller* — `CoachPage.tsx:59` has the button. The first grep looked for
+  `dismissedTips` in `.tsx` and the page reads `s.restoreTips`, which is the same mistake one line
+  over.
+- *`Session.rewarded` is a dead field* — XP is derived, but `LogPage.tsx:1978` still uses the flag
+  to decide whether the reward card has been acknowledged, which is a different job with the same
+  name and is documented as such at `:1911`.
+- *A block that has run out is never announced* — it is, twice: `PreSession.tsx:232` replaces the
+  week line with *"has run its course"*, and `DayNudges` links to `/finish`. M85 found this
+  already.
+- *An objective whose date has passed reads as overdue* — `describeProgress` (`objectives.ts:154`)
+  says *"target was 3 weeks ago"* and the module's own docblock explains why it is never a failure
+  state.
+- *The backup export omits a store* — `EXPORTABLE_STORES` (`db/schema.ts:18`) is all seven JSON
+  stores, and `media` is exported separately as data URLs with a comment saying why.
+
 ### M152 — doors that only open sometimes, and rooms with no way out ✅
 
 Reachability, walked route by route against `routes.ts` rather than page by page. Eight claims
