@@ -13,6 +13,8 @@ import {
 } from './exportImport';
 import { unzip, zip } from '@/lib/zip';
 import { SCHEMA_VERSION } from './schema';
+import { loadPrograms } from '@/content/programs';
+import { MODE_REPAIR_KEY } from '@/engine/sessionMode';
 
 beforeEach(() => {
   // Fresh database per test.
@@ -569,5 +571,126 @@ describe('the v1 to v2 upgrade', () => {
     expect([...db.transaction('media').store.indexNames]).toEqual(['by-owner']);
     // And the data that was already there survives.
     expect(await db.get('sessions', '2026-03-01#0')).toBeDefined();
+  });
+});
+
+/**
+ * The rule holds on rows this module did not build (PLAN.md M180).
+ *
+ * A backup taken before M170 carries sessions logged against an outdoor
+ * session type and stored as `'indoor'`, because at the time nothing in the
+ * app wrote the field. Importing one puts those rows straight into the store
+ * — they never touch `newSession` — and in **merge** the local `meta` still
+ * holds M170's one-time repair flag, so the boot repair will not look at what
+ * just arrived.
+ *
+ * A **replace** already recovered on its own, and the difference is worth
+ * keeping: `meta` is cleared, a pre-M170 file carries no flag, and
+ * `hydrateAll` re-runs the repair afterwards. Half the mechanism was right,
+ * which is exactly why the missing half went unnoticed.
+ */
+describe('a backup from before the mode was ever written', () => {
+  const preM170 = (id: string) => ({
+    id,
+    date: id.slice(0, 10),
+    planned: false,
+    completed: true,
+    rewarded: true,
+    mode: 'indoor' as const,
+    programId: 'outdoor_climbing',
+    sessionTypeId: 'outdoor_boulder',
+    climbs: [],
+    createdAt: `${id.slice(0, 10)}T18:00:00.000Z`,
+    updatedAt: `${id.slice(0, 10)}T18:00:00.000Z`,
+  });
+
+  const fileWith = (sessions: unknown[]): ExportFile => ({
+    app: 'project-ascent',
+    schemaVersion: SCHEMA_VERSION,
+    exportedAt: '2026-05-01T00:00:00.000Z',
+    appVersion: '0.1.0',
+    data: { sessions } as ExportFile['data'],
+  });
+
+  beforeEach(async () => {
+    await loadPrograms();
+  });
+
+  it('corrects an outdoor session on the way in, merging', async () => {
+    const db = await getDb();
+    // The local device has already run the repair and will never run it
+    // again, which is the condition that made this a hole.
+    await db.put('meta', { key: MODE_REPAIR_KEY, value: '2026-04-01T00:00:00.000Z' });
+    await importAll(fileWith([preM170('2026-03-07#0')]), 'merge');
+    expect((await db.get('sessions', '2026-03-07#0'))?.mode).toBe('outdoor');
+    expect(await db.get('meta', MODE_REPAIR_KEY), 'the flag was cleared instead').toBeTruthy();
+  });
+
+  it('corrects it on a replace too, without waiting for the boot repair', async () => {
+    const db = await getDb();
+    await importAll(fileWith([preM170('2026-03-07#0')]), 'replace');
+    expect((await db.get('sessions', '2026-03-07#0'))?.mode).toBe('outdoor');
+  });
+
+  /** And leaves every other answer in the file exactly as it was. */
+  it('changes nothing else about the row', async () => {
+    const db = await getDb();
+    const row = { ...preM170('2026-03-07#0'), rpe: 7, durationMin: 240, notes: 'Font' };
+    await importAll(fileWith([row]), 'replace');
+    const stored = await db.get('sessions', '2026-03-07#0');
+    expect(stored).toEqual({ ...row, mode: 'outdoor' });
+  });
+
+  /**
+   * A session the climber genuinely logged indoors on an outdoor type is the
+   * case M170 protected by running its repair once, and an import cannot
+   * tell the two apart — the row says the same thing either way. So this is
+   * the cost, stated rather than hidden: a restore applies the declaration.
+   * The chip puts it back, and `update` does not go through this.
+   */
+  it('cannot tell a corrected session from an unasked one, and says so', async () => {
+    const db = await getDb();
+    await importAll(fileWith([{ ...preM170('2026-03-07#0'), notes: 'actually the gym' }]), 'replace');
+    expect((await db.get('sessions', '2026-03-07#0'))?.mode).toBe('outdoor');
+  });
+
+  /**
+   * And only sessions. A restore is the statement of record, so every other
+   * store has to come back exactly as it was sent — the mutation that
+   * applied the rule to all seven stores had nothing behavioural to fail
+   * against until this.
+   */
+  it('writes every other store back byte for byte', async () => {
+    const db = await getDb();
+    const file: ExportFile = {
+      app: 'project-ascent',
+      schemaVersion: SCHEMA_VERSION,
+      exportedAt: '2026-05-01T00:00:00.000Z',
+      appVersion: '0.1.0',
+      data: {
+        profile: [{ key: 'settings', value: { theme: 'dark', sessionTypeId: 'outdoor_boulder' } }],
+        metrics: [{ metricId: 'max_hang_20mm', date: '2026-03-07', value: 32 }],
+        game: [{ key: 'ledger', value: [] }],
+      } as unknown as ExportFile['data'],
+    };
+    await importAll(file, 'replace');
+    expect(await db.get('profile', 'settings')).toEqual({
+      key: 'settings',
+      value: { theme: 'dark', sessionTypeId: 'outdoor_boulder' },
+    });
+    expect(await db.get('metrics', ['max_hang_20mm', '2026-03-07'])).toEqual({
+      metricId: 'max_hang_20mm',
+      date: '2026-03-07',
+      value: 32,
+    });
+    expect(await db.get('game', 'ledger')).toEqual({ key: 'ledger', value: [] });
+  });
+
+  /** An indoor type is untouched, which is most of anybody's log. */
+  it('leaves an indoor session alone', async () => {
+    const db = await getDb();
+    const indoor = { ...preM170('2026-03-07#0'), programId: 'iron_grip', sessionTypeId: 'fp' };
+    await importAll(fileWith([indoor]), 'replace');
+    expect((await db.get('sessions', '2026-03-07#0'))?.mode).toBe('indoor');
   });
 });

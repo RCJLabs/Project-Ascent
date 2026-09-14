@@ -158,23 +158,19 @@ export function useStartSession(date: string): DayPlan {
   const others = program?.sessionTypes.filter((t) => t.id !== primary?.id) ?? [];
 
   async function start(sessionTypeId?: string) {
-    const chosen = sessionTypeId
-      ? program?.sessionTypes.find((t) => t.id === sessionTypeId)
-      : primary;
     await create(date, {
       // A clock only makes sense on the day it is ticking through. Logging
       // Tuesday's session on Thursday has nothing to time.
       ...(date === today() ? { startedAt: new Date().toISOString() } : {}),
       ...(activeProgramId ? { programId: activeProgramId } : {}),
       ...(sessionTypeId ? { sessionTypeId } : {}),
-      // Where the session happens, from the type that declares it
-      // (PLAN.md M170). `newSession` defaults to `'indoor'` and nothing in
-      // the app ever wrote anything else, so a climber logging Outdoor
-      // Bouldering filed an indoor session — and a dozen features that read
-      // `mode` saw a climber who had never been on rock. The logger can
-      // still say otherwise; a program cannot know that this Tuesday was at
-      // the crag.
-      ...(chosen?.outdoor === true ? { mode: 'outdoor' as const } : {}),
+      // The mode is not set here (PLAN.md M180). It used to be, from
+      // `chosen?.outdoor` — a second copy of a rule `sessionMode.ts`
+      // already held, and one that only this handler applied. `newSession`
+      // reads the declaration off whatever `sessionTypeId` it is given, so
+      // every way of creating a session gets it and this one does not have
+      // to remember. The logger can still say otherwise afterwards; a
+      // program cannot know that this Tuesday was at the crag.
       ...(trackId ? { trackId } : {}),
       // The plan's drill on a training day; the rest day's own on a rest day
       // (PLAN.md M164). Stamped at the start like any other, so the editor

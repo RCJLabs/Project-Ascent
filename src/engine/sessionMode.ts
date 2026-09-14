@@ -64,14 +64,47 @@ export function typeIsOutdoor(session: Pick<Session, 'programId' | 'sessionTypeI
 }
 
 /**
+ * The rule, applied (PLAN.md M180).
+ *
+ * M170 wrote this as a **migration** and left the write path alone, which is
+ * the wrong way round: a migration catches up the history once, and an
+ * invariant is what keeps it true afterwards. `newSession` calls this, so
+ * every path that creates a session gets the rule — the ones that existed
+ * when M170 shipped and the ones written after it.
+ *
+ * ## Why the declaration wins over a mode already in the patch
+ *
+ * M170's reasoning was that `'indoor'` on an outdoor type may be a sentence
+ * the climber said — a session on Outdoor Bouldering that really did happen
+ * in the gym — and that is why the repair runs once and never again. At
+ * *creation* there is no such sentence yet: nobody has been asked about this
+ * session. Any mode arriving in the patch was copied from somewhere else,
+ * and the two places it comes from are a template body snapshotted before
+ * the field was ever writable, and a spreadsheet column. The spreadsheet
+ * never carries a session type, so the two can never disagree; the template
+ * can, and did.
+ *
+ * The chip in the logger is still the last word. It writes through `update`,
+ * not through here.
+ */
+export function withDeclaredMode<T extends Pick<Session, 'programId' | 'sessionTypeId' | 'mode'>>(
+  session: T,
+): T {
+  if (session.mode === 'outdoor' || !typeIsOutdoor(session)) return session;
+  return { ...session, mode: 'outdoor' };
+}
+
+/**
  * The sessions the repair would rewrite, already rewritten.
  *
  * Returns only the changed ones, so the caller writes what it has to and no
  * more — a log of two thousand sessions with three outdoor days in it is
  * three writes, not two thousand.
+ *
+ * Runs the same `withDeclaredMode` the write path does rather than a second
+ * copy of the filter, which is the rule `content/authored.test.ts` states for
+ * its own sweeps and M173 had to apply twice in one milestone.
  */
 export function outdoorRepairs(sessions: readonly Session[]): Session[] {
-  return sessions
-    .filter((session) => session.mode !== 'outdoor' && typeIsOutdoor(session))
-    .map((session) => ({ ...session, mode: 'outdoor' as const }));
+  return sessions.map(withDeclaredMode).filter((session, i) => session !== sessions[i]);
 }

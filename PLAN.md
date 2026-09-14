@@ -8598,7 +8598,7 @@ two large, three medium, five small.*
   finding out three milestones later. Cheap — the script is about forty lines and already written.
   *Small.*
 
-- **M180 — M170's repair ran once, and the importers never learned the rule.**
+- **M180 — M170's repair ran once, and the importers never learned the rule.** *Done — see the entry at the end of this document. The CSV importer was the wrong suspect: it writes no session type at all. Templates and a merge-mode restore were the real ones.*
   **A hole in a milestone from this same session, which is the reason it is listed rather than
   quietly patched.** `repairOutdoorModes` (`store/sessions.ts`) opens with
   `if (await db.get('meta', MODE_REPAIR_KEY)) return 0;` — correct for a migration, and it means
@@ -9932,3 +9932,71 @@ Wednesdays gets the frequency answer.
 the three tip bodies, since `coach.ts` is first-load because Home reads the top
 tip. Some was bought back in the same commit — four copies of a sentence became
 one. 5,400 tests pass.
+
+### M180 — a migration where there should have been an invariant ✅
+
+**The suspect named in the proposal was innocent.** It said `importCsv.ts:618`
+*"sets `mode` only when the file has a mode column; it never reads
+`SessionType.outdoor`"*. True, and **empty**: `importCsv` writes no `programId`
+and no `sessionTypeId` either — a spreadsheet row is not logged against a
+session type, so there is no declaration for it to read. Measured by grep, and
+pinned by a test, because a correction that lives only in a commit message is
+not a correction.
+
+**The real paths were two, and the way to find them was to ask the same
+question of every write.** M170 put the rule inline in `PreSession.start()` and
+shipped a one-time migration for the history, flag-guarded so it can never run
+again. Anything creating a session outside that handler could put back exactly
+what the migration had just fixed:
+
+- **A template.** `bodyFrom` snapshots `session.mode`; `applyTemplate` stamps
+  that beside a `sessionTypeId`. Templates live in the `profile` store, and
+  `outdoorRepairs` walks the session log — so the repair never saw them. A
+  template saved from a pre-M170 outdoor session carried `'indoor'` and
+  recreated the broken record **every time it was used, for ever.**
+- **A merge-mode archive import.** Those rows go into the database as they came
+  and never touch `newSession`, while the local `meta` still holds the repair
+  flag — so the boot repair will not look at what just arrived.
+
+**And half the mechanism was already right, which is why the other half went
+unnoticed.** A *replace* import recovers on its own: `meta` is cleared, a
+pre-M170 file carries no flag, and `hydrateAll` re-runs the repair afterwards.
+Only merge had no path back. Both are tested now, and the replace test records
+that it was never broken.
+
+**So the rule moved to the write path, which is the whole milestone.**
+`withDeclaredMode` is one function; `newSession` calls it, and `newSession` is
+the one constructor every creation path goes through — the logger, a template,
+the CSV importer and the demo climber alike. `PreSession` lost its inline copy.
+The archive import, which bypasses the constructor by design, applies it to
+incoming session rows and to nothing else.
+
+**The line between creating and editing is where the care went.** M170's reason
+for running its repair once is that `'indoor'` on an outdoor type may be a
+sentence the climber said — a session on Outdoor Bouldering that really did
+happen in the gym. At *creation* there is no such sentence: nobody has been
+asked about this session yet, and a mode arriving in the patch was copied from
+somewhere else. So the declaration wins there, and `putSession` deliberately
+does **not** apply the rule — a test asserts its absence, because applying it
+there would overwrite the logger's chip on every save.
+
+**What the battery moved.** Twelve mutants. Two results were mine to fix rather
+than the code's: a mutant that forced `mode: 'indoor'` into the logger's patch
+was **invalid** — the rule beats a patched mode by design, so it changed
+nothing — and one that applied the rule to all seven stores died only because
+it disturbed a source regex, with no behavioural test to fail against. That
+second one earned a real test: a restore is the statement of record, so every
+other store now has to come back byte for byte. One mutant survives on purpose
+and is recorded as equivalent: rewriting `outdoorRepairs` back to its own copy
+of the filter is behaviourally identical, and no test can tell. Eleven of eleven
+killable mutants killed, sanity no-op survived.
+
+**Browser-checked** on both themes at 430px and 1280px, because the milestone
+*removes* code from the logger and the risk is that the path it removed it from
+stops working: an Outdoor Climbing block, the start button pressed, and the
+stored row read straight back out of IndexedDB — `mode: "outdoor"` every time,
+with the inline rule gone.
+
+**Budget** 162.86 → 162.85, down 0.01KB. `sessionMode.ts` was already first-load
+because the boot repair reads it, `db/sessions.ts` is first-load by
+construction, and the inline copy came out. 5,416 tests pass.

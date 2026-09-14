@@ -14,6 +14,7 @@ import { getDb } from './db';
 import type { MetricEntry } from './metrics';
 import type { Project } from './projects';
 import type { Session } from './sessions';
+import { withDeclaredMode } from '@/engine/sessionMode';
 import {
   EXPORTABLE_STORES,
   SCHEMA_VERSION,
@@ -365,8 +366,21 @@ export async function importAll(
     for (const record of incoming) {
       // A file cannot write the reserved key, whatever it claims to hold.
       if (store === 'meta' && (record as { key?: string })?.key === SNAPSHOT_KEY) continue;
+      // The one rule that has to hold on a record this function did not
+      // build (PLAN.md M180). Everything else here is written as it came,
+      // which is what a restore is — but a session is the one store whose
+      // rows the app itself has an invariant about, and these rows do not
+      // go through `newSession`.
+      //
+      // It matters most in **merge**, where the local `meta` keeps
+      // M170's repair flag and so the boot repair will not look at what
+      // just arrived. A replace already recovers on its own: `meta` is
+      // cleared, a pre-M170 file carries no flag, and `hydrateAll` runs
+      // the repair again after the import. Merge had no such path.
+      const row =
+        store === 'sessions' ? withDeclaredMode(record as unknown as Session) : record;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await os.put(record as any);
+      await os.put(row as any);
     }
   }
   await tx.done;

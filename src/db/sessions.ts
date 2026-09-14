@@ -13,6 +13,7 @@ import type { CheckIn } from '@/engine/readiness';
 import type { AttemptOutcome } from './projects';
 import { getDb } from './db';
 import { isDateKey } from '@/engine/dates';
+import { withDeclaredMode } from '@/engine/sessionMode';
 import { recordReading, sound, type Shape } from './sound';
 
 export type SessionMode = 'indoor' | 'outdoor';
@@ -253,7 +254,17 @@ export function newSession(date: string, index: number, patch: Partial<Session> 
     throw new Error(`newSession: ${JSON.stringify(date)} is not a YYYY-MM-DD date key`);
   }
   const now = new Date().toISOString();
-  return {
+  // Where it happened, from the type that declares it (PLAN.md M180).
+  //
+  // Here rather than at each call site, because this is the one constructor
+  // every creation path goes through — the logger, a template, the CSV
+  // importer and the demo climber alike. M170 put the rule inline in
+  // `PreSession.start()` and wrote a one-time migration for the history,
+  // which left the two paths that do not go through that handler free to
+  // reintroduce exactly what the migration had just fixed, after it could
+  // never run again. `withDeclaredMode` is applied last so a session type
+  // in the patch is read together with everything else in it.
+  return withDeclaredMode({
     id: sessionId(date, index),
     date,
     planned: false,
@@ -264,7 +275,7 @@ export function newSession(date: string, index: number, patch: Partial<Session> 
     createdAt: now,
     updatedAt: now,
     ...patch,
-  };
+  });
 }
 
 /**

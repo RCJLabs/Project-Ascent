@@ -683,6 +683,15 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M180**, measured 162.86 → 162.85: **down** 0.01KB, which
+    // is rounding on a rebuild and not a saving — the point is that moving a
+    // rule onto the write path cost nothing at all. `engine/sessionMode.ts`
+    // was already first-load, because `store/index.ts` runs M170's repair at
+    // boot; `db/sessions.ts` is first-load by construction. So the one new
+    // import joins two modules that were already in the entry chunk, and the
+    // inline copy it replaced in `PreSession` came out. The importer's half
+    // lands in the lazy Settings chunk where `exportImport` already lives.
+    //
     // **163.3 holds at M173**, measured 162.29 → 162.86: 0.57KB, and the
     // headroom raised on its own two commits ago is what it was raised for.
     // Nearly all of it is English. `coach.ts` is first-load because Home's
