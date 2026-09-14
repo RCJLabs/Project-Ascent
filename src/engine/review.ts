@@ -251,7 +251,7 @@ function coachNote(
       id: 'spike',
       tone: 'caution',
       headline: 'Load spiked this week',
-      body: `You are at ${review.acwr!.toFixed(2)}× your baseline. This is the pattern most associated with injury — take next week down to roughly ${Math.round(review.load * 0.7)} of load and it settles on its own.`,
+      body: `You are at ${review.acwr!.toFixed(2)}× your baseline. That is the sharpest kind of rise this model flags — take next week down to roughly ${Math.round(review.load * 0.7)} of load and it settles on its own.`,
     };
   }
 

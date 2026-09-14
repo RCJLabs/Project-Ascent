@@ -66,7 +66,63 @@ export type AcwrZone = 'detraining' | 'optimal' | 'caution' | 'danger' | 'unknow
  * Exported because the injury guide states them in prose and a test asserts
  * the two agree. A guide that says 1.3 while the app draws the line at 1.4
  * is worse than a guide that says nothing.
+ *
+ * ## Which ACWR this is, decided rather than defaulted (PLAN.md M168)
+ *
+ * **The coupled form.** `acute` is the seven days ending today and `chronic`
+ * is the twenty-eight days ending today divided by four — so the acute week
+ * sits *inside* its own baseline, on both sides of the division. That is the
+ * specific thing the method's critics name: the same load appears in the
+ * numerator and the denominator, which induces correlation between them
+ * independent of any relationship to injury. The uncoupled form — this week
+ * against the twenty-one days *before* it — is the usual answer to that, and
+ * there is a broader argument that the ratio should not carry this much weight
+ * in either form.
+ *
+ * **It stays coupled, and these are the measurements that decided it.** The
+ * two forms agree exactly at steady state and diverge as load rises:
+ *
+ * | shape | coupled | uncoupled |
+ * | --- | --- | --- |
+ * | steady three or four sessions a week | 1.00 | 1.00 |
+ * | one extra session this week | 1.23 | 1.33 |
+ * | a week at double the usual load | 2.09 | 3.29 |
+ * | five big days on a trip | 3.11 | **10.52** |
+ * | a deload week | 0.20 | 0.16 |
+ *
+ * Three things follow. The bounds above are the ones that travel with the
+ * coupled form, and applying them to a statistic that reads 10.52 where this
+ * one reads 3.11 would be using thresholds calibrated for a different number.
+ * `peak.ts` derives its whole ramp from this form in its own prose — *"a steady
+ * geometric ramp of `r` settles at `4 / (1 + 1/r + 1/r² + 1/r³)`, which reaches
+ * 1.3 at about 1.22 a week"* — and that arithmetic is the coupled one; under
+ * the uncoupled form a 1.20 ramp already reads 1.42, so `RAMP`, `MAX_BUILD` and
+ * `staysInBand` would all need redrawing. And every climber's history would
+ * change overnight, on a question the literature has not settled.
+ *
+ * **What follows from it being contested is the language, not the formula.**
+ * The app said *"the pattern most associated with injury"* in three places and
+ * the injury guide called the ratio *"a powerful metric… to minimize injury
+ * risk"*. Those are claims about evidence. What the app can actually say is
+ * what the model does and why the mechanism is plausible — see M168's entry.
  */
+/**
+ * The two windows the ratio is built from, named once (PLAN.md M168).
+ *
+ * They were written twice — `deriveLoad` walks a 28-entry array and takes
+ * `slice(-7)`, `loadSeries` rolls two pointers at `today - 27` and
+ * `today - 6` — because one answers for a single day and the other for a
+ * series, and the series exists for a measured reason (see `LoadIndex`).
+ * The *algorithms* can differ. The **windows** are the decision this
+ * milestone exists to make explicit, and a decision written in two places is
+ * one that can drift: a mutation to either copy used to survive every test of
+ * the other.
+ */
+export const ACUTE_DAYS = 7;
+export const CHRONIC_DAYS = 28;
+/** The divisor that turns a 28-day total into a weekly-equivalent baseline. */
+export const CHRONIC_WEEKS = CHRONIC_DAYS / ACUTE_DAYS;
+
 export const ACWR_BOUNDS = {
   optimalFrom: 0.8,
   optimalTo: 1.3,
@@ -431,7 +487,7 @@ function bracket(
   unmeasuredChronic: number,
   inDeload: boolean,
 ): Bracket {
-  const exact = acute / (chronicTotal / 4);
+  const exact = acute / (chronicTotal / CHRONIC_WEEKS);
   if (unmeasuredChronic === 0) {
     return { acwr: exact, zone: zoneOf(exact, inDeload), estimated: false, unknownBecause: null };
   }
@@ -444,9 +500,9 @@ function bracket(
   const typical = chronicTotal / measuredDays;
   // Low: the unscored days were rest in all but name, so they add nothing to
   // the numerator and everything they might have been to the denominator.
-  const low = acute / ((chronicTotal + unmeasuredChronic * typical) / 4);
+  const low = acute / ((chronicTotal + unmeasuredChronic * typical) / CHRONIC_WEEKS);
   // High: they were ordinary training, which lifts the numerator most.
-  const high = (acute + unmeasuredAcute * typical) / (chronicTotal / 4);
+  const high = (acute + unmeasuredAcute * typical) / (chronicTotal / CHRONIC_WEEKS);
   const zone = zoneOf(low, inDeload);
   if (zone !== zoneOf(high, inDeload)) {
     return { acwr: null, zone: 'unknown', estimated: true, unknownBecause: 'unscored' };
@@ -650,14 +706,14 @@ export function loadSeries(index: LoadIndex, dates: readonly string[]): LoadPoin
       if (entry.deload) deloadDays += 1;
       hi += 1;
     }
-    while (lo28 < hi && entries[lo28]!.day < today - 27) {
+    while (lo28 < hi && entries[lo28]!.day < today - (CHRONIC_DAYS - 1)) {
       const entry = entries[lo28]!;
       chronic -= entry.load;
       if (entry.load > 0) chronicDays -= 1;
       if (entry.unmeasured) unmeasured28 -= 1;
       lo28 += 1;
     }
-    while (lo7 < hi && entries[lo7]!.day < today - 6) {
+    while (lo7 < hi && entries[lo7]!.day < today - (ACUTE_DAYS - 1)) {
       const entry = entries[lo7]!;
       acute -= entry.load;
       if (entry.deload) deloadDays -= 1;
@@ -666,7 +722,7 @@ export function loadSeries(index: LoadIndex, dates: readonly string[]): LoadPoin
     }
 
     const daysOfHistory = earliestDay === null || earliestDay > today ? 0 : today - earliestDay + 1;
-    const baseline = chronic / 4;
+    const baseline = chronic / CHRONIC_WEEKS;
     const deload = deloadDays > 0;
     if (daysOfHistory < 21 || chronicDays < MIN_CHRONIC_DAYS || baseline <= 0) {
       return { date, acwr: null, zone: 'unknown', acute, chronic: baseline, deload, estimated: false };
@@ -698,7 +754,7 @@ function deriveLoad(
   const loadByDate = index.byDate;
   const daily: DayLoad[] = [];
   const unmeasured: boolean[] = [];
-  for (let i = 27; i >= 0; i--) {
+  for (let i = CHRONIC_DAYS - 1; i >= 0; i--) {
     const date = addDays(today, -i);
     const entry = loadByDate.get(date);
     daily.push({
@@ -709,11 +765,11 @@ function deriveLoad(
     unmeasured.push(entry?.unmeasured === true);
   }
 
-  const acute = daily.slice(-7).reduce((sum, d) => sum + d.load, 0);
+  const acute = daily.slice(-ACUTE_DAYS).reduce((sum, d) => sum + d.load, 0);
   const chronicTotal = daily.reduce((sum, d) => sum + d.load, 0);
-  const chronic = chronicTotal / 4;
+  const chronic = chronicTotal / CHRONIC_WEEKS;
   const unmeasuredDays = unmeasured.filter(Boolean).length;
-  const unmeasuredAcute = unmeasured.slice(-7).filter(Boolean).length;
+  const unmeasuredAcute = unmeasured.slice(-ACUTE_DAYS).filter(Boolean).length;
 
   // The earliest day is a property of the index, not of this call: the
   // minimum over `d <= today` is the global minimum whenever that minimum
@@ -729,7 +785,7 @@ function deriveLoad(
   // sessions in it produces arithmetic like 4.0 — true division, no
   // meaning — so density is a condition, not just span.
   const ready = daysOfHistory >= 21 && chronicDays >= MIN_CHRONIC_DAYS && chronic > 0;
-  const inPlannedDeload = daily.slice(-7).some((d) => d.deload);
+  const inPlannedDeload = daily.slice(-ACUTE_DAYS).some((d) => d.deload);
 
   if (!ready) {
     // Which of the two reasons, decided by whether filling in the blanks

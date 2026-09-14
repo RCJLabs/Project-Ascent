@@ -7987,8 +7987,7 @@ the end with what killed them. Sized as before: two large, six medium, two small
   nothing while the program is being written. M136 gave the builder the catalogue's full
   expressive power; this is the other half of that gift.
 
-- **M168 — the ratio the app calls a safety signal is the contested form of it.** *Proposed.
-  Small.*
+- **M168 — the ratio the app calls a safety signal is the contested form of it.** *Done — see the entry at the end of this document. The formula stayed and the claims went; the entry has the measurements that decided it.*
   `acute` is the rolling 7-day load and `chronic` is the 28-day load ÷ 4 (`derive.ts:497`), so the
   acute week sits **inside** the chronic window. That is the *coupled* ACWR, and the coupling is
   the specific thing the method's critics name: the same load appears in numerator and
@@ -9362,3 +9361,83 @@ guide is about 9KB of prose and none of it is first-load — `guides/summary.ts`
 exists precisely so the program page can ask *"is there a guide?"* without
 pulling 150KB of bodies, and the new summary row is four fields. 5,237 tests
 pass.
+
+---
+
+### M168 — the ratio the app called a safety signal is the contested form of it ✅
+
+**The technical claim holds, as arithmetic rather than as an appeal to
+anyone.** `acute` is the seven days ending today; `chronic` is the twenty-eight
+days ending today over four. The acute week is therefore *inside* its own
+baseline — the same training on both sides of the division. A test proves it
+without reference to any literature: add one session to this week and watch the
+chronic baseline move with it.
+
+**The milestone is not a recomputation, and the measurement is why.** Both
+forms were computed off the same logs:
+
+| shape | coupled | uncoupled |
+| --- | --- | --- |
+| steady three or four sessions a week | 1.00 | 1.00 |
+| one extra session this week | 1.23 | 1.33 |
+| a week at double the usual load | 2.09 | 3.29 |
+| five big days on a trip | 3.11 | **10.52** |
+| a deload week | 0.20 | 0.16 |
+
+They agree exactly at steady state and diverge as load rises. Three
+consequences decided it. `ACWR_BOUNDS` — 0.8, 1.3, 1.5 — are the bands that
+travel with the coupled form, and applying them to a statistic reading 10.52
+where this one reads 3.11 is using thresholds calibrated for a different
+number. `peak.ts` derives its entire ramp from this form in its own prose —
+*"a steady geometric ramp of `r` settles at `4 / (1 + 1/r + 1/r² + 1/r³)`,
+which reaches 1.3 at about 1.22 a week"* — and that **is** the coupled formula;
+a test checks it, and checks that the uncoupled version of the same algebra
+puts a 1.20 ramp at 1.42, so `RAMP`, `MAX_BUILD` and `staysInBand` would all
+need redrawing. And every climber's history would change overnight on a
+question nobody has settled.
+
+**So the formula stays and the language changes, which is where the actual
+defect was.** The app said *"the pattern most associated with injury"* in three
+places — the zone note, the coach tip, the weekly review — and the injury guide
+called the ratio *"a powerful metric used by elite athletes and coaches to
+minimize injury risk"* with *"High risk of injury"* against the top row. Those
+are claims about evidence, made by an app that cannot see a climber, for a
+method whose evidence is disputed. All five are gone, and a sweep over every
+non-test file fails if any of them returns. The one exemption is `derive.ts`,
+which quotes them in order to record what was decided and why, and whose prose
+never renders.
+
+**What replaced them is what the app can actually stand behind**: what the
+model does, and the mechanism underneath it. Connective tissue adapting more
+slowly than the muscle driving the change is not the contested part, and
+stripping it would leave a warning with no reason attached — so a test holds
+the mechanism in all three places.
+
+**And the honest paragraph sits where the number is drawn.** The load chart is
+the one screen a climber arrives at *asking* what the ratio means, so the
+caveat is under it: your week is inside the four weeks it is divided by, that
+is the part people argue about, the argument is not settled, the bands are the
+ones drawn for this version — with a link to the longer answer in the injury
+guide, which now states the coupling, quotes the 3.1-against-10.5 divergence,
+and ends on *"never as a diagnosis — and never as permission, either. Plenty of
+injuries arrive at 1.0."*
+
+**What the battery moved, and the finding inside it.** Twenty-two mutants, four
+survivors and one invalid. Three of the four were the same gap and it is the
+one that matters most here: **the windows are implemented twice.** `deriveLoad`
+walks a 28-entry array and takes `slice(-7)`; `loadSeries` rolls two pointers at
+`today - 27` and `today - 6`, for a measured performance reason. Both carried
+their own copies of 7, 28 and 4 — so widening the acute window to a fortnight in
+one, or dividing by three in the other, survived every test of its twin. A
+milestone whose whole subject is that the formula was a default rather than a
+decision could not leave that standing: the windows are `ACUTE_DAYS`,
+`CHRONIC_DAYS` and `CHRONIC_WEEKS` now, named once, read by both, and a test
+asserts the two implementations return the same ratio off the same log. The
+fourth survivor was the familiar one — the chart caveat was checked by grepping
+its own source, which passes while the paragraph carries `hidden`; it is a
+render test now.
+
+**Budget.** 162.24 → 162.27: 0.03KB, the one sentence that got longer. The
+three constants minify to nothing and delete two hard-coded copies of each; the
+long caveat is on a lazy card and in a lazy guide; the whole case for the
+decision is in a docblock the bundler strips. 5,273 tests pass.

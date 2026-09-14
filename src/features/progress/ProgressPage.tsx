@@ -675,6 +675,26 @@ export function ProgressPage() {
           <Card title="Where the ratio has been">
             <LoadTrendLine trend={trend} />
             <p className="text-sm text-ink-soft mt-2 leading-relaxed">{describeTrend(trend)}</p>
+            {/* What the number is, next to the number (PLAN.md M168).
+                The app draws this line on four screens and stated in three
+                of them that a spike is "the pattern most associated with
+                injury" — a claim about evidence, for a method that is
+                genuinely disputed. The honest version goes where the chart
+                is, which is the one screen a climber comes to *asking* what
+                the ratio means. */}
+            <p className="text-xs text-ink-soft mt-3 leading-relaxed">
+              This week&rsquo;s load against the four weeks behind it — and your week is inside
+              those four, so the same training sits on both sides of the division. That is the
+              part of this method people argue about, and the argument is not settled. The bands
+              are the ones drawn for this version of the ratio, which is why it is the version
+              here.{' '}
+              <Link href="/guides/injury_management" className="text-accent underline underline-offset-2">
+                The longer answer
+              </Link>{' '}
+              is in the injury guide. What is not in doubt is the mechanism: tissue adapts slower
+              than the muscle driving the change. Read a spike as a reason to look at the week,
+              not as a diagnosis.
+            </p>
           </Card>
         )}
 

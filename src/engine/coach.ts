@@ -445,7 +445,7 @@ function loadSpike({ state, objectives }: CoachInput, today: string): Tip | null
       tone: 'caution',
       weight: 93,
       headline: 'Load spike',
-      body: `You are at ${ratio}× your own four-week baseline, and a jump this size is the pattern most associated with injury — not the training itself, the speed of the change. An easier week now costs a week. Fingers and tendons adapt slower than the muscles that made this feel possible.`,
+      body: `You are at ${ratio}× your own four-week baseline, and a jump this size is what this model exists to flag — not the training itself, the speed of the change. An easier week now costs a week. Fingers and tendons adapt slower than the muscles that made this feel possible.`,
       action: { label: 'Plan the week', href: '/calendar' },
     };
   }

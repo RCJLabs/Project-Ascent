@@ -470,6 +470,14 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M168**, measured 162.24 → 162.27: 0.03KB, and it is the
+    // one sentence that got longer. The three retired claims were replaced
+    // roughly in kind; `ACUTE_DAYS`, `CHRONIC_DAYS` and `CHRONIC_WEEKS` are
+    // three numbers that minify to nothing and remove two hard-coded copies
+    // of each; the long caveat is on the Progress card and the injury guide,
+    // both lazy. The whole case for the decision lives in `derive.ts`'s
+    // docblock, which the bundler strips.
+    //
     // **Unchanged at M166**, measured 162.24 → 162.24: nothing at all, to two
     // decimal places. A six-section guide is about 9KB of prose and none of it
     // is here — `content/guides/index.ts` imports all sixteen guide modules,

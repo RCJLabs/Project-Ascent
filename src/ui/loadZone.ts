@@ -52,7 +52,7 @@ export const ZONE: Record<AcwrZone, { label: string; note: string; color: string
   },
   danger: {
     label: 'Load spike',
-    note: 'A jump this size is the pattern most associated with injury. Consider an easier week.',
+    note: 'A rise this sharp is what this model exists to flag — connective tissue adapts slower than the muscle driving the change. Worth an easier week, or a reason it is not.',
     color: 'var(--viz-critical)',
     Icon: AlertTriangle,
   },
