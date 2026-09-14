@@ -283,7 +283,7 @@ describe('the bundle stays small', () => {
    * with one exception recorded below — the history is in the comment inside
    * the first test.
    */
-  const BUDGET = 160.6;
+  const BUDGET = 161.6;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -469,6 +469,13 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **160.6 → 161.6, raised rather than spent** — the second entry here to
+    // record no feature, and for the same reason as the first. M162 came in
+    // at 160.55, which left 0.05KB: the next change of any size would have
+    // had to move the line in its own commit, under pressure, which is the
+    // one condition a budget should never be moved under. So it moves here,
+    // alone, to one milestone's headroom again.
     //
     // **Unchanged at M162**, measured 159.83 → 160.55: 0.72KB, and the
     // headroom raised on its own before M158 is now spent — 0.05KB left,
