@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import { Link } from 'wouter';
-import { AlertTriangle, ChevronRight, Flag, Plus, Ruler, Zap } from 'lucide-react';
-import { INTENSITY_LABEL, type Program, type SessionType } from '@/content/types';
+import { AlertTriangle, ChevronRight, Clock, Flag, Plus, Ruler, Zap } from 'lucide-react';
+import { INTENSITY_LABEL, type Drill, type Program, type SessionType } from '@/content/types';
 import { TEST_REASON_LABEL } from '@/engine/assessments';
 import { dayLoad, describeDayLoad } from '@/engine/bodyLoad';
 import { today } from '@/engine/dates';
 import { concerning, injuryPolicy } from '@/engine/injury';
 import { type PlannedDay } from '@/engine/plan';
+import { restDayDrill } from '@/engine/restDrill';
 import { intensityOf } from '@/engine/scheduler';
 import { describeWork, sessionMinutes } from '@/engine/sessionLength';
 import { useProfile } from '@/store/profile';
@@ -43,6 +44,12 @@ export interface DayPlan {
   others: SessionType[];
   /** The warning about what today loads, or null when there is none. */
   loadNote: string | null;
+  /**
+   * One off-wall drill for a rest day, or null (PLAN.md M164). Null on a
+   * training day, and null on a rest day where every one of them loads
+   * something the climber said is hurt.
+   */
+  restDrill: Drill | null;
   /** The track this climber picked, where the program declares tracks. */
   trackId: string | undefined;
   start: (sessionTypeId?: string) => Promise<void>;
@@ -111,6 +118,19 @@ export function useStartSession(date: string): DayPlan {
   const loadNote = useMemo(() => (day ? describeDayLoad(dayLoad(day, hurt)) : null), [day, hurt]);
 
   /**
+   * The rest day's drill (PLAN.md M164).
+   *
+   * Only when the plan actually calls this day a rest day — `day.over` sets
+   * `isRest` too, and a block that ran out three weeks ago is not a rest day,
+   * it is no plan at all. `hurt` is the same reading the load note uses, so a
+   * drill and a warning about the same body part cannot appear together.
+   */
+  const restDrill = useMemo(
+    () => (day !== undefined && day.isRest && day.over !== true ? restDayDrill(date, hurt) : null),
+    [day, date, hurt],
+  );
+
+  /**
    * What the one big button does (PLAN.md M117, merged from Home's card).
    *
    * A training day starts the planned session. A rest day logs the rest —
@@ -145,13 +165,16 @@ export function useStartSession(date: string): DayPlan {
       ...(activeProgramId ? { programId: activeProgramId } : {}),
       ...(sessionTypeId ? { sessionTypeId } : {}),
       ...(trackId ? { trackId } : {}),
-      ...(day?.drill ? { drillId: day.drill.id } : {}),
+      // The plan's drill on a training day; the rest day's own on a rest day
+      // (PLAN.md M164). Stamped at the start like any other, so the editor
+      // has something to tick and `drillsCompleted` can move.
+      ...(day?.drill ? { drillId: day.drill.id } : restDrill ? { drillId: restDrill.id } : {}),
       ...(day?.isDeload ? { deload: true } : {}),
       planned: Boolean(day?.sessionType),
     });
   }
 
-  return { program, day, primary, label, others, loadNote, trackId, start };
+  return { program, day, primary, label, others, loadNote, restDrill, trackId, start };
 }
 
 /**
@@ -165,7 +188,7 @@ export function useStartSession(date: string): DayPlan {
  * logger, so starting a session is all there is to do.
  */
 export function PreSessionCard({ date, onOpen }: { date: string; onOpen?: () => void }) {
-  const { program, day, primary, label, others, loadNote, trackId, start } = useStartSession(date);
+  const { program, day, primary, label, others, loadNote, restDrill, trackId, start } = useStartSession(date);
   const byDate = useSessions((s) => s.byDate);
   const hydrated = useSessions((s) => s.hydrated);
   const setLogView = useSettings((s) => s.setLogView);
@@ -204,10 +227,30 @@ export function PreSessionCard({ date, onOpen }: { date: string; onOpen?: () => 
           {program!.name} has run its course. Nothing is planned until you pick what is next.
         </p>
       ) : day ? (
-        <p className="text-sm text-ink-soft mb-3">
-          Rest day{day.week ? ` · week ${day.week}` : ''}
-          {day.test !== undefined ? ' · Test week' : ''}. Recovery is training — log it to bank it.
-        </p>
+        <>
+          <p className="text-sm text-ink-soft mb-2">
+            Rest day{day.week ? ` · week ${day.week}` : ''}
+            {day.test !== undefined ? ' · Test week' : ''}. Recovery is training — log it to bank it.
+          </p>
+          {/* And what to do with it (PLAN.md M164). Twelve drills were
+              written for this exact day and the app had never offered one
+              of them: `offWallDrills()` had no caller outside its own
+              test. */}
+          {restDrill && (
+            <Link
+              href={`/drills/${restDrill.id}`}
+              className="flex items-center gap-2 text-sm rounded-xl px-3 py-2.5 border border-line bg-sunken mb-3"
+            >
+              <div className="min-w-0 flex-1">
+                <span className="font-semibold">{restDrill.name}</span>
+                <span className="text-ink-soft flex items-center gap-1 text-xs mt-0.5">
+                  <Clock size={11} /> {restDrill.duration} · {restDrill.focus} · no wall needed
+                </span>
+              </div>
+              <ChevronRight size={15} className="text-ink-soft shrink-0" />
+            </Link>
+          )}
+        </>
       ) : hydrated && Object.keys(byDate).length === 0 ? (
         /* A new install's first screen (PLAN.md M123): this card,
            these buttons. Only once the store has loaded — before

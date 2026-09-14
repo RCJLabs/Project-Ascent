@@ -6,7 +6,7 @@ import { getDrill } from '@/content/drills';
 import { drillText } from '@/content/drillText';
 import { getProtocol } from '@/content/protocols';
 import { SCALE_MAX, getField, type FieldSpec } from '@/content/fields';
-import type { FieldId, SessionType } from '@/content/types';
+import type { Drill, FieldId, SessionType } from '@/content/types';
 import { fromKey, isDateKey, shortLabel, today } from '@/engine/dates';
 import { clearTimerState, loadTimerState, saveTimerState } from '@/lib/timerState';
 import { ClimbEntry, RepeatLast, type Outcome } from './ClimbEntry';
@@ -330,6 +330,82 @@ function CooldownCard({ session }: { session: Session }) {
           )}
         </>
       )}
+    </Card>
+  );
+}
+
+/**
+ * The drill this session is carrying (PLAN.md M164).
+ *
+ * Its own component because it is rendered twice — on a training day and on a
+ * rest day — and it used to be written once, inline, inside the training half
+ * of an `isRest` ternary. A rest session with a `drillId` on it therefore
+ * showed nothing, which is the state the whole of M164 exists to fix.
+ */
+function DrillCard({
+  drill,
+  session,
+  hurtParts,
+  patch,
+  setTimer,
+}: {
+  drill: Drill;
+  session: Session;
+  hurtParts: BodyPart[];
+  patch: (fields: Partial<Session>) => void;
+  setTimer: (timer: { subject: TimerSubject; completes?: string }) => void;
+}) {
+  // The drill's own protocol, if it names one: eleven of the 144 do, and the
+  // rules on them are the ones this screen was never showing (PLAN.md M153).
+  const protocol = drill.protocolId ? getProtocol(drill.protocolId) : undefined;
+  const clash = hasAuthoredWarning(protocol, hurtParts) ? null : drillConflict(drill, hurtParts);
+  return (
+    <Card title="Drill">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="min-w-0">
+          <div className="font-semibold text-sm">{drill.name}</div>
+          <p className="text-xs text-ink-soft mt-0.5">
+            {drill.duration} · {drill.focus}
+          </p>
+        </div>
+        <Chip
+          active={Boolean(session.drillDone)}
+          onClick={() => patch({ drillDone: !session.drillDone })}
+          className="shrink-0 text-xs font-bold uppercase tracking-wide"
+        >
+          {session.drillDone ? 'Done' : 'Mark done'}
+        </Chip>
+      </div>
+      <p className="text-sm text-ink-soft leading-relaxed">{drillText(drill.id)}</p>
+      <SafetyNote protocol={protocol} injured={hurtParts} />
+      {clash ? (
+        <p className="text-warn text-xs mt-2 flex items-start gap-1.5">
+          <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+          <span>
+            Loads {describeParts(clash.parts)} — {clash.because}.
+          </span>
+        </p>
+      ) : null}
+      {protocol?.timer ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() =>
+            setTimer({
+              subject: protocolSubject(
+                protocol,
+                drill.name,
+                drill.timerOverride?.sets ?? 2,
+                drill.timerOverride,
+              )!,
+              completes: drill.name,
+            })
+          }
+          className="mt-3 text-accent"
+        >
+          <Timer size={15} /> Open the {protocol.name} timer
+        </Button>
+      ) : null}
     </Card>
   );
 }
@@ -755,7 +831,31 @@ function SessionEditor({
       )}
 
       {isRest ? (
-        <Card title="Recovery checklist">
+        <>
+          {/* The drill the rest day is carrying (PLAN.md M164).
+              `isRest` and the editor's other half were a ternary, and the
+              drill card was inside the *other* branch — so a rest session
+              with a `drillId` on it rendered nothing about the drill at
+              all. Not hypothetical: `DrillPage`'s "add to today" writes
+              `drillId` and navigates here, and on a rest day it handed the
+              climber a screen with no sign of the drill they just picked.
+              That is the same bug its own comment records being found in a
+              browser for the quick/full case and fixed only there.
+
+              Not gated on `full`, unlike the training-day one: the rest
+              branch has no quick view to be the short half of, so gating
+              would hide it from whichever view the climber happens to be
+              in. */}
+          {drill && (
+            <DrillCard
+              drill={drill}
+              session={session}
+              hurtParts={hurtParts}
+              patch={patch}
+              setTimer={setTimer}
+            />
+          )}
+          <Card title="Recovery checklist">
           <div className="grid grid-cols-1 gap-2">
             {REST_ITEMS.map((item) => {
               const checked = session.restChecklist?.[item.key] ?? false;
@@ -781,7 +881,8 @@ function SessionEditor({
               );
             })}
           </div>
-        </Card>
+          </Card>
+        </>
       ) : (
         <>
           {full && (
@@ -1093,70 +1194,13 @@ function SessionEditor({
           )}
 
           {full && drill && (
-            <Card title="Drill">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="min-w-0">
-                  <div className="font-semibold text-sm">{drill.name}</div>
-                  <p className="text-xs text-ink-soft mt-0.5">
-                    {drill.duration} · {drill.focus}
-                  </p>
-                </div>
-                <Chip
-                  active={Boolean(session.drillDone)}
-                  onClick={() => patch({ drillDone: !session.drillDone })}
-                  className="shrink-0 text-xs font-bold uppercase tracking-wide"
-                >
-                  {session.drillDone ? 'Done' : 'Mark done'}
-                </Chip>
-              </div>
-              <p className="text-sm text-ink-soft leading-relaxed">{drillText(drill.id)}</p>
-              {(() => {
-                // The drill's own protocol, if it names one: eleven of the
-                // 144 do, and the rules on them are the ones this screen
-                // was never showing (PLAN.md M153).
-                const protocol = drill!.protocolId ? getProtocol(drill!.protocolId) : undefined;
-                const clash = hasAuthoredWarning(protocol, hurtParts)
-                  ? null
-                  : drillConflict(drill!, hurtParts);
-                return (
-                  <>
-                    <SafetyNote protocol={protocol} injured={hurtParts} />
-                    {clash ? (
-                      <p className="text-warn text-xs mt-2 flex items-start gap-1.5">
-                        <AlertTriangle size={12} className="shrink-0 mt-0.5" />
-                        <span>
-                          Loads {describeParts(clash.parts)} — {clash.because}.
-                        </span>
-                      </p>
-                    ) : null}
-                  </>
-                );
-              })()}
-              {(() => {
-                const protocol = drill.protocolId ? getProtocol(drill.protocolId) : undefined;
-                if (!protocol?.timer) return null;
-                return (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      setTimer({
-                        subject: protocolSubject(
-                          protocol,
-                          drill!.name,
-                          drill!.timerOverride?.sets ?? 2,
-                          drill!.timerOverride,
-                        )!,
-                        completes: drill!.name,
-                      })
-                    }
-                    className="mt-3 text-accent"
-                  >
-                    <Timer size={15} /> Open the {protocol.name} timer
-                  </Button>
-                );
-              })()}
-            </Card>
+            <DrillCard
+              drill={drill}
+              session={session}
+              hurtParts={hurtParts}
+              patch={patch}
+              setTimer={setTimer}
+            />
           )}
 
           {full && <WarmupCard session={session} day={day} onWarmedUp={() => patch({ warmup: true })} />}

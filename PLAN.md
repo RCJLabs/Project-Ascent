@@ -7932,8 +7932,7 @@ the end with what killed them. Sized as before: two large, six medium, two small
   app peaked them for reads *"Load spike — a jump this size is the pattern most associated with
   injury"*. One field on `CoachInput` and one clause beside `inPlannedDeload`.
 
-- **M164 — twelve drills for the day you cannot train, prescribed by nothing.** *Proposed.
-  Medium.*
+- **M164 — twelve drills for the day you cannot train, prescribed by nothing.** *Done — see the entry at the end of this document.*
   **144 of 156 drills are prescribed by a program. The twelve that are not are exactly the twelve
   that need no wall** — verified by set comparison, not by reading the ids: `off_shoulder_cars`,
   `off_wrist_forearm_prep`, `off_ninety_ninety_hips`, `off_thoracic_opening`, `off_extensor_work`,
@@ -8983,3 +8982,85 @@ than a card on Home should ask anyone to read. 5,077 tests pass.
   under the spike on the board, saying the same thing with the same figure. It
   is not wrong on a trip — a plateau genuinely cannot be read through one — but
   two cards quoting one number is the kind of noise the board exists to avoid.
+
+---
+
+### M164 — twelve drills for the day you cannot train, prescribed by nothing ✅
+
+**The count holds, and the mechanism the proposal named for it does not.** It
+said *"144 of 156 drills are prescribed by a program"*, which is true — but the
+link is each drill's `sources` array, not the programs' `drillsByWeek`. Only
+twelve session types in the whole catalogue carry a `drillsByWeek` at all, and
+it maps a week to **one drill id**, not a list. The set comparison that matters
+is now a test: the drills with an empty `sources` and the drills
+`offWallDrills()` returns are the same twelve, computed independently and
+compared, so a drill that gains a source or loses its `equipment: ['none']`
+fails here rather than drifting.
+
+**And all thirteen programs schedule the day those twelve were written for.**
+Every one ships a session type with `isRest` — ten call it *"Rest / Recovery"*,
+two *"Rest / Mobility"*, one *"Recovery & Mobility"* — and the pre-session card
+rendered that day as *"Rest day · week 3. Recovery is training — log it to bank
+it."* and offered nothing. **`offWallDrills()` had no caller in the app**: grep
+returns its own test and nothing else. M132 wrote the function that answers
+*"what can I do with no equipment"* and the app never asked it.
+
+**Which one, and the two the rule excludes.** A list of twelve on a rest day is
+a menu, and the day this is for is a day something is already wrong with — so
+one drill, named, with its duration on it. `off_tension_holds` is excluded by
+category: twelve to fifteen minutes of hollow and arch holds is `power`, and
+offering it would be the app contradicting the plan it just rendered. Anything
+that loads a reported injury is excluded by `drillConflict` — the same reading
+M153 put in the logger and M161 on the assessments, so `off_wrist_forearm_prep`
+(`fingers`, `shoulder`, `forearm`) never reaches a climber resting a hurt
+finger. `off_easy_aerobic` is **kept** despite being `endurance`, because the
+recovery checklist has shipped *"Walking / Zone 1"* as one of its four items
+since M94: zone-one work is already part of what this app means by a rest day.
+
+**Rotation, not randomness.** The coach's house rule is that the same log
+always produces the same advice, so the choice is a modulo of the date. Two
+rest days in a row are two different drills; the same day reopened is the same
+one. The second modulo is load-bearing: `daysBetween` is signed, `%` in
+JavaScript keeps the sign, and a date before the epoch — which a spreadsheet
+import can easily carry — would index off the front of the array.
+
+**A bug found on the way, which is the other half of the milestone.** In the
+editor, `isRest` and everything else were a ternary and **the drill card lived
+in the other branch** — so a rest session carrying a `drillId` rendered nothing
+about the drill, and a drill that cannot be seen cannot be ticked, so
+`drillsCompleted` stayed where it was and the coach kept asking. Not
+hypothetical: `DrillPage`'s *"add to today"* writes `drillId` and navigates
+straight here, so picking any off-wall drill for a rest day handed the climber a
+screen with no sign of what they had just picked. That is the same failure the
+card's own comment records being found in a browser for the quick/full case and
+fixed only there. The card is now its own component, rendered in both branches,
+and **not** gated on `full` in the rest one — the rest branch has no quick half
+to be the short version of, so gating would hide it from whichever view the
+climber last left the app in.
+
+**What the battery moved.** Twenty mutants, three survivors, and one of the
+three was not a survivor at all: `Card` takes `title`, `children` and
+`className` and ignores everything else, so the mutant that added `hidden` to
+the recovery checklist changed nothing — an invalid mutant, replaced with one
+that empties the list. The two real ones were the same shape as each other and
+invisible on screen: deleting `day.isRest` from the gate, and deleting
+`day.over !== true`. The card renders the offer only inside its rest-day branch
+and handles `over` in a branch above it, so both mutants looked identical in the
+DOM — and both changed what `start()` **stamps on the session**, putting an
+off-wall drill on a hangboard day and on a block that finished three weeks ago.
+Two tests now assert the stamped `drillId`, not the pixels.
+
+**A test that passed while asserting nothing, caught before it shipped.** The
+first draft of the screen test wrapped its one assertion in `if (/Rest day/)`,
+because it tried to make today a rest day by walking back through start dates —
+and a `WeekPlan` maps **day of week** to a session type, so today is a rest day
+or not according to the plan, which no start date can move. The fixture sets the
+plan instead.
+
+**Recorded, not built.** The app has two definitions of "this is a rest
+session": `isRestSession(session)` in `engine/rest.ts` reads a present
+`restChecklist` and no climbs, and the editor reads `type?.isRest === true` off
+the session type. They agree for every session the app makes, and they are two
+answers to one question in two files.
+
+**Budget.** 161.56 → 161.87, inside 162.5. 5,105 tests pass.

@@ -470,6 +470,16 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M164**, measured 161.56 → 161.87: 0.31KB. `engine/
+    // restDrill.ts` is first-load because `PreSession` is — Home renders that
+    // card and nothing else of the logger — and the drill registry it reads
+    // was already on the boot path by construction, so what is new is the
+    // module's own prose, one link in the pre-session card and one line of
+    // the start handler. The `DrillCard` extraction in `LogPage` is roughly
+    // neutral: the JSX is rendered in two branches now and written once,
+    // where it used to be written once and rendered in one, and `LogPage` is
+    // a lazy route either way.
+    //
     // **Unchanged at M163**, measured 161.11 → 161.56: 0.45KB, and nearly all
     // of it is English. `engine/trip.ts` is nine lines of logic; what costs is
     // the two rewritten tip bodies in `coach.ts`, which is first-load because
