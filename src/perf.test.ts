@@ -470,6 +470,15 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M165**, measured 162.26 → 162.24: **down** 0.02KB, which
+    // is chunk-hash churn rather than a saving — the point is that a Medium
+    // milestone cost nothing at all. `engine/pyramidShape.ts` has exactly one
+    // caller, `ProgressPage`, so the module and its paragraph both land in
+    // that lazy chunk. Putting the reading where the drawing already is was
+    // the right answer for the climber and happens to be the free one; a
+    // coach tip saying the same thing would have been first-load prose and
+    // would have needed the line raised.
+    //
     // **Unchanged at M171**, measured 162.11 → 162.26: 0.15KB, and the page
     // itself is none of it — the whole privacy statement lands in
     // `PrivacyPage-*.js`, a lazy route. What is first-load is the route table

@@ -41,6 +41,7 @@ import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
 import { useMetrics } from '@/store/metrics';
 import { useProjects } from '@/store/projects';
 import { useProfile } from '@/store/profile';
+import { describePyramid, readPyramid } from '@/engine/pyramidShape';
 import { useSettings, type ProgressView } from '@/store/settings';
 import { useSessions, allSessions, useAllSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
@@ -507,6 +508,13 @@ export function ProgressPage() {
   const shown =
     onWhich === 'indoor' ? twoLadders.indoor.tally : onWhich === 'outdoor' ? twoLadders.outdoor.tally : tally;
   const rows = useMemo(() => pyramid(shown, scale), [shown, scale]);
+  // Read off the same rows the bars are drawn from, and of the same ladder
+  // the toggle has selected — so a climber looking at their outdoor pyramid
+  // is told about their outdoor pyramid (PLAN.md M165).
+  const shape = useMemo(
+    () => describePyramid(readPyramid(rows, shown.totalSends), (g) => gradeLabel(scale, g)),
+    [rows, shown.totalSends, scale, gradeLabel],
+  );
   // What you avoid (PLAN.md M108). Silent until climbs carry an angle,
   // which is most logs — the question is new and nothing is inferred.
   const byAngle = useMemo(() => angles(sessions, scale), [sessions, scale]);
@@ -804,6 +812,19 @@ export function ProgressPage() {
           {rows.length > 0 ? (
             <>
               <PyramidBars rows={rows.map((r) => ({ ...r, grade: gradeLabel(scale, r.grade) }))} />
+              {/* The shape, read at last (PLAN.md M165). Drawn here since
+                  §5.9 and compared to itself nowhere: `plateau` reads one
+                  row at a time and `conversion` reads inside a row, and no
+                  two adjacent grades have ever been put side by side.
+
+                  Under the bars rather than above them, because it is a
+                  comment on what is already on screen — and it says what
+                  the log shows without calling the gap a weakness, which
+                  is `angles.ts`'s rule and the reason that module refuses
+                  to name a strength. */}
+              {shape !== null && (
+                <p className="text-sm leading-relaxed mt-3">{shape}</p>
+              )}
               <p className="text-xs text-ink-soft mt-3">
                 Every grade you have touched, hardest first. A row that is mostly orange is a grade you
                 keep trying without sending — usually where the next gain is.

@@ -7947,7 +7947,7 @@ the end with what killed them. Sized as before: two large, six medium, two small
   **The Train page already advertises them** — *"A hundred and fifty-odd, twelve of which need no
   wall"* — which is the app describing a feature it does not connect to anything.
 
-- **M165 — the pyramid is drawn and never read.** *Proposed. Medium.*
+- **M165 — the pyramid is drawn and never read.** *Done — see the entry at the end of this document.*
   **This is the shelved one, and this is the thinking it was shelved for.** The second brainstorm
   parked *a thin top of the pyramid* because *"it needs a gate or it fires for almost everyone
   almost always, and that gate is a milestone's worth of thinking."* That remains true of *thin
@@ -9200,3 +9200,78 @@ list did not know about it.
 **Budget.** 162.11 → 162.26, inside 162.5 — and the page is none of it. The
 whole statement is in its own lazy chunk; what is first-load is the route entry
 and its search keywords, which is how anyone finds the page. 5,184 tests pass.
+
+---
+
+### M165 — the pyramid was drawn and never read ✅
+
+**The claim holds, and it is narrower than it sounds.** `PyramidRow[]` has
+carried sends and attempts per grade since §5.9, on screen, separated indoor
+from rock since M106 — and nothing ever compared one row to the next.
+`plateau.ts` does call `pyramid()`, which looks like a counter-example and is
+not: `stuckGrade` reads rows **one at a time**, looking for a grade with
+attempts and no sends. `conversion.ts` reads a ratio *inside* a row. A
+comparison between adjacent grades appears nowhere, and a test greps the three
+readers to keep it that way.
+
+**What is still not built, deliberately.** The second brainstorm parked *"a
+thin top of the pyramid"* because it fires for almost everyone almost always,
+and that is still true: a thin top band is what every climber has for a month
+after they start trying a new grade, which is the healthy case rather than the
+finding.
+
+**The confound the proposal did not name, which shapes the whole milestone.**
+`GradeTally.sends` is the **entire log**, and a climber who improves stops
+logging what they warm up on. Three years in the V2 row is fat because V2 used
+to be the session, and the V6 row is thin because V6 is four goes on a Tuesday.
+So "more sends here than below" is a statement about a *log* at least as much
+as about a climber, and a rule that ignored that would tell experienced
+climbers their base is weak on the evidence that they stopped writing down
+warm-ups.
+
+**Which is why the gate is where it is, and why the sentence refuses to
+judge.** The confound is strongest at the bottom of the ladder and weakest at
+the top, where every go near the limit is an event worth recording — so the
+reading is confined to the top four grades, the working range. Below that an
+inversion is history, and a test builds a six-row ladder with an inversion at
+the bottom to prove it stays quiet. `angles.ts` set the house rule for exactly
+this problem — *"the angle nobody logs is as likely to be the one their gym
+does not have"* — and the sentence follows it: it names **both** readings, a
+grade moved past before consolidating or a grade that stopped being written
+down, says both are common, and ends on *"only you know which"*. Tests assert
+that it never uses the words *weakness*, *problem* or *should have*.
+
+**Three gates, each borrowed rather than invented.** Twenty-five sends across
+the log before its shape means anything — `coach.ts`'s `domain:style` already
+waits for exactly that before it will say anything about how a climber sends.
+Three sends at the upper grade before it is a band rather than an afternoon —
+`projectHistory`'s floor for the same unit. And the *lower* row has no floor at
+all, deliberately: a zero directly under an established grade is the sharpest
+form of this finding, and requiring three there would rule out the one case
+most worth reporting.
+
+**Held against the one realistic log this repo ships.** The demo climber's
+pyramid is 7 sends at V6 over 48 at V5 over 138 at V4 — a textbook shape — and
+a test asserts the rule stays silent on it. A rule that fired on the sample
+climber would be firing on the healthy case.
+
+**What the battery moved.** Twenty-four mutants, three real survivors. One was
+a **self-referential test**: the established-grade cases were written as
+`ESTABLISHED - 1` and `ESTABLISHED`, so setting the constant to one moved the
+test with it and asserted nothing about where the line is — rewritten with
+literals and an explicit `expect(ESTABLISHED).toBe(3)`. One was **another
+unreachable branch**, the fourth this session: `readPyramid` never returns
+fewer than three sends, so the sentence's `send`/`sends` singular could not
+fire, and it is gone. The third was the sharpest: reading `totalSends` off the
+all-time tally instead of the ladder on screen passed every existing test,
+because every fixture cleared the floor on both sides — a climber with a full
+indoor season and four days on rock would have had five outdoor sends read as a
+pyramid. A test now seeds exactly that.
+
+**Budget.** 162.26 → **162.24**, which is chunk-hash churn rather than a
+saving; what matters is that a Medium milestone cost nothing. The module has
+one caller and both it and its paragraph land in the lazy Progress chunk.
+Putting the reading where the drawing already is was the right answer for the
+climber and happens to be the free one — the same sentence as a coach tip would
+have been first-load prose and would have needed the line raised. 5,217 tests
+pass.
