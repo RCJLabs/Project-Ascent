@@ -470,6 +470,13 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M169**, measured 162.27 → 162.29: 0.02KB, which is one
+    // `retired` string on a field spec. Everything else the milestone did is
+    // tests — the widened `wired.test.ts` sweep and the new value sweep — and
+    // a test weighs nothing at all. `content/fields.ts` is in the catalogue's
+    // chunk rather than the entry one, so even that string is not really here;
+    // the 0.02 is rounding on a rebuild.
+    //
     // **Unchanged at M168**, measured 162.24 → 162.27: 0.03KB, and it is the
     // one sentence that got longer. The three retired claims were replaced
     // roughly in kind; `ACUTE_DAYS`, `CHRONIC_DAYS` and `CHRONIC_WEEKS` are

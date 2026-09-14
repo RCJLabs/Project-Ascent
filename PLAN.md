@@ -8000,7 +8000,7 @@ the end with what killed them. Sized as before: two large, six medium, two small
   the honest paragraph next to the number, and a decision recorded about which form to use — but
   it should be a decision, and at the moment it is a default.
 
-- **M169 — the guard against unread content covers three types of twelve.** *Proposed. Small.*
+- **M169 — the guard against unread content covers three types of twelve.** *Done — see the entry at the end of this document. Sixteen, not twelve; both named orphans dissolved on measurement.*
   `wired.test.ts:280` walks `ROOTS = ['PhasePrescription', 'ExerciseBlock', 'Protocol']`, and its
   own header says why it stops there: an array of objects is *"a different question (M155's, and
   it is a much longer list)"*. `Program`, `SessionType`, `Drill`, `Metric`, `Phase`, `Exercise`,
@@ -9441,3 +9441,70 @@ render test now.
 three constants minify to nothing and delete two hard-coded copies of each; the
 long caveat is on a lazy card and in a lazy guide; the whole case for the
 decision is in a docblock the bundler strips. 5,273 tests pass.
+
+---
+
+### M169 — the guard against unread content covered three types of twelve ✅
+
+**The count was right and the number was low: sixteen, not twelve.**
+`wired.test.ts` walked `ROOTS = ['PhasePrescription', 'ExerciseBlock',
+'Protocol']`, and `content/types.ts` declares sixteen interfaces. Its own
+header said why it stopped — an array of objects is *"a different question
+(M155's, and it is a much longer list)"* — and that reasoning holds for
+**values** and never held for **fields**. `Program`, `SessionType`, `Drill`,
+`Metric`, `Phase`, `Exercise`, `Track`, `WeeklyLayout` and `ProgramIntro` are
+declared in the same file with the same shape; nothing made them harder to
+check. They simply were not being checked.
+
+**So the roots are derived now, by the argument the leaves already won.** The
+file argues that a hand-maintained list *"fails exactly when a new field
+appears, which is the only time it is needed"* — that is how `Protocol.safety`
+sat unread for the life of the project. The roots were that same hand-list one
+level up. They are read off the type file, and the sweep went from about thirty
+leaves to **107 fields across sixteen interfaces**.
+
+**And it finds nothing, which is the honest result.** Every one of the 107 is
+read on a screen or by something a screen imports. The proposal expected
+deletions — *"ends with either the fields read or the fields gone"* — and there
+is nothing to delete. What the milestone buys is that the next one cannot hide.
+
+**Both "known orphans" dissolved on measurement, for the same reason.** The
+proposal named `flexibility`, *"defined and prescribed by none of the thirteen
+programs"*, and the twelve `off_` drills carrying an empty `sources`. Neither is
+an orphan: **unprescribed is not unreachable.** `allMetrics()` exists in its own
+words *"for adding one outside your program"*, and the browser check opens *Add
+a benchmark* and finds Flexibility in the list — the half an engine test cannot
+see, since a function that returns it wired to a list nobody can open is the
+same as not returning it. The twelve off-wall drills are what M164 wired into
+rest days, and their empty `sources` is a declaration rather than an absence.
+M155's orphans were things **nothing could render**; these are things no
+*program* prescribes, which is a different word.
+
+**The sweep the field check cannot do, built as the other half.**
+`content/authored.test.ts` asks of every authored **value** whether anything
+reaches it: every metric in the registry is offered by `allMetrics`, every drill
+either prescribed or declared library-only, every protocol named by a drill or
+an exercise — a protocol nothing references is its authored safety rules unread,
+which is exactly the shape `Protocol.safety` was in before M153 — and every
+`FieldSpec` either asked by a session type or marked `retired`.
+
+**Which found one real thing.** `clipStyle` was retired at M108, **three
+milestones before the `retired` marker existed**, so it sat in the registry
+asked by nothing and marked as nothing — indistinguishable from a field somebody
+forgot to wire up. It carries its marker now, naming `Climb.style` and
+`Climb.ropeStyle` as what replaced it. M142's test that pins the retired set
+went from three to four.
+
+**What the battery moved.** Thirteen mutants, four survivors, **two of them my
+own invalid mutants** — a duplicate `sources:` key that the later literal
+overwrote, and a protocol added beside the registry rather than inside it. The
+two real ones were the same lesson, and it is the one this file's sibling states
+outright: *"the assertion itself, named so the self-check below runs the same
+one. A weakened assertion here fails there, which is the only way a check
+nothing else checks can be held to anything."* My sweeps and their self-checks
+held **separate copies** of the same predicate, so weakening the sweep's copy
+survived. Each predicate is one named function now, called by both.
+
+**Budget.** 162.27 → 162.29: one `retired` string on a field spec, in the
+catalogue's chunk rather than the entry one. Everything else is tests, which
+weigh nothing. 5,359 tests pass.

@@ -123,8 +123,20 @@ export const FIELDS: Record<FieldId, FieldSpec> = {
    *
    * The entry stays so answers already written keep a label and a shape;
    * nothing renders an input for it.
+   *
+   * **Carries `retired` since M169**, which is what it always was. The field
+   * was retired at M108, three milestones before `retired` existed, so it sat
+   * in the registry asked by nothing and marked as nothing — indistinguishable
+   * from a field somebody forgot to wire up. The marker is how the guard tells
+   * a decision from an omission.
    */
-  clipStyle: { id: 'clipStyle', label: 'Style', kind: 'text', placeholder: 'Onsight, flash, redpoint, toprope' },
+  clipStyle: {
+    id: 'clipStyle',
+    label: 'Style',
+    kind: 'text',
+    placeholder: 'Onsight, flash, redpoint, toprope',
+    retired: "the climb's own style and rope style, which every climb row carries since M108",
+  },
   waterDepth: { id: 'waterDepth', label: 'Water depth', kind: 'number', unit: 'ft' },
   gearNotes: { id: 'gearNotes', label: 'Gear', kind: 'text', placeholder: 'What the rack needed' },
   sessionDuration: {

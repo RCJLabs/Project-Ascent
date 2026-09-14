@@ -26,12 +26,24 @@ beforeEach(async () => {
 });
 
 describe('the registry says where each retired question is asked instead', () => {
-  it('retires exactly the three that duplicate something read', () => {
+  /**
+   * Four since M169, and the fourth is the same kind of thing.
+   *
+   * `clipStyle` asked *"Onsight, flash, redpoint, toprope"* as free text on
+   * one session type — three of which `Climb.style` has always stored
+   * structurally and the fourth of which is `Climb.ropeStyle` since M108. It
+   * was retired at M108, three milestones before `retired` existed, so it sat
+   * in the registry asked by nothing and marked as nothing, which is exactly
+   * what a field somebody forgot to wire up looks like. M169's sweep over
+   * authored values is what found it, and the marker is what tells a decision
+   * from an omission.
+   */
+  it('retires exactly the four that duplicate something read', () => {
     const retired = Object.values(FIELDS)
       .filter((f) => f.retired !== undefined)
       .map((f) => f.id)
       .sort();
-    expect(retired).toEqual(['projectName', 'routeName', 'sessionDuration']);
+    expect(retired).toEqual(['clipStyle', 'projectName', 'routeName', 'sessionDuration']);
   });
 
   // Kept, not deleted: a stored answer is labelled through the registry, so

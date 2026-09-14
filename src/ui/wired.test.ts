@@ -276,15 +276,37 @@ function leavesOf(root: string): string[] {
   return out;
 }
 
-describe('every authored prescription field reaches a screen', () => {
-  const ROOTS = ['PhasePrescription', 'ExerciseBlock', 'Protocol'];
+/**
+ * Every interface the content schema declares, read off the file (M169).
+ *
+ * The roots were three — `PhasePrescription`, `ExerciseBlock`, `Protocol` —
+ * and this file's own header said why it stopped there: an array of objects
+ * was *"a different question (M155's, and it is a much longer list)"*. True of
+ * *values*, which the sweep below this one now covers. It was never true of
+ * **fields**: `Program`, `SessionType`, `Drill`, `Metric`, `Phase`,
+ * `Exercise`, `Track`, `WeeklyLayout` and `ProgramIntro` are declared in the
+ * same file with the same shape, and nothing about them made them harder to
+ * check. They simply were not.
+ *
+ * So the roots are derived too, by the same argument the leaves already win:
+ * a list you maintain by hand fails exactly when something new appears. All
+ * sixteen interfaces, 107 fields, checked by default and argued out in
+ * `EXEMPT` with the reason written down.
+ */
+const ROOTS = [...TYPES.matchAll(/^export interface (\w+) \{/gm)].map((m) => m[1]!);
+
+describe('every authored content field reaches a screen', () => {
   const LEAVES = [...new Set(ROOTS.flatMap(leavesOf))];
 
   it('reads the roots off the type file', () => {
     // A parse that quietly found nothing would pass every case below.
+    expect(ROOTS).toContain('PhasePrescription');
+    expect(ROOTS).toContain('Program');
+    expect(ROOTS).toContain('Metric');
+    expect(ROOTS.length).toBeGreaterThanOrEqual(16);
     expect(LEAVES).toContain('selection.note');
     expect(LEAVES).toContain('safety');
-    expect(LEAVES.length).toBeGreaterThanOrEqual(12);
+    expect(LEAVES.length).toBeGreaterThanOrEqual(60);
   });
 
   it.each(LEAVES)('%s is read somewhere a climber can see it', (leaf) => expectRendered(leaf));
