@@ -124,8 +124,13 @@ describe('a delete can be undone', () => {
    * climber wrote; the offer has to follow within a dozen lines, which is
    * where every one of the fourteen sites puts it.
    */
+  // `healInjury` joined the list at M177, and it is destructive in the sense
+  // this net means: the record leaves the live list, the warmups and the
+  // finder stop seeing it, and a climber who tapped it by mistake wants it
+  // back. It keeps its record — that is the whole milestone — but the undo is
+  // still the difference between a mistake and a loss.
   const DESTRUCTIVE =
-    /\b(removeInjury|deleteMedia|clearSnapshot|stopProgram)\(|\bremove\((?!\))|setMarks\([^)]*, \[\]\)|requirements\.filter\(|climbs: before\.filter|projectAttempts: before\.filter/;
+    /\b(removeInjury|healInjury|deleteMedia|clearSnapshot|stopProgram)\(|\bremove\((?!\))|setMarks\([^)]*, \[\]\)|requirements\.filter\(|climbs: before\.filter|projectAttempts: before\.filter/;
 
   /** Sites that destroy without an offer, each with the reason it may. */
   const ALLOWED: Record<string, string> = {

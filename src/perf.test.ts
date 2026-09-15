@@ -683,6 +683,13 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **164.0 holds at M177**, measured 163.14 → 163.24: 0.10KB. `store/
+    // profile.ts` is first-load — every screen reads the climber — and what
+    // it gained is a list, a field and one action; `engine/injuryLog.ts` is
+    // where the reading lives and it is lazy, read only by the injury page
+    // and the body page's card. The sentences a climber sees are in both of
+    // those chunks rather than here. 0.76KB of slack.
+    //
     // **164.0 holds at M176**, measured 163.01 → 163.14: 0.13KB, and the
     // headroom raised two milestones ago is what it was raised for. `Rank`
     // gained a number, `rankFor` a branch, `nextRank` lost its null and

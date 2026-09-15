@@ -35,6 +35,7 @@
 
 import type { Session } from '@/db/sessions';
 import type { BodyPart } from '@/content/warmups';
+import type { Injury } from '@/store/profile';
 import type { TissueFeel } from './readiness';
 import { addDays, daysBetween } from './dates';
 import { isRestSession } from './rest';
@@ -147,6 +148,110 @@ export function describeInjuryHistory(history: InjuryHistory): string | null {
  * before the session it sits on. So each bad day carries the day before it
  * and the day itself, and says which is which rather than picking one.
  */
+/**
+ * Episodes, which is what an injury record could not see (PLAN.md M177).
+ *
+ * `injuryHistory` above reads inside **one** episode — how the part has felt
+ * since `since`. It is scoped to a live injury, and until M177 a healed one
+ * was deleted, so the reading died with the record and the question a physio
+ * asks second — *has this happened before?* — had no answer at all.
+ *
+ * ## What it reports and what it refuses
+ *
+ * The same line this module draws everywhere else. It reports **what
+ * happened**: how many times, how long each ran, how long the climber was
+ * clear in between. It refuses to say what that means. Two episodes is not a
+ * pattern, a gap of forty days is not a prognosis, and the app has one
+ * self-reported flag per episode rather than a diagnosis — so the numbers go
+ * on the screen and the climber takes them to someone who can read them.
+ *
+ * It gates nothing, deliberately. M161 blocks a maximal test on a *live*
+ * injury because that is a fact about today; blocking one on a history would
+ * be the app deciding a climber is fragile, which is a clinical judgement it
+ * is in no position to make.
+ */
+export interface Episode {
+  part: BodyPart;
+  since: string;
+  /** The day it was marked healed. */
+  healedAt: string;
+  /** How long it ran, in days. */
+  days: number;
+}
+
+export interface Recurrence {
+  part: BodyPart;
+  /** Closed episodes, oldest first. */
+  past: Episode[];
+  /** Past episodes plus the live one, when there is a live one. */
+  total: number;
+  /** Days clear between the last episode ending and the live one starting. */
+  clearDays: number | null;
+}
+
+/** The episodes on one part, and where a live injury sits among them. */
+export function recurrenceFor(
+  part: BodyPart,
+  healed: readonly Injury[],
+  live?: Injury,
+): Recurrence {
+  const past = healed
+    .filter((injury) => injury.part === part && injury.healedAt !== undefined)
+    .map((injury) => ({
+      part,
+      since: injury.since,
+      healedAt: injury.healedAt!,
+      days: Math.max(0, daysBetween(injury.since, injury.healedAt!)),
+    }))
+    .sort((a, b) => (a.since < b.since ? -1 : 1));
+  const last = past.at(-1);
+  return {
+    part,
+    past,
+    total: past.length + (live ? 1 : 0),
+    clearDays: last && live ? Math.max(0, daysBetween(last.healedAt, live.since)) : null,
+  };
+}
+
+const ORDINAL = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth'];
+
+/**
+ * `third`, or `9th` once the words stop being worth it.
+ *
+ * With the real suffix past the words, because `21th` looks like a bug and
+ * the one place this reads is a sentence about somebody's body.
+ */
+export function ordinal(n: number): string {
+  const word = ORDINAL[n];
+  if (word !== undefined) return word;
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return `${n}th`;
+  const suffix = { 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] ?? 'th';
+  return `${n}${suffix}`;
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/**
+ * One sentence about how often this part has gone, or nothing.
+ *
+ * Nothing when there is no history to report, which is most climbers most of
+ * the time — the same rule `describeInjuryHistory` follows above, and the
+ * reason neither of them renders an empty heading.
+ */
+export function describeRecurrence(recurrence: Recurrence): string | null {
+  const { past, total, clearDays, part } = recurrence;
+  if (past.length === 0) return null;
+  const runs = `${past.length === 1 ? 'The last one ran' : 'They ran'} ${past
+    .map((episode) => plural(episode.days, 'day'))
+    .join(', ')}.`;
+  if (total === past.length) {
+    return `${past.length === 1 ? 'One episode' : `${plural(past.length, 'episode')}`} on this ${part} before, healed. ${runs}`;
+  }
+  const clear = clearDays === null ? '' : ` You were clear for ${plural(clearDays, 'day')} in between.`;
+  return `The ${ordinal(total)} time this ${part} has gone. ${runs}${clear}`;
+}
+
 export interface BadDay {
   date: string;
   /** What was logged the day before — what the check-in is reacting to. */

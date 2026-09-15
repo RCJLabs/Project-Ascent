@@ -3,7 +3,13 @@ import { useLocation } from 'wouter';
 import { Plus, ShieldAlert, Trash2 } from 'lucide-react';
 import { RETURN_DISCLAIMER } from '@/content/returnToClimbing';
 import { fromKey, shortLabel, today } from '@/engine/dates';
-import { badDays, describeInjuryHistory, injuryHistory } from '@/engine/injuryLog';
+import {
+  badDays,
+  describeInjuryHistory,
+  describeRecurrence,
+  injuryHistory,
+  recurrenceFor,
+} from '@/engine/injuryLog';
 import { useSessions, allSessions } from '@/store/sessions';
 import { PROGRAMS as programs } from '@/content/programs';
 import type { TissueFeel } from '@/engine/readiness';
@@ -72,7 +78,8 @@ export function InjuryPage({ params }: { params: { id: string } }) {
   const injuries = useProfile((s) => s.injuries);
   const hydrated = useProfile((s) => s.hydrated);
   const updateInjury = useProfile((s) => s.updateInjury);
-  const removeInjury = useProfile((s) => s.removeInjury);
+  const healInjury = useProfile((s) => s.healInjury);
+  const healedInjuries = useProfile((s) => s.healedInjuries);
   const restoreInjury = useProfile((s) => s.restoreInjury);
   const byDate = useSessions((s) => s.byDate);
   const sessionsReady = useSessions((s) => s.hydrated);
@@ -85,7 +92,7 @@ export function InjuryPage({ params }: { params: { id: string } }) {
   if (!injury) {
     return (
       <RecordNotFound what="That injury record" backTo="/body" backLabel="Back to your body">
-        Recovered injuries are cleared from the tracker.
+        Injuries you marked healed are kept, out of the tracker and on your body page.
       </RecordNotFound>
     );
   }
@@ -102,6 +109,9 @@ export function InjuryPage({ params }: { params: { id: string } }) {
   // heading over nothing — which is what a `history !== null` gate gave,
   // since the reading is always an object.
   const said = describeInjuryHistory(history);
+  // Whether this part has gone before (PLAN.md M177). Null for a first
+  // episode, which is most of them.
+  const again = describeRecurrence(recurrenceFor(injury.part, healedInjuries, injury));
 
   return (
     <>
@@ -151,6 +161,16 @@ export function InjuryPage({ params }: { params: { id: string } }) {
             first, then the bad days with what was logged around them — and
             no ratio, because two counts side by side are a causal claim
             however they are worded. */}
+        {again !== null && (
+          <Card title="This is not the first">
+            <p className="text-sm leading-relaxed">{again}</p>
+            <p className="text-xs text-ink-soft mt-2.5 leading-relaxed">
+              Counted, not interpreted. How often a part goes is the first thing a physio asks and
+              the last thing this app would guess at — take the dates to someone who can read them.
+            </p>
+          </Card>
+        )}
+
         {said !== null && (
           <Card title="How it has been">
             <p className="text-sm leading-relaxed">{said}</p>
@@ -285,7 +305,12 @@ export function InjuryPage({ params }: { params: { id: string } }) {
               // Whole record back on undo — notes and return ticks included
               // — not a fresh injury with a new id (PLAN.md M79).
               const healed = injury;
-              removeInjury(healed.id);
+              // Healed, not deleted (PLAN.md M177): the record moves into the
+              // history so the next episode on this part knows it is not the
+              // first. `removeInjury` stays a delete, because three of its
+              // call sites are a checkbox being un-ticked rather than an
+              // injury ending.
+              healInjury(healed.id);
               offerUndo(`${healed.side && healed.part !== 'back' ? `${healed.side} ` : ''}${healed.part} injury`, async () => restoreInjury(healed));
               navigate('/body');
             }}

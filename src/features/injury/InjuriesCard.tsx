@@ -1,5 +1,6 @@
 import { Link } from 'wouter';
 import type { BodyPart } from '@/content/warmups';
+import { recurrenceFor } from '@/engine/injuryLog';
 import {
   SEVERITY_LABEL,
   STATUS_LABEL,
@@ -34,8 +35,23 @@ const PARTS: { value: BodyPart; label: string }[] = [
  */
 export function InjuriesCard() {
   const injuries = useProfile((s) => s.injuries);
+  const healedInjuries = useProfile((s) => s.healedInjuries);
   const addInjury = useProfile((s) => s.addInjury);
   const updateInjury = useProfile((s) => s.updateInjury);
+
+  /**
+   * Parts that have gone before and are not going now (PLAN.md M177).
+   *
+   * Here as well as on the injury page, and that is the half that keeps this
+   * from being another store nothing renders: the page only exists while an
+   * injury is live, so a history read *only* there would be invisible to
+   * exactly the climber who is currently fine — which is when knowing a part
+   * has gone twice is worth most.
+   */
+  const healedParts = [...new Set(healedInjuries.map((injury) => injury.part))]
+    .filter((part) => !injuries.some((injury) => injury.part === part))
+    .map((part) => recurrenceFor(part, healedInjuries))
+    .sort((a, b) => b.past.length - a.past.length);
 
   return (
     <Card title="Injuries">
@@ -105,6 +121,25 @@ export function InjuriesCard() {
           </Chip>
         ))}
       </div>
+
+      {healedParts.length > 0 && (
+        <div className="mt-4 pt-3 border-t border-line">
+          <p className="text-2xs font-bold uppercase tracking-widest text-ink-soft mb-1.5">
+            Healed
+          </p>
+          <ul className="grid grid-cols-1 gap-1">
+            {healedParts.map((recurrence) => (
+              <li key={recurrence.part} className="text-xs text-ink-soft leading-relaxed">
+                <span className="capitalize font-semibold text-ink">{recurrence.part}</span>
+                {' — '}
+                {recurrence.past.length === 1
+                  ? `one episode, ${recurrence.past[0]!.days} days, healed ${recurrence.past[0]!.healedAt}`
+                  : `${recurrence.past.length} episodes, last healed ${recurrence.past.at(-1)!.healedAt}`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </Card>
   );
 }

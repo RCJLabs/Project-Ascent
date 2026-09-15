@@ -8550,7 +8550,7 @@ two large, three medium, five small.*
   first gym wall again"*.
   *Large, and blocked on that decision.*
 
-- **M177 — an injury that heals is deleted, so nothing counts the second time.**
+- **M177 — an injury that heals is deleted, so nothing counts the second time.** *Done — see the entry at the end of this document. A closed-episode list rather than a third status, because sixteen places read `injuries` as what is wrong now.*
   **There is no healed state.** `InjuryStatus = 'active' | 'returning'` (`profile.ts:26`), and
   ending an injury means `removeInjury` (`profile.ts:397`), which filters the record out of the
   array. `restoreInjury` exists only to undo that within a session.
@@ -10315,3 +10315,74 @@ quietly.
 **Budget** 163.01 → 163.14: 0.13KB for a number on a type and a branch in
 `economy.ts`, which the logger's reward card puts on the boot path. 5,514 tests
 pass.
+
+### M177 — a healed injury is kept ✅
+
+**The app documented the loss rather than hiding it.** `RecordNotFound` on the
+injury page said *"Recovered injuries are cleared from the tracker"*, and it
+was true: `removeInjury` filtered the record out of the array and everything
+went with it — the notes, the return-to-climbing ticks, and the answer to the
+question a physio asks second. `injuryHistory` reads inside **one** episode,
+scoped to a live injury's `since`, so the reading died with the record.
+
+**A separate list, not a third status — and the reason is the risk
+direction.** `InjuryStatus` could have grown a `'healed'`, but **sixteen
+places read `injuries`**, and every one of them reads it as *what is wrong
+right now*: the warmup generator, the finder, M161's maximal-test gate,
+vitality, the logger, the coach. A healed record left in that array is one
+forgotten filter away from blocking training a climber is cleared for. A
+separate `healedInjuries` cannot make that mistake.
+
+**And healing is not removing, which the call sites settled.** `removeInjury`
+looked like the healing verb — the button says *Mark healed* and the variable
+in that handler is literally named `healed` — but **three of its four call
+sites are not healings at all**: a toggle in the finder's questions, the same
+toggle in onboarding, and clearing the demo climber. Recording those as
+episodes would invent an injury history out of un-ticking a checkbox. So
+`healInjury` is its own verb and `removeInjury` stays a delete.
+
+**What it reports, and what it refuses.** `recurrenceFor` counts the episodes
+on a part, how long each ran, and how long the climber was clear in between;
+`describeRecurrence` says *"The third time this fingers has gone"* and the
+dates. It says nothing about what that means, which is the line this module
+already draws — it refuses a co-occurrence at length, because *"a climber
+reading '4 of 5 against 1 of 9' reads hangboarding hurts my elbow, on a sample
+of fourteen"*. Two episodes is not a pattern and a gap is not a prognosis, and
+the card says so: **counted, not interpreted**.
+
+**It gates nothing, deliberately.** M161 blocks a maximal test on a *live*
+injury because that is a fact about today. Blocking one on a history would be
+the app deciding a climber is fragile, which is a clinical judgement it is in
+no position to make from one self-reported flag per episode.
+
+**Shown in two places, and the second is what stops this being another store
+nothing renders.** The injury page only exists while an injury is live — a
+history read only there would be invisible to exactly the climber who is
+currently fine, which is when knowing a part has gone twice is worth most. So
+the body page's Injuries card carries a *Healed* line for parts that have gone
+before and are not going now.
+
+**What the battery moved.** Fifteen mutants, fourteen real. Two survived the
+first pass and both were gaps in the tests rather than the code. **Writing
+`[]` into the persisted snapshot passed everything** — every test read the
+store rather than what reached the database, which for a milestone whose whole
+point is that the record survives is the one thing that had to be checked; it
+hydrates now. The other was an unreachable guard: the dedupe in `healInjury`
+cannot be hit through the UI, because after a heal the record is out of the
+live list. It is reachable from a restored **backup**, which is a file and can
+say anything, and a duplicate there inflates a count on somebody's injury
+history — so the guard stays and a test reaches it that way. Second pass:
+fourteen of fourteen killed.
+
+**One existing guard caught the change**, which is the system working:
+`ui/safety.test.ts` requires every destructive call site to offer an undo
+within a dozen lines, and renaming the verb dropped its count below the floor.
+`healInjury` is in that net now — the record is kept, but leaving the live list
+is still something a mis-tap wants back.
+
+**Browser-checked** end to end on both themes at 430px and 1280px: add an
+injury, mark it healed, reload, find it under *Healed* on the body page, then
+hurt the same part again and read *The second time this fingers has gone*.
+
+**Budget** 163.14 → 163.24: 0.10KB, the store's share. The reading itself is in
+`engine/injuryLog.ts`, which only the two lazy screens import. 5,537 tests pass.

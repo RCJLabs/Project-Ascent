@@ -41,6 +41,13 @@ export interface Injury {
   ownSteps?: { id: string; text: string }[];
   /** Default step ids the climber removed, so they stay removed. */
   hiddenSteps?: string[];
+  /**
+   * The day it was marked healed (PLAN.md M177).
+   *
+   * Set only on a record in `healedInjuries`, which is the one list where it
+   * means anything — a live injury has not ended.
+   */
+  healedAt?: string;
   /** What a clinician actually said, in their words rather than ours. */
   clinicalNote?: string;
   note?: string;
@@ -152,7 +159,35 @@ export interface ProfileState {
   addInjury: (part: BodyPart, note?: string) => void;
   updateInjury: (id: string, patch: Partial<Injury>) => void;
   removeInjury: (id: string) => void;
-  /** Put a removed injury back whole — id, notes, checklist — for an undo (PLAN.md M79). */
+  /**
+   * Injuries that healed, oldest first (PLAN.md M177).
+   *
+   * A **separate list**, not a third `InjuryStatus`. Sixteen places read
+   * `injuries`, and every one of them reads it as *what is wrong right now* —
+   * the warmup generator, the finder, M161's maximal-test gate, vitality, the
+   * logger. A healed record left in that array is one forgotten filter away
+   * from blocking training the climber is cleared for, and that is the
+   * dangerous direction to be wrong in.
+   *
+   * What it buys is the thing a coach would most want and the app could not
+   * see: that this is the third time. M166's own guide says why — finger
+   * injuries are *"slow to heal and quick to recur"*, and golfer's elbow,
+   * tennis elbow and rotator cuff trouble *"end more seasons than falling off
+   * does"*. Recurrence is the clinical picture.
+   */
+  healedInjuries: Injury[];
+  /**
+   * Mark one healed: out of the live list, into the history.
+   *
+   * Separate from `removeInjury`, which stays a delete — and the separation
+   * is not cosmetic. Three of that action's four call sites are not healings
+   * at all: a toggle in the finder's questions, the same toggle in
+   * onboarding, and clearing the demo climber. Recording those as episodes
+   * would invent an injury history out of un-ticking a checkbox.
+   */
+  healInjury: (id: string) => void;
+  /** Put a removed or healed injury back whole — id, notes, checklist — for
+   *  an undo (PLAN.md M79). */
   restoreInjury: (injury: Injury) => void;
   rememberWarmup: (ids: string[]) => void;
   setAvatarPalette: (patch: Partial<AvatarPalette>) => void;
@@ -170,6 +205,7 @@ interface Persisted {
   adaptations: Record<string, number>;
   equipment: Equipment[];
   injuries: Injury[];
+  healedInjuries: Injury[];
   recentWarmups: string[];
   avatarPalette: AvatarPalette;
   onboardedAt: string | null;
@@ -191,6 +227,7 @@ function snapshot(s: ProfileState): Persisted {
     adaptations: s.adaptations,
     equipment: s.equipment,
     injuries: s.injuries,
+    healedInjuries: s.healedInjuries,
     recentWarmups: s.recentWarmups,
     avatarPalette: s.avatarPalette,
     onboardedAt: s.onboardedAt,
@@ -237,6 +274,7 @@ export const useProfile = create<ProfileState>((set, get) => ({
   adaptations: {},
   equipment: ['wall', 'gym'],
   injuries: [],
+  healedInjuries: [],
   recentWarmups: [],
   avatarPalette: DEFAULT_PALETTE,
   onboardedAt: null,
@@ -399,10 +437,33 @@ export const useProfile = create<ProfileState>((set, get) => ({
     void save(snapshot(get()));
   },
 
+  healInjury: (id) => {
+    const injury = get().injuries.find((i) => i.id === id);
+    if (!injury) return;
+    set({
+      injuries: get().injuries.filter((i) => i.id !== id),
+      // Oldest first, and never twice: healing the same record again — which
+      // an undo followed by a second "Mark healed" does — replaces rather
+      // than doubles the episode.
+      healedInjuries: [
+        ...get().healedInjuries.filter((i) => i.id !== id),
+        { ...injury, healedAt: today() },
+      ],
+    });
+    void save(snapshot(get()));
+  },
+
   restoreInjury: (injury) => {
     // Whole record, not a fresh one: `addInjury` would mint a new id and
     // lose the notes and the return-to-climbing ticks the climber wrote.
-    set({ injuries: [...get().injuries.filter((i) => i.id !== injury.id), injury] });
+    //
+    // Out of the history as well as back into the live list (PLAN.md M177):
+    // undoing a heal has to undo the episode too, or the record comes back
+    // *and* leaves a scar the climber never had.
+    set({
+      injuries: [...get().injuries.filter((i) => i.id !== injury.id), injury],
+      healedInjuries: get().healedInjuries.filter((i) => i.id !== injury.id),
+    });
     void save(snapshot(get()));
   },
 
@@ -467,6 +528,7 @@ export async function hydrateProfile(): Promise<void> {
       adaptations: adopt(value.adaptations),
       equipment: value.equipment ?? ['wall', 'gym'],
       injuries: (value.injuries ?? []).map(readInjury),
+      healedInjuries: (value.healedInjuries ?? []).map(readInjury),
       recentWarmups: value.recentWarmups ?? [],
       avatarPalette: { ...DEFAULT_PALETTE, ...value.avatarPalette },
       onboardedAt: value.onboardedAt ?? null,
