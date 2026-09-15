@@ -10624,11 +10624,19 @@ the one candidate wraps* `expect` *in a helper; TODOs — none in the tree.*
   exists; this needs a different window — recently on a trip rather than on one.
   *Medium.*
 
-- **M189 — the glossary is 13.99KB of the logger navigation chunk**, pulled in by a single
-  `<Term>` on an exercise name asking whether that name has a definition. Measured when the
-  logger was split and parked because `Term` is used across the app and making its lookup async
-  changes tap behaviour everywhere.
-  *Medium.*
+- **M189 — ~~the glossary is 13.99KB of the logger navigation chunk~~ — withdrawn, M116 built
+  it.** *My error, and the same one M66 and M86 record: I read a milestone's description of the
+  problem it had solved as an open finding. The prose I quoted is `Term`'s own header, and the
+  paragraph above the one I took it from begins "**The definition arrives on the tap (PLAN.md
+  M116)**".*
+  **Measured against the current build before withdrawing**, because a fixed claim and a stale
+  one look identical from a distance. `ui/Term.tsx` asks `hasGlossaryTerm` — from
+  `content/glossaryTerms.ts`, the keys alone — and reaches the 208 definitions through
+  `await import('@/content/glossary')` on the tap. The built output agrees: the definitions live
+  in **one chunk of their own, `glossary-*.js` at 14.08KB gzipped**, the logger chunk (21.04KB)
+  does not contain them, and no other chunk in the build does either. None of `glossary.ts`,
+  `glossaryTerms.ts` or `Term.tsx` is on the first-paint path.
+  *Withdrawn. Nothing to build.*
 
 - **M190 — the plateau blocker repeats the spike's number one card down.** *"Recovery is the
   blocker: your load has jumped to 2.96× your baseline"* sits directly under the spike card
