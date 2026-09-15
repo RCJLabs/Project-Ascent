@@ -496,7 +496,7 @@ describe('the bundle stays small', () => {
    * with one exception recorded below — the history is in the comment inside
    * the first test.
    */
-  const BUDGET = 137.2;
+  const BUDGET = 138.0;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -682,6 +682,26 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **137.2 → 138.0, raised rather than spent** — the seventh entry here to
+    // record no feature, and the first that is **late**. M191's entry said
+    // the next milestone to touch a first-load file would raise this first;
+    // M192 did not, and shipped at 0.20KB of slack — below the hash churn
+    // M145 measured, so a rebuild that changed nothing could have failed it.
+    // The rule held in the letter, because nothing was moved to make a
+    // failing thing pass, and was missed in the spirit. Recorded because a
+    // process that is only followed when convenient is not one.
+    //
+    // Bounded both ways before it was committed: 300 fails the slack guard,
+    // 136.9 fails the budget, and 138.50 — exactly 1.5 of slack — fails the
+    // slack guard while 138.49 passes, which is where the cap really is.
+    //
+    // 1.00KB, the same target every raise here has used and deliberately
+    // short of the 1.5 the slack guard allows. What it buys, measured: the
+    // three milestones since the last raise cost 0.79, 0.76 and 0.12, so
+    // this is roughly one more of the expensive kind — and the expensive
+    // kind is now the only kind, since M183 took the coach engine off this
+    // path and a rule's copy costs nothing.
     //
     // **137.2 holds at M192**, measured 136.88 → 137.00: 0.12KB. The page
     // itself is a 1.63KB lazy chunk and costs this line nothing; what lands
