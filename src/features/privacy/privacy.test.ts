@@ -54,10 +54,15 @@ const FILES = sourceFiles();
 /**
  * What a rebuild would pick up: the source the bundler reads, plus the three
  * files outside `src/` that change its output. Test files are left out — an
- * edit to one cannot change a byte of `dist/`.
+ * edit to one cannot change a byte of `dist/` — and so is `src/test/`, which
+ * is the same argument for the harness that sets those tests up. Measured
+ * rather than assumed: no file outside a test imports from `@/test/`, and
+ * nothing it pulls in (`fake-indexeddb`) appears in any built chunk. It is
+ * here because M197 edited `setup.ts` and this check asked for a rebuild
+ * that could not have changed anything.
  */
 const FILES_FOR_STALENESS = [
-  ...FILES,
+  ...FILES.filter((path) => !path.startsWith('src/test/')),
   'index.html',
   'vite.config.ts',
   'package.json',

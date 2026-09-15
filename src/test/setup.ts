@@ -1,5 +1,7 @@
 // Vitest runs in node; give the db layer a real-enough IndexedDB.
 import 'fake-indexeddb/auto';
+import { afterEach, beforeEach, expect } from 'vitest';
+import { noAssertionMade } from './assertions';
 import { loadPrograms } from '@/content/programs';
 import { loadDrills } from '@/content/drills';
 
@@ -53,3 +55,16 @@ if (typeof window !== 'undefined') {
       }) as unknown as MediaQueryList;
   }
 }
+
+// No test passes without asserting anything (PLAN.md M197). The rule itself
+// lives in `assertions.ts`, where it is a pure function with tests of its
+// own; this is the wiring.
+let assertionsBefore = 0;
+beforeEach(() => {
+  assertionsBefore = expect.getState().assertionCalls ?? 0;
+});
+afterEach((ctx) => {
+  const made = (expect.getState().assertionCalls ?? 0) - assertionsBefore;
+  const complaint = noAssertionMade(made, `${ctx.task.file?.name ?? '?'} > ${ctx.task.name}`);
+  if (complaint !== null) throw new Error(complaint);
+});

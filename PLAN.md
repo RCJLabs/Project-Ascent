@@ -11358,7 +11358,9 @@ narrowable by search and by nine category chips, so the longest page in the app 
   on content fields.
   *Small.*
 
-- **M197 — one test in 5,688 asserts nothing.** `loadTrend.test.ts`'s *"says 'about where it was'
+- **M197 — one test in 5,688 asserts nothing.** *Done — see the entry at the end of this
+  document. The fix took one line of fixture; the guard took a refactor, because a rule that runs
+  only inside the machinery it guards cannot be shown to work.* `loadTrend.test.ts`'s *"says 'about where it was'
   for a flat week"* wraps its only assertion in `if (Math.abs(trend.latest! - trend.weekAgo!) <
   0.05)`, and the `steady(200)` fixture never satisfies it, so the test passes without checking
   the sentence in its own name. Found by counting `expect.getState().assertionCalls` per test
@@ -11572,3 +11574,60 @@ screen to lose.
 
 **Budget** 137.00 → 137.00. The five were not on the first-paint path; this is a tidy, and the
 guard is the milestone. 5,704 tests pass.
+
+
+## M197 — a test that could not fail, and the rule that would have said so
+
+**The defect, exactly.** `loadTrend.test.ts`'s *"says 'about where it was' for a flat week"*
+wrapped its only assertion in `if (Math.abs(trend.latest! - trend.weekAgo!) < 0.05)` over a
+`steady(200)` fixture. Measured: that fixture gives **1.14 now against 0.86 a week ago**, a gap of
+0.29, so the condition was never true and the test passed for nine milestones without once
+reading the sentence in its own name.
+
+**And the cadence is the reason, which is the interesting part.** `steady()` trains every other
+day. Seven days holds four of those sessions in some windows and three in others, so the acute
+half of the ratio moves while the chronic half does not — an every-other-day habit is not a flat
+week to an ACWR. **Every third day divides both windows evenly**: 0.89 on both sides, and the
+sentence really does say *about where it was a week ago*. The test builds that now, and asserts
+the premise before the claim, so a fixture that stops being flat fails rather than goes quiet.
+
+**The guard is the milestone.** Vitest counts every `expect` call in its own state, so the delta
+across a test is exactly how many assertions it made, and one is the floor. A `beforeEach` and an
+`afterEach` in `src/test/setup.ts` hold every one of 5,711 tests to it.
+
+**Seven tests are exempt and all seven earn it**, which was checked rather than assumed: emptying
+the list fails exactly seven, no more and none missing. Four assert by awaiting `findByText`,
+where an absent string throws with a better message than any assertion wrapped around it. One is
+`launch.test.ts`'s loop over an empty Digital Asset Links file, deliberately empty with its reason
+at the site. Two are `reachable.test.ts`'s `/gym` and `/today`, routes that render nothing to go
+back from, exempted by name there and checked by a test of their own. Each is keyed by file **and**
+test name, so a rename fails loudly rather than quietly dropping its exemption.
+
+**A guard that runs only inside the machinery it guards cannot be shown to work**, and that is
+why this is a refactor rather than three lines. The suite passing is precisely what a broken
+guard produces. So the decision is `noAssertionMade(made, key)` in `src/test/assertions.ts`, a
+pure function with seven tests of its own: it complains at zero and not at one, at both sides of
+the threshold, names the test in the complaint, says what to do about it, lets a listed exemption
+through, refuses one that is not listed, and — the self-check — fails if the exemption list is
+empty, since an empty set would satisfy every other test here while exempting nobody.
+
+**Planted, to see it fire.** Two throwaway tests, one asserting nothing at all and one with its
+assertion behind `if (1 === 2)`, both failed with the right message; a third that asserts passed
+beside them. The wiring survived its own mutant — no test in the run set is vacuous, so
+disconnecting the throw has nothing to throw about — and that is what the planted pair covers
+instead.
+
+**Eleven mutants, eight killed.** The threshold moved either way; the exemptions ignored and made
+universal; the complaint stripped of which test it means and of what to do; the flat-week fixture
+put back to every other day. Three survived as intended: `made > 0` written `made >= 1`, the
+wiring mutant above, and an assertion weakened to `toBeTruthy()`, which this project's rule does
+not count.
+
+**A correction to M194 in passing.** Its staleness check asked for a rebuild when `src/test/`
+changed, which cannot alter a byte of `dist/` — the same argument that already excluded
+`*.test.ts`. Measured before narrowing it: no file outside a test imports from `@/test/`, and
+nothing it pulls in appears in any built chunk.
+
+**No browser check, and it would be theatre.** The engine is untouched; what changed is a
+fixture, a rule about tests, and one comment. **Budget** 137.00 → 137.00. 5,711 tests pass, up
+from 5,704 — the seven that hold the new rule to account.

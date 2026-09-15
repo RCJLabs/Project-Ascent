@@ -172,9 +172,28 @@ describe('the sentence under the chart', () => {
   });
 
   it('says "about where it was" for a flat week', () => {
-    const trend = loadTrend({ sessions: steady(200), to: TO });
-    if (Math.abs(trend.latest! - trend.weekAgo!) < 0.05) {
-      expect(describeTrend(trend)).toMatch(/about where it was/);
-    }
+    /**
+     * Every third day, and the cadence is the whole test (PLAN.md M197).
+     *
+     * `steady()` trains every other day, which is not a flat week: seven
+     * days holds four of those sessions in some windows and three in
+     * others, so the acute half of the ratio moves while the chronic half
+     * does not — **1.14 now against 0.86 a week ago**, measured. A
+     * three-day cadence divides both windows evenly and sits at 0.89 on
+     * both sides.
+     *
+     * This test used to run `steady(200)` and wrap its assertion in
+     * `if (Math.abs(latest - weekAgo) < 0.05)`, a condition that fixture
+     * never met, so it passed for nine milestones without once reading the
+     * sentence in its own name.
+     */
+    const everyThirdDay: Session[] = [];
+    for (let i = 200; i >= 0; i -= 3) everyThirdDay.push(session(addDays(TO, -i)));
+
+    const trend = loadTrend({ sessions: everyThirdDay, to: TO });
+    // The premise, asserted rather than assumed: a test about a flat week
+    // has to fail if the week it built is not flat.
+    expect(trend.latest).toBeCloseTo(trend.weekAgo!, 2);
+    expect(describeTrend(trend)).toMatch(/about where it was/);
   });
 });
