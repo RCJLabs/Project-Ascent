@@ -11723,8 +11723,14 @@ content — `SearchBody` feeds it `allSessions` and reads `session.notes`.*
   never fires.
   *Medium.*
 
-- **M200 — the game recognises effort and never recognises restraint.** *Corrected by M199's work
-  before anyone started it: the scan behind this was on **ids**, and the skill trees carry a
+- **M200 — the game recognises effort and never recognises restraint.** *WITHDRAWN. Not narrowed
+  — wrong. Four of the 25 achievements are about restraint: `listened` (a rest day straight after
+  an RPE 9 session), `deload-honoured` (a deload week where nothing went above RPE 7),
+  `rested-and-ready` (a limit send the day after a rest day) and `both-ends` (one week holding
+  both an easy session and a maximal one). My scan wrote `id: '[a-z_]*deload[a-z_]*'` and every
+  id here is **hyphenated**, so a pattern that could not match a hyphen reported zero where a
+  plain `grep -i deload` finds ten. The earlier correction below was itself too generous.*
+  *Previously recorded:* the scan behind this was on **ids**, and the skill trees carry a
   five-rung `grit-recovery-discipline` branch — Log 5, 15, 40, 90 and 180 rest days — whose ids
   say "recovery" rather than "rest". The claim survives only for **achievements**, which have no
   rest badge among their 25. Re-scope before building.* Verified by scanning every
@@ -11746,7 +11752,16 @@ content — `SearchBody` feeds it `allSessions` and reads `session.notes`.*
 
 ### The rest
 
-- **M202 — the app can never remind you.** Verified absent: no `Notification`, no
+- **M202 — the app can never remind you.** *WITHDRAWN. The absence is real and it is a decision
+  with a written rationale: `lib/ics.ts` opens "M75 was going to be local notifications. It is
+  not" and gives the reasoning — Notification Triggers never shipped past an origin trial, Web
+  Push needs the push server this rebuild exists not to have, a service worker is killed within
+  seconds so a `setTimeout` for tomorrow evening dies, and a TWA is a browser tab rather than a
+  process with an alarm clock. The app writes the schedule as an `.ics` file with a
+  `DEFAULT_ALARM_MINUTES = 120` alarm and lets the phone's own calendar do the reminding. My note
+  even said "the caveat is the platform, not the principle" — the platform caveat is the whole
+  answer, and it was settled at M75.*
+  *Previously recorded:* Verified absent: no `Notification`, no
   `requestPermission`, no `showNotification`, no `periodicSync` anywhere in the tree. A training
   app that cannot say *it is Tuesday and you have a session* is leaving its main job to memory. A
   local notification sends nothing and needs no server, so it sits inside the privacy stance
@@ -11756,13 +11771,24 @@ content — `SearchBody` feeds it `allSessions` and reads `session.notes`.*
   first work is measuring what each actually delivers.
   *Medium.*
 
-- **M203 — photos go in and never come out.** `AttachPage`, `MediaCard`, `PhotoMarks` and
+- **M203 — photos go in and never come out.** *WITHDRAWN as written. They do come out:
+  `Thumbnails.tsx` exports `PhotoStrip`, which every journal entry renders, and `PhotoTile`,
+  which the year review lays out in a grid off `engine/photos.ts`'s `pickPhotos`. What is
+  genuinely absent is one place to see **all** of them, or every photo of one project — which is
+  a judgement call about whether that view earns its place, not a gap in the build. Re-propose it
+  as a feature or not at all.*
+  *Previously recorded:* `AttachPage`, `MediaCard`, `PhotoMarks` and
   `Thumbnails` all exist; there is no gallery or timeline view in the tree. Beta shots and
   progress photos attach to a session and are reachable only by finding that session again —
   there is no *every photo of this project*, no year of them, no way to browse what you have.
   *Medium.*
 
-- **M204 — you cannot take a photo, only pick one.** No `getUserMedia` and no capture path: photos
+- **M204 — you cannot take a photo, only pick one.** *WITHDRAWN. False in practice. `lib/image.ts`
+  sets `ACCEPTED = 'image/*'`, and on both Android and iOS a file input with that accept offers
+  the camera as a source inside the picker. Adding `capture="environment"` would **force** the
+  camera and take the choice away, which is worse than what ships. I checked for `getUserMedia`
+  and a `capture` attribute and never checked the thing that actually decides it.*
+  *Previously recorded:* No `getUserMedia` and no capture path: photos
   arrive through the file picker or the operating system's share sheet. At the wall, mid-session,
   that is the difference between logging the beta and not bothering.
   *Small, and it pairs with M203.*
@@ -11862,3 +11888,49 @@ resting, and M200 has been re-scoped in place.
 
 **No browser check, and none is owed:** no product code changed. **Budget** 137.00 → 137.00.
 5,718 tests pass, up from 5,711.
+
+
+## M200 withdrawn, and three more with it — a note on how this brainstorm was built
+
+**M200 is not narrowed, it is wrong.** Four of the 25 achievements are about restraint:
+`listened` — a rest day logged straight after a session at RPE 9 or more; `deload-honoured` — a
+deload week where nothing went above RPE 7; `rested-and-ready` — a send at your limit the day
+after a logged rest day; and `both-ends` — one week holding both an easy session and a maximal
+one. The skill trees add a five-rung branch on top of that. *"The game recognises effort and
+never recognises restraint"* was false twice over.
+
+**The cause, and it is the same one three times now.** The scan behind M200 was
+`id: '[a-z_]*deload[a-z_]*'`. Every achievement id in this app is **hyphenated**, so the
+character class could not match one — `deload-honoured` contains the word and the pattern
+returned zero, where a plain `grep -i deload` returns ten. M195 failed the same way on a template
+literal. M199's four fixtures failed the same way on field names. **A character class that
+silently excludes the thing being looked for produces an absence that reads exactly like a
+finding.**
+
+**So the tenth brainstorm was re-verified in full rather than item by item on the way in, and it
+does not hold up.** Of ten items, **four survive**:
+
+- **M201** — no vitality history anywhere. Stands.
+- **M205** — `ClimberState.totalSessions` read by nothing. Stands.
+- **M206** — no changelog under any spelling. Stands.
+- **M207** — `DemoClimber` carries no journal entries and no objectives. Stands.
+- **M208** — one climber, undecided either way. Stands as a decision to record.
+
+**Four are withdrawn** — M200, M202, M203 and M204, each annotated in place above with what it
+missed. **M199 shipped** as a guard after its own premise turned out false.
+
+**What this says about the method.** The nine audit brainstorms before this one were checks
+against code that either matched a pattern or did not, and their failure mode was proposing
+something already built. This one asked what is *absent*, and absence cannot be established by a
+grep that finds nothing: **a pattern returns nothing when the feature is missing and when the
+pattern is wrong, and those are indistinguishable without reading the code.** Every one of the
+four withdrawals was findable in under a minute by opening the module and reading it — `ics.ts`
+opens by explaining why notifications are not there; `Thumbnails.tsx` exports the two components
+that render photos; `image.ts` defines `image/*` six lines from the top.
+
+**The rule to carry forward, and it is stronger than M195's.** *An absence is not established by
+a search that found nothing. It is established by reading the module that would hold the thing
+and finding it absent* — or, where the module is not obvious, by a search whose pattern has been
+shown to find a known-present instance of the same shape. M195 asked for a positive control on
+the sweep. This asks for the module to be opened, because a control only proves the pattern works
+on the shape you thought of.
