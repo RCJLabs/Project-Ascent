@@ -496,7 +496,7 @@ describe('the bundle stays small', () => {
    * with one exception recorded below — the history is in the comment inside
    * the first test.
    */
-  const BUDGET = 136.3;
+  const BUDGET = 137.2;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -682,6 +682,26 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **136.3 → 137.2, raised rather than spent** — the sixth entry here to
+    // record no feature, and the first raise since M179's. M187 left the line
+    // at 0.15KB of slack, which is *below* the hash churn M145 measured when
+    // a lazy chunk's filename changed inside the entry's module map: a
+    // rebuild that changed nothing could have failed it, and a gate that
+    // cries wolf is a gate that gets raised in a hurry.
+    //
+    // 1.05KB, deliberately short of the 1.5 the slack guard allows, for the
+    // reason the M173 raise gives at length: at the cap the guard sits on its
+    // own ceiling with nothing left for churn. What it buys, measured rather
+    // than guessed: the four milestones since the last raise came to
+    // **−27.46KB** between them, so this is not headroom for a trend, it is
+    // headroom for the one kind of milestone that still spends — M187's, a
+    // first-load file gaining prose. Those have cost 0.79, 0.37 and 0.10.
+    //
+    // The line moves in its own commit, ahead of the milestone rather than
+    // inside it, because the one condition a budget should never be moved
+    // under is pressure from the change that needs it. M187 is already
+    // shipped and measured; this raise is for whatever comes next.
     //
     // **136.3 holds at M187**, measured 135.36 → 136.15: 0.79KB, which is
     // the first *spend* since M182 and the price of a second failure mode
