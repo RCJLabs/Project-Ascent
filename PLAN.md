@@ -10638,7 +10638,10 @@ the one candidate wraps* `expect` *in a helper; TODOs — none in the tree.*
   `glossaryTerms.ts` or `Term.tsx` is on the first-paint path.
   *Withdrawn. Nothing to build.*
 
-- **M190 — the plateau blocker repeats the spike's number one card down.** *"Recovery is the
+- **M190 — the plateau blocker repeats the spike's number one card down.** *Done — see the entry
+  at the end of this document. Confirmed at 2.43×, and the fix had to be at the coach rather than
+  in the diagnosis: Progress renders the same sentence with nothing beside it.*
+  *"Recovery is the
   blocker: your load has jumped to 2.96× your baseline"* sits directly under the spike card
   quoting the same figure.
   *Small.*
@@ -10977,3 +10980,64 @@ the way back.
 `comedown.ts` is read by `coach.ts`, which M183 moved off the first-paint path — so a coach rule
 now costs the entry chunk nothing, where M178's cost 0.37KB for the same kind of work. 5,643
 tests pass.
+
+
+## M190 — two cards, one number
+
+**Reproduced before anything was changed.** A steady log and then a week several times heavier
+puts `load-spike` at weight 93 and the recovery verdict at 92, adjacent, quoting the same ratio
+to two decimal places:
+
+```
+ 93  Load spike               You are at 2.43× your own four-week baseline…
+ 92  Recovery is the blocker  …your load has jumped to 2.43× your baseline…
+```
+
+**The constraint that shaped the fix.** `diagnosis.explanation` is also what Progress renders,
+through `TrainingState.tsx`, where there is nothing beside it — so the sentence is *right* there
+and wrong only on the board. Dropping the clause in `plateau.ts` would have taken the number off
+Progress too, which is the one screen whose job is showing the evidence.
+
+So the diagnosis now publishes its reasons **in parts** — `RecoveryReason[]`, one per clause,
+each tagged `injury`, `overload` or `grinding` — and keeps `explanation` as those joined.
+`recoverySentence` is exported so the coach builds its version from a *subset* with the same
+maker rather than a second copy of the sentence. The coach drops the `overload` clause when its
+own spike card is really on the board, and `buildTips` computes `loadSpike` first and hands it to
+`plateau` rather than asking "will the spike fire?" a second time.
+
+**Only the duplicate goes.** *No verdict on your training until this is dealt with* is a
+different fact from *ease off*, and it is the one that explains why Progress has stopped giving a
+read — so both cards stay. When the load was the **only** reason there is nothing left to list,
+and the card says the verdict without the figure rather than filling the space with it again.
+
+**A deload is why the drop is keyed on the spike and not on the zone.** `loadSpike` returns null
+in a planned deload, and then this card is the only place the number appears at all.
+
+**The signature now carries the reasons**, not just the verdict: waving this away with a tweaked
+finger must not also wave it away three weeks later when the reason is a load spike. That is
+M175's rule, applied to a card with three quite different things to say.
+
+**A copy bug caught by an existing test.** The first draft's empty-case sentence began *"The load
+spike above is the whole of it"*, which broke `tripTip.test.tsx` — `getByText(/Load spike/i)`
+matched the headline *and* the body. Worth more than the test failure: Home shows exactly one
+tip, so a sentence pointing at a neighbouring card is simply wrong there. It names the fact now,
+not the layout.
+
+**Tests** `engine/recoveryOverlap.test.ts` — the measurement kept as a test (the ratio is on one
+card, not two), both cards still present and still adjacent, the non-duplicate reason surviving,
+the empty case, the signature, and the two things that must not change: Progress's sentence stays
+whole, and a climber whose reason is an injury reads exactly what they read before. The no-spike
+branch is driven with a diagnosis built by hand, because reproducing `inPlannedDeload` needs a
+program, a start date and a plan that this rule never reads — the first draft asserted the
+fixture's shape instead of the branch.
+
+**Mutations** 12 mutants, all killed on the first pass, the no-op survived. Both directions of
+the filter, the wrong clause, the empty case saying the number again, the empty case dropping the
+verdict, the signature reading the filtered list instead of the full one, and `plateau` being
+handed `null` instead of the spike.
+
+**Verified in a browser** at 430px and 1280px in both themes: the ratio appears **once** on the
+board, both cards are there, the recovery card keeps *6 training days deep with no rest*, and
+Progress still says *your load has jumped to 2.43× your baseline* in its own sentence.
+
+**Budget** 136.13 → 136.12: down 0.01KB. 5,651 tests pass.

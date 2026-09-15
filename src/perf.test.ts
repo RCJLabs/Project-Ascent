@@ -683,6 +683,11 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M190**, measured 136.13 → 136.12: **down** 0.01KB, for
+    // the same reason M188's entry gives — `coach.ts` and `plateau.ts` are
+    // both off the first-paint path since M183, so a rule's copy costs this
+    // line nothing. Two milestones running now.
+    //
     // **Unchanged at M188**, measured 136.15 → 136.13: **down** 0.02KB, from
     // a milestone that added a whole engine module. `engine/comedown.ts` and
     // the two new branches in `detraining` are read by `coach.ts`, which M183

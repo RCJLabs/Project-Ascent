@@ -67,11 +67,33 @@ export interface ResetProtocol {
   steps: ResetStep[];
 }
 
+/**
+ * Why recovery is the blocker, one clause at a time (PLAN.md M190).
+ *
+ * `explanation` is these joined into a sentence, and Progress renders it
+ * whole because there is nothing beside it there. The coach board is the
+ * other case: it shows this verdict directly under its own `load-spike`
+ * card, and both were quoting the same ratio to two decimal places — *"You
+ * are at 2.43× your own four-week baseline"* at weight 93, *"your load has
+ * jumped to 2.43× your baseline"* at 92. Published in parts so the reader
+ * with a neighbour can leave that one out, rather than parsing it back out
+ * of a sentence or building a second copy of the sentence without it.
+ */
+export type RecoveryReasonKind = 'injury' | 'overload' | 'grinding';
+
+export interface RecoveryReason {
+  kind: RecoveryReasonKind;
+  /** The clause, in the climber's words and mid-sentence. */
+  text: string;
+}
+
 export interface Diagnosis {
   verdict: Verdict;
   headline: string;
   explanation: string;
   evidence: Evidence[];
+  /** Empty for every verdict but `recovery-compromised`. */
+  reasons: RecoveryReason[];
   /** Only ever attached to a plateau — it is that verdict's prescription. */
   reset?: ResetProtocol;
 }
@@ -108,10 +130,12 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
   const overloaded = state.load.zone === 'danger';
   const grinding = state.consecutiveTrainingDays >= RULES.consecutiveDays;
   if (injuries.length > 0 || overloaded || grinding) {
+    const reasons = recoveryReasons(injuries, overloaded, grinding, state);
     return {
       verdict: 'recovery-compromised',
       headline: 'Recovery first',
-      explanation: recoveryExplanation(injuries, overloaded, grinding, state),
+      explanation: recoverySentence(reasons),
+      reasons,
       evidence: [
         ...(injuries.length > 0
           ? [{ label: 'Active injuries', value: injuries.join(', ') }]
@@ -131,6 +155,7 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
   if (state.completedSessions < RULES.minSessions || state.load.daysOfHistory < RULES.minDaysOfHistory) {
     return {
       verdict: 'insufficient-data',
+      reasons: [],
       headline: 'Too early to tell',
       explanation: `A training state needs ${RULES.minSessions} sessions across ${Math.round(
         RULES.minDaysOfHistory / 7,
@@ -162,6 +187,7 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
   if (daysSincePr !== null && daysSincePr <= RULES.prIsRecentDays) {
     return {
       verdict: 'breakthrough',
+      reasons: [],
       headline: 'Breaking through',
       explanation: `You sent ${label(latestPr!.grade)} ${daysAgo(daysSincePr)} — your hardest on this ladder. Whatever the last block was doing, it worked. Hold the pattern rather than adding to it.`,
       evidence: baseEvidence,
@@ -175,6 +201,7 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
     const wall = stuckGrade(tally, scale);
     return {
       verdict: 'plateau',
+      reasons: [],
       headline: 'Plateaued',
       explanation: `${state.recentSessions} sessions in the last month and no new grade ${
         daysSincePr === null ? 'yet' : `in ${Math.round(daysSincePr / 7)} weeks`
@@ -195,6 +222,7 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
   // ── 5. Nothing is blocking you ─────────────────────────────────────────
   return {
     verdict: 'optimal',
+    reasons: [],
     headline: training ? 'Building' : 'Ticking over',
     explanation: training
       ? 'Load is where it should be, nothing is flagged, and you are inside the window where a record would be normal. This is the boring part that works.'
@@ -210,25 +238,40 @@ function daysAgo(days: number): string {
   return `${Math.round(days / 7)} weeks ago`;
 }
 
-function recoveryExplanation(
+function recoveryReasons(
   injuries: BodyPart[],
   overloaded: boolean,
   grinding: boolean,
   state: ClimberState,
-): string {
-  const reasons: string[] = [];
+): RecoveryReason[] {
+  const reasons: RecoveryReason[] = [];
   if (injuries.length > 0) {
     const named = injuries.join(' and ');
-    reasons.push(`you have logged ${article(named)} ${named} injury`);
+    reasons.push({ kind: 'injury', text: `you have logged ${article(named)} ${named} injury` });
   }
   if (overloaded) {
-    reasons.push(
-      `your load has jumped to ${state.load.acwr!.toFixed(2)}× your baseline`,
-    );
+    reasons.push({
+      kind: 'overload',
+      text: `your load has jumped to ${state.load.acwr!.toFixed(2)}× your baseline`,
+    });
   }
-  if (grinding) reasons.push(`you are ${state.consecutiveTrainingDays} training days deep with no rest`);
+  if (grinding) {
+    reasons.push({
+      kind: 'grinding',
+      text: `you are ${state.consecutiveTrainingDays} training days deep with no rest`,
+    });
+  }
+  return reasons;
+}
+
+/**
+ * The reasons as a sentence. Exported because the coach builds this from a
+ * *subset* — one sentence maker, not two, which is the rule M169 states and
+ * M188 needed one milestone ago.
+ */
+export function recoverySentence(reasons: readonly RecoveryReason[]): string {
   return `No verdict on your training until this is dealt with: ${joinList(
-    reasons,
+    reasons.map((reason) => reason.text),
   )}. Progress measured through a compromised recovery is measuring the wrong thing.`;
 }
 

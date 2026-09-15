@@ -25,7 +25,7 @@ import { METRICS } from '@/content/metrics';
 import { assessmentStatus } from './assessments';
 import { daysBetween, today as todayKey } from './dates';
 import { MIN_CHRONIC_DAYS, MIN_HISTORY_DAYS, type ClimberState } from './derive';
-import type { Diagnosis } from './plateau';
+import { recoverySentence, type Diagnosis } from './plateau';
 import { activeProjects, attemptsFor, highPointOf } from './projects';
 import type { BlockAdherence } from './adherence';
 import type { Finding } from './planVsLog';
@@ -168,16 +168,21 @@ export const LATE_HOUR = 21;
 
 export function buildTips(input: CoachInput): Tip[] {
   const today = input.today ?? todayKey();
+  // Built first and handed to `plateau`, because the two cards sit next to
+  // each other and one of them has the load number in it (PLAN.md M190).
+  // Passed rather than re-derived: asking "will the spike fire?" twice is
+  // two copies of one predicate, which is the rule M169 states.
+  const spike = loadSpike(input, today);
   const tips = [
     firstSession(input),
     coldStart(input),
-    plateau(input),
+    plateau(input, spike),
     ...projectBurns(input, today),
     outdoorReentry(input, today),
     detraining(input, today),
     fingerGap(input, today),
     unscoredEffort(input),
-    loadSpike(input, today),
+    spike,
     benchmarks(input, today),
     benchmarkGain(input, today),
     skippedType(input),
@@ -308,16 +313,54 @@ function coldStart({ state }: CoachInput): Tip | null {
   };
 }
 
-function plateau({ diagnosis }: CoachInput): Tip | null {
+/**
+ * The verdict, minus whatever the card above it already said (PLAN.md M190).
+ *
+ * `load-spike` sits at weight 93 and this at 92, so on a board where the
+ * load is the problem they were adjacent and quoting the same ratio to two
+ * decimal places: *"You are at 2.43× your own four-week baseline"* and then
+ * *"your load has jumped to 2.43× your baseline"*. Two cards spending the
+ * climber's attention on one number is the noise the board exists to avoid.
+ *
+ * The verdict itself is not the duplicate and does not go: *no verdict on
+ * your training until this is dealt with* is a different fact from *ease
+ * off*, and it is the one that explains why Progress has stopped giving a
+ * read. Only the clause that repeats is dropped — and only when the spike
+ * card is really there, which is why it is passed in rather than guessed at
+ * from the zone. A deload suppresses the spike, and then this card is the
+ * only place the number appears.
+ *
+ * `diagnosis.explanation` is left alone: Progress renders it whole, and
+ * there is nothing beside it there to repeat.
+ */
+function plateau({ diagnosis }: CoachInput, spike: Tip | null): Tip | null {
   if (!diagnosis) return null;
   if (diagnosis.verdict === 'recovery-compromised') {
+    const reasons = spike
+      ? diagnosis.reasons.filter((reason) => reason.kind !== 'overload')
+      : diagnosis.reasons;
+    // Every reason was the one the spike card is carrying. The verdict still
+    // stands and still has somewhere to send them; what it must not do is
+    // say the number again to fill the space.
+    //
+    // Named as the fact rather than as the card — no "above", no "the card
+    // beside this". Home shows exactly one tip, so a sentence that points at
+    // a neighbour is wrong there, and card order is not something copy
+    // should depend on anywhere.
+    const said =
+      reasons.length > 0
+        ? recoverySentence(reasons)
+        : 'The load ratio is the whole of it, and no verdict on your training holds while it stands.';
     return {
       id: 'recovery',
-      signature: diagnosis.verdict,
+      // The reasons, not just the verdict: waving this away with a tweaked
+      // finger must not also wave it away three weeks later when the reason
+      // is a load spike (PLAN.md M175).
+      signature: `${diagnosis.verdict}:${diagnosis.reasons.map((r) => r.kind).join('+')}`,
       tone: 'caution',
       weight: 92,
       headline: 'Recovery is the blocker',
-      body: `${diagnosis.explanation} Nothing else in your training is worth changing until this is.`,
+      body: `${said} Nothing else in your training is worth changing until this is.`,
       action: { label: 'See the evidence', href: '/progress' },
     };
   }
