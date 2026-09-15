@@ -20,6 +20,7 @@ import {
 } from '@/engine/ascent/replay';
 import { payoutFor, wallNumber, type AscentPayout } from '@/engine/ascent/rewards';
 import { dailySeed } from '@/engine/ascent/rng';
+import { describeScale, runHeight } from '@/engine/ascent/scale';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveAvatar } from '@/engine/avatar';
 import { addDays, daysBetween, today as todayKey } from '@/engine/dates';
@@ -40,6 +41,8 @@ import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
 import { useAllSessions } from '@/store/sessions';
+import { useSettings } from '@/store/settings';
+import { formatHeight, type UnitSystem } from '@/engine/units';
 import { useSkills } from '@/store/skills';
 import { unitsToXp } from '@/engine/economy';
 import { BackLink } from '@/ui/BackLink';
@@ -83,6 +86,7 @@ const EMPTY_HUD: Hud = {
 };
 
 export function AscentPage() {
+  const units = useSettings((s) => s.units);
   const metricEntries = useMetrics((s) => s.entries);
   const projects = useProjects((s) => s.projects);
   const injuries = useProfile((s) => s.injuries);
@@ -209,10 +213,11 @@ export function AscentPage() {
         pure: run.pure,
         date,
         rested: derived.restedToday,
+        units,
         ...(tape ? { tape } : {}),
       }).then(setPayout);
     },
-    [recordRun, derived.restedToday, seed],
+    [recordRun, derived.restedToday, seed, units],
   );
 
   /**
@@ -352,6 +357,11 @@ export function AscentPage() {
 
   const best = records.best[mode];
   const run = runRef.current;
+  // What the run amounted to, in climbs rather than in metres (PLAN.md
+  // M210). A comparison and never a credit: the altimeter is the one number
+  // no game action moves, and this reads its ladder without writing to it.
+  const runScale = describeScale(hud.metres, units);
+  const bestScale = describeScale(records.best.ascent, units);
 
   return (
     <>
@@ -365,14 +375,14 @@ export function AscentPage() {
       <div className="grid grid-cols-1 gap-3">
         {phase !== 'menu' && (
           <div className="flex items-center gap-3 text-sm">
-            <span className="font-black text-xl tabular-nums">{hud.metres.toLocaleString()} m</span>
+            <span className="font-black text-xl tabular-nums">{runHeight(hud.metres, units).label}</span>
             <span className="text-ink-soft tabular-nums">◎ {hud.coins}</span>
             {hud.past !== null && (
               <span
                 className="tabular-nums font-semibold text-positive"
                 title="Past your best run today"
               >
-                +{Math.max(0, hud.past).toLocaleString()} m
+                +{runHeight(Math.max(0, hud.past), units).label}
               </span>
             )}
             <span className="ml-auto flex items-center gap-2 text-ink-soft">
@@ -408,7 +418,7 @@ export function AscentPage() {
               {raceable('ascent') && (
                 <p className="text-sm text-ink-soft leading-relaxed mb-3">
                   Your best run today climbs it with you — a faint second climber on the same wall,
-                  making the same moves. {today?.metres.toLocaleString()} m to beat.
+                  making the same moves. {runHeight(today?.metres ?? 0, units).label} to beat.
                 </p>
               )}
               <Button size="lg" className="w-full" onClick={() => start('ascent')}>
@@ -421,9 +431,9 @@ export function AscentPage() {
                 One life, thirty per cent faster, no hearts.{' '}
                 {freeSoloUnlocked
                   ? 'Unlocked.'
-                  : `Reach ${FREE_SOLO_UNLOCK.toLocaleString()} m on the normal wall to unlock it.`}
+                  : `Reach ${runHeight(FREE_SOLO_UNLOCK, units).label} on the normal wall to unlock it.`}
                 {raceable('freesolo') &&
-                  ` Today's best Free Solo runs beside you — ${today?.metres.toLocaleString()} m to beat.`}
+                  ` Today's best Free Solo runs beside you — ${runHeight(today?.metres ?? 0, units).label} to beat.`}
               </p>
               <Button
                 variant="outline"
@@ -439,27 +449,32 @@ export function AscentPage() {
               <TodayPayout
                 daily={today}
                 rested={derived.restedToday}
+                units={units}
               />
             </Card>
 
             <Card title="Your records">
               <dl className="grid grid-cols-1 gap-1.5 text-sm">
-                <Row label="Best climb" value={`${records.best.ascent.toLocaleString()} m`} />
-                <Row label="Best Free Solo" value={`${records.best.freesolo.toLocaleString()} m`} />
-                <Row label="Best pure run" value={`${records.pureBest.toLocaleString()} m`} />
+                <Row label="Best climb" value={runHeight(records.best.ascent, units).label} />
+                <Row label="Best Free Solo" value={runHeight(records.best.freesolo, units).label} />
+                <Row label="Best pure run" value={runHeight(records.pureBest, units).label} />
                 <Row label="Runs" value={String(records.runs)} />
-                {today && <Row label="Today's wall" value={`${today.metres.toLocaleString()} m`} />}
+                {today && <Row label="Today's wall" value={runHeight(today.metres, units).label} />}
               </dl>
+              {bestScale !== null && (
+                <p className="text-sm text-ink-soft mt-3 leading-relaxed">{bestScale}</p>
+              )}
               <p className="text-xs text-ink-soft mt-3">
                 Everyone gets the same wall each day — the pattern comes from the date, so a score is
-                comparable without anything leaving your phone.
+                comparable without anything leaving your phone. Heights are the game's own — nothing
+                here moves the altimeter.
               </p>
             </Card>
 
-            {describeAscent(history) !== null && (
+            {describeAscent(history, units) !== null && (
               <Card title="The month behind you">
-                <DayBars history={history} />
-                <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeAscent(history)}</p>
+                <DayBars history={history} units={units} />
+                <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeAscent(history, units)}</p>
               </Card>
             )}
 
@@ -473,7 +488,7 @@ export function AscentPage() {
                       {wall.name}
                       {wall.feet > 0 && (
                         <span className="text-ink-soft">
-                          {' '}· {wall.feet.toLocaleString()} ft on the altimeter
+                          {' '}· {formatHeight(wall.feet, units)} on the altimeter
                         </span>
                       )}
                     </li>
@@ -537,13 +552,14 @@ export function AscentPage() {
           <Card>
             <div className="text-center mb-3">
               <div className="text-4xl font-black tabular-nums leading-none">
-                {hud.metres.toLocaleString()}
-                <span className="text-lg text-ink-soft ml-1.5">m</span>
+                {runHeight(hud.metres, units).value}
+                <span className="text-lg text-ink-soft ml-1.5">{runHeight(hud.metres, units).unit}</span>
               </div>
               <p className="text-sm text-ink-soft mt-1.5">
-                {newBest ? 'A new best.' : `Best is ${best.toLocaleString()} m.`}
+                {newBest ? 'A new best.' : `Best is ${runHeight(best, units).label}.`}
                 {hud.pure && ' No power-ups touched.'}
               </p>
+              {runScale !== null && <p className="text-sm text-ink-soft mt-1">{runScale}</p>}
             </div>
             {run?.mode === 'ascent' && !freeSoloUnlocked && hud.metres >= FREE_SOLO_UNLOCK && (
               <p className="flex items-center justify-center gap-1.5 text-sm font-semibold text-accent mb-3">
@@ -594,6 +610,7 @@ export function AscentPage() {
                   pure: hud.pure,
                   coins: hud.coins,
                   avatar,
+                  units,
                 })}
               />
             </div>
@@ -628,9 +645,11 @@ function Hook({ on, text, off }: { on: boolean; text: string; off: string }) {
 function TodayPayout({
   daily,
   rested,
+  units,
 }: {
   daily: { metres: number; coins: number; mode: Mode } | null;
   rested: boolean;
+  units: UnitSystem;
 }) {
   if (!daily) {
     return (
@@ -640,12 +659,12 @@ function TodayPayout({
       </p>
     );
   }
-  const payout = payoutFor({ date: '', ...daily }, rested);
+  const payout = payoutFor({ date: '', ...daily }, rested, units);
   return (
     <>
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-sm">
-          Best today · <span className="font-semibold">{daily.metres.toLocaleString()} m</span>
+          Best today · <span className="font-semibold">{runHeight(daily.metres, units).label}</span>
         </span>
         <span className="font-bold tabular-nums">+{payout.xp} XP</span>
       </div>
@@ -666,7 +685,7 @@ function TodayPayout({
  * nought metres of it are different days, and drawing them the same is the
  * mistake the consistency grid records for its own rest days.
  */
-function DayBars({ history }: { history: AscentHistory }) {
+function DayBars({ history, units }: { history: AscentHistory; units: UnitSystem }) {
   const peak = Math.max(1, ...history.days.map((d) => d.metres));
   const span = daysBetween(history.from, history.to) + 1;
   const byDate = new Map(history.days.map((d) => [d.date, d]));
@@ -675,7 +694,7 @@ function DayBars({ history }: { history: AscentHistory }) {
     <div
       className="flex items-end gap-0.5 h-20"
       role="img"
-      aria-label={`${history.played} of the last ${span} daily walls climbed, best ${history.best?.metres ?? 0} metres`}
+      aria-label={`${history.played} of the last ${span} daily walls climbed, best ${runHeight(history.best?.metres ?? 0, units).label}`}
     >
       {Array.from({ length: span }, (_, i) => {
         const date = addDays(history.from, i);

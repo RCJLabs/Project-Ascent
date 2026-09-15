@@ -12,6 +12,8 @@
  */
 
 import { GAME_ACTION_CAP, unitsToXp } from '../economy';
+import type { UnitSystem } from '../units';
+import { runHeight } from './scale';
 import type { Mode } from './game';
 
 /**
@@ -52,7 +54,23 @@ export interface AscentPayout {
   restBoost: boolean;
 }
 
-export function payoutFor(run: DailyRun, restedToday: boolean): AscentPayout {
+/**
+ * `unitSystem`, not `units`, and it has no default (PLAN.md M210).
+ *
+ * **Not `units`** because that word has meant *fraction of a level* in this
+ * file since it was written — `PayoutLine.units`, `AscentPayout.units`, the
+ * accumulator below — and a second meaning for it here is the ambiguity
+ * M198 is about, one file early.
+ *
+ * **And no default** because the first line of this payout is a label a
+ * climber reads, *Best run · 3,488 ft*, and a default would be the game
+ * quietly answering in its own unit at whichever call site forgot.
+ */
+export function payoutFor(
+  run: DailyRun,
+  restedToday: boolean,
+  unitSystem: UnitSystem,
+): AscentPayout {
   const metresUnits =
     Math.min(1, Math.sqrt(Math.max(0, run.metres) / PAYOUT.metresForMax)) * PAYOUT.maxMetresUnits;
   const coinUnits = Math.min(
@@ -61,7 +79,7 @@ export function payoutFor(run: DailyRun, restedToday: boolean): AscentPayout {
   );
 
   const lines: PayoutLine[] = [
-    { label: `Best run · ${run.metres.toLocaleString()} m`, units: metresUnits },
+    { label: `Best run · ${runHeight(run.metres, unitSystem).label}`, units: metresUnits },
   ];
   if (coinUnits > 0) {
     // One coin is a coin. The same fault M80 wrote `records(n)` for, found

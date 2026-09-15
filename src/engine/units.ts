@@ -71,3 +71,16 @@ export function formatHeight(feet: number, units: UnitSystem): string {
 export function heightValue(feet: number, units: UnitSystem): number {
   return units === 'metric' ? Math.round(feet * 0.3048) : Math.round(feet);
 }
+
+/**
+ * The other direction, for the one thing in the app that stores metres.
+ *
+ * The Ascent's simulation is metric — `METRES_PER_PX` is 0.4 — while every
+ * other height here is canonically feet, and `formatHeight` is the one
+ * formatter. So a run converts on the way *in* to that formatter rather than
+ * growing a second one, and the factor stays in the table above where the
+ * other four conversions live.
+ */
+export function feetFromMetres(metres: number): number {
+  return metres / CONVERSIONS['ft']!.perImperial;
+}

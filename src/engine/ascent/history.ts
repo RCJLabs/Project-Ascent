@@ -15,6 +15,8 @@
 
 import type { ClimbedDay, DayRecord, LedgerEntry } from '@/db/game';
 import { addDays, daysBetween } from '../dates';
+import type { UnitSystem } from '../units';
+import { runHeight } from './scale';
 
 /**
  * A year. The Ascent is a daily game and a year is the unit it is played
@@ -166,13 +168,17 @@ export function ascentHistory(input: HistoryInput): AscentHistory {
 /**
  * The series, in one sentence. Null while there is nothing to compare — one
  * day's wall is a score, not a history.
+ *
+ * Takes the units rather than printing metres (PLAN.md M210): this is the
+ * one sentence about the game that a climber reads on the same screen as
+ * their own records, and it read in a different unit from all of them.
  */
-export function describeAscent(history: AscentHistory): string | null {
+export function describeAscent(history: AscentHistory, units: UnitSystem): string | null {
   if (history.played < 2) return null;
 
   const window = daysBetween(history.from, history.to) + 1;
-  const lead = `${history.played} of the last ${window} walls, ${history.total.toLocaleString()} m in total.`;
-  const best = `Your best was ${history.best!.metres.toLocaleString()} m.`;
+  const lead = `${history.played} of the last ${window} walls, ${runHeight(history.total, units).label} in total.`;
+  const best = `Your best was ${runHeight(history.best!.metres, units).label}.`;
   if (history.streak < 2) return `${lead} ${best}`;
   return `${lead} ${best} ${history.streak} days in a row.`;
 }

@@ -13,6 +13,7 @@ import {
   LIGHT_CARD,
   altimeterCard,
   buildCardSvg,
+  dailyWallCard,
   escapeXml,
   projectCard,
   rankCard,
@@ -182,6 +183,24 @@ describe('the builders', () => {
     const card = rankCard(deriveXp({ sessions: [session(TODAY)] }));
     expect(card.eyebrow).toBe('Rank');
     expect(card.footnote).toContain('climbing');
+  });
+});
+
+describe('the daily wall card', () => {
+  const card = (metres: number, units: 'metric' | 'imperial') =>
+    dailyWallCard({ wall: 258, metres, mode: 'ascent', pure: false, coins: 12, units });
+
+  it('carries the height in the climber’s units (PLAN.md M210)', () => {
+    expect(card(1_063, 'metric').headline).toBe('1,063 m');
+    expect(card(1_063, 'imperial').headline).toBe('3,488 ft');
+  });
+
+  it('names the climb the run cleared, which is the part worth sharing', () => {
+    expect(card(950, 'imperial').stats[0]).toEqual({ label: 'Past', value: 'El Capitan' });
+  });
+
+  it('leaves the row off a run that has not cleared a gym wall', () => {
+    expect(card(9, 'metric').stats.some((stat) => stat.label === 'Past')).toBe(false);
   });
 });
 

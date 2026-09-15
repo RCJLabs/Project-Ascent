@@ -153,6 +153,7 @@ describe('the cap that makes all of this safe', () => {
     const payout = payoutFor(
       { date: '2026-09-10', mode: 'freesolo', metres: 999_999, coins },
       true,
+      'metric',
     );
     expect(payout.units).toBeLessThanOrEqual(GAME_ACTION_CAP);
     expect(payout.capped).toBe(true);

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { UnitSystem } from '@/engine/units';
 import type { ClimbedDay, DayRecord, LedgerEntry } from '@/db/game';
 import type { Tape } from './replay';
 import { addDays } from '../dates';
@@ -204,7 +205,8 @@ describe('the month behind you', () => {
 });
 
 describe('said out loud', () => {
-  const say = (days: DayRecord[]) => describeAscent(ascentHistory({ days, to: TODAY }));
+  const say = (days: DayRecord[], units: UnitSystem = 'metric') =>
+    describeAscent(ascentHistory({ days, to: TODAY }), units);
 
   // One wall is a score, not a history.
   it('says nothing about a single day', () => {
@@ -230,5 +232,13 @@ describe('said out loud', () => {
 
   it('stays quiet about a run of one', () => {
     expect(say([climbed(TODAY, 900), climbed(back(4), 100)])).not.toMatch(/in a row/);
+  });
+
+  it('reads in the climber\u2019s units, like every other height (PLAN.md M210)', () => {
+    // 1,000 m is 3,281 ft and 900 m is 2,953 ft. The sentence sits on the
+    // same screen as the records, so it cannot be the one in metres.
+    expect(say([climbed(TODAY, 900), climbed(back(4), 100)], 'imperial')).toMatch(
+      /3,281 ft in total\. Your best was 2,953 ft\./,
+    );
   });
 });

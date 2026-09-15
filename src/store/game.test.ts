@@ -4,8 +4,9 @@ import { resetDbForTests } from '@/db/db';
 import { EMPTY_ASCENT, getAscent } from '@/db/game';
 import { NO_MODIFIERS } from '@/engine/ascent/game';
 import type { Tape } from '@/engine/ascent/replay';
+import { useSettings } from '@/store/settings';
 import { useGame } from './game';
-import { dayRun } from '@/engine/ascent/history';
+import { dayRun, heightFromLabel } from '@/engine/ascent/history';
 
 /**
  * The day's best keeps the inputs that climbed it (PLAN.md M81).
@@ -42,6 +43,7 @@ async function run(metres: number, moves: number[] | null) {
     pure: true,
     date: DAY,
     rested: false,
+    units: 'metric',
     ...t,
   });
 }
@@ -81,7 +83,7 @@ describe('the tape of the day’s best', () => {
   it('starts fresh on a new day', async () => {
     await run(700, [20, -1]);
     await useGame.getState().recordRun({
-      mode: 'ascent', metres: 50, coins: 0, pure: true, date: '2026-09-12', rested: false,
+      mode: 'ascent', metres: 50, coins: 0, pure: true, date: '2026-09-12', rested: false, units: 'metric',
     });
     expect(todayRecord('2026-09-12')?.date).toBe('2026-09-12');
     expect(todayRecord('2026-09-12')?.tape).toBeUndefined();
@@ -89,5 +91,36 @@ describe('the tape of the day’s best', () => {
     // tape pruned, because only the newest wall can be raced.
     expect(todayRecord(DAY)?.metres).toBe(700);
     expect(todayRecord(DAY)?.tape).toBeUndefined();
+  });
+});
+
+describe('the payout a finished run hands back', () => {
+  it('reads in the units the run was recorded with (PLAN.md M210)', async () => {
+    // The card shown when a run ends renders exactly this object, so a store
+    // that priced it in metres put *1,621 ft* above *Best run · 494 m* —
+    // which is what shipped for the length of one browser check.
+    const payout = await useGame.getState().recordRun({
+      mode: 'ascent', metres: 494, coins: 0, pure: true, date: DAY, rested: false,
+      units: 'imperial',
+    });
+    expect(payout!.lines[0]!.label).toBe('Best run · 1,621 ft');
+  });
+});
+
+describe('the ledger label the Ascent writes', () => {
+  it('stays in metres whatever units the climber reads in (PLAN.md M210)', async () => {
+    // Not a display string: `heightFromLabel` parses this back to recover
+    // days written before M96, so it is a storage format that happens to be
+    // readable. Localising it would also mean a day written in feet and
+    // read after a switch to metric.
+    useSettings.getState().setUnits('imperial');
+    try {
+      await run(1_063, null);
+      const entry = useGame.getState().ledger.find((e) => e.origin === 'ascent');
+      expect(entry?.label).toBe('The Ascent · 1,063 m');
+      expect(heightFromLabel(entry!.label)).toBe(1_063);
+    } finally {
+      useSettings.getState().setUnits('imperial');
+    }
   });
 });

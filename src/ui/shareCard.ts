@@ -20,6 +20,8 @@ import type { ProjectSummary } from '@/engine/projects';
 import type { WeekReview } from '@/engine/review';
 import type { YearReview } from '@/engine/yearReview';
 import type { XpState } from '@/engine/xp';
+import { matchedClimb, runHeight } from '@/engine/ascent/scale';
+import type { UnitSystem } from '@/engine/units';
 import { CLIMBER_VIEWBOX, climberShapes, shapeToSvg } from './climberShapes';
 import { RIDGE } from './MountainMeter';
 
@@ -304,12 +306,18 @@ export function dailyWallCard(input: {
   pure: boolean;
   coins: number;
   avatar?: AvatarConfig;
+  /** The climber's own, because this is the copy that leaves the app. */
+  units: UnitSystem;
 }): CardContent {
+  // The climb the run cleared, which is the part of a score worth sharing:
+  // "3,488 ft" is a number and "past El Capitan" is a climb (PLAN.md M210).
+  const climb = matchedClimb(input.metres);
   return {
     eyebrow: `Daily Wall #${input.wall}`,
-    headline: `${input.metres.toLocaleString()} m`,
+    headline: runHeight(input.metres, input.units).label,
     subhead: input.mode === 'freesolo' ? 'Free Solo · one life' : 'The Ascent',
     stats: [
+      ...(climb ? [{ label: 'Past', value: climb.name }] : []),
       { label: 'Coins', value: String(Math.round(input.coins)) },
       ...(input.pure ? [{ label: 'Run', value: 'Pure' }] : []),
     ],

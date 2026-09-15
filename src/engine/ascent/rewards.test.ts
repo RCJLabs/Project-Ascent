@@ -12,21 +12,21 @@ const run = (patch: Partial<DailyRun> = {}): DailyRun => ({
 
 describe('the daily payout', () => {
   it('pays nothing for a run that went nowhere', () => {
-    const payout = payoutFor(run({ metres: 0, coins: 0 }), false);
+    const payout = payoutFor(run({ metres: 0, coins: 0 }), false, 'metric');
     expect(payout.units).toBe(0);
     expect(payout.xp).toBe(0);
   });
 
   it('counts one coin as a coin', () => {
     // The payout card printed "1 coins" until a browser run showed it.
-    const labels = (coins: number) => payoutFor(run({ metres: 600, coins }), false).lines.map((l) => l.label);
+    const labels = (coins: number) => payoutFor(run({ metres: 600, coins }), false, 'metric').lines.map((l) => l.label);
     expect(labels(1)).toContain('1 coin');
     expect(labels(2)).toContain('2 coins');
   });
 
   it('scales with height and with coins, and names both', () => {
-    const short = payoutFor(run({ metres: 1_000 }), false);
-    const long = payoutFor(run({ metres: 4_000 }), false);
+    const short = payoutFor(run({ metres: 1_000 }), false, 'metric');
+    const long = payoutFor(run({ metres: 4_000 }), false, 'metric');
     expect(long.units).toBeGreaterThan(short.units);
     expect(long.lines[0]!.label).toContain('4,000 m');
     expect(long.lines.some((l) => l.label.includes('coins'))).toBe(true);
@@ -34,23 +34,23 @@ describe('the daily payout', () => {
 
   it('pays a short run something worth having', () => {
     // A first attempt is a few hundred metres. Linear scaling paid it 1 XP.
-    const first = payoutFor(run({ metres: 600, coins: 0 }), false);
+    const first = payoutFor(run({ metres: 600, coins: 0 }), false, 'metric');
     expect(first.xp).toBeGreaterThanOrEqual(10);
     // And still leaves most of the range to skill.
-    expect(first.units).toBeLessThan(payoutFor(run({ metres: 5_000, coins: 0 }), false).units / 2);
+    expect(first.units).toBeLessThan(payoutFor(run({ metres: 5_000, coins: 0 }), false, 'metric').units / 2);
   });
 
   it('stops rewarding height and coins past their ceilings', () => {
-    const at = payoutFor(run({ metres: PAYOUT.metresForMax, coins: PAYOUT.coinsForMax }), false);
-    const far = payoutFor(run({ metres: 500_000, coins: 5_000 }), false);
+    const at = payoutFor(run({ metres: PAYOUT.metresForMax, coins: PAYOUT.coinsForMax }), false, 'metric');
+    const far = payoutFor(run({ metres: 500_000, coins: 5_000 }), false, 'metric');
     expect(far.units).toBeCloseTo(at.units);
     expect(at.units).toBeCloseTo(PAYOUT.maxMetresUnits + PAYOUT.maxCoinUnits);
   });
 
   it('doubles for Free Solo and adds half again for a rest day', () => {
-    const plain = payoutFor(run({ metres: 4_000, coins: 0 }), false);
-    const hard = payoutFor(run({ metres: 4_000, coins: 0, mode: 'freesolo' }), false);
-    const rested = payoutFor(run({ metres: 4_000, coins: 0 }), true);
+    const plain = payoutFor(run({ metres: 4_000, coins: 0 }), false, 'metric');
+    const hard = payoutFor(run({ metres: 4_000, coins: 0, mode: 'freesolo' }), false, 'metric');
+    const rested = payoutFor(run({ metres: 4_000, coins: 0 }), true, 'metric');
     expect(hard.units).toBeCloseTo(plain.units * PAYOUT.freeSoloMultiplier);
     expect(rested.units).toBeCloseTo(plain.units * PAYOUT.restDayMultiplier);
     expect(rested.restBoost).toBe(true);
@@ -58,15 +58,15 @@ describe('the daily payout', () => {
   });
 
   it('never pays past the game-lane cap, however good the day was', () => {
-    const best = payoutFor(run({ metres: 999_999, coins: 999, mode: 'freesolo' }), true);
+    const best = payoutFor(run({ metres: 999_999, coins: 999, mode: 'freesolo' }), true, 'metric');
     expect(best.units).toBe(GAME_ACTION_CAP);
     expect(best.capped).toBe(true);
-    expect(payoutFor(run({ metres: 1_000, coins: 0 }), false).capped).toBe(false);
+    expect(payoutFor(run({ metres: 1_000, coins: 0 }), false, 'metric').capped).toBe(false);
   });
 
   it('can never substitute for training', () => {
     // A perfect day of play against simply turning up and logging a session.
-    const perfect = payoutFor(run({ metres: 999_999, coins: 999, mode: 'freesolo' }), true);
+    const perfect = payoutFor(run({ metres: 999_999, coins: 999, mode: 'freesolo' }), true, 'metric');
     expect(perfect.units).toBeLessThan(AWARDS.session);
     expect(perfect.xp).toBeLessThan(unitsToXp(AWARDS.session));
   });
@@ -81,5 +81,23 @@ describe('the wall number', () => {
 
   it('moves by one per day across a month boundary', () => {
     expect(wallNumber('2026-02-01') - wallNumber('2026-01-31')).toBe(1);
+  });
+});
+
+describe('the payout a climber reads', () => {
+  it('names the run in their own units (PLAN.md M210)', () => {
+    // 494 m is 1,621 ft. This line sits directly under a height printed in
+    // feet on the card shown when a run ends, and read in metres until M210.
+    expect(payoutFor(run({ metres: 494 }), false, 'imperial').lines[0]!.label).toBe(
+      'Best run · 1,621 ft',
+    );
+    expect(payoutFor(run({ metres: 494 }), false, 'metric').lines[0]!.label).toBe(
+      'Best run · 494 m',
+    );
+  });
+
+  it('pays the same either way, because a unit is not an economy', () => {
+    const r = run({ metres: 494, coins: 20 });
+    expect(payoutFor(r, false, 'imperial').units).toBe(payoutFor(r, false, 'metric').units);
   });
 });

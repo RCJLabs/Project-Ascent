@@ -31,24 +31,40 @@ export interface Milestone {
 }
 
 /**
+ * The ten climbs whose place on the ladder **is** their own height.
+ *
+ * Everything above Everest is stacked, so `feet` there is a running total
+ * and not a mountain — K2's entry reads 57,283 because it sits on Everest's
+ * shoulders. These ten are the part of the ladder that can answer *how tall
+ * was that*, which is what M210 needed to say what a run on the game's wall
+ * would have climbed, and they are also the part with a spread worth
+ * comparing against: the fourteen eight-thousanders are all within 800
+ * metres of each other and naming one over another would be a coin toss.
+ *
+ * Exported and then spread into the ladder below, rather than copied, so the
+ * two cannot say different things about El Capitan.
+ */
+export const CLIMBS_TO_EVEREST: Milestone[] = [
+  { feet: 45, name: 'First gym wall', note: 'A single lead wall, floor to anchor.' },
+  { feet: 867, name: 'Devils Tower', note: 'The Durrance route, Wyoming.' },
+  { feet: 2_000, name: 'Half Dome', note: 'Regular Northwest Face, Yosemite.' },
+  { feet: 2_900, name: 'El Capitan', note: 'The Nose. Thirty-one pitches.' },
+  { feet: 5_790, name: 'Mt. Washington', note: 'New Hampshire, and the weather that comes with it.' },
+  { feet: 14_505, name: 'Mt. Whitney', note: 'The highest summit in the lower 48.' },
+  { feet: 19_341, name: 'Kilimanjaro', note: 'Tanzania. The first of the big ones.' },
+  { feet: 20_310, name: 'Denali', note: 'Alaska. Cold in a way the others are not.' },
+  { feet: 22_838, name: 'Aconcagua', note: 'Argentina. The highest peak outside Asia.' },
+  { feet: 29_032, name: 'Everest', note: 'Sea level to the summit. All of it.' },
+];
+
+/**
  * The ladder: ten real climbs to Everest, then the remaining thirteen
  * eight-thousanders stacked on top as the long tail.
  */
 export const MILESTONES: Milestone[] = buildLadder();
 
 function buildLadder(): Milestone[] {
-  const toEverest: Milestone[] = [
-    { feet: 45, name: 'First gym wall', note: 'A single lead wall, floor to anchor.' },
-    { feet: 867, name: 'Devils Tower', note: 'The Durrance route, Wyoming.' },
-    { feet: 2_000, name: 'Half Dome', note: 'Regular Northwest Face, Yosemite.' },
-    { feet: 2_900, name: 'El Capitan', note: 'The Nose. Thirty-one pitches.' },
-    { feet: 5_790, name: 'Mt. Washington', note: 'New Hampshire, and the weather that comes with it.' },
-    { feet: 14_505, name: 'Mt. Whitney', note: 'The highest summit in the lower 48.' },
-    { feet: 19_341, name: 'Kilimanjaro', note: 'Tanzania. The first of the big ones.' },
-    { feet: 20_310, name: 'Denali', note: 'Alaska. Cold in a way the others are not.' },
-    { feet: 22_838, name: 'Aconcagua', note: 'Argentina. The highest peak outside Asia.' },
-    { feet: 29_032, name: 'Everest', note: 'Sea level to the summit. All of it.' },
-  ];
+  const toEverest: Milestone[] = [...CLIMBS_TO_EVEREST].map((m) => ({ ...m }));
 
   /** The other thirteen 8,000-metre peaks, tallest first. */
   const eightThousanders: [string, number, string][] = [

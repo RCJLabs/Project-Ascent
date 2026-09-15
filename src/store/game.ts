@@ -20,6 +20,7 @@ import type { Mode } from '@/engine/ascent/game';
 import type { Tape } from '@/engine/ascent/replay';
 import { dayRun, recordDay, recoverDays } from '@/engine/ascent/history';
 import { payoutFor, type AscentPayout } from '@/engine/ascent/rewards';
+import type { UnitSystem } from '@/engine/units';
 import type { BountySpec, Challenge, AcceptedBounty } from '@/engine/challenges';
 import { today } from '@/engine/dates';
 import { deriveXp, type XpState } from '@/engine/xp';
@@ -39,6 +40,18 @@ export interface GameState {
    * payout is re-priced on the best run rather than added to per run.
    */
   recordRun: (run: {
+    /**
+     * The climber's units, for the payout this hands back (PLAN.md M210).
+     *
+     * Display, not storage: it reaches `payoutFor` only so the *Best run ·
+     * 3,488 ft* line reads in the same unit as the screen around it. Nothing
+     * written below depends on it — the economy units are a fraction of a
+     * level either way, and the ledger label stays metres on purpose.
+     *
+     * Passed in rather than read off the settings store here, so the one
+     * place that knows a display preference is the screen.
+     */
+    units: UnitSystem;
     mode: Mode;
     metres: number;
     coins: number;
@@ -93,7 +106,7 @@ export const useGame = create<GameState>((set, get) => ({
     }
   },
 
-  recordRun: async ({ mode, metres, coins, pure, date, rested, tape }) => {
+  recordRun: async ({ mode, metres, coins, pure, date, rested, tape, units }) => {
     const current = get().ascent;
     // The day is priced on its best run, so a worse one changes nothing —
     // and the day is kept rather than overwritten (PLAN.md M96).
@@ -114,11 +127,18 @@ export const useGame = create<GameState>((set, get) => ({
       }),
     });
 
-    const payout = payoutFor(daily, rested);
+    const payout = payoutFor(daily, rested, units);
     set({
       ledger: await upsertLedger({
         id: `ascent:${date}`,
         date,
+        // Metres, and **not** the climber's units (PLAN.md M210). This
+        // string is parsed back by `heightFromLabel` to recover days written
+        // before M96, so its shape is a storage format that happens to be
+        // readable; a stored string that encoded a display preference would
+        // also mean a day written in feet and read after a switch to metric.
+        // The cost is that the XP feed shows metres to an imperial climber,
+        // which is one line in a ledger rather than the game's own screen.
         label: `The Ascent · ${daily.metres.toLocaleString()} m`,
         units: payout.units,
         origin: 'ascent',

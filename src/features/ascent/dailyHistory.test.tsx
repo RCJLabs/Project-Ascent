@@ -6,6 +6,7 @@ import { resetDbForTests } from '@/db/db';
 import { EMPTY_ASCENT, putAscent, getAscent, upsertLedger, type ClimbedDay } from '@/db/game';
 import { addDays, today } from '@/engine/dates';
 import { useGame } from '@/store/game';
+import { useSettings } from '@/store/settings';
 import { renderAt, reset } from '@/test/render';
 import { AscentPage } from './AscentPage';
 
@@ -29,8 +30,10 @@ beforeEach(async () => {
   useGame.setState({ ledger: [], bounties: [], wallet: { spent: 0 }, ascent: EMPTY_ASCENT, hydrated: false });
 });
 
-async function open(days: ClimbedDay[]): Promise<void> {
-  await putAscent({ ...EMPTY_ASCENT, days });
+async function open(days: ClimbedDay[], bestAscent = 0): Promise<void> {
+  // `best` is separate from `days` in the record, so a fixture that wants
+  // the records card populated has to say so.
+  await putAscent({ ...EMPTY_ASCENT, days, best: { ...EMPTY_ASCENT.best, ascent: bestAscent } });
   await useGame.getState().load();
   renderAt('/ascent', <AscentPage />);
 }
@@ -41,7 +44,25 @@ describe('the month behind you', () => {
     expect(await screen.findByText('The month behind you')).toBeTruthy();
     // Four days of history, so four walls — the window stops at the first
     // one climbed rather than inventing a month of misses.
-    expect(screen.getByText(/2 of the last 4 walls, 1,300 m in total/)).toBeTruthy();
+    //
+    // Feet, because the app's default is imperial and this sentence used to
+    // be the one place in it that answered in metres (PLAN.md M210).
+    expect(screen.getByText(/2 of the last 4 walls, 4,265 ft in total/)).toBeTruthy();
+  });
+
+  it('answers in metres for a climber who set them', async () => {
+    // Put back afterwards: the setting is one store for the whole file and
+    // a leaked unit would fail whichever test ran next.
+    useSettings.getState().setUnits('metric');
+    try {
+      await open([climbed(TODAY, 900), climbed(back(3), 400)]);
+      expect(await screen.findByText(/2 of the last 4 walls, 1,300 m in total/)).toBeTruthy();
+      // The wall unlocks are altimeter feet and were printed with a hard
+      // `ft` beside them: 2,900 ft is 884 m.
+      expect(screen.getByText(/884 m on the altimeter/)).toBeTruthy();
+    } finally {
+      useSettings.getState().setUnits('imperial');
+    }
   });
 
   // One wall is a score, not a history.
@@ -49,6 +70,20 @@ describe('the month behind you', () => {
     await open([climbed(TODAY, 900)]);
     await screen.findByRole('heading', { level: 1 });
     expect(screen.queryByText('The month behind you')).toBeNull();
+  });
+
+  it('reads every record in the climber’s units, and names the climb', async () => {
+    // Five heights on this page were metres and the app's default is
+    // imperial, so this was the one screen answering in a unit the climber
+    // had not chosen (PLAN.md M210). 950 m is 3,117 ft, which is past El
+    // Capitan's 2,900 and short of Mt. Washington's 5,790.
+    await open([climbed(TODAY, 950), climbed(back(3), 400)], 950);
+    await screen.findByText('Your records');
+    // More than one row reads 3,117 ft — the best climb and today's wall
+    // are the same run — so this counts them rather than demanding one.
+    expect(screen.getAllByText('3,117 ft').length).toBeGreaterThan(1);
+    expect(screen.queryByText(/950 m/)).toBeNull();
+    expect(screen.getByText(/Past El Capitan\. Mt\. Washington is 2,673 ft higher\./)).toBeTruthy();
   });
 
   it('still shows today’s wall on the records card', async () => {

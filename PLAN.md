@@ -11872,6 +11872,9 @@ thresholds beside them.*
   El Capitan without the app ever saying so. Convert the unit, and name the climb the run just
   matched.
   *Small, and it is the cheapest real connection on this list.*
+  *Done — see the entry at the end of this document. Eleven places, not five; the wall-unlock
+  thresholds carried a hard `ft` too, and the end-of-run payout line was priced by the store
+  rather than the screen, which only the browser caught.*
 
 - **M211 — four of the five skill trees do nothing inside the game.** `content/skills.ts` grants
   exactly three `ascent-boon` effects and **all three sit in Dynamic Power** — Campus Fluent,
@@ -12416,3 +12419,76 @@ on any of them.
 **Budget** 137.12 → **137.13**, which is the noise floor: `climberShapes`, `Avatar` and the
 share card are all in lazy chunks, so the front view and `ui/contrast` behind it cost the entry
 nothing. 0.87KB of slack under the 138.0 ceiling, inside the rule. **5,787 tests pass, up from 5,765.**
+
+## M210 — the game answered in a unit nobody chose, about a height nobody could picture
+
+**Two faults, one screen.** The Ascent printed `${metres} m` in eleven places — the running HUD,
+the ghost line, the Free Solo gate, four rows of records, the payout, the month's sentence, the
+day-bar label and the share card that leaves the app — and **never once read the units setting**.
+Every other height in the app goes through `formatHeight`: the altimeter card, the career page,
+the trips. **The app's default is imperial**, so out of the box the game was the one screen
+answering a climber in a unit they had not chosen. And a bare height says nothing anyway: 950 m
+is a number, *past El Capitan* is a climb.
+
+**`engine/ascent/scale.ts` is both answers.** `runHeight` converts metres to feet on the way into
+the app's one formatter — there is no second formatter, and `feetFromMetres` sits in `units.ts`
+beside the four conversions that were already there. It returns the number and the unit split as
+well as joined, because the card shown when a run ends sets one at four times the size of the
+other and would otherwise take the string apart again. `describeScale` names what the run cleared
+and what is next: ***Past Devils Tower. Half Dome is 379 ft higher.***
+
+**The ladder it borrows is ten rungs long, and choosing which ten was the whole design.**
+`MILESTONES` runs to twenty-three, but above Everest it **stacks** — K2's entry reads 57,283 feet
+because it sits on Everest's shoulders — so those rungs are running totals and not mountains. The
+ten to Everest are the part where a rung *is* a height, and they are also the part with a spread
+worth comparing against: the fourteen eight-thousanders are all within 800 metres of each other,
+so naming one over another would be a coin toss with a decimal point. `CLIMBS_TO_EVEREST` is
+exported and then spread into the ladder rather than copied, so the two cannot come to disagree
+about El Capitan.
+
+**It is a comparison and never a credit.** `altimeter.ts` opens by promising that no game action
+adds a single foot, and that promise is the only reason *"Everest in eleven months"* means
+anything. Nothing here writes to it: this reads the ladder to name a scale, the copy says **past**
+a climb rather than claiming one, and the records card now says so out loud — *"Heights are the
+game's own — nothing here moves the altimeter."* There is a test that the sentence never says
+*reached*, *climbed* or *summit*.
+
+**One thing deliberately left in metres.** The ledger entry the Ascent writes reads *The Ascent ·
+1,063 m*, and `heightFromLabel` parses it back to recover days logged before M96. That string is a
+storage format that happens to be readable, so localising it would mean a day written in feet and
+read after a switch to metric. It stays metres, the parser fails closed on anything else, and
+there is a test pinning it so nobody localises it by accident. The cost is one line in the XP feed.
+
+**The browser caught what the tests had not.** After everything above was green, the card shown at
+the end of a run read **1,621 ft** above **Best run · 494 m**: `payoutFor` builds that label, the
+*store* prices the payout, and the store had been handed `'metric'` on a line whose comment I had
+written claiming only the number was read. It is read by the screen. `recordRun` now takes the
+climber's units for the object it hands back — display, passed in rather than reached for, so the
+one place that knows a display preference is still the screen — and two tests now fail if it goes
+back: one on `payoutFor`'s label, one on what `recordRun` returns.
+
+**`payoutFor` takes `unitSystem`, not `units`, and has no default.** Not `units` because that word
+has meant *fraction of a level* in `rewards.ts` since it was written — `PayoutLine.units`,
+`AscentPayout.units`, the accumulator — and a second meaning for it is the ambiguity M198 is about,
+arriving one file early. No default because a default is the game quietly answering in its own unit
+at whichever call site forgot, which is exactly the fault this milestone exists to fix.
+
+**Twenty-three mutants, twenty-three killed, first pass.** The conversion inverted; the run
+height and the unit label each ignoring the setting; the label losing its unit; the matched climb
+taking the next one up, or never returning null; the next climb going inclusive; Everests rounding
+up; the gap measured in metres, and measured to the wrong climb; *Past Everest* going silent; the
+copy saying **reached** instead of **past**; the comparison borrowing the stacked rungs above
+Everest; the ten drifting from the ladder they are spread into; and then one reversion each for
+the payout line, the month's sentence, the store's pricing, the share card's headline and its
+climb row, the records card, the wall unlocks and the scale line. **The ledger label mutant is the
+one worth naming**: localising it is killed by the test that pins its shape, which is the guard
+that stops a future milestone "fixing" a storage format. One sanity no-op survived, as it must.
+
+**In a browser, both themes, 430px and 1280px:** the HUD reads *1,621 ft*, the end-of-run card
+reads *1,621 ft* over *Past Devils Tower. Half Dome is 379 ft higher.* and *Best run · 1,621 ft*,
+the menu reads *6,562 ft to unlock* and *1,621 ft to beat*, the wall unlocks read *2,900 ft on the
+altimeter*, and a climber switched to metric reads *884 m* in the same row. No page errors.
+
+**Budget** 137.13 → **137.34**. `store/game.ts` is in the eager shell and now
+reaches `scale.ts`, so the ladder and the conversion land in the entry chunk; 0.66KB of slack
+under the 138.0 ceiling, which is inside the rule. **5,810 tests pass, up from 5,787.**
