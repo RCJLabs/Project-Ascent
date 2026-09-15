@@ -8,7 +8,7 @@ import { gymSummary } from '@/engine/gym';
 import { DayHeading } from '@/features/log/DayHeading';
 import { DayNudges, PreSessionCard } from '@/features/log/PreSession';
 import { usePlannedDay } from '@/features/log/usePlannedDay';
-import { ReviewCard } from '@/features/review/ReviewPage';
+import { ReviewCard } from '@/features/review/ReviewCard';
 import { useWeekOutline } from '@/features/week/useWeekOutline';
 import { describeWeekDays, nextLimitDay } from '@/engine/week';
 import { fromKey } from '@/engine/dates';

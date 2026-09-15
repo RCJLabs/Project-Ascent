@@ -10553,3 +10553,157 @@ of it, which is the opposite of the rule every raise here has followed and is
 the point — a ceiling must never be *raised* under pressure from the change
 about to fail it, and can only be *lowered* after the win is real. 5,581
 tests pass.
+
+---
+
+## The seventh brainstorm
+
+*Six brainstorms in, the shape that keeps turning up has changed. M169 swept every content
+field, M179 swept every module, and both came back clean — so this pass went looking for a
+different kind of miss, and M183 had just named it: **a boundary the app draws and then walks
+around**. The sweep is mechanical, so it could be answered rather than argued: all forty-one
+`lazy()` route pages checked against the static import closure from `main.tsx`.*
+
+***The answer is one, and that is the finding.*** *M183 was not the first of many. Exactly one
+route page is reachable eagerly — `ReviewPage`, through `HomePage.tsx:11` — and the other forty
+are clean. So the theme is narrow and the list below is honest about it: four items are the
+first-paint path, and the rest are the project's own recorded findings, unbuilt.*
+
+***What this pass checked and killed**, because the evidence that the cheap findings are gone is
+worth as much as a finding:* `deriveClimberState` *unmemoised — it has a single-entry identity
+cache with the reasoning written down; the check-in series unread —* `ProgressPage` *reads it
+through* `checkInHistory` *and a* `CheckInStrip`*; photos missing from backups —* `exportArchive`
+*includes them; Font and French grades —* `displayGrade` *handles both; a test asserting nothing —
+the one candidate wraps* `expect` *in a helper; TODOs — none in the tree.*
+
+- **M184 — Home imports one card from a lazy route and gets the page.** *Done — see the entry at
+  the end of this document. The fix was a move, not a defer: the card never depended on the page.*
+  **Measured: 13.32KB gzipped**, by cutting it and rebuilding. `HomePage.tsx:11` imports
+  `ReviewCard` from `@/features/review/ReviewPage`, which is `lazy()` in `App.tsx`, and drags
+  twelve modules including `ui/shareCard.ts` — the SVG share-card builder — onto the first paint.
+  **Pair it with generalising the guard**: `wired.test.ts` names nine modules by hand since M183;
+  asking the question of all forty-one routes would have caught this automatically.
+  *Medium.*
+
+- **M185 — the drill library is on the first-paint path through four doors.** **Ceiling: 5.39KB**,
+  measured by stubbing the library and rebuilding. `derive.ts`, `fingerGap.ts`, `restDrill.ts` and
+  `challenges.ts` each import `getDrill` for a name-and-focus lookup, so all eight drill files'
+  prose is in the entry chunk — confirmed by grepping the built output for
+  `Limit Boulders on the Crimps`. **Closing one door is worth 0.06KB**; it has to be all four.
+  M78 already solved this shape for programs by *fetching* the catalogue instead of importing it,
+  and drills never got the same treatment.
+  *Medium.*
+
+- **M186 — `@/db` is a barrel that re-exports the backup path. 1.18KB for five lines.** Five
+  stores import `getDb` from `@/db`, and the barrel re-exports `exportImport.ts`, which pulls
+  `engine/exportCsv.ts`. Measured by repointing them at `@/db/db`. The smallest real win here and
+  the cheapest.
+  *Small.*
+
+- **M187 — a failed lazy chunk never recovers.** React caches a rejected `lazy` factory, so the
+  error boundary's *Try again* re-throws the same error and only a reload helps. For an
+  offline-first app that is the first launch without signal, before the service worker has
+  precached anything. **Unverified** — the claim is from React's documented behaviour, not from a
+  test against this app, and it needs one before it is worth building.
+  *Small–Medium.*
+
+- **M188 — the week after a trip reads as `detraining`.** Already measured in this document: seven
+  days after a nine-day trip, `acwr` 0.00, zone `detraining`, and the tip offers *"come back at
+  about two-thirds of the volume you left"* to a climber doing exactly the right thing. `tripNow`
+  exists; this needs a different window — recently on a trip rather than on one.
+  *Medium.*
+
+- **M189 — the glossary is 13.99KB of the logger navigation chunk**, pulled in by a single
+  `<Term>` on an exercise name asking whether that name has a definition. Measured when the
+  logger was split and parked because `Term` is used across the app and making its lookup async
+  changes tap behaviour everywhere.
+  *Medium.*
+
+- **M190 — the plateau blocker repeats the spike's number one card down.** *"Recovery is the
+  blocker: your load has jumped to 2.96× your baseline"* sits directly under the spike card
+  quoting the same figure.
+  *Small.*
+
+- **M191 — two definitions of "rest session".** `isRestSession(session)` reads a present
+  `restChecklist` and no climbs; the editor reads `type?.isRest === true`. They agree for every
+  session the app makes, which is why nothing has caught them.
+  *Small.*
+
+- **M192 — the venue catalogue.** Sessions record where they happened in free text; turning that
+  into walls, circuits and set dates is the milestone the text was collected for.
+  *Large.*
+
+- **M193 — minutes as a scheduling constraint.** The finder asking how long a climber has.
+  Blocked on the session-length estimate, which answers for 25 sessions out of 42 — filtering a
+  catalogue on a number absent for the other 17 would quietly hide the projecting programs.
+  *Large, and genuinely blocked.*
+
+
+## M184 — one card cost the page it lived in
+
+**`HomePage.tsx:11` imported `ReviewCard` from `@/features/review/ReviewPage`**, a page the
+router defers, and got the page: twelve modules including `ui/shareCard.ts` — the SVG
+share-card builder, its font stack and its copy — on the first paint. **13.32KB gzipped**,
+measured by cutting the card and rebuilding. M183's finding one card over, and this time the
+sweep found it rather than a reading of the code.
+
+**The fix is a move, not a defer, and that is the correction to the proposal.** I recommended
+M183's recipe — a `lazy()` boundary and a skeleton fallback — and the code says that is the
+wrong shape here: `ReviewCard` is nine lines over a hook, and **it never depended on the page
+at all**. One file held both. `useReview`, `TONE` and `ReviewCard` move to
+`features/review/ReviewCard.tsx`; `ReviewPage` imports the two names it still uses. No
+boundary, no `Suspense`, no fallback, no layout shift — the front door's CLS is unchanged at
+0.0042/0.0267, which is M183's number, because nothing new was deferred.
+
+The compiler listed the difference. Pulling the card out left `ReviewPage` with **twelve unused
+imports** — `getProgram`, `buildReview`, four stores, `useMemo`, two icons — every one of them
+something the card needed and the page did not. That is the whole defect in one error list.
+
+**7.42KB of the 13.32 comes off**, and the rest is `engine/review.ts` and its dependencies,
+which Home genuinely needs: the card shows the week's note and that module builds the note.
+Deferring it behind a boundary would be worth **a further 5.75KB**, measured. Not taken here —
+that is M183's shape applied to a second card and should be judged on its own, not folded into
+a milestone about a file in the wrong place.
+
+**And unlike M183, these bytes leave the app.** That entry says plainly that deferring the
+coach engine moved parse work off the first paint without reducing it, because Home is the only
+screen the app opens on and Home wants the card. This is different: nothing on Home reads the
+share sheet, so a climber who never opens `/review` now never downloads it.
+
+**The guard is the durable half.** `wired.test.ts` gained `lazyRoutePages`, which reads
+`App.tsx`'s own `lazy(() => import('…'))` calls rather than a roll of forty-one filenames, and
+asserts that none of them is in the first-load closure. M183 named nine modules by hand; this
+asks the question of every route, and it found this defect immediately. It is clean now, which
+is the argument for having it — the same argument this file makes about itself a hundred lines
+up. Verified by putting the eager import back: the sweep fails.
+
+Three copies of the module resolver collapsed into one on the way. `importedPaths` wrote it,
+`firstLoadClosure` copied it at M183, and the new sweep wanted a third — which is exactly
+M169's rule, and this file states it.
+
+**Tests** `features/review/reviewCard.test.tsx` — the note still reaches the front door, the
+page says what the card says (one `useReview`, one `TONE`), the three tones stay three
+colours, and the split stays one-directional: the card must not import the page back, and the
+page must not re-export the card, which is the leak restored by a convenience line.
+`wired.test.ts` carries the sweep and the check that the three deliberately-eager pages stay
+eager, so the sweep cannot be satisfied by deferring everything.
+
+**Mutations** 13 mutants, all killed, the no-op survived. Two real survivors, both mine:
+`expect(pages.filter(onFirstPaint)).toEqual([])` passed with a filter that could never match —
+an absence assertion needs its predicate self-checked, which is M169's rule again — and the
+tone table could be given two identical colours with nothing noticing. One mutant was dropped
+rather than fixed: replacing an assertion with `toBeTruthy()` is a mutation of the test, and
+this document already records that deleting half a test and watching the other half hold is
+not a finding.
+
+**A vacuous browser check, caught before it counted.** The first draft asserted the entry chunk
+no longer contains `"Week of"` — a string that is not in `shareCard.ts` at all, so it passed for
+nothing. It now probes `Helvetica Neue` and `Every send, added up`, both confirmed present in
+the pre-M184 entry chunk and absent from this one.
+
+**Verified in a browser** at 430px and 1280px in both themes at a quarter CPU: the week note is
+on the front door with its tone colour, `/review` says what the card said and keeps its share
+button, the share-card builder is out of the entry chunk, no page errors.
+
+**Budget** 149.54 → 142.12, and **the ceiling comes down a second time: 150.5 → 143.0**, 0.88KB
+of slack. 5,587 tests pass.

@@ -496,7 +496,7 @@ describe('the bundle stays small', () => {
    * with one exception recorded below — the history is in the comment inside
    * the first test.
    */
-  const BUDGET = 150.5;
+  const BUDGET = 143.0;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -682,6 +682,25 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **150.5 → 143.0 at M184, the second cut and the cheaper one.** Measured
+    // 149.54 → 142.12: **7.42KB**, and unlike M183 it bought no boundary, no
+    // fallback and no layout shift. `HomePage.tsx` imported `ReviewCard` from
+    // `@/features/review/ReviewPage`, a page the router defers, and got the
+    // page — its share sheet, `ui/shareCard.ts`'s SVG builder, its header and
+    // back link. The card never needed any of it; one file held both.
+    //
+    // So the fix was a move rather than a defer, which is worth separating
+    // from M183's entry above. M183 moved parse work off the first paint and
+    // said plainly that the bytes did not leave the app. **These bytes do
+    // leave**: nothing on Home reads the share sheet, and a climber who never
+    // opens `/review` now never downloads it.
+    //
+    // 0.88KB of slack. What is left on this card is `engine/review.ts` and
+    // its dependencies — measured at a further **5.75KB** if it went behind a
+    // boundary like the coach card's. Not taken here: that is M183's shape
+    // applied to a second card, and it should be judged on its own rather
+    // than folded into a milestone about a file in the wrong place.
     //
     // **164.0 → 150.5 at M183, the first time this line has come down.**
     // Measured 163.61 → 149.54: **14.07KB off the entry chunk**, which is

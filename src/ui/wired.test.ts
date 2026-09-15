@@ -355,31 +355,40 @@ describe('every authored content field reaches a screen', () => {
  * forty files — because `App.tsx` reaches them through `lazy(() =>
  * import('…'))`.
  */
+/**
+ * A specifier resolved the way the bundler resolves it (PLAN.md M184).
+ *
+ * One copy. `importedPaths` wrote this first, `firstLoadClosure` copied it at
+ * M183, and the sweep below wanted a third — which is the shape M169 named
+ * and this file's own rule against: a sweep and its self-check holding
+ * separate copies of one predicate means weakening one survives everything.
+ */
+function resolveSpec(known: ReadonlySet<string>, from: string, spec: string): string | null {
+  let base: string;
+  if (spec.startsWith('@/')) base = `src/${spec.slice(2)}`;
+  else if (spec.startsWith('.')) {
+    const parts = from.split('/').slice(0, -1);
+    for (const step of spec.split('/')) {
+      if (step === '.') continue;
+      else if (step === '..') parts.pop();
+      else parts.push(step);
+    }
+    base = parts.join('/');
+  } else return null;
+  for (const candidate of [`${base}.ts`, `${base}.tsx`, `${base}/index.ts`, `${base}/index.tsx`]) {
+    if (known.has(candidate)) return candidate;
+  }
+  return null;
+}
+
 export function importedPaths(
   sources: readonly { path: string; source: string }[],
 ): Set<string> {
   const known = new Set(sources.map((f) => f.path));
   const out = new Set<string>();
-  const resolve = (from: string, spec: string): string | null => {
-    let base: string;
-    if (spec.startsWith('@/')) base = `src/${spec.slice(2)}`;
-    else if (spec.startsWith('.')) {
-      const parts = from.split('/').slice(0, -1);
-      for (const step of spec.split('/')) {
-        if (step === '.') continue;
-        else if (step === '..') parts.pop();
-        else parts.push(step);
-      }
-      base = parts.join('/');
-    } else return null;
-    for (const candidate of [`${base}.ts`, `${base}.tsx`, `${base}/index.ts`, `${base}/index.tsx`]) {
-      if (known.has(candidate)) return candidate;
-    }
-    return null;
-  };
   for (const file of sources) {
     for (const m of file.source.matchAll(/(?:from|import)\s*\(?\s*'([^']+)'/g)) {
-      const target = resolve(file.path, m[1]!);
+      const target = resolveSpec(known, file.path, m[1]!);
       if (target !== null && target !== file.path) out.add(target);
     }
   }
@@ -389,7 +398,7 @@ export function importedPaths(
 /**
  * What the browser must parse before the app can do anything (PLAN.md M183).
  *
- * The same resolver as `importedPaths`, walked from `main.tsx` and reading
+ * `resolveSpec` again, walked from `main.tsx` and reading
  * **only static edges**, because that is exactly the set the bundler puts in
  * the entry chunk: a `lazy(() => import('…'))` is a separate file the app
  * fetches when it needs it, and `import type` vanishes at build.
@@ -407,23 +416,6 @@ export function firstLoadClosure(
 ): Set<string> {
   const known = new Set(sources.map((f) => f.path));
   const by = new Map(sources.map((f) => [f.path, f.source]));
-  const resolve = (from: string, spec: string): string | null => {
-    let base: string;
-    if (spec.startsWith('@/')) base = `src/${spec.slice(2)}`;
-    else if (spec.startsWith('.')) {
-      const parts = from.split('/').slice(0, -1);
-      for (const step of spec.split('/')) {
-        if (step === '.') continue;
-        else if (step === '..') parts.pop();
-        else parts.push(step);
-      }
-      base = parts.join('/');
-    } else return null;
-    for (const candidate of [`${base}.ts`, `${base}.tsx`, `${base}/index.ts`, `${base}/index.tsx`]) {
-      if (known.has(candidate)) return candidate;
-    }
-    return null;
-  };
   const seen = new Set<string>();
   const stack = [...roots];
   while (stack.length > 0) {
@@ -442,11 +434,32 @@ export function firstLoadClosure(
     for (const m of source.matchAll(/from\s*'([^']+)'/g)) {
       const spec = m[1]!;
       if (typeOnly.has(spec)) continue;
-      const target = resolve(path, spec);
+      const target = resolveSpec(known, path, spec);
       if (target !== null && target !== path) stack.push(target);
     }
   }
   return seen;
+}
+
+/**
+ * Every page the router defers, read from the router (PLAN.md M184).
+ *
+ * The list is `App.tsx`'s own `lazy(() => import('…'))` calls rather than a
+ * roll of forty-one filenames, because a hand list of routes is a list that
+ * goes stale on the next page and says nothing about the one that was added.
+ */
+export function lazyRoutePages(
+  sources: readonly { path: string; source: string }[],
+  app = 'src/App.tsx',
+): string[] {
+  const known = new Set(sources.map((f) => f.path));
+  const source = sources.find((f) => f.path === app)?.source ?? '';
+  const out = new Set<string>();
+  for (const m of source.matchAll(/lazy\(\(\) =>\s*import\('([^']+)'\)/g)) {
+    const target = resolveSpec(known, app, m[1]!);
+    if (target !== null) out.add(target);
+  }
+  return [...out].sort();
 }
 
 /**
@@ -466,7 +479,7 @@ const DEFERRED_ENGINE = [
   'src/features/coach/useTips.ts',
 ];
 
-describe('the coach engine is not on the first-paint path', () => {
+describe('nothing is on the first-paint path that does not have to be', () => {
   const firstLoad = firstLoadClosure(SOURCES, ['src/main.tsx']);
 
   /**
@@ -490,6 +503,58 @@ describe('the coach engine is not on the first-paint path', () => {
       SOURCES.length - 30,
     );
     expect(firstLoad, 'Home itself is meant to be eager').toContain('src/features/home/HomePage.tsx');
+  });
+
+  /**
+   * The general form of the rule, and the reason it is here rather than in a
+   * list (PLAN.md M184).
+   *
+   * A page declared `lazy()` and also reachable statically is a boundary that
+   * does nothing: the router asks for it in a separate chunk and the entry
+   * chunk already holds it. M183 fixed one instance by hand and named nine
+   * modules; this asks the question of all forty-one routes at once, and it
+   * found the second instance immediately — `HomePage.tsx` imported
+   * `ReviewCard` from `@/features/review/ReviewPage`, and one card cost the
+   * page, its share sheet and the SVG builder behind it, 13.32KB gzipped.
+   *
+   * Clean now, which is the argument for having it. This file makes that
+   * argument about itself a hundred lines up.
+   */
+  it('lets no page the router defers back onto it', () => {
+    const pages = lazyRoutePages(SOURCES);
+    expect(pages.length, 'the router scan found nothing, so this proves nothing').toBeGreaterThan(
+      35,
+    );
+    expect(pages, 'a route resolved to something outside src/').toSatisfy((ps: string[]) =>
+      ps.every((path) => path.startsWith('src/features/')),
+    );
+
+    // The predicate, named once and self-checked — M169's rule, and the
+    // battery needed it: an assertion that a filtered list is empty passes
+    // just as well when the filter can never match anything.
+    const onFirstPaint = (path: string) => firstLoad.has(path);
+    expect(onFirstPaint('src/features/home/HomePage.tsx'), 'the filter matches nothing').toBe(true);
+    expect(onFirstPaint('src/features/coach/CoachPage.tsx'), 'the filter matches everything').toBe(
+      false,
+    );
+    expect(pages.filter(onFirstPaint)).toEqual([]);
+  });
+
+  /**
+   * And the three pages that are deliberately eager stay eager, so the sweep
+   * above cannot be satisfied by deferring everything. `App.tsx` names them
+   * and says why: Home is where the app opens, `/today` is a launcher
+   * shortcut, and the placeholder is a few lines.
+   */
+  it('keeps the three pages that are meant to be eager', () => {
+    for (const path of [
+      'src/features/home/HomePage.tsx',
+      'src/features/log/TodayRedirect.tsx',
+      'src/features/placeholder/PlaceholderPage.tsx',
+    ]) {
+      expect(firstLoad, `${path} stopped being first-load`).toContain(path);
+      expect(lazyRoutePages(SOURCES), `${path} is lazy now`).not.toContain(path);
+    }
   });
 
   it.each(DEFERRED_ENGINE)('leaves %s out of the entry chunk', (path) => {
