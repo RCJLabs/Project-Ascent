@@ -9,6 +9,7 @@ import { useSessions } from './sessions';
 import { hydrateSettings } from './settings';
 import { beginHydration, endHydration } from './hydrating';
 import { loadPrograms } from '@/content/programs';
+import { loadDrills } from '@/content/drills';
 
 /**
  * Load every store from IndexedDB.
@@ -27,9 +28,11 @@ export async function hydrateAll(): Promise<void> {
   beginHydration();
   try {
     await Promise.all([
-      // The catalogue is fetched, not imported (PLAN.md M78). Idempotent, so
-      // the boot path and the after-import path can both ask for it.
+      // The catalogue is fetched, not imported (PLAN.md M78), and so is the
+      // drill library (M185). Idempotent, so the boot path and the
+      // after-import path can both ask for them.
       loadPrograms(),
+      loadDrills(),
       hydrateSettings(),
       hydrateProfile(),
       useSessions.getState().load(),

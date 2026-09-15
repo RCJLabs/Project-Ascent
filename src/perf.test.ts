@@ -496,7 +496,7 @@ describe('the bundle stays small', () => {
    * with one exception recorded below — the history is in the comment inside
    * the first test.
    */
-  const BUDGET = 141.9;
+  const BUDGET = 136.3;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -682,6 +682,28 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **141.9 → 136.3 at M185, the largest cut this line has taken.**
+    // Measured 140.94 → 135.36: **5.58KB**, against a ceiling of 5.57
+    // measured beforehand by stubbing the library out — so this took all of
+    // it. The drill bodies were imported by `content/drills/index.ts`, and
+    // **six modules on the first-paint path call `getDrill`** for a category
+    // or a name: `derive`, `fingerGap`, `restDrill`, `challenges`,
+    // `sessionLength`, `plan`. Cutting any one of the six was worth 0.06KB,
+    // which is why this had to be a change to the registry rather than to
+    // its callers — and why the first draft of the proposal, which blamed
+    // one safety rule, was wrong.
+    //
+    // The registry fills itself through one `import()` now, which is
+    // `content/programs/index.ts` verbatim: M78 solved this for the program
+    // bodies and the drills were simply never given the same treatment.
+    // `getDrill` stays synchronous, so none of the six callers changed.
+    //
+    // 0.94KB of slack. These bytes do not leave the app — the router waits
+    // for the library before it renders a page, so every launch fetches it —
+    // but they are off the *first paint*, which is what this line measures,
+    // and the chunk is fetched in parallel with the program catalogue rather
+    // than parsed ahead of it.
     //
     // **143.0 → 141.9 at M186, five lines.** Measured 142.12 → 140.94:
     // **1.18KB**, the cheapest entry on this list per character changed.

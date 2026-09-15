@@ -75,6 +75,7 @@ const AttachPage = lazy(() => import('@/features/media/AttachPage').then((m) => 
 import { sweepOrphanMedia } from '@/db/media';
 import { hydrateAll } from '@/store';
 import { loadPrograms, programsLoaded } from '@/content/programs';
+import { drillsLoaded, loadDrills } from '@/content/drills';
 import { applyTextSize, applyTheme, useSettings } from '@/store/settings';
 import { AppShell } from '@/ui/AppShell';
 
@@ -193,11 +194,15 @@ interface LaunchQueue {
  * here is one, and the nav still paints while the bodies are parsed.
  */
 function useCatalogue(): boolean {
-  const [ready, setReady] = useState(programsLoaded);
+  const [ready, setReady] = useState(() => programsLoaded() && drillsLoaded());
   useEffect(() => {
     if (ready) return;
     let live = true;
-    void loadPrograms().then(() => {
+    // Both, because the drills are fetched too since M185 and a page that
+    // reads `getDrill` on mount would otherwise render an empty library
+    // once and never hear about it. One gate for the same reason there was
+    // one before: gating the pages one by one is a chance to miss one.
+    void Promise.all([loadPrograms(), loadDrills()]).then(() => {
       if (live) setReady(true);
     });
     return () => {

@@ -11,14 +11,6 @@
  */
 
 import type { Discipline, Drill, DrillCategory, DrillId, Equipment } from '../types';
-import { BASE_CAMP_DRILLS } from './baseCamp';
-import { GRAVITY_DEFIED_DRILLS } from './gravityDefied';
-import { IRON_GRIP_DRILLS } from './ironGrip';
-import { LOCKDOWN_DRILLS } from './lockdown';
-import { LONG_GAME_DRILLS } from './longGame';
-import { OFF_WALL_DRILLS } from './offWall';
-import { PEAK_PERFORMANCE_DRILLS } from './peakPerformance';
-import { SIEGE_DRILLS } from './siege';
 
 export const DRILL_CATEGORIES: Record<DrillCategory, { label: string; description: string }> = {
   technique: { label: 'Technique', description: 'Movement quality, footwork, body position.' },
@@ -36,20 +28,47 @@ export const DRILL_CATEGORIES: Record<DrillCategory, { label: string; descriptio
   assessment: { label: 'Assessment', description: 'Benchmark testing and retests.' },
 };
 
-export const DRILLS: Drill[] = [
-  ...BASE_CAMP_DRILLS,
-  ...GRAVITY_DEFIED_DRILLS,
-  ...IRON_GRIP_DRILLS,
-  ...LOCKDOWN_DRILLS,
-  ...LONG_GAME_DRILLS,
-  ...PEAK_PERFORMANCE_DRILLS,
-  ...SIEGE_DRILLS,
-  // Last, and belonging to no program (PLAN.md M132). Every other file here
-  // is named after the program its drills were extracted from, which is the
-  // seam this library was split on — and is exactly why nothing in it worked
-  // without a wall until these.
-  ...OFF_WALL_DRILLS,
-];
+/**
+ * The library, in provenance order.
+ *
+ * **Empty until `loadDrills` has run** (PLAN.md M185). The bodies used to be
+ * imported here, and six modules on the first-paint path call `getDrill` for
+ * a category or a name — `derive`, `fingerGap`, `restDrill`, `challenges`,
+ * `sessionLength`, `plan` — so all hundred-odd of them were in front of the
+ * first paint of a screen that shows none. Cutting any one of those six was
+ * worth 0.06KB; cutting all six is worth 5.57KB, which is why this is a
+ * change to the registry rather than to its callers.
+ *
+ * Filled in place rather than replaced, so the callers holding a reference
+ * see the drills the moment they land. This is `content/programs/index.ts`
+ * verbatim, down to the promise being memoised, because that milestone
+ * solved this exact problem for the program bodies at M78 and the drills
+ * were simply never given the same treatment.
+ */
+export const DRILLS: Drill[] = [];
+
+const BY_ID = new Map<DrillId, Drill>();
+
+let loading: Promise<void> | null = null;
+
+/**
+ * Fetch the bodies and register them. Idempotent: the second caller gets the
+ * first caller's promise, so the router and `hydrateAll` can both ask
+ * without loading twice or racing the array.
+ */
+export function loadDrills(): Promise<void> {
+  loading ??= import('./library').then(({ LIBRARY }) => {
+    DRILLS.splice(0, DRILLS.length, ...LIBRARY);
+    BY_ID.clear();
+    for (const drill of LIBRARY) BY_ID.set(drill.id, drill);
+  });
+  return loading;
+}
+
+/** True once the library is in the registry. */
+export function drillsLoaded(): boolean {
+  return BY_ID.size > 0;
+}
 
 /**
  * The drills a climber with nothing at all can do (PLAN.md M132).
@@ -65,8 +84,6 @@ export const DRILLS: Drill[] = [
 export function offWallDrills(): Drill[] {
   return filterDrills({ equipment: [] });
 }
-
-const BY_ID = new Map<DrillId, Drill>(DRILLS.map((d) => [d.id, d]));
 
 export function getDrill(id: DrillId): Drill | undefined {
   return BY_ID.get(id);

@@ -601,6 +601,55 @@ describe('nothing is on the first-paint path that does not have to be', () => {
     expect([...firstLoad]).not.toContain(path);
   });
 
+  /**
+   * A bodies module is content reached through one `import()` and nothing
+   * else (PLAN.md M185).
+   *
+   * `content/programs/catalogue.ts` has been one since M78 and says so in
+   * its own header; `content/drills/library.ts` became one here. The rule
+   * that keeps them working is the same and had never been written down: a
+   * single static import from anywhere puts the whole body back in the
+   * entry chunk, and nothing would say so until the budget moved.
+   *
+   * Six modules on the first-paint path call `getDrill` — `derive`,
+   * `fingerGap`, `restDrill`, `challenges`, `sessionLength`, `plan` — so the
+   * drills were in front of the first paint through six doors at once.
+   * Cutting any one was worth 0.06KB; the registry filling itself is worth
+   * 5.58KB.
+   */
+  const BODIES = ['src/content/programs/catalogue.ts', 'src/content/drills/library.ts'];
+
+  it.each(BODIES)('reaches %s through import() and nothing else', (path) => {
+    expect(SOURCES.map((f) => f.path), 'the bodies module was renamed').toContain(path);
+    expect([...firstLoad], 'a static import put it back in the entry chunk').not.toContain(path);
+
+    // The scan, named once and asked twice — the assertion and its own
+    // control run through the same expression. An empty list is an assertion
+    // that passes when the search is broken, and a control built from a
+    // second copy of the scan does not fix that: the battery stubbed this
+    // one to `[]` and survived until the control went through it too.
+    const staticImportersOf = (module: string) =>
+      SOURCES.filter(
+        (f) => f.path !== path && new RegExp(`from '[^']*${module}'`).test(f.source),
+      ).map((f) => f.path);
+
+    const name = path.replace(/^.*\//, '').replace(/\.ts$/, '');
+    expect(staticImportersOf(name), `${name} is imported statically, which undoes the split`)
+      .toEqual([]);
+    // `content/types.ts` is imported statically all over the tree; a scan
+    // that cannot see that cannot see a static import of the bodies either.
+    expect(
+      staticImportersOf('types').length,
+      'the static-import scan finds nothing at all',
+    ).toBeGreaterThan(10);
+
+    // And something does reach it, or the module is dead rather than lazy.
+    const dynamic = SOURCES.filter((f) =>
+      new RegExp(`import\\('[^']*${name}'\\)`).test(f.source),
+    ).map((f) => f.path);
+    expect(dynamic.length, `nothing loads ${name} at all`).toBeGreaterThan(0);
+  });
+
   it.each(DEFERRED_ENGINE)('leaves %s out of the entry chunk', (path) => {
     expect(SOURCES.map((f) => f.path), 'the module was renamed, not deferred').toContain(path);
     expect([...firstLoad]).not.toContain(path);

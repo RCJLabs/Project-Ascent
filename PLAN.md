@@ -10585,7 +10585,9 @@ the one candidate wraps* `expect` *in a helper; TODOs — none in the tree.*
   asking the question of all forty-one routes would have caught this automatically.
   *Medium.*
 
-- **M185 — the drill library is on the first-paint path through four doors.** **Ceiling: 5.39KB**,
+- **M185 — the drill library is on the first-paint path through four doors.** *Done — see the
+  entry at the end of this document. Six doors, not four, and the fix is M78's, applied to a
+  registry that was never given it.* **Ceiling: 5.39KB**,
   measured by stubbing the library and rebuilding. `derive.ts`, `fingerGap.ts`, `restDrill.ts` and
   `challenges.ts` each import `getDrill` for a name-and-focus lookup, so all eight drill files'
   prose is in the entry chunk — confirmed by grepping the built output for
@@ -10743,3 +10745,68 @@ repointed, Settings still offers the backup, and clicking it writes a real
 the code that moved.
 
 **Budget** 142.12 → 140.94, ceiling **143.0 → 141.9**, 0.96KB of slack. 5,590 tests pass.
+
+
+## M185 — the drill library, fetched rather than imported
+
+**Six modules on the first-paint path call `getDrill`**, not the four the proposal counted:
+`derive`, `fingerGap`, `restDrill`, `challenges`, `sessionLength` and `plan`, each for a
+category, a name or a focus line. So all hundred-odd drills were in front of the first paint
+through six doors at once — confirmed by grepping the built entry chunk for
+`Limit Boulders on the Crimps`, which was in it.
+
+**Which is why the proposal's shape was wrong.** Measured before building: closing one door is
+worth **0.06KB**. The library only leaves when all six stop importing it, so this had to be a
+change to the registry rather than to its callers.
+
+**And the app had already solved it once.** `content/programs/index.ts` has held an empty
+`PROGRAMS` array filled in place by one `import()` since M78, for exactly this reason — *"the
+bodies used to be imported here statically, which put all eleven — a sixth of the entry chunk —
+in front of the first paint of a screen that needed none of them."* The drills are the same kind
+of content and were simply never given the same treatment. `content/drills/library.ts` is the
+new `catalogue.ts`; `DRILLS` fills in place; `BY_ID` is built at load rather than at module
+scope. **`getDrill` stays synchronous, so none of the six callers changed.**
+
+**5.58KB against a 5.57KB ceiling** — the split took all of it, and the entry chunk is 383KB raw
+against 444KB when this run of milestones began.
+
+**What it costs, stated plainly.** Unlike M184 and M186 these bytes do not leave the app: the
+router holds every route behind `loadPrograms` and `loadDrills` together, so every launch
+fetches the library. What changes is that it is no longer *parsed ahead of the first paint*, and
+it arrives in parallel with the program catalogue rather than in series. Measured at a quarter
+CPU, first paint is **335ms against 418ms before this run of milestones** — so the 8ms M183
+bought on its own has become about 75ms now that real bytes have left the entry chunk.
+
+**The window this opens, and the gate that closes it.** Between the entry chunk executing and
+the library landing there is a registry with no drills in it, and Home is eager and calls
+`getDrill` on mount — a page rendered in that window would read a hangboard session as no finger
+work at all, once, with nothing to correct it. `App.tsx` already gated its routes on
+`loadPrograms`; it gates on both now, and `drillsLoaded()` joins `programsLoaded()` in the
+initial state so a warm registry does not flash the fallback.
+
+**Tests** `content/drills/loading.test.ts` — the registry is full before a test module runs
+(which is what lets dozens of files call `getDrill` at module scope), it is the same array the
+callers already hold, `loadDrills()` returns one memoised promise, and the derived views read
+the filled array rather than a module-scope snapshot. Then the state none of that can see: a
+`vi.resetModules()` graph, where `drillsLoaded()` is false, `DRILLS` is empty and `getDrill`
+answers `undefined` — the window, asserted, plus the gate that closes it. `ui/wired.test.ts`
+gains the rule both bodies modules live by: reached through `import()` and nothing else, no
+static importer anywhere, and not in the first-load closure. `catalogue.ts` has lived by that
+rule since M78 and it had never been written down.
+
+**Mutations** 16 mutants, all killed, the no-op survived. Five real survivors, every one a test
+too weak rather than code too loose: memoisation was untested (`loading = ` instead of `??=`
+refetches three times and leaves the length right, because the fill splices), `drillsLoaded()`
+could return a bare `true`, the router could stop waiting for the library, its gate could start
+open, and `hydrateAll` could stop refilling after an import. The last survivor was the
+bodies-module scan, stubbed to `[]` — fixed by routing its own positive control through the same
+named scan rather than a second copy of it, which is M169's rule and the third time this
+brainstorm has needed it.
+
+**Verified in a browser** at 430px and 1280px in both themes: neither `Limit Boulders on the
+Crimps` nor `Shoulder CARs` is in the entry chunk — both confirmed present in the pre-M185 build
+first, so the check is not the vacuous kind M184 caught — the catalogue screen fills, a logged
+drill is still read by id, no page errors.
+
+**Budget** 140.94 → 135.36, ceiling **141.9 → 136.3**, 0.94KB of slack. **164.0 → 136.3 across
+M183–M186**, and the four cuts together took 163.61 → 135.36. 5,600 tests pass.
