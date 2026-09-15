@@ -496,7 +496,7 @@ describe('the bundle stays small', () => {
    * with one exception recorded below — the history is in the comment inside
    * the first test.
    */
-  const BUDGET = 163.3;
+  const BUDGET = 164.0;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -682,6 +682,25 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **163.3 → 164.0, raised rather than spent** — the fifth entry here to
+    // record no feature, and for the same reason as the first four. M179 left
+    // the measurement at 163.04, which is 0.26KB: above the 0.21 that
+    // prompted the last raise and still below the chunk-hash churn M145
+    // recorded, so the next change of any size would have had to move the
+    // line inside its own commit.
+    //
+    // 0.96KB, and the arithmetic behind picking it is the same as last time.
+    // The slack guard allows 1.5 and a raise to the cap leaves nothing for
+    // that churn; the milestones since the last raise cost 162.29 → 163.04,
+    // a median of 0.00 and a largest of 0.57 — M173's three tip bodies. So
+    // this is one heavy milestone's worth with room to spare, and the two
+    // proposals most likely to spend it (M178's coach rules, M176's ladder)
+    // are both prose-carrying.
+    //
+    // The line moves in its own commit, ahead of the milestone rather than
+    // inside it, because the one condition a budget should never be moved
+    // under is pressure from the change that needs it.
     //
     // **Unchanged at M179**, measured 163.07 → 163.04: **down** 0.03KB. The
     // milestone is two sweeps in `ui/wired.test.ts`, and a test weighs
