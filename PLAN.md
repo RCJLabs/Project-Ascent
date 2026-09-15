@@ -11710,7 +11710,9 @@ content — `SearchBody` feeds it `allSessions` and reads `session.notes`.*
 
 ### The game
 
-- **M199 — nothing proves an unlockable can be unlocked.** `achievements.ts` is 600 lines of
+- **M199 — nothing proves an unlockable can be unlocked.** *Done, and the premise was false —
+  see the entry at the end of this document. Every achievement, every skill node and every
+  cosmetic is reachable. The guard was always the half worth having and it is what shipped.* `achievements.ts` is 600 lines of
   definitions, `skills.ts` 464 of log-gated nodes, and the appearance card says every cosmetic is
   *"unlocked by the skill trees"*. The tests assert the **count** (`toHaveLength(ACHIEVEMENT_COUNT)`)
   and that a thin log earns fewer than half. **Nothing asserts that any given one can ever fire.**
@@ -11721,7 +11723,11 @@ content — `SearchBody` feeds it `allSessions` and reads `session.notes`.*
   never fires.
   *Medium.*
 
-- **M200 — the game recognises effort and never recognises restraint.** Verified by scanning every
+- **M200 — the game recognises effort and never recognises restraint.** *Corrected by M199's work
+  before anyone started it: the scan behind this was on **ids**, and the skill trees carry a
+  five-rung `grit-recovery-discipline` branch — Log 5, 15, 40, 90 and 180 rest days — whose ids
+  say "recovery" rather than "rest". The claim survives only for **achievements**, which have no
+  rest badge among their 25. Re-scope before building.* Verified by scanning every
   achievement and skill id: **not one contains rest, deload or taper.** Meanwhile `vitality.ts`'s
   own header says the one direction gamification may push a climber that a coach would agree with
   is *toward resting*, and pays `REST_RELIEF` for it. The reward system does not. Taking the
@@ -11791,3 +11797,68 @@ content — `SearchBody` feeds it `allSessions` and reads `session.notes`.*
   let them run it in their own copy. But the decision is not in this document, and the gap is
   real for whoever is coaching rather than training.
   *Large as a build, small as a decision. Worth settling before it is asked for.*
+
+
+## M199 — everything the game offers can be got, and now something says so
+
+**The premise was false, measured three ways.** Every one of the **25 achievements** is earned by
+the existing tests — established by instrumenting `deriveAchievements` to print each id it awards
+and running `achievements.test.ts` and the achievements page test: 25 of 25, none missing. Every
+one of the **130 skill nodes** unlocks for a climber who has done everything. Every one of the
+**5 earned outfits** is granted by a named node, and no node grants a kit no outfit wears. The
+sixth item this session to turn out already sound — but the case for M199 was never that
+something was broken, it was that **nobody had checked and nothing would notice**. So the check
+is what shipped.
+
+**Four fixtures too weak, and every one of them looked like a finding.** This is the entry's real
+content, because each produced a confident list of locked nodes that was entirely my own doing:
+
+- **A `Climb` shaped from memory.** `{ discipline, attempts, sent }` against the real
+  `{ grade, scale, count, result }`, so `deriveClimberState` counted nothing and *"Send 10 at V3
+  or harder"* read `current=0` against 700 sessions of V10s.
+- **A grade scale in the wrong case.** `'v'` and `'yds'` where `GradeScale` is `'V'` and `'YDS'`,
+  which threw inside `gradeOrdinal` rather than reading as zero — the only one of the four that
+  failed loudly.
+- **Drill ids invented rather than looked up.** `drillsByCategory` resolves `session.drillId`
+  through `getDrill`, so `['a','b','c']` counted as no drills at all and locked fifteen nodes
+  across three trees.
+- **A missing `style: 'onsight'`.** The last five locked nodes were the whole on-sight branch,
+  plus the one achievement the scenarios still missed — one field, six failures.
+
+**Not one of those was distinguishable from a real finding without reading the code.** A locked
+node reports `current=0 / target=1` whether the app cannot award it or the fixture cannot ask
+for it, which is the same shape as M195's missing link and M194's stale build: **a check that
+silently measured nothing looks exactly like a check that passed.**
+
+**What shipped.** `engine/unlockable.test.ts`, seven tests over three rules. Achievements are
+proved by **witnesses**, because the definitions want log *shapes* rather than larger numbers —
+one uniform two-year log earns 11 of 25, and the other 14 need a sixty-day gap, four days on rock
+in a row, five grades in one session with nothing failed, two sessions on one date, a week
+holding both RPE 3 and RPE 9, twenty burns before a send, a marked deload capped at RPE 7, and a
+twelve-week block with a session in every week. Nine scenarios cover all 25, each one documenting
+what its achievement actually asks for. Skill nodes are proved by one maximal climber and held
+from the other side by a control: an empty log must leave **every** node locked, so a fixture
+that quietly degrades fails rather than passes. Cosmetics are checked in both directions — no
+outfit without a node, no node granting a kit no outfit wears.
+
+**Ten mutants, eight killed, and four of them are the defect itself.** An achievement whose
+`find` returns `null` for every log; a node asking for `Number.MAX_SAFE_INTEGER`; an outfit whose
+unlock id no node grants; a node granting `kit-nowhere`. All four die, which is the only evidence
+that matters — the rest of the battery killed the sweeps reading an empty tree, a maximal climber
+degraded to an empty log, a scenario list never filled, and the outfit sweep filtering to
+nothing. Two survived as intended: `!== null` written `!= null`, and an assertion weakened, which
+this project's rule does not count.
+
+**M197's guard caught this milestone's own probe** on its first run — the throwaway that
+collected locked nodes and asserted nothing failed with *"This test asserted nothing and so
+cannot fail"*. Two milestones old and already earning its place.
+
+**A correction to M200, made before anybody builds it.** That item says the game *"recognises
+effort and never recognises restraint"*, on a scan of achievement and skill **ids** for rest,
+deload and taper. The skill trees have a five-rung branch — **Log 5, 15, 40, 90 and 180 rest
+days** — under ids reading `grit-recovery-discipline-N`. The word the scan looked for is not the
+word the content uses. The claim holds for achievements alone, where none of the 25 is about
+resting, and M200 has been re-scoped in place.
+
+**No browser check, and none is owed:** no product code changed. **Budget** 137.00 → 137.00.
+5,718 tests pass, up from 5,711.
