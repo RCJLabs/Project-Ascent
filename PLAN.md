@@ -11939,6 +11939,9 @@ thresholds beside them.*
   carries the venue you logged most recently, or the summit banner carries your project's name —
   nothing about the run changes, and the wall stops being nowhere.
   *Small, and it is the one item here a climber would notice in a second.*
+  *Done, and **the first half of this item was wrong** — see the entry at the end of this
+  document. Naming a shared wall after your own gym contradicts the sentence directly beneath it.
+  What shipped is the project, on the screen that is already about resting.*
 
 - **M218 — Free Solo is the only mode, and its unlock is the only one in the game that is not
   earned by climbing.** `FREE_SOLO_UNLOCK = 2000` metres on the normal wall. Every other gate —
@@ -12492,3 +12495,55 @@ altimeter*, and a climber switched to metric reads *884 m* in the same row. No p
 **Budget** 137.13 → **137.34**. `store/game.ts` is in the eager shell and now
 reaches `scale.ts`, so the ladder and the conversion land in the entry chunk; 0.66KB of slack
 under the 138.0 ceiling, which is inside the rule. **5,810 tests pass, up from 5,787.**
+
+
+## M217 — the game had never heard of a grade, a project or a venue
+
+**Zero mentions of any of them**, across `engine/ascent` and `features/ascent` both. The app knows
+the name of the climb you are working, what it is graded and where it is, and the game's wall was
+anonymous rock with a number on it.
+
+**The shape I proposed for this was wrong, and the flaw was on the same screen.** The eleventh
+brainstorm offered *"the day's wall carries the venue you logged most recently"*. Directly beneath
+the records on that page is the sentence the whole game rests on — *"Everyone gets the same wall
+each day … so a score is comparable"* — and putting your gym's name on a shared wall is a claim
+about that wall which is not true. The pattern is shared **on purpose**.
+
+**What is already personal here is the climber**, not the rock: their figure, their stat hooks,
+their unlocked wall themes, the ghost of their own best run. So this names something of theirs,
+and the Ascent turns out to be exactly the right screen for it. The card that links to it calls it
+the rest-day activity; the payout pays ×1.5 on a logged rest day and the sky changes; the module's
+own copy says *"the good paydays are on rest days"*. **A screen built around resting is the one
+place in the app where naming what you are resting for is not a nag.** On a logged rest day the
+card reads *Today's rest is for **Blue Moon** — V7, at The Roaches.* On any other day, *You're on*.
+
+**`restingFor` takes the most recent, not the biggest.** A climber with two projects on the go is
+working the one they were on last week, and twenty burns from last winter is the wrong answer
+however large the number is. Burns break a tie; `updatedAt` breaks that. An **untouched** project
+still wins when nothing has been touched at all, because it is still the climb you said you were
+on — and it gets no burns line, since *"0 days on it"* is the app telling somebody off for a climb
+they have only just written down.
+
+**Three real facts and a link, and that is deliberately all.** The name, the grade in the notation
+the climber reads (`displayGrade`, so a Font climber sees 7A+), and the place when the project
+names one. Under it: *2 days on it, last touched 39 days ago. High point 88%.* The card links to
+the project and the footnote says **"Nothing on this screen moves it."** The game must not become
+a place where projects are worked — everything here reads and nothing writes.
+
+**Eighteen mutants, eighteen killed**, and one of them only after I rebuilt it. Shelved and sent
+projects counting as active; the card surviving with no project; the pick running oldest-first;
+the tie-break backwards; the grade shown as stored; a whitespace-only location becoming a place;
+the place dropped; an untouched climb told off; *1 days on it*; *last touched 0 days ago* for
+today and *1 days ago* for yesterday; the high point dropped; the card, the burns line and the
+rest-day framing each suppressed; and the link pointed at the project list instead of the project.
+**The one that survived first time was my own fault** — I wrote a "burns beat recency" mutant that
+only hoisted a `const` above an `if` and left both returns in order, which is an equivalent mutant
+and proves nothing. Swapping the two guards for real kills it. One sanity no-op survived, as it
+must.
+
+**In a browser, both themes, 430px and 1280px**, against the sample climber: *You're on **Brad
+Pit** — V6, at The Roaches.* over *2 days on it, last touched 39 days ago. High point 88%.* and
+*Nothing on this screen moves it.* No page errors, no overflow at either width.
+
+**Budget** 137.34 → **137.35**, which is noise: `AscentPage` and `resting.ts` are both in the
+lazy Ascent chunk. 0.65KB of slack under the 138.0 ceiling. **5,825 tests pass, up from 5,810.**

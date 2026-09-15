@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Heart, Play, Shield, Sparkles } from 'lucide-react';
+import { Link } from 'wouter';
 import { HOOKS, VIEW } from '@/engine/ascent/config';
 import {
   createRun,
@@ -20,6 +21,7 @@ import {
 } from '@/engine/ascent/replay';
 import { payoutFor, wallNumber, type AscentPayout } from '@/engine/ascent/rewards';
 import { dailySeed } from '@/engine/ascent/rng';
+import { describeBurns, describeClimb, restingFor } from '@/engine/ascent/resting';
 import { describeScale, runHeight } from '@/engine/ascent/scale';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveAvatar } from '@/engine/avatar';
@@ -87,6 +89,7 @@ const EMPTY_HUD: Hud = {
 
 export function AscentPage() {
   const units = useSettings((s) => s.units);
+  const display = useSettings((s) => s.display);
   const metricEntries = useMetrics((s) => s.entries);
   const projects = useProjects((s) => s.projects);
   const injuries = useProfile((s) => s.injuries);
@@ -360,6 +363,9 @@ export function AscentPage() {
   // What the run amounted to, in climbs rather than in metres (PLAN.md
   // M210). A comparison and never a credit: the altimeter is the one number
   // no game action moves, and this reads its ladder without writing to it.
+  // The climb you are actually working, which the game had never heard of
+  // (PLAN.md M217). Read and never written: a sentence and a link.
+  const resting = restingFor({ projects, sessions, display });
   const runScale = describeScale(hud.metres, units);
   const bestScale = describeScale(records.best.ascent, units);
 
@@ -452,6 +458,21 @@ export function AscentPage() {
                 units={units}
               />
             </Card>
+
+            {resting && (
+              <Card title="What you're working">
+                <Link href={`/projects/${resting.id}`} className="block">
+                  <p className="text-sm leading-relaxed">
+                    {derived.restedToday ? "Today's rest is for " : "You're on "}
+                    <span className="font-semibold">{resting.name}</span> — {describeClimb(resting)}.
+                  </p>
+                  {describeBurns(resting) !== null && (
+                    <p className="text-xs text-ink-soft mt-1.5">{describeBurns(resting)}</p>
+                  )}
+                </Link>
+                <p className="text-xs text-ink-soft mt-3">Nothing on this screen moves it.</p>
+              </Card>
+            )}
 
             <Card title="Your records">
               <dl className="grid grid-cols-1 gap-1.5 text-sm">
