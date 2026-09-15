@@ -32,6 +32,7 @@ import type { Finding } from './planVsLog';
 import { FINGER_GAP_HOURS, fingerGaps } from './fingerGap';
 import type { Objective } from './objectives';
 import { tripNow } from './trip';
+import { comedownNow, type Comedown } from './comedown';
 import { isRestSession } from './rest';
 
 export type TipTone = 'good' | 'neutral' | 'caution';
@@ -387,9 +388,30 @@ function outdoorReentry({ state, sessions }: CoachInput, today: string): Tip | n
   };
 }
 
-function detraining({ state, sessions }: CoachInput, today: string): Tip | null {
+/**
+ * What a quiet stretch is called when something explains it (PLAN.md M188).
+ *
+ * The tip still fires — M163's rule, and it holds harder here: a comedown
+ * that runs long really does become a layoff, and swallowing the sentence
+ * would leave the climber with nothing at the point it starts being true.
+ * Only the words change, and they change to the true ones.
+ */
+function comedownBody(comedown: Comedown, tail: string): string {
+  const days = `${comedown.quietDays} day${comedown.quietDays === 1 ? '' : 's'}`;
+  if (comedown.because === 'trip') {
+    return `${days} quiet, and ${comedown.trip.name} is the obvious reason — a trip that is climbed and not logged looks exactly like a trip that did not happen, and this is the app reading the log rather than doubting you. ${tail}`;
+  }
+  const named = comedown.trip?.name ?? 'the fortnight before it';
+  return `${days} quiet after ${named} ran at ${comedown.ratio.toFixed(1)}× your own baseline. That is a taper, not a loss: the ratio falls after a peak because the peak is what raised it. ${tail}`;
+}
+
+function detraining({ state, sessions, objectives }: CoachInput, today: string): Tip | null {
   const { acwr, inPlannedDeload, daysOfHistory } = state.load;
   if (inPlannedDeload || daysOfHistory < 28) return null;
+
+  // Read before either branch, because both were saying the same wrong thing
+  // for the same reason.
+  const comedown = comedownNow(sessions, objectives, today);
 
   const last = sessions
     .filter((s) => s.completed && !isRestDay(s))
@@ -408,6 +430,23 @@ function detraining({ state, sessions }: CoachInput, today: string): Tip | null 
     // have climbed through every one of them (PLAN.md M100). The advice
     // underneath is still the right advice for the reading that is true, so
     // it stays — behind the sentence the log actually supports.
+    if (comedown !== null) {
+      return {
+        id: 'detraining',
+        // The explanation is part of the fact. A climber who waves this away
+        // coming home from a trip has not waved away the layoff that the
+        // same silence becomes three weeks later.
+        signature: `after:${comedown.because}:${away >= 28 ? 'month' : 'fortnight'}`,
+        tone: 'neutral',
+        weight: 44,
+        headline: `Quiet since ${comedown.trip?.name ?? 'the last block'}`,
+        body: comedownBody(
+          comedown,
+          'Nothing to fix today. If you did climb through it, marking those days on the calendar puts the numbers back where they belong.',
+        ),
+        action: { label: 'Mark the days you trained', href: '/calendar' },
+      };
+    }
     return {
       id: 'detraining',
       signature: away >= 60 ? 'long' : away >= 28 ? 'month' : 'fortnight',
@@ -430,6 +469,19 @@ function detraining({ state, sessions }: CoachInput, today: string): Tip | null 
   // hedged, because a range has no second decimal.
   if (state.load.zone === 'detraining' && acwr !== null) {
     const figure = state.load.estimated ? `about ${acwr.toFixed(1)}×` : `${acwr.toFixed(2)}×`;
+    if (comedown !== null) {
+      return {
+        id: 'detraining',
+        signature: `after:${comedown.because}:${acwr < 0.5 ? 'deep' : 'shallow'}`,
+        tone: 'neutral',
+        weight: 44,
+        headline: `Coming down from ${comedown.trip?.name ?? 'the last block'}`,
+        body: comedownBody(
+          comedown,
+          `You are at ${figure} your baseline now, which is where a week off is meant to put you. A fortnight here is still recovery; if it is still this quiet in a month, that is the one worth acting on.`,
+        ),
+      };
+    }
     return {
       id: 'detraining',
       signature: acwr < 0.5 ? 'deep' : 'shallow',

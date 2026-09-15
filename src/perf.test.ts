@@ -683,6 +683,14 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M188**, measured 136.15 → 136.13: **down** 0.02KB, from
+    // a milestone that added a whole engine module. `engine/comedown.ts` and
+    // the two new branches in `detraining` are read by `coach.ts`, which M183
+    // moved off the first-paint path — so a coach rule now costs the entry
+    // chunk nothing at all, where M178's cost 0.37KB for the same kind of
+    // work. That is the first time the boundary has been visible in this
+    // column rather than argued for, and it is worth the line.
+    //
     // **136.3 → 137.2, raised rather than spent** — the sixth entry here to
     // record no feature, and the first raise since M179's. M187 left the line
     // at 0.15KB of slack, which is *below* the hash churn M145 measured when

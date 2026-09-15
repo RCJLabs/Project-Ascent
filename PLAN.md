@@ -10615,7 +10615,10 @@ the one candidate wraps* `expect` *in a helper; TODOs — none in the tree.*
   test against this app, and it needs one before it is worth building.
   *Small–Medium.*
 
-- **M188 — the week after a trip reads as `detraining`.** Already measured in this document: seven
+- **M188 — the week after a trip reads as `detraining`.** *Done — see the entry at the end of this
+  document. The recorded finding was the milder half: the worse case is the climber who logged
+  the trip and took the week off, where the evidence was in the log and the rule read the ratio.*
+  Already measured in this document: seven
   days after a nine-day trip, `acwr` 0.00, zone `detraining`, and the tip offers *"come back at
   about two-thirds of the volume you left"* to a climber doing exactly the right thing. `tripNow`
   exists; this needs a different window — recently on a trip rather than on one.
@@ -10905,3 +10908,64 @@ Left there rather than raised here, because a ceiling moves in its own commit ah
 milestone and never under pressure from the change that wants it — but the next milestone to
 touch a first-load file must raise it first, and that is now overdue rather than optional.
 5,627 tests pass.
+
+
+## M188 — a quiet week that has a reason
+
+**The recorded finding was the milder half.** It said that seven days after a nine-day trip the
+board reads `detraining` and offers a return at two-thirds volume. Reproduced exactly — and the
+proof that the trip was invisible is that the board was **identical** to the same log with no
+trip objective on it at all.
+
+**The worse case is the climber who did it right and wrote it down.** Nine outdoor days logged,
+then the week off any coach would prescribe, and the app said **"Training has dropped off — a
+week or two here is recovery; a month is losing what you built."** The evidence was in the log,
+and the rule read the ratio instead. That is M178's shape one rule over: the input was there and
+the rule looked at the other field.
+
+**So there are two explanations, and the app already held both.** A **peak in the log** — the
+fortnight before the quiet ran well above the month before *it*, so a falling ratio is the taper
+working. And a **trip on the board** — because nobody logs from a campsite, which `trip.ts` says
+in its own words, so when nothing was logged the objective is the only evidence there is.
+
+**The tip still fires, which is M163's rule and it holds harder here.** A comedown that runs long
+really does become a layoff, and swallowing the sentence would leave the climber with nothing at
+the point it starts being true. What changes is the words, the tone (neutral, not caution) and
+the weight (44, under the faults) — and the signature, so waving this away on the way home from a
+trip does not also wave away the layoff the same silence becomes three weeks later.
+
+**The first draft of the fix was wrong, and a steady log is what showed it.** It read
+`state.load.daily`, which is truncated to the 28-day chronic window — so the "month before the
+peak fortnight" was mostly absent and a perfectly flat log reported a **3.5× peak**. The windows
+are taken over the sessions now, using `derive.ts`'s own exported `sessionLoad` rather than a
+second copy of that arithmetic.
+
+**Six climbers, measured before and after.** A trip not logged → *Quiet since Céüse*. The same
+log with no trip → unchanged, and correctly so. A trip logged then a week off → *Coming down from
+Céüse … ran at 1.6× your own baseline*. The same without an objective → *Coming down from the
+last block*, because the log alone is enough. A real layoff at 30 days → unchanged. Steady
+training that simply stopped five days ago → unchanged, because there is no peak to point at.
+
+**Tests** `engine/comedown.test.ts` — the measurement this milestone exists for kept as a test
+(the trip week no longer reads the same as a stop), both explanations, both windows' edges, and
+the two negative cases that matter most: a steady log has no peak, and a real layoff keeps its
+own words. `trip.ts`'s filter is now `datedTrips`, shared with `tripNow` rather than copied into
+`tripRecently` — M169's rule, and the battery found the copy by weakening one and watching the
+other keep the test green.
+
+**Mutations** 19 mutants, all killed, the no-op survived. Four real survivors, and two of them
+were fixtures too weak to reach the guard rather than gaps in the code: planned-but-not-completed
+sessions placed *outside* the peak fortnight could not show the `completed` check working, and a
+malformed date that rolls forward into next year falls out of the window anyway — `2026-02-30`,
+which rolls onto today, is the one that proves `isDateKey` is load-bearing. The other two were
+real: the shelved-trip rule and the shared filter had nothing asserting them.
+
+**Verified in a browser** at 430px and 1280px in both themes, with a seeded objective and a
+seeded log: the climber home from a trip reads *Coming down from Céüse* with no *two-thirds* in
+sight, and the climber who genuinely stopped still gets *30 days since you logged anything* and
+the way back.
+
+**Budget** 136.15 → 136.13: **down** 0.02KB, from a milestone that added an engine module.
+`comedown.ts` is read by `coach.ts`, which M183 moved off the first-paint path — so a coach rule
+now costs the entry chunk nothing, where M178's cost 0.37KB for the same kind of work. 5,643
+tests pass.
