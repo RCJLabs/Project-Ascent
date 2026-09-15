@@ -11742,7 +11742,9 @@ content — `SearchBody` feeds it `allSessions` and reads `session.notes`.*
   session.
   *Small to medium, and the item most aligned with what this app already says it believes.*
 
-- **M201 — vitality has no memory.** It is derived live and consumed in exactly two places,
+- **M201 — vitality has no memory.** *Done — see the entry at the end of this document. The
+  narrowing that made it cheap is the interesting part, and four of the twelve first-round mutants
+  were gaps in my own tests, one of them vacuous.* It is derived live and consumed in exactly two places,
   `useClimberAvatar` and BodyPage's current-state card; there is no history anywhere. Its header
   says it exists *"to make the cost of grinding legible"* — and three weeks of running cooked
   looks identical to one bad Tuesday, because you only ever see today. Nothing new has to be
@@ -12071,3 +12073,65 @@ loosened the net everywhere — and it went back with the rest of that half.
 
 **Budget** 136.97 → 136.98, which is ten notes' worth of content in a lazy chunk. 5,730 tests
 pass, up from 5,723.
+
+
+## M201 — the month behind the number
+
+**`vitality.ts` says its own job is to make the cost of grinding legible**, and the app showed one
+number: today's. **Three weeks of running cooked read exactly like one bad Tuesday**, which is the
+half that matters — nobody grinds themselves down in a day, and the only signal was a bar that had
+always looked like that.
+
+**Nothing new is stored, and nothing is derived twice.** Vitality is a pure function, so a history
+is the same function over past days. The obvious way to get there — re-derive the climber for each
+of thirty dates — would have been wrong: `deriveClimberState` holds a **single-entry** cache added
+because eighteen call sites each walked the log separately, and thirty dates in a row evict it on
+every one of them. A chart that quietly slowed Home and Progress is not a chart worth having.
+
+**So the input was narrowed instead, and the narrowing is the documentation.** `deriveVitality`
+reads exactly three things off `ClimberState` — `consecutiveTrainingDays`, `recentSkippedWarmups`,
+`restedWithin24h` — and its parameter says so now as a `Pick`. A full state still satisfies it, so
+both existing callers are untouched, and `vitalityHistory` walks the log **once** and hands it one
+day at a time.
+
+**Two things are held still across the window and both are stated where they are done.** The
+endurance stat sets the ceiling and is read as it is today, because recomputing the stats per day
+is the cost this module exists to avoid and END moves over months. And an injury counts from the
+day it was logged: the live list is *what is wrong now* — M177 moved healed ones elsewhere — so
+the honest claim is *"this was already logged by then"*, not *"this was still open then"*.
+
+**The sentence refuses to speak when there is nothing to say.** A climber who trained twice this
+month has a flat line and no story, and `describeVitalityHistory` returns null rather than
+*"you were fresh"*. Where there is something: five days in a row below Worked is *"a stretch
+rather than a session"*; scattered days are counted and named as runs of one or two, because those
+are different problems and only one of them is a problem.
+
+**Four of the twelve first-round mutants survived, and all four were my tests rather than the
+code.** The worst was vacuous in the way this document keeps recording: *"ignores a session that
+was never finished"* asserted zero against zero, because a lone unfinished session costs nothing
+either way — `GRIND_COST` has no entry below three — so a mutation that counted unfinished
+sessions sailed through it. It puts the unfinished session **inside a run** now, which is the only
+place the answer differs. The other three had no fixture at all for the branch they claimed: a
+rest day breaking a run rather than extending it, rest *yesterday* counting as relief today (the
+arm that matters, since a rest day breaks any run that could supply the damage — skipped warmups
+have to supply it instead), and a skipped warmup ageing out of its seven-day window.
+
+**And two fixtures could not reach the threshold they were about.** At END 50 the ceiling sits
+near 278, where even the steepest grind cost lands at 0.75 and reads *Worked* — so a test
+comparing a long run against a single bad day was comparing zero with zero. END 20 is a ceiling of
+144, where the same cost is 0.51 and the run shows. The endurance in those fixtures is load-bearing
+and now says so.
+
+**Fifteen mutants, fourteen killed.** The run never walking back; rest yesterday ignored;
+unfinished sessions counted; rest days counted as training; injuries counted from the start of
+time; skipped warmups never expiring; the window reversed; `under` counting every day; a long run
+reading as scattered; the sentence speaking over a quiet month; vitality itself no longer reading
+the run; and on the card, every column one colour, no columns at all, and the sentence dropped.
+One sanity no-op survived.
+
+**In a browser, both themes, 430px and 1280px:** thirty columns, today's at full opacity, the
+sentence under them, no overflow and no page errors. **The sample climber's month is flat green
+and that is the right answer** — two or three days a week with rest days is not a grind, the chart
+says so, and the strip only has a shape when there is one to show.
+
+**Budget** 136.98 → 137.00. 5,749 tests pass, up from 5,730.

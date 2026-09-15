@@ -8,6 +8,8 @@ import { parentOf } from '@/ui/routes';
 import { ProgressPage } from '@/features/progress/ProgressPage';
 import { BodyPage } from './BodyPage';
 import { useSettings } from '@/store/settings';
+import { addDays, today as todayKey } from '@/engine/dates';
+import { HISTORY_DAYS } from '@/engine/vitalityHistory';
 
 /**
  * The training half of the old climber page (PLAN.md M118).
@@ -48,3 +50,56 @@ describe('your body', () => {
     expect(card.textContent).toContain('1 injury on the books');
   });
 });
+
+/**
+ * The month behind the number (PLAN.md M201).
+ *
+ * The card showed one day, so a run of grinding and a single hard Tuesday
+ * were the same picture. These check the picture is different.
+ */
+describe('vitality over the month', () => {
+  const strip = () =>
+    screen.getByRole('img', { name: /Vitality over the last/i });
+
+  async function withDays(count: number, patch: Partial<Parameters<typeof newSession>[2]> = {}) {
+    await reset();
+    useProfile.setState({ injuries: [] });
+    const today = todayKey();
+    for (let i = 0; i < count; i += 1) {
+      await putSession(
+        newSession(addDays(today, -i), 0, { completed: true, warmup: true, ...patch }) as never,
+      );
+    }
+    await hydrate();
+    renderAt('/body', <BodyPage />);
+    await screen.findByRole('heading', { level: 1, name: 'Your body' });
+  }
+
+  it('draws a column a day', async () => {
+    await withDays(1);
+    expect(strip().children).toHaveLength(HISTORY_DAYS);
+  });
+
+  it('says nothing happened when nothing did', async () => {
+    await withDays(1);
+    expect(strip().getAttribute('aria-label')).toMatch(/nothing below Worked/i);
+    expect(screen.getByText(/none of them below Worked/i)).toBeTruthy();
+  });
+
+  it('colours the bad days differently from the good ones', async () => {
+    // A fortnight without a rest day, which is what the chart is for. The
+    // colours come from the same map the headline icon uses, so a run that
+    // reads as *Cooked* cannot draw the same as a fresh week.
+    await withDays(14);
+    const colours = new Set(
+      [...strip().children].map((c) => (c as HTMLElement).style.backgroundColor),
+    );
+    expect(colours.size).toBeGreaterThan(1);
+  });
+
+  it('names the run in the sentence under it', async () => {
+    await withDays(14);
+    expect(strip().getAttribute('aria-label')).toMatch(/in a row|below Worked/i);
+  });
+});
+

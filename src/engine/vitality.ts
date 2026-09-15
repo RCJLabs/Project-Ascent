@@ -52,8 +52,27 @@ const HEADLINE: Record<VitalityState, string> = {
   cooked: 'Cooked',
 };
 
+/**
+ * The three facts vitality actually reads off `ClimberState` (PLAN.md M201).
+ *
+ * Named as a `Pick` rather than the whole state so a history can hand it a
+ * day at a time. Re-deriving the climber for each of thirty dates would
+ * work and would be wrong: `deriveClimberState` holds a **single-entry**
+ * cache, added because eighteen call sites each walked the log separately,
+ * and thirty dates in a row would evict it on every one of them — paying
+ * for a chart with every other screen on the page.
+ *
+ * A full `ClimberState` satisfies this, so both existing callers are
+ * unchanged, and the narrowing is the documentation: these three are the
+ * whole of what a vitality number depends on.
+ */
+export type VitalityFacts = Pick<
+  ClimberState,
+  'consecutiveTrainingDays' | 'recentSkippedWarmups' | 'restedWithin24h'
+>;
+
 export interface VitalityInput {
-  state: ClimberState;
+  state: VitalityFacts;
   /** The END stat, which sets the ceiling. */
   endurance: Stat | number;
   injuries?: readonly Injury[];

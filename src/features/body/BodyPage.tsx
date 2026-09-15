@@ -5,6 +5,11 @@ import { deriveClimberState } from '@/engine/derive';
 import { compareStats } from '@/engine/statHistory';
 import { deriveStats, type Stat, type StatId } from '@/engine/stats';
 import { deriveVitality, type Vitality, type VitalityState } from '@/engine/vitality';
+import {
+  describeVitalityHistory,
+  vitalityHistory,
+  type VitalityHistory,
+} from '@/engine/vitalityHistory';
 import { InjuriesCard } from '@/features/injury/InjuriesCard';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
@@ -74,13 +79,30 @@ export function BodyPage() {
     [state, stats, injuries, skills.effects.restRecovery],
   );
 
+  /**
+   * The month behind the number (PLAN.md M201). Built from the sessions
+   * rather than by re-deriving the climber per day, which would evict the
+   * single-entry cache the rest of this page reads through.
+   */
+  const history = useMemo(
+    () =>
+      vitalityHistory({
+        sessions: allSessions(byDate),
+        injuries,
+        endurance: stats.END,
+        restBonus: skills.effects.restRecovery,
+        to: today(),
+      }),
+    [byDate, injuries, stats, skills.effects.restRecovery],
+  );
+
   return (
     <>
       <BackLink />
       <PageHeader title="Your body" subtitle="Fresh or cooked, what hurts, and what the log has built" />
 
       <PageGrid>
-        <VitalityCard vitality={vitality} />
+        <VitalityCard vitality={vitality} history={history} />
         {/* What hurts, next to what it costs (PLAN.md M76). */}
         <InjuriesCard />
 
@@ -126,9 +148,10 @@ const VITALITY_LOOK: Record<VitalityState, { color: string; Icon: typeof HeartPu
 };
 
 /** Vitality gates nothing — it only makes the cost of grinding visible. */
-function VitalityCard({ vitality }: { vitality: Vitality }) {
+function VitalityCard({ vitality, history }: { vitality: Vitality; history: VitalityHistory }) {
   const { color, Icon } = VITALITY_LOOK[vitality.state];
   const pct = Math.round(vitality.fraction * 100);
+  const said = describeVitalityHistory(history);
   return (
     <Card title="Vitality">
       <div className="flex items-baseline gap-2 mb-1.5">
@@ -145,6 +168,33 @@ function VitalityCard({ vitality }: { vitality: Vitality }) {
         label={`Vitality: ${vitality.headline}`}
         valueText={`${vitality.current} of ${vitality.max}`}
       />
+
+      {/* The month behind it (PLAN.md M201). One column a day, coloured by
+          the band it sat in — the point is the *shape*, because a run of
+          five bad days and one bad Tuesday were the same picture before
+          this, and only one of them is a problem. */}
+      <div className="mt-3">
+        <div
+          className="flex items-end gap-px h-8"
+          role="img"
+          aria-label={`Vitality over the last ${history.days.length} days: ${said ?? 'nothing below Worked'}`}
+        >
+          {history.days.map((day) => (
+            <div
+              key={day.date}
+              className="flex-1 rounded-sm"
+              style={{
+                height: `${Math.max(8, Math.round(day.fraction * 100))}%`,
+                backgroundColor: VITALITY_LOOK[day.state].color,
+                opacity: day.date === history.days.at(-1)?.date ? 1 : 0.65,
+              }}
+            />
+          ))}
+        </div>
+        <p className="text-xs text-ink-soft mt-1.5 leading-relaxed">
+          {said ?? `The last ${history.days.length} days, and none of them below Worked.`}
+        </p>
+      </div>
 
       {vitality.penalties.length === 0 ? (
         <p className="text-sm text-ink-soft mt-2.5 leading-relaxed">
