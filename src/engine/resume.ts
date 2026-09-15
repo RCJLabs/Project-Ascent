@@ -58,7 +58,7 @@
 
 import { phaseForWeek, type Program } from '@/content/types';
 import type { Session } from '@/db/sessions';
-import { addDays, daysBetween, programWeek } from './dates';
+import { addDays, programWeek } from './dates';
 import { blockStatus, blockWindow } from './plan';
 import { isRestSession } from './rest';
 
@@ -84,8 +84,6 @@ export interface ResumeOption {
 }
 
 export interface Interruption {
-  /** Days since the last training day logged inside this block. */
-  away: number;
   /** The week the block currently thinks it is, having counted the gap. */
   nowWeek: number;
   /** The last week of the block that carries a completed session. */
@@ -216,7 +214,6 @@ export function interruption(input: ResumeInput): Interruption | null {
   if (options.length === 0) return null;
 
   return {
-    away: daysBetween(last, today),
     nowWeek,
     lastTrainedWeek,
     missedWeeks,

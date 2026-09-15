@@ -56,8 +56,6 @@ export interface NextChoice {
   reason: string;
   /** Benchmarks this block did not move, which this program trains. */
   addresses: Metric[];
-  /** Benchmarks this block did move, which this program trains again. */
-  repeats: Metric[];
   /** What the block says about this one, or null when it says nothing. */
   because: string | null;
 }
@@ -167,7 +165,6 @@ export function chooseNext(input: NextBlockInput): NextBlock {
         program: step.program,
         reason: step.reason,
         addresses,
-        repeats,
         because: because(addresses, repeats),
       } satisfies NextChoice,
     };

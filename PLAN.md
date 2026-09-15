@@ -11793,7 +11793,9 @@ content — `SearchBody` feeds it `allSessions` and reads `session.notes`.*
   that is the difference between logging the beta and not bothering.
   *Small, and it pairs with M203.*
 
-- **M205 — the wired rule still stops at the engine's own interfaces.** `ClimberState.totalSessions`
+- **M205 — the wired rule still stops at the engine's own interfaces.** *Done — see the entry at
+  the end of this document. Three fields went, not one, and the rule caught two of its own
+  false answers before it caught theirs.* `ClimberState.totalSessions`
   is derived on every pass and read by **no feature, no UI file and no other engine module**.
   M174 recorded that M169's content-field sweep does not cover engine interfaces; M192 found two
   such fields by hand; M196 built the rule for exported *values*. Interface fields are the one
@@ -11934,3 +11936,63 @@ and finding it absent* — or, where the module is not obvious, by a search whos
 shown to find a known-present instance of the same shape. M195 asked for a positive control on
 the sweep. This asks for the module to be opened, because a control only proves the pattern works
 on the shape you thought of.
+
+
+## M205 — a field nobody reads, and a rule that kept misreading itself
+
+**The gap was recorded twice before it was closed.** M174 wrote down that M169's sweep covers
+**content** fields and not the engine's own interfaces. M192 then found two by hand —
+`Venue.projects` and `Venue.objectives`, counted, asserted in a test and rendered to nobody. M196
+built the rule for exported *values*. A field on an interface was the shape still uncovered, and
+it is the shape M192 actually tripped over.
+
+**Three fields, and each was a second answer nobody asked for.**
+`ClimberState.totalSessions` was `sessions.length` sitting beside `completedSessions`, which is
+what all 24 of its callers use — the app carried two session counters and consulted one.
+`Interruption.away` counted days since the last session inside a block, published next to
+`missedWeeks`, which is the fact the screen actually shows. `NextChoice.repeats` was published
+beside `because`, the sentence built out of it. All three were set on every derivation and read
+by nothing.
+
+**The rule is *read*, not *mentioned*, and that distinction is most of the work.** `LoadState`
+publishes `acute`, and `derive.ts` also takes a function parameter of that name — so the
+identifier is all over the module and the field is read nowhere. Only `.field` and a destructure
+count, because `const { x } = thing` is how half this codebase reads a result and a rule that
+saw only `thing.x` would call most of the engine dead.
+
+**It was blinded by its own documentation.** The first working draft passed with
+`NextChoice.repeats` restored — because the doc comment above it, explaining that the field had
+been removed, contains the words `NextChoice.repeats`, and `\.repeats\b` matched **that**. A
+guard's account of what it found counted as a use of what it found. Comments are stripped now, and
+the check that caught it was restoring a removed field and watching the rule stay green.
+
+**Then the stripper went too far, twice.** Borrowing `privacy.test.ts`'s version wholesale blanks
+string literals *and* template literals — and a template carries expressions. `injuryLog.ts`
+reads `history.elapsed` inside one, `blockReport.ts` reads `report.better`, `SettingsPage.tsx`
+reads `parsed.appVersion`; all three were reported dead by a rule that had deleted the code doing
+the reading. **Comments only.** That file blanks templates because it hunts `fetch(` in code,
+where the contents cannot matter; here they are the point.
+
+**So the detector was wrong three times before it was right**, and every wrong answer looked
+exactly like a finding: three named fields, in three modules, with a plausible story each. The
+only thing that separated them was opening the file — which is the rule this brainstorm's
+withdrawals ended on, now paid for a fourth time.
+
+**1,383 engine interface fields, zero unread.** The sweep is held to the corpus it swept — named
+once, asserted to be over 600 files — for the reason M196 records, and the controls run the
+predicate over three synthetic files holding a field that is read, one that is destructured and
+one that is read by nobody, so every branch fires deliberately rather than by luck.
+
+**Eight mutants, six killed.** A dead field put back; the destructure clause disabled; the
+property clause disabled; the corpus emptied; nothing declared; the engine-only filter widened to
+the whole tree. Two survived as intended: a type annotation added to a callback, and **the
+comment stripper removed** — which is honest to record rather than dress up, because with all
+three fields gone there is no comment left for it to be blinded by. That interaction was verified
+by hand, not by the battery.
+
+**In a browser, both themes, 430px and 1280px:** Home, Progress, Coach, Review, Injury, Week,
+Train and Body all render, no page errors, no console errors, no overflow — worth running because
+`derive.ts` is on the first-paint path, even though the fields were read by nobody.
+
+**Budget** 137.00 → **136.97**, which is three fields' worth of derivation leaving the entry
+chunk. 5,723 tests pass, up from 5,718.

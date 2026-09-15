@@ -395,6 +395,136 @@ describe('every exported value has a caller', () => {
   });
 });
 
+/**
+ * And every field an engine interface publishes is read by somebody
+ * (PLAN.md M205).
+ *
+ * M174 recorded the gap in writing: M169's sweep covers **content** fields
+ * and not the engine's own interfaces. M192 then found two by hand —
+ * `Venue.projects` and `Venue.objectives`, counted, asserted in a test, and
+ * rendered to nobody — and M196 built the rule for exported *values*. A
+ * field on an interface is the one shape still uncovered, and it is the
+ * shape M192 actually tripped over.
+ *
+ * **Three were found and removed.** `ClimberState.totalSessions` sat beside
+ * `completedSessions`, which is what all 24 of its callers use, so the app
+ * carried two session counters and consulted one. `Interruption.away`
+ * counted the days since the last session inside a block and was published
+ * next to `missedWeeks`, which is the fact the screen shows.
+ * `NextChoice.repeats` was published beside `because`, the sentence built
+ * out of it.
+ *
+ * **A read, not a mention.** The distinction is the whole rule: `acute` is
+ * set on `LoadState`, and `derive.ts` also takes a function parameter of
+ * that name — so the identifier is everywhere and the field is read
+ * nowhere. Only `.field` and a destructure count.
+ */
+describe('every engine interface field is read', () => {
+  /**
+   * Comments and string literals stripped, which this rule learned the hard
+   * way: its own doc comment above says `NextChoice.repeats`, and a search
+   * for `.repeats` matched **that** — so the guard's account of the field it
+   * had just removed counted as a reader of it, and restoring the field did
+   * not fail this test. Prose about a field is not a use of it.
+   *
+   * **Comments only, and string literals left alone**, which is where
+   * `privacy.test.ts`'s stripper and this one part company. That file blanks
+   * template literals because it hunts `fetch(` in code; blanking them here
+   * deletes real reads, because a template carries expressions — 
+   * `injuryLog.ts` reads `history.elapsed` inside one, and the first draft
+   * of this rule called that field dead.
+   */
+  const code = (source: string): string =>
+    source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
+
+  const CORPUS = walk('src')
+    .filter((p) => /\.tsx?$/.test(p))
+    .map((path) => ({ path, source: code(readFileSync(path, 'utf8')) }));
+
+  /** Identifiers per file, so a field is only regexed against files that
+   *  could possibly mention it. The naive form takes minutes. */
+  const NAMES = new Map(
+    CORPUS.map(({ path, source }) => [path, new Set(source.match(/[A-Za-z_$][\w$]*/g) ?? [])]),
+  );
+
+  const DECLARED: { iface: string; field: string; path: string }[] = [];
+  for (const { path } of CORPUS) {
+    if (!path.startsWith('src/engine/') || /\.test\.tsx?$/.test(path)) continue;
+    const source = readFileSync(path, 'utf8');
+    for (const m of source.matchAll(/export interface (\w+)\s*\{([\s\S]*?)\n\}/g)) {
+      for (const f of (m[2] ?? '').matchAll(/^ {2}(?:readonly )?(\w+)\??\s*:/gm)) {
+        DECLARED.push({ iface: m[1]!, field: f[1]!, path });
+      }
+    }
+  }
+
+  /**
+   * Named, so the controls run the same one (PLAN.md M155, M195, M196).
+   * The corpus is a parameter for the reason M196 records: a control that
+   * can only run against the real tree proves the half of the rule the tree
+   * happens to exercise.
+   */
+  const unread = (
+    declared: readonly { iface: string; field: string; path: string }[],
+    corpus: readonly { path: string; source: string }[],
+  ): string[] =>
+    declared
+      .filter(({ field }) => {
+        const dot = new RegExp(`\\.${field}\\b`);
+        const destructured = new RegExp(`\\{[^{}\n]*\\b${field}\\b[^{}\n]*\\}\\s*(?::|=)`);
+        return !corpus.some(({ path, source }) => {
+          const names = NAMES.get(path);
+          if (names !== undefined && !names.has(field)) return false;
+          return dot.test(source) || destructured.test(source);
+        });
+      })
+      .map(({ iface, field, path }) => `${iface}.${field} (${path})`);
+
+  const SAMPLE = [
+    { path: 'a.ts', source: 'export interface S {\n  read: number;\n  never: number;\n}\n' },
+    { path: 'b.ts', source: 'const f = (s: S) => s.read;\n' },
+    { path: 'c.ts', source: 'const { alsoRead } = thing;\n' },
+  ];
+  const SAMPLE_FIELDS = [
+    { iface: 'S', field: 'read', path: 'a.ts' },
+    { iface: 'S', field: 'never', path: 'a.ts' },
+    { iface: 'S', field: 'alsoRead', path: 'a.ts' },
+  ];
+
+  it('names the field nobody reads, and only that one', () => {
+    expect(unread(SAMPLE_FIELDS, SAMPLE)).toEqual(['S.never (a.ts)']);
+  });
+
+  it('counts a destructure as a read', () => {
+    // `const { x } = thing` is how half this codebase reads a result, so a
+    // rule that only saw `thing.x` would call most of the engine dead.
+    expect(unread([{ iface: 'S', field: 'alsoRead', path: 'a.ts' }], SAMPLE)).toEqual([]);
+  });
+
+  it('does not count a mention as a read', () => {
+    // The `acute` case: the name appears as a parameter and the field is
+    // still read by nobody.
+    const mentions = [{ path: 'd.ts', source: 'function g(never: number) { return never + 1; }\n' }];
+    expect(unread([{ iface: 'S', field: 'never', path: 'a.ts' }], mentions)).toEqual([
+      'S.never (a.ts)',
+    ]);
+  });
+
+  it('finds enough fields to be checking anything', () => {
+    expect(DECLARED.length).toBeGreaterThan(1_000);
+    expect(DECLARED.some((d) => d.iface === 'ClimberState' && d.field === 'completedSessions')).toBe(true);
+  });
+
+  it('has a reader for each', () => {
+    // Corpus named once and asserted on, for the reason M196 records: a
+    // sweep handed an empty one finds nothing and passes.
+    const corpus = CORPUS;
+    expect(corpus.length).toBeGreaterThan(600);
+    const found = unread(DECLARED, corpus);
+    expect(found, `published and read by nobody: ${found.join('; ')}`).toEqual([]);
+  });
+});
+
 describe('every authored content field reaches a screen', () => {
   const LEAVES = [...new Set(ROOTS.flatMap(leavesOf))];
 

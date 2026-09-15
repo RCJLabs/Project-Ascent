@@ -175,7 +175,6 @@ export interface PersonalRecord {
 }
 
 export interface ClimberState {
-  totalSessions: number;
   completedSessions: number;
   restSessions: number;
   /** Completed sessions in the last 30 days. */
@@ -421,7 +420,6 @@ function deriveClimberStateUncached(sessions: Session[], options: DeriveOptions)
   sport.bestOrdinal = sport.best ? gradeOrdinal('YDS', sport.best) : -1;
 
   return {
-    totalSessions: sessions.length,
     completedSessions: completed.length,
     restSessions,
     recentSessions,

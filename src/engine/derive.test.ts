@@ -21,7 +21,9 @@ describe('deriveClimberState', () => {
       [session(TODAY), newSession(TODAY, 99, { completed: false })],
       { today: TODAY },
     );
-    expect(state.totalSessions).toBe(2);
+    // Two sessions in, one of them unfinished: the count is of what was
+    // completed. `totalSessions` used to sit beside this and was read by
+    // nothing else in the app (PLAN.md M205).
     expect(state.completedSessions).toBe(1);
   });
 
