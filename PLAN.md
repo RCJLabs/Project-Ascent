@@ -11691,3 +11691,103 @@ on items that shipped. The eighth's two real milestones were both about the test
 app. That is what a codebase looks like when the audit-shaped work is done. What is left is
 coaching judgement on the content, which is not mine to make, and capability, which is not an
 audit.*
+
+
+## The tenth brainstorm — what is missing rather than what is wrong
+
+*Nine brainstorms audited. This one asks what the app does not do. The rule from the last four
+holds and is the reason this took a survey first: **every item below says what was checked to
+establish that it is not already built**, because M189, M192, M193, M195 and the ninth
+brainstorm's three wrong premises are what an unverified capability note is worth.*
+
+***Five candidates died in the survey and are recorded so nobody proposes them again:*** *the
+Ascent's year of daily runs is already charted and described on its own page (`ascentHistory`,
+`describeAscent`, a per-day chart); block comparison is already on Progress through
+`ui/charts/BlockCompare.tsx`; session templates are already surfaced in the logger and Settings;
+program files can already be written and opened (`programFile.ts`, BuilderList's* Open a program
+file*); and search already indexes your own sessions and their notes, not only the app's static
+content — `SearchBody` feeds it `allSessions` and reads `session.notes`.*
+
+### The game
+
+- **M199 — nothing proves an unlockable can be unlocked.** `achievements.ts` is 600 lines of
+  definitions, `skills.ts` 464 of log-gated nodes, and the appearance card says every cosmetic is
+  *"unlocked by the skill trees"*. The tests assert the **count** (`toHaveLength(ACHIEVEMENT_COUNT)`)
+  and that a thin log earns fewer than half. **Nothing asserts that any given one can ever fire.**
+  That is M26's rule — built and left unreachable — applied to the half of the app whose whole
+  job is to be chased. A badge that cannot be earned is worse than a missing one, because the
+  player spends real sessions on it. Measurable rather than arguable: drive a maximal synthetic
+  log through `deriveAchievements`, the skill tree and the avatar unlocks, and name whatever
+  never fires.
+  *Medium.*
+
+- **M200 — the game recognises effort and never recognises restraint.** Verified by scanning every
+  achievement and skill id: **not one contains rest, deload or taper.** Meanwhile `vitality.ts`'s
+  own header says the one direction gamification may push a climber that a coach would agree with
+  is *toward resting*, and pays `REST_RELIEF` for it. The reward system does not. Taking the
+  deload is the hardest thing to get a climber to do and the only training decision the badges are
+  silent about — which is backwards for an app that put the rest day in the log as a first-class
+  session.
+  *Small to medium, and the item most aligned with what this app already says it believes.*
+
+- **M201 — vitality has no memory.** It is derived live and consumed in exactly two places,
+  `useClimberAvatar` and BodyPage's current-state card; there is no history anywhere. Its header
+  says it exists *"to make the cost of grinding legible"* — and three weeks of running cooked
+  looks identical to one bad Tuesday, because you only ever see today. Nothing new has to be
+  stored: vitality is a pure function of `ClimberState` and injuries, so a trend is the same call
+  over past dates, which is how `loadTrend` already works.
+  *Small.*
+
+### The rest
+
+- **M202 — the app can never remind you.** Verified absent: no `Notification`, no
+  `requestPermission`, no `showNotification`, no `periodicSync` anywhere in the tree. A training
+  app that cannot say *it is Tuesday and you have a session* is leaving its main job to memory. A
+  local notification sends nothing and needs no server, so it sits inside the privacy stance
+  rather than against it — the privacy page already enumerates the two permissions the app asks
+  for and would name a third. **The caveat is the platform, not the principle:** notification
+  support differs sharply between an installed Android TWA and an iOS home-screen PWA, so the
+  first work is measuring what each actually delivers.
+  *Medium.*
+
+- **M203 — photos go in and never come out.** `AttachPage`, `MediaCard`, `PhotoMarks` and
+  `Thumbnails` all exist; there is no gallery or timeline view in the tree. Beta shots and
+  progress photos attach to a session and are reachable only by finding that session again —
+  there is no *every photo of this project*, no year of them, no way to browse what you have.
+  *Medium.*
+
+- **M204 — you cannot take a photo, only pick one.** No `getUserMedia` and no capture path: photos
+  arrive through the file picker or the operating system's share sheet. At the wall, mid-session,
+  that is the difference between logging the beta and not bothering.
+  *Small, and it pairs with M203.*
+
+- **M205 — the wired rule still stops at the engine's own interfaces.** `ClimberState.totalSessions`
+  is derived on every pass and read by **no feature, no UI file and no other engine module**.
+  M174 recorded that M169's content-field sweep does not cover engine interfaces; M192 found two
+  such fields by hand; M196 built the rule for exported *values*. Interface fields are the one
+  shape still uncovered, and this is a live example sitting in the most-used interface in the app.
+  *Small, and it closes a gap this document has already named twice.*
+
+- **M206 — the app updates silently.** No changelog, no what's-new, no release notes anywhere.
+  `useAppUpdate` and `watchForUpdates` bring a new version in and the climber is told a new version
+  exists, never what changed. For an app that explains every number it shows and writes its
+  reasoning into the page, that is out of character — and it is the one place a reader cannot get
+  at the reasoning, because it lives in this document and ships nowhere.
+  *Small.*
+
+- **M207 — the sample climber leaves two screens empty.** `DemoClimber` carries sessions, projects,
+  metrics, injuries and a program; it carries **no journal entries and no objectives**, so Journal
+  and Objectives are bare after loading it. Settings sells that button as filling the app *"so
+  every screen has something to show — for a look around, a screenshot or a video"*, which is
+  exactly the claim those two screens break.
+  *Small.*
+
+- **M208 — there is one climber, and that is a decision nobody has written down.** No athlete,
+  roster or client concept exists anywhere. The app holds one person's log in one IndexedDB per
+  origin, and coaching a second climber has no answer — not even a bad one. **I expect the right
+  outcome here is a recorded refusal rather than a build**: multi-tenancy fights the single-device,
+  no-account, nothing-leaves-this-phone design that the privacy page stakes everything on, and the
+  honest version is probably the program file that already exists — write a block, hand it over,
+  let them run it in their own copy. But the decision is not in this document, and the gap is
+  real for whoever is coaching rather than training.
+  *Large as a build, small as a decision. Worth settling before it is asked for.*
