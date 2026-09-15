@@ -51,8 +51,6 @@ export interface Venue {
   days: number;
   /** Of those, the ones logged as outdoor. */
   outdoorDays: number;
-  projects: number;
-  objectives: number;
   /**
    * The hardest sent here, per ladder, or null (PLAN.md M112f).
    *
@@ -77,6 +75,16 @@ interface Spelling {
   last: string;
 }
 
+/**
+ * The per-place working totals.
+ *
+ * `projects` and `objectives` are counted and **not published** since M192:
+ * they were on `Venue`, asserted in this file's test, and rendered by
+ * nothing — M155 and M156's shape, in an engine interface the M169 sweep
+ * does not cover. `VenuePage` lists the projects and objectives themselves,
+ * and a list needs no count beside it. They stay here because a place named
+ * only by a project is still a place, which is what these decide.
+ */
 interface Tally {
   key: string;
   /** Built with `addClimb`, so what counts as a send is defined once. */
@@ -162,8 +170,6 @@ export function venues(input: VenueInput): Venue[] {
         sessions: t.sessions,
         days: t.days.size,
         outdoorDays: t.outdoorDays.size,
-        projects: t.projects,
-        objectives: t.objectives,
         best: { V: t.boulder.best, YDS: t.sport.best },
       };
     })

@@ -10656,7 +10656,11 @@ the one candidate wraps* `expect` *in a helper; TODOs — none in the tree.*
   session the app makes, which is why nothing has caught them.
   *Small.*
 
-- **M192 — the venue catalogue.** Sessions record where they happened in free text; turning that
+- **M192 — the venue catalogue.** *Done — see the entry at the end of this document. Half of it
+  was built at M88b and the note did not know: what was missing is somewhere to **look** at a
+  place, and two fields that were computed and shown to nobody. Circuits and set dates are not
+  built and should not be — they need a new field on every climb.*
+  Sessions record where they happened in free text; turning that
   into walls, circuits and set dates is the milestone the text was collected for.
   *Large.*
 
@@ -11114,3 +11118,66 @@ sees the program's own *Rest / Recovery* and no second chip.
 Home shows the day's card — the right place for it, since the finding is that this was
 unreachable. **0.32KB of slack**; the next first-load milestone raises the ceiling first. 5,660
 tests pass.
+
+
+## M192 — a place you can open
+
+**Half of this was built at M88b and the note did not know it.** That milestone took the three
+independent free-text location fields — `session.fields.location`, `Project.location`,
+`Objective.location` — and grouped them into one `Venue` by a deliberately timid key. The
+"catalogue of walls" the note asked for is that, and it works.
+
+**What was missing is somewhere to look.** Career showed the top eight as rows of name, days and
+best grade, and nothing else read the venue at all. The app has a detail page for a project, an
+objective, a benchmark, a drill, a guide and a program; a venue was the odd one out.
+
+**And two fields were computed and shown to nobody.** `Venue.projects` and `Venue.objectives`
+were counted, asserted in `venues.test.ts`, and rendered nowhere — M155 and M156's shape, in an
+**engine interface**, which is exactly the gap M174 recorded about the M169 sweep: it covers
+content fields and not these. The assertions were the only thing keeping them looking alive.
+
+So: `VenuePage` lists the projects and the objectives themselves, and the counts are gone. A list
+is what the count was standing in for, and a list needs no count beside it — "wired up or gone",
+with the honest answer being one of each.
+
+**Circuits and set dates are not built, deliberately.** They would need a new field on every
+climb — a colour, a set, a circuit — and `Climb` carries none. M133's whole finding was fields
+the app collects and never reads; adding one speculatively for a payoff only indoor climbers get,
+on the chance a climber fills it in every time, is that milestone in reverse. Recorded rather
+than half-built.
+
+**The page says what the log already knows:** days and sessions (different numbers — a fixture of
+one session per day cannot tell them apart), the indoor/outdoor split, the hardest sent here per
+ladder with M112f's note that grades vary by crag, first and last visit, the projects and
+objectives at that place, and — only when there is more than one — the spellings it folded
+together, because a timid grouping should show its working.
+
+**Tests** `features/venues/venuePage.test.tsx` — the page renders, lists the projects and
+objectives **here and not elsewhere**, counts days and sessions apart, titles itself by the
+spelling used most rather than the first seen, keeps quiet about spellings when there is only
+one, answers an unknown place with the not-found shape, and reads a key that has been through a
+URL. `venues.test.ts`'s two assertions were rewritten to protect the behaviour they were really
+about — a place named only by a project or an objective still exists — rather than the dead
+field.
+
+**Mutations** 17 mutants, all killed, the no-op survived. Four survived the first pass and all
+four were fixtures too weak to reach the code: one project and one objective, both at the venue
+under test, so an unfiltered list looked identical; one session per day, so `days` and `sessions`
+were interchangeable; and every spelling used once, so the spellings card could never be absent.
+That last one had already misled me once — the first draft of the test expected the heading *The
+Works* and the page correctly rendered *the works*, because a three-way tie has no commonest
+spelling.
+
+**Two of the app's own guards caught the new route** before any test of mine did:
+`ui/routes.test.ts` requires every `<Route>` to have a row in the route table, and
+`features/mounts.test.tsx` requires every routed page to be mounted somewhere. Both were right to
+fire.
+
+**Verified in a browser** at 430px and 1280px in both themes: the Career rows open the place, the
+page is titled *The Works*, days 4 against sessions 5, the project and objective here are listed
+and Stanage's are not, the merged spellings are explained, and `#/venues/malham` says *That
+place* rather than rendering blank.
+
+**Budget** 136.88 → 137.00: 0.12KB, the route and its href — the page is a 1.63KB lazy chunk.
+**0.20KB of slack, and the raise is overdue**: M191 said the next first-load milestone would
+raise the ceiling first and this one did not. 5,674 tests pass.

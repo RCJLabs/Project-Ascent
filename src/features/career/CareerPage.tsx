@@ -5,6 +5,7 @@ import { CATEGORY_LABEL, byYear, deriveCareer, type CareerCategory } from '@/eng
 import { fromKey } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { describeVenues } from '@/engine/venues';
+import { venueHref } from '@/ui/routes';
 import { useGradeLabel } from '@/ui/useGrade';
 import { useVenues } from '@/features/venues/useVenues';
 import { useSessions, allSessions } from '@/store/sessions';
@@ -115,7 +116,11 @@ export function CareerPage() {
                 .filter((place) => place.days > 0)
                 .slice(0, 8)
                 .map((place) => (
-                  <div key={place.key} className="flex items-baseline gap-2">
+                  <Link
+                    key={place.key}
+                    href={venueHref(place.key)}
+                    className="focus-ring flex items-baseline gap-2 rounded-lg -mx-1 px-1 py-0.5"
+                  >
                     <dt className="flex-1 min-w-0 truncate">
                       {place.name}
                       {/* The hardest sent here, beside the name rather than
@@ -139,7 +144,7 @@ export function CareerPage() {
                       {place.days === 1 ? '1 day' : `${place.days} days`}
                       {place.outdoorDays > 0 && ` · ${place.outdoorDays} outside`}
                     </dd>
-                  </div>
+                  </Link>
                 ))}
             </dl>
             <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeVenues(places)}</p>

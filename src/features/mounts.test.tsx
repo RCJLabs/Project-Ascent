@@ -17,6 +17,7 @@ import { BuilderPage } from '@/features/builder/BuilderPage';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { WeekPage } from '@/features/week/WeekPage';
 import { CareerPage } from '@/features/career/CareerPage';
+import { VenuePage } from '@/features/venues/VenuePage';
 import { AchievementsPage } from '@/features/climber/AchievementsPage';
 import { BodyPage } from '@/features/body/BodyPage';
 import { CoachPage } from '@/features/coach/CoachPage';
@@ -81,6 +82,7 @@ const PAGES: [string, string, ReactElement][] = [
   ['finder', '/find', <FinderPage />],
   ['builder list', '/build', <BuilderList />],
   ['career', '/career', <CareerPage />],
+  ['a place', '/venues/the%20works', <VenuePage params={{ key: 'the works' }} />],
   ['year', '/year', <YearPage params={{}} />],
   ['objectives', '/objectives', <ObjectivesPage />],
   ['board', '/board', <BoardPage />],

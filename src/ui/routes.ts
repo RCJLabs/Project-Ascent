@@ -86,6 +86,7 @@ export const ROUTES: RouteMeta[] = [
   { path: '/assessments', title: 'Assessments', parent: '/progress', group: 'Progress', keywords: ['test', 'benchmark', 'max hang', 'pull-up'] },
   { path: '/assessments/:id', title: 'Assessment', parent: '/assessments' },
   { path: '/career', title: 'Career', parent: '/progress', group: 'Progress', keywords: ['milestones', 'timeline', 'history'] },
+  { path: '/venues/:key', title: 'Place', parent: '/career' },
   { path: '/year', title: 'Year in review', parent: '/career', group: 'Progress', keywords: ['annual', 'season', 'recap'] },
   { path: '/year/:year', title: 'Year in review', parent: '/career' },
   { path: '/review', title: 'Weekly review', parent: '/progress', group: 'Progress', keywords: ['week', 'recap', 'sunday'] },
@@ -169,6 +170,16 @@ export function logHref(date: string): string {
 }
 
 /** Where a week lives. Any date in it will do; the page snaps to its Sunday. */
+/**
+ * A place, by the key `venueKey` produced (PLAN.md M192).
+ *
+ * Encoded, because a venue name is free text a climber typed: "St Bees /
+ * South" has a slash in it and would otherwise be two path segments.
+ */
+export function venueHref(key: string): string {
+  return `/venues/${encodeURIComponent(key)}`;
+}
+
 export function weekHref(date: string): string {
   return `/week/${date}`;
 }

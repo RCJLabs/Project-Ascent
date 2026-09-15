@@ -147,6 +147,10 @@ const YearPage = lazyRoute(
   () => import('@/features/career/YearPage'),
   (m) => m.YearPage,
 );
+const VenuePage = lazyRoute(
+  () => import('@/features/venues/VenuePage'),
+  (m) => m.VenuePage,
+);
 const AscentPage = lazyRoute(
   () => import('@/features/ascent/AscentPage'),
   (m) => m.AscentPage,
@@ -379,6 +383,7 @@ function Shell() {
           <Route path="/train/:id/start" component={StartProgramPage} />
           <Route path="/train/:id" component={ProgramDetailPage} />
           <Route path="/career" component={CareerPage} />
+          <Route path="/venues/:key" component={VenuePage} />
           <Route path="/year/:year" component={YearPage} />
           <Route path="/year" component={YearPage} />
           <Route path="/objectives/:id" component={ObjectiveDetailPage} />

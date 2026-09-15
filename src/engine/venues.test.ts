@@ -112,22 +112,35 @@ describe('reading the places off the log', () => {
  * The finding the milestone missed: three independent free-text strings,
  * rendered everywhere and grouped nowhere.
  */
+/**
+ * What the three inputs decide is **whether a place exists**, not a count
+ * on it (PLAN.md M192). `Venue.projects` and `Venue.objectives` were
+ * published, asserted right here, and rendered by nothing — so these
+ * assertions were the only thing keeping two dead fields looking alive.
+ * `VenuePage` lists the projects and objectives themselves now.
+ */
 describe('the three places a location is written', () => {
-  it('counts a project at the same place as the sessions', () => {
+  it('folds a project into the same place as the sessions', () => {
     const list = venues({ sessions: [at('2026-09-01', 'The Works')], projects: [project('the works')] });
-    expect(list).toHaveLength(1);
-    expect(list[0]).toMatchObject({ days: 1, projects: 1 });
+    expect(list, 'a project made a second place out of one').toHaveLength(1);
+    expect(list[0]).toMatchObject({ days: 1, name: 'The Works' });
   });
 
-  it('counts an objective there too', () => {
+  it('folds an objective in too', () => {
     const list = venues({ sessions: [at('2026-09-01', 'Stanage')], objectives: [objective('Stanage')] });
-    expect(list[0]?.objectives).toBe(1);
+    expect(list).toHaveLength(1);
+    expect(list[0]?.name).toBe('Stanage');
   });
 
   // A crag you have not climbed at yet is still a place you have named.
   it('knows a place named only by an objective', () => {
     const list = venues({ objectives: [objective('Yosemite')] });
-    expect(list[0]).toMatchObject({ name: 'Yosemite', days: 0, sessions: 0, objectives: 1 });
+    expect(list[0]).toMatchObject({ name: 'Yosemite', days: 0, sessions: 0 });
+  });
+
+  it('knows a place named only by a project', () => {
+    const list = venues({ projects: [project('Raven Tor')] });
+    expect(list[0]).toMatchObject({ name: 'Raven Tor', days: 0, sessions: 0 });
   });
 });
 
