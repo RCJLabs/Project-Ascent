@@ -41,7 +41,7 @@
  */
 
 import type { MetricEntry } from '@/db/metrics';
-import type { Project } from '@/db/projects';
+import type { BetaNote, Project } from '@/db/projects';
 import type { Climb, ProjectAttempt, Session, WallAngle } from '@/db/sessions';
 import { newSession, sessionId } from '@/db/sessions';
 import type { Injury } from '@/store/profile';
@@ -140,8 +140,55 @@ function climbsFor(rng: Rng, week: number, id: string): Climb[] {
   return out;
 }
 
+/**
+ * What a climber writes down, and why the sample one now does (PLAN.md M207).
+ *
+ * The journal stores nothing — it reads notes back off sessions, projects
+ * and benchmarks. So a sample climber with no notes leaves that screen
+ * empty while Settings promises the button fills *"every screen"*. These
+ * are written the way the log is: some sessions, not all, and about the
+ * session rather than about the app.
+ */
+const SESSION_NOTES = [
+  'Felt heavy from the first pull. Cut it at four problems and went home.',
+  'Best session in weeks. Everything on the 40 felt like it had a handle.',
+  'Skin thin by the third go. Taped and kept it to feet-on.',
+  'Left early, shoulder grumbling on anything overhead.',
+  'Warmed up properly for once and it showed — flashed two at the grade.',
+  'Crowded. Spent more time queueing than climbing, which is its own rest.',
+  'Legs still wrecked from the weekend. Kept it to technique and traverses.',
+  'Tried the sit start again. Still cannot see the sequence past move three.',
+  'Good head day. Committed to the dyno first go instead of talking myself out.',
+  'Fingers felt flat. Stopped the hangs after two sets rather than push it.',
+] as const;
+
+const BETA_NOTES = [
+  'Heel hook on the arête, not the toe. Everything follows from that.',
+  'The crux is the second clip, not the move above it — get the feet up first.',
+  'Right hand to the sloper is a trap. Cross through low instead.',
+  'Rest at the rail is real if you drop the hip in. Twenty seconds, no more.',
+] as const;
+
+const BENCHMARK_NOTES = [
+  'Fresh, after two rest days. Honest number.',
+  'Tested tired at the end of a session — read it as a floor, not a ceiling.',
+  'Elbow quiet throughout, which is the news.',
+] as const;
+
 export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
   const rng = createRng(seed);
+  /**
+   * A second stream, for the prose only (PLAN.md M207).
+   *
+   * The sample climber is deterministic from its seed — *"one climber, so a
+   * screenshot taken today matches one taken in a year"* — and every draw
+   * comes off one sequence, so inserting a single `chance()` for a note
+   * re-rolls every session, burn and benchmark after it. The first version
+   * of this did exactly that and a test about the burns on a project went
+   * red for reasons that had nothing to do with burns. Notes come off their
+   * own stream, so the climber underneath them is the same one as before.
+   */
+  const prose = createRng(seed ^ 0x5eed_0f5e);
   const start = addDays(startOfWeek(today), -(DEMO_WEEKS - 1) * 7);
 
   const sessions: Session[] = [];
@@ -179,6 +226,10 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
           ...(chance(rng, 0.3)
             ? { checkIn: { fingers: pick(rng, ['good', 'good', 'tender'] as const), sleep: pick(rng, ['good', 'good', 'short'] as const) } }
             : {}),
+          // Roughly one session in five. A climber who wrote one every time
+          // would be a different climber, and the journal would read like a
+          // form rather than a log.
+          ...(chance(prose, 0.2) ? { notes: pick(prose, SESSION_NOTES) } : {}),
         }),
       );
     }
@@ -207,7 +258,15 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
       const date = addDays(monday, 1);
       if (date <= today) {
         metrics.push(
-          { metricId: 'max_hang_20mm_7s', date, value: 20 + ceilingAt(week) * 5 + Math.floor(next(rng) * 5), demo: true },
+          {
+            metricId: 'max_hang_20mm_7s',
+            date,
+            value: 20 + ceilingAt(week) * 5 + Math.floor(next(rng) * 5),
+            demo: true,
+            // The condition a number was taken in is half of what it means,
+            // and it is the kind of note the journal exists to surface.
+            ...(chance(prose, 0.5) ? { note: pick(prose, BENCHMARK_NOTES) } : {}),
+          },
           { metricId: 'max_pullups', date, value: 8 + Math.floor(week / 12) + Math.floor(next(rng) * 3), demo: true },
         );
       }
@@ -228,13 +287,26 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
     ...patch,
   });
 
+  /** Beta accumulates on a project you are actually on, not on a wish. */
+  const beta = (count: number, from: number): BetaNote[] =>
+    BETA_NOTES.slice(0, count).map((text, i) => ({
+      id: `demo-beta-${from}-${i}`,
+      date: addDays(today, -from + i * 9),
+      text,
+    }));
+
   return {
     sessions,
     // One sent, one being worked, one shelved: the three states the project
     // pages actually have between them.
     projects: [
-      made('The Joker', 'V5', { location: 'Stanage', status: 'sent', sentDate: addDays(today, -40) }),
-      made('Brad Pit', 'V6', { location: 'The Roaches' }),
+      made('The Joker', 'V5', {
+        location: 'Stanage',
+        status: 'sent',
+        sentDate: addDays(today, -40),
+        beta: beta(1, 60),
+      }),
+      made('Brad Pit', 'V6', { location: 'The Roaches', beta: beta(3, 50) }),
       made('Careless Torque', 'V7', { location: 'Stanage', status: 'shelved' }),
     ],
     metrics,

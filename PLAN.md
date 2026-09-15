@@ -11809,7 +11809,11 @@ content — `SearchBody` feeds it `allSessions` and reads `session.notes`.*
   at the reasoning, because it lives in this document and ships nowhere.
   *Small.*
 
-- **M207 — the sample climber leaves two screens empty.** `DemoClimber` carries sessions, projects,
+- **M207 — the sample climber leaves two screens empty.** *Half done — see the entry at the end
+  of this document. The journal is full; the objectives half was **reverted** after it put a real
+  intermittent failure into the demo tests that I could not localise, measured at 3 runs in 18
+  against 0 in 20 at HEAD. Everything learned about it is in the entry, including why the obvious
+  fixes made it worse.* `DemoClimber` carries sessions, projects,
   metrics, injuries and a program; it carries **no journal entries and no objectives**, so Journal
   and Objectives are bare after loading it. Settings sells that button as filling the app *"so
   every screen has something to show — for a look around, a screenshot or a video"*, which is
@@ -11996,3 +12000,74 @@ Train and Body all render, no page errors, no console errors, no overflow — wo
 
 **Budget** 137.00 → **136.97**, which is three fields' worth of derivation leaving the entry
 chunk. 5,723 tests pass, up from 5,718.
+
+
+## M207 — the journal fills up, and the objectives half is handed back
+
+**The premise was half a category error.** *"Carries no journal entries"* describes nothing that
+exists: `engine/journal.ts` stores nothing at all. It reads notes back off sessions, projects and
+benchmarks — *"the notes existed, there was just no way to read them"* is the complaint it was
+built for. The sample climber's journal was bare because **the climber wrote nothing**, not
+because a table was missing. Of the four sources the journal reads, it populated exactly one:
+project-attempt notes, on a quarter of them, from three canned strings. `beta` was explicitly
+`[]`; no session carried `notes`; no benchmark carried one either.
+
+**So the fix is prose, and prose is content.** Ten session notes on roughly one session in five —
+a climber who wrote one every time would be a different climber and the journal would read like a
+form. Four beta notes, weighted to the project still open rather than the one already sent,
+because beta accumulates where you keep going back. Three benchmark notes, since the condition a
+number was taken in is half of what it means. **The journal goes from 231 characters to 35
+entries across all four kinds**, grouped by month, with the filter row — Sessions, Beta, Burns,
+Tests — finally having something behind each tab.
+
+**The notes come off their own random stream, and that is not a detail.** The sample climber is
+deterministic from its seed — *"one climber, so a screenshot taken today matches one taken in a
+year"* — and every draw comes off one sequence. The first version put `chance(rng, 0.2)` in the
+session loop, which **re-rolled every session, burn and benchmark after it**, and a test about
+the burns on a project went red for reasons that had nothing to do with burns. A second stream
+means the climber underneath the prose is the same one as before.
+
+**The objectives half is reverted, and this is the honest account of why.** It worked: two
+objectives, one tied to the project being worked and one a trip with blocks named before it,
+loaded and wiped through the pattern injuries already use. But it put a **real intermittent
+failure** into `demoClimber.test.tsx` — *"leaves what the climber logged themselves"* failing to
+find the cleared message. Measured rather than guessed: **3 failures in 18 runs against 0 in 20
+on a HEAD worktree.**
+
+**Four hypotheses, all wrong, all measured.** *Slowness:* load is 8-14ms and wipe 25-41ms against
+a one-second timeout — twenty times the headroom. *My new test polluting the next one:* removing
+it left the flake at 1 in 4. *Two DB round-trips instead of one:* `saveMany`/`removeMany` made it
+no better. *Ordering:* moving the objectives write ahead of the profile writes made it **10 out
+of 10**, because my test clicks clear as soon as the objectives land, while the load's own
+fire-and-forget writes are still in flight. Making the store write fire-and-forget too made it
+worse again — `hydrateAll()` re-reads from the database and a `void` write has not landed yet, so
+the objectives came back empty every time.
+
+**What is true and was worth finding**: objectives live as one array under a key in the `profile`
+object store, and **every action on that store persists with `void save(...)`**. Anything that
+awaits a write to it is waiting on a transaction queue it cannot see. Folding the objectives into
+`loadDemo`'s and `wipeDemo`'s own transaction — one transaction, no ordering to get wrong, and
+the wipe counting them naturally at 191 records instead of 189 — is the right shape and still
+came out at 3 in 12. **The cause is somewhere I did not reach.**
+
+**A flake is worse than a missing feature**, and the two halves are separable: the journal fix is
+content the existing `loadDemo` already writes, touching no wiring at all. Reverted to that
+alone: **0 failures in 20 runs.** The objectives half goes back on the list with everything above
+attached, so whoever takes it starts from the four dead ends rather than finding them again.
+
+**Seven mutants, six killed.** Session notes removed; a note on every session; one note repeated;
+benchmark notes removed; beta removed from the worked project; the prose sharing the main stream
+again. The sanity no-op survived.
+
+**In a browser, both themes, 430px and 1280px**, sample climber loaded: the journal shows 35
+entries under all four filters, the worked project shows its beta, the assessments page its
+notes. No page errors, no overflow.
+
+**A guard this milestone tripped rather than wrote.** `safety.test.ts` requires every destructive
+call to offer undo or carry a written reason, and it names the function a call belongs to by
+looking eight lines back for `wipeDemo(`. The objectives removal sat further down than that. The
+fix was to teach the attribution a second marker rather than widen the window, which would have
+loosened the net everywhere — and it went back with the rest of that half.
+
+**Budget** 136.97 → 136.98, which is ten notes' worth of content in a lazy chunk. 5,730 tests
+pass, up from 5,723.
