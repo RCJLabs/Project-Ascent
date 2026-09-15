@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveClimberState } from '@/engine/derive';
-import { RANKS } from '@/engine/economy';
+import { LEVELS_PER_DEGREE, RANKS, nextRank, rankLabel, type Rank } from '@/engine/economy';
 import { shortLabel } from '@/engine/dates';
 import { describeNext } from '@/engine/nextUnlock';
 import { formatHeight, heightValue } from '@/engine/units';
@@ -62,7 +62,7 @@ export function GamePage() {
           <Avatar config={avatar} className="w-full h-auto block" />
         </div>
         <div className="min-w-0">
-          <h1 className="text-2xl font-black tracking-tight">{xp.rank.title}</h1>
+          <h1 className="text-2xl font-black tracking-tight">{rankLabel(xp.rank)}</h1>
           <p className="text-sm text-ink-soft mt-0.5">
             Level {xp.progress.level} · {xp.total.toLocaleString()} XP earned
           </p>
@@ -73,7 +73,7 @@ export function GamePage() {
           <ShareButton
             className="mt-2"
             content={rankCard(xp, avatar)}
-            filename={`ascent-${xp.rank.title.toLowerCase().replace(/\s+/g, '-')}.png`}
+            filename={`ascent-${rankLabel(xp.rank).toLowerCase().replace(/\s+/g, '-')}.png`}
           />
         </div>
       </header>
@@ -236,9 +236,22 @@ function Split({ label, value, total }: { label: string; value: number; total: n
   );
 }
 
+/**
+ * The last three rungs and the next three (PLAN.md M176).
+ *
+ * The next three are walked with `nextRank` rather than filtered out of
+ * `RANKS`, because past the authored ladder the filter returns nothing and
+ * the card became a list of what was already behind you. `nextRank` answers
+ * in both regimes, so this code stopped having two.
+ */
 function RanksCard({ level, current }: { level: number; current: string }) {
   const reached = RANKS.filter((r) => r.level <= level);
-  const upcoming = RANKS.filter((r) => r.level > level).slice(0, 3);
+  const upcoming: Rank[] = [];
+  for (let at = level, i = 0; i < 3; i += 1) {
+    const rung = nextRank(at);
+    upcoming.push(rung);
+    at = rung.level;
+  }
   return (
     <Card title="Ranks">
       <ol className="grid grid-cols-1 gap-1.5">
@@ -250,14 +263,16 @@ function RanksCard({ level, current }: { level: number; current: string }) {
           </li>
         ))}
         {upcoming.map((rank) => (
-          <li key={rank.title} className="flex items-baseline gap-2 text-sm opacity-50">
+          <li key={`${rank.title}-${rank.degree}`} className="flex items-baseline gap-2 text-sm opacity-50">
             <span className="w-8 text-xs tabular-nums">{rank.level}</span>
-            <span>{rank.title}</span>
+            <span>{rankLabel(rank)}</span>
           </li>
         ))}
       </ol>
       <p className="text-xs text-ink-soft mt-3">
-        {RANKS.length} ranks to GOAT at level {RANKS.at(-1)!.level}.
+        {level < RANKS.at(-1)!.level
+          ? `${RANKS.length} ranks to ${RANKS.at(-1)!.title} at level ${RANKS.at(-1)!.level}.`
+          : `All ${RANKS.length} ranks behind you. ${RANKS.at(-1)!.title} takes a degree every ${LEVELS_PER_DEGREE} levels from here, and keeps taking them.`}
       </p>
     </Card>
   );

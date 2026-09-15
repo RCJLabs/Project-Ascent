@@ -1,4 +1,4 @@
-import type { LevelProgress, Rank } from '@/engine/economy';
+import { rankLabel, type LevelProgress, type Rank } from '@/engine/economy';
 import { Meter } from './Meter';
 
 /**
@@ -15,7 +15,12 @@ export function LevelBar({
 }: {
   progress: LevelProgress;
   rank: Rank;
-  next?: Rank | null;
+  /**
+   * The rung ahead. Not optional and not nullable (PLAN.md M176): this used
+   * to fall back to *"top rank reached"*, a sentence a climber met somewhere
+   * in year nine and then read for ever. `nextRank` always answers now.
+   */
+  next: Rank;
   compact?: boolean;
 }) {
   return (
@@ -23,7 +28,7 @@ export function LevelBar({
       <div className="flex items-baseline gap-2 mb-1.5">
         <span className="text-2xs font-bold uppercase tracking-widest text-ink-soft">Lvl</span>
         <span className="font-black text-lg leading-none tabular-nums">{progress.level}</span>
-        <span className="font-semibold text-sm truncate">{rank.title}</span>
+        <span className="font-semibold text-sm truncate">{rankLabel(rank)}</span>
         <span className="text-xs text-ink-soft ml-auto tabular-nums shrink-0">
           {progress.into.toLocaleString()} / {progress.width.toLocaleString()}
         </span>
@@ -37,7 +42,7 @@ export function LevelBar({
       {!compact && (
         <p className="text-xs text-ink-soft mt-1.5">
           {progress.toNext.toLocaleString()} XP to level {progress.level + 1}
-          {next ? ` · ${next.title} at ${next.level}` : ' · top rank reached'}
+          {` · ${rankLabel(next)} at ${next.level}`}
         </p>
       )}
     </div>

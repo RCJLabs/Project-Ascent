@@ -683,6 +683,14 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **164.0 holds at M176**, measured 163.01 → 163.14: 0.13KB, and the
+    // headroom raised two milestones ago is what it was raised for. `Rank`
+    // gained a number, `rankFor` a branch, `nextRank` lost its null and
+    // `rankLabel` is one line — all of it in `economy.ts`, which is
+    // first-load because the logger's reward card reads it. What costs is the
+    // `RanksCard` sentence, and that lands in the lazy Game chunk; what shows
+    // here is the shared arithmetic. 0.86KB of slack.
+    //
     // **Unchanged at M175+M181+M182**, measured 163.04 → 163.01: **down**
     // 0.03KB, which is rounding rather than a saving. Three signatures and a
     // dismissal key are arithmetic, not prose; `coach.ts`'s one new headline

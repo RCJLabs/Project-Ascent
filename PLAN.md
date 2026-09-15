@@ -8522,7 +8522,7 @@ two large, three medium, five small.*
   fact is: the count at the time, a month key, or the streak of sessions since the gap closed.
   *Small.*
 
-- **M176 — the rank ladder runs out before the climber does.**
+- **M176 — the rank ladder runs out before the climber does.** *Done — see the entry at the end of this document. The author's decision: ranking up continues, for ever.*
   **Measured.** A probe ran `deriveXp` over the same three-a-week climber and read the level off
   `economy.ts`:
 
@@ -10246,3 +10246,72 @@ not transformed by `text-transform`. The third recurrence of that trap this
 brainstorm.
 
 **Budget** 163.04 → 163.01, down 0.03KB. 5,469 tests pass.
+
+### M176 — there is no top rank ✅
+
+**The decision was the author's and it was "keep ranking up infinitely".** The
+proposal offered three answers — re-curve the ladder, extend it, or say in the
+app that ranks are a first-few-seasons thing. This is the second, taken to its
+end: the ladder does not stop.
+
+**What it was.** `RANKS` is twenty-four titles topping out at level 100;
+`levelFor` is `floor(sqrt(xp / 100))` over a total that only grows. So the
+number beside the name climbed for ever and the name did not — **level 108 at
+ten years, 172 at twenty-five, 217 at forty**, all of them GOAT. `nextRank`
+returned `null` past 100, and `LevelBar` rendered that as *"top rank reached"*:
+a sentence a three-a-week climber met somewhere in year nine and then read for
+the rest of their career.
+
+**What it is.** Past the last title the title stays and a **degree** counts,
+every `LEVELS_PER_DEGREE` levels — GOAT, GOAT 2, GOAT 3, unbounded. Measured
+over the same climber: GOAT 2 at ten years, GOAT 15 at twenty-five, **GOAT 24
+at forty**, which is one degree for each authored rung and a pleasing accident
+rather than a design.
+
+**Not a lap, and the app had already argued why.** The altimeter repeats its
+ladder — *"You have been round this ladder twice. It repeats; your career does
+not"* — because a mountain's height is a distance you cover again. A rank is
+not: `career.ts` says a climber is *"better than being told they are 45 feet
+from their first gym wall again"*, which is exactly what a prestige reset to
+`Newcomer` would do. So the title holds and only the degree moves.
+
+**Five levels a degree, measured rather than picked.** That is the cadence the
+top of the ladder already runs at — 75, 80, 85, 90 — rather than the 3s it
+tightens to at the very end, which would make the first degree arrive faster
+than the last authored rung did. In XP: the final rung is 59,100 and a degree
+is **102,500**, about 135 sessions or ten months at three a week. The slowest
+step in the game, and it never stops.
+
+**The degree is derived, not authored.** `RANKS` stays a list of names and
+levels — `RankEntry` — and `Rank` is what a climber holds, with the degree
+computed. So no bookkeeping entered the content, and every authored rung is
+degree 1 by construction, which a test asserts for all twenty-four.
+
+**And the front-loading is untouched, deliberately.** Forty per cent of the
+ladder still goes in the first twelve months. That is a different decision — the
+author's answer was about the ceiling — and the sqrt curve already slows the
+climb on its own.
+
+**One helper, because five screens draw a rank.** `rankLabel` composes the
+degree in one place rather than in the level strip, the game heading, the share
+filename and the logger's two lines — the shape M168 took out of the load
+windows and M173 out of the ratio's copy.
+
+**What the battery moved.** Twelve mutants, eleven real. The first pass left
+one: putting `RanksCard`'s upcoming list back to a filter over `RANKS` — which
+returns nothing past the top — survived, because the test asserted the card's
+*footer sentence* rather than the rungs the footer is about. It reads the rows
+now and requires three of them, climbing. Second pass: eleven of eleven killed,
+sanity no-op survived.
+
+**And the browser check failed on the harness, twice over.** Seeding the
+database while the app holds it open leaves both sides blocked — which the app
+correctly reports as *"Another tab has this app open"* and then never hydrates,
+so every assertion read a level-0 climber. The fix is the reload every working
+check in this session already did; the check now also asserts that banner is
+absent, so a harness that fights the connection fails loudly instead of
+quietly.
+
+**Budget** 163.01 → 163.14: 0.13KB for a number on a type and a branch in
+`economy.ts`, which the logger's reward card puts on the boot path. 5,514 tests
+pass.

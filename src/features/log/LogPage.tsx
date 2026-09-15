@@ -13,7 +13,7 @@ import { ClimbEntry, RepeatLast, type Outcome } from './ClimbEntry';
 import { sessionOwner } from '@/db/media';
 import { MediaCard } from '@/features/media/MediaCard';
 import { offerUndo } from '@/store/undo';
-import { rankFor } from '@/engine/economy';
+import { rankFor, rankLabel } from '@/engine/economy';
 import { useSettings } from '@/store/settings';
 import type { SessionXp } from '@/engine/xp';
 import {
@@ -1948,8 +1948,8 @@ function useSessionMilestones(session: Session, detail: SessionXp | undefined): 
       earlierOutdoor: earlier.filter((s) => s.mode === 'outdoor').length,
       levelBefore: detail.levelBefore,
       levelAfter: detail.levelAfter,
-      rankBefore: rankFor(detail.levelBefore).title,
-      rankAfter: rankFor(detail.levelAfter).title,
+      rankBefore: rankLabel(rankFor(detail.levelBefore)),
+      rankAfter: rankLabel(rankFor(detail.levelAfter)),
       projectsSent: projects
         .filter((p) => p.status === 'sent' && p.sentDate === session.date)
         .map((p) => ({ name: p.name, grade: p.grade, scale: p.scale })),
@@ -2027,7 +2027,7 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
       <p className="text-sm text-ink-soft text-center mb-3 tabular-nums">
         +{detail.xp.toLocaleString()} XP
         {levelled && !lead && (
-          <span className="text-accent font-semibold"> · level {detail.levelAfter}, {xp.rank.title}</span>
+          <span className="text-accent font-semibold"> · level {detail.levelAfter}, {rankLabel(xp.rank)}</span>
         )}
       </p>
 

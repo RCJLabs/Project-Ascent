@@ -53,14 +53,43 @@ export function levelProgress(xp: number): LevelProgress {
 
 // ── Ranks ─────────────────────────────────────────────────────────────────
 
-export interface Rank {
+/** A rung as it is authored: a level and a name. */
+export interface RankEntry {
   level: number;
   title: string;
 }
 
+/**
+ * A rung as a climber holds it (PLAN.md M176).
+ *
+ * `degree` is which time round the top title this is, and it is **1 for
+ * every authored rung** — the ladder below the top is walked once. Past the
+ * last title it climbs for ever, because `levelFor` does: it is
+ * `floor(sqrt(xp / 100))` over an XP total that only grows, so the number
+ * beside the name never stops and until now the name did.
+ *
+ * Derived rather than authored, so `RANKS` stays a list of names and levels
+ * with no bookkeeping in it.
+ */
+export interface Rank extends RankEntry {
+  degree: number;
+}
+
+/**
+ * Levels between degrees once the authored ladder is finished.
+ *
+ * Five, because that is the cadence the top of the ladder already runs at —
+ * 75, 80, 85, 90 — rather than the 3s it tightens to at the very end, which
+ * would make the first degree arrive faster than the last authored rung did.
+ * Measured against the rate a three-a-week climber actually earns: level 100
+ * is 1,000,000 XP and level 105 is 1,102,500, so a degree is about ten
+ * months. It is the slowest step in the game and it never stops.
+ */
+export const LEVELS_PER_DEGREE = 5;
+
 /** Twenty-four titles to level 100, in the order you actually grow: the
  *  gym, then the rock, then the disciplines, then the long game. */
-export const RANKS: Rank[] = [
+export const RANKS: RankEntry[] = [
   { level: 0, title: 'Newcomer' },
   { level: 2, title: 'Gym Regular' },
   { level: 5, title: 'Top Roper' },
@@ -88,13 +117,48 @@ export const RANKS: Rank[] = [
 ];
 
 export function rankFor(level: number): Rank {
+  const top = RANKS.at(-1)!;
+  if (level >= top.level) {
+    // Past the ladder the title stays and the degree counts. Not a lap back
+    // to `Newcomer`: the altimeter repeats its ladder because a mountain's
+    // height is a distance you cover again, and `career.ts` says why a rank
+    // is not — a climber is *"better than being told they are 45 feet from
+    // their first gym wall again"*.
+    const degree = 1 + Math.floor((level - top.level) / LEVELS_PER_DEGREE);
+    return { level: top.level + (degree - 1) * LEVELS_PER_DEGREE, title: top.title, degree };
+  }
   let current = RANKS[0]!;
   for (const rank of RANKS) if (level >= rank.level) current = rank;
-  return current;
+  return { ...current, degree: 1 };
 }
 
-export function nextRank(level: number): Rank | null {
-  return RANKS.find((r) => r.level > level) ?? null;
+/**
+ * The next rung, and there is always one (PLAN.md M176).
+ *
+ * This returned `null` past level 100, and `LevelBar` said *"top rank
+ * reached"* — a sentence a climber met somewhere in year nine and then read
+ * for the rest of their life. There is no top.
+ */
+export function nextRank(level: number): Rank {
+  const authored = RANKS.find((r) => r.level > level);
+  if (authored) return { ...authored, degree: 1 };
+  const current = rankFor(level);
+  return {
+    level: current.level + LEVELS_PER_DEGREE,
+    title: current.title,
+    degree: current.degree + 1,
+  };
+}
+
+/**
+ * What a rank is called, in one place.
+ *
+ * Five screens render a rank and every one of them would otherwise have to
+ * remember the degree — which is the shape M168 took out of the load windows
+ * and M173 out of the ratio's copy.
+ */
+export function rankLabel(rank: Rank): string {
+  return rank.degree > 1 ? `${rank.title} ${rank.degree}` : rank.title;
 }
 
 // ── The award table ───────────────────────────────────────────────────────

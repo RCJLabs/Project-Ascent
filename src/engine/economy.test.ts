@@ -3,6 +3,7 @@ import { newSession, type Session } from '@/db/sessions';
 import {
   AWARDS,
   GAME_ACTION_CAP,
+  LEVELS_PER_DEGREE,
   LEVEL_UNIT,
   RANKS,
   drillStreakMultiplier,
@@ -64,9 +65,24 @@ describe('ranks', () => {
     expect(rankFor(999).title).toBe('GOAT');
   });
 
-  it('points at the next one, and at nothing past the top', () => {
-    expect(nextRank(0)!.title).toBe('Gym Regular');
-    expect(nextRank(100)).toBeNull();
+  /** And every authored rung is walked once, whatever happens above them. */
+  it('gives every authored rank the first degree', () => {
+    for (const rung of RANKS) expect(rankFor(rung.level).degree, rung.title).toBe(1);
+  });
+
+  /**
+   * There is no "past the top" any more (PLAN.md M176). This asserted
+   * `nextRank(100)` was `null`, and `LevelBar` rendered that as *"top rank
+   * reached"* — a sentence a three-a-week climber met in year nine and then
+   * read for the rest of their life.
+   */
+  it('points at the next one, and never at nothing', () => {
+    expect(nextRank(0).title).toBe('Gym Regular');
+    expect(nextRank(0).degree).toBe(1);
+    const past = nextRank(100);
+    expect(past.title).toBe('GOAT');
+    expect(past.degree).toBe(2);
+    expect(past.level).toBe(100 + LEVELS_PER_DEGREE);
   });
 });
 

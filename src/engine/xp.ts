@@ -71,7 +71,8 @@ export interface XpState {
   game: number;
   progress: LevelProgress;
   rank: Rank;
-  next: Rank | null;
+  /** The next rung. Never null since M176 — the ladder does not end. */
+  next: Rank;
   /** Newest first. */
   events: XpEvent[];
   bySession: Record<string, SessionXp>;
