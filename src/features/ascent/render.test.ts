@@ -315,3 +315,30 @@ describe('the ghost on the wall', () => {
     expect(calls.scale ?? 0).toBe(1);
   });
 });
+
+describe('which way the climber faces', () => {
+  const options = {
+    palette: WALL_THEMES.granite!,
+    wall: buildWall(9),
+    avatar: deriveAvatar({ level: 3, vitality: 'fresh', feet: 0 }),
+    scale: 1,
+  };
+
+  /** How many circles one climber costs, isolated from the rest of the scene. */
+  const arcsPerClimber = (): number => {
+    const one = stubCtx();
+    render(one.ctx, createRun({ seed: 9 }), options);
+    const ghost = createRun({ seed: 9 });
+    ghost.distance = 60;
+    const two = stubCtx();
+    render(two.ctx, createRun({ seed: 9 }), { ...options, ghost });
+    return (two.calls.arc ?? 0) - (one.calls.arc ?? 0);
+  };
+
+  it('draws a back, and a back has no face on it (PLAN.md M209)', () => {
+    // A head and two hands. The portrait and the share card turned around
+    // at M209 and this one did not, because a climber on a wall is a back —
+    // `facing: 'front'` here would add two eyes and this count would be 5.
+    expect(arcsPerClimber()).toBe(3);
+  });
+});

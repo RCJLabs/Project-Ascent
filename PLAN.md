@@ -12200,3 +12200,94 @@ today · data schema v2 · fully offline, no account, no tracking*, no overflow,
 **Budget** 137.00 → **137.12**. `UpdatePrompt` is in the eager shell, so the stamp and `buildAge`
 land in the entry chunk; 0.88KB of slack under the 138.0 ceiling, which is inside the rule.
 5,765 tests pass, up from 5,749.
+
+## M209 — the profile picture was the back of someone's head
+
+**One figure, one view, and the view was wrong on half the screens it appeared on.** The
+climber is drawn from `ui/climberShapes`, which is geometry as data so that the React `Avatar`
+and the standalone share-card builder cannot drift apart. It had one pose table and every pose
+in it was a back: head as a featureless circle, chalk bag centred on the spine, a pack drawn as
+a slab across the shoulder blades, a rope trailing off a waist you cannot see. That is right on
+a wall — a climber on a wall *is* a back, which is what anyone watching one sees — and it is
+wrong on a character sheet, where it reads as a climber walking away from you.
+
+**Two tables now, and the call sites have to say which.** `POSES` is the climbing figure, seen
+from behind, and the Ascent is the only thing that draws it. `STANDING` is the same body on the
+ground and turned around, and the portrait and the share card draw that. `ShapeOptions.facing`
+is **required**, with no default: three sites draw this figure, each one has an answer, and a
+default means the site that forgot ships a face on the back of a head or loses one off a
+profile — neither of which a type check would notice.
+
+**The pose keys were renamed, because they stopped being true.** They were `reach`, `highstep`
+and `hang` — what the climbing figure did. A standing figure called `highstep` is a lie in the
+type, so the key now names what the climber has left: **`strong`, `steady`, `spent`**. Each
+table says what that looks like. Contained: the three names appeared in `engine/avatar.ts` and
+its test and nowhere else, and nothing persists a pose.
+
+**The face is two eyes and there is nothing else on it.** A nose and a mouth on a head fifteen
+units across — six pixels on a 96px profile — is three smudges. The eyes pick their own colour:
+the six skin tones run from `#f2d3b8` to `#4d2f1c` and one fixed eye colour disappears at one
+end of that range or the other, so `eyeColor` takes whichever of dark and pale has more contrast
+on the skin it is drawn on. It uses `ui/contrast`, which is the app's one copy of that formula,
+so the eyes and the themes agree about what is legible.
+
+**The vitality read survived, which was the risk in the whole change.** Posture on this figure
+has encoded vitality since it was built — fresh climbers move, tired ones hang — and a single
+frozen standing stance would have silently thrown away the one number the game reads from
+training. So there are three standing stances and the gradient is the signal: **head height,
+shoulder width and stance width all fall together** from `strong` to `spent`, and `steady` puts
+a hand on a hip so the three are tellable apart as silhouettes rather than as postures. The test
+asserts a **minimum step** on each of the three, not merely an ordering — a mutation that
+flattened the stance to two units apart passed an ordering check, and two units on a 180-wide
+frame is under half a pixel where this is actually drawn.
+
+**Gear that a front view changes, and gear it does not.** The pack becomes two straps over the
+chest and whatever shows of the body of it past the shoulders, drawn behind the torso; drawing
+the slab on the front would be a pack worn on the chest. The chalk bag moves off the spine onto
+the hip, because a bag centred on your back is one the viewer cannot see. The harness gains a
+belay loop, which is the part of a harness that says harness rather than belt. The rope is tied
+into that loop and dropped rather than trailing off behind. The helmet sits two higher, because
+its brim is drawn over the head and the eyes are under it. The jacket, the shoes and the axe are
+the same from either side and were left alone. And the gym ground stopped being four holds under
+the hands and feet — that is a wall — and became a floor.
+
+**A neck, finally.** The `neck` joint has been in the table since the figure was built and
+nothing ever drew it. On a wall the head sits close enough to the shoulders to get away with it;
+facing you, fifteen units of background between the chin and the collar is a head floating over
+a shirt. Head and shoulders now sit eleven apart, about a third of a head — the first pass had
+twenty-one and the figure had a giraffe's neck, which is a fault that could not exist until a
+neck was drawn at all.
+
+**Four faults in my own first pass, and three of them came from the tests rather than the
+picture.** The legs in `steady` were 0.7 units different left to right, so the stances now mirror
+about the body's centre line and are equal by construction rather than by my arithmetic — facing
+you is the one view where a mismatch shows, because the two sides are side by side instead of
+one behind the other. The eyes sat under the helmet brim from level 40 on. The stance gradient
+ran the wrong way, `steady` standing wider than `strong`. And the eyes at six below centre read
+as a snout, which only the render showed.
+
+**Twenty-two mutants, twenty-two killed, and it took two rounds to get there.** The first
+battery killed seventeen and left five standing, and only one of the five was a defensible
+survivor. **Four were holes in the tests.** Nothing asserted the neck existed. Nothing asserted
+the pack's body showed past the shoulders — the straps were checked and the slab was checked for
+absence, so deleting the part in between changed nothing. Nothing said there was *one* chalk bag,
+so drawing the spine bag as well as the hip bag passed. And nothing looked at the rope at all,
+so the front view could inherit the back one's trailing curve. Each of those is now a property:
+one skin-coloured limb starts inside the head; two sliver rects flank the shoulders; no rect is
+the spine bag's width; the rope's `M` starts at the belay loop's centre and inside its span.
+
+**The fifth was the interesting one.** A mutant that narrowed `steady`'s stance from ten units
+below `strong` to two survived, and it was *right* to survive the rule as written — the stances
+were still ordered, still mirrored, still the same length. It was the rule that was too weak: two
+units on a 180-wide frame is under half a pixel at the size this is drawn, so an ordering check
+was passing a gradient nobody could see. The rule now asserts a minimum step on the head, the
+shoulders and the stance, and the mutant dies. **One sanity no-op survived, as it must.**
+
+**In a browser, both themes, 430px and 1280px:** the climber page header shows the figure facing
+you with the level and rank beside it, the Ascent still draws a faceless back climbing the wall,
+and a personal-record share card carries the standing figure in both card themes. No page errors
+on any of them.
+
+**Budget** 137.12 → **137.13**, which is the noise floor: `climberShapes`, `Avatar` and the
+share card are all in lazy chunks, so the front view and `ui/contrast` behind it cost the entry
+nothing. 0.87KB of slack under the 138.0 ceiling, inside the rule. **5,787 tests pass, up from 5,765.**

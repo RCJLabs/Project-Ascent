@@ -140,6 +140,8 @@ export function buildCardSvg(content: CardContent, theme: CardTheme = LIGHT_CARD
     parts.push(`<g transform="translate(${(width - drawn) / 2} ${bandTop}) scale(${scale})">`);
     for (const shape of climberShapes(content.avatar, {
       colors: { ground: theme.line, surface: theme.surface, accentGround: theme.inkSoft },
+      // The card is a portrait too, and it is the one that leaves the app.
+      facing: 'front',
     })) {
       parts.push(shapeToSvg(shape));
     }

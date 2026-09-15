@@ -3,6 +3,10 @@
  *
  * The geometry lives in `climberShapes` so the share-card builder can draw
  * the same figure without React. This component is only the renderer.
+ *
+ * Facing you, always. This is the portrait — a character sheet showing the
+ * back of someone's head is a climber walking away — and the Ascent is the
+ * one place the figure turns around.
  */
 
 import type { AvatarConfig } from '@/engine/avatar';
@@ -58,7 +62,7 @@ export function Avatar({
   className?: string;
   showGround?: boolean;
 }) {
-  const shapes = climberShapes(config, { showGround, colors: THEME_COLORS });
+  const shapes = climberShapes(config, { showGround, colors: THEME_COLORS, facing: 'front' });
   return (
     <svg
       viewBox={`0 0 ${CLIMBER_VIEWBOX.width} ${CLIMBER_VIEWBOX.height}`}

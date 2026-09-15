@@ -412,6 +412,9 @@ function drawClimber(
   ctx.globalAlpha = at.alpha;
   for (const shape of climberShapes(options.avatar, {
     showGround: false,
+    // The one place the figure is a back: that is what you see watching
+    // somebody climb, and it is why this head has no face on it.
+    facing: 'back',
     colors: {
       ground: options.palette.rockNear,
       surface: options.palette.sky,

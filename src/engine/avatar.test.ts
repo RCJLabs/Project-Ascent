@@ -72,11 +72,11 @@ describe('ground', () => {
 
 describe('pose', () => {
   it('reads vitality: fresh climbers move, tired ones hang', () => {
-    expect(poseForVitality('fresh')).toBe('highstep');
-    expect(poseForVitality('worked')).toBe('reach');
-    expect(poseForVitality('tired')).toBe('hang');
-    expect(poseForVitality('cooked')).toBe('hang');
-    expect(poseForVitality(undefined)).toBe('reach');
+    expect(poseForVitality('fresh')).toBe('strong');
+    expect(poseForVitality('worked')).toBe('steady');
+    expect(poseForVitality('tired')).toBe('spent');
+    expect(poseForVitality('cooked')).toBe('spent');
+    expect(poseForVitality(undefined)).toBe('steady');
   });
 });
 
@@ -102,7 +102,7 @@ describe('palette', () => {
 describe('deriveAvatar', () => {
   it('assembles the whole figure from three real numbers', () => {
     const config = deriveAvatar({ level: 42, vitality: 'tired', feet: 30_000 });
-    expect(config).toMatchObject({ pose: 'hang', ground: 'alpine' });
+    expect(config).toMatchObject({ pose: 'spent', ground: 'alpine' });
     expect(config.gear.rope).toBe(true);
     expect(config.stage.name).toBe('On the sharp end');
     expect(config.next!.name).toBe('Approach ready');

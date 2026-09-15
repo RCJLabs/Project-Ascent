@@ -6,6 +6,7 @@ import { deriveAvatar } from '@/engine/avatar';
 import { summariseProject } from '@/engine/projects';
 import { buildReview } from '@/engine/review';
 import { deriveXp } from '@/engine/xp';
+import { STANDING } from './climberShapes';
 import {
   CARD,
   DARK_CARD,
@@ -181,5 +182,18 @@ describe('the builders', () => {
     const card = rankCard(deriveXp({ sessions: [session(TODAY)] }));
     expect(card.eyebrow).toBe('Rank');
     expect(card.footnote).toContain('climbing');
+  });
+});
+
+describe('the climber on a card', () => {
+  it('faces you, the same way the portrait does (PLAN.md M209)', () => {
+    // The card is the one thing here that leaves the app, and it draws the
+    // figure through its own code path rather than through `Avatar`. Both
+    // sites pass `facing` and both have to pass the same one.
+    const avatar = deriveAvatar({ level: 60, vitality: 'worked', feet: 9_000 });
+    const svg = buildCardSvg({ eyebrow: 'PR', headline: 'V7', stats: [], avatar });
+    const eyes = [...svg.matchAll(/<circle[^>]*r="2\.6"[^>]*\/>/g)];
+    expect(eyes).toHaveLength(2);
+    expect(svg).toContain(`cy="${STANDING.steady.head[1]}"`);
   });
 });

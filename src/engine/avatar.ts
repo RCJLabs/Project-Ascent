@@ -114,7 +114,17 @@ export function shopOutfits(): Outfit[] {
   return OUTFITS.filter((o) => o.price !== undefined);
 }
 
-export type AvatarPose = 'reach' | 'highstep' | 'hang';
+/**
+ * Which of the three postures the figure takes, and it is a vitality tier
+ * rather than a gesture.
+ *
+ * The names used to be `reach`, `highstep` and `hang`, which described what
+ * the climbing figure did. Two tables draw a pose now — the climbing one the
+ * Ascent animates, and the standing one the portrait shows — and a standing
+ * figure called `highstep` is a lie in the type. The key names what the
+ * climber has left; each table says what that looks like.
+ */
+export type AvatarPose = 'strong' | 'steady' | 'spent';
 export type AvatarGround = 'gym' | 'rock' | 'alpine';
 
 export interface AvatarGear {
@@ -190,14 +200,14 @@ export function groundForHeight(feet: number): AvatarGround {
 export function poseForVitality(state: VitalityState | undefined): AvatarPose {
   switch (state) {
     case 'fresh':
-      return 'highstep';
+      return 'strong';
     case 'worked':
-      return 'reach';
+      return 'steady';
     case 'tired':
     case 'cooked':
-      return 'hang';
+      return 'spent';
     default:
-      return 'reach';
+      return 'steady';
   }
 }
 
