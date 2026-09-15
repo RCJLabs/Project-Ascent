@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getDb } from '@/db';
+import { getDb } from '@/db/db';
 import { reportDbError } from '@/db/db';
 import type { Objective } from '@/engine/objectives';
 

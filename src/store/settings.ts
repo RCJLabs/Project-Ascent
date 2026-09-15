@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getDb } from '@/db';
+import { getDb } from '@/db/db';
 import { DEFAULT_DISPLAY, type BoulderDisplay, type GradeDisplay, type RouteDisplay } from '@/engine/grades';
 import { setCuesEnabled } from '@/lib/cues';
 import { CONTRAST_THEME_ID, DEFAULT_THEME_ID, applyPalette, getTheme } from '@/ui/themes';

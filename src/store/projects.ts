@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { reportDbError } from '@/db/db';
-import { getDb } from '@/db';
+import { getDb } from '@/db/db';
 import {
   deleteProject,
   listProjects,

@@ -557,6 +557,50 @@ describe('nothing is on the first-paint path that does not have to be', () => {
     }
   });
 
+  /**
+   * A barrel is a module that re-exports its neighbours, and importing one
+   * name from it costs all of them (PLAN.md M186).
+   *
+   * `@/db` re-exports `exportImport.ts`, which pulls `engine/exportCsv.ts`:
+   * the whole backup and CSV path. Five stores imported `getDb` from the
+   * barrel rather than from `@/db/db`, and that one convenience put the
+   * backup machinery in front of the first paint, worth 1.18KB gzipped.
+   *
+   * The rule is the general one rather than the two filenames, because the
+   * barrel will grow and the next thing re-exported from it arrives with no
+   * milestone attached. Off the first-paint path a barrel import is fine and
+   * several lazy pages use it — this asks only of the modules that are.
+   */
+  it('has no first-paint module importing the @/db barrel', () => {
+    // Both halves named once and self-checked before they are combined. An
+    // assertion that a filtered list is empty passes just as well when
+    // either half can never match, and the battery proved it: scoping the
+    // filter to nothing survived until these two lines existed.
+    const importsBarrel = (f: { source: string }) => /from '@\/db'/.test(f.source);
+    const onFirstPaint = (f: { path: string }) => firstLoad.has(f.path);
+    expect(
+      SOURCES.filter(importsBarrel).length,
+      'nothing imports the barrel at all, so this proves nothing',
+    ).toBeGreaterThan(0);
+    expect(
+      SOURCES.filter(onFirstPaint).length,
+      'the first-paint scope is empty, so this proves nothing',
+    ).toBeGreaterThan(50);
+
+    expect(
+      SOURCES.filter((f) => onFirstPaint(f) && importsBarrel(f)).map((f) => f.path),
+    ).toEqual([]);
+  });
+
+  /** Which is the consequence, named, so a failure says what it cost. */
+  it.each([
+    ['src/db/exportImport.ts', 'the backup path — only Settings and the importer need it'],
+    ['src/engine/exportCsv.ts', 'the CSV writer, reached only through the backup path'],
+  ])('leaves %s out of the entry chunk (%s)', (path, _why) => {
+    expect(SOURCES.map((f) => f.path), 'the module was renamed, not deferred').toContain(path);
+    expect([...firstLoad]).not.toContain(path);
+  });
+
   it.each(DEFERRED_ENGINE)('leaves %s out of the entry chunk', (path) => {
     expect(SOURCES.map((f) => f.path), 'the module was renamed, not deferred').toContain(path);
     expect([...firstLoad]).not.toContain(path);

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { reportDbError } from '@/db/db';
-import { getDb } from '@/db';
+import { getDb } from '@/db/db';
 import { registerAdaptations } from '@/content/programs';
 import type { BodyPart } from '@/content/warmups';
 import type { Equipment } from '@/content/types';

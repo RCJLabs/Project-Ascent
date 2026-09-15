@@ -496,7 +496,7 @@ describe('the bundle stays small', () => {
    * with one exception recorded below — the history is in the comment inside
    * the first test.
    */
-  const BUDGET = 143.0;
+  const BUDGET = 141.9;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -682,6 +682,21 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **143.0 → 141.9 at M186, five lines.** Measured 142.12 → 140.94:
+    // **1.18KB**, the cheapest entry on this list per character changed.
+    // `@/db` is a barrel, and it re-exports `db/exportImport.ts`, which pulls
+    // `engine/exportCsv.ts` — the whole backup and CSV path. Five stores
+    // imported `getDb` from the barrel instead of from `@/db/db`, and that
+    // convenience put the backup machinery in front of the first paint.
+    //
+    // These bytes leave the app the way M184's did: a climber who never opens
+    // Settings never downloads the CSV writer.
+    //
+    // 0.96KB of slack. `wired.test.ts` carries the general rule rather than
+    // the two filenames — no module on the first-paint path may import the
+    // barrel — because the barrel will grow and the next thing re-exported
+    // from it will arrive with no milestone attached.
     //
     // **150.5 → 143.0 at M184, the second cut and the cheaper one.** Measured
     // 149.54 → 142.12: **7.42KB**, and unlike M183 it bought no boundary, no

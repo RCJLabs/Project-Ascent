@@ -10594,7 +10594,9 @@ the one candidate wraps* `expect` *in a helper; TODOs — none in the tree.*
   and drills never got the same treatment.
   *Medium.*
 
-- **M186 — `@/db` is a barrel that re-exports the backup path. 1.18KB for five lines.** Five
+- **M186 — `@/db` is a barrel that re-exports the backup path. 1.18KB for five lines.** *Done — see
+  the entry at the end of this document. The guard is the general rule, not the two filenames.*
+  Five
   stores import `getDb` from `@/db`, and the barrel re-exports `exportImport.ts`, which pulls
   `engine/exportCsv.ts`. Measured by repointing them at `@/db/db`. The smallest real win here and
   the cheapest.
@@ -10707,3 +10709,37 @@ button, the share-card builder is out of the entry chunk, no page errors.
 
 **Budget** 149.54 → 142.12, and **the ceiling comes down a second time: 150.5 → 143.0**, 0.88KB
 of slack. 5,587 tests pass.
+
+
+## M186 — one convenience import, the whole backup path
+
+**`@/db` is a barrel**, and it re-exports `db/exportImport.ts`, which pulls `engine/exportCsv.ts`.
+Five stores — `profile`, `settings`, `projects`, `objectives`, `templates` — imported `getDb`
+from the barrel rather than from `@/db/db`, and that one convenience put the backup and CSV
+machinery in front of the first paint. **1.18KB gzipped for five lines**, the cheapest thing on
+the seventh brainstorm's list per character changed, and both modules are now off the
+first-load path entirely rather than merely lighter.
+
+**These bytes leave the app**, as M184's did and M183's did not: a climber who never opens
+Settings never downloads the CSV writer.
+
+**The guard is the rule, not the two filenames.** `wired.test.ts` asserts that no module on the
+first-paint path imports the barrel at all. Off that path a barrel import is fine and several
+lazy pages use one; the point is that the barrel will grow, and the next thing re-exported from
+it arrives with no milestone attached. The two named modules are asserted underneath it as the
+consequence, so a failure says what it cost.
+
+**Mutations** 5 mutants, 4 killed, the no-op survived. The real survivor was mine again and the
+same shape as M184's: `expect(filtered).toEqual([])` passed with either half of the filter
+stubbed to `false`. Both halves are named once and self-checked before they are combined now —
+something must import the barrel, and the first-paint scope must hold more than fifty modules —
+so neither can quietly stop matching. One mutant was dropped rather than fixed, again: replacing
+an assertion with `toBeTruthy()` is a mutation of the test, which this document already records
+is not a finding.
+
+**Verified in a browser** at 430px and 1280px in both themes: the app boots with the five stores
+repointed, Settings still offers the backup, and clicking it writes a real
+`project-ascent-backup-2026-09-15.zip` — which is the point, because the code that writes it is
+the code that moved.
+
+**Budget** 142.12 → 140.94, ceiling **143.0 → 141.9**, 0.96KB of slack. 5,590 tests pass.
