@@ -11335,7 +11335,10 @@ narrowable by search and by nine category chips, so the longest page in the app 
   out not to write.
   *Medium, and the only one here that matters before the app is listed anywhere.*
 
-- **M195 — the year in review has no way in.** `/year` sits in the route table with
+- **M195 — the year in review has no way in.** *Withdrawn — see the entry at the end of this
+  document. It is linked from two places and always was; the finding was a false positive from
+  this brainstorm's own sweep, which could not match a template literal. The affordance the item
+  proposed — a link on Career's year headings — is the exact affordance already there.* `/year` sits in the route table with
   `parent: '/career'`. No page links to it: the only `href="/year"` in the source is `YearPage`'s
   own fallback for a malformed year parameter. Career is the page that should — it groups
   milestones by year through `byYear` and renders a heading per year — and it offers nothing on
@@ -11448,3 +11451,56 @@ with no page errors and no overflow. That is the new bullet, measured rather tha
 
 **Budget** 137.00 → 137.00. The privacy page is a lazy 6.5KB chunk and the test is a test. 5,700
 tests pass, up from 5,688: eleven artefact checks and one more pinned sentence.
+
+
+## M195 withdrawn — the link was there, and my own sweep could not see it
+
+**Career has linked to the year review since before the item was written**, on the heading the
+item proposed putting it on. `CareerPage.tsx:203` renders *The year in review* beside every year
+group, and `ProgressPage.tsx:260` ships a whole card for it. What the note asked to build is what
+the code already does.
+
+**The sweep could not match a template literal.** It looked for `href="/year"` and the app writes
+`` href={`/year/${group.year}`} ``, so a link that has been on screen for milestones read as an
+absence. The same regex also demanded a closing quote immediately after the path, which no
+parameterised link has.
+
+**This is the worse kind of stale item.** M189 and M193 quoted old prose; this one I generated,
+two turns earlier, in a brainstorm whose stated premise was to measure the build rather than
+trust the notes — and I named unverified probes as the risk in the same message that shipped
+one. A sweep is code. It gets the same standard as code or it is worth less than the prose it
+replaced.
+
+**So the rule M169 wrote for tests applies to sweeps, and it is the thing to keep from this.**
+*An assertion that something is absent is worth nothing until the same predicate has been shown
+to find something that is present.* Every sweep that reports a gap needs a positive control run
+through the identical code path — not a similar one — before the gap is written down.
+
+**Re-measured properly, and the class is clean.** Two independent methods:
+
+- **A corrected static sweep**, comments stripped, `<Route path=…>` declarations excluded so a
+  page cannot count as linking to itself, template literals reduced to their static prefix, with
+  a control asserting it finds `/year`, `/career` and `/privacy` and does not find a path that
+  does not exist. Three regex drafts gave three different answers before that control was added,
+  which is the whole argument for adding it.
+- **A crawl of the running app**, sample climber loaded, following every `a[href]` from the front
+  door: **102 URLs reached**, covering `/`, `/train/:id`, `/train/:id/start`, `/log/:date`,
+  `/week/:start`, `/guides/:id`, `/drills/:id`, `/projects/:id`, `/venues/:key` and — the point —
+  **`/year/2025` and `/year/2026`**.
+
+**What the crawl did not reach is not a gap either**, and checking that is what stopped a second
+false positive: `/body` is missing from its results and is linked from `ProgressPage.tsx:236` —
+the crawl follows links and does not click through Progress's tabs. `/gym` is M120's retired
+redirect, `/attach` is opened by the operating system's share sheet, and the rest are detail
+routes the demo log has no rows for. **No route in the table is unreachable.**
+
+**And no guard ships with this.** The obvious one — *every route is navigated to from somewhere* —
+is exactly the check I have now failed to write correctly four times, between the three regex
+drafts and a crawl blind to tabbed pages. `reachable.test.ts` already holds the sound half of it:
+every page declaring a parent renders a way back, and every parented route has a `<Route>` that
+renders it. Adding a fragile inbound-link check beside it would ship the defect this entry is
+about. Recorded instead, the way M66, M86 and M189 are.
+
+**No code change.** M196 was re-verified before writing this, since a third false positive in one
+brainstorm would have said something about all four items: its five exports each appear exactly
+once in the whole tree, their own declaration, with no consumer and no test. It stands.
