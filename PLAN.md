@@ -11836,6 +11836,131 @@ content — `SearchBody` feeds it `allSessions` and reads `session.notes`.*
   *Large as a build, small as a decision. Worth settling before it is asked for.*
 
 
+## The eleventh brainstorm — the game, and what of real climbing it touches
+
+*Asked for directly: what the game half could become, with the connections running to climbing
+that actually happened rather than to a score. The rule from the last five holds and is why this
+took a survey before it took an opinion — **every item says what was read to establish that it is
+not already built**, because the tenth brainstorm proposed ten things and eight of them were
+already there or false, every one from a search that found nothing for the wrong reason.*
+
+***The direction that matters, stated first.*** *The game is already well connected **inward**.
+Five stats become run modifiers (`modifiersFrom`), three skill nodes grant boons, the wall's
+look unlocks off the altimeter, a logged rest day multiplies the payout and changes the sky, the
+climber's level puts gear on the figure and their vitality sets its posture. What is thin is the
+other direction and the **specificity**: everything that flows in is an aggregate — a stat, a
+level, a total height — and nothing that flows in is a **thing you did**. The game has never
+named a route, a grade, a venue or a project. That is where the items below go.*
+
+***Five candidates died in the survey and are recorded so nobody proposes them again:*** *the
+Ascent already tells you exactly what your training buys, stat by stat, earned or not — the*
+What your training does here *card lists all five with their numbers and their hooks (M31); the
+daily wall already keeps a year of history with a chart and a sentence (M96, `ascentHistory`);
+the best run with no power-up touched is already a row in* Your records*; the replay tape is not
+idle, it drives the ghost you race (M81, `createGhost`); and the wall themes are not free
+cosmetics — they unlock at 2,900 and 29,032 feet on the altimeter and the page lists the
+thresholds beside them.*
+
+### The connections that are missing
+
+- **M210 — a run's height is a bare number, in a unit the climber may not use.** `AscentPage`
+  prints `${metres} m` in five places and **never imports `useSettings`**, while the altimeter
+  card, the career page and the trips all run their heights through `heightValue`/`formatHeight`
+  against the units setting. So a climber logging in feet meets the one screen in the app that
+  insists on metres. And a height with nothing beside it says nothing: `altimeter.ts` owns ten
+  named climbs from *First gym wall* (45 ft) to *Everest* (29,032 ft), and a 950 m run is most of
+  El Capitan without the app ever saying so. Convert the unit, and name the climb the run just
+  matched.
+  *Small, and it is the cheapest real connection on this list.*
+
+- **M211 — four of the five skill trees do nothing inside the game.** `content/skills.ts` grants
+  exactly three `ascent-boon` effects and **all three sit in Dynamic Power** — Campus Fluent,
+  Airborne and the capstone. Static Tension, Endurance, Technique and Grit grant kits, project
+  slots and bounty slots, which are all outside the wall. A climber who trains endurance for a
+  year gets the speed-ramp hook their END stat earns and no boon at all, and the tree that is
+  explicitly about commitment grants nothing to the mode that is about commitment. One boon per
+  tree, written the way `boons.ts` insists — label and effect in the same object, because the two
+  drifted once already and told a climber they had earned a mechanic that was never written.
+  *Medium. The design question is what four new mechanics should be, not where to put them.*
+
+- **M212 — the game is a leaf, and nobody has written down whether that is the decision.**
+  `achievements.ts`, `career.ts` and `challenges.ts` mention the Ascent **zero times** between
+  them. For the first two that is arguably principled and the modules say so — an achievement is
+  *"a shape in the log, never a running total"*, and the game is not in the log. The career page
+  is the awkward one: it is a list of **dated days**, unbounded by construction, and *"the first
+  day you climbed the height of El Capitan on the wall"* is a dated day. Decide it in writing
+  either way, the way M192 recorded circuits and M206 recorded the changelog.
+  *Small if the answer is no, medium if it is yes.*
+
+- **M213 — the currency runs out at about level 26 and the card never says so.** `CURRENCY_RATE`
+  is 0.25, so coins are a quarter of lifetime XP. The four priced kits cost 1,200, 2,500, 5,000
+  and 8,000 — **16,700 coins, which is 66,800 XP, which is level 25.8**. `buy` is the only thing
+  in the app that spends (M155 removed the second one deliberately). Past that level the Currency
+  card counts *earned* upward forever against a *spent* that can never move again. Either the
+  shop gains something worth buying, or the card says the shop is finished, but a number that can
+  only go up is the thing the whole economy was built to avoid.
+  *Small to say, medium to fix.*
+
+- **M214 — a run keeps its height and forgets how it ended.** `ClimbedDay` is date, metres,
+  coins, mode and an optional tape. The simulation raises `{ kind: 'hit', absorbed: 'life' |
+  'save' }` on every collision and the run throws the event away when the frame ends. So the app
+  cannot say *"you lose most runs within two seconds of a lane change"* or *"the small fast ones
+  are the ones that get you"* — which the page already claims in its instructions without ever
+  having checked. A daily game's one genuine insight is about how you play it, and this one keeps
+  nothing to build that from.
+  *Medium.*
+
+- **M215 — vitality sets the climber's posture and changes nothing else about the game.**
+  `modifiersFrom` takes `end`, `agi`, `men`, `tec`, `str` and `boons`; vitality is never passed
+  to it. A cooked climber and a fresh one play an identical wall at an identical speed. The one
+  vitality-shaped thing is the rest-day multiplier, and that is a **payout**, not a game. The
+  careful version of this is the only version worth building: **never make a tired climber's run
+  harder**, because that punishes training, which is the one thing the economy refuses to do. A
+  recovery wall that is slower and calmer — the `recovery` palette already exists and already
+  fires on a logged rest day — is the shape that fits the app's own rule.
+  *Medium, and the wrong version of it is actively harmful.*
+
+- **M216 — the wall is never yours.** `buildWall(dailySeed(date))`: the pattern comes from the
+  date and is the same for everyone, which is the whole premise of a comparable score and is not
+  a defect. What does not exist is a **second** wall seeded from your own log — a week's
+  sessions, a block, a single day — so that a heavy week is a busier wall and a rest week is a
+  quiet one. It would be the first time the game was generated out of climbing that happened. It
+  must pay nothing, or pay under the same `GAME_ACTION_CAP`, or it becomes a way to farm your own
+  history.
+  *Large, and the reward rule is the hard part rather than the generator.*
+
+- **M217 — the Ascent has never heard of a grade, a project or a venue.** Zero matches for any of
+  them across `engine/ascent` and `features/ascent`. The app knows your hardest send, the name of
+  the project you are on and where you last climbed, and the game's wall is anonymous rock with a
+  number on it. The smallest honest version is naming rather than mechanics: the day's wall
+  carries the venue you logged most recently, or the summit banner carries your project's name —
+  nothing about the run changes, and the wall stops being nowhere.
+  *Small, and it is the one item here a climber would notice in a second.*
+
+- **M218 — Free Solo is the only mode, and its unlock is the only one in the game that is not
+  earned by climbing.** `FREE_SOLO_UNLOCK = 2000` metres on the normal wall. Every other gate —
+  the walls, the kits, the boons, the gear on the figure — comes from the log. This one comes
+  from the game, and it gates the mode about commitment, which is what the whole Grit tree is
+  about. Gate it on something real instead, or say in writing why the one arcade-earned unlock
+  belongs to the one arcade-flavoured mode.
+  *Small.*
+
+- **M219 — the ghost you race is always yourself, and the tape would travel.** `Tape` is
+  self-contained by design — seed, mode, ticks, moves and the modifiers the run was played with,
+  *"because a run recorded this morning and replayed tonight would otherwise be played by a
+  different climber"*. Everyone gets the same wall from the date. So handing someone your tape is
+  a file, and this app already writes and reads files for the backup, the CSV and the calendar —
+  no server, no account, nothing leaving the phone that the climber did not send. What exists
+  today is a share **card**, which is a picture of a number.
+  *Medium, and it is the only item here that would put two climbers on the same wall.*
+
+***The recommendation.*** *M210 and M217 first — they are both small, they are both naming rather
+than mechanics, and between them they put the climber's own units, a climb they have heard of and
+a place they have actually been onto a screen that currently shows an anonymous number. M214
+after those, because everything cleverer the game could say about how you play needs a run to
+remember more than its height. M215 and M216 are the two with a real risk of building the harmful
+version, and neither should start without the reward rule settled first.*
+
 ## M199 — everything the game offers can be got, and now something says so
 
 **The premise was false, measured three ways.** Every one of the **25 achievements** is earned by
