@@ -387,6 +387,138 @@ export function importedPaths(
 }
 
 /**
+ * What the browser must parse before the app can do anything (PLAN.md M183).
+ *
+ * The same resolver as `importedPaths`, walked from `main.tsx` and reading
+ * **only static edges**, because that is exactly the set the bundler puts in
+ * the entry chunk: a `lazy(() => import('…'))` is a separate file the app
+ * fetches when it needs it, and `import type` vanishes at build.
+ *
+ * It exists because the eager import is the easy mistake and it has already
+ * been made once here. M104 moved `useTips` out of `CoachPage.tsx` so the
+ * page's lazy boundary would be real — and then `HomePage.tsx` imported the
+ * hook directly and put the whole coach engine back in the entry chunk by
+ * the other door, where it sat for eighty milestones. A budget notices the
+ * kilobytes a milestone later; this notices the import.
+ */
+export function firstLoadClosure(
+  sources: readonly { path: string; source: string }[],
+  roots: readonly string[],
+): Set<string> {
+  const known = new Set(sources.map((f) => f.path));
+  const by = new Map(sources.map((f) => [f.path, f.source]));
+  const resolve = (from: string, spec: string): string | null => {
+    let base: string;
+    if (spec.startsWith('@/')) base = `src/${spec.slice(2)}`;
+    else if (spec.startsWith('.')) {
+      const parts = from.split('/').slice(0, -1);
+      for (const step of spec.split('/')) {
+        if (step === '.') continue;
+        else if (step === '..') parts.pop();
+        else parts.push(step);
+      }
+      base = parts.join('/');
+    } else return null;
+    for (const candidate of [`${base}.ts`, `${base}.tsx`, `${base}/index.ts`, `${base}/index.tsx`]) {
+      if (known.has(candidate)) return candidate;
+    }
+    return null;
+  };
+  const seen = new Set<string>();
+  const stack = [...roots];
+  while (stack.length > 0) {
+    const path = stack.pop();
+    if (path === undefined || seen.has(path)) continue;
+    seen.add(path);
+    const source = by.get(path);
+    if (source === undefined) continue;
+    // Only `import type` has to be filtered. A dynamic import is already
+    // out: `import('…')` carries no `from`, so the scan below never reaches
+    // one — a first draft also kept a set of them and skipped it, and the
+    // battery found that the set changed nothing.
+    const typeOnly = new Set(
+      [...source.matchAll(/import\s+type\s[^'"]*'([^']+)'/g)].map((m) => m[1]!),
+    );
+    for (const m of source.matchAll(/from\s*'([^']+)'/g)) {
+      const spec = m[1]!;
+      if (typeOnly.has(spec)) continue;
+      const target = resolve(path, spec);
+      if (target !== null && target !== path) stack.push(target);
+    }
+  }
+  return seen;
+}
+
+/**
+ * The engine behind Home's one coach card, which is not worth the first
+ * paint. Nine modules and 121KB of source; 14.28KB gzipped off the entry
+ * chunk when `HomeCoachCard` went behind a boundary.
+ */
+const DEFERRED_ENGINE = [
+  'src/engine/coach.ts',
+  'src/engine/plateau.ts',
+  'src/engine/planVsLog.ts',
+  'src/engine/adherence.ts',
+  'src/engine/trip.ts',
+  'src/engine/progress.ts',
+  'src/engine/effort.ts',
+  'src/engine/phrase.ts',
+  'src/features/coach/useTips.ts',
+];
+
+describe('the coach engine is not on the first-paint path', () => {
+  const firstLoad = firstLoadClosure(SOURCES, ['src/main.tsx']);
+
+  /**
+   * Exact rather than a floor, for the reason `TEST_ONLY` above gives: a
+   * list checked only for what is in it passes when an entry is taken out.
+   * Dropping `engine/coach.ts` — the heaviest of the nine — survived the
+   * battery until this line existed.
+   */
+  it('names every module the boundary defers', () => {
+    expect(DEFERRED_ENGINE).toHaveLength(9);
+    expect(new Set(DEFERRED_ENGINE).size, 'a duplicate pads the count').toBe(9);
+    expect(DEFERRED_ENGINE, 'the hook itself is the door to the other eight').toContain(
+      'src/features/coach/useTips.ts',
+    );
+    expect(DEFERRED_ENGINE, 'the heaviest of them').toContain('src/engine/coach.ts');
+  });
+
+  it('finds enough of the app to be checking anything', () => {
+    expect(firstLoad.size).toBeGreaterThan(80);
+    expect(firstLoad.size, 'the whole tree, so the sweep proves nothing').toBeLessThan(
+      SOURCES.length - 30,
+    );
+    expect(firstLoad, 'Home itself is meant to be eager').toContain('src/features/home/HomePage.tsx');
+  });
+
+  it.each(DEFERRED_ENGINE)('leaves %s out of the entry chunk', (path) => {
+    expect(SOURCES.map((f) => f.path), 'the module was renamed, not deferred').toContain(path);
+    expect([...firstLoad]).not.toContain(path);
+  });
+
+  /**
+   * And the boundary is the one that keeps them out. Named rather than
+   * implied, because deleting the `lazy()` and importing the card directly
+   * is the exact regression this describe block exists for and it would
+   * otherwise only show up as nine separate failures with no cause in them.
+   */
+  it('keeps them out through a lazy boundary on Home', () => {
+    const home = readFileSync('src/features/home/HomePage.tsx', 'utf8');
+    expect(home, 'the card is imported eagerly again').not.toMatch(
+      /^import .*HomeCoachCard/m,
+    );
+    expect(home).toMatch(/lazy\(\(\) =>\s*import\('@\/features\/coach\/HomeCoachCard'\)/);
+    expect(home, 'a null fallback collapses the slot — PLAN.md M183').toMatch(
+      /<Suspense[\s\S]{0,400}?fallback=\{[\s\S]{0,400}?<SkeletonCard/,
+    );
+    expect(home, 'a null fallback collapses the slot — PLAN.md M183').not.toMatch(
+      /fallback=\{null\}/,
+    );
+  });
+});
+
+/**
  * Modules nothing imports, and why each is allowed to be one.
  *
  * Exact rather than a floor: a list that only says "at most two" lets the

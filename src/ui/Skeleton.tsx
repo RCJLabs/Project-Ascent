@@ -19,8 +19,14 @@ function SkeletonBlock({ className = '' }: { className?: string }) {
   return <div className={`bg-sunken rounded-lg ${className}`} aria-hidden />;
 }
 
-/** A card-shaped placeholder, sized to what usually lands there. */
-function SkeletonCard({ lines = 3 }: { lines?: number }) {
+/**
+ * A card-shaped placeholder, sized to what usually lands there.
+ *
+ * Exported since M183, which needed one card's worth rather than a page's:
+ * Home's coach card moved behind a lazy boundary and a `null` fallback put
+ * back exactly the collapse-and-snap this file was written to remove.
+ */
+export function SkeletonCard({ lines = 3 }: { lines?: number }) {
   return (
     <div className="bg-surface border border-line rounded-2xl p-4">
       <SkeletonBlock className="h-3 w-24 mb-3" />
@@ -45,11 +51,12 @@ function SkeletonCard({ lines = 3 }: { lines?: number }) {
  * climber can tell they arrived at.
  */
 /**
- * The only export: the two helpers above are `PageSkeleton`'s own parts.
+ * `SkeletonBlock` stays private: it is `SkeletonCard`'s own part.
  *
- * Exporting them made them look like a public offer nothing had taken up —
- * which is the pattern `ui/wired.test.ts` exists to catch, and it caught
- * these on its first run.
+ * Both were exported once and neither was used outside this file, which is
+ * the pattern `ui/wired.test.ts` exists to catch and it caught them on its
+ * first run. `SkeletonCard` is exported again because M183 gave it a second
+ * caller, which is the only reason that check accepts.
  */
 export function PageSkeleton({ title, cards = 2 }: { title?: string; cards?: number }) {
   return (

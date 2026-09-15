@@ -48,7 +48,8 @@ describe('the order of the front door', () => {
     await running();
     renderAt('/', <HomePage />);
     const start = await logButton();
-    const coach = screen.getByText("Coach's Corner");
+    // Awaited, not queried: the card crosses a lazy boundary since M183.
+    const coach = await screen.findByText("Coach's Corner");
     const review = screen.getByText(/Nothing logged this week|logged this week/);
     const program = screen.getByRole('heading', { name: 'Your week', level: 2 });
     expect(before(coach, start), 'the coach is under the buttons').toBe(true);

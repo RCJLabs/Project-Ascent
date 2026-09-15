@@ -496,7 +496,7 @@ describe('the bundle stays small', () => {
    * with one exception recorded below — the history is in the comment inside
    * the first test.
    */
-  const BUDGET = 164.0;
+  const BUDGET = 150.5;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -682,6 +682,34 @@ describe('the bundle stays small', () => {
     // move UI in the same change and the entry did not shrink by it,
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
+    //
+    // **164.0 → 150.5 at M183, the first time this line has come down.**
+    // Measured 163.61 → 149.54: **14.07KB off the entry chunk**, which is
+    // more than every milestone since M78 has spent on it put together.
+    // Home's one coach card imported `useTips` eagerly, and that one import
+    // reached `coach.ts`, `plateau.ts`, `planVsLog.ts`, `adherence.ts`,
+    // `trip.ts`, `progress.ts`, `effort.ts` and `phrase.ts` — nine modules
+    // that nothing else on the first-paint path needs.
+    //
+    // **The cut is in the milestone's own commit, and that is the opposite
+    // of the rule above, on purpose.** A raise moves ahead of the change
+    // that needs it, because a ceiling must never be moved under pressure
+    // from the thing it is about to fail. A cut can only be made *after* the
+    // win is real — the line and the measurement have to move together or
+    // the suite is red between them — and it is under no pressure at all,
+    // because nothing is asking for it.
+    //
+    // 0.96KB of slack, set by the same rule every raise here has used.
+    //
+    // **What it is not.** The bytes did not leave the app. Home is the only
+    // screen the app opens on and it wants the card, so the chunk is fetched
+    // about 30ms later on a warm cache and the browser parses the same total
+    // either way — measured, first paint came 8ms earlier at a quarter CPU,
+    // not 100. What the split buys is that the coach engine is no longer in
+    // front of the first paint, and that this line now measures what the app
+    // needs before it can draw anything rather than what it needs in the
+    // first half-second. The 14.07KB is honest as a budget figure and would
+    // be dishonest as a download saving.
     //
     // **164.0 holds at M178**, measured 163.24 → 163.61: 0.37KB — the most
     // expensive milestone since M173, and for the same reason: the cost of a

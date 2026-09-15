@@ -64,6 +64,10 @@ describe('training load on the front door', () => {
 
     const view = renderAt('/', <HomePage />);
     await view.findByRole('heading', { level: 1 });
+    // The coach card is a chunk away since M183, so it lands a microtask
+    // after the heading does. Awaiting the card rather than the page is the
+    // difference between reading Home and reading Home without its board.
+    await view.findByText("Coach's Corner");
     const text = view.container.textContent ?? '';
     expect(text, 'nothing on Home mentions load at all').toMatch(/Load spike/);
     expect(text, 'a word without the number is not guidance').toMatch(/\d\.\d\d× your own four-week baseline/);

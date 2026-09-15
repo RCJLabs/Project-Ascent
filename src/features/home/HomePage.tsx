@@ -1,11 +1,10 @@
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, useMemo, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { CalendarDays, ClipboardList, Compass, MessageSquare, ShieldAlert, Sparkles, Zap } from 'lucide-react';
+import { CalendarDays, ClipboardList, Compass, ShieldAlert, Sparkles, Zap } from 'lucide-react';
 import type { Session } from '@/db/sessions';
 import { today } from '@/engine/dates';
 import { loadsFingersDirectly } from '@/engine/fingerGap';
 import { gymSummary } from '@/engine/gym';
-import { useTips } from '@/features/coach/useTips';
 import { DayHeading } from '@/features/log/DayHeading';
 import { DayNudges, PreSessionCard } from '@/features/log/PreSession';
 import { usePlannedDay } from '@/features/log/usePlannedDay';
@@ -20,6 +19,7 @@ import { useSettings } from '@/store/settings';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageGrid } from '@/ui/PageGrid';
+import { SkeletonCard } from '@/ui/Skeleton';
 
 /**
  * Home is the day, and the way into it (PLAN.md M124).
@@ -51,6 +51,40 @@ import { PageGrid } from '@/ui/PageGrid';
  * worker has precached it before the tap comes.
  */
 
+/**
+ * The coach engine is not on the first-paint path (PLAN.md M183).
+ *
+ * One eager import of `useTips` here pulled nine engine modules into the
+ * entry chunk for the sake of a card that is one of three in this grid —
+ * 14.4KB gzipped, the app's largest single first-load cost and more than a
+ * hundred milestones' worth of budget at the rate they have been costing.
+ *
+ * **The fallback is a card, not `null`, and that was measured.** A `null`
+ * fallback let the two cards below draw first and the coach card insert
+ * above them a beat later: at a quarter of this machine's CPU, cumulative
+ * layout shift went from **0.0000 to 0.1243** — the app's only shift, and
+ * over the 0.1 the web vitals call good. A card-shaped one takes it to
+ * **0.0042 at 1280px and 0.0267 at 430px**, the remainder being the nights
+ * the top tip's headline runs to two lines and the placeholder has reserved
+ * one. Which is M22's finding again, in its own words — *"with nothing in
+ * `main` the page has no height at all, so the layout collapses and then
+ * snaps back a frame later, which reads as a fault rather than as
+ * loading"*.
+ *
+ * Three lines rather than four because three is what lands there: a
+ * headline and two of body under the label. Four measured marginally better
+ * (0.0078 against 0.0087 on the same fixture) by over-reserving, which
+ * trades a shift down for a shift up and is not worth a thousandth.
+ *
+ * Reserving the slot is safe because the card is almost never absent:
+ * measured across a fresh install, two weeks, a year, and a year with a
+ * benchmark gain, the board had something to say every time — a climber
+ * with nothing at all to be told is the rare case, not the common one.
+ */
+const HomeCoachCard = lazy(() =>
+  import('@/features/coach/HomeCoachCard').then((m) => ({ default: m.HomeCoachCard })),
+);
+
 export function HomePage() {
   const date = today();
   return (
@@ -68,7 +102,17 @@ function AroundTheSession() {
   const { program } = usePlannedDay(today());
   return (
     <PageGrid>
-      <CoachCard />
+      <Suspense
+        fallback={
+          // Announced the way `PageSkeleton` announces its own: a reader
+          // should be told the region is loading, not read grey rectangles.
+          <div aria-busy="true" aria-live="polite" aria-label="Loading Coach's Corner">
+            <SkeletonCard lines={3} />
+          </div>
+        }
+      >
+        <HomeCoachCard />
+      </Suspense>
       <Link href="/review" className="block bg-surface border border-line rounded-2xl p-4">
         <ReviewCard />
       </Link>
@@ -319,32 +363,5 @@ function FirstRunCard({ icon, title, children }: { icon: ReactNode; title: strin
       </div>
       {children}
     </Card>
-  );
-}
-
-/**
- * The loudest standing observation, or nothing. Home is not the board — it
- * carries one card so the board is worth opening, and stays silent when
- * there is genuinely nothing to say.
- */
-function CoachCard() {
-  const { visible } = useTips();
-  const top = visible[0];
-  if (!top) return null;
-  const rest = visible.length - 1;
-  const tone =
-    top.tone === 'caution' ? 'text-warn' : top.tone === 'good' ? 'text-positive' : 'text-accent';
-  return (
-    <Link href="/coach" className="block bg-surface border border-line rounded-2xl p-4">
-      <div className="flex items-center gap-2 mb-1.5">
-        <MessageSquare size={15} className={tone} />
-        <span className="text-xs font-bold uppercase tracking-widest text-ink-soft">
-          Coach's Corner
-        </span>
-        {rest > 0 && <span className="text-xs text-ink-soft ml-auto">+{rest} more</span>}
-      </div>
-      <div className="font-bold leading-snug mb-1">{top.headline}</div>
-      <p className="text-sm text-ink-soft leading-relaxed line-clamp-2">{top.body}</p>
-    </Link>
   );
 }

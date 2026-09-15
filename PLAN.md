@@ -9214,6 +9214,9 @@ than a card on Home should ask anyone to read. 5,077 tests pass.
   the right thing. The same `tripNow` reading would fix it, but through a
   different window — *recently* on a trip rather than on one — so it is a
   separate change rather than one more clause here.
+- **The eager coach card.** *Done at M183 — see the entry at the end of this
+  document. Nine modules and 14.07KB, and the first draft of the fix shipped
+  the app's only layout shift before the measurement caught it.*
 - **The plateau blocker repeats the spike's number one card down.** *"Recovery
   is the blocker: your load has jumped to 2.96× your baseline"* sits directly
   under the spike on the board, saying the same thing with the same figure. It
@@ -10474,3 +10477,79 @@ card and leaves the rest of the board.
 for the same reason — the cost of a coach rule is its prose, and `coach.ts` is
 first-load because Home shows the top card. The logic is free; the sentence is
 not. 0.39KB of slack, the tightest since M172. 5,566 tests pass.
+
+
+## M183 — the coach engine was in front of the first paint
+
+**The finding the last brainstorm carried in prose, and it was the only one
+of the four that paid.** `HomePage.tsx` imported `useTips` eagerly for the
+sake of one card in a grid of three, and that single import reached
+`engine/coach.ts`, `plateau.ts`, `planVsLog.ts`, `adherence.ts`, `trip.ts`,
+`progress.ts`, `effort.ts` and `phrase.ts` — **nine modules, 121KB of source,
+14.07KB gzipped**, none of which anything else on the first-paint path needs.
+
+**It is M104's own boundary, gone around.** That milestone moved `useTips`
+out of `CoachPage.tsx` for exactly this reason — *"one eager import of this
+hook from Home pulled the page's JSX, its tone table and its icons into the
+entry chunk with it"* — and then Home imported the hook directly and put the
+whole engine back by the other door, where it sat for eighty milestones. A
+budget notices the kilobytes a milestone later. Nothing noticed the import.
+
+**The first draft shipped the app's only layout shift, and the measurement
+caught it.** `Suspense fallback={null}` let the two cards below draw first
+and the coach card insert above them a beat later: at a quarter of this
+machine's CPU, **CLS 0.0000 → 0.1243**, over the 0.1 the web vitals call
+good. Which is M22's finding, in that file's own words — *"with nothing in
+`main` the page has no height at all, so the layout collapses and then snaps
+back a frame later, which reads as a fault rather than as loading."* The app
+had already decided this question and the first draft contradicted it.
+
+A card-shaped fallback takes it to **0.0042 at 1280px and 0.0267 at 430px**,
+the remainder being the boards whose top headline runs to two lines against a
+placeholder that reserved one. Reserving is safe because the card is almost
+never absent: measured across a fresh install, two weeks, a year, and a year
+with a benchmark gain, the board had something to say every time. So
+`ui/Skeleton.tsx` exports `SkeletonCard` again — it was un-exported at M155
+for having no second caller, and this is the second caller.
+
+**What the milestone is not, recorded because the number invites the wrong
+reading.** The bytes did not leave the app. Home is the only screen it opens
+on and Home wants the card, so the chunk is fetched about 30ms later on a
+warm cache and the browser parses the same total either way. Measured: first
+paint came **8ms** earlier at a quarter CPU, not 100. Two things were tried
+and dropped — a module-scope preload to start the fetch sooner (513ms against
+518ms, inside the noise) and a four-line placeholder (0.0078 against 0.0087,
+by over-reserving). What the split actually buys is that the coach engine is
+no longer *in front of* the first paint, and that the budget now measures
+what the app needs before it can draw anything.
+
+**Tests** `ui/wired.test.ts` gains `firstLoadClosure`, the same resolver as
+`importedPaths` walked from `main.tsx` over static edges only, and asserts
+each of the nine modules is outside it — the guard that would have caught the
+original regression, where a budget did not. `features/home/coachBoundary.
+test.tsx` proves the card still arrives across the boundary and that the
+placeholder is card-shaped; it does **not** assert the fallback through
+`Suspense`, because under the runner the chunk is already in the module graph
+and React resolves it inside the same `act`, so the fallback is never on
+screen to query. Two existing Home tests had to start awaiting the card
+rather than the page.
+
+**Mutations** 13 real mutants, all killed, the no-op survived. Two genuine
+survivors, both found and fixed: the closure walker kept a set of dynamic
+specifiers and skipped them, which changed nothing — `import('…')` carries no
+`from`, so the scan never reached one — and the list of deferred modules had
+no count, so dropping `engine/coach.ts` from it passed. That is the
+redundant-guard shape from M143, M158, M167 and M178, and the exact-not-floor
+rule the same file already states for `TEST_ONLY`.
+
+**Verified in a browser** at 430px and 1280px in both themes, at a quarter
+CPU so the boundary is really crossed on screen: the card arrives, leads the
+front door, tones as good news, fits the viewport, sets aside, and the page
+does not jolt.
+
+**Budget** 163.61 → 149.54, and **the ceiling comes down for the first time:
+164.0 → 150.5**, 0.96KB of slack. The cut is in this commit rather than ahead
+of it, which is the opposite of the rule every raise here has followed and is
+the point — a ceiling must never be *raised* under pressure from the change
+about to fail it, and can only be *lowered* after the win is real. 5,581
+tests pass.
