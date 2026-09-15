@@ -126,9 +126,6 @@ export function writtenProgram(id: ProgramId): Program | undefined {
   return CUSTOM.get(id) ?? BY_ID.get(id);
 }
 
-export function isCustomProgram(id: ProgramId): boolean {
-  return CUSTOM.has(id);
-}
 
 /** Everything runnable, shipped and written alike — at the length it is
  *  actually being run, so a list cannot disagree with the program it opens. */

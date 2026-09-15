@@ -35,14 +35,6 @@ export interface WarmupExercise {
   loads: BodyPart[];
 }
 
-export const WARMUP_CATEGORY_LABEL: Record<WarmupCategory, string> = {
-  pulse: 'Raise the pulse',
-  shoulder: 'Shoulders',
-  fingers: 'Fingers and forearms',
-  hips: 'Hips and legs',
-  core: 'Core and tension',
-  climbing: 'On the wall',
-};
 
 export const WARMUP_EXERCISES: WarmupExercise[] = [
   // ── Pulse raisers ───────────────────────────────────────────────────────
@@ -283,6 +275,3 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
   },
 ];
 
-export function getWarmupExercise(id: string): WarmupExercise | undefined {
-  return WARMUP_EXERCISES.find((e) => e.id === id);
-}

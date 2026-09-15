@@ -11346,7 +11346,9 @@ narrowable by search and by nine category chips, so the longest page in the app 
   keywords for it. One link, on a heading that is already rendered.
   *Small.*
 
-- **M196 — five exports that nothing references, and one of them is a finished card.** Of 295
+- **M196 — five exports that nothing references, and one of them is a finished card.** *Done —
+  see the entry at the end of this document. The count was right; what the sweep could not tell
+  me was that one of the five is a second answer to a question, not merely an unused one.* Of 295
   exported values with no consumer outside their own file, five are referenced exactly once in
   the whole repository: their own declaration. `CareerLinkCard` is a complete `Card` — a Career
   link, a milestone count, the latest milestone by name and date, wired to `deriveCareer` — that
@@ -11504,3 +11506,69 @@ about. Recorded instead, the way M66, M86 and M189 are.
 **No code change.** M196 was re-verified before writing this, since a third false positive in one
 brainstorm would have said something about all four items: its five exports each appear exactly
 once in the whole tree, their own declaration, with no consumer and no test. It stands.
+
+
+## M196 — wired up or gone, one layer out
+
+**`wired.test.ts` opens with *"Nothing is built and left unreachable"* and has guarded that
+since M26.** It checks every share card has a caller, every module has an importer, and every
+exported component in **seven hand-listed files under `ui/`** is used. The app is 666 files, and
+all five of these were outside the list — which is the finding, more than the five themselves.
+
+**What went:**
+
+- **`CareerLinkCard`** (`features/climber/AchievementsCard.tsx`) — a finished `Card`: a Career
+  link, a milestone count, the latest milestone by name and date, computed through
+  `deriveCareer` over every session. Rendered by nothing. `ProgressPage` ships the equivalent,
+  and it is reachable — verified in a browser rather than in the source, since Progress is
+  tabbed: the Career card sits under **Grades** and under **All**.
+- **`getWarmupExercise`, `getCooldownExercise`** — by-id lookups over their libraries. Neither
+  has an inline duplicate to fold back in; `engine/warmup.ts` and `engine/cooldown.ts` filter the
+  whole library and never want one exercise by id.
+- **`WARMUP_CATEGORY_LABEL`** — display strings for all six warmup categories. No screen shows a
+  warmup category.
+- **`isCustomProgram`** — and this one is not simply unused. It is a **second answer to *is this
+  a custom program***: `CUSTOM.has(id)`, registry-backed, against `engine/customProgram.ts`'s
+  `isCustomId`, which reads the `custom_` prefix. They can disagree — a deleted program keeps its
+  prefix and loses its registry entry. The honest measurement is that **the app calls neither**:
+  `isCustomProgram` is referenced once, its own declaration, and `isCustomId` only by two test
+  files. Where the app actually needs the distinction it uses `writtenProgram`'s
+  `CUSTOM.get(id) ?? BY_ID.get(id)` and never wants a boolean. The dead one goes; the test-only
+  one is a different question with 232 answers in this repo and is not folded in here.
+
+**The compiler listed what the card had been carrying**, the way it did at M184: cutting
+`CareerLinkCard` left `Trophy`, `deriveCareer`, `deriveClimberState` and `useSettings` imported
+by a file with no use for them.
+
+**The rule now covers every export, not seven files.** `every exported value has a caller` scans
+each `export const|function|class|enum` in the tree and fails on a name that appears **in one
+file and once in that file** — its own declaration. Deliberately narrower than "unused": an
+export referenced only inside its own file is over-exported and not this rule's business, and one
+referenced only by its own test is that 232-strong question. Restoring any one of the five fails
+it, which was checked rather than assumed.
+
+**The predicate takes its corpus as a parameter, and that is the whole design.** The first draft
+read the real tree in every case, so its control had to invent a path that did not exist — which
+returned before the occurrence count ever ran, leaving the threshold untested and a mutation of
+it alive. Passing the corpus in means the controls hand it three files built to contain one
+export of each kind: imported elsewhere, referenced nowhere, and used privately in its own file.
+Every branch fires on purpose.
+
+**And the sweep is tied to the corpus it swept.** A mutation replaced the real corpus with an
+empty one at the call site: nothing is ever held by exactly one file, so nothing is flagged and
+the test passes having read nothing. **That is the third time in three milestones** — M194's
+staleness guard checking an empty list, M195's whole withdrawal, and now this. The corpus is
+named once, asserted to be over 600 files and to contain `src/main.tsx`, and then swept.
+
+**Ten mutants, eight killed.** The predicate flagging nothing and flagging everything; the
+one-file rule made a no-file rule; the occurrence threshold moved to zero and to two; the real
+sweep handed an empty corpus; nothing declared; the export pattern narrowed to `const` alone.
+Two survived as intended: `!== 1` written `!= 1`, and word boundaries dropped for a plain
+`includes`, which this corpus cannot distinguish.
+
+**In a browser, both themes, 430px and 1280px:** `/achievements`, `/progress`, `/career` and
+`/game` all render unchanged, no page errors, no console errors, no overflow. Nothing was on
+screen to lose.
+
+**Budget** 137.00 → 137.00. The five were not on the first-paint path; this is a tidy, and the
+guard is the milestone. 5,704 tests pass.

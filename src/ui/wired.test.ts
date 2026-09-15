@@ -295,6 +295,106 @@ function leavesOf(root: string): string[] {
  */
 const ROOTS = [...TYPES.matchAll(/^export interface (\w+) \{/gm)].map((m) => m[1]!);
 
+/**
+ * And every exported value has somebody who wants it (PLAN.md M196).
+ *
+ * `every UI primitive is used` above is this rule with a hand-written scope:
+ * seven files in `ui/`. The app is six hundred and sixty-six, and the five
+ * this found were all outside that list — `CareerLinkCard`, a finished card
+ * with a Career link, a milestone count and the latest milestone by name,
+ * rendered by nothing while `ProgressPage` shipped an equivalent; two
+ * by-id lookups in `content/`; a label map for warmup categories no screen
+ * shows; and a second answer to *is this a custom program* that nothing
+ * asked.
+ *
+ * **Referenced nowhere at all**, which is narrower than unused and is the
+ * point. An export used only inside its own file is merely over-exported,
+ * and one used only by its own test is a different question with 232
+ * answers in this repo — neither is flagged here. This fires when a name
+ * appears in one file and once in that file: its own declaration.
+ */
+describe('every exported value has a caller', () => {
+  const ALL = walk('src')
+    .filter((p) => /\.tsx?$/.test(p))
+    .map((path) => ({ path, source: readFileSync(path, 'utf8') }));
+
+  const DECLARED = SOURCES.flatMap(({ path, source }) =>
+    [...source.matchAll(/^export\s+(?:async\s+)?(?:const|function|class|enum)\s+([A-Za-z_$][\w$]*)/gm)].map(
+      (m) => ({ name: m[1]!, path }),
+    ),
+  );
+
+  /**
+   * Named, so the control below runs the same one (PLAN.md M155, M195).
+   *
+   * M195 is why the control is not optional: a sweep of this shape reported
+   * a link as missing that had been on screen for milestones, because its
+   * pattern could not match a template literal. An absence is worth nothing
+   * until the identical code path has been shown to find a presence.
+   */
+  const unreferenced = (
+    declared: readonly { name: string; path: string }[],
+    corpus: readonly { path: string; source: string }[],
+  ): string[] =>
+    declared
+      .filter(({ name, path }) => {
+        const holding = corpus.filter(({ source }) => new RegExp(`\\b${name}\\b`).test(source));
+        if (holding.length !== 1) return false;
+        const own = corpus.find((f) => f.path === path);
+        if (own === undefined) return false;
+        return (own.source.match(new RegExp(`\\b${name}\\b`, 'g')) ?? []).length <= 1;
+      })
+      .map(({ name, path }) => `${name} (${path})`);
+
+  /**
+   * The corpus is a parameter so the controls can hand it one they built
+   * (PLAN.md M196). A control that runs the predicate over the real tree can
+   * only prove the half of it the tree happens to exercise — the first
+   * version of this passed a synthetic path, which returned before the
+   * occurrence count ran, so the threshold went unchecked and a mutation of
+   * it survived.
+   */
+  const CORPUS = [
+    { path: 'a.ts', source: 'export function used() {}\nexport const dead = 1;\n' },
+    { path: 'b.ts', source: "import { used } from './a';\nused();\n" },
+    { path: 'c.ts', source: 'export function twiceInOwnFile() {}\nconst x = twiceInOwnFile;\n' },
+  ];
+  const CORPUS_DECLARED = [
+    { name: 'used', path: 'a.ts' },
+    { name: 'dead', path: 'a.ts' },
+    { name: 'twiceInOwnFile', path: 'c.ts' },
+  ];
+
+  it('finds enough exports to be checking anything', () => {
+    expect(DECLARED.length).toBeGreaterThan(250);
+    expect(DECLARED.some(({ name }) => name === 'deriveClimberState')).toBe(true);
+  });
+
+  it('names the one nothing references, and only that one', () => {
+    // Three exports, one of each kind: imported elsewhere, referenced
+    // nowhere, and used privately inside its own file. Only the middle one
+    // is this rule's business.
+    expect(unreferenced(CORPUS_DECLARED, CORPUS)).toEqual(['dead (a.ts)']);
+  });
+
+  it('counts references rather than files', () => {
+    // `twiceInOwnFile` lives in one file, like `dead` does. What separates
+    // them is the second mention, so the threshold gets its own case.
+    expect(unreferenced([{ name: 'twiceInOwnFile', path: 'c.ts' }], CORPUS)).toEqual([]);
+    expect(unreferenced([{ name: 'dead', path: 'a.ts' }], CORPUS)).toEqual(['dead (a.ts)']);
+  });
+
+  it('has a caller for each', () => {
+    // The corpus is named once and both asserted on, because a sweep handed
+    // an empty one flags nothing and passes — which is how this rule's own
+    // first draft read the whole tree and checked none of it.
+    const corpus = ALL;
+    expect(corpus.length).toBeGreaterThan(600);
+    expect(corpus.some(({ path }) => path === 'src/main.tsx')).toBe(true);
+    expect(unreferenced(DECLARED, corpus)).toEqual([]);
+  });
+});
+
 describe('every authored content field reaches a screen', () => {
   const LEAVES = [...new Set(ROOTS.flatMap(leavesOf))];
 

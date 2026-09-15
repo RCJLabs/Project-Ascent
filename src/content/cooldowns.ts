@@ -160,7 +160,3 @@ export const COOLDOWN_EXERCISES: CooldownExercise[] = [
     targets: ['ankle', 'knee'],
   },
 ];
-
-export function getCooldownExercise(id: string): CooldownExercise | undefined {
-  return COOLDOWN_EXERCISES.find((e) => e.id === id);
-}

@@ -1,19 +1,16 @@
 import { useMemo } from 'react';
 import { Link } from 'wouter';
-import { Award, ChevronRight, Trophy } from 'lucide-react';
+import { Award, ChevronRight } from 'lucide-react';
 import {
   ACHIEVEMENT_COUNT,
   deriveAchievements,
   earnedCount,
   sortAchievements,
 } from '@/engine/achievements';
-import { deriveCareer } from '@/engine/career';
-import { deriveClimberState } from '@/engine/derive';
 import { getProgram } from '@/content/programs';
 import { fromKey } from '@/engine/dates';
 import { useProjects } from '@/store/projects';
 import { useSessions, allSessions } from '@/store/sessions';
-import { useSettings } from '@/store/settings';
 import { Card } from '@/ui/Card';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { achievementCard } from '@/ui/shareCard';
@@ -128,38 +125,6 @@ export function AchievementList() {
           filename={`ascent-${newest.id}.png`}
         />
       )}
-    </Card>
-  );
-}
-
-/** The whole history, from the page that shows the named days of it. */
-export function CareerLinkCard() {
-  const byDate = useSessions((s) => s.byDate);
-  const display = useSettings((s) => s.display);
-  const career = useMemo(() => {
-    const sessions = allSessions(byDate);
-    return deriveCareer({ sessions, records: deriveClimberState(sessions).personalRecords, display });
-  }, [byDate, display]);
-  const latest = career.achieved[0];
-
-  return (
-    <Card title="Career">
-      <Link href="/career" className="flex items-center gap-3">
-        <Trophy size={18} className="text-accent shrink-0" />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate">
-            {career.achieved.length > 0
-              ? `${career.achieved.length} milestones`
-              : 'No milestones yet'}
-          </p>
-          <p className="text-xs text-ink-soft mt-0.5 truncate">
-            {latest
-              ? `Latest: ${latest.label}, ${fromKey(latest.date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`
-              : 'Worked out from the log, not handed out.'}
-          </p>
-        </div>
-        <ChevronRight size={18} className="text-ink-soft shrink-0" />
-      </Link>
     </Card>
   );
 }
