@@ -362,6 +362,33 @@ function FinderForm({
             </>
           )}
 
+          {/* The promise under the question, kept (PLAN.md M193). The page
+              shows a pick and two alternatives, so the ten points a long
+              session costs were enough to push a program off the screen —
+              which reads as hiding, whatever the engine did. These are the
+              ones the clock moved out, with the caution that says by how
+              much.
+
+              Named for what happened to them rather than for being long: a
+              program that runs past the evening can perfectly well still be
+              the pick or an alternative — Gravity Defied is, at 45 minutes
+              — so a heading reading "longer than your evening" would claim
+              a set this section does not hold. */}
+          {result.overBudget.length > 0 && (
+            <>
+              <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft mt-2">
+                Moved down, not off
+              </h2>
+              <p className="text-sm text-ink-soft -mt-1">
+                These would be on the list if the clock were open. A long session can be cut
+                short, so the time you have moves a program down the list — never off it.
+              </p>
+              {result.overBudget.map((rec) => (
+                <RecCard key={rec.program.id} rec={rec} />
+              ))}
+            </>
+          )}
+
           {result.blocked.length > 0 && (
             <Card title="Out of reach for now">
               <ul className="grid grid-cols-1 gap-2.5">

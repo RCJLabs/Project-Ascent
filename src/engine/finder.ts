@@ -652,6 +652,13 @@ export interface FinderResult {
   /** Programs that fit but are out of reach, with what stands in the way. */
   blocked: Recommendation[];
   /**
+   * The programs a stated evening pushed off the page (PLAN.md M193).
+   *
+   * Empty whenever no budget was given, and empty most of the time when one
+   * was. See `pushedOffByTheClock` for why the field exists at all.
+   */
+  overBudget: Recommendation[];
+  /**
    * What the catalogue cannot answer, when the honest answer is "nothing
    * here really does this".
    *
@@ -717,6 +724,65 @@ function catalogueGap(input: FinderInput): string | undefined {
   return 'Nothing here trains fingers without a hangboard — off the wall, finger strength needs a load you can measure and repeat. A hangboard is the one piece of kit that opens Iron Grip, and the cheapest thing you can buy for this goal.';
 }
 
+/**
+ * The programs a stated evening pushed off the page (PLAN.md M193).
+ *
+ * The fit rule is deliberately never a filter — `recommend` returns every
+ * program whatever the clock says, and `finder.test.ts` pins that. The
+ * finder screen makes the same promise to the climber in words, directly
+ * under the question: *a program whose sessions run longer than this still
+ * shows, and says which ones and by how much.*
+ *
+ * **The page could not keep it.** `findProgram` shows a pick and two
+ * alternatives, so the ten points a long session costs are enough to move a
+ * program out of sight — which is indistinguishable from filtering from the
+ * only side that matters. Measured across 432 answer profiles (nine goals,
+ * four experience levels, four day counts, three budgets): **90 of them lost
+ * a program that way, 94 disappearances in all, and every one of the 94 was
+ * a program carrying a length caution** — precisely the case the sentence on
+ * screen says cannot happen. Four programs did the vanishing: Gravity
+ * Defied, The Cruiser, Trip Prep and Two Days a Week.
+ *
+ * **The counterfactual is the answer.** Rank a second time with the clock
+ * unset; anything that would have been visible then is shown now, carrying
+ * the caution that explains it. The signal stays soft — the ranking still
+ * moves, because a climber with forty-five minutes should be handed
+ * something that fits first — and nothing disappears for running long.
+ *
+ * **The counterfactual names the program and nothing else.** Ranked with the
+ * clock unset, a recommendation carries no fit line at all — so returning
+ * those cards would keep the first half of the promise and drop the second,
+ * showing the program and saying nothing about how long it runs. The ids
+ * come from the second ranking; the cards come from the first, where the
+ * caution is.
+ *
+ * **Nothing here can be out of reach.** The ids come from the counterfactual's
+ * pick and alternatives, which `findProgram` takes from `viable` — and a
+ * blocker is a fact about equipment and entry standards, not about the
+ * clock, so a program unblocked at one budget is unblocked at every other.
+ * A guard against it filtered nothing across every profile the sweep walks,
+ * and `overBudget.test.ts` pins the invariant instead.
+ *
+ * Recurs exactly once: the second call has no budget, and returns here at
+ * the guard on its first line.
+ */
+function pushedOffByTheClock(
+  input: FinderInput,
+  ranked: Recommendation[],
+  visible: Set<string>,
+): Recommendation[] {
+  if (input.minutesPerSession === undefined) return [];
+  const open = { ...input };
+  delete open.minutesPerSession;
+  const before = findProgram(open);
+  const lost = new Set(
+    [before.top, ...before.alternatives]
+      .filter((r) => !visible.has(r.program.id))
+      .map((r) => r.program.id),
+  );
+  return ranked.filter((r) => lost.has(r.program.id));
+}
+
 export function findProgram(input: FinderInput): FinderResult {
   const ranked = recommend(input);
   const viable = ranked.filter((r) => r.blockers.length === 0);
@@ -732,20 +798,29 @@ export function findProgram(input: FinderInput): FinderResult {
   const gap = catalogueGap(input);
 
   if (!best) {
+    // Provably empty rather than chosen: the fallback's one card is open
+    // logging, and `recommend` does not rank the logging modes at all, so
+    // the counterfactual has nothing to name and the filter nothing to
+    // return. Written out because a reader should not have to derive that.
     return {
       top: openLogging(input, blocked),
       alternatives: [],
       fallback: true,
       blocked: blocked.slice(0, 3),
+      overBudget: [],
       ...(gap ? { gap } : {}),
     };
   }
 
+  const alternatives = viable.slice(1, 3);
+  const visible = new Set([best, ...alternatives].map((r) => r.program.id));
+
   return {
     top: best,
-    alternatives: viable.slice(1, 3),
+    alternatives,
     fallback: weak,
     blocked: blocked.slice(0, 3),
+    overBudget: pushedOffByTheClock(input, ranked, visible),
     ...(gap ? { gap } : {}),
   };
 }

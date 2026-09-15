@@ -10664,7 +10664,13 @@ the one candidate wraps* `expect` *in a helper; TODOs — none in the tree.*
   into walls, circuits and set dates is the milestone the text was collected for.
   *Large.*
 
-- **M193 — minutes as a scheduling constraint.** The finder asking how long a climber has.
+- **M193 — minutes as a scheduling constraint.** *Done, and not as written — see the entry at
+  the end of this document. The item was stale twice over: M138 built the finder's minutes
+  question and closed this exact blocker by name, and the note was mined from M138's own
+  **proposal** rather than its Done entry. What the milestone became is the defect that turned
+  up while proving the item was already built: the "never a filter" promise is the engine's, and
+  the page could not keep it.*
+  The finder asking how long a climber has.
   Blocked on the session-length estimate, which answers for 25 sessions out of 42 — filtering a
   catalogue on a number absent for the other 17 would quietly hide the projecting programs.
   *Large, and genuinely blocked.*
@@ -11181,3 +11187,100 @@ place* rather than rendering blank.
 **Budget** 136.88 → 137.00: 0.12KB, the route and its href — the page is a 1.63KB lazy chunk.
 **0.20KB of slack, and the raise is overdue**: M191 said the next first-load milestone would
 raise the ceiling first and this one did not. 5,674 tests pass.
+
+
+## M193 — never a filter, and the page was filtering
+
+**The item was already built, and the blocker it named had already been closed — by the same
+milestone.** M138 asks *How long is a session for you?* (Any / 45 / 60 / 90 / 120+), scores every
+program against the answer and never hides one. It also went through M131's gate on the way:
+where the note says the estimate answers for 25 session types of 42, M138 re-measured, exempted
+the two logging modes, read a duration out of six doses that already stated one, and authored
+`SessionType.duration` on the seven days left. Re-measured again here, against a catalogue that
+has grown since: **35 of 55 session types answer, and the 20 that do not are 13 rest types and 7
+belonging to the two modes. Zero unexplained.** The Siege — the projecting program the note said
+would be quietly hidden — answers for `proj`, `pe` and `fp`, and misses only `rest`.
+
+**Two withdrawals in one brainstorm, both from the same mistake.** M189 quoted a milestone's
+description of the problem it had solved. This one quoted M138's *proposal* — including its
+"25 of 42" — and never read the Done entry forty lines below it, which closes the gate, builds
+the question and, in as many words, refuses the `LayoutRequest.minutes` half on the grounds that
+*"a layout is a shape of days, and every layout of a program contains the same sessions — so a
+time budget cannot change which one it produces."* That argument still holds and nothing here
+disturbs it.
+
+**But proving it was built found the thing that was not.** The rule is that minutes are never a
+filter. `recommend` keeps every program whatever the clock says, `finder.test.ts` pins it, and
+the finder screen tells the climber so directly under the question: *a program whose sessions run
+longer than this still shows, and says which ones and by how much.*
+
+**`findProgram` shows three programs.** A pick and `viable.slice(1, 3)`. The fit rule is worth ten
+points either way, which is enough to reorder the top of a thirteen-program list — so a program
+that runs long could be pushed off the screen entirely. The engine kept its promise and the page
+broke it, and from the only side that matters there is no difference between the two.
+
+**Measured across 432 answer profiles** — nine goals × four experience levels × four day counts ×
+three budgets, at a fixed grade with wall, hangboard and added weight: **90 of them lost a
+program, 94 disappearances in all, and every one of the 94 was a program carrying a length
+caution.** Not a reordering that happened to touch long programs: the displaced set and the
+over-budget set were the same set. Four programs did the vanishing — Gravity Defied, The Cruiser,
+Trip Prep and Two Days a Week.
+
+**The counterfactual is the fix.** Rank a second time with the clock unset; anything that would
+have been visible then is shown now. `FinderResult.overBudget`, a required field so the compiler
+found the fallback return too, and `pushedOffByTheClock` recursing exactly once — the second call
+has no budget and returns at the guard on its first line. Across the same 432 profiles the page
+now loses nothing, and `overBudget` holds at most two cards.
+
+**The first draft kept half the promise.** The counterfactual's recommendations are scored with
+the clock unset, so they carry no fit line at all — the programs came back and said nothing about
+how long they run, which is the *and says by how much* half missing. The ids come from the second
+ranking; the cards come from the first, where the caution is. Its own mutant now, and it dies.
+
+**And the heading was making a claim the page contradicts.** *Longer than your evening* reads as
+naming the long programs, and at 45 minutes Gravity Defied sits two cards above it in *Also worth
+considering* carrying the same *1 of 3 sessions runs past 45 min*. The section is not the long
+ones, it is the ones the clock moved out — **Moved down, not off**, which is the rule as a
+heading, over *"These would be on the list if the clock were open. A long session can be cut
+short, so the time you have moves a program down the list — never off it."* That sentence is
+M138's reason for the penalty being ten rather than twenty, said out loud.
+
+**Why M138's tests missed it, in one line of one test.** `sessionTime.test.tsx` asserts a fit
+reason appears, under the comment *"Never a filter: the whole catalogue is still on the page."*
+The assertion never checked that. A comment claiming a guarantee over an assertion that does not
+make it is worse than no test, because it stops anyone writing the real one; the comment now says
+what the line does and points at the file that does the rest.
+
+**Two survivors, and neither was a missing assertion.** Rescuing a blocked program survived — and
+cannot happen: the ids come from the counterfactual's pick and alternatives, which are drawn from
+`viable`, and a blocker is a fact about equipment, not about the clock. Redundant guard, so it is
+gone and `overBudget.test.ts` pins the invariant that replaces it — with `['none']` in the sweep,
+which leaves exactly one program unblocked, because the richer equipment sets have enough slack
+to hide a `viable` that has stopped filtering. Making the fallback rescue too survived as an
+equivalent mutant: the fallback's one card is open logging, and `recommend` does not rank the
+logging modes, so both spellings return empty. Recorded, and the comment there now says *provably*
+empty rather than chosen.
+
+**Sixteen mutants, thirteen killed, one no-op survived as it should and one equivalent as
+described:** the feature off; the guard inverted; the counterfactual keeping the clock; rescuing
+what is already shown; the cards taken from the wrong ranking; reading the pick without the
+alternatives; the visible set forgetting the alternatives; `viable` no longer excluding blocked
+programs; the page widened to three alternatives; the section rendered when empty; the heading
+without its cards; the heading renamed; the why-line cut.
+
+**In a browser, both themes, 430px and 1280px.** Established / bouldering / stronger fingers /
+three days / hangboard: at *Any* the page offers Gravity Defied, Iron Grip and Trip Prep; at 45 it
+offers Ground Zero, Gravity Defied and Iron Grip, and Trip Prep is under *Moved down, not off*
+with *1 of 3 sessions runs past 45 min — Specific Session is 60-90 min*. Nothing lost either way,
+the section absent when the clock is open, no horizontal overflow, no page errors. The heading is
+CSS-uppercased, which made the first probe's absence check pass for the wrong reason until the
+match went case-insensitive with a control.
+
+**Budget** 137.00 → 136.99, which is rounding: the finder is a lazy route and the work landed in
+`finder-*.js`. 1.01KB of slack under the 138.0 ceiling, so nothing to raise. 5,688 tests pass.
+
+**What this says about the brainstorm.** Four of the seventh's ten items came from prose already
+in PLAN.md rather than from a sweep of the code, and three of those four were substantially or
+entirely already built — M189 withdrawn, M192 half-built, M193 built outright. An old proposal
+reads exactly like an open finding; only the Done entry tells them apart, and it is the one thing
+a keyword search does not surface. The eighth brainstorm should come from measuring the build.

@@ -62,7 +62,10 @@ describe('the finder asks how long an evening is', () => {
     fireEvent.click(screen.getByRole('button', { name: /Find my program/ }));
     await screen.findByText(/Your program/i);
     await waitFor(() => expect(TEXT()).toMatch(/sessions? runs? past 45 min|sessions run past 45 min/));
-    // Never a filter: the whole catalogue is still on the page.
+    // A program that fits says so, in the same breath. The comment that
+    // used to sit here claimed this line proved the catalogue was still
+    // whole, which it never did — that is `finder/overBudget.test.tsx`,
+    // and the page was in fact dropping programs (PLAN.md M193).
     expect(TEXT()).toMatch(/Every session fits your 45 min/);
   });
 });
