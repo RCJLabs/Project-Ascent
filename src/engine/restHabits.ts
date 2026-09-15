@@ -42,6 +42,18 @@ export const REST_ITEMS: readonly { key: RestItem; label: string; noun: string }
   { key: 'sleep', label: 'Sleep 8+ hrs', noun: 'sleep' },
 ];
 
+/**
+ * Every habit unticked — what a rest day starts as (PLAN.md M191).
+ *
+ * Built from `REST_ITEMS` rather than written out, in the file that owns
+ * that list: a fifth habit added there must not leave a hand-written
+ * literal one key short, and `RestItem` is `keyof RestChecklist` so the two
+ * cannot drift apart without the compiler saying so.
+ */
+export const NO_HABITS: RestChecklist = Object.fromEntries(
+  REST_ITEMS.map(({ key }) => [key, false]),
+) as Record<RestItem, boolean>;
+
 export const REST_DAYS = 90;
 
 /** Below this a share is a coincidence rather than a habit. */

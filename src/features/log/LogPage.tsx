@@ -90,6 +90,7 @@ import {
 } from '@/engine/readiness';
 import { describeParts, drillConflict, exerciseConflict, exerciseLoads } from '@/engine/bodyLoad';
 import { REST_ITEMS } from '@/engine/restHabits';
+import { startedAsRest } from '@/engine/rest';
 import { VENUE_LIST_ID, VenueOptions, useVenues } from '@/features/venues/useVenues';
 import { BadParameter } from '@/ui/RecordNotFound';
 import { DayHeading } from './DayHeading';
@@ -530,7 +531,16 @@ function SessionEditor({
 }) {
   const type = program?.sessionTypes.find((t) => t.id === session.sessionTypeId);
   const gradeLabel = useGradeLabel();
-  const isRest = type?.isRest === true;
+  /**
+   * The plan **or** the record (PLAN.md M191).
+   *
+   * `type?.isRest` alone meant the rest editor existed only inside a
+   * program, so a climber with no program had nowhere to tick a recovery
+   * checklist — while the coach's `domain:rest` card told them they had
+   * never logged a rest day and sent them to `/today`, which offered
+   * *Search* and *Log a session* and never used the word.
+   */
+  const isRest = type?.isRest === true || startedAsRest(session);
   const patch = (p: Partial<Session>) => onChange({ ...session, ...p });
 
   /**

@@ -683,6 +683,19 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **137.2 holds at M191**, measured 136.12 → 136.88: 0.76KB, and unlike
+    // the last two coach milestones this one lands here in full —
+    // `features/log/PreSession.tsx` is first-load because Home shows the
+    // day's card, so the chip, its handler and its copy are all in front of
+    // the first paint. That is the right place for them: the whole finding
+    // is that a climber could not reach this without a program.
+    //
+    // **0.32KB of slack.** Left rather than raised here, for the reason the
+    // M187 entry gives at length: a ceiling moves in its own commit ahead of
+    // a milestone, never under pressure from the change that wants it. The
+    // raise three commits back bought 1.05KB and this spent 0.76 of it, so
+    // the next first-load milestone raises again.
+    //
     // **Unchanged at M190**, measured 136.13 → 136.12: **down** 0.01KB, for
     // the same reason M188's entry gives — `coach.ts` and `plateau.ts` are
     // both off the first-paint path since M183, so a rule's copy costs this

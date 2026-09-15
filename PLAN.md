@@ -10646,7 +10646,12 @@ the one candidate wraps* `expect` *in a helper; TODOs — none in the tree.*
   quoting the same figure.
   *Small.*
 
-- **M191 — two definitions of "rest session".** `isRestSession(session)` reads a present
+- **M191 — two definitions of "rest session".** *Done — see the entry at the end of this
+  document. The premise was wrong and what it was covering for was worse: they are two different
+  questions and both are worth having, but the logger asked a **third** one — the plan — so a
+  climber with no program could not log a rest day at all while the coach told them they never
+  had.*
+  `isRestSession(session)` reads a present
   `restChecklist` and no climbs; the editor reads `type?.isRest === true`. They agree for every
   session the app makes, which is why nothing has caught them.
   *Small.*
@@ -11041,3 +11046,71 @@ board, both cards are there, the recovery card keeps *6 training days deep with 
 Progress still says *your load has jumped to 2.43× your baseline* in its own sentence.
 
 **Budget** 136.13 → 136.12: down 0.01KB. 5,651 tests pass.
+
+
+## M191 — the rest day a climber could not log
+
+**The recorded premise was wrong, and it was covering for something worse.** It said
+`isRestSession(session)` and `type?.isRest` are "two answers to one question". They are not:
+one is about the **record** (does this count as a rest day) and the other about the **plan**
+(does this slot ask for one). Both are worth having.
+
+What is wrong is that **the logger asked the plan**. `LogPage` gated its whole rest editor —
+the recovery checklist included — on `type?.isRest === true`, so the checklist existed only
+inside a program. Measured in a browser, twelve sessions and no program:
+
+- the coach board carried **"No rest days logged, ever"** with a button reading **Log a rest
+  day**, pointing at `/today`;
+- `/today` offered **Search** and **Log a session**, and the word *rest* did not appear
+  anywhere on the page.
+
+The app was nagging a climber to do something it gave them no way to do. That is M132's finding
+in the domain next door — *"A climber on The Cruiser has never been prescribed a drill in their
+life and was being told they skip one every week"* — and it had been sitting behind a note about
+tidying two predicates.
+
+**The fix is a third reading, named.** `engine/rest.ts` now holds both questions with the
+difference written down: `isRestSession` for the count, `startedAsRest` for the intent. The
+logger reads `type?.isRest === true || startedAsRest(session)` — the plan **or** the record. The
+two must stay apart: a rest day someone ends up climbing on stops counting, and must not have
+the editor swapped out from under them mid-edit.
+
+**And a way in.** `PreSession` offers a **😴 Rest day** chip on the row where the other things a
+day can be already are, creating a session with an empty checklist — `restChecklist` present and
+no climbs being the app's own definition. `NO_HABITS` lives in `restHabits.ts`, built from
+`REST_ITEMS` rather than written out, so a fifth habit cannot leave a literal one key short.
+
+**Only when nothing else offers one.** The first draft checked the big button alone and put a
+second generic chip beside the program's own *Rest / Recovery* — two ways to do one thing,
+caught by `restDayDrill.test.tsx`, which asserts a training day offers nothing of the kind. That
+condition also made a branch dead: `startRest` is only reachable when the catalogue has not given
+the climber a rest type, so it never has one to stamp.
+
+**Tests** `features/log/restWithoutProgram.test.tsx` — the chip exists at all, tapping it writes
+a record the counts recognise, the logger gives that record the checklist editor with no program
+anywhere, and the program case gets one way rather than two. Plus the two questions kept apart,
+including the case that separates them: a rest day with a climb on it is `startedAsRest` and not
+`isRestSession`.
+
+**Mutations** 16 mutants, all killed, the no-op survived. Three survived the first pass and all
+three were my assertions, not the code: `expect(written.restChecklist).toEqual(NO_HABITS)`
+compares the record against the same constant that wrote it, so a checklist of four `true`s
+satisfied it, and dropping a key from that constant satisfied it too. The list is checked against
+`REST_ITEMS` now, which owns it. The third was `planned`, which nothing asserted — a rest day
+nobody planned being recorded as a planned session would quietly reach the adherence engine.
+
+**Two vacuous browser checks, both caught.** The profile persists as **one** record under
+`active-plan`, not a row per field, so seeding `activeProgramId` per-field wrote rows the store
+never reads: the program was never running and the "one way, not two" check passed because
+*neither* chip was the program's. Printing the buttons is what showed it. It now asserts the
+program is really running before counting.
+
+**Verified in a browser** at 430px and 1280px in both themes: a climber with no program is
+offered the chip, it opens the checklist editor with no climbs section, and the record is
+`{climbs: 0, planned: false, typeId: null}` with every habit unticked; a climber on Iron Grip
+sees the program's own *Rest / Recovery* and no second chip.
+
+**Budget** 136.12 → 136.88: 0.76KB, all of it in `PreSession.tsx`, which is first-load because
+Home shows the day's card — the right place for it, since the finding is that this was
+unreachable. **0.32KB of slack**; the next first-load milestone raises the ceiling first. 5,660
+tests pass.

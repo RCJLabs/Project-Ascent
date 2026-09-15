@@ -8,6 +8,7 @@ import { today } from '@/engine/dates';
 import { concerning, injuryPolicy } from '@/engine/injury';
 import { type PlannedDay } from '@/engine/plan';
 import { restDayDrill } from '@/engine/restDrill';
+import { NO_HABITS } from '@/engine/restHabits';
 import { intensityOf } from '@/engine/scheduler';
 import { describeWork, sessionMinutes } from '@/engine/sessionLength';
 import { useProfile } from '@/store/profile';
@@ -53,6 +54,10 @@ export interface DayPlan {
   /** The track this climber picked, where the program declares tracks. */
   trackId: string | undefined;
   start: (sessionTypeId?: string) => Promise<void>;
+  /** Start today as a rest day, program or no program (PLAN.md M191). */
+  startRest: () => Promise<void>;
+  /** Whether the rest chip is worth offering — false when the big button is one. */
+  offersRest: boolean;
 }
 
 /**
@@ -156,6 +161,45 @@ export function useStartSession(date: string): DayPlan {
         ? 'Log rest day'
         : 'Start session';
   const others = program?.sessionTypes.filter((t) => t.id !== primary?.id) ?? [];
+  /**
+   * Only when there is no rest day on offer already (PLAN.md M191).
+   *
+   * A program with a rest type puts it on the chip row itself, or on the big
+   * button when today is one — and a second generic chip beside the
+   * program's own *Rest / Recovery* is two ways to do one thing. Caught by
+   * `restDayDrill.test.tsx`, which asserts a training day offers nothing of
+   * the kind; the first draft checked only the big button.
+   *
+   * Which also means `startRest` never has a rest type to stamp: it is only
+   * reachable when the catalogue has not given it one.
+   */
+  const offersRest = primary?.isRest !== true && !others.some((t) => t.isRest === true);
+
+  /**
+   * A rest day with no program behind it (PLAN.md M191).
+   *
+   * `primary` is a *program* session type, so with no program — or a
+   * program with no rest type — there was no rest day to start, and the
+   * logger's editor keyed on `type?.isRest` so there was nowhere to tick a
+   * checklist either. Meanwhile the coach's `domain:rest` card told the same
+   * climber they had never logged one and sent them to `/today`, which
+   * offered *Search* and *Log a session* and never used the word. Measured
+   * in a browser before this existed.
+   *
+   * An empty checklist is what makes it one: `restChecklist` present and no
+   * climbs is the app's definition of a rest day, and the editor reads the
+   * same field to know which half to render.
+   */
+  async function startRest() {
+    await create(date, {
+      ...(date === today() ? { startedAt: new Date().toISOString() } : {}),
+      ...(activeProgramId ? { programId: activeProgramId } : {}),
+      ...(trackId ? { trackId } : {}),
+      ...(restDrill ? { drillId: restDrill.id } : {}),
+      restChecklist: NO_HABITS,
+      planned: false,
+    });
+  }
 
   async function start(sessionTypeId?: string) {
     await create(date, {
@@ -181,7 +225,7 @@ export function useStartSession(date: string): DayPlan {
     });
   }
 
-  return { program, day, primary, label, others, loadNote, restDrill, trackId, start };
+  return { program, day, primary, label, others, loadNote, restDrill, trackId, start, startRest, offersRest };
 }
 
 /**
@@ -195,10 +239,17 @@ export function useStartSession(date: string): DayPlan {
  * logger, so starting a session is all there is to do.
  */
 export function PreSessionCard({ date, onOpen }: { date: string; onOpen?: () => void }) {
-  const { program, day, primary, label, others, loadNote, restDrill, trackId, start } = useStartSession(date);
+  const { program, day, primary, label, others, loadNote, restDrill, trackId, start, startRest, offersRest } =
+    useStartSession(date);
   const byDate = useSessions((s) => s.byDate);
   const hydrated = useSessions((s) => s.hydrated);
   const setLogView = useSettings((s) => s.setLogView);
+
+  async function goRest() {
+    if (onOpen) setLogView('full');
+    await startRest();
+    onOpen?.();
+  }
 
   async function go(view: LogView, sessionTypeId?: string) {
     // Only when the card is the one on Home. Inside the logger the fold is
@@ -293,7 +344,7 @@ export function PreSessionCard({ date, onOpen }: { date: string; onOpen?: () => 
           </Button>
         )}
       </div>
-      {others.length > 0 && (
+      {(others.length > 0 || offersRest) && (
         <div className="mt-3">
           <p className="text-xs text-ink-soft mb-1.5">Or a different session</p>
           <div className="flex flex-wrap gap-2">
@@ -302,6 +353,16 @@ export function PreSessionCard({ date, onOpen }: { date: string; onOpen?: () => 
                 {t.icon} {t.name}
               </Button>
             ))}
+            {/* Last, and only when the main button is not already one
+                (PLAN.md M191). A rest day is not "a different session type"
+                when there is no program to have types — it is the other
+                thing a day can be, and it belongs on this row because that
+                is where the other things a day can be already are. */}
+            {offersRest && (
+              <Button size="sm" variant="outline" onClick={() => void goRest()}>
+                😴 Rest day
+              </Button>
+            )}
           </div>
         </div>
       )}

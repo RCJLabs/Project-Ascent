@@ -19,6 +19,20 @@
  * Both halves matter: the checklist is what the climber filled in to say the
  * day was rest, and the climbs are what would contradict them.
  *
+ * ## Two questions, not one (PLAN.md M191)
+ *
+ * This one is about the **record**: does this session count as a rest day
+ * for the stats? `startedAsRest` below is about the **intent**, and the
+ * logger asks that one — which editor to show. They are close enough to
+ * look like a duplicate and they are not: adding a climb to a rest day
+ * stops it counting, and must not swap the editor out from under the
+ * climber mid-edit.
+ *
+ * Both live here so the difference is written down once, in the file named
+ * after the question. The logger used to ask a third thing — `type?.isRest`,
+ * the *plan* — and a climber with no program therefore had no way to log a
+ * rest day at all, while the coach told them they never had.
+ *
  * ## Why it tolerates a missing `climbs`
  *
  * `Session.climbs` is typed `Climb[]` and is not optional, so this guard
@@ -35,4 +49,17 @@ import type { Session } from '@/db/sessions';
 export function isRestSession(session: Pick<Session, 'restChecklist' | 'climbs'>): boolean {
   if (session.restChecklist === undefined) return false;
   return !Array.isArray(session.climbs) || session.climbs.length === 0;
+}
+
+/**
+ * What the climber set out to log, which is a different question.
+ *
+ * The checklist alone: a session started as a rest day keeps its rest
+ * editor even once a boulder finds its way onto it, and `isRestSession`
+ * above independently stops counting it. A logger that swapped its whole
+ * layout on the first logged climb would be answering the stats' question
+ * rather than the climber's.
+ */
+export function startedAsRest(session: Pick<Session, 'restChecklist'>): boolean {
+  return session.restChecklist !== undefined;
 }
