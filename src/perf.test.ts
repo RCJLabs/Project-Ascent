@@ -683,6 +683,18 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **164.0 holds at M178**, measured 163.24 → 163.61: 0.37KB — the most
+    // expensive milestone since M173, and for the same reason: the cost of a
+    // coach rule is its prose. `engine/coach.ts` is first-load, because Home
+    // shows the top card, so one rule's headline, body and comment all land
+    // here in full. The logic is a filter, a sort and two constants, and it
+    // reuses `assessmentStatus`, which the file already called — the
+    // arithmetic was free and the sentence was not.
+    //
+    // 0.39KB of slack, the tightest this line has been since M172's 0.23.
+    // The next milestone that touches a first-load file will need the raise
+    // made ahead of it, in its own commit, as every raise here has been.
+    //
     // **164.0 holds at M177**, measured 163.14 → 163.24: 0.10KB. `store/
     // profile.ts` is first-load — every screen reads the climber — and what
     // it gained is a list, a field and one action; `engine/injuryLog.ts` is

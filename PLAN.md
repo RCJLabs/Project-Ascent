@@ -8567,7 +8567,7 @@ two large, three medium, five small.*
   test the way M161's injuries do, it is not.
   *Medium.*
 
-- **M178 — fifteen coach rules, one of which is good news, at the lowest weight in the table.**
+- **M178 — fifteen coach rules, one of which is good news, at the lowest weight in the table.** *Done — see the entry at the end of this document. Twenty-three tips, not fifteen, and exactly one `tone: 'good'`; the other half was closer than the proposal thought — `benchmarks` has called `assessmentStatus` since M174 and read only `due`.*
   **`streakPraise` (`coach.ts:703`) is the only rule with `tone: 'good'`, at weight 20**, below
   every other rule in `buildTips` (`coach.ts:141`). Everything ranked above it is a fault, a gap, a
   risk or a nag. Over a year the Corner is a list of what is wrong with you.
@@ -10386,3 +10386,91 @@ hurt the same part again and read *The second time this fingers has gone*.
 
 **Budget** 163.14 → 163.24: 0.10KB, the store's share. The reading itself is in
 `engine/injuryLog.ts`, which only the two lazy screens import. 5,537 tests pass.
+
+
+## M178 — the good news the coach was already holding
+
+**Twenty-three tips are constructed in `engine/coach.ts` and exactly one carried
+`tone: 'good'`** — `streakPraise`, at weight 20, the lowest number in the table.
+The proposal said fifteen and said the rest is a fault, a gap, a risk or a nag;
+the count was low and the point was right. A coach who only speaks when
+something is wrong trains a climber to stop reading, and the rules in that file
+most worth reading are the ones about not getting hurt.
+
+**The other half was one field away, not three modules away.** The proposal
+pointed at `assessments.ts`, `loadTrend.ts` and `blockCompare` as three places
+the app computes progress and hands it to nobody. Only the first turned out to
+matter, and it is nearer than that: `assessmentStatus` returns a `change` — the
+delta between the last two readings, whether it was an improvement, and by what
+percent — **beside** the `due`, and `benchmarks` has called that function since
+M174 reading only `due`. This is M174's own finding one level deeper. The input
+was there; the rule looked at the other field.
+
+**So the rule is a filter over a call the file already made.** `benchmarkGain`
+takes the metrics the climber has recorded, asks `assessmentStatus` for each,
+keeps the ones where `change.improved` is true, and applies the gate:
+
+- **Five per cent** (`GAIN_PERCENT`), because that is past the noise of a
+  retest — the same hand, the same edge, a different day — and under what a
+  real block moves.
+- **A hundred and twenty days** (`GAIN_WINDOW_DAYS`), applied twice: between
+  the two readings, and between the latest one and today. A gain is news about
+  *training*. Two readings three years apart say a climber got better at
+  climbing, which they knew; two readings eleven weeks apart say the block
+  worked.
+- **No percentage where a percentage means nothing.** A grade or a pass carries
+  none and needs none — a step up a ladder is already the size — so those sort
+  above every percentage gain, and among themselves by how many rungs.
+
+**What makes it praise rather than noise** is the thing the second brainstorm
+parked *a thin top of the pyramid* over: it has a subject, a size and a window,
+and `streakPraise` has none of the three. It fires on a measurement the climber
+chose to take, twice, and it is silent for everyone else — including a climber
+training perfectly who has measured nothing.
+
+**Weight 56: under every fault, over every gap and nag.** Measured against the
+boards that actually build rather than against the table: `plateau` at 88 still
+leads, because a flat line is something to do something about and a hang that
+went up is not; `domain:rest`, `backup` and `streak` all fall below it. For a
+climber with no fault the good news leads the board and the front door, which
+before this milestone could not happen at all — the file's only good-news rule
+sat at the bottom of every board it appeared on.
+
+**Two copy decisions worth recording.** The headline says *improved*, not *is
+up*: `min_edge` gets better by going **down**, and *Min Edge Achievable is up:
+−2 mm* would be a lie told by the one rule whose job is saying something true
+and nice. And the window is the last step, not the series — a climber with
+three readings who retests three days after the last one gained that in three
+days, and saying *over 8 weeks* would measure from a number already superseded.
+
+**One redundant guard collapsed on the way in.** The first draft filtered the
+metric ids against `METRICS` before calling `assessmentStatus`, which returns
+null for an unknown id anyway — the equivalent-mutant shape from M143, M158 and
+M167, caught this time before the battery ran rather than by it.
+
+**Tests** `engine/benchmarkGain.test.ts` — 23 cases, mostly the gate, because a
+praise rule that fires easily is worth less than no praise rule: both edges of
+both windows, the threshold and a hair under it, a decline, a single reading, a
+metric that improves downwards, a grade step, a pass, the biggest of several,
+and the board ordering measured against the tips that really fire.
+`features/coach/benchmarkGain.test.tsx` mounts Home and the Corner from a
+seeded database and checks the sentence arrives, carries its window and its
+link, and is coloured as good news beside a nag that is not — the M174 shape,
+where a rule can be right and invisible because the hook never handed it what
+it needed.
+
+**Mutations** 18 run, 17 killed, the no-op survived. One real survivor: the
+sort's tie-break, because every percentless gain carries the same size and a
+stable sort keeps whichever the entries mentioned first — so *two rungs beat
+one* passed by luck. It now reads the fixture both ways round.
+
+**Verified in a browser** at 430px and 1280px in both themes: the front door
+leads with *Max Hang 20mm 7s improved: +3 BW+lbs (10%)* toned `text-positive`,
+the board carries *over 7 weeks* and *See the curve*, the nag beside it stays
+`text-warn`, the card fits the viewport, and setting it aside hides that one
+card and leaves the rest of the board.
+
+**Budget** 163.24 → 163.61: 0.37KB, the most expensive milestone since M173 and
+for the same reason — the cost of a coach rule is its prose, and `coach.ts` is
+first-load because Home shows the top card. The logic is free; the sentence is
+not. 0.39KB of slack, the tightest since M172. 5,566 tests pass.

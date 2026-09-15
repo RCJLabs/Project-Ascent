@@ -118,6 +118,21 @@ export const OUTDOOR_GAP_DAYS = 21;
 export const BACKUP_INTERVAL_DAYS = 30;
 
 /**
+ * How far a benchmark has to move, and how recently, to earn a sentence
+ * (PLAN.md M178).
+ *
+ * Five per cent because that is past the noise of a retest — the same hand,
+ * the same edge, a different day — and under what a real block moves. A
+ * grade metric needs no percentage: a step up a ladder is the size.
+ *
+ * A hundred and twenty days because a gain is news about *training*. Two
+ * readings three years apart say a climber got better at climbing, which they
+ * knew; two readings eleven weeks apart say the block worked.
+ */
+export const GAIN_PERCENT = 5;
+export const GAIN_WINDOW_DAYS = 120;
+
+/**
  * Sessions before a waved-away nag comes back (PLAN.md M175, M182).
  *
  * A dismissal is against a fact and a fact has to be able to change. Neither
@@ -163,6 +178,7 @@ export function buildTips(input: CoachInput): Tip[] {
     unscoredEffort(input),
     loadSpike(input, today),
     benchmarks(input, today),
+    benchmarkGain(input, today),
     skippedType(input),
     planVsLog(input),
     ...missingDomains(input),
@@ -753,6 +769,92 @@ function benchmarks(input: CoachInput, today: string): Tip | null {
     headline: `${due.length} benchmark${due.length === 1 ? '' : 's'} out of date`,
     body: 'A number you took three months ago is a number about a climber you no longer are. Retesting takes one session and it is the only way the strength curve stays honest.',
     action: { label: 'Retest', href: '/assessments' },
+  };
+}
+
+/**
+ * The one thing that went right, said out loud (PLAN.md M178).
+ *
+ * ## The measurement this milestone was built on
+ *
+ * Twenty-three tips are constructed in this file and **exactly one carries
+ * `tone: 'good'`** — `streakPraise`, at weight 20, the lowest number in the
+ * table. Everything above it is a fault, a gap, a risk or a nag. Over a year
+ * of use Coach's Corner is a list of what is wrong with you, and a coach who
+ * only speaks when something is wrong trains a climber to stop reading —
+ * which matters most for the rules in here that are about not getting hurt.
+ *
+ * ## And the app was already computing the other half
+ *
+ * `assessmentStatus` returns a `change` beside the `due`: the delta between
+ * the last two readings, whether it was an improvement, and by what percent.
+ * `benchmarks` above has called that function since M174 and reads **only**
+ * `due`. The good news was in the coach's hand and it was looking at the
+ * other field — which is M174's own finding one level deeper.
+ *
+ * ## What makes it praise rather than noise
+ *
+ * The second brainstorm parked *a thin top of the pyramid* because praise
+ * that fires for almost everyone almost always is worth nothing, and that is
+ * the whole difficulty here. This one has the three things `streakPraise`
+ * does not: a **subject** (which number), a **size** (how much it moved) and
+ * a **window** (over how long). It fires on a measurement the climber chose
+ * to take, twice, and it is silent for everybody else — including a climber
+ * who is training well and has not tested anything.
+ *
+ * Ranked above the gaps and the nags and below every fault, because it is
+ * news rather than a standing fact: a gain happened on a day, and *no rest
+ * days logged, ever* will still be true tomorrow.
+ */
+function benchmarkGain({ metrics }: CoachInput, today: string): Tip | null {
+  const entries = metrics ?? [];
+  // No registry filter: `assessmentStatus` already returns null for an id the
+  // catalogue does not know, and the null filter below is the one that drops it.
+  const ids = [...new Set(entries.map((entry) => entry.metricId))];
+
+  const gains = ids
+    .map((id) => assessmentStatus(id, entries, { today }))
+    .filter((status): status is NonNullable<typeof status> => status !== null)
+    .flatMap((status) => {
+      const { change, series, metric } = status;
+      if (change?.improved !== true) return [];
+      const latest = series.at(-1)!;
+      const previous = series.at(-2)!;
+      // News, not history: the gain has to be recent *and* the two readings
+      // close enough together to be about a block rather than a decade.
+      const span = daysBetween(previous.date, latest.date);
+      if (span > GAIN_WINDOW_DAYS || daysBetween(latest.date, today) > GAIN_WINDOW_DAYS) return [];
+      // A grade, a pass, or a number that used to be zero carries no
+      // percentage and needs none — a step up a ladder is already the size,
+      // and off zero is every percentage there is. The rest clear the noise.
+      const size = change.percent === null ? Infinity : Math.abs(change.percent);
+      if (size < GAIN_PERCENT) return [];
+      return [{ metric, change, latest, span, size }];
+    })
+    // Biggest first, and among the percentless ones — all of them Infinity —
+    // the one that moved the most rungs.
+    .sort((a, b) => b.size - a.size || Math.abs(b.change.delta) - Math.abs(a.change.delta));
+
+  const best = gains[0];
+  if (best === undefined) return null;
+  const weeks = Math.max(1, Math.round(best.span / 7));
+  // "improved", not "is up": `min_edge` gets better by going down, and a
+  // headline reading *Min Edge Achievable is up: −2 mm* would be a lie told
+  // by a rule whose whole job is saying something true and nice.
+  const size =
+    best.change.percent === null
+      ? best.change.label
+      : `${best.change.label} (${Math.round(Math.abs(best.change.percent))}%)`;
+  return {
+    id: 'benchmark-gain',
+    // The reading it is about, so it is said once and the next retest earns
+    // its own sentence rather than repeating this one.
+    signature: `${best.metric.id}:${best.latest.date}`,
+    tone: 'good',
+    weight: 56,
+    headline: `${best.metric.label} improved: ${size}`,
+    body: `Measured, over ${weeks} week${weeks === 1 ? '' : 's'}, by you — which is the only kind of progress this app will claim. Nothing to do about it; the number is here because a training log that only ever reports faults is a log nobody reads for long.`,
+    action: { label: 'See the curve', href: '/assessments' },
   };
 }
 
