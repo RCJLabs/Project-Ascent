@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { APP_VERSION } from '@/version';
+import { APP_VERSION, BUILT_AT } from '@/version';
+import { buildAge } from '@/engine/offline';
 import { exportArchive, hasRealData, importAll, readBackupFile, SCHEMA_VERSION } from '@/db';
 import { previewFile, type ImportPreview } from '@/db/importPreview';
 import { clearSnapshot, readSnapshot, restoreSnapshot, takeSnapshot } from '@/db/snapshot';
@@ -811,7 +812,9 @@ export function SettingsPage() {
 
         <Card title="About">
           <p className="text-sm text-ink-soft mb-3">
-            Project Ascent v{APP_VERSION} · data schema v{SCHEMA_VERSION} · fully offline, no
+            Project Ascent v{APP_VERSION}
+            {buildAge(BUILT_AT) === null ? '' : ` · ${buildAge(BUILT_AT)}`} · data schema v
+            {SCHEMA_VERSION} · fully offline, no
             account, no tracking.
           </p>
           {/* The manual, in one line. The Reference card that held these

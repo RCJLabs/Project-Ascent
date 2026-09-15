@@ -313,6 +313,20 @@ const ROOTS = [...TYPES.matchAll(/^export interface (\w+) \{/gm)].map((m) => m[1
  * answers in this repo — neither is flagged here. This fires when a name
  * appears in one file and once in that file: its own declaration.
  */
+/** Identifier sets per corpus, built once. See `unreferenced` for why. */
+const INDEX = new WeakMap<object, Map<string, Set<string>>>();
+function identifiers(
+  corpus: readonly { path: string; source: string }[],
+): Map<string, Set<string>> {
+  const held = INDEX.get(corpus);
+  if (held !== undefined) return held;
+  const built = new Map(
+    corpus.map(({ path, source }) => [path, new Set(source.match(/[A-Za-z_$][\w$]*/g) ?? [])]),
+  );
+  INDEX.set(corpus, built);
+  return built;
+}
+
 describe('every exported value has a caller', () => {
   const ALL = walk('src')
     .filter((p) => /\.tsx?$/.test(p))
@@ -338,7 +352,15 @@ describe('every exported value has a caller', () => {
   ): string[] =>
     declared
       .filter(({ name, path }) => {
-        const holding = corpus.filter(({ source }) => new RegExp(`\\b${name}\\b`).test(source));
+        // Identifier sets first, built once per corpus. Regexing every file
+        // for every name is quadratic and this rule took 4.2 seconds before
+        // M206 added one more export and tipped it past the five-second
+        // timeout. `every engine interface field is read` was written with
+        // the prefilter already; this is the same fix, one rule later.
+        const words = identifiers(corpus);
+        const holding = corpus.filter(
+          ({ path: p, source }) => words.get(p)?.has(name) === true && new RegExp(`\\b${name}\\b`).test(source),
+        );
         if (holding.length !== 1) return false;
         const own = corpus.find((f) => f.path === path);
         if (own === undefined) return false;

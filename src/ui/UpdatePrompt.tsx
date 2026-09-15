@@ -1,5 +1,6 @@
 import { ArrowUpCircle } from 'lucide-react';
-import { DEFERRED_NOTE, updateVisible } from '@/engine/offline';
+import { buildAge, DEFERRED_NOTE, updateVisible } from '@/engine/offline';
+import { BUILT_AT } from '@/version';
 import { useAppUpdate } from '@/store/appUpdate';
 import { Button } from './Button';
 
@@ -19,6 +20,9 @@ export function UpdatePrompt({ live }: { live: boolean }) {
 
   if (!updateVisible({ ready, live, deferred })) return null;
 
+  // What the version could never say (PLAN.md M206).
+  const age = buildAge(BUILT_AT);
+
   return (
     <div
       role="status"
@@ -28,7 +32,8 @@ export function UpdatePrompt({ live }: { live: boolean }) {
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-sm">A new version is ready</p>
         <p className="text-xs text-ink-soft mt-0.5 leading-relaxed">
-          Updating reloads the app. {DEFERRED_NOTE}
+          {age === null ? '' : `The copy you are running was ${age}. `}Updating reloads the app.{' '}
+          {DEFERRED_NOTE}
         </p>
         <div className="flex gap-2 mt-2.5">
           <Button size="sm" onClick={() => apply?.()}>

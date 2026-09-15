@@ -152,6 +152,11 @@ export default defineConfig({
   ],
   define: {
     __APP_VERSION__: JSON.stringify(APP_VERSION),
+    // When this copy was built (PLAN.md M206). The version has been
+    // `0.1.0` since the first commit and there are no tags, so it is the
+    // one thing stamped into backups and exports that cannot tell two
+    // copies apart. A build stamp can, and needs nothing maintained.
+    __BUILT_AT__: JSON.stringify(new Date().toISOString()),
   },
   resolve: {
     alias: {

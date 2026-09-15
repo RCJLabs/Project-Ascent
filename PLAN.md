@@ -11804,7 +11804,10 @@ content — `SearchBody` feeds it `allSessions` and reads `session.notes`.*
   shape still uncovered, and this is a live example sitting in the most-used interface in the app.
   *Small, and it closes a gap this document has already named twice.*
 
-- **M206 — the app updates silently.** No changelog, no what's-new, no release notes anywhere.
+- **M206 — the app updates silently.** *Done, and not as a changelog — see the entry at the end
+  of this document. A changelog needs releases to describe and there have never been any: the
+  version has read `0.1.0` since the first commit, with no tags. What shipped is the half that
+  moves on its own.* No changelog, no what's-new, no release notes anywhere.
   `useAppUpdate` and `watchForUpdates` bring a new version in and the climber is told a new version
   exists, never what changed. For an app that explains every number it shows and writes its
   reasoning into the page, that is out of character — and it is the one place a reader cannot get
@@ -12135,3 +12138,65 @@ and that is the right answer** — two or three days a week with rest days is no
 says so, and the strip only has a shape when there is one to show.
 
 **Budget** 136.98 → 137.00. 5,749 tests pass, up from 5,730.
+
+
+## M206 — the version could never tell two copies apart
+
+**The premise held and the fix it implied did not.** There is no changelog, no what's-new, no
+release notes — the prompt says *"A new version is ready"* and the climber is told nothing else.
+But a changelog describes releases, and **this app has never had one**: `package.json` has read
+`0.1.0` since the first commit, there are no tags, and every deploy is main moving forward. A
+version-keyed list would have exactly one entry, for ever.
+
+**And the version is not merely useless, it is stamped everywhere as though it were not.**
+`APP_VERSION` goes into every backup file, every exported program, the `meta` store on first open
+and the data-health report — in each case as *provenance*, the answer to *which copy made this*.
+It has been the same string for the life of the project, so that question has never had an
+answer. This is M205's shape one level out: a field written faithfully into four places that
+cannot inform anyone.
+
+**So the milestone is the half that moves on its own.** `vite.config.ts` already reads
+`package.json` and defines `__APP_VERSION__`; it defines `__BUILT_AT__` beside it now, and
+`version.ts` exposes `BUILT_AT` with the same fallback meaning the same thing — the absence of a
+build rather than a second source of truth.
+
+**`buildAge` turns it into the sentence a climber actually wants.** *Built today*, *built
+yesterday*, *built 5 days ago*, then weeks, then months. Null in, null out: a runtime with no
+build behind it says nothing rather than guessing. A clock running behind the build reads as
+*today*, because a negative age is a device disagreeing with a stamp and not a fact about the
+app.
+
+**The update prompt has a scale on it now** — *"The copy you are running was built 3 weeks ago.
+Updating reloads the app."* — and the Settings footer carries it beside the version it sits
+next to: **Project Ascent v0.1.0 · built today · data schema v2**. The two read as what they are:
+one says which release, and has never changed; the other says how old this copy is, and changes
+every build.
+
+**What is deliberately not built.** A changelog. Not because it would be hard but because it
+would be a list nobody could keep true: there is no release to hang an entry on, and a
+hand-maintained file describing deploys that have no boundaries is the kind of thing that is
+accurate for a fortnight. **If releases ever get versions, the changelog becomes possible and
+this stamp is what dates its entries.** Recorded rather than half-built, the way M192 recorded
+circuits and set dates.
+
+**Ten mutants, nine killed.** A null stamp formatted instead of dropped; an unreadable one
+guessed at; a clock behind the build reading as the future; *yesterday* collapsed into days;
+weeks and months never arriving; the prompt dropping the age; and **the stamp stopping moving**,
+which is the mutant that matters — a hardcoded date fails the test that says a fresh checkout
+reads as built today, which is the whole property the version lacks. One sanity no-op survived,
+and one deliberate survivor: printing a null age, which no fixture can reach because `define`
+applies under vitest too.
+
+**A guard this milestone tripped, and the fix belonged in it.** Adding one export pushed M196's
+`every exported value has a caller` past its five-second timeout — it was at 4.2 seconds and
+regexes every file for every name. `every engine interface field is read`, written one milestone
+later, already had the identifier prefilter; M196's rule has it now, and the file went **7.3
+seconds to 3.3**. Verified by restoring a removed export and watching it fail, not by watching it
+pass faster.
+
+**In a browser, both themes, 430px and 1280px:** the footer reads *Project Ascent v0.1.0 · built
+today · data schema v2 · fully offline, no account, no tracking*, no overflow, no page errors.
+
+**Budget** 137.00 → **137.12**. `UpdatePrompt` is in the eager shell, so the stamp and `buildAge`
+land in the entry chunk; 0.88KB of slack under the 138.0 ceiling, which is inside the rule.
+5,765 tests pass, up from 5,749.

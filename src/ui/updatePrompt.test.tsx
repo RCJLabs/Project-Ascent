@@ -73,3 +73,41 @@ describe('the update prompt', () => {
     expect(screen.getByText(/close the app and open it again/)).toBeTruthy();
   });
 });
+
+/**
+ * And how far behind the copy in front of you is (PLAN.md M206).
+ *
+ * The prompt could only say a new version existed. `APP_VERSION` has read
+ * `0.1.0` since the first commit, so there was nothing else it could say —
+ * a build stamp is the part that moves.
+ */
+describe('how old the running copy is', () => {
+  it('puts the age in the prompt', () => {
+    // `__BUILT_AT__` is defined under vitest too — the config's `define`
+    // applies to the test run — so this is the real sentence, not a shape.
+    useAppUpdate.setState({ ready: true, apply: () => {} });
+    render(<UpdatePrompt live={false} />);
+    const said = screen.getByRole('status').textContent ?? '';
+    expect(said).toMatch(/The copy you are running was built /);
+    expect(said).toMatch(/today|yesterday|days ago|weeks ago|months ago/);
+    expect(said).toMatch(/Updating reloads the app/);
+  });
+
+  it('never renders a gap where the age should be', () => {
+    // The failure this is written against: a null age formatted into the
+    // string rather than dropped from it.
+    useAppUpdate.setState({ ready: true, apply: () => {} });
+    render(<UpdatePrompt live={false} />);
+    const said = screen.getByRole('status').textContent ?? '';
+    expect(said).not.toMatch(/null|undefined|NaN|was \./);
+  });
+
+  it('is a fresh build in a fresh checkout', () => {
+    // The stamp is written at build time, so a test run minutes later
+    // reads as today. A stamp that did not move would fail this the day
+    // after it was written, which is the whole complaint about the version.
+    useAppUpdate.setState({ ready: true, apply: () => {} });
+    render(<UpdatePrompt live={false} />);
+    expect(screen.getByRole('status').textContent).toMatch(/built today/);
+  });
+});

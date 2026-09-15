@@ -54,6 +54,33 @@ export function updateVisible(gate: UpdateGate): boolean {
  */
 export const DEFERRED_NOTE = 'It will be applied once you close the app and open it again.';
 
+/**
+ * How old the copy in front of you is (PLAN.md M206).
+ *
+ * *"A new version is ready"* was the whole of what an update could say,
+ * because the only thing the app knew about itself was `APP_VERSION` — and
+ * that has read `0.1.0` since the first commit, with no tags and no
+ * releases behind it. A changelog needs releases to describe. A build stamp
+ * needs nothing maintained, and answers the question a climber actually
+ * has when the prompt appears: *how far behind am I?*
+ *
+ * Null in, null out — a runtime with no build behind it says nothing rather
+ * than guessing, which is the same bargain `version.ts` makes.
+ */
+export function buildAge(builtAt: string | null, now: number = Date.now()): string | null {
+  if (builtAt === null) return null;
+  const at = Date.parse(builtAt);
+  if (Number.isNaN(at)) return null;
+  const days = Math.floor((now - at) / 86_400_000);
+  // A negative age is a clock disagreeing with a build, not a fact about
+  // the app, so it reads as today rather than as the future.
+  if (days <= 0) return 'built today';
+  if (days === 1) return 'built yesterday';
+  if (days < 14) return `built ${days} days ago`;
+  if (days < 60) return `built ${Math.round(days / 7)} weeks ago`;
+  return `built ${Math.round(days / 30)} months ago`;
+}
+
 // ── Noticing there is one at all (PLAN.md M154) ───────────────────────────
 
 /**
