@@ -11926,6 +11926,19 @@ thresholds beside them.*
   recovery wall that is slower and calmer — the `recovery` palette already exists and already
   fires on a logged rest day — is the shape that fits the app's own rule.
   *Medium, and the wrong version of it is actively harmful.*
+  ***REFUSED, and recorded rather than left open.*** *The premise is true — `modifiersFrom` takes
+  five stats and a boon list and never sees vitality — but it is not a gap. The wall is the same
+  for everyone on purpose, and every per-climber input to a run is a modifier that only ever
+  **helps**: `rampReduction`, `hitboxTrim`, `chalkSaves`, `laneTrim`, `coinMultiplier`,
+  `startWithSlowmo`. Feeding vitality in means one of two things, and both are worse than the
+  absence. Making a tired climber's run harder punishes training, which is the one thing the
+  economy refuses to do — `effortMultiplier` already brakes to 1.0 rather than pay a bonus for
+  digging the hole deeper. Making a tired climber's run **easier** is a reward for arriving
+  cooked, and it would quietly make the fastest way to a good score a bad week of training. The
+  recovery wall the item proposes is the third option and it already exists: a logged rest day
+  changes the sky and pays ×1.5, which is the whole of what "vitality shapes the game" should
+  mean. The posture on the figure is the other half, and that is enough. Not built, and not to be
+  proposed again without a mechanic that is neither a penalty nor a bribe.*
 
 - **M216 — the wall is never yours.** `buildWall(dailySeed(date))`: the pattern comes from the
   date and is the same for everyone, which is the whole premise of a comparable score and is not
