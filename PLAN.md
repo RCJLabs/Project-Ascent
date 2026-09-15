@@ -11284,3 +11284,80 @@ in PLAN.md rather than from a sweep of the code, and three of those four were su
 entirely already built — M189 withdrawn, M192 half-built, M193 built outright. An old proposal
 reads exactly like an open finding; only the Done entry tells them apart, and it is the one thing
 a keyword search does not surface. The eighth brainstorm should come from measuring the build.
+
+
+## The eighth brainstorm
+
+*M193's entry set the rule for this one: **the seventh's items came from prose already in this
+document, and three of the four mined that way turned out to be built already.** So nothing below
+was read out of PLAN.md. Eight sweeps were run against the code and the shipped build — dead
+exports, record fields, route reachability, guarantee-shaped copy, accessibility, a route walk
+with demo data loaded, assertion counts across the whole suite, and engine cost at ten years of
+training. Every number here came back from one of them.*
+
+***The headline is the yield.*** *Eight sweeps, four findings, and the largest is medium. Six of
+the eight came back clean outright. After 193 milestones that is the useful signal rather than a
+disappointment, and it is why this list is four items and not ten — padding it would mean going
+back to the notes, which is the mistake this pass exists to stop making.*
+
+***What the sweeps killed**, which is worth as much as what they found:* **accessibility** *— 29
+routes with a year of demo data: zero buttons or links without an accessible name, zero* `<img>`
+*without* `alt`*, zero heading-level jumps, zero duplicate ids (three flagged inputs were* `hidden`
+*file pickers, the probe's own false positives);* **a route walk** *— all 31 static routes render,
+zero page errors, zero console errors, zero horizontal overflow at 430px;* **record fields
+declared and never read** *— one, and it is demo scaffolding (*`DemoProfile.injuryId`*), so
+M133's class is closed;* **the precache** *— all 130 built assets are in the manifest and*
+`serviceWorker.ready` *resolves after install, so "the whole app is cached" is sound;*
+**cross-screen agreement** *— Progress says 831 sends and Career says "1k sends, 169 to go", which
+is the same number;* **engine cost at scale** *—* `deriveClimberState` *runs 4.5ms over a year and
+22.8ms over ten (1,560 sessions, 12,480 climbs), linear, so a coach-sized log is not a problem;*
+**the core loop in a real browser** *— fresh install to Home to a started session to the logger
+with its grade picker, zero errors;* **and the glossary's 31,317px page** *— the "All" default,
+narrowable by search and by nine category chips, so the longest page in the app is deliberate.*
+
+- **M194 — the privacy guarantee is checked against the wrong artifact.** `privacy.test.ts` is
+  the best test in this repo and it reads `src/`, the *names* in `package.json`, and
+  `index.html`. It never reads `dist/`. The page it defends says, as its first bullet, *"The app
+  makes no network requests at all — no fetch, no XMLHttpRequest, no beacon, no websocket"* —
+  and the shipped bundle contains `fetch(` twice: `fetch(c.href, f)` in the entry chunk, which is
+  Vite's module-preload polyfill asking for the app's own chunks, and the service worker, which
+  exists to. An external host appears too — `https://bit.ly`, inside a workbox console warning,
+  plus `https://react.dev` in React's error decoder. None of it sends a climber's data anywhere
+  and the page half-corrects itself two cards later under *What hosting can see*; the bullet as
+  worded is still false of the thing a climber installs. **And the dependency check is a
+  blocklist of eight vendor names**, so the next package that phones home passes it. The fix is
+  both halves: scan the built output, with the bundler's same-origin preload and the worker named
+  and allowed rather than ignored, and reword the bullet to the true claim — nothing the app
+  requests carries anything you logged. A privacy page that overclaims is the one thing M171 set
+  out not to write.
+  *Medium, and the only one here that matters before the app is listed anywhere.*
+
+- **M195 — the year in review has no way in.** `/year` sits in the route table with
+  `parent: '/career'`. No page links to it: the only `href="/year"` in the source is `YearPage`'s
+  own fallback for a malformed year parameter. Career is the page that should — it groups
+  milestones by year through `byYear` and renders a heading per year — and it offers nothing on
+  those headings. Reachable today by typing the URL or through the search sheet, which has the
+  keywords for it. One link, on a heading that is already rendered.
+  *Small.*
+
+- **M196 — five exports that nothing references, and one of them is a finished card.** Of 295
+  exported values with no consumer outside their own file, five are referenced exactly once in
+  the whole repository: their own declaration. `CareerLinkCard` is a complete `Card` — a Career
+  link, a milestone count, the latest milestone by name and date, wired to `deriveCareer` — that
+  nothing renders, and `ProgressPage` already ships an equivalent link card. The other four are
+  `getWarmupExercise`, `getCooldownExercise`, `WARMUP_CATEGORY_LABEL` and `isCustomProgram`.
+  M133's rule was *wired up or gone*; this is the same rule one layer out, on exports rather than
+  on content fields.
+  *Small.*
+
+- **M197 — one test in 5,688 asserts nothing.** `loadTrend.test.ts`'s *"says 'about where it was'
+  for a flat week"* wraps its only assertion in `if (Math.abs(trend.latest! - trend.weekAgo!) <
+  0.05)`, and the `steady(200)` fixture never satisfies it, so the test passes without checking
+  the sentence in its own name. Found by counting `expect.getState().assertionCalls` per test
+  across the whole suite: eight tests make no `expect` call, four of those legitimately assert by
+  awaiting `findByText`, three are documented exemptions in `reachable.test.ts` and
+  `launch.test.ts`, and this one is real. **The instrumentation is worth more than the fix** — it
+  is six lines in `src/test/setup.ts` and it is the only mechanical check this project has ever
+  had for the failure that has cost it the most: an assertion that never runs. M169's rule asks
+  for a self-check per sweep; this asks the suite the same question once, for every test at once.
+  *Small, and it should be built with the guard rather than only the fix.*
