@@ -21,6 +21,7 @@ import {
 } from '@/engine/ascent/replay';
 import { payoutFor, wallNumber, type AscentPayout } from '@/engine/ascent/rewards';
 import { dailySeed } from '@/engine/ascent/rng';
+import { describeEndings, readEndings } from '@/engine/ascent/endingsRead';
 import { describeBurns, describeClimb, restingFor } from '@/engine/ascent/resting';
 import { describeScale, runHeight } from '@/engine/ascent/scale';
 import { deriveAltimeter } from '@/engine/altimeter';
@@ -217,6 +218,7 @@ export function AscentPage() {
         date,
         rested: derived.restedToday,
         units,
+        endedBy: run.endedBy,
         ...(tape ? { tape } : {}),
       }).then(setPayout);
     },
@@ -366,6 +368,9 @@ export function AscentPage() {
   // The climb you are actually working, which the game had never heard of
   // (PLAN.md M217). Read and never written: a sentence and a link.
   const resting = restingFor({ projects, sessions, display });
+  // How the runs end, which a run used to forget the moment it did
+  // (PLAN.md M214). Null until there are enough of them to mean anything.
+  const endings = readEndings(records.endings);
   const runScale = describeScale(hud.metres, units);
   const bestScale = describeScale(records.best.ascent, units);
 
@@ -496,6 +501,25 @@ export function AscentPage() {
               <Card title="The month behind you">
                 <DayBars history={history} units={units} />
                 <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeAscent(history, units)}</p>
+              </Card>
+            )}
+
+            {endings && (
+              <Card title="How your runs end">
+                <p className="text-sm leading-relaxed mb-3">{describeEndings(endings)}</p>
+                <dl className="grid grid-cols-1 gap-1.5 text-sm">
+                  {endings.kinds.map((kind) => (
+                    <Row
+                      key={kind.kind}
+                      label={kind.label}
+                      value={`${kind.deaths} · ${Math.round(kind.share * 100)}%`}
+                    />
+                  ))}
+                </dl>
+                <p className="text-xs text-ink-soft mt-3 leading-relaxed">
+                  {endings.counted} runs, averaging {runHeight(endings.averageMetres, units).label}.
+                  Percentages are of your runs, not of the wall.
+                </p>
               </Card>
             )}
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { resetDbForTests } from '@/db/db';
-import { EMPTY_ASCENT, getAscent } from '@/db/game';
+import { EMPTY_ASCENT, getAscent, putAscent } from '@/db/game';
 import { NO_MODIFIERS } from '@/engine/ascent/game';
 import type { Tape } from '@/engine/ascent/replay';
 import { useSettings } from '@/store/settings';
@@ -44,6 +44,7 @@ async function run(metres: number, moves: number[] | null) {
     date: DAY,
     rested: false,
     units: 'metric',
+    endedBy: 'rock',
     ...t,
   });
 }
@@ -83,7 +84,7 @@ describe('the tape of the day’s best', () => {
   it('starts fresh on a new day', async () => {
     await run(700, [20, -1]);
     await useGame.getState().recordRun({
-      mode: 'ascent', metres: 50, coins: 0, pure: true, date: '2026-09-12', rested: false, units: 'metric',
+      mode: 'ascent', metres: 50, coins: 0, pure: true, date: '2026-09-12', rested: false, units: 'metric', endedBy: 'rock',
     });
     expect(todayRecord('2026-09-12')?.date).toBe('2026-09-12');
     expect(todayRecord('2026-09-12')?.tape).toBeUndefined();
@@ -101,7 +102,7 @@ describe('the payout a finished run hands back', () => {
     // which is what shipped for the length of one browser check.
     const payout = await useGame.getState().recordRun({
       mode: 'ascent', metres: 494, coins: 0, pure: true, date: DAY, rested: false,
-      units: 'imperial',
+      units: 'imperial', endedBy: 'rock',
     });
     expect(payout!.lines[0]!.label).toBe('Best run · 1,621 ft');
   });
@@ -122,5 +123,38 @@ describe('the ledger label the Ascent writes', () => {
     } finally {
       useSettings.getState().setUnits('imperial');
     }
+  });
+});
+
+describe('the tally of how runs end (PLAN.md M214)', () => {
+  it('counts every run, not the day’s best', async () => {
+    // The day record keeps the best run only, and the ending of the one run
+    // you did not die early on is the least representative sample there is.
+    const record = (metres: number, endedBy: 'rock' | 'boulder' | 'debris') =>
+      useGame.getState().recordRun({
+        mode: 'ascent', metres, coins: 0, pure: true, date: DAY, rested: false,
+        units: 'metric', endedBy,
+      });
+    await record(900, 'rock');
+    await record(100, 'debris');
+    await record(200, 'debris');
+    const { endings } = useGame.getState().ascent;
+    expect(endings).toEqual({ rock: 1, boulder: 0, debris: 2, metres: 1_200, counted: 3 });
+  });
+
+  it('leaves the tally alone for a run that ended some other way', async () => {
+    await useGame.getState().recordRun({
+      mode: 'ascent', metres: 300, coins: 0, pure: true, date: DAY, rested: false,
+      units: 'metric', endedBy: null,
+    });
+    expect(useGame.getState().ascent.endings).toEqual({ ...EMPTY_ASCENT.endings });
+    expect(useGame.getState().ascent.runs).toBe(1);
+  });
+
+  it('survives a record written before any of this existed', async () => {
+    // No `endings` key at all, which is every record on disk today.
+    const legacy = { best: { ascent: 5, freesolo: 0 }, pureBest: 0, runs: 4, days: [] };
+    await putAscent(legacy as never);
+    expect((await getAscent()).endings).toEqual(EMPTY_ASCENT.endings);
   });
 });

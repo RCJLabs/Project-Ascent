@@ -1332,6 +1332,37 @@ describe('the bundle stays small', () => {
     }
   });
 
+  it.runIf(built)('keeps the arcade out of the entry chunk', () => {
+    /**
+     * The Ascent is one lazy route and its tuning table has no business on
+     * the boot path (PLAN.md M214).
+     *
+     * This exists because M214 put it there. `db/game.ts` is read before
+     * anything renders, it gained an import of the run-ending tally, and the
+     * tally's module imported `ascent/config` for the spawn weights — which
+     * carried the whole arcade table into the first load and took it from
+     * 137.35KB to 138.47, through the ceiling. The tally is dependency-free
+     * now and the reading that needs the weights is a separate module. This
+     * fails if the two are ever merged back.
+     */
+    const html = readFileSync('dist/index.html', 'utf8');
+    const entryName = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)![1]!;
+    const entry = readFileSync(`${dist}/${entryName}`, 'utf8');
+    // Markers from `ascent/config` only. `rewards.PAYOUT` is deliberately
+    // not on this list: `store/game.ts` prices a finished run through
+    // `payoutFor` to write the ledger, so that table is a real boot-path
+    // dependency and `freeSoloMultiplier` is in the entry on purpose.
+    //
+    // One marker per table, because a partial leak would pass a single probe.
+    for (const marker of ['arrivalWindowRatio', 'rampSeconds', 'maxRampReduction', 'laneChangeMs']) {
+      expect(entry.includes(marker), `${marker} is in the entry chunk`).toBe(false);
+    }
+    // The control: the Ascent's *route* is eager — the shell needs every
+    // path for search and the nav — so this sweep finding nothing at all
+    // would mean it was reading the wrong file rather than passing.
+    expect(entry.includes('minigame'), 'the route table is not in the entry either').toBe(true);
+  });
+
   it.runIf(built)('keeps the drill text out of the entry chunk', () => {
     // A marker per drill, not one marker, for the reason the program-body
     // check above gives: a split that leaks half the text back into the

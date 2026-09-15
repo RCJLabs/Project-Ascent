@@ -569,3 +569,45 @@ describe('the event stream the cues read', () => {
     expect(state.events.filter((e) => e.kind === 'coin')).toEqual([]);
   });
 });
+
+describe('what ended the run', () => {
+  it('is null while it is still going, and a kind once it is not', () => {
+    const state = createRun({ seed: 11 });
+    expect(state.endedBy).toBeNull();
+    play(state, 120_000);
+    expect(state.over).toBe(true);
+    expect(state.endedBy).not.toBeNull();
+    expect(isObstacle(state.endedBy!)).toBe(true);
+  });
+
+  it('is the thing that actually hit, not one kind for every run', () => {
+    // A dozen seeds and more than one answer between them. Checking only
+    // that each is *a* kind passes a version that records the same one
+    // every time, which is what the first draft of this did.
+    const kinds = Array.from({ length: 12 }, (_, i) => play(createRun({ seed: i + 1 }), 120_000).endedBy);
+    for (const kind of kinds) expect(['rock', 'boulder', 'debris']).toContain(kind);
+    expect(new Set(kinds).size).toBeGreaterThan(1);
+  });
+
+  it('stays null while a spare life is absorbing hits', () => {
+    // A heart can leave a climber on more than one life, and a hit that
+    // costs one of them has not ended anything.
+    const state = createRun({ seed: 11 });
+    state.lives = 3;
+    for (let t = 0; t < 120_000 && state.lives === 3; t += 16) step(state, 16);
+    expect(state.lives).toBe(2);
+    expect(state.over).toBe(false);
+    expect(state.endedBy).toBeNull();
+    play(state, 120_000);
+    expect(state.endedBy).not.toBeNull();
+  });
+
+  it('stays null while a chalk save is absorbing hits', () => {
+    // A save takes the hit and the run carries on, so nothing has ended it.
+    const state = createRun({ seed: 11, modifiers: { chalkSaves: 40 } });
+    play(state, 8_000);
+    expect(state.saves).toBeLessThan(40);
+    expect(state.over).toBe(false);
+    expect(state.endedBy).toBeNull();
+  });
+});

@@ -37,7 +37,8 @@ export type PickupKind = 'coin' | 'slowmo' | 'magnet' | 'heart';
 export type EntityKind = ObstacleKind | PickupKind;
 
 const OBSTACLES: ReadonlySet<string> = new Set<EntityKind>(['rock', 'boulder', 'debris']);
-export const isObstacle = (kind: EntityKind): boolean => OBSTACLES.has(kind);
+/** A type guard, so the kind that hit you is narrow enough to record. */
+export const isObstacle = (kind: EntityKind): kind is ObstacleKind => OBSTACLES.has(kind);
 
 export interface Entity {
   id: number;
@@ -118,6 +119,14 @@ export interface RunState {
   /** False the moment a power-up is touched. */
   pure: boolean;
   over: boolean;
+  /**
+   * What ended the run, or null while it is still going (PLAN.md M214).
+   *
+   * On the state rather than only in `events`, which are cleared at the
+   * start of every step: the screen reads this once, at the end, the way it
+   * already reads `pure`.
+   */
+  endedBy: ObstacleKind | null;
   /** Cleared at the start of every step; the renderer reads them for feedback. */
   events: RunEvent[];
   /**
@@ -162,6 +171,7 @@ export function createRun(options: RunOptions): RunState {
     invulnMs: 0,
     pure: true,
     over: false,
+    endedBy: null,
     events: [],
     pendingInput: 0,
   };
@@ -416,7 +426,7 @@ function collide(state: RunState): void {
     if (isObstacle(entity.kind)) {
       if (state.invulnMs > 0) continue;
       entity.collected = true;
-      absorbHit(state);
+      absorbHit(state, entity.kind);
       continue;
     }
 
@@ -425,7 +435,7 @@ function collide(state: RunState): void {
   }
 }
 
-function absorbHit(state: RunState): void {
+function absorbHit(state: RunState, by: ObstacleKind): void {
   if (state.saves > 0) {
     state.saves--;
     state.invulnMs = INVULNERABLE_MS;
@@ -436,6 +446,7 @@ function absorbHit(state: RunState): void {
   state.events.push({ kind: 'hit', absorbed: 'life' });
   if (state.lives <= 0) {
     state.over = true;
+    state.endedBy = by;
     state.events.push({ kind: 'over' });
   } else {
     state.invulnMs = INVULNERABLE_MS;

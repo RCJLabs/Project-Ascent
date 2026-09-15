@@ -11912,6 +11912,10 @@ thresholds beside them.*
   having checked. A daily game's one genuine insight is about how you play it, and this one keeps
   nothing to build that from.
   *Medium.*
+  *Done — see the entry at the end of this document. The statistic turned out to be a ratio rather
+  than a count, because debris is 15% of what spawns and a body count would have named rocks
+  whatever happened. The milestone also leaked the arcade's tuning table into the boot path and
+  blew the budget, which is why `endings.ts` and `endingsRead.ts` are two files.*
 
 - **M215 — vitality sets the climber's posture and changes nothing else about the game.**
   `modifiersFrom` takes `end`, `agi`, `men`, `tec`, `str` and `boons`; vitality is never passed
@@ -12547,3 +12551,78 @@ Pit** — V6, at The Roaches.* over *2 days on it, last touched 39 days ago. Hig
 
 **Budget** 137.34 → **137.35**, which is noise: `AscentPage` and `resting.ts` are both in the
 lazy Ascent chunk. 0.65KB of slack under the 138.0 ceiling. **5,825 tests pass, up from 5,810.**
+
+
+## M214 — a run kept its height and forgot how it ended
+
+**`ClimbedDay` was date, metres, coins, mode and a tape.** The simulation raised `{ kind: 'hit',
+absorbed: 'life' }` on every collision and the frame threw the event away at the start of the next
+step. So the app could not say a single thing about *how you play*, which is the one genuine
+insight a daily arcade game has to offer and the only thing it did not keep.
+
+**The statistic is a ratio, not a count, and that is the whole design.** The page's own
+instructions have always said **"Rocks end the run; the small fast ones are the ones that get
+you"** — a claim the app made and had never checked. A tally of deaths would not check it either:
+rocks are **60%** of what spawns and debris **15%** (`SPAWN.obstacles`), so rocks would top a body
+count even if they were the easiest thing on the wall. What answers the question is **share of
+deaths against share of spawns**. Debris at 15% of the wall ending 31% of runs is twice as
+dangerous as it is common; rocks at 60% ending 64% are doing no more than their share. The card
+says which, per climber, and only says *"the small fast ones really are the ones that get you"*
+when that climber's own runs bear it out.
+
+**Every run, not the day's best.** `AscentRecords.days` keeps the best run per day, and the
+ending of the one run you did not die early on is the least representative sample available. The
+tally sits beside it and counts all of them, with its own `counted` rather than `runs` — that
+counter has been incrementing since long before any of this was kept, and dividing a handful of
+endings by a lifetime of runs would report a percentage of nothing.
+
+**Ten runs before it says anything**, because the rarest obstacle is 15% of the wall and at three
+runs one unlucky one reads as *"debris ends a third of your runs"*. The same house rule as
+`ENOUGH_SENDS` and `ENOUGH_TRIES`.
+
+**And `isObstacle` is a type guard now.** `absorbHit` needed the kind that hit, and the predicate
+returned `boolean`, so the `EntityKind` at the call site would not narrow. One word, and every
+call site is narrower for it.
+
+### The budget caught a leak, and the fix is a split
+
+**This shipped at 138.47KB on the first attempt and blew the 138.0 ceiling.** `db/game.ts` is on
+the boot path — the ledger is read before anything renders — and it gained an import of the
+run-ending tally, whose module imported `ascent/config` for the spawn weights. That carried **the
+whole arcade tuning table into the first load of every climber**, whether or not they ever open
+the game: 1.1KB gzipped, 137.35 → 138.47.
+
+Raising the line would have been the wrong fix, and the guard exists to stop exactly that. So the
+module is two: **`endings.ts`** is the tally — the type, the empty value and `recordEnding` — with
+**no runtime imports at all**, and **`endingsRead.ts`** is the reading, which needs the weights and
+is imported only by the Ascent page and so travels only in the Ascent chunk. Both files say why,
+because the obvious tidy-up is to merge them back.
+
+**`perf.test.ts` gained a guard for it**: four markers from `ascent/config` that must not appear in
+the entry chunk, with a control marker that must — the Ascent's *route* is eager, since the shell
+needs every path for search and the nav, so a sweep finding nothing at all would mean it was
+reading the wrong file rather than passing. `rewards.PAYOUT` is deliberately not on the list:
+`store/game.ts` prices a finished run to write the ledger, so that table is a real boot-path
+dependency.
+
+**Twenty-two mutants, twenty-two killed — three of them only on a second pass, and all three
+were my mutants being wrong rather than the tests being right.** *The leak mutant* added an unused
+import and a `void` reference, which Rollup shook away, so it proved nothing; rebuilt to make
+`recordEnding` itself depend on `SPAWN.obstacles.length`, it dies. *The "a save ends the run"
+mutant* was misnamed — it set the ending after the save branch had already returned, so what it
+actually tested was a hit absorbed by a **spare life**, which nothing covered; there is a test for
+that now. *The "every run ends the same way" mutant* hardcoded `'rock'`, and my test only asserted
+each ending was *a* kind, which `'rock'` satisfies — it now plays a dozen seeds and requires more
+than one answer between them. One sanity no-op survived, as it must.
+
+**The battery rebuilds between mutants**, because `perf.test.ts` reads `dist` and a stale bundle
+would report every mutant as surviving the bundle guards. That is the M194 confound, which cost
+that milestone a re-run.
+
+**In a browser, both themes, 430px and 1280px**, after eleven runs: *Boulders are 25% of what
+spawns and end 100% of your runs*, three rows with their counts and shares, and *11 runs,
+averaging 1,621 ft. Percentages are of your runs, not of the wall.* Under a null input every run
+on those seeds ends the same way, which is the harness rather than the app. No page errors.
+
+**Budget** 137.35 → **137.47**, the cost of the tally type and `endedBy` rather than of the arcade
+table. 0.53KB of slack under the 138.0 ceiling. **5,847 tests pass, up from 5,825.**

@@ -12,6 +12,7 @@
  */
 
 import { getDb } from './db';
+import { NO_ENDINGS, type Endings } from '@/engine/ascent/endings';
 import type { Tape } from '@/engine/ascent/replay';
 import type { AcceptedBounty } from '@/engine/challenges';
 
@@ -98,6 +99,14 @@ export interface AscentRecords {
   days: DayRecord[];
   /** @deprecated Migrated into `days` on read. Never written. */
   daily?: DayRecord | null;
+  /**
+   * How the runs ended (PLAN.md M214).
+   *
+   * Not on `ClimbedDay`, which keeps the day's **best** run: the ending of
+   * the one run you did not die early on is the least representative sample
+   * available. This is a tally over every run instead.
+   */
+  endings: Endings;
 }
 
 export const EMPTY_ASCENT: AscentRecords = {
@@ -105,6 +114,7 @@ export const EMPTY_ASCENT: AscentRecords = {
   pureBest: 0,
   runs: 0,
   days: [],
+  endings: NO_ENDINGS,
 };
 
 const ASCENT_KEY = 'ascent';
@@ -160,7 +170,15 @@ export async function putBounties(bounties: AcceptedBounty[]): Promise<AcceptedB
 export async function getAscent(): Promise<AscentRecords> {
   const db = await getDb();
   const record = await db.get('game', ASCENT_KEY);
-  const stored = { ...EMPTY_ASCENT, ...((record?.value as Partial<AscentRecords> | undefined) ?? {}) };
+  const value = (record?.value as Partial<AscentRecords> | undefined) ?? {};
+  // `endings` is spread field by field rather than taken whole: a record
+  // written before M214 has none at all, and one written before a *later*
+  // field would otherwise arrive missing it (PLAN.md M214).
+  const stored: AscentRecords = {
+    ...EMPTY_ASCENT,
+    ...value,
+    endings: { ...NO_ENDINGS, ...(value.endings ?? {}) },
+  };
   // The one day the old shape kept, promoted into the history (PLAN.md
   // M96). Only when there is no history yet: a record written since carries
   // its own days and the stale `daily` beside it must not overwrite them.

@@ -19,6 +19,8 @@ import {
 import type { Mode } from '@/engine/ascent/game';
 import type { Tape } from '@/engine/ascent/replay';
 import { dayRun, recordDay, recoverDays } from '@/engine/ascent/history';
+import { recordEnding } from '@/engine/ascent/endings';
+import type { ObstacleKind } from '@/engine/ascent/game';
 import { payoutFor, type AscentPayout } from '@/engine/ascent/rewards';
 import type { UnitSystem } from '@/engine/units';
 import type { BountySpec, Challenge, AcceptedBounty } from '@/engine/challenges';
@@ -52,6 +54,14 @@ export interface GameState {
      * place that knows a display preference is the screen.
      */
     units: UnitSystem;
+    /**
+     * What ended the run, or null when nothing did (PLAN.md M214).
+     *
+     * Nullable because a run can in principle reach here without a fatal
+     * collision, and a tally that counted those would have a denominator
+     * bigger than the deaths in it.
+     */
+    endedBy: ObstacleKind | null;
     mode: Mode;
     metres: number;
     coins: number;
@@ -106,7 +116,7 @@ export const useGame = create<GameState>((set, get) => ({
     }
   },
 
-  recordRun: async ({ mode, metres, coins, pure, date, rested, tape, units }) => {
+  recordRun: async ({ mode, metres, coins, pure, date, rested, tape, units, endedBy }) => {
     const current = get().ascent;
     // The day is priced on its best run, so a worse one changes nothing —
     // and the day is kept rather than overwritten (PLAN.md M96).
@@ -124,6 +134,10 @@ export const useGame = create<GameState>((set, get) => ({
         pureBest: pure ? Math.max(current.pureBest, metres) : current.pureBest,
         runs: current.runs + 1,
         days,
+        // Every run, not the day's best: the ending of the one run you did
+        // not die early on is the least representative sample there is.
+        endings:
+          endedBy === null ? current.endings : recordEnding(current.endings, endedBy, metres),
       }),
     });
 
