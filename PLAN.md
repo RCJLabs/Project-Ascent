@@ -11631,3 +11631,63 @@ nothing it pulls in appears in any built chunk.
 **No browser check, and it would be theatre.** The engine is untouched; what changed is a
 fixture, a rule about tests, and one comment. **Budget** 137.00 → 137.00. 5,711 tests pass, up
 from 5,704 — the seven that hold the new rule to account.
+
+
+## The ninth brainstorm — the numbers, and the audit hitting its floor
+
+*Eight brainstorms have audited the code. This one audited the **decisions**: every named numeric
+constant the app makes a judgement on, since a tool that tells a climber to back off is only as
+good as the thresholds it backs off at. **204 constants** across `engine/`, `content/`, `ui/`,
+`store/`, `db/` and `lib/`, classified by whether their surrounding prose cites a source, owns
+the number as a judgement, or says neither — with three controls on the classifier
+(`ACUTE_DAYS` must read sourced, `REPEAT_WINDOW_DAYS` owned, `MAX_TEMPLATES` silent) because
+M195 is what an uncontrolled sweep costs.*
+
+***The result is that the audit has hit its floor, and three of my own opening claims were
+wrong.*** *Recorded in full, because after M189, M192, M193 and M195 the pattern in this document
+matters more than any single finding.*
+
+**Wrong the first way: unsourced is not undocumented.** The sweep said 107 constants "say nothing
+either way", and I read that as undocumented. It is not what it measures — the classifier looks
+for *sourcing* language. Re-measured against the real question: **82 of the 204 are coaching
+decisions, 75 of those carry prose reasoning immediately above them, and 7 are bare.** The code
+explains itself almost everywhere. What it does not do is justify itself against anything
+outside itself — **2 constants in 204** — and that is a different and much smaller complaint.
+
+**Wrong the second way: fifteen answers is not fifteen contradictions.** *How much data before
+the app says something* is answered fifteen times, from 3 to 25, under twelve names. Read rather
+than counted, they are fifteen **different questions at different scopes**: sends at one grade
+(3), routes carrying a rope style (8), sends across the whole log (25), tries in a block (6).
+And the habit of cross-referencing already exists where it matters — `pyramidShape.ENOUGH_SENDS`
+says in writing that it is *"the app's own number, not a new one"* and points at `coach.ts`;
+`conversion.ENOUGH_TRIES` explains why it sits above `projectHistory`'s three. Not a defect.
+
+**Wrong the third way, and this is the one that would have been the milestone.** The strongest
+candidate was that the app's load ratio rests on a **contested** literature and presents it with
+more confidence than the evidence carries. That is M168, built: the coupling problem is written
+out in `derive.ts`, the reason for not switching to the uncoupled form is measured there, and
+the milestone's own work was **removing** *"the pattern most associated with injury"* from three
+places and *"a powerful metric… to minimize injury risk"* from the injury guide. Caught before it
+was written down this time, which is the only improvement on M195 available.
+
+**What survives, and it is small.** Seven coaching constants with no comment at all —
+`SETTLED_WEEKS`, `GAIN_WINDOW_DAYS`, `BACKUP_RETURN`, `CHRONIC_DAYS`, `TREND_DAYS`, `REST_DAYS`,
+`DEFAULT_TARGET_SECONDS`. And two names that mean different things in different modules, so a
+reader who greps finds the wrong one: **`ENOUGH` is 3, 8, 10 and 3** in `projectHistory`,
+`ropeStyle`, `angles` and `calendar`, and **`MIN_HISTORY_DAYS` is 21 in `derive.ts` and 60 in
+`statHistory.ts`**. The chart files' `PAD_L`, `ROW` and `GAP` collide too and should not be
+counted — those are one chart's layout, local by nature.
+
+- **M198 — seven numbers with nothing said about them, and two names meaning four things.** A
+  comment each for the seven, in the voice the other 75 already use; and `ENOUGH` renamed at each
+  site to the question it answers, with `MIN_HISTORY_DAYS` split the same way. Nothing changes
+  value: this is the reader's problem, not the climber's.
+  *Small, and it is the whole of what the ninth brainstorm found.*
+
+***The recommendation is to stop auditing.*** *Four passes now — M179's module sweep, the
+seventh's boundary sweep, the eighth's eight sweeps, and this one — have returned progressively
+less, and the last three have each spent more effort on items that turned out already built than
+on items that shipped. The eighth's two real milestones were both about the tests rather than the
+app. That is what a codebase looks like when the audit-shaped work is done. What is left is
+coaching judgement on the content, which is not mine to make, and capability, which is not an
+audit.*
