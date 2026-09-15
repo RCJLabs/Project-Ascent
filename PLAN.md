@@ -11315,7 +11315,10 @@ is the same number;* **engine cost at scale** *—* `deriveClimberState` *runs 4
 with its grade picker, zero errors;* **and the glossary's 31,317px page** *— the "All" default,
 narrowable by search and by nine category chips, so the longest page in the app is deliberate.*
 
-- **M194 — the privacy guarantee is checked against the wrong artifact.** `privacy.test.ts` is
+- **M194 — the privacy guarantee is checked against the wrong artifact.** *Done — see the entry
+  at the end of this document. The claim was right and one word was wrong: the offending bullet's
+  subject. And the fix found a second thing the brainstorm had not — a build older than the
+  source made every artefact check pass having read last milestone's answer.* `privacy.test.ts` is
   the best test in this repo and it reads `src/`, the *names* in `package.json`, and
   `index.html`. It never reads `dist/`. The page it defends says, as its first bullet, *"The app
   makes no network requests at all — no fetch, no XMLHttpRequest, no beacon, no websocket"* —
@@ -11361,3 +11364,87 @@ narrowable by search and by nine category chips, so the longest page in the app 
   had for the failure that has cost it the most: an assertion that never runs. M169's rule asks
   for a self-check per sweep; this asks the suite the same question once, for every test at once.
   *Small, and it should be built with the guard rather than only the fix.*
+
+
+## M194 — a guarantee about the app, tested against the source
+
+**The best test in this repository was reading the wrong files.** `privacy.test.ts` sweeps every
+file under `src/`, screens `package.json`, reads `index.html`, and self-checks its own sweep so a
+scan that walked nothing cannot pass. All of it is true, and none of it is about the thing a
+climber installs: a bundler emits code of its own, a service worker is generated rather than
+written, and a dependency's network call lives in `node_modules` where no sweep above it can
+look. Nothing in that file has ever opened `dist/`.
+
+**What the build actually contains**, measured before anything was changed: `fetch(` once in the
+entry chunk — `fetch(c.href, f)`, Vite's module-preload polyfill asking for the app's own chunks
+— and five times in the workbox runtime, which is what an offline cache is. `XMLHttpRequest`
+once, in the privacy page's own chunk, inside the sentence denying it. No `sendBeacon`, no
+`WebSocket`, no `EventSource` anywhere. Seven absolute URLs: four `w3.org` XML namespaces, which
+identify a vocabulary and are never fetched, React's error-decoder link, a workbox console
+warning pointing at `bit.ly`, and Tailwind's licence banner. `navigator.connection.downlink` is
+in there too, from a dependency — it reads a number the browser already has.
+
+**So one bullet was false and the subject was the whole of it.** The page said *"The app makes no
+network requests at all — no fetch, no XMLHttpRequest, no beacon, no websocket."* It says *"The
+app's **own code** makes no network request at all"* now, which is exactly what the sweeps prove,
+followed by the sentence that makes losing the stronger one safe: *"The only requests that ever
+happen are for the app itself: its page, its scripts and its icons, and the offline cache filling
+up with them."* The page half-corrected itself two cards down already, under *What hosting can
+see*; a climber should not have to read to the fourth card to find the first one qualified.
+
+**Both sentences are pinned, in opposite directions.** The new one joins the list of awkward
+claims M171 pins because a privacy page that only says the comfortable half is the kind that
+milestone exists not to write. The old one joins `encrypt`, `anonymised` and *we never share* in
+the list of sentences the page may not contain — with the subject as the discriminator, since
+*the app's own code makes no network request* has to stay and *the app makes no network requests*
+has to go. The first draft of that guard matched both and failed the page it was written for.
+
+**The blocklist was the other half, and it answered the wrong question.** `ships no dependency
+that talks to a network` tested eleven vendor patterns — `axios|sentry|posthog|…` — against
+`package.json`. A blocklist passes everything it has not heard of, and the package that phones
+home next will not be called `analytics`. Six dependencies ship here and all six are readable in
+an afternoon, so **the list is the assertion now**: `idb`, `lucide-react`, `react`, `react-dom`,
+`wouter`, `zustand`, each with a line saying why it is harmless. A seventh fails the suite until
+somebody has looked at it.
+
+**And the artefact checks needed a guard of their own, which is the thing the brainstorm missed.**
+A test that reads `dist/` is `it.runIf(built)`, and `perf.test.ts` already records nearly shipping
+red because the suite ran before `npm run build` and measured the previous milestone's output. A
+stale artefact is indistinguishable from a healthy one — which is this milestone's own subject,
+one level up. So the first check in the new block is that nothing under `src/` (tests excluded,
+since an edit to one cannot change a byte of `dist/`) plus `index.html`, `vite.config.ts` and
+`package.json` is newer than the newest built file. **It fired four times during this
+milestone**, every time correctly, including twice when it was the only thing standing between a
+page edit and a green suite that had checked the previous build.
+
+**The mutation battery found the staleness check checking nothing.** Emptying its source list
+survived: `newest([])` dates from 1970, which is older than any build, so the comparison passed
+having compared nothing. The same absence trap as M169's rule, in the guard written against that
+very trap. It asserts its own list is over 200 files and contains `index.html` and
+`vite.config.ts` now.
+
+**And the battery itself was confounded, which is worth recording for the next milestone.** Every
+mutant applied to `PrivacyPage.tsx` died — including one that should have survived — because
+mutating the page makes the build stale and the new check kills it for a reason that has nothing
+to do with the mutant. Page mutants need a rebuild between the edit and the run, and that is now
+what they get. Two results this milestone were wrong until they did.
+
+**Eighteen mutants, fourteen killed.** The allowlist with each of its four kinds of URL removed
+in turn; the fetch file-set forgetting the worker; `XMLHttpRequest` expected twice; `holding()`
+returning nothing; the `dist` sweep reading nothing; the staleness comparison inverted and its
+source list emptied; a seventh dependency added and a sixth removed; the page reclaiming the
+sentence the build disproves, and dropping the one that replaced it. Four survived as intended: a
+reorder of two `w3.org` entries, a reorder of two bullets, and two assertion-weakenings, which
+this project's own rule does not count as findings. One positive control rides along in the file
+— a pattern the build really does contain, asserted absent, so the sweep can be seen to fail.
+
+**In a browser, both themes, 430px and 1280px — and this is the verification that matters.** A
+static sweep can only say what is written down. So the app was loaded and used: the sample
+climber loaded, six routes walked, a session started. **231 requests, every one of them
+same-origin, every one a GET, and not one carrying a request body.** What it asked for, in full:
+the page, `/assets/*` 209 times, `/icons/*` fifteen, `sw.js`, the workbox runtime,
+`share-target.js`, the manifest and `index.html`. Nothing else, at either width, in either theme,
+with no page errors and no overflow. That is the new bullet, measured rather than asserted.
+
+**Budget** 137.00 → 137.00. The privacy page is a lazy 6.5KB chunk and the test is a test. 5,700
+tests pass, up from 5,688: eleven artefact checks and one more pinned sentence.

@@ -65,14 +65,16 @@ export function PrivacyPage() {
       <Card title="How you can tell">
         <p className="text-sm text-ink-soft leading-relaxed mb-3">
           That is a strong claim, so it is held by the code rather than by this page. A test reads
-          the source on every build and fails if any of it stops being true.
+          the source <em>and the built app</em> on every build, and fails if any of it stops being
+          true.
         </p>
         <ul className="grid grid-cols-1 gap-2">
           {[
-            'The app makes no network requests at all — no fetch, no XMLHttpRequest, no beacon, no websocket.',
+            "The app's own code makes no network request at all — no fetch, no XMLHttpRequest, no beacon, no websocket.",
+            'The only requests that ever happen are for the app itself: its page, its scripts and its icons, and the offline cache filling up with them.',
             'It loads nothing from anyone else: no fonts, no scripts, no tracking pixels, no CDN.',
             'There is no analytics library, no crash reporter and no telemetry under any name.',
-            'It works in aeroplane mode, permanently, because there is nothing for it to reach.',
+            'Once those files are cached it works in aeroplane mode, permanently.',
           ].map((line) => (
             <li key={line} className="flex items-start gap-2 text-sm leading-relaxed">
               <Check size={15} className="text-positive shrink-0 mt-0.5" aria-hidden />
