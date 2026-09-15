@@ -683,6 +683,23 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **136.3 holds at M187**, measured 135.36 → 136.15: 0.79KB, which is
+    // the first *spend* since M182 and the price of a second failure mode
+    // being told apart from the first. `ui/ErrorBoundary.tsx` is first-load
+    // by construction — it is the thing that catches a page that throws —
+    // and it now carries two sets of copy rather than one, plus the detector
+    // and the retryable route helper beside it.
+    //
+    // **0.15KB of slack, the tightest this line has ever been**, and below
+    // the hash churn M145 recorded when a lazy chunk's filename changed
+    // inside the entry's module map. It is left there rather than fixed
+    // here: the rule this file follows is that a ceiling moves in its own
+    // commit *ahead* of the milestone, never under pressure from the change
+    // that wants it, and this change is already made. The next milestone to
+    // touch a first-load file raises it first — and a raise is now the
+    // honest move rather than a deferred one, because a rebuild that changes
+    // nothing could blow this.
+    //
     // **141.9 → 136.3 at M185, the largest cut this line has taken.**
     // Measured 140.94 → 135.36: **5.58KB**, against a ceiling of 5.57
     // measured beforehand by stubbing the library out — so this took all of

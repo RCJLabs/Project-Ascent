@@ -1,7 +1,9 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Link } from 'wouter';
-import { TriangleAlert } from 'lucide-react';
+import { RefreshCw, TriangleAlert, WifiOff } from 'lucide-react';
 import { Button } from './Button';
+import { isChunkLoadError } from './chunkError';
+import { RetryAttempt } from './lazyRoute';
 
 /**
  * The thing the app did not have (PLAN.md M20).
@@ -31,10 +33,19 @@ interface Props {
 interface State {
   error: Error | null;
   resetKey: string | undefined;
+  /**
+   * How many times this boundary has been asked to try again (PLAN.md M187).
+   *
+   * Published to the tree below so a `lazyRoute` can build a **new** `lazy`
+   * instance per attempt. `React.lazy` caches its factory's rejection, so
+   * without a new instance the retry re-throws from the cache without
+   * fetching anything — which is what it did, measured, before this existed.
+   */
+  attempt: number;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { error: null, resetKey: this.props.resetKey };
+  state: State = { error: null, resetKey: this.props.resetKey, attempt: 0 };
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
@@ -47,7 +58,16 @@ export class ErrorBoundary extends Component<Props, State> {
    * the new key before any effect would run.
    */
   static getDerivedStateFromProps(props: Props, state: State): Partial<State> | null {
-    if (props.resetKey !== state.resetKey) return { error: null, resetKey: props.resetKey };
+    if (props.resetKey !== state.resetKey) {
+      // The attempt count rises only when there was something to retry.
+      // Navigating away from a route whose chunk failed and back again is a
+      // retry by another name, and it would otherwise hand React the same
+      // rejected instance — but bumping it on *every* navigation would build
+      // a new lazy component for every route on every navigation, which
+      // re-imports and re-suspends the whole app for nothing.
+      const attempt = state.error === null ? state.attempt : state.attempt + 1;
+      return { error: null, resetKey: props.resetKey, attempt };
+    }
     return null;
   }
 
@@ -58,13 +78,22 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('[Project Ascent] caught by a boundary:', error, info.componentStack);
   }
 
-  retry = (): void => this.setState({ error: null });
+  retry = (): void => this.setState((state) => ({ error: null, attempt: state.attempt + 1 }));
 
   render(): ReactNode {
-    const { error } = this.state;
-    if (!error) return this.props.children;
-    if (this.props.fallback) return this.props.fallback(error, this.retry);
-    return <ErrorCard error={error} onRetry={this.retry} label={this.props.label} />;
+    const { error, attempt } = this.state;
+    const inner = error ? (
+      this.props.fallback ? (
+        this.props.fallback(error, this.retry)
+      ) : (
+        <ErrorCard error={error} onRetry={this.retry} label={this.props.label} />
+      )
+    ) : (
+      this.props.children
+    );
+    // Always provided, not only while children render: the retry's whole
+    // point is that the *next* render builds a new lazy instance from it.
+    return <RetryAttempt.Provider value={attempt}>{inner}</RetryAttempt.Provider>;
   }
 }
 
@@ -75,6 +104,18 @@ export class ErrorBoundary extends Component<Props, State> {
  * record really is corrupt, the export is the only copy that survives a
  * reinstall. The error text is shown rather than hidden — it is the only
  * diagnostic anyone will ever have from a device I cannot see.
+ *
+ * **Two failures, two cards** (PLAN.md M187). Every route in this app is a
+ * separate file the browser fetches on demand, so a boundary catches bad
+ * records *and* downloads that never arrived — and until M187 it told the
+ * second kind that their data was corrupt and offered them a backup. That is
+ * a false diagnosis about the one thing a training log cannot afford to be
+ * wrong about, and it fires on a train rather than on a bad record.
+ *
+ * The offer differs too. *Export a backup* is right when the data may be
+ * damaged and beside the point when the network is; a chunk that failed is
+ * worth simply asking for again, which since M187 is something the retry can
+ * actually do.
  */
 export function ErrorCard({
   error,
@@ -85,30 +126,40 @@ export function ErrorCard({
   onRetry: () => void;
   label?: string;
 }) {
+  const offline = isChunkLoadError(error);
+  const Icon = offline ? WifiOff : TriangleAlert;
   return (
     <div role="alert" className="bg-surface border border-critical rounded-2xl p-4">
       <div className="flex items-start gap-3">
-        <TriangleAlert size={18} className="text-critical shrink-0 mt-0.5" aria-hidden />
+        <Icon size={18} className="text-critical shrink-0 mt-0.5" aria-hidden />
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-sm">
-            {label ? `${label} could not be shown` : 'This part could not be shown'}
+            {offline
+              ? `${label ?? 'This part'} could not be downloaded`
+              : `${label ?? 'This part'} could not be shown`}
           </p>
           <p className="text-sm text-ink-soft mt-1 leading-relaxed">
-            Something in your data is not the shape the app expected — often a backup restored
-            from an older version. Your logs are still on the device and the rest of the app
-            works.
+            {offline
+              ? 'This part of the app had not been saved for offline use yet, and it could not be fetched. Nothing is wrong with your logs. Try again when you have a connection — once it loads, it is stored for good.'
+              : 'Something in your data is not the shape the app expected — often a backup restored from an older version. Your logs are still on the device and the rest of the app works.'}
           </p>
           <p className="text-xs text-ink-soft mt-2 font-mono break-words">{error.message}</p>
           <div className="flex flex-wrap gap-2 mt-3">
             <Button size="sm" variant="outline" onClick={onRetry}>
               Try again
             </Button>
-            <Link
-              href="/settings"
-              className="focus-ring inline-flex items-center justify-center min-h-9 px-3 rounded-xl border border-line text-sm font-semibold"
-            >
-              Export a backup
-            </Link>
+            {offline ? (
+              <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
+                <RefreshCw size={14} aria-hidden /> Reload
+              </Button>
+            ) : (
+              <Link
+                href="/settings"
+                className="focus-ring inline-flex items-center justify-center min-h-9 px-3 rounded-xl border border-line text-sm font-semibold"
+              >
+                Export a backup
+              </Link>
+            )}
           </div>
         </div>
       </div>

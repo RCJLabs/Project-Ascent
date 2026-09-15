@@ -10604,7 +10604,11 @@ the one candidate wraps* `expect` *in a helper; TODOs — none in the tree.*
   the cheapest.
   *Small.*
 
-- **M187 — a failed lazy chunk never recovers.** React caches a rejected `lazy` factory, so the
+- **M187 — a failed lazy chunk never recovers.** *Done — see the entry at the end of this
+  document. The claim was true and incomplete: React's cache was half of it, the browser's
+  module map the other half, and a third defect turned up beside them — a failed search
+  chunk white-screened the whole app.*
+  React caches a rejected `lazy` factory, so the
   error boundary's *Try again* re-throws the same error and only a reload helps. For an
   offline-first app that is the first launch without signal, before the service worker has
   precached anything. **Unverified** — the claim is from React's documented behaviour, not from a
@@ -10810,3 +10814,94 @@ drill is still read by id, no page errors.
 
 **Budget** 140.94 → 135.36, ceiling **141.9 → 136.3**, 0.94KB of slack. **164.0 → 136.3 across
 M183–M186**, and the four cuts together took 163.61 → 135.36. 5,600 tests pass.
+
+
+## M187 — the button that did nothing, and the card that blamed the wrong thing
+
+**The one item on the seventh brainstorm's list marked unverified, and verifying it first was
+the whole difference.** The claim was that React caches a rejected `lazy` factory so a chunk
+that failed to arrive stays failed. True, and incomplete in one direction and understated in
+another.
+
+**Measured before anything was written.** With the coach chunk blocked and the service worker
+out of the way: the error card appeared, *Try again* fired **zero** new requests, and only a
+full page reload recovered — which costs a running session, since M19 records that the protocol
+timer and a half-entered climb row live in component state.
+
+**And the card said something false.** Its copy is M20's, written for the failure that milestone
+was built for: *"Something in your data is not the shape the app expected — often a backup
+restored from an older version"*, with **Export a backup** beside it. Every route in this app is
+a file fetched on demand, so a climber on a train was being told their training log was corrupt.
+That is the app being wrong about the one thing a training log cannot afford, and it fires on a
+bad connection rather than on a bad record.
+
+**A third defect, found by reading the tree rather than the proposal.** `SearchSheet` is a
+sibling of `<main>` and `RouteBoundary` lives *inside* it, so nothing caught a failed search
+chunk. Measured: tapping search with that chunk blocked took the whole app to a **white screen**
+— no nav, no way back, a body with zero characters of text in it. That is precisely the failure
+M20 exists to make impossible, in the one place its boundary did not reach.
+
+## Two caches, and the second is the hard one
+
+Fixing React's cache alone changed nothing, which the browser said plainly: with the block
+lifted, a second `import()` of the same URL rejected with the request count still at one. **The
+browser's module map caches the failed record too.** The same URL with a query string appended
+loaded fine.
+
+So a retry needs a new `lazy` instance *and* a URL the module map has not seen. The instance
+comes from a retry counter the boundary publishes; the URL comes out of the error message, which
+is the only place a built chunk's hashed filename survives. Grubby, and there is nothing else: a
+dynamic `import()` rejects with a plain `TypeError` carrying no code and no cause.
+
+**Two drafts were wrong and the browser caught both.** `useMemo` for the per-attempt instance
+does not work — a component that suspends on its first render never commits, so its hook state
+is discarded, the memo runs again, and React is handed a different component type every pass;
+the route sat on the Suspense fallback for ever instead of reaching the boundary, which is worse
+than the bug. And raising the counter on *every* navigation, rather than only on navigation away
+from a failure, would build a new lazy component for every route each time the location changed.
+
+## What shipped
+
+`ui/chunkError.ts` tells the two failures apart and extracts the URL. `ui/lazyRoute.tsx` holds
+one instance per attempt outside render and chases a cache-busted URL on any attempt after the
+first. `ErrorBoundary` counts its retries and publishes the count; `ErrorCard` carries two sets
+of copy and two offers — *Reload* rather than *Export a backup* when the data is not the
+problem. All 41 routes, Home's coach card and the search sheet use `lazyRoute`, and the search
+sheet has a boundary for the first time.
+
+**Tests** `chunkError.test.ts` on the detector and the URL, including the negative half that
+matters most: a bad record must never read as a failed download, or M20's copy stops being true.
+`chunkBoundary.test.tsx` on which failure the card claims and whether the boundary counts at
+all. `lazyRoute.test.tsx` drives the factory by hand — a new instance per attempt, no re-import
+while the attempt holds, the first failure left untouched, and a later attempt really chasing
+the busted URL. Four source-scanning guards across `wired.test.ts`, `notFound.test.ts` and
+`drillCoaching.test.ts` needed their patterns updated, which is a fair consequence of changing
+43 declarations.
+
+**Mutations** 20 mutants, all killed, the no-op survived. Two survived the first pass, both in
+`lazyRoute` and both apparently unreachable from jsdom — holding one instance for ever, and
+busting the URL on the first attempt. Neither was actually unreachable: the factory is a plain
+function and takes a plain importer, so both are driven directly now. A third survivor —
+the retry giving up and rethrowing rather than asking again — needed the one observable jsdom
+has, which is that the second attempt fails against a URL the runner cannot resolve and so
+reports a different error.
+
+**A trap worth writing down.** A boundary publishes its retry count to everything beneath it,
+which is right — each boundary retries what it wraps — and it means a boundary between the
+provider and the route shadows the count. That cost two runs of `lazyRoute.test.tsx` before it
+was noticed, and the nesting is now commented where it matters.
+
+**Verified in a browser** at 430px and 1280px in both themes, with the service worker disabled
+and chunks blocked: a failed route is named as a download and not as bad data, the card says the
+logs are fine and offers a reload, *Try again* makes a real request and the page recovers
+**without a reload**, and a failed search sheet leaves the shell and the nav standing. The
+request counter in that harness read zero at first — its glob did not match the cache-busted
+URL — which is the third browser check this brainstorm has had to fix for measuring the wrong
+thing.
+
+**Budget** 135.36 → 136.15: **0.79KB, the first spend since M182**, and the price of the
+boundary carrying two sets of copy. **0.15KB of slack, the tightest this line has ever been.**
+Left there rather than raised here, because a ceiling moves in its own commit ahead of a
+milestone and never under pressure from the change that wants it — but the next milestone to
+touch a first-load file must raise it first, and that is now overdue rather than optional.
+5,627 tests pass.

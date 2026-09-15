@@ -1,13 +1,20 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { reportDbError } from '@/db/db';
 import { Route, Router, Switch, useLocation } from 'wouter';
 import { RouteBoundary } from '@/ui/ErrorBoundary';
+import { lazyRoute } from '@/ui/lazyRoute';
 import { useHashLocation } from 'wouter/use-hash-location';
 import { HomePage } from '@/features/home/HomePage';
 import { PlaceholderPage } from '@/features/placeholder/PlaceholderPage';
 import { TodayRedirect } from '@/features/log/TodayRedirect';
 /**
  * Every route is its own chunk but the three you cannot defer.
+ *
+ * `lazyRoute` rather than `lazy` since M187: React memoises a lazy factory's
+ * rejection, so a chunk that failed to arrive stayed failed and the error
+ * card's *Try again* fetched nothing. Measured — zero requests. The helper
+ * builds a new instance per retry, which is the only thing that makes the
+ * button mean anything.
  *
  * Home is where the app opens, `/today` is a launcher shortcut, and the
  * placeholder is a few lines. Everything else is a tap away at most, and
@@ -24,53 +31,176 @@ import { TodayRedirect } from '@/features/log/TodayRedirect';
  * twenty-five pages in an entry chunk sitting at 894.6 KiB against its own
  * 900 KiB budget, with 0.6% of headroom for the next feature (PLAN.md M40).
  */
-const AltimeterPage = lazy(() => import('@/features/altimeter/AltimeterPage').then((m) => ({ default: m.AltimeterPage })));
-const AssessmentsPage = lazy(() => import('@/features/assessments/AssessmentsPage').then((m) => ({ default: m.AssessmentsPage })));
-const BoardPage = lazy(() => import('@/features/challenges/BoardPage').then((m) => ({ default: m.BoardPage })));
-const BuilderList = lazy(() => import('@/features/builder/BuilderList').then((m) => ({ default: m.BuilderList })));
-const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage').then((m) => ({ default: m.CalendarPage })));
-const WeekPage = lazy(() => import('@/features/week/WeekPage').then((m) => ({ default: m.WeekPage })));
-const CareerPage = lazy(() => import('@/features/career/CareerPage').then((m) => ({ default: m.CareerPage })));
-const AchievementsPage = lazy(() => import('@/features/climber/AchievementsPage').then((m) => ({ default: m.AchievementsPage })));
-const BodyPage = lazy(() => import('@/features/body/BodyPage').then((m) => ({ default: m.BodyPage })));
-const CoachPage = lazy(() => import('@/features/coach/CoachPage').then((m) => ({ default: m.CoachPage })));
-const FinderPage = lazy(() => import('@/features/finder/FinderPage').then((m) => ({ default: m.FinderPage })));
-const FinishPage = lazy(() => import('@/features/finish/FinishPage').then((m) => ({ default: m.FinishPage })));
-const DataPage = lazy(() => import('@/features/data/DataPage').then((m) => ({ default: m.DataPage })));
-const PrivacyPage = lazy(() => import('@/features/privacy/PrivacyPage').then((m) => ({ default: m.PrivacyPage })));
-const InjuryPage = lazy(() => import('@/features/injury/InjuryPage').then((m) => ({ default: m.InjuryPage })));
-const JournalPage = lazy(() => import('@/features/journal/JournalPage').then((m) => ({ default: m.JournalPage })));
-const MetricDetailPage = lazy(() => import('@/features/assessments/MetricDetailPage').then((m) => ({ default: m.MetricDetailPage })));
-const ObjectiveDetailPage = lazy(() => import('@/features/objectives/ObjectiveDetailPage').then((m) => ({ default: m.ObjectiveDetailPage })));
-const ObjectivesPage = lazy(() => import('@/features/objectives/ObjectivesPage').then((m) => ({ default: m.ObjectivesPage })));
-const ProgramDetailPage = lazy(() => import('@/features/train/ProgramDetailPage').then((m) => ({ default: m.ProgramDetailPage })));
-const ProgressPage = lazy(() => import('@/features/progress/ProgressPage').then((m) => ({ default: m.ProgressPage })));
-const ProjectDetailPage = lazy(() => import('@/features/projects/ProjectDetailPage').then((m) => ({ default: m.ProjectDetailPage })));
-const ProjectsPage = lazy(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.ProjectsPage })));
-const ReviewPage = lazy(() => import('@/features/review/ReviewPage').then((m) => ({ default: m.ReviewPage })));
-const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
-const SkillsPage = lazy(() => import('@/features/skills/SkillsPage').then((m) => ({ default: m.SkillsPage })));
-const StartProgramPage = lazy(() => import('@/features/plan/StartProgramPage').then((m) => ({ default: m.StartProgramPage })));
-const TrainPage = lazy(() => import('@/features/train/TrainPage').then((m) => ({ default: m.TrainPage })));
-const YearPage = lazy(() => import('@/features/career/YearPage').then((m) => ({ default: m.YearPage })));
-const AscentPage = lazy(() => import('@/features/ascent/AscentPage').then((m) => ({ default: m.AscentPage })));
-const BuilderPage = lazy(() => import('@/features/builder/BuilderPage').then((m) => ({ default: m.BuilderPage })));
-const SessionEditorPage = lazy(() => import('@/features/builder/SessionEditorPage').then((m) => ({ default: m.SessionEditorPage })));
-const GuideList = lazy(() => import('@/features/guides/GuidePage').then((m) => ({ default: m.GuideList })));
-const GuidePage = lazy(() => import('@/features/guides/GuidePage').then((m) => ({ default: m.GuidePage })));
-const GamePage = lazy(() => import('@/features/game/GamePage').then((m) => ({ default: m.GamePage })));
-const GlossaryPage = lazy(() => import('@/features/glossary/GlossaryPage').then((m) => ({ default: m.GlossaryPage })));
-const DrillsPage = lazy(() => import('@/features/drills/DrillsPage').then((m) => ({ default: m.DrillsPage })));
-const DrillPage = lazy(() => import('@/features/drills/DrillPage').then((m) => ({ default: m.DrillPage })));
-const WelcomePage = lazy(() => import('@/features/onboarding/WelcomePage').then((m) => ({ default: m.WelcomePage })));
+const AltimeterPage = lazyRoute(
+  () => import('@/features/altimeter/AltimeterPage'),
+  (m) => m.AltimeterPage,
+);
+const AssessmentsPage = lazyRoute(
+  () => import('@/features/assessments/AssessmentsPage'),
+  (m) => m.AssessmentsPage,
+);
+const BoardPage = lazyRoute(
+  () => import('@/features/challenges/BoardPage'),
+  (m) => m.BoardPage,
+);
+const BuilderList = lazyRoute(
+  () => import('@/features/builder/BuilderList'),
+  (m) => m.BuilderList,
+);
+const CalendarPage = lazyRoute(
+  () => import('@/features/calendar/CalendarPage'),
+  (m) => m.CalendarPage,
+);
+const WeekPage = lazyRoute(
+  () => import('@/features/week/WeekPage'),
+  (m) => m.WeekPage,
+);
+const CareerPage = lazyRoute(
+  () => import('@/features/career/CareerPage'),
+  (m) => m.CareerPage,
+);
+const AchievementsPage = lazyRoute(
+  () => import('@/features/climber/AchievementsPage'),
+  (m) => m.AchievementsPage,
+);
+const BodyPage = lazyRoute(
+  () => import('@/features/body/BodyPage'),
+  (m) => m.BodyPage,
+);
+const CoachPage = lazyRoute(
+  () => import('@/features/coach/CoachPage'),
+  (m) => m.CoachPage,
+);
+const FinderPage = lazyRoute(
+  () => import('@/features/finder/FinderPage'),
+  (m) => m.FinderPage,
+);
+const FinishPage = lazyRoute(
+  () => import('@/features/finish/FinishPage'),
+  (m) => m.FinishPage,
+);
+const DataPage = lazyRoute(
+  () => import('@/features/data/DataPage'),
+  (m) => m.DataPage,
+);
+const PrivacyPage = lazyRoute(
+  () => import('@/features/privacy/PrivacyPage'),
+  (m) => m.PrivacyPage,
+);
+const InjuryPage = lazyRoute(
+  () => import('@/features/injury/InjuryPage'),
+  (m) => m.InjuryPage,
+);
+const JournalPage = lazyRoute(
+  () => import('@/features/journal/JournalPage'),
+  (m) => m.JournalPage,
+);
+const MetricDetailPage = lazyRoute(
+  () => import('@/features/assessments/MetricDetailPage'),
+  (m) => m.MetricDetailPage,
+);
+const ObjectiveDetailPage = lazyRoute(
+  () => import('@/features/objectives/ObjectiveDetailPage'),
+  (m) => m.ObjectiveDetailPage,
+);
+const ObjectivesPage = lazyRoute(
+  () => import('@/features/objectives/ObjectivesPage'),
+  (m) => m.ObjectivesPage,
+);
+const ProgramDetailPage = lazyRoute(
+  () => import('@/features/train/ProgramDetailPage'),
+  (m) => m.ProgramDetailPage,
+);
+const ProgressPage = lazyRoute(
+  () => import('@/features/progress/ProgressPage'),
+  (m) => m.ProgressPage,
+);
+const ProjectDetailPage = lazyRoute(
+  () => import('@/features/projects/ProjectDetailPage'),
+  (m) => m.ProjectDetailPage,
+);
+const ProjectsPage = lazyRoute(
+  () => import('@/features/projects/ProjectsPage'),
+  (m) => m.ProjectsPage,
+);
+const ReviewPage = lazyRoute(
+  () => import('@/features/review/ReviewPage'),
+  (m) => m.ReviewPage,
+);
+const SettingsPage = lazyRoute(
+  () => import('@/features/settings/SettingsPage'),
+  (m) => m.SettingsPage,
+);
+const SkillsPage = lazyRoute(
+  () => import('@/features/skills/SkillsPage'),
+  (m) => m.SkillsPage,
+);
+const StartProgramPage = lazyRoute(
+  () => import('@/features/plan/StartProgramPage'),
+  (m) => m.StartProgramPage,
+);
+const TrainPage = lazyRoute(
+  () => import('@/features/train/TrainPage'),
+  (m) => m.TrainPage,
+);
+const YearPage = lazyRoute(
+  () => import('@/features/career/YearPage'),
+  (m) => m.YearPage,
+);
+const AscentPage = lazyRoute(
+  () => import('@/features/ascent/AscentPage'),
+  (m) => m.AscentPage,
+);
+const BuilderPage = lazyRoute(
+  () => import('@/features/builder/BuilderPage'),
+  (m) => m.BuilderPage,
+);
+const SessionEditorPage = lazyRoute(
+  () => import('@/features/builder/SessionEditorPage'),
+  (m) => m.SessionEditorPage,
+);
+const GuideList = lazyRoute(
+  () => import('@/features/guides/GuidePage'),
+  (m) => m.GuideList,
+);
+const GuidePage = lazyRoute(
+  () => import('@/features/guides/GuidePage'),
+  (m) => m.GuidePage,
+);
+const GamePage = lazyRoute(
+  () => import('@/features/game/GamePage'),
+  (m) => m.GamePage,
+);
+const GlossaryPage = lazyRoute(
+  () => import('@/features/glossary/GlossaryPage'),
+  (m) => m.GlossaryPage,
+);
+const DrillsPage = lazyRoute(
+  () => import('@/features/drills/DrillsPage'),
+  (m) => m.DrillsPage,
+);
+const DrillPage = lazyRoute(
+  () => import('@/features/drills/DrillPage'),
+  (m) => m.DrillPage,
+);
+const WelcomePage = lazyRoute(
+  () => import('@/features/onboarding/WelcomePage'),
+  (m) => m.WelcomePage,
+);
 /** The logger, and by a distance the largest route. Lazy, and lazy for
  *  real again since M124: from M117 to M123 Home imported its body
  *  statically, so the whole editor sat in the entry chunk and this
  *  `lazy()` bought a wrapper and nothing else. Home shows the pre-session
  *  card now and the editor is behind the tap — the split M115 measured,
  *  with M117's finding honoured, since the *button* is still eager. */
-const LogPage = lazy(() => import('@/features/log/LogPage').then((m) => ({ default: m.LogPage })));
-const AttachPage = lazy(() => import('@/features/media/AttachPage').then((m) => ({ default: m.AttachPage })));
+const LogPage = lazyRoute(
+  () => import('@/features/log/LogPage'),
+  (m) => m.LogPage,
+);
+const AttachPage = lazyRoute(
+  () => import('@/features/media/AttachPage'),
+  (m) => m.AttachPage,
+);
 
 import { sweepOrphanMedia } from '@/db/media';
 import { hydrateAll } from '@/store';

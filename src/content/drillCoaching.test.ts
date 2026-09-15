@@ -137,14 +137,15 @@ describe('the coaching stays off the boot path', () => {
   });
 
   it('reaches the page through the lazy route only', () => {
-    // `DrillPage` is `lazy()` in App.tsx, so a static import here lands in
-    // its chunk. That is the arrangement; if the route ever stops being
-    // lazy, this is the test that has to be read again.
+    // `DrillPage` is a lazy route in App.tsx, so a static import here lands
+    // in its chunk. That is the arrangement; if the route ever stops being
+    // lazy, this is the test that has to be read again. `lazyRoute` since
+    // M187 — a bare `lazy` cannot retry a chunk that failed to arrive.
     expect(readFileSync('src/features/drills/DrillPage.tsx', 'utf8')).toMatch(
       /^import \{ drillCoaching \} from '@\/content\/drillCoaching';$/m,
     );
     expect(readFileSync('src/App.tsx', 'utf8')).toMatch(
-      /const DrillPage = lazy\(\(\) => import\('@\/features\/drills\/DrillPage'\)/,
+      /const DrillPage = lazyRoute\(\s*\(\) => import\('@\/features\/drills\/DrillPage'\)/,
     );
   });
 

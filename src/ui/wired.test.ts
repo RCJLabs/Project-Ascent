@@ -444,7 +444,7 @@ export function firstLoadClosure(
 /**
  * Every page the router defers, read from the router (PLAN.md M184).
  *
- * The list is `App.tsx`'s own `lazy(() => import('…'))` calls rather than a
+ * The list is `App.tsx`'s own `lazyRoute(() => import('…'))` calls rather than a
  * roll of forty-one filenames, because a hand list of routes is a list that
  * goes stale on the next page and says nothing about the one that was added.
  */
@@ -455,7 +455,7 @@ export function lazyRoutePages(
   const known = new Set(sources.map((f) => f.path));
   const source = sources.find((f) => f.path === app)?.source ?? '';
   const out = new Set<string>();
-  for (const m of source.matchAll(/lazy\(\(\) =>\s*import\('([^']+)'\)/g)) {
+  for (const m of source.matchAll(/lazyRoute\(\s*\(\) =>\s*import\('([^']+)'\)/g)) {
     const target = resolveSpec(known, app, m[1]!);
     if (target !== null) out.add(target);
   }
@@ -666,7 +666,7 @@ describe('nothing is on the first-paint path that does not have to be', () => {
     expect(home, 'the card is imported eagerly again').not.toMatch(
       /^import .*HomeCoachCard/m,
     );
-    expect(home).toMatch(/lazy\(\(\) =>\s*import\('@\/features\/coach\/HomeCoachCard'\)/);
+    expect(home).toMatch(/lazyRoute\(\s*\(\) => import\('@\/features\/coach\/HomeCoachCard'\)/);
     expect(home, 'a null fallback collapses the slot — PLAN.md M183').toMatch(
       /<Suspense[\s\S]{0,400}?fallback=\{[\s\S]{0,400}?<SkeletonCard/,
     );

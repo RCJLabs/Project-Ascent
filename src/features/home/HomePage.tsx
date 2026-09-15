@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, type ReactNode } from 'react';
+import { Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { CalendarDays, ClipboardList, Compass, ShieldAlert, Sparkles, Zap } from 'lucide-react';
 import type { Session } from '@/db/sessions';
@@ -20,6 +20,7 @@ import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageGrid } from '@/ui/PageGrid';
 import { SkeletonCard } from '@/ui/Skeleton';
+import { lazyRoute } from '@/ui/lazyRoute';
 
 /**
  * Home is the day, and the way into it (PLAN.md M124).
@@ -81,8 +82,9 @@ import { SkeletonCard } from '@/ui/Skeleton';
  * benchmark gain, the board had something to say every time — a climber
  * with nothing at all to be told is the rare case, not the common one.
  */
-const HomeCoachCard = lazy(() =>
-  import('@/features/coach/HomeCoachCard').then((m) => ({ default: m.HomeCoachCard })),
+const HomeCoachCard = lazyRoute(
+  () => import('@/features/coach/HomeCoachCard'),
+  (m) => m.HomeCoachCard,
 );
 
 export function HomePage() {

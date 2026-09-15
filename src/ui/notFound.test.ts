@@ -48,8 +48,12 @@ interface RoutedPage {
 
 function routedPages(): RoutedPage[] {
   const imports = new Map<string, string>();
-  // Lazy: `const X = lazy(() => import('@/features/…'))`.
-  for (const m of APP.matchAll(/const (\w+) = lazy\(\(\) => import\('@\/(features\/[^']+)'/g)) {
+  // Lazy: `const X = lazyRoute(() => import('@/features/…'), …)`. The helper
+  // replaced a bare `lazy` at M187 so a failed chunk can be asked for again;
+  // the declaration now wraps, which is why the pattern allows whitespace.
+  for (const m of APP.matchAll(
+    /const (\w+) = lazyRoute\(\s*\(\) => import\('@\/(features\/[^']+)'/g,
+  )) {
     imports.set(m[1]!, `src/${m[2]}.tsx`);
   }
   // Static: `import { X, Y } from '@/features/…'`. Reading only the first

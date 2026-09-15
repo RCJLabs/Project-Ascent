@@ -1,7 +1,9 @@
-import { Suspense, lazy, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { CalendarDays, Dumbbell, Gamepad2, Mountain, Search, Settings, TrendingUp } from 'lucide-react';
 import { Announcer } from './Announce';
+import { ErrorBoundary } from './ErrorBoundary';
+import { lazyRoute } from './lazyRoute';
 import { IconButton } from './IconButton';
 import { LiveBar, useLiveBanner } from './LiveBar';
 import { DemoBanner } from './DemoBanner';
@@ -38,8 +40,9 @@ const TABS = [
  * measurement was 13.99KB for the glossary alone — and none of it is
  * needed until someone searches.
  */
-const SearchSheet = lazy(() =>
-  import('@/features/search/SearchSheet').then((m) => ({ default: m.SearchSheet })),
+const SearchSheet = lazyRoute(
+  () => import('@/features/search/SearchSheet'),
+  (m) => m.SearchSheet,
 );
 
 function isActive(href: string, location: string): boolean {
@@ -268,9 +271,20 @@ export function AppShell({ children }: { children: ReactNode }) {
       </main>
 
       {searching && (
-        <Suspense fallback={null}>
-          <SearchSheet onClose={() => setSearching(false)} />
-        </Suspense>
+        /**
+         * Inside a boundary, because it is outside the route one (PLAN.md
+         * M187). This sheet is a sibling of `<main>` and `RouteBoundary`
+         * lives inside it, so nothing above this caught anything — and the
+         * sheet is a chunk, so it can fail to arrive. Measured, with the
+         * search chunk blocked: the whole app went to a **white screen**, no
+         * nav and no way back, which is the failure M20 was written to make
+         * impossible.
+         */
+        <ErrorBoundary label="Search">
+          <Suspense fallback={null}>
+            <SearchSheet onClose={() => setSearching(false)} />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </div>
   );
