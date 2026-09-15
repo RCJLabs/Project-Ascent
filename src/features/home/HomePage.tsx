@@ -1,8 +1,9 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { CalendarDays, ClipboardList, Compass, MessageSquare, ShieldAlert, Sparkles, Zap } from 'lucide-react';
 import type { Session } from '@/db/sessions';
 import { today } from '@/engine/dates';
+import { loadsFingersDirectly } from '@/engine/fingerGap';
 import { gymSummary } from '@/engine/gym';
 import { useTips } from '@/features/coach/useTips';
 import { DayHeading } from '@/features/log/DayHeading';
@@ -14,7 +15,7 @@ import { describeWeekDays, nextLimitDay } from '@/engine/week';
 import { fromKey } from '@/engine/dates';
 import type { Program } from '@/content/types';
 import { useProfile } from '@/store/profile';
-import { useSessions } from '@/store/sessions';
+import { allSessions, useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -199,9 +200,19 @@ function OpenSessionCard({ date, sessions }: { date: string; sessions: Session[]
  *
  * Three, each with its own reason to stop showing:
  *
- * - **Before you train** — the safety note, until "Got it". Not gated on
- *   the program: the note was only ever on the welcome screen, and a
- *   climber who restored a backup, or who skips the setup, never saw it.
+ * - **Before you train** — the safety note, until "Got it" **against the
+ *   training it is about** (PLAN.md M181). Not gated on the program: the
+ *   note was only ever on the welcome screen, and a climber who restored a
+ *   backup, or who skips the setup, never saw it.
+ *
+ *   The other two stop for a reason — `onboardedAt`, a running block — and
+ *   this one stopped for no reason at all: it showed until "Got it" and then
+ *   never again, for the life of the install. That is the wrong shape for
+ *   the one card about hurting yourself, because most of what it warns about
+ *   is hangboarding and campusing, which a climber may not touch for months.
+ *   So the dismissal names the fact: waved away before any finger-loading
+ *   session is in the log, it comes back once there is one. Waved away after,
+ *   it stays away — the warning has been read against the thing it is about.
  * - **Set up your climber** — the guided setup, until it has been
  *   finished (or skipped from inside it, which stamps `onboardedAt` the
  *   same way) or waved away here.
@@ -218,10 +229,27 @@ function FirstRunCards() {
   const dismissed = useProfile((s) => s.dismissedCards);
   const onboardedAt = useProfile((s) => s.onboardedAt);
   const dismissCard = useProfile((s) => s.dismissCard);
+  const byDate = useSessions((s) => s.byDate);
+  /**
+   * The fact the safety card is dismissed against, folded into the stored id
+   * rather than added beside it (PLAN.md M181).
+   *
+   * A tip carries `id` and `signature` separately because `visibleTips` has
+   * to match them; a card is a string in a list, and turning that list into
+   * a map would mean a store shape change, a migration, and a backup format
+   * that has to read both — risk out of all proportion to one card. The id
+   * *is* the signature here, and a dismissal recorded under the old plain
+   * `'safety'` matches neither key, so the note is shown once more and then
+   * settles against whichever half is true.
+   */
+  const fingerPhase = useMemo(
+    () => (allSessions(byDate).some(loadsFingersDirectly) ? 'loading' : 'before'),
+    [byDate],
+  );
   const gone = (id: string) => dismissed.includes(id);
   return (
     <PageGrid className="mt-3">
-      {!gone('safety') && (
+      {!gone(`safety:${fingerPhase}`) && (
         <FirstRunCard icon={<ShieldAlert size={15} className="text-warn" />} title="Before you train">
           <p className="text-sm leading-relaxed">
             This app is training software, not a coach or a clinician. Hangboarding and campusing
@@ -229,7 +257,7 @@ function FirstRunCards() {
             see a physio for anything that persists. You are responsible for what you climb.
           </p>
           <div className="flex gap-2 mt-3">
-            <Button size="sm" variant="outline" onClick={() => dismissCard('safety')}>
+            <Button size="sm" variant="outline" onClick={() => dismissCard(`safety:${fingerPhase}`)}>
               Got it
             </Button>
           </div>

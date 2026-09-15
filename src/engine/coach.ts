@@ -117,6 +117,18 @@ export const OUTDOOR_GAP_DAYS = 21;
 /** Days between backups before the offline story needs saying out loud. */
 export const BACKUP_INTERVAL_DAYS = 30;
 
+/**
+ * Sessions before a waved-away nag comes back (PLAN.md M175, M182).
+ *
+ * A dismissal is against a fact and a fact has to be able to change. Neither
+ * of these two rules has a number that grows on its own — a domain gap is
+ * binary and a backup that was never taken stays never — so the fact both
+ * borrow is the log itself: roughly a month of training, after which the
+ * silence has outlived what it was agreed to.
+ */
+export const DOMAIN_RETURN = 10;
+export const BACKUP_RETURN = 10;
+
 /** Below this ACWR the body is losing what it built, deload aside. */
 export const DETRAINING_ACWR = 0.8;
 
@@ -822,7 +834,20 @@ function missingDomains(input: CoachInput): Tip[] {
     .slice(0, 1)
     .map((d) => ({
       id: d.id,
-      signature: 'missing',
+      // The fact, rather than the word "missing" (PLAN.md M175).
+      //
+      // Every other rule in this file signs itself with what raised it, and
+      // `visibleTips` hides a tip while `dismissed[id] === signature` — so a
+      // constant signature is a dismissal that can never expire. These five
+      // are the rules aimed at a climber's habits, gated at eight to
+      // twenty-five sessions, and they each had exactly one chance to be
+      // read.
+      //
+      // What changes is not the gap, which is binary, but the history that
+      // makes it worth saying: *still no rest days after forty sessions* is a
+      // stronger sentence than after ten. So it returns every
+      // `DOMAIN_RETURN` sessions, which is roughly a month of training.
+      signature: `${Math.floor(state.completedSessions / DOMAIN_RETURN)}`,
       tone: 'neutral' as const,
       weight: 45,
       headline: d.headline,
@@ -855,10 +880,22 @@ function backupNudge({ state, lastExportAt }: CoachInput, today: string): Tip | 
   if (days !== null && days < BACKUP_INTERVAL_DAYS) return null;
   return {
     id: 'backup',
-    signature: lastExportAt ?? 'never',
+    // What is at risk, not only when it was last banked (PLAN.md M182).
+    //
+    // `lastExportAt ?? 'never'` alone re-armed on the **action being asked
+    // for**: dismiss it before you have ever exported and the signature
+    // stays `'never'` for as long as you never export, which is precisely
+    // the climber it is written for. One tap in month one silenced it
+    // through a decade of logging, on the one rule whose subject is total
+    // loss. The session count is the fact that actually grows, so the
+    // dismissal lasts a month of training rather than for ever.
+    signature: `${lastExportAt ?? 'never'}:${Math.floor(state.completedSessions / BACKUP_RETURN)}`,
     tone: 'caution',
     weight: 35,
-    headline: days === null ? 'You have never exported a backup' : `${days} days since your last backup`,
+    headline:
+      days === null
+        ? `${state.completedSessions} sessions logged and never exported`
+        : `${days} days since your last backup`,
     body: 'Everything lives on this device and nowhere else. A cleared browser, a lost phone or a reinstalled app takes the lot with it, and there is no account to restore from. The export is one tap and one file.',
     action: { label: 'Export now', href: '/settings' },
   };

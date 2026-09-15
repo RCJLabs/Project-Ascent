@@ -8507,7 +8507,7 @@ two large, three medium, five small.*
   early, when a baseline is still worth having a before for.
   *Small.*
 
-- **M175 — a domain gap waved away is waved away for ever.**
+- **M175 — a domain gap waved away is waved away for ever.** *Done with M181 and M182 — see the entry at the end of this document. One mistake, three places.*
   **Every other rule's signature encodes the fact that raised it. This one is a string literal.**
   `missingDomains` (`coach.ts:653`) sets `signature: 'missing'` for all five domains, where
   `late-sessions` uses `${late}`, `stale-benchmarks` uses `${due.length}`, and `load-spike` uses the
@@ -8614,7 +8614,7 @@ two large, three medium, five small.*
   *Small, and the only unambiguous defect in this list.*
 
 - **M181 — the safety card can be dismissed for the life of the install, and nothing brings it
-  back.**
+  back.** *Done with M175 and M182 — see the entry at the end of this document. It got a fact rather than a restore button.*
   **Three Home cards are permanently dismissible** — `dismissCard('safety')`, `('setup')` and
   `('programs')` at `HomePage.tsx:232`, `:249`, `:269`. `profile.ts:119` states the design
   deliberately: these are *"a one-way 'I have seen this' … and nothing brings them back short of
@@ -8629,7 +8629,7 @@ two large, three medium, five small.*
   injury, a first hangboard session, a first maximal test — and letting it behave like a tip.
   *Small.*
 
-- **M182 — the backup nudge re-arms only on the thing it is nagging you to do.**
+- **M182 — the backup nudge re-arms only on the thing it is nagging you to do.** *Done with M175 and M181 — see the entry at the end of this document.*
   **`backupNudge` (`coach.ts`) signs itself `lastExportAt ?? 'never'`.** Dismiss it before you have
   ever exported and the signature stays `'never'` for as long as you never export — which is
   precisely the climber it is for. `BACKUP_INTERVAL_DAYS = 30` (`coach.ts:118`) re-fires the rule,
@@ -10177,3 +10177,72 @@ preceded this was committed and pushed **on a red suite**: the command chained
 `git commit` after a `grep` for failures, and grep succeeds when it finds
 them. The suite output was there to read and the exit code was never checked.
 Five mutants: four killed, sanity survived. 5,453 tests pass.
+
+### M175 + M181 + M182 — a dismissal is against a fact ✅
+
+*Taken together, on the precedent M155 and M156 set: they are one mistake seen
+from three angles, and the fix for one is most of the fix for the others.*
+
+**The mechanism is already right and three places did not use it.**
+`visibleTips` hides a tip while `dismissed[id] === signature`, so the signature
+*is* the expiry — name what raised the tip and the dismissal lasts exactly as
+long as that thing does. Twenty-four rules do that. These three did not:
+
+- **`missingDomains`** signed all five habit gaps `'missing'` — a word, not a
+  fact. *No rest days logged, ever* waved away in month one never came back,
+  and those five rules are the ones written for a climber who has been at it
+  long enough to have a pattern.
+- **`backupNudge`** signed itself `lastExportAt ?? 'never'`, which re-arms on
+  the **action it is asking for**: dismiss it before the first export and it
+  stays dismissed for as long as there is no export — on the one rule whose
+  subject is losing everything.
+- **the safety card** had no fact at all. The other two first-run cards stop
+  for a reason (`onboardedAt`, a running block); this one showed until *Got
+  it* and then never again, for the life of the install.
+
+**What each now signs itself with.** A domain gap is binary, so what grows is
+the log that makes it worth saying — *still no rest days after forty sessions*
+is a stronger sentence than after ten — and it returns every `DOMAIN_RETURN`
+sessions, roughly a month of training. The backup nudge borrows the same fact,
+because what actually grows there is **what would be lost**; its headline says
+so now (*"31 sessions logged and never exported"*), and the export still quiets
+it for the interval, so the fix does not turn a nag into a metronome.
+
+**The safety card got a fact rather than a restore button**, which the proposal
+offered as the smaller option. Most of what the note warns about is
+hangboarding and campusing, which a climber may not touch for months — so the
+dismissal names whether the log holds any finger-loading session yet. Waved
+away before, it comes back the first time one appears; waved away beside it, it
+stays away, because the warning has been read against the thing it is about.
+`loadsFingersDirectly` already existed for M160's finger-gap rule.
+
+**And the store shape did not change, deliberately.** A tip carries `id` and
+`signature` separately because `visibleTips` matches them; a card is a string
+in a list. Turning that list into a map meant a migration and a backup format
+that reads both — risk out of proportion to one card, and M180 had just shown
+where import paths leak. The id *is* the signature here: `safety:before`,
+`safety:loading`. A dismissal stored under the old plain `'safety'` matches
+neither, so the note shows once more and then settles.
+
+**A guard against a fourth instance.** `engine/dismissal.test.ts` sweeps
+`coach.ts` for literal signatures and holds the set to the two that are
+themselves facts — `'none'`, which expires with the first logged session, and
+`'caution'`, which expires when the ratio leaves the zone. The distinction is
+the whole milestone: both name **a state the climber is in and will leave**,
+where `'missing'` named the word *yes*. The spike rule's danger branches read
+as literals and are not — they are a ternary on the ratio, which is the shape a
+signature should have.
+
+**What the battery moved.** Eleven mutants, ten of them real and all ten
+killed; one expectation was mine to correct rather than the code's — dropping
+`lastExportAt` from the backup signature *should* die, because a dismissal must
+not survive an actual export.
+
+**And the browser check found a fault in itself twice**, which is worth the
+line: the first run failed on a timeout that was really a case mismatch —
+`FirstRunCard` titles are CSS-uppercased, so `innerText` reads *BEFORE YOU
+TRAIN* — while the jsdom test passed all along, because an accessible name is
+not transformed by `text-transform`. The third recurrence of that trap this
+brainstorm.
+
+**Budget** 163.04 → 163.01, down 0.03KB. 5,469 tests pass.

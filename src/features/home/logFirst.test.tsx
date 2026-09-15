@@ -143,7 +143,10 @@ describe('not now', () => {
     // is what the click changed, the database is what survives the tab.
     await waitFor(async () => {
       await hydrate();
-      expect(useProfile.getState().dismissedCards).toEqual(['safety', 'setup']);
+      // `safety:before` rather than `safety` (PLAN.md M181): the note is
+      // waved away against the training it is about, so a climber who has
+      // never loaded a finger sees it once more when they first do.
+      expect(useProfile.getState().dismissedCards).toEqual(['safety:before', 'setup']);
     });
     renderAt('/', <HomePage />);
     await screen.findByRole('button', { name: /Log a session/ });

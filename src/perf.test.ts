@@ -683,6 +683,14 @@ describe('the bundle stays small', () => {
     // because the calendar is lazy too. M137 is the one that buys this
     // back, and more.
     //
+    // **Unchanged at M175+M181+M182**, measured 163.04 → 163.01: **down**
+    // 0.03KB, which is rounding rather than a saving. Three signatures and a
+    // dismissal key are arithmetic, not prose; `coach.ts`'s one new headline
+    // is shorter than the sentence it replaced. `HomePage` gained a `useMemo`
+    // and an import of `loadsFingersDirectly`, which `coach.ts` already put
+    // on the boot path for M160's finger-gap rule — so the module was there
+    // and only the call is new. 0.99KB of slack.
+    //
     // **163.3 → 164.0, raised rather than spent** — the fifth entry here to
     // record no feature, and for the same reason as the first four. M179 left
     // the measurement at 163.04, which is 0.26KB: above the 0.21 that

@@ -15,6 +15,7 @@ import {
   OUTDOOR_GAP_DAYS,
   buildTips,
   visibleTips,
+  BACKUP_RETURN,
   type CoachInput,
 } from './coach';
 
@@ -333,10 +334,33 @@ describe('backups', () => {
     expect(ids(tips({ sessions: steady(1) }))).not.toContain('backup');
   });
 
-  it('says so when there has never been one', () => {
-    const tip = tips({ sessions: steady(10) }).find((t) => t.id === 'backup');
+  /**
+   * And says how much is at stake, which is also what the dismissal is
+   * against now (PLAN.md M182). `'never'` alone re-armed on the export the
+   * tip is asking for, so waving it away before the first backup silenced
+   * the app's only warning about total loss for as long as the climber
+   * never made one.
+   */
+  it('says so when there has never been one, and how much there is', () => {
+    // Counted off the fixture rather than written out: `steady(10)` is ten
+    // *weeks*, which is thirty-one sessions, and a literal here would have
+    // pinned the helper's arithmetic instead of the headline's.
+    const log = steady(10);
+    const done = log.filter((session) => session.completed).length;
+    expect(done).toBeGreaterThan(10);
+    const tip = tips({ sessions: log }).find((t) => t.id === 'backup');
     expect(tip?.headline).toContain('never exported');
-    expect(tip?.signature).toBe('never');
+    expect(tip?.headline).toContain(`${done} sessions`);
+    expect(tip?.signature).toBe(`never:${Math.floor(done / BACKUP_RETURN)}`);
+  });
+
+  /** The dismissal outlives a month of training and no more. */
+  it('comes back once the log has grown past the wave-away', () => {
+    const waved = tips({ sessions: steady(10) }).find((t) => t.id === 'backup')!;
+    const later = tips({ sessions: steady(16) }).find((t) => t.id === 'backup')!;
+    expect(later.signature, 'the log did not grow past a return').not.toBe(waved.signature);
+    expect(visibleTips([later], { backup: waved.signature }).map((t) => t.id)).toEqual(['backup']);
+    expect(visibleTips([waved], { backup: waved.signature })).toEqual([]);
   });
 
   it('goes quiet after a recent export and returns after the interval', () => {
