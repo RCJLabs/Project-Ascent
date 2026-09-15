@@ -27,10 +27,14 @@ async function trained(): Promise<void> {
   resetDbForTests();
   await reset();
   await loadPrograms();
-  for (let d = 90; d >= 0; d -= 1) {
+  // Every other day rather than named weekdays (PLAN.md M179b). A filter on
+  // Mondays, Wednesdays and Fridays inside a window ending *today* puts a
+  // different number of sessions in the fixture depending on which weekday
+  // today is — which took the suite red on the day it rolled over to a
+  // Tuesday. These screens read the clock through their stores, so the
+  // anchor stays relative and the stride is what makes it deterministic.
+  for (let d = 90; d >= 0; d -= 2) {
     const date = addDays(DAY, -d);
-    const dow = new Date(`${date}T00:00:00Z`).getUTCDay();
-    if (![1, 3, 5].includes(dow)) continue;
     const session: Session = {
       ...newSession(date, 0),
       completed: true,

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { loadPrograms } from '@/content/programs';
 import { resetDbForTests } from '@/db/db';
 import { putSession, type Session } from '@/db/sessions';
@@ -34,9 +34,14 @@ async function aWeekIn(scored = true): Promise<void> {
   resetDbForTests();
   await reset();
   await loadPrograms();
-  for (let d = 6; d >= 0; d -= 1) {
+  // Every other day rather than named weekdays (PLAN.md M179b). A filter on
+  // Mondays, Wednesdays and Fridays inside a window ending *today* puts a
+  // different number of sessions in the fixture depending on which weekday
+  // today is, and the suite changed shape at midnight. `useTips` reads the
+  // clock itself, so this cannot take a date — a fixed stride from today is
+  // deterministic instead, and the density is the same three a week.
+  for (const d of [6, 4, 2]) {
     const date = addDays(DAY, -d);
-    if (![1, 3, 5].includes(new Date(`${date}T00:00:00Z`).getUTCDay())) continue;
     await putSession({
       id: `${date}#0`,
       date,
@@ -109,11 +114,20 @@ describe("Coach's Corner, one week in", () => {
     expect(body()).toMatch(/None of what you have logged is counting yet/);
   });
 
-  /** And it is dismissible like any other card, against this week's fact. */
+  /**
+   * And it is dismissible like any other card, against this week's fact.
+   *
+   * Set aside through the button rather than by writing a signature into the
+   * store (PLAN.md M179b). The first version wrote `'history:0'`, which is
+   * the signature only for a fixture whose earliest scored day lands in the
+   * same week — so it pinned the rule's signature *format* and the fixture's
+   * arithmetic at once, and broke on a change to neither.
+   */
   it('can be set aside, and the board says so rather than going blank', async () => {
     await aWeekIn();
-    useProfile.setState({ dismissedTips: { 'cold-start': 'history:0' } });
     renderAt('/coach', <CoachPage />);
+    const aside = await screen.findByRole('button', { name: /^Set aside: \d+ more days? before/ });
+    fireEvent.click(aside);
     expect(await screen.findByText(/Bring back 1 set aside/)).toBeTruthy();
     expect(body()).not.toMatch(/which is the good outcome/);
   });

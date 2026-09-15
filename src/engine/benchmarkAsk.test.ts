@@ -6,7 +6,7 @@ import type { Session } from '@/db/sessions';
 import { buildTips, type Tip } from './coach';
 import { STALE_DAYS } from './assessments';
 import { deriveClimberState } from './derive';
-import { addDays, today } from './dates';
+import { addDays } from './dates';
 import { diagnose } from './plateau';
 
 /**
@@ -38,7 +38,23 @@ beforeAll(async () => {
   await loadPrograms();
 });
 
-const DAY = today();
+/**
+ * A fixed Monday, not `today()` (PLAN.md M179b).
+ *
+ * These fixtures lay sessions on Mondays, Wednesdays and Fridays inside a
+ * window ending on the anchor day — so the number of sessions in an 18-day
+ * window depends on **which weekday the anchor is**, and the suite quietly
+ * changed shape at midnight. It went red on a Tuesday: an 18-day window that
+ * held eight sessions on Monday holds seven, one short of the gate
+ * `domain:drills` opens at, and the guards written to refuse a vacuous pass
+ * did exactly that.
+ *
+ * Every rule these tests exercise takes its date as an argument, so the
+ * anchor can simply be a constant. The render tests alongside them cannot do
+ * this — `useTips` reads the clock itself — and they seed at fixed offsets
+ * from today instead, which is deterministic for the same reason.
+ */
+const DAY = '2026-03-02';
 
 function log(days: number): Session[] {
   const out: Session[] = [];

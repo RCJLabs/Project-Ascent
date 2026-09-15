@@ -34,9 +34,14 @@ async function onIronGrip(): Promise<void> {
   resetDbForTests();
   await reset();
   await loadPrograms();
-  for (let d = 29; d >= 0; d -= 1) {
+  // Every other day rather than named weekdays (PLAN.md M179b). A filter on
+  // Mondays, Wednesdays and Fridays inside a window ending *today* puts a
+  // different number of sessions in the fixture depending on which weekday
+  // today is, and the suite changed shape at midnight. `useTips` reads the
+  // clock itself, so this cannot take a date — a fixed stride from today is
+  // deterministic instead, and the density is the same three a week.
+  for (let d = 29; d >= 0; d -= 2) {
     const date = addDays(DAY, -d);
-    if (![1, 3, 5].includes(new Date(`${date}T00:00:00Z`).getUTCDay())) continue;
     await putSession({
       id: `${date}#0`,
       date,

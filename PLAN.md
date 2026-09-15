@@ -10134,3 +10134,46 @@ climb bar still reads.
 
 **Budget** 163.07 → 163.04, down 0.03KB: the sweeps are tests and weigh
 nothing, and the two deleted fields gave a little back. 5,448 tests pass.
+
+### M179b — the suite changed shape at midnight ✅
+
+**Not a milestone: a defect shipped three commits ago and caught by the
+calendar.** The date rolled from a Monday to a Tuesday and three tests went red
+on code that had not changed.
+
+**The fixtures, not the tests.** Six test files — all written in this
+brainstorm — laid their sessions on Mondays, Wednesdays and Fridays inside a
+window ending on `today()`. That is a realistic three-a-week pattern and a
+different **number of sessions** depending on which weekday today is: an
+eighteen-day window holding eight sessions on Monday holds seven on Tuesday,
+one short of the gate `domain:drills` opens at. The tests themselves behaved
+correctly — each carried a guard refusing a vacuous pass (*"the fixture lost
+its domain gap"*), and those guards are precisely what fired.
+
+**Two fixes, because two kinds of test are involved.** An engine test anchors
+to a constant Monday, since every rule it exercises takes its date as an
+argument. A screen test cannot — it goes through the stores and `useTips`,
+which read the clock themselves — so those seed at a fixed **stride** from
+today, every other day, which gives the same density with no dependence on the
+weekday. Four fixtures moved; two of them (`tripTip`, `loadCaveat`) were not
+failing today and were the same bomb on a different fuse.
+
+**One test was brittle for a second reason.** The cold-start card's dismissal
+test wrote the signature `'history:0'` straight into the store, pinning the
+rule's signature *format* and the fixture's arithmetic at once. It clicks the
+*Set aside* button now, which is both stabler and closer to what a climber
+does.
+
+**And the rule is held rather than remembered.** `src/deterministic.test.ts`
+sweeps every test file for the pair — a weekday read and an anchor on now —
+and finds none. Reading the weekday against a fixed date is fine and two files
+do it; it is the combination that bites. Its first run flagged the two files it
+had just fixed, because the note explaining why they no longer call `today()`
+says `today()` — so comments come off first, which is the same correction
+`ui/wired.test.ts` records for its own predicate.
+
+**Process, because this is the part worth keeping.** The budget raise that
+preceded this was committed and pushed **on a red suite**: the command chained
+`git commit` after a `grep` for failures, and grep succeeds when it finds
+them. The suite output was there to read and the exit code was never checked.
+Five mutants: four killed, sanity survived. 5,453 tests pass.

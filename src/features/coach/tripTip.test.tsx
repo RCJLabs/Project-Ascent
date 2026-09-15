@@ -44,11 +44,13 @@ const at = (date: string, rpe: number, min: number, i = 0): Session => ({
 function spikyLog(): Session[] {
   const out: Session[] = [];
   let i = 0;
-  for (let d = 90; d >= 8; d -= 1) {
-    const date = addDays(DAY_ONE, -d);
-    const dow = new Date(`${date}T00:00:00Z`).getUTCDay();
-    if (dow === 1 || dow === 3 || dow === 5) out.push(at(date, 7, 60, i++));
-  }
+  // Every other day rather than named weekdays (PLAN.md M179b). A filter on
+  // Mondays, Wednesdays and Fridays inside a window ending *today* puts a
+  // different number of sessions in the fixture depending on which weekday
+  // today is — which took the suite red on the day it rolled over to a
+  // Tuesday. These screens read the clock through their stores, so the
+  // anchor stays relative and the stride is what makes it deterministic.
+  for (let d = 90; d >= 8; d -= 2) out.push(at(addDays(DAY_ONE, -d), 7, 60, i++));
   out.push(at(addDays(DAY_ONE, -7), 5, 45, i++), at(addDays(DAY_ONE, -4), 5, 40, i++));
   for (const d of [0, 1, 3, 4]) out.push(at(addDays(DAY_ONE, d), 8, 300, i++));
   return out;
