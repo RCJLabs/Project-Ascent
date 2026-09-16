@@ -11822,7 +11822,11 @@ content — `SearchBody` feeds it `allSessions` and reads `session.notes`.*
   of this document. The journal is full; the objectives half was **reverted** after it put a real
   intermittent failure into the demo tests that I could not localise, measured at 3 runs in 18
   against 0 in 20 at HEAD. Everything learned about it is in the entry, including why the obvious
-  fixes made it worse.* `DemoClimber` carries sessions, projects,
+  fixes made it worse.* **Finished at M220's tail — see the second M207 entry at the end of this
+  document. The flake was the test itself: it waited on `activeProgramId`, which `startProgram` sets
+  several awaits before `startDemo` returns, so it resumed mid-load and clicked a Clear button that
+  was still `disabled`. Reverting that one line reproduces it at 2 runs in 12, against the 3 in 18
+  originally measured.** `DemoClimber` carries sessions, projects,
   metrics, injuries and a program; it carries **no journal entries and no objectives**, so Journal
   and Objectives are bare after loading it. Settings sells that button as filling the app *"so
   every screen has something to show — for a look around, a screenshot or a video"*, which is
@@ -13170,3 +13174,62 @@ errors.
 
 **Budget** 136.95 → **137.02**, which is the queue itself — it is store-layer code and belongs on
 the boot path. **5,952 tests pass, up from 5,944.**
+
+## M207, finished — the objectives half, and the flake was the test
+
+**The flake was not the write race, and it was not about objectives.** M220 found a real defect on
+the way here — twenty-four fire-and-forget writes and a read that overtook them — and fixing it is
+worth doing on its own merits, but it is not what made this test red. **The test waited on
+`activeProgramId`.** `startProgram` sets that field synchronously, several awaits before `startDemo`
+returns, so the test resumed *mid-load* and clicked a "Clear the sample data" button that was still
+`disabled`. The click went nowhere, and the failure read as *"the cleared message never appeared"* —
+which is exactly the symptom M207 recorded and could not place.
+
+Measured, not argued: reverting that one line and running the file twelve times fails **2 of 12**,
+against the **3 of 18** M207 measured. The same rate, from the same cause. Waiting on the message
+instead — the operation, rather than an intermediate it sets on the way — is **25 of 25**.
+
+**Adding the objectives is what made it findable.** Two more awaited writes in `startDemo` widened
+the window from one-run-in-six to every run, and a deterministic failure is a diagnosable one. The
+four hypotheses M207 measured were all about the feature; none of them was about what the test was
+synchronising on.
+
+### What the climber is training for
+
+Two objectives, covering both shapes the page draws. **Brad Pit** — the V6 they are already on,
+tied to the project by id so the two screens agree, no `season` because it sits inside the runway
+where `peak.ts` answers the timing better. And **a week in Font**, a trip with the blocks named
+before it, where every date falls backwards out of the target.
+
+**Both are tuned against this climber's own log rather than guessed at**, and the battery is what
+forced that. The first pyramid requirement read **56 of 8** on screen — a bar already cleared seven
+times over, which is worse than no bar — and left two of three ticked. It is one met and two open
+now: the base is there, the fingers and the mileage are not. The test that holds it asks for *most*
+requirements unmet rather than *not all*, because "not all" was a claim weak enough to survive
+trivialising one.
+
+**The browser found two content faults no test would have.** The trip was called *"Font in
+October"*, and its date is computed from `today` — so the name was wrong for most of the year, and
+the page rendered *"Font in October · for March 3"*. And its season came to 28 weeks against 24 of
+runway, so the sample climber opened on the season card's *"four weeks more than there is room
+for"* warning; a fixture whose plan does not fit reads as a mistake in the fixture. Twenty-eight
+weeks of blocks against twenty-eight weeks of runway now: *"It starts this week."*
+
+### The safety rule allowed it without being widened
+
+M207's first attempt had to teach `safety.test.ts` a second marker, because the objectives removal
+sat further from the `wipeDemo()` that identifies the function than the eight-line back-window
+reaches. Putting the loop directly after the injuries loop means the existing window sees it, the
+call is attributed to `#clearDemo`, and the reason already written there covers it. Nothing about
+the net changed.
+
+**Ten mutants, nine killed, one probabilistic.** The survivor is the flake mutant itself, which
+passes five runs in six by construction — measured over twelve instead, it dies. Two of the first
+pass's results were my own faults rather than the code's: one mutant left an unused function and
+failed to typecheck, and one exposed that my *test* was too weak rather than the content wrong.
+
+**In a browser, both themes, 430px and 1280px**: Objectives lists both, the detail pages draw the
+furthest-away requirement with its reason, the requirement list with real progress against the log,
+and the season with its three blocks and their dates. No page errors.
+
+**Budget** 137.02 → **137.00**. **5,957 tests pass, up from 5,952.**

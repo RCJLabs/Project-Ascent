@@ -64,6 +64,20 @@ export function demoInjuries(today = todayKey(), seed = DEMO_SEED) {
 }
 
 /**
+ * The objectives it would add, for the objectives store to hold
+ * (PLAN.md M207).
+ *
+ * Beside the injuries and for the same reason: neither lives in one of the
+ * three stores `loadDemo` writes. They are one array under a key in
+ * `profile`, so the tag-per-record wipe above cannot reach them — the store
+ * that owns them takes them out by id, which is exactly what it does for an
+ * injury.
+ */
+export function demoObjectives(today = todayKey(), seed = DEMO_SEED) {
+  return demoClimber(today, seed).objectives;
+}
+
+/**
  * Take it all back out, and nothing else.
  *
  * Returns how many records went, so the screen can say it rather than

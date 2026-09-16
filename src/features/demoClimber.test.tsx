@@ -2,14 +2,21 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { canLoadDemo, loadDemo } from '@/db/demo';
+import { canLoadDemo, demoObjectives, loadDemo } from '@/db/demo';
 import { daysBetween, today } from '@/engine/dates';
 import { getSession, newSession, putSession } from '@/db/sessions';
+import { deriveClimberState } from '@/engine/derive';
+import { measure } from '@/engine/skills';
+import { allSessions } from '@/store/sessions';
+import { useObjectives } from '@/store/objectives';
 import { useProfile } from '@/store/profile';
+import { useMetrics } from '@/store/metrics';
+import { useProjects } from '@/store/projects';
 import { useSessions } from '@/store/sessions';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { DemoBanner } from '@/ui/DemoBanner';
+import { ObjectivesPage } from '@/features/objectives/ObjectivesPage';
 
 /**
  * A climber who does not exist, on screen (PLAN.md M110).
@@ -98,8 +105,17 @@ describe('loading and clearing it', () => {
     // Loaded through the button, so the program and the injury are really
     // there to be cleared. Calling `loadDemo` directly leaves the profile
     // untouched, which made the assertions below pass over nothing.
+    //
+    // Waited on the *message*, not on `activeProgramId` (PLAN.md M207).
+    // `startProgram` sets that field synchronously, several awaits before
+    // `startDemo` returns — so waiting on it resumed the test mid-load, and
+    // the Clear button it then clicked was still `disabled`. The click went
+    // nowhere and the failure read as "the cleared message never appeared".
+    // That is the flake this half was reverted over, made deterministic by
+    // giving `startDemo` two more writes to get through.
     fireEvent.click(await screen.findByText('Load a sample climber'));
-    await waitFor(() => expect(useProfile.getState().activeProgramId).toBe('iron_grip'));
+    await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy());
+    expect(useProfile.getState().activeProgramId).toBe('iron_grip');
     expect(useProfile.getState().injuries).toHaveLength(1);
 
     await putSession(newSession(today(), 1, { completed: true, rpe: 9 }) as never);
@@ -119,6 +135,100 @@ describe('loading and clearing it', () => {
     await settings();
     fireEvent.click(await screen.findByText('Clear the sample data'));
     await waitFor(() => expect(screen.getByText(/records\. Anything you logged yourself/)).toBeTruthy());
+  });
+});
+
+/**
+ * The screen the sample climber used to leave bare (PLAN.md M207).
+ *
+ * Settings sells that button as filling the app *"so every screen has
+ * something to show"*, and Objectives was the claim it broke. This half was
+ * reverted once over a flake that turned out to be M220's write race rather
+ * than anything about objectives.
+ */
+describe('the objectives it brings', () => {
+  it('fills the screen the button promised', async () => {
+    await emptied();
+    await settings();
+    fireEvent.click(await screen.findByText('Load a sample climber'));
+    await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy());
+
+    renderAt('/objectives', <ObjectivesPage />);
+    expect(await screen.findByText('Brad Pit')).toBeTruthy();
+    expect(screen.getByText('A week in Font')).toBeTruthy();
+  });
+
+  it('covers both shapes the page draws', async () => {
+    // One inside the runway, where `peak.ts` answers the timing, and one
+    // with a season, where the dates come backwards off the target. A demo
+    // carrying two of the same shape would leave half the screen untested
+    // by the eye it exists for.
+    const [project, trip] = demoObjectives();
+    expect(project!.projectId).toBe('demo-brad-pit');
+    expect(project!.season).toBeUndefined();
+    expect(trip!.season).toEqual(['iron_grip', 'peak_performance', 'trip_prep']);
+    expect(trip!.targetDate! > today()).toBe(true);
+    // The blocks add up to exactly the runway. A demo that opens on the
+    // season card's "four weeks more than there is room for" warning reads
+    // as a broken fixture rather than as a feature.
+    expect(daysBetween(today(), trip!.targetDate!)).toBe(7 * 28);
+    // And no month in the name, because the date moves with `today`.
+    expect(trip!.name).not.toMatch(/January|February|March|April|May|June|July|August|September|October|November|December/);
+  });
+
+  it('leaves every objective unfinished', async () => {
+    // A screen with no gap on it is the screenshot this climber is worst at.
+    await emptied();
+    await loadDemo();
+    await hydrate();
+    const input = {
+      state: deriveClimberState(allSessions(useSessions.getState().byDate)),
+      projects: useProjects.getState().projects,
+      metrics: useMetrics.getState().entries,
+    };
+    for (const objective of demoObjectives()) {
+      const done = objective.requirements.filter((r) => measure(r.requirement, input).met);
+      // Most of them, not merely one: M207's battery trivialised a single
+      // requirement and "not all met" stayed true, which is a claim too weak
+      // to protect the screen it exists for.
+      expect(done.length, objective.name).toBeLessThanOrEqual(
+        Math.floor(objective.requirements.length / 2),
+      );
+    }
+  });
+
+  it('takes them back out when the sample data is cleared', async () => {
+    await emptied();
+    await settings();
+    fireEvent.click(await screen.findByText('Load a sample climber'));
+    await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy());
+    expect(useObjectives.getState().objectives).toHaveLength(2);
+
+    fireEvent.click(await screen.findByText('Clear the sample data'));
+    await waitFor(() => expect(screen.getByText(/Sample data cleared/)).toBeTruthy());
+    expect(useObjectives.getState().objectives).toEqual([]);
+  });
+
+  it('leaves an objective the climber wrote themselves', async () => {
+    // The wipe is by id, never by store — the same rule the records follow.
+    await emptied();
+    await settings();
+    fireEvent.click(await screen.findByText('Load a sample climber'));
+    await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy());
+    expect(useObjectives.getState().objectives).toHaveLength(2);
+    await useObjectives.getState().save({
+      id: 'mine',
+      name: 'The Nose',
+      kind: 'route',
+      status: 'planning',
+      requirements: [],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    fireEvent.click(await screen.findByText('Clear the sample data'));
+    await waitFor(() => expect(screen.getByText(/Sample data cleared/)).toBeTruthy());
+    expect(useObjectives.getState().objectives.map((o) => o.id)).toEqual(['mine']);
   });
 });
 

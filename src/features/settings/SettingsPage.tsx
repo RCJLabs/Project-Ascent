@@ -13,7 +13,7 @@ import {
   type CsvResult,
 } from './SpreadsheetImportCard';
 import { CsvError, parseCsv } from '@/engine/csv';
-import { canLoadDemo, demoInjuries, loadDemo, wipeDemo } from '@/db/demo';
+import { canLoadDemo, demoInjuries, demoObjectives, loadDemo, wipeDemo } from '@/db/demo';
 import { eraseEverything } from '@/db/erase';
 import { hasDemo } from '@/db/demoFlag';
 import { takeLaunchFile } from '@/lib/launchFile';
@@ -27,6 +27,7 @@ import { formatBytes, storagePressure } from '@/engine/offline';
 import { useAppUpdate } from '@/store/appUpdate';
 import { unlock } from '@/lib/cues';
 import { hydrateAll } from '@/store';
+import { useObjectives } from '@/store/objectives';
 import { useProfile } from '@/store/profile';
 import { rankTemplates } from '@/engine/templates';
 import { useTemplates } from '@/store/templates';
@@ -296,6 +297,9 @@ export function SettingsPage() {
       const layout = program ? layoutsFor(program)[0] : undefined;
       profile.startProgram(made.programId, layout ? planFromLayout(layout) : {});
       for (const injury of demoInjuries()) profile.restoreInjury(injury);
+      // Awaited, unlike the profile actions above: the objectives store
+      // persists before it sets, so there is a promise to hold (M207, M220).
+      for (const objective of demoObjectives()) await useObjectives.getState().save(objective);
       await hydrateAll();
       setMessage('Sample data loaded. Nothing in it happened.');
     } catch (e) {
@@ -314,6 +318,7 @@ export function SettingsPage() {
       const profile = useProfile.getState();
       profile.stopProgram();
       for (const injury of demoInjuries()) profile.removeInjury(injury.id);
+      for (const objective of demoObjectives()) await useObjectives.getState().remove(objective.id);
       await hydrateAll();
       setMessage(`Sample data cleared — ${gone} record${gone === 1 ? '' : 's'}. Anything you logged yourself is still here.`);
     } catch (e) {

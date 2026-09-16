@@ -42,6 +42,7 @@
 
 import type { MetricEntry } from '@/db/metrics';
 import type { BetaNote, Project } from '@/db/projects';
+import type { Objective } from './objectives';
 import type { Climb, ProjectAttempt, Session, WallAngle } from '@/db/sessions';
 import { newSession, sessionId } from '@/db/sessions';
 import type { Injury } from '@/store/profile';
@@ -59,6 +60,17 @@ export interface DemoClimber {
   projects: Project[];
   metrics: MetricEntry[];
   injuries: Injury[];
+  /**
+   * Two season-scale goals, so the Objectives screen is not bare
+   * (PLAN.md M207).
+   *
+   * One tied to the project being worked and one a trip with the blocks
+   * named before it — between them they cover both shapes the page draws:
+   * an objective inside the peak runway, where `peak.ts` answers the timing,
+   * and one with a `season`, where the dates are derived backwards from the
+   * target.
+   */
+  objectives: Objective[];
   /** The program the demo is mid-way through, and when it started. */
   programId: string;
   startDate: string;
@@ -321,7 +333,101 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
         note: 'Felt it on a hard lock-off. Easing, slowly.',
       },
     ],
+    objectives: objectivesFor(today, start),
     programId: 'iron_grip',
     startDate: addDays(startOfWeek(today), -7 * 5),
   };
+}
+
+/**
+ * What this climber is training *for*, as opposed to what they are on.
+ *
+ * Requirements are the skill vocabulary, which is the whole reason
+ * `objectives.ts` reuses it — every one of these is measured against the log
+ * above rather than declared, so the page shows real progress bars on a
+ * climber who really did the sessions behind them. Both are deliberately
+ * **unfinished**: an objective with every box ticked draws a screen that
+ * never shows a gap, which is the screen this climber exists to photograph
+ * least.
+ */
+function objectivesFor(today: string, start: string): Objective[] {
+  const stamp = (date: string) => `${date}T09:00:00.000Z`;
+  return [
+    {
+      id: 'demo-objective-brad-pit',
+      name: 'Brad Pit',
+      kind: 'boulder',
+      status: 'training',
+      grade: 'V6',
+      scale: 'V',
+      location: 'The Roaches',
+      // The project they are actually on, so the two screens agree about it.
+      projectId: 'demo-brad-pit',
+      // No `season`: this one is inside the runway, and `peak.ts` answers
+      // the timing question better than a list of blocks would.
+      requirements: [
+        // Tuned against this climber's own log, not guessed at. M207's
+        // battery caught the first version reading **56 of 8** on the
+        // pyramid — a requirement already done seven times over is worse on
+        // screen than no requirement, and it left two of three ticked.
+        // One met and two open is the shape: the base is there, the
+        // fingers and the mileage are not.
+        {
+          id: 'demo-req-pyramid',
+          requirement: { kind: 'sends', scale: 'V', grade: 'V5', count: 40 },
+          why: 'A grade is a base before it is a ceiling. This part is done.',
+        },
+        {
+          id: 'demo-req-hang',
+          requirement: { kind: 'metric', metricId: 'max_hang_20mm_7s', atLeast: 52 },
+          why: 'The crux is a two-finger drag off the lip. Fingers first.',
+        },
+        {
+          id: 'demo-req-outside',
+          requirement: { kind: 'outdoor-days', count: 40 },
+          why: 'Grit is a skill. Indoor V6 is not this V6.',
+        },
+      ],
+      notes: 'Sat start still feels impossible. The stand is close.',
+      createdAt: stamp(start),
+      updatedAt: stamp(addDays(today, -12)),
+    },
+    {
+      id: 'demo-objective-font',
+      // Not "Font in October": the target is computed from *today*, so a
+      // name with a month in it is wrong for most of the year — which the
+      // browser showed as "Font in October … for March 3" (PLAN.md M207).
+      name: 'A week in Font',
+      kind: 'trip',
+      status: 'planning',
+      location: 'Fontainebleau',
+      // Twenty-eight weeks, which is exactly what the season below adds up
+      // to: 12 + 12 + 4. The first version was 24 weeks against 28 of
+      // blocks, so the sample climber opened on the card's *warning* — a
+      // fixture whose plan does not fit reads as a mistake in the fixture.
+      targetDate: addDays(today, 7 * 28),
+      // Blocks named before it; every date on the page is derived from this
+      // sequence and the target, working backwards (PLAN.md M109).
+      season: ['iron_grip', 'peak_performance', 'trip_prep'],
+      requirements: [
+        {
+          id: 'demo-req-volume',
+          requirement: { kind: 'outdoor-days', count: 45 },
+          why: 'Six days on circuits asks for a body that has been outside.',
+        },
+        {
+          id: 'demo-req-flash',
+          requirement: { kind: 'style-sends', style: 'flash', count: 20 },
+          why: 'A circuit is flashing, not projecting. Practise the thing.',
+        },
+        {
+          id: 'demo-req-consistent',
+          requirement: { kind: 'streak-weeks', weeks: 20 },
+          why: 'Nothing here needs a peak. It needs twenty weeks of showing up.',
+        },
+      ],
+      createdAt: stamp(addDays(today, -60)),
+      updatedAt: stamp(addDays(today, -30)),
+    },
+  ];
 }
