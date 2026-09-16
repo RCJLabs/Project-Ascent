@@ -228,8 +228,59 @@ function newest(paths: readonly string[]): { path: string; at: number } {
   return best;
 }
 
+/**
+ * The workflow builds before it tests (PLAN.md M224).
+ *
+ * This is the guard the twenty-eight red deploys deserved, and it is about
+ * the *order* rather than about `dist/`, because the danger here is quiet:
+ * **a suite whose tests all skip reads exactly like a suite that ran.**
+ * Every check below is `runIf(built)`, so in a CI that tested first they
+ * reported green having measured nothing — the budget unchecked, the
+ * promises about the shipped artefact unchecked — right up until one of
+ * them stopped skipping politely and threw instead.
+ *
+ * Asserting `dist` exists would be the wrong rule: a fresh clone running
+ * `vitest` has none and should skip. The thing that has to be true is that
+ * the pipeline which *does* deploy builds first.
+ */
+describe('the workflow that ships it', () => {
+  const WORKFLOW = '.github/workflows/deploy.yml';
+
+  it('builds before it tests, so the checks above are not all skipped', () => {
+    const steps = readFileSync(WORKFLOW, 'utf8')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith('- run:'));
+    const build = steps.findIndex((s) => s.includes('npm run build'));
+    const test = steps.findIndex((s) => s.includes('npm test'));
+    expect(build, 'no build step').toBeGreaterThanOrEqual(0);
+    expect(test, 'no test step').toBeGreaterThanOrEqual(0);
+    expect(build, 'dist/ has to exist before the tests that read it').toBeLessThan(test);
+  });
+
+  it('uploads the directory those tests just read', () => {
+    // A build, a test pass and an upload of something else would be three
+    // green steps and a stale app.
+    expect(readFileSync(WORKFLOW, 'utf8')).toMatch(/path:\s*dist/);
+  });
+});
+
+/**
+ * `describe.runIf` skips the *tests*, not the suite body (PLAN.md M224).
+ *
+ * Vitest evaluates the callback at collection whatever the condition says,
+ * so `distFiles()` here ran on a tree with no `dist/` and threw
+ * `ENOENT: scandir 'dist'` — a **collection** error, which fails the file
+ * rather than skipping it. CI tested before it built, so this crashed every
+ * run from M194 onward and no deploy reached Pages for twenty-eight
+ * commits.
+ *
+ * The workflow builds first now, so these finally run against the artefact
+ * they are about. This stays empty-on-absent anyway: a fresh clone running
+ * `vitest` with no `dist/` should skip these, not fail to collect them.
+ */
 describe.runIf(built)('the app that ships', () => {
-  const FILES = distFiles();
+  const FILES = built ? distFiles() : [];
   const TEXT = FILES.filter((f) => /\.(js|css|html|webmanifest|json)$/.test(f)).map((path) => ({
     path,
     text: readFileSync(path, 'utf8'),

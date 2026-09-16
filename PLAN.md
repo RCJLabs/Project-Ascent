@@ -13433,3 +13433,49 @@ reads *"Hand · Right since 2026-09-16"*. No page errors.
 the prompts and the cooldowns are all in lazy chunks, checked. Slack is **0.49**, which is the
 thinnest this has been; the next milestone that touches the shell should expect to pay for itself.
 **5,996 tests pass, up from 5,980.**
+
+## M224 — the deploy had been red for twenty-eight commits
+
+**Reported from a phone, not by the repository.** Five runs red on the Actions list and an app that
+had not moved. The failure was the same every time:
+`privacy.test.ts:210 — ENOENT: no such file or directory, scandir 'dist'`.
+
+### Two mistakes stacked, and neither was visible from here
+
+`dist/` is gitignored, and `deploy.yml` ran **`npm test` before `npm run build`**. So on every CI
+run there was no `dist/` when the tests executed. Both suites that read it — `perf.test.ts` for the
+budget and `privacy.test.ts` for the promises about the artefact a climber installs — guard
+themselves with `runIf(built)`, so they should simply have skipped.
+
+They did not, because **`describe.runIf` skips the tests and not the suite body.** Vitest evaluates
+the callback at collection whatever the condition says, and `const FILES = distFiles()` sat in that
+body. A missing directory there is a *collection* error, which fails the file outright rather than
+skipping it. It has been that way since M194 wrote those checks — **twenty-eight commits**, every
+one of them failing to deploy.
+
+### I saw this twice and wrote it off
+
+The failing test appeared in two local runs during this session — once after M220's harness change
+and once during M221 — and both times I attributed it to my own stale `dist/` and moved on. It was
+the same defect both times, saying so plainly. A test that fails for a reason you have a story for
+is the easiest kind to dismiss, and the story was wrong.
+
+### The fix is the order, and the guard is about the order
+
+CI builds first now. That is not only what stops the crash — it is what makes those eighteen checks
+**run at all**, which in CI they never had. The budget and every promise about the shipped bundle
+have been reporting green by not being measured.
+
+`FILES` is `built ? distFiles() : []` as well, so a fresh clone running `vitest` with no `dist/`
+skips them rather than failing to collect. Verified both ways: with a build, 65 of 65 in those two
+files run; without one, 47 pass and 18 skip and the files pass.
+
+**The guard is a rule about `deploy.yml`, not about `dist/`**, because the quiet danger here is that
+**a suite whose tests all skip reads exactly like a suite that ran**. Asserting `dist` exists would
+be wrong — a fresh clone has none and should skip. What has to be true is that the pipeline which
+deploys builds before it tests, and that it uploads the directory those tests just read. Both are
+checked.
+
+**Verified as the workflow runs it**, from a removed `dist/`: lint, build, then the whole suite —
+**5,998 tests pass, none skipped**. No budget change; nothing shipped in this milestone but the
+order of two lines and a `? :`.
