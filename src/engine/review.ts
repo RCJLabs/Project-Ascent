@@ -15,7 +15,7 @@ import type { BodyPart } from '@/content/bodyParts';
 import type { Program } from '@/content/types';
 import type { Session } from '@/db/sessions';
 import type { Project } from '@/db/projects';
-import { weeklyChallenges, type Challenge } from './challenges';
+import type { Challenge } from './challenges';
 import { addDays, startOfWeek, today as todayKey } from './dates';
 import { buildLoadIndex, deriveClimberState, loadOrZero, loadStateAt, type AcwrZone } from './derive';
 import { sessionHeight } from './altimeter';
@@ -111,6 +111,14 @@ export interface ReviewInput {
   injuries?: BodyPart[];
   /** Notation to write grades in. Defaults to the stored ladders. */
   display?: GradeDisplay;
+  /**
+   * The week's challenges, already resolved. See where they are used.
+   *
+   * Absent means the caller does not show them, not that there are none —
+   * `ReviewPage` is the only screen that reads `review.challenges`, and it
+   * is a lazy route, so it is the only one that pays for the engine.
+   */
+  challenges?: Challenge[];
   today?: string;
 }
 
@@ -163,7 +171,22 @@ export function buildReview(input: ReviewInput): WeekReview {
   }
 
   const records = state.personalRecords.filter((r) => r.date >= from && r.date <= to);
-  const challengeList = weeklyChallenges(all, state, from, target, input.display ?? DEFAULT_DISPLAY);
+  /**
+   * Handed in rather than derived (PLAN.md M230).
+   *
+   * This module called `weeklyChallenges` and that one import put the whole
+   * of `engine/challenges.ts` — the daily quality ladder, the weekly variety
+   * table and the bounty generator, with the copy for all of it — into the
+   * **entry chunk**, because `ReviewCard` is on Home and Home is the one
+   * eager route. Measured: **2.12KB gzipped**, for a field that exactly one
+   * screen reads, and that screen is a lazy route.
+   *
+   * So it arrives as data, the way `achievements.ts` takes `programWeeks` as
+   * a callback to stay out of the programs catalogue. A caller that does not
+   * pass any is a caller that does not show them — which is every caller but
+   * `ReviewPage`.
+   */
+  const challengeList = input.challenges ?? [];
   const xpThisWeek = (input.xp?.events ?? [])
     .filter((e) => e.date >= from && e.date <= to)
     .reduce((sum, e) => sum + e.xp, 0);
@@ -217,7 +240,9 @@ function withArticle(word: string): string {
   return `${/^[aeiou]/i.test(word) ? 'an' : 'a'} ${word}`;
 }
 
-function weeklyTargetOf(program: Program | undefined): number {
+/** Exported since M230: the caller that resolves the week's challenges
+ *  has to scale them to the same target this does. */
+export function weeklyTargetOf(program: Program | undefined): number {
   const rule = program?.constraints.find((c) => c.kind === 'sessions-per-week');
   return rule && rule.kind === 'sessions-per-week' ? rule.min : 3;
 }

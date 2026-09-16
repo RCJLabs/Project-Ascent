@@ -496,7 +496,7 @@ describe('the bundle stays small', () => {
    * with one exception recorded below — the history is in the comment inside
    * the first test.
    */
-  const BUDGET = 138.0;
+  const BUDGET = 136.9;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -1400,6 +1400,49 @@ describe('the bundle stays small', () => {
     // The control: `avatar.ts` itself is still on the boot path, and the
     // stage names are the proof this is reading the right file.
     expect(entry.includes('Rental shoes'), 'the figure itself is in the entry').toBe(true);
+  });
+
+  it.runIf(built)('keeps the board out of the entry chunk', () => {
+    /**
+     * The daily quality ladder, the weekly variety table and the bounty
+     * generator, with the copy for all of it — **2.12KB gzipped**, measured
+     * (PLAN.md M230).
+     *
+     * It was there by one import: `engine/review.ts` called
+     * `weeklyChallenges`, `ReviewCard` calls `buildReview`, and `ReviewCard`
+     * is on Home, which is the one eager route. The field it filled is read
+     * by exactly one screen and that screen is a lazy route. The review
+     * takes the challenges as input now and the review *page* resolves them.
+     *
+     * This fails if anything on the boot path reaches that module again —
+     * including the Home card added by the same milestone, which is lazy
+     * precisely so it cannot.
+     */
+    const html = readFileSync('dist/index.html', 'utf8');
+    const entryName = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)![1]!;
+    const entry = readFileSync(`${dist}/${entryName}`, 'utf8');
+    // One marker per group — the daily ladder, the weekly variety, and the
+    // bounty copy — because a partial leak would pass a single probe.
+    for (const marker of [
+      'Rate the effort',
+      'Warm up for the hard one',
+      'Rest properly',
+      'Get outside',
+      'Mix it up',
+      'send distribution',
+    ]) {
+      expect(entry.includes(marker), `${marker} is in the entry chunk`).toBe(false);
+    }
+    // The control: the review card itself is still on the boot path — Home
+    // renders it eagerly — so a sweep finding nothing at all would mean it
+    // was reading the wrong file rather than passing.
+    //
+    // `sends this week` rather than `sessions this week`, which is what the
+    // first version looked for and is never in the bundle: the card writes
+    // `{n} of {m} sessions · {k} sends this week`, and JSX compiles that
+    // into separate fragments. A control that cannot find a known-present
+    // instance is not a control, which is the whole of M195's rule.
+    expect(entry.includes('sends this week'), 'the review card is in the entry').toBe(true);
   });
 
   it.runIf(built)('keeps the wall palettes out of the entry chunk', () => {

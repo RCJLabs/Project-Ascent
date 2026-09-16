@@ -24,6 +24,7 @@ import { ChevronRight, Info, Sparkles, TrendingDown } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { startOfWeek, today as todayKey } from '@/engine/dates';
 import { buildReview, type NoteTone, type WeekReview } from '@/engine/review';
+import type { Challenge } from '@/engine/challenges';
 import { useXp } from '@/store/game';
 import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';
@@ -31,8 +32,16 @@ import { useProjects } from '@/store/projects';
 import { useSessions, allSessions } from '@/store/sessions';
 
 
-/** The review for a week containing `date`, assembled from every store. */
-export function useReview(date: string): WeekReview {
+/**
+ * The review for a week containing `date`, assembled from every store.
+ *
+ * `challenges` is passed in rather than derived here (PLAN.md M230). This
+ * hook is in the file that holds the Home card, so it is on the boot path,
+ * and resolving the week's challenges here put the whole of
+ * `engine/challenges.ts` in the entry chunk — 2.12KB gzipped for a field
+ * only the lazy `ReviewPage` reads.
+ */
+export function useReview(date: string, challenges: Challenge[] = []): WeekReview {
   const byDate = useSessions((s) => s.byDate);
   const projects = useProjects((s) => s.projects);
   const activeProgramId = useProfile((s) => s.activeProgramId);
@@ -54,8 +63,9 @@ export function useReview(date: string): WeekReview {
       xp,
       injuries: injuries.map((i) => i.part),
       display,
+      challenges,
     });
-  }, [byDate, date, activeProgramId, startDates, plans, projects, xp, injuries, display]);
+  }, [byDate, date, activeProgramId, startDates, plans, projects, xp, injuries, display, challenges]);
 }
 
 export const TONE: Record<NoteTone, { color: string; Icon: typeof Info }> = {

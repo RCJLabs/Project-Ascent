@@ -1,3 +1,5 @@
+import { deriveClimberState } from './derive';
+import { weeklyChallenges } from './challenges';
 import { describe, expect, it } from 'vitest';
 import type { BodyPart } from '@/content/bodyParts';
 import { getProgram } from '@/content/programs';
@@ -116,11 +118,28 @@ describe('what the week says', () => {
     expect(review([]).target).toBe(3);
   });
 
-  it('resolves the week board from the log', () => {
+  it('shows the challenges it was handed, and none when it was handed none', () => {
+    /**
+     * It used to resolve them itself (PLAN.md M230). That one import put the
+     * whole board engine — the daily ladder, the weekly table, the bounty
+     * generator — into the **entry chunk**, because `ReviewCard` is on Home,
+     * for a field that only the lazy review page reads. Measured at 2.12KB
+     * gzipped.
+     *
+     * So the contract is now a pass-through, and this checks both halves:
+     * what arrives is reported, and a caller that hands over nothing gets an
+     * empty board rather than a resolved one.
+     */
     const sessions = [...baseline(), ...[1, 3, 5].map((d) => session(addDays(THIS_WEEK, d)))];
-    const r = review(sessions);
+    const list = weeklyChallenges(sessions, deriveClimberState(sessions), THIS_WEEK, 3);
+    expect(list.length).toBe(3);
+
+    const r = review(sessions, { challenges: list });
     expect(r.challenges.total).toBe(3);
+    expect(r.challenges.done).toBe(list.filter((c) => c.done).length);
     expect(r.challenges.list.every((c) => c.from === THIS_WEEK)).toBe(true);
+
+    expect(review(sessions).challenges).toEqual({ done: 0, total: 0, list: [] });
   });
 
   it('counts a project sent inside the week', () => {

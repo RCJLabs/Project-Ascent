@@ -13879,6 +13879,14 @@ which is the right shape.*
   the one part of the app with a deadline on it is two taps away under Game. **A daily task nobody
   sees is not a daily task.**
   *Small, and it is placement rather than a build.*
+  ***WITHDRAWN as proposed, and the reason is in this document.*** *The board was taken off Home
+  on purpose at M117 — "Four cards left Home for it: the climber strip, the altimeter, the board
+  and the arcade, and the point of a move is that the thing is in one place afterwards" — and two
+  rules hold it there: Home's source may not name a `BoardCard`, and Home may not link to
+  `#/board` at all. The item called this placement rather than a build and never asked whether the
+  placement had already been decided. A card was written, and both rules failed it within a minute
+  of the first full run. **What the investigation found instead was real and shipped** — see the
+  entry at the end of this document.*
 
 - **M231 — a run has no shape after ninety seconds.** `DIFFICULTY` ramps speed to about 32 seconds
   and density to 90, and `config.ts` says the rest out loud: *"After ninety seconds nothing changes
@@ -14037,3 +14045,77 @@ are sparkle rows, the achievement carries an award icon and its sentence, and th
 
 **6,085 tests over 348 files.** First load **137.66KB against the 138.0 budget, 0.34 of slack.** The
 achievements engine and the share card were both already in the chunks that needed them.
+
+## M230 withdrawn — and the 2.12KB the investigation found
+
+The item was *the board is a page nobody opens*: `engine/challenges.ts` generates a daily quality
+task, a weekly set and bounties, all resolving from the log, and it was imported by `BoardPage` and
+by `review.ts` and by nothing else. Put the daily on Home, where the day starts.
+
+**Home had it, and gave it up on purpose.** M117 moved four cards off Home for the game tab — the
+climber strip, the altimeter, **the board** and the arcade — and wrote down why: *"the point of a
+move is that the thing is in one place afterwards."* Two rules hold it. `gamePage.test.tsx` requires
+that Home's source never names a `BoardCard`, and that Home links to `#/board` nowhere at all.
+
+I wrote the card, made it lazy, put it under the session, and both rules failed on the first full
+run. **The brainstorm item called this "placement rather than a build" and never asked whether the
+placement had already been decided** — which is the same fault as M228's, one week of milestones
+later: an absence established by reading what imports a module, and a conclusion drawn without
+reading why it stopped being imported.
+
+The card is gone. Whether the daily belongs on Home is a design question that reverses a recorded
+decision, and that is the author's to make rather than mine to discover.
+
+### What was underneath it
+
+Chasing the budget for that card turned up something better.
+
+`engine/review.ts` called `weeklyChallenges`. `ReviewCard` calls `buildReview`. **`ReviewCard` is on
+Home, and Home is the one eager route** — so that single import put the whole board engine into the
+**entry chunk**: the three-tier daily ladder, the weekly variety table, the bounty generator, and
+the copy for all of it. Measured by stubbing the import and rebuilding: **2.12KB gzipped**.
+
+It filled exactly one field, `WeekReview.challenges`, and exactly one screen reads it —
+`ReviewPage`, which is a lazy route. The Home card beside it never touched the field.
+
+So the review takes them as data now, the way `achievements.ts` takes `programWeeks` as a callback
+to stay out of the programs catalogue: `ReviewInput.challenges`, absent meaning *this caller does
+not show them*. The review **page** resolves them, scaled by `weeklyTargetOf` — exported for the
+purpose, so the challenges and the adherence line above them cannot be counted against two
+different targets.
+
+**And I told the author the opposite an hour earlier.** Asked what M230 would cost, I said none of
+the challenges engine was in the entry chunk today. That came from probing the bundle for
+`weeklyChallenges`, `bountyLoads` and `Perfect week` — two identifiers the minifier renames and one
+string that lives in a comment. A probe that cannot find a known-present instance is not a probe,
+which is M195's rule, and it was wrong in the direction that matters: it reported 2.12KB of dead
+weight as absent.
+
+### The budget comes down
+
+**135.54KB, and the budget goes 138.0 → 136.9.** The slack rule — *a ceiling cannot notice being
+raised, so it has to sit just above what was measured* — cuts both ways, and this is the first time
+it has been cut rather than raised. 1.36 of slack, which is the milestone's worth the rule asks for.
+
+A guard holds the board out of the entry with one marker per group — the daily ladder, the weekly
+variety, the bounty copy — because a partial leak would pass a single probe. Its control looks for
+`sends this week`, and the first version looked for `sessions this week`, which is never in the
+bundle: the card writes `{n} of {m} sessions · {k} sends this week` and JSX compiles that into
+separate fragments. The control caught itself.
+
+### Measured
+
+**7 of 7 mutants caught, sanity no-op survived**: the review resolving them again, the review
+ignoring what it was handed, the hook dropping its argument, the page handing over nothing, the page
+scaling them to a constant, and the page anchoring them on today rather than the week being read.
+
+That last one survived the first battery, and the gap was real: every test read the current week,
+where the anchor and today are the same date. The review page carries week navigation, so resolving
+against `today()` would show **this** week's board under a past week's heading with every other
+number on the page belonging to that past week. The test steps back a week now.
+
+Browser-verified: Home carries no link to the board, the review page's board section reads
+*"10 sends at V1 or harder 9/10 · 3 sessions this week 3/3 · Mix it up 0/2 · 1 of 3 weekly
+challenges"* against a seeded week, and the board page is untouched.
+
+**6,089 tests over 349 files.**

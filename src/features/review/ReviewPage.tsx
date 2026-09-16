@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import {
   AlertTriangle,
@@ -10,11 +10,16 @@ import {
 } from 'lucide-react';
 import { addDays, fromKey, shortLabel, startOfWeek, today as todayKey } from '@/engine/dates';
 import { describeDayLoad, describeParts } from '@/engine/bodyLoad';
-import type { PlannedSlot } from '@/engine/review';
+import { getProgram } from '@/content/programs';
+import { weeklyChallenges, type Challenge } from '@/engine/challenges';
+import { deriveClimberState } from '@/engine/derive';
+import { weeklyTargetOf, type PlannedSlot } from '@/engine/review';
 import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
 import { weekCard } from '@/ui/shareCard';
-import { useSessions } from '@/store/sessions';
+import { useProfile } from '@/store/profile';
+import { useSettings } from '@/store/settings';
+import { useSessions, allSessions } from '@/store/sessions';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -24,12 +29,40 @@ import { TONE, useReview } from './ReviewCard';
 import { useGradeLabel } from '@/ui/useGrade';
 
 
+/**
+ * The week's challenges, resolved here rather than inside `buildReview`.
+ *
+ * This page is the only screen that reads them and it is a lazy route, so it
+ * is the only one that should pay for `engine/challenges.ts` — see the note
+ * on `useReview` (PLAN.md M230). The target is the review engine's own, so
+ * the challenges cannot be scaled to a different number than the adherence
+ * line above them.
+ */
+function useWeeklyChallenges(anchor: string): Challenge[] {
+  const byDate = useSessions((s) => s.byDate);
+  const activeProgramId = useProfile((s) => s.activeProgramId);
+  const display = useSettings((s) => s.display);
+
+  return useMemo(() => {
+    const sessions = allSessions(byDate).filter((s) => s.completed);
+    const program = activeProgramId ? getProgram(activeProgramId) : undefined;
+    return weeklyChallenges(
+      sessions,
+      deriveClimberState(sessions),
+      anchor,
+      weeklyTargetOf(program),
+      display,
+    );
+  }, [byDate, activeProgramId, display, anchor]);
+}
+
 export function ReviewPage() {
   const gradeLabel = useGradeLabel();
   const hydrated = useSessions((s) => s.hydrated);
   const load = useSessions((s) => s.load);
   const [anchor, setAnchor] = useState(() => startOfWeek(todayKey()));
-  const review = useReview(anchor);
+  const challenges = useWeeklyChallenges(anchor);
+  const review = useReview(anchor, challenges);
 
   useEffect(() => {
     if (!hydrated) void load();
