@@ -14,13 +14,14 @@ import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveClimberState } from '@/engine/derive';
 import { LEVELS_PER_DEGREE, RANKS, nextRank, rankLabel, type Rank } from '@/engine/economy';
 import { shortLabel } from '@/engine/dates';
+import { describeShop, shopProgress } from '@/engine/kits';
 import { describeNext } from '@/engine/nextUnlock';
 import { formatHeight, heightValue } from '@/engine/units';
 import type { XpEvent } from '@/engine/xp';
 import { BoardCard } from '@/features/challenges/BoardPage';
 import { AchievementsCard } from '@/features/climber/AchievementsCard';
 import { ShareButton } from '@/features/share/ShareSheet';
-import { useCurrency, useXp } from '@/store/game';
+import { useCurrency, useOwned, useXp } from '@/store/game';
 import { useProfile } from '@/store/profile';
 import { useSessions, allSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
@@ -188,6 +189,10 @@ function SkillsCard() {
 
 function CurrencyCard() {
   const currency = useCurrency();
+  const owned = useOwned();
+  // What the coins are *for*, which this card never said until M213 — at any
+  // balance, not only at the end of the shop.
+  const shop = describeShop(shopProgress(owned, currency.balance));
   return (
     <Card title="Currency">
       <div className="flex items-center gap-3">
@@ -196,6 +201,7 @@ function CurrencyCard() {
           <div className="text-2xl font-black tabular-nums leading-none">
             {currency.balance.toLocaleString()}
           </div>
+          <p className="text-xs text-ink mt-1">{shop}</p>
           <p className="text-xs text-ink-soft mt-1">
             {currency.earned.toLocaleString()} earned · {currency.spent.toLocaleString()} spent.
             Cosmetics only — nothing you can buy makes you climb harder.

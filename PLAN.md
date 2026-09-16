@@ -11914,6 +11914,10 @@ thresholds beside them.*
   shop gains something worth buying, or the card says the shop is finished, but a number that can
   only go up is the thing the whole economy was built to avoid.
   *Small to say, medium to fix.*
+  *Done, and the reason above is wrong — see the entry at the end of this document. The economy was
+  built to stop the game outpaying training, and level, total XP and the altimeter are all
+  monotonic on purpose. The real fault started at level 1: the card never said what a coin buys.
+  Two kits added, priced to the gear ladder, and the card says where you are on it.*
 
 - **M214 — a run keeps its height and forgets how it ended.** `ClimbedDay` is date, metres,
   coins, mode and an optional tape. The simulation raises `{ kind: 'hit', absorbed: 'life' |
@@ -12870,3 +12874,72 @@ grep for changed lines carrying quoted prose returns three test descriptions and
 
 **Budget** 137.52 → **137.53**, which is noise: no value moved and no module boundary did. **5,888
 tests pass, up from 5,880.**
+
+## M213 — the shop ran out, and the card had never said what a coin buys
+
+**The milestone's own reason was wrong.** It said *"a number that can only go up is the thing the
+whole economy was built to avoid"*. `economy.ts` opens by saying what it was built to avoid, and it
+is the game lane outpaying training — `GAME_ACTION_CAP` at 0.075 against `AWARDS.session` at 0.15.
+Level, total XP and the altimeter all only go up, on purpose. Monotonicity was never the fault.
+
+**The fault started at level 1, not level 25.** `CurrencyCard` showed a balance, a lifetime earned
+and a spent, and never connected any of the three to a kit. A climber at level 10 held four
+thousand coins with nothing on screen saying that 2,500 was Lichen or that 8,000 was the last thing
+they would ever buy. Running out at level 25 is where a card that had never said anything stopped
+being survivable — it is the symptom, and the milestone had diagnosed it as the disease.
+
+### A price now means something
+
+`avatar.ts` claimed the four kits *"land at roughly level 7, 10, 14 and 18"*, which was wrong
+twice: those are each price **on its own**, for a climber who buys nothing, and they are rounded up
+from 6, 10, 14 and 17. A shop priced on the assumption that nothing in it gets bought. Bought in
+order the four land at **6, 12, 18 and 25**.
+
+Two kits were added, and their prices are not round numbers picked to be large. **A kit is priced
+to arrive with a piece of gear.** `Basalt` lands about when the chalk bag does and `Dusk` about
+when the harness does, which was coincidence until this milestone made it the rule: `Serac` lands
+at **level 40** with the rope and helmet, and `Bivouac` at **level 60** with the pack. Both are
+alpine things named for the gear they arrive with rather than for a colour, and both are designed
+around the `gear` swatch, because a climber who can afford them is wearing a harness, a rope and a
+helmet — all drawn in that one colour.
+
+**It stops below the top gear stage on purpose.** Level 90 is 810,000 XP. The gear ladder may keep
+a horizon up there; a shop may not, because *"all bought"* has to be a state that arrives. A test
+holds that.
+
+### The card says where you are on the ladder, including the end of it
+
+`describeShop` leads with the count in every state, because *"4 of 6"* is what makes the remaining
+number mean anything: **`2 of 6 bought. Dusk next, 5,000 to go.`** — **`5 of 6 bought. Bivouac is
+yours for 50,000.`** — **`All 6 bought — nothing left to spend on.`** Adding kits moved that last
+state from level 25 to level 60; it did not remove it, and a balance that can only rise against a
+spent that can never move again is a card lying by omission wherever the wall happens to sit.
+
+### The split paid for the milestone and then some
+
+The first build came in at **137.76KB**, and the entry chunk held sixteen colour quartets and the
+shop's copy — in the first load of an app that opens on Home. `store/profile.ts` reaches
+`engine/avatar.ts` for `DEFAULT_PALETTE` before anything renders, so everything sharing that module
+lands in the entry although the only two readers are lazy pages. The same shape M214 found in the
+arcade, and the same answer: `engine/kits.ts` is its own module now, and the first load is
+**136.95KB** — *below* where this milestone started. `perf.test.ts` fails if the two are ever
+merged back.
+
+**That guard's first markers were wrong, and its own failure said so.** All six free kits are named
+after rock, and `ui/themes.ts` names its palettes the same way and is genuinely on the boot path —
+a bare `'Glacier'` is in the entry from a theme blurb. The free group is probed by the table's
+shape now, `name:"Chalk",top:`, which cannot be anything else.
+
+**Fourteen mutants, fourteen killed** — but four of the first pass's "kills" were malformed mutants
+failing to typecheck rather than tests catching anything, and one survivor was a mutant that did
+not leak because Rollup shook it. Rewritten so each compiles and each genuinely leaks, all five
+died. **Two are equivalent and commented as such**: the cheapest-first sort cannot be told from no
+sort while the table is authored in price order, and `short === 0` cannot be told from `short <= 0`
+while `shopProgress` clamps at zero.
+
+**In a browser, both themes, 430px and 1280px**, on an empty wallet, a two-kit wallet and a
+bought-out one: all three sentences render, no page errors. And it caught something no test would
+have — **the kit picker drew three of the four colours**, dropping `gear`, which is the one this
+milestone's whole pricing argument rests on. Four swatches now.
+
+**Budget** 137.53 → **136.95**, a 0.58KB *gain*. **5,904 tests pass, up from 5,888.**

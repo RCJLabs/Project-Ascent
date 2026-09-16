@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PALETTE,
-  OUTFITS,
   SKIN_TONES,
   STAGES,
   deriveAvatar,
@@ -87,15 +86,12 @@ describe('palette', () => {
     expect(config.palette.top).toBe(DEFAULT_PALETTE.top);
   });
 
-  it('offers real choices, each a complete outfit', () => {
+  it('offers real skin choices', () => {
+    // The outfit half of this rule moved to kits.test.ts with the table
+    // itself (PLAN.md M213). Skin stays here: it is the one palette row no
+    // kit sets and nothing can ever charge for.
     expect(SKIN_TONES.length).toBeGreaterThanOrEqual(6);
     expect(new Set(SKIN_TONES).size).toBe(SKIN_TONES.length);
-    for (const outfit of OUTFITS) {
-      for (const key of ['top', 'shorts', 'shoes', 'gear'] as const) {
-        expect(outfit[key], `${outfit.name}.${key}`).toMatch(/^#[0-9a-f]{6}$/i);
-      }
-    }
-    expect(new Set(OUTFITS.map((o) => o.name)).size).toBe(OUTFITS.length);
   });
 });
 

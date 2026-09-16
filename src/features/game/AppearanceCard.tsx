@@ -1,13 +1,6 @@
 import { useMemo } from 'react';
-import {
-  OUTFITS,
-  SKIN_TONES,
-  earnedOutfits,
-  freeOutfits,
-  shopOutfits,
-  type AvatarPalette,
-  type Outfit,
-} from '@/engine/avatar';
+import { SKIN_TONES, type AvatarPalette } from '@/engine/avatar';
+import { OUTFITS, earnedOutfits, freeOutfits, shopOutfits, type Outfit } from '@/engine/kits';
 import { cosmeticSources } from '@/engine/skills';
 import { SKILL_TREES } from '@/content/skills';
 import { useCurrency, useGame, useOwned } from '@/store/game';
@@ -152,8 +145,12 @@ function KitRow({
               }
               className={`bg-sunken px-2 py-2 ${shut && !buyable ? 'opacity-55' : ''}`}
             >
+              {/* All four, not three. `gear` was missing until M213, and it
+                  is the colour that carries most on a climber high enough to
+                  afford the late kits: at level 40 the figure is wearing a
+                  harness, a rope and a helmet, all of it drawn in this one. */}
               <div className="flex gap-1 mb-1.5">
-                {[outfit.top, outfit.shorts, outfit.shoes].map((color) => (
+                {[outfit.top, outfit.shorts, outfit.shoes, outfit.gear].map((color) => (
                   <span
                     key={color}
                     className="w-4 h-4 rounded border border-line"

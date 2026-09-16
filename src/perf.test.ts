@@ -1363,6 +1363,45 @@ describe('the bundle stays small', () => {
     expect(entry.includes('minigame'), 'the route table is not in the entry either').toBe(true);
   });
 
+  it.runIf(built)('keeps the kit table out of the entry chunk', () => {
+    /**
+     * Sixteen colour quartets and a shop's copy, on the boot path of an app
+     * that opens on Home (PLAN.md M213).
+     *
+     * The same shape as the arcade above, found the same way. `OUTFITS` and
+     * the shop lived in `engine/avatar.ts`, and `store/profile.ts` reaches
+     * that module for `DEFAULT_PALETTE` before anything renders — so the
+     * whole table sat in the entry chunk although the only two readers are
+     * lazy pages. Splitting it into `engine/kits.ts` took the first load
+     * from 137.76KB to under 137, which is *below* where M213 started —
+     * the milestone paid for its own two new kits and 0.58KB besides. This
+     * fails if the two are ever merged back.
+     */
+    const html = readFileSync('dist/index.html', 'utf8');
+    const entryName = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)![1]!;
+    const entry = readFileSync(`${dist}/${entryName}`, 'utf8');
+    // One kit per group — free, earned and bought — because a partial leak
+    // would pass a single probe, and one phrase from the shop's own copy.
+    //
+    // The free kits are probed by the table's *shape* rather than by name.
+    // Every one of the six is a rock or a landform, and `ui/themes.ts` names
+    // its palettes the same way and is genuinely on the boot path: a bare
+    // 'Glacier' is in the entry from a theme blurb, and this rule read as a
+    // leak until that was chased down. `name:"Chalk",top:` cannot be
+    // anything but a row of this table.
+    for (const marker of [
+      'name:"Chalk",top:',
+      'Weathered',
+      'Bivouac',
+      'nothing left to spend on',
+    ]) {
+      expect(entry.includes(marker), `${marker} is in the entry chunk`).toBe(false);
+    }
+    // The control: `avatar.ts` itself is still on the boot path, and the
+    // stage names are the proof this is reading the right file.
+    expect(entry.includes('Rental shoes'), 'the figure itself is in the entry').toBe(true);
+  });
+
   it.runIf(built)('keeps the drill text out of the entry chunk', () => {
     // A marker per drill, not one marker, for the reason the program-body
     // check above gives: a split that leaks half the text back into the

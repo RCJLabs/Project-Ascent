@@ -252,7 +252,6 @@ export function useXp(): XpState {
   );
 }
 
-/** Spendable soft currency: earned over all time, minus what is spent. */
 /** Kits this climber has bought. */
 export function useOwned(): string[] {
   return useGame((s) => s.wallet.owned ?? EMPTY_OWNED);
@@ -260,6 +259,7 @@ export function useOwned(): string[] {
 
 const EMPTY_OWNED: string[] = [];
 
+/** Spendable soft currency: earned over all time, minus what is spent. */
 export function useCurrency(): { balance: number; earned: number; spent: number } {
   const xp = useXp();
   const spent = useGame((s) => s.wallet.spent);

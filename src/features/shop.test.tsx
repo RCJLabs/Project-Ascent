@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { earnedOutfits, shopOutfits } from '@/engine/avatar';
+import { earnedOutfits, shopOutfits } from '@/engine/kits';
 import { useGame } from '@/store/game';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
@@ -110,6 +110,47 @@ describe('a kit you earn', () => {
     await withCoins(400);
     renderAt('/game', <GamePage />);
     expect(card(earned.name).hasAttribute('disabled')).toBe(true);
+  });
+});
+
+/**
+ * The card that spends the coins says what they are for (PLAN.md M213).
+ *
+ * `CurrencyCard` showed a balance, a lifetime earned and a spent, and never
+ * connected any of them to a kit. These are page tests rather than engine
+ * tests because the engine was never the gap: `describeShop` can be right
+ * and the card can still not call it, which is exactly the wiring hole M212
+ * found ten mutants' worth of.
+ */
+describe('the currency card', () => {
+  const ladder = shopOutfits().sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+
+  it('names the next kit and the gap to it, with nothing bought', async () => {
+    await withCoins(0);
+    renderAt('/game', <GamePage />);
+    expect(
+      screen.getByText(
+        `0 of ${ladder.length} bought. ${ladder[0]!.name} next, ${(ladder[0]!.price ?? 0).toLocaleString()} to go.`,
+      ),
+    ).toBeTruthy();
+  });
+
+  it('counts what is owned, so a balance means something before the end', async () => {
+    await withCoins(0);
+    useGame.setState({ wallet: { spent: ladder[0]!.price ?? 0, owned: [ladder[0]!.name] } });
+    renderAt('/game', <GamePage />);
+    expect(screen.getByText(new RegExp(`^1 of ${ladder.length} bought\\. ${ladder[1]!.name} next,`))).toBeTruthy();
+  });
+
+  it('says the shop is finished rather than counting a balance that buys nothing', async () => {
+    // The state M213 exists for. Adding two kits moved this from level 25 to
+    // level 60; it did not remove it.
+    await withCoins(400);
+    useGame.setState({
+      wallet: { spent: 0, owned: ladder.map((kit) => kit.name) },
+    });
+    renderAt('/game', <GamePage />);
+    expect(screen.getByText(`All ${ladder.length} bought — nothing left to spend on.`)).toBeTruthy();
   });
 });
 

@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { SKILL_TREES } from '@/content/skills';
 import { cosmeticSources, evaluateSkills } from './skills';
 import { ACHIEVEMENT_COUNT, deriveAchievements, type AchievementInput } from './achievements';
-import { OUTFITS } from './avatar';
+import { OUTFITS } from './kits';
 import { deriveClimberState } from './derive';
 import { loadPrograms } from '@/content/programs';
 import { loadDrills } from '@/content/drills';
