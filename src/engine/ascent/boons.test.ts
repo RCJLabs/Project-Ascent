@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { SKILL_TREES } from '@/content/skills';
 import { GAME_ACTION_CAP } from '@/engine/economy';
-import { CLIMBER, HOOKS, LANE_WIDTH } from './config';
-import { BOONS, BOON_IDS, applyBoons, boonLabel, type BoonId } from './boons';
+import { CLIMBER, HOOKS, INVULNERABLE_MS, LANE_WIDTH, POWERUP, SIZES } from './config';
+import { BOONS, BOON_IDS, BOON_RAMP, BOON_STRETCH, applyBoons, boonLabel, type BoonId } from './boons';
 import {
   NO_MODIFIERS,
   climberX,
@@ -152,6 +152,124 @@ describe('the cap that makes all of this safe', () => {
     const coins = 10_000 * maxed.coinMultiplier;
     const payout = payoutFor(
       { date: '2026-09-10', mode: 'freesolo', metres: 999_999, coins },
+      true,
+      'metric',
+    );
+    expect(payout.units).toBeLessThanOrEqual(GAME_ACTION_CAP);
+    expect(payout.capped).toBe(true);
+  });
+});
+
+describe('one boon per tree (PLAN.md M211)', () => {
+  /** Every `ascent-boon` the trees grant, with the tree that grants it. */
+  const granted = SKILL_TREES.flatMap((tree) =>
+    tree.nodes
+      .filter((node) => node.effect?.kind === 'ascent-boon')
+      .map((node) => ({ tree: tree.id, node: node.name, id: (node.effect as { id: string }).id })),
+  );
+
+  it('reaches every tree, which it did not before', () => {
+    // All three used to sit in Dynamic Power, so a climber who trained
+    // endurance for a year got their END stat's ramp hook and no boon.
+    const trees = new Set(granted.map((g) => g.tree));
+    expect(trees.size).toBe(SKILL_TREES.length);
+    for (const tree of SKILL_TREES) expect(trees.has(tree.id), tree.id).toBe(true);
+  });
+
+  it('grants only boons that exist, and every boon is granted', () => {
+    // The fault this file was written for: a tree naming a mechanic that was
+    // never built. It cuts both ways — a boon nothing grants is unreachable.
+    for (const g of granted) expect(BOON_IDS, `${g.tree}/${g.node}`).toContain(g.id);
+    for (const id of BOON_IDS) expect(granted.map((g) => g.id)).toContain(id);
+  });
+
+  it('says the same thing in the tree as in the game', () => {
+    for (const tree of SKILL_TREES) {
+      for (const node of tree.nodes) {
+        if (node.effect?.kind !== 'ascent-boon') continue;
+        expect(node.effect.label, node.name).toBe(boonLabel(node.effect.id as BoonId));
+      }
+    }
+  });
+});
+
+describe('what the four new boons actually do', () => {
+  const held = (...ids: BoonId[]) => applyBoons(NO_MODIFIERS, ids);
+
+  it('gives a second life — and never on Free Solo', () => {
+    // Free Solo's whole premise is one life. A boon that took that away
+    // would be the mode quietly ceasing to be itself.
+    expect(held('boon-second-life').extraLives).toBe(1);
+    expect(createRun({ seed: 1, modifiers: held('boon-second-life') }).lives).toBe(2);
+    expect(
+      createRun({ seed: 1, mode: 'freesolo', modifiers: held('boon-second-life') }).lives,
+    ).toBe(1);
+  });
+
+  it('slows the ramp past what the stat alone can buy', () => {
+    const maxed = modifiersFrom({ end: 100 });
+    expect(maxed.rampReduction).toBeCloseTo(HOOKS.maxRampReduction, 10);
+    const both = modifiersFrom({ end: 100, boons: ['boon-pace'] });
+    expect(both.rampReduction).toBeCloseTo(HOOKS.maxRampReduction + BOON_RAMP, 10);
+    expect(both.rampReduction).toBeGreaterThan(maxed.rampReduction);
+  });
+
+  it('stretches a slow-mo charge, picked up or started with', () => {
+    const boon = held('boon-read', 'boon-slowmo');
+    expect(createRun({ seed: 1, modifiers: boon }).slowmoMs).toBeCloseTo(
+      POWERUP.slowmoMs * BOON_STRETCH,
+      10,
+    );
+    // And the same again for one taken off the wall, through the real
+    // collision path rather than a test-only door into it.
+    const state = createRun({ seed: 1, modifiers: held('boon-read') });
+    expect(state.slowmoMs).toBe(0);
+    state.entities = [
+      {
+        id: 99,
+        kind: 'slowmo',
+        lane: state.lane,
+        lanes: 1,
+        worldY: state.distance,
+        width: SIZES.powerup.width,
+        height: SIZES.powerup.height,
+        fallRate: 0,
+        collected: false,
+      },
+    ];
+    step(state, 16);
+    // Set on collection, which runs after the tick's decay, so it is the
+    // full charge and not the full charge minus one tick.
+    expect(state.slowmoMs).toBe(POWERUP.slowmoMs * BOON_STRETCH);
+    expect(state.slowmoMs).toBeGreaterThan(POWERUP.slowmoMs);
+  });
+
+  it('stretches the forgiveness after a hit a life absorbed', () => {
+    const state = createRun({ seed: 11, modifiers: held('boon-recover') });
+    state.lives = 2;
+    for (let t = 0; t < 120_000 && state.lives === 2; t += 16) step(state, 16);
+    expect(state.lives).toBe(1);
+    expect(state.invulnMs).toBeCloseTo(INVULNERABLE_MS * BOON_STRETCH, 10);
+  });
+
+  it('stretches it after a hit a chalk save absorbed, which is the other branch', () => {
+    // Two ways a hit is survived and two lines that set the window. The
+    // first version of this test only drove the life branch, and a mutant
+    // that left the save branch alone lived through the whole battery.
+    const saves = 40;
+    const state = createRun({ seed: 11, modifiers: { ...held('boon-recover'), chalkSaves: saves } });
+    for (let t = 0; t < 120_000 && state.saves === saves; t += 16) step(state, 16);
+    expect(state.saves).toBe(saves - 1);
+    expect(state.lives).toBe(1);
+    expect(state.invulnMs).toBeCloseTo(INVULNERABLE_MS * BOON_STRETCH, 10);
+  });
+
+  it('cannot pay more, however many of them are held', () => {
+    // Every boon makes a run go further and none of them touches the
+    // ceiling: the day is still capped at half a session.
+    const all = modifiersFrom({ end: 100, agi: 100, men: 100, tec: 100, str: 100, boons: BOON_IDS });
+    const payout = payoutFor(
+      { date: '2026-09-10', mode: 'freesolo', metres: 999_999, coins: 10_000 * all.coinMultiplier },
       true,
       'metric',
     );

@@ -66,6 +66,17 @@ export interface Modifiers {
   /** STR and skill boons: what a coin is worth. */
   coinMultiplier: number;
   startWithSlowmo: boolean;
+  /**
+   * Lives on top of the one every run starts with (PLAN.md M211).
+   *
+   * Free Solo ignores it — see `createRun`. Its whole premise is one life,
+   * and it is enforced there rather than left to whoever writes a boon.
+   */
+  extraLives: number;
+  /** A skill boon: how long a slow-mo charge lasts, against `POWERUP.slowmoMs`. */
+  slowmoScale: number;
+  /** A skill boon: the forgiveness window after a hit, against `INVULNERABLE_MS`. */
+  invulnScale: number;
 }
 
 export const NO_MODIFIERS: Modifiers = {
@@ -75,6 +86,9 @@ export const NO_MODIFIERS: Modifiers = {
   laneTrim: 0,
   coinMultiplier: 1,
   startWithSlowmo: false,
+  extraLives: 0,
+  slowmoScale: 1,
+  invulnScale: 1,
 };
 
 export type RunEvent =
@@ -164,10 +178,13 @@ export function createRun(options: RunOptions): RunState {
     entities: [],
     nextEntityId: 1,
     nextSpawnDistance: SPAWN.grace,
-    lives: 1,
+    // Free Solo is one life, and that is the mode, not a tuning value: a
+    // boon that granted a second would take the whole point of it away
+    // (PLAN.md M211).
+    lives: 1 + (mode === 'freesolo' ? 0 : modifiers.extraLives),
     saves: modifiers.chalkSaves,
     coins: 0,
-    slowmoMs: modifiers.startWithSlowmo ? POWERUP.slowmoMs : 0,
+    slowmoMs: modifiers.startWithSlowmo ? POWERUP.slowmoMs * modifiers.slowmoScale : 0,
     invulnMs: 0,
     pure: true,
     over: false,
@@ -197,12 +214,12 @@ export function modifiersFrom(input: {
     Math.max(0, Math.min(cap, ((stat ?? 10) - 10) / 90 * cap));
 
   const base: Modifiers = {
+    ...NO_MODIFIERS,
     rampReduction: scale(input.end, HOOKS.maxRampReduction),
     hitboxTrim: scale(input.agi, HOOKS.maxHitboxTrim),
     chalkSaves: (input.men ?? 0) >= HOOKS.chalkSaveStat ? 1 : 0,
     laneTrim: scale(input.tec, HOOKS.maxLaneTrim),
     coinMultiplier: 1 + scale(input.str, HOOKS.maxCoinBonus),
-    startWithSlowmo: false,
   };
   return applyBoons(base, input.boons ?? []);
 }
@@ -438,7 +455,7 @@ function collide(state: RunState): void {
 function absorbHit(state: RunState, by: ObstacleKind): void {
   if (state.saves > 0) {
     state.saves--;
-    state.invulnMs = INVULNERABLE_MS;
+    state.invulnMs = INVULNERABLE_MS * state.modifiers.invulnScale;
     state.events.push({ kind: 'hit', absorbed: 'save' });
     return;
   }
@@ -449,7 +466,7 @@ function absorbHit(state: RunState, by: ObstacleKind): void {
     state.endedBy = by;
     state.events.push({ kind: 'over' });
   } else {
-    state.invulnMs = INVULNERABLE_MS;
+    state.invulnMs = INVULNERABLE_MS * state.modifiers.invulnScale;
   }
 }
 
@@ -466,7 +483,7 @@ function collect(state: RunState, kind: PickupKind): void {
   state.pure = false;
   state.events.push({ kind: 'powerup', type: kind });
 
-  if (kind === 'slowmo') state.slowmoMs = POWERUP.slowmoMs;
+  if (kind === 'slowmo') state.slowmoMs = POWERUP.slowmoMs * state.modifiers.slowmoScale;
   else if (kind === 'heart') state.lives = Math.min(POWERUP.maxLives, state.lives + 1);
   else if (kind === 'magnet') sweepCoins(state);
 }

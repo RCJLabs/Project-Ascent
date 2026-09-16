@@ -20,6 +20,7 @@ import {
   type Ghost,
 } from '@/engine/ascent/replay';
 import { payoutFor, wallNumber, type AscentPayout } from '@/engine/ascent/rewards';
+import { BOONS, BOON_IDS } from '@/engine/ascent/boons';
 import { dailySeed } from '@/engine/ascent/rng';
 import { describeEndings, readEndings } from '@/engine/ascent/endingsRead';
 import { describeBurns, describeClimb, restingFor } from '@/engine/ascent/resting';
@@ -159,6 +160,12 @@ export function AscentPage() {
         palette,
       }),
     [xp.progress.level, derived.vitality.state, derived.feet, palette],
+  );
+
+  /** The boons the climber holds, for the list that says so. */
+  const held = useMemo(
+    () => new Set(skills.effects.ascentBoons.map((b) => b.id)),
+    [skills.effects.ascentBoons],
   );
 
   const modifiers = useMemo(
@@ -578,11 +585,29 @@ export function AscentPage() {
                   text={`${modifiers.chalkSaves} chalk save${modifiers.chalkSaves === 1 ? '' : 's'} — one free near-miss each`}
                   off={`Mental ${stat.MEN} — a chalk save at ${HOOKS.chalkSaveStat}, one free near-miss`}
                 />
-                <Hook
-                  on={modifiers.startWithSlowmo}
-                  text="You start every run with a slow-mo charge"
-                  off="A skill node grants a slow-mo charge at the start of a run"
-                />
+              </ul>
+
+              {/* The boons are their own list, under their own heading. They
+                  were one hardcoded row until M211, which would have hidden
+                  the four added outside Dynamic Power on the very screen that
+                  claims to say what training does — and a hand-written line
+                  is the drift `boons.ts` exists to stop, so these come from
+                  the table. Every one of them, earned or not, for M31's
+                  reason. A shared heading rather than a tail on each: seven
+                  rows ending "— from a skill node" is a stutter, which only
+                  showed up once they were on a screen together. */}
+              <p className="text-xs font-bold uppercase tracking-widest text-ink-soft mt-4 mb-2">
+                From the skill trees
+              </p>
+              <ul className="grid grid-cols-1 gap-1.5 text-sm text-ink-soft">
+                {BOON_IDS.map((id) => (
+                  <Hook
+                    key={id}
+                    on={held.has(id)}
+                    text={sentence(BOONS[id].label)}
+                    off={sentence(BOONS[id].label)}
+                  />
+                ))}
               </ul>
               <p className="text-xs text-ink-soft mt-3">
                 Capped on purpose. Training helps a little; it is still a reflex game — and the
@@ -676,6 +701,11 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 const pct = (fraction: number) => `${Math.round(fraction * 100)}%`;
+
+/** A boon label, which is written as a fragment, as the start of a line. */
+function sentence(label: string): string {
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
 
 function Hook({ on, text, off }: { on: boolean; text: string; off: string }) {
   return (

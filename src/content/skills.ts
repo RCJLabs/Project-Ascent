@@ -9,6 +9,13 @@
  * Each tree is five branches of five, plus a capstone that asks for a stat
  * in the seventies — which no single branch can produce, so a capstone
  * really does mean the whole tree.
+ *
+ * **One Ascent boon per tree since M211.** All three used to sit in Dynamic
+ * Power, so four of the five trees did nothing inside the game a climber
+ * could feel. Each of the four added grants its boon at the top rung of the
+ * branch that earns it — the lock-off for a second life, forty minutes of
+ * ARC for a slower ramp, seventy on-sights for longer to read, thirty
+ * unbroken weeks for longer to recover.
  */
 
 import { boonLabel } from '@/engine/ascent/boons';
@@ -135,7 +142,7 @@ const TENSION: SkillTree = {
       ['Held', 6],
       ['Steady', 10],
       ['Rock Solid', 15],
-      ['Immovable', 22],
+      ['Immovable', 22, { kind: 'ascent-boon', id: 'boon-second-life', label: boonLabel('boon-second-life') }],
     ], (v) => ({ kind: 'metric', metricId: 'lock_off_90', atLeast: v })),
 
     ...branch('tension', 'Core Line', [
@@ -190,7 +197,7 @@ const ENDURANCE: SkillTree = {
       ['Ten Minutes', 10],
       ['Quarter Hour', 15],
       ['Long Burn', 25],
-      ['Bottomless', 40],
+      ['Bottomless', 40, { kind: 'ascent-boon', id: 'boon-pace', label: boonLabel('boon-pace') }],
     ], (v) => ({ kind: 'metric', metricId: 'arc_duration', atLeast: v })),
 
     ...branch('endurance', 'Mileage', [
@@ -265,7 +272,7 @@ const TECHNIQUE: SkillTree = {
       ['Cold Start', 5],
       ['Ground Up', 15],
       ['Eyes Only', 35],
-      ['On-Sight Specialist', 70],
+      ['On-Sight Specialist', 70, { kind: 'ascent-boon', id: 'boon-read', label: boonLabel('boon-read') }],
     ], (v) => ({ kind: 'style-sends', style: 'onsight', count: v })),
 
     ...branch('technique', 'Tactics', [
@@ -292,7 +299,7 @@ const GRIT: SkillTree = {
       ['A Month', 4],
       ['Two Months', 8],
       ['A Season', 16],
-      ['Unbroken', 30],
+      ['Unbroken', 30, { kind: 'ascent-boon', id: 'boon-recover', label: boonLabel('boon-recover') }],
     ], (v) => ({ kind: 'streak-weeks', weeks: v })),
 
     ...branch('grit', 'Projects', [

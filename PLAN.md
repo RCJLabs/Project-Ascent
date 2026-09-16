@@ -11885,6 +11885,10 @@ thresholds beside them.*
   tree, written the way `boons.ts` insists — label and effect in the same object, because the two
   drifted once already and told a climber they had earned a mechanic that was never written.
   *Medium. The design question is what four new mechanics should be, not where to put them.*
+  *Done — see the entry at the end of this document. A second life for Tension, a slower ramp for
+  Endurance, longer slow-mo for Technique and a longer forgiveness window for Grit. The milestone
+  also turned the Ascent's hard-coded list of one boon into a generated list of all seven, which is
+  the half the item did not mention and would have hidden every new boon.*
 
 - **M212 — the game is a leaf, and nobody has written down whether that is the decision.**
   `achievements.ts`, `career.ts` and `challenges.ts` mention the Ascent **zero times** between
@@ -12639,3 +12643,71 @@ on those seeds ends the same way, which is the harness rather than the app. No p
 
 **Budget** 137.35 → **137.47**, the cost of the tally type and `endedBy` rather than of the arcade
 table. 0.53KB of slack under the 138.0 ceiling. **5,847 tests pass, up from 5,825.**
+
+
+## M211 — four of the five skill trees did nothing inside the game
+
+**Three boons, and all three in Dynamic Power.** `content/skills.ts` granted `boon-reach`,
+`boon-doublejump` and its capstone's `boon-slowmo`, every one of them in one tree. Static Tension,
+Endurance, Technique and Grit granted kits, project slots and bounty slots — all of which live
+outside the wall. **A climber who trained endurance for a year got the speed-ramp hook their END
+stat earned and no boon at all**, and the tree explicitly about commitment granted nothing to the
+mode explicitly about commitment.
+
+**Four more, one per tree, each a mechanic that reads as what the tree is for.**
+
+- **Static Tension → a second life.** The tree about holding on, and a life is the only thing in
+  the game that lets a mistake not be the end of it. Granted at *Immovable*, the top of the
+  Lock-Off branch.
+- **Endurance → the wall speeds up more slowly.** Forty minutes of continuous ARC is exactly the
+  training that makes a rising speed matter less. At *Bottomless*.
+- **Technique → slow-mo lasts half again as long.** On-sighting is reading the wall as you go, and
+  slow-mo is the only time this game gives you to read it. At *On-Sight Specialist*.
+- **Mental Grit → longer to recover after a hit.** Thirty unbroken weeks of turning up buys longer
+  on your feet after a knock, not fewer knocks. At *Unbroken*.
+
+**Free Solo keeps its one life, and `createRun` enforces that rather than the label.** The mode's
+whole premise is one life — the copy says so and the spawn table already filters hearts out of it
+— so a boon that granted a second would be the mode quietly ceasing to be itself. The suppression
+is in the simulation, where the mode is, and there is a test for it.
+
+**The ramp boon is the one that raises a ceiling.** `HOOKS.maxRampReduction` is the limit the END
+stat can reach on its own; `BOON_RAMP` adds 0.05 on top, so 0.15 is the maximum and only a climber
+holding the boon can get past 0.10. That is the shape `boon-reach` already had — a boon adding to
+a dial a stat also moves — rather than a second dial nobody can find.
+
+**None of it can pay more.** Every one of these makes a run go further, and further is more metres
+and more coins, and the day is still capped at `GAME_ACTION_CAP` — half of what one logged session
+pays. There is a test that holds all seven boons with every stat at 100 and still cannot clear the
+cap.
+
+**The screen that says what training does was listing one boon.** `What your training does here`
+had five hand-written stat rows and **one hard-coded line about the slow-mo charge**, so four boons
+outside Dynamic Power would have been invisible on the one screen whose job is to say what training
+buys — and a hand-written line is precisely the drift `boons.ts` exists to stop. The boons are
+generated from the table now, all seven, earned or not, for M31's reason: *a list of only the
+active hooks hides the half that would give you a reason to train.*
+
+**And a copy fault the browser found.** Each generated row ended *"— from a skill node"*, which is
+fine once and a stutter seven times in a row under five stat rows. They are their own list under
+their own heading — **From the skill trees** — and the tail is gone.
+
+**Nineteen mutants, nineteen killed, one on a second pass.** A tree losing its boon; two trees
+sharing one; a tree naming a boon that does not exist; a label drifting from its effect; the second
+life granted on Free Solo, never granted, or granting nothing; the ramp boon capped away by the
+stat or replacing it rather than adding; slow-mo unstretched on a pickup and at the start; the
+forgiveness window unstretched after a life and after a save; the new modifiers defaulting to zero;
+the stat hooks no longer seeding them; the list written out by hand, hiding what is not earned, or
+losing its heading. **The one that survived is the interesting one**: the forgiveness window is set
+on two lines — one after a chalk save, one after a spare life — and my test drove only the life
+branch, so a mutant that left the save branch alone lived through the whole battery. Both branches
+are tested now. One sanity no-op survived, as it must.
+
+**In a browser, both themes, 430px and 1280px:** each of the five trees on `/skills` shows its own
+boon, and the Ascent lists all seven under *From the skill trees*. No page errors, no horizontal
+overflow at either width.
+
+**Budget** unchanged at **137.48KB** — `boons.ts` still has no runtime imports, which is deliberate:
+`content/skills.ts` reads `boonLabel` from it, so a dependency there would drag the arcade's tuning
+table onto the boot path, which is the leak M214 had to split a module to undo. 0.52KB of slack.
+**5,858 tests pass, up from 5,847.**
