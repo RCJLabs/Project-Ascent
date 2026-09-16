@@ -56,10 +56,8 @@ import { PageHeader } from '@/ui/PageHeader';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { dailyWallCard } from '@/ui/shareCard';
 import { ascentHistory, dayRun, describeAscent, type AscentHistory } from '@/engine/ascent/history';
+import { FREE_SOLO_UNLOCK, describeFreeSoloUnlock } from '@/engine/ascent/unlock';
 import { THEME_UNLOCKS, buildWall, render, themeForHeight } from './render';
-
-/** Free Solo is the hard mode, and it has to be earned. */
-export const FREE_SOLO_UNLOCK = 2000;
 
 /** How many coins in one frame get their own note. */
 const COIN_CUES = 5;
@@ -447,9 +445,7 @@ export function AscentPage() {
             <Card title="Free Solo">
               <p className="text-sm text-ink-soft mb-3 leading-relaxed">
                 One life, thirty per cent faster, no hearts.{' '}
-                {freeSoloUnlocked
-                  ? 'Unlocked.'
-                  : `Reach ${runHeight(FREE_SOLO_UNLOCK, units).label} on the normal wall to unlock it.`}
+                {freeSoloUnlocked ? 'Unlocked.' : describeFreeSoloUnlock(units)}
                 {raceable('freesolo') &&
                   ` Today's best Free Solo runs beside you — ${runHeight(today?.metres ?? 0, units).label} to beat.`}
               </p>

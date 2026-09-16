@@ -11982,6 +11982,11 @@ thresholds beside them.*
   about. Gate it on something real instead, or say in writing why the one arcade-earned unlock
   belongs to the one arcade-flavoured mode.
   *Small.*
+  *Done, and the second answer — see the entry at the end of this document. The premise needed
+  correcting first: the shop and the gear ladder are partly game-funded already, because `xp.ts`
+  totals the game lane. What is true is narrower — it is the only gate that reads a game record
+  **directly**. It stays, because gating a mode on training would make the log serve the toy. And
+  the bar was never measured: 2,000 m is eighteen seconds.*
 
 - **M219 — the ghost you race is always yourself, and the tape would travel.** `Tape` is
   self-contained by design — seed, mode, ticks, moves and the modifiers the run was played with,
@@ -12943,3 +12948,74 @@ have — **the kit picker drew three of the four colours**, dropping `gear`, whi
 milestone's whole pricing argument rests on. Four swatches now.
 
 **Budget** 137.53 → **136.95**, a 0.58KB *gain*. **5,904 tests pass, up from 5,888.**
+
+## M218 — the one gate that reads a game record, and it stays
+
+**The premise needed correcting before the question could be answered.** The milestone was written
+against *"every other gate — the walls, the kits, the boons, the gear on the figure — comes from
+the log"*, and that is not true. `xp.ts` totals the game lane into `total`, and coins are
+`total × CURRENCY_RATE`, so **the kit shop and the gear on the figure are both partly game-funded
+already**. The walls do come from the log — `THEME_UNLOCKS` reads altimeter feet, which M212's rule
+keeps clean — and so do the boons, which hang off skill capstones.
+
+What is true is narrower, and it is the better indictment: `records.best.ascent >=
+FREE_SOLO_UNLOCK` is the only gate in the app that reads a game record **directly**, without going
+through the economy where `GAME_ACTION_CAP` keeps a day of play worth less than half a session.
+Every other use of `records.best` in the app is display.
+
+### It stays, and not as a shrug
+
+The milestone offered two answers, and the one it led with would have been worse than what was
+there. **Gating a game mode on training would make the log serve the toy.** The cap exists so the
+game can never pay its way in training currency; requiring fifteen days on real rock to play a
+harder arcade mode runs the same contamination backwards, putting a reason to log a rock day that
+has nothing to do with climbing into the one record the coach reads. The wall between the halves of
+this app is one-way on purpose — training feeds the game, the game never feeds training — and a
+training prerequisite for a toy would be the first thing pointing back.
+
+**And the mode is called Free Solo.** Handing that out as a reward for going outside more often is
+an association a training app should not build, however cosmetic the mode is.
+
+**A mode is not a reward, it is a difficulty setting**, and what qualifies a climber for a harder
+one is competence at the easier one. That is the real climbing connection the proposal was reaching
+for and missed: a gym does not put you on the lead wall because you have been coming six months, it
+puts you on it when you pass the belay check. This is the belay check.
+
+### Which means the bar had to be measured, and never had been
+
+`FREE_SOLO_UNLOCK = 2000` reads like a distance. Stepped through the actual simulation, it is
+**eighteen seconds** of survival on the normal wall — 14.5 in the mode it unlocks, which is why the
+gate is on the other one. Reached well before the speed caps at 32.5s, so it is a check on
+understanding the controls rather than on endurance. `unlock.test.ts` pins it as a *duration*, so
+retuning `SPEED` or `DIFFICULTY` fails here instead of quietly turning a belay check into a grind.
+
+**It was also in a component.** M198 wrote, in `tuning.test.ts`: *"A tuning decision that found its
+way into a component would escape this — the answer to that is to move it, not to widen the
+sweep."* This is the first case since that was written, and the answer was the one that rule
+names. `engine/ascent/unlock.ts` now holds the constant, the reasoning and the sentence.
+
+**And it was the last anonymous number on that page.** M210 gave every run a climb it had heard of;
+this line still read *"Reach 6,562 ft on the normal wall"*, a conversion rather than a place. It
+reads **"Climb past Mt. Washington — 6,562 ft — on the normal wall to unlock it."** A mountain known
+for the weather turning on you, gating the mode with no safety net, which is a coincidence worth
+keeping.
+
+### The decision is checkable, not just written down
+
+M212 recorded the no-Ascent-challenge decision in prose alone. This one has a test: `unlock.ts` may
+import from the arcade and the unit formatter and nothing else, so the day someone gates the mode
+on sessions or outdoor days, the import that would take is what fails — and the failure points at
+the reasoning above rather than at a style rule.
+
+**Eleven mutants, eleven killed**, sanity survived. One needed rewriting: dropping the engine's
+sentence back into the page left an import unused and failed to typecheck rather than failing a
+test, which proves nothing — corrected, it died on the page test. Three of the kills are the page
+wiring, which is where M212's battery found ten holes and where this one had none only because the
+page tests were written first this time.
+
+**In a browser, both themes, 430px and 1280px**, locked and unlocked: the card reads correctly in
+both states, no page errors. The first phrasing put the height at the end and orphaned *"— to
+unlock it"* onto its own line; the parenthetical sits beside the name it qualifies now.
+
+**Budget** 136.95 → **136.93**, which is noise: the constant moved between two lazy modules and
+the entry chunk never held it. **5,915 tests pass, up from 5,904.**
