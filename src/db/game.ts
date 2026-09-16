@@ -12,6 +12,7 @@
  */
 
 import { getDb } from './db';
+import { isDateKey } from '@/engine/dates';
 import { NO_ENDINGS, type Endings } from '@/engine/ascent/endings';
 import type { Tape } from '@/engine/ascent/replay';
 import type { AcceptedBounty } from '@/engine/challenges';
@@ -178,17 +179,111 @@ export async function putBounties(bounties: AcceptedBounty[]): Promise<AcceptedB
   return bounties;
 }
 
+/**
+ * A number the app could have written: finite, and never negative
+ * (PLAN.md M221).
+ *
+ * Heights, counts and tallies are all of this shape. `Number.isFinite`
+ * rejects `NaN` and both infinities, and it rejects a *string* — which
+ * matters more than it looks, because `'9999' >= 2000` is `true` in
+ * JavaScript and that is the Free Solo gate.
+ */
+function count(value: unknown, fallback = 0): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+/**
+ * One day of the history, or nothing.
+ *
+ * A day without a usable date cannot be placed on the calendar or compared
+ * to another, so there is no salvaging it — dropping the row keeps the rest
+ * of a damaged file readable, which is the whole point of reading it field
+ * by field rather than trusting the object.
+ *
+ * **The tape is passed through unexamined on purpose.** Checking it here
+ * would mean importing `isTape`, and `replay.ts` reaches `ascent/config`
+ * and the boons — the arcade's tuning tables, on the boot path, which is
+ * the leak M214 exists to stop. It is already refused at the point of use:
+ * `tapeToRace` runs `isTape` over it, bounds and all, before a ghost is
+ * built from it.
+ */
+/** The tally, one counter at a time. */
+function readEndings(value: unknown): Endings {
+  const from = (typeof value === 'object' && value !== null ? value : {}) as Partial<Endings>;
+  return {
+    rock: count(from.rock),
+    boulder: count(from.boulder),
+    debris: count(from.debris),
+    metres: count(from.metres),
+    counted: count(from.counted),
+  };
+}
+
+function readDay(value: unknown): DayRecord | null {
+  if (typeof value !== 'object' || value === null) return null;
+  // Field by field rather than `Partial<ClimbedDay & RecoveredDay>`: that
+  // intersection is `never`, because `ClimbedDay.recovered` is `false` and
+  // `RecoveredDay.recovered` is `true`. The two shapes are a union on
+  // purpose and this is the one place that has to read either.
+  const day = value as {
+    date?: unknown;
+    metres?: unknown;
+    coins?: unknown;
+    mode?: unknown;
+    pureMetres?: unknown;
+    tape?: unknown;
+    recovered?: unknown;
+  };
+  if (typeof day.date !== 'string' || !isDateKey(day.date)) return null;
+  const metres = count(day.metres);
+  if (day.recovered === true) return { date: day.date, metres, recovered: true };
+  return {
+    date: day.date,
+    metres,
+    coins: count(day.coins),
+    // Anything else is not a mode this app has ever had.
+    mode: day.mode === 'freesolo' ? 'freesolo' : 'ascent',
+    ...(day.pureMetres !== undefined ? { pureMetres: count(day.pureMetres) } : {}),
+    ...(day.tape !== undefined ? { tape: day.tape as ClimbedDay['tape'] } : {}),
+  };
+}
+
 export async function getAscent(): Promise<AscentRecords> {
   const db = await getDb();
   const record = await db.get('game', ASCENT_KEY);
   const value = (record?.value as Partial<AscentRecords> | undefined) ?? {};
-  // `endings` is spread field by field rather than taken whole: a record
-  // written before M214 has none at all, and one written before a *later*
-  // field would otherwise arrive missing it (PLAN.md M214).
+  /**
+   * Read field by field, because a backup is whatever was in the file
+   * (PLAN.md M221).
+   *
+   * This used to be a spread over `EMPTY_ASCENT`, which fills a *missing*
+   * field and trusts a present one of any type. Measured, on a damaged
+   * record: `days` as a string threw `input.days.reduce is not a function`
+   * and took the Ascent page down; `best.ascent` as the string `'9999'`
+   * drew **32,805 ft** on the records card and unlocked Free Solo, because
+   * `'9999' >= 2000` is true.
+   *
+   * The same discipline `hydrateProfile` has had since M159, arriving in
+   * the store that needed it second.
+   */
+  // No object check on `best`: M221's battery showed one could never fire.
+  // `count` defends every field, so a `best` that is a string, a number or
+  // null reaches the same `{ ascent: 0, freesolo: 0 }` either way — and a
+  // line that cannot change a result is a line on the boot path for nothing
+  // (the dead guard M198 removed, met again).
+  const best = (value.best ?? {}) as Partial<AscentRecords['best']>;
   const stored: AscentRecords = {
-    ...EMPTY_ASCENT,
-    ...value,
-    endings: { ...NO_ENDINGS, ...(value.endings ?? {}) },
+    best: { ascent: count(best.ascent), freesolo: count(best.freesolo) },
+    pureBest: count(value.pureBest),
+    runs: count(value.runs),
+    days: Array.isArray(value.days)
+      ? value.days.map(readDay).filter((day): day is DayRecord => day !== null)
+      : [],
+    // `endings` is spread field by field rather than taken whole: a record
+    // written before M214 has none at all, and one written before a *later*
+    // field would otherwise arrive missing it (PLAN.md M214).
+    endings: readEndings(value.endings),
+    ...(value.daily !== undefined ? { daily: readDay(value.daily) } : {}),
   };
   // The one day the old shape kept, promoted into the history (PLAN.md
   // M96). Only when there is no history yet: a record written since carries

@@ -13233,3 +13233,59 @@ furthest-away requirement with its reason, the requirement list with real progre
 and the season with its three blocks and their dates. No page errors.
 
 **Budget** 137.02 → **137.00**. **5,957 tests pass, up from 5,952.**
+
+## M221 — the game store never learned to distrust the file
+
+**One store reads a backup carefully and the other never did.** `hydrateProfile` has taken its
+record field by field since M159, with `typeof` guards and a fallback each — *"a backup is whatever
+was in the file"* is written in it twice. `getAscent` was a spread over `EMPTY_ASCENT`, which fills
+a **missing** field and trusts a **present** one of any type.
+
+### What that actually did, measured rather than assumed
+
+**A height stored as the string `'9999'` unlocked Free Solo.** `'9999' >= 2000` is `true` in
+JavaScript, so the gate M218 spent a milestone reasoning about opened on a damaged file — and the
+records card drew **32,805 ft**, a fabricated number presented as a real one. Confirmed in a
+browser against a hand-seeded record, on a build with and without this change: **Free Solo
+UNLOCKED** before, locked after.
+
+**And I had the second symptom wrong.** A `days` that is not an array makes `ascentHistory` throw
+`input.days.reduce is not a function`, which is true and is in a test — but I described it as taking
+the Ascent page down, and it does not. The browser renders the page either way. The symptom is a
+missing history, not a blank screen. The claim is narrower than I made it and the fix is worth
+making anyway: an engine that throws on stored data is one refactor away from being a blank screen,
+and nothing should depend on which component happens to catch it.
+
+### Field by field, and a day is repaired rather than dropped
+
+`count` takes a number that is finite and not negative, or the fallback — and `Number.isFinite`
+rejects a string, which is the whole of the gate bug. `readDay` drops a row whose **date** is
+unusable, because a day that cannot be placed on a calendar or compared to another cannot be
+salvaged; everything else is repaired in place. A height that arrived as a string is a lost number,
+not a lost day: the row still says you played.
+
+**The tape is passed through unexamined, on purpose.** Checking it here would import `isTape`, and
+`replay.ts` reaches `ascent/config` and the boons — the arcade's tuning tables, on the boot path,
+which is the leak M214 exists to stop. It is already refused where it is used: `tapeToRace` runs
+`isTape` over it, bounds and all, before a ghost is built from it. There is a test that this is
+deliberate rather than forgotten.
+
+**A guard that rejects everything passes every test about rejection.** So the first two cases are
+controls: a sound record comes back unchanged, and a full one round-trips through its own writer.
+
+### The battery found a line that could never fire
+
+`best` had an object check in front of it — `typeof value.best === 'object' && value.best !== null`
+— and no mutation of it changed any result, because `count` defends every field underneath: a
+`best` that is a string, a number or null reaches the same `{ ascent: 0, freesolo: 0 }` either way.
+Removed rather than commented, which is M198's lesson and also 0.01KB off the boot path. **Twelve
+mutants, eleven killed, one removed as dead.** Two sanity no-ops survived, and two of the first
+pass's results were malformed mutants of mine rather than gaps.
+
+**In a browser**, four damaged records — a non-array `days`, a string height, a `best` that is a
+string, and a list of junk with one good row in it — all render with no page errors, the readable
+rows survive, and the gate stays shut.
+
+**Budget** 137.00 → **137.29**. That is 0.29KB of guards on the boot path, and it is the price of
+the store that opens the game not trusting a file it did not write. `db/game.ts` is read before
+anything renders; there is nowhere cheaper to put this. **5,969 tests pass, up from 5,957.**
