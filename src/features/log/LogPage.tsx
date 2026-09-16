@@ -47,7 +47,7 @@ import { useXp } from '@/store/game';
 import { useProjects } from '@/store/projects';
 import { useSkillEffects } from '@/store/skills';
 import { useProfile, type Injury } from '@/store/profile';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import { useSessions, allSessions } from '@/store/sessions';
 import { againstPrescription, lastLogged } from '@/engine/exerciseLog';
 import { circuitPlan } from '@/engine/circuit';

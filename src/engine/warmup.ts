@@ -10,12 +10,8 @@
  * an empty warmup is more dangerous than a caveated one.
  */
 
-import {
-  WARMUP_EXERCISES,
-  type BodyPart,
-  type WarmupCategory,
-  type WarmupExercise,
-} from '@/content/warmups';
+import { WARMUP_EXERCISES, type WarmupCategory, type WarmupExercise } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import type { Equipment, SessionType } from '@/content/types';
 
 export interface WarmupRequest {

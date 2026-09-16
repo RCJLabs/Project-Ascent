@@ -13359,3 +13359,77 @@ Achievable to 52 or under"* with the unit beside the number, and the picker offe
 No page errors.
 
 **Budget** 137.29 → **137.30**. **5,980 tests pass, up from 5,969.**
+
+## M223 — the part list was two lists, and neither had a hand in it
+
+**Asked for directly: more body parts, and a different way of recording one.** *"I hurt my hand but
+that's not an Option."*
+
+### The list was two lists, and they already disagreed
+
+`BodyPart` was nine strings in `warmups.ts`, and the list of them was written out by hand **twice**
+— in the injuries card and in the finder's *"anything currently injured?"* chips. The finder had
+**seven**: no hip, no ankle. So a climber with a bad hip could say so on one screen and not the
+other, and nothing failed. That is why a missing part was possible at all.
+
+The parts are a table now — id, label, region, whether sides mean anything — and both pickers read
+it. A part is a **five-place commitment**: the union, a label, return-to-climbing prompts,
+something in the warmup that loads it, something in the cooldown that eases it. `bodyParts.test.tsx`
+fails on any of the five, and it renders the finder to check the last list is not a list again,
+because M223's own battery cut that render to one region and every *source* rule still passed.
+
+**`pulley` had no cooldown at all**, which nothing had noticed in twelve milestones of that file.
+
+### Eighteen, chosen for what ends a climber's season
+
+The nine new ones are **hand, forearm, neck, rib, lat, groin, hamstring, Achilles and foot**. Heel
+hooks tear hamstrings and Achilles tendons; hard crimping and lock-offs pull intercostals; toe hooks
+and tight shoes ruin feet; belaying wrecks necks. And the label stops being the id — rendering
+`{injury.part}` under `capitalize` is what had quietly kept every part to one lowercase word.
+
+**Three guards caught the content, which is what they are for.** A cooldown may not say *"hang"*,
+and the neck stretch told you to let an arm hang heavy. A return prompt may not say *"stretch"*, and
+the lat one did. And two warmup exercises must load **nothing** — that is the escape hatch that lets
+a warmup exist for a climber with every part flagged — and I had given both of them loads.
+
+`PART_WORDS` gained the nine, and one of the old nine was wrong: the hip rule was
+`/\bhips?\b|\bgroin\b/`, so a safety line about adductors reported a *hip* injury and one about
+hips reported no groin. They are separate rules now.
+
+### Adding one asks, instead of guessing
+
+Tapping a part chip used to **create the record on the spot** — dated today, no side, severity
+guessed — and leave the climber to correct it from three more chip rows. Two of those four are
+usually wrong: an injury is rarely logged the day it happens, and a side is not optional
+information about an elbow.
+
+It is one step now: a grouped picker, then side, how bad and since when, then **Add**. Nothing is
+written until then, so backing out costs nothing — which is the other half of why instant-create
+was wrong. It is not an undoable action if it never happened.
+
+**And the same part can be hurt on both sides.** The old picker filtered out any part already
+recorded, so a left elbow and a right elbow could not both exist; ids carry a counter now, because
+two records added inside one millisecond used to share one.
+
+### Two faults the browser found, and one only a test could
+
+The injury row put **status and side on one wrapped line**, so *"Healing · Coming back · Left ·
+Right · Both"* read as a single set of five choices. Three rows now. And the row printed the raw
+`side` — lowercase *"right"* beside a chip labelled *"Right"*, because the chips were lowercase text
+under `className="capitalize"`. That is not only untidy: the **accessible name differed from what is
+on screen**, so a screen reader and a test both asked for "Right" and found "right". There is a
+`SIDES` table with labels, and the add form is a named `group` so the form's own chips can be
+addressed apart from each injury row's.
+
+**Fourteen mutants, thirteen killed**, two sanity no-ops survived. Three of the first pass needed
+correcting: two were weak mutants of mine — removing a part's *second* loader rather than its last —
+and the third was the real gap that produced the finder-rendering rule.
+
+**In a browser, both themes, 430px and 1280px**: the form groups four regions, the hint appears
+under the part chosen, a hand injury records with a side and a date that is not today, and the row
+reads *"Hand · Right since 2026-09-16"*. No page errors.
+
+**Budget** 137.30 → **137.51**, and none of the new content is on the boot path — the parts table,
+the prompts and the cooldowns are all in lazy chunks, checked. Slack is **0.49**, which is the
+thinnest this has been; the next milestone that touches the shell should expect to pay for itself.
+**5,996 tests pass, up from 5,980.**

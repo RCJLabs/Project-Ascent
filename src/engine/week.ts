@@ -32,7 +32,7 @@
  */
 
 import type { Drill, Phase, Program, SessionType } from '@/content/types';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import type { Session } from '@/db/sessions';
 import type { TestReason } from './assessments';
 import { dayLoad, type DayLoad } from './bodyLoad';

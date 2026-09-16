@@ -11,7 +11,7 @@
  * before the feature existed.
  */
 
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import type { Program } from '@/content/types';
 import type { Session } from '@/db/sessions';
 import type { Project } from '@/db/projects';

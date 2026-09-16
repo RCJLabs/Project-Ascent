@@ -36,7 +36,7 @@ import type { Session } from '@/db/sessions';
 import { addDays, daysBetween, startOfWeek, today as todayKey } from './dates';
 import type { ClimberState } from './derive';
 import { DEFAULT_DISPLAY, V_GRADES, YDS_GRADES, displayGrade, gradeOrdinal, type GradeDisplay, type GradeScale } from './grades';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import { drillLoads } from './bodyLoad';
 import { isRestSession } from './rest';
 

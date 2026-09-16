@@ -1,6 +1,6 @@
 import { AlertTriangle } from 'lucide-react';
 import type { Protocol } from '@/content/types';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import { protocolSafety } from '@/engine/bodyLoad';
 
 /**

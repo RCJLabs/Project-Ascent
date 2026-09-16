@@ -18,7 +18,7 @@ import { deriveClimberState } from '@/engine/derive';
 import { useSessions, useAllSessions } from '@/store/sessions';
 import { injuryPolicy } from '@/engine/injury';
 import type { Discipline, Equipment } from '@/content/types';
-import type { BodyPart } from '@/content/warmups';
+import { REGIONS, REGION_LABEL, partsIn, type BodyPart } from '@/content/bodyParts';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { Button } from '@/ui/Button';
@@ -63,15 +63,6 @@ const EQUIPMENT: { value: Equipment; label: string; hint: string }[] = [
   { value: 'weight', label: 'Added weight', hint: 'Belt, backpack, or plates' },
 ];
 
-const BODY_PARTS: { value: BodyPart; label: string }[] = [
-  { value: 'fingers', label: 'Fingers' },
-  { value: 'pulley', label: 'Pulley' },
-  { value: 'elbow', label: 'Elbow' },
-  { value: 'shoulder', label: 'Shoulder' },
-  { value: 'wrist', label: 'Wrist' },
-  { value: 'back', label: 'Back' },
-  { value: 'knee', label: 'Knee' },
-];
 
 function Chip({
   selected,
@@ -572,17 +563,28 @@ function FinderForm({
             Optional. Used to steer you away from programs that would load it hard, and kept out of
             your warmups. Saved to your profile.
           </p>
-          <div className="grid grid-cols-2 gap-2">
-            {BODY_PARTS.map((part) => (
-              <Chip
-                key={part.value}
-                selected={injuries.includes(part.value)}
-                onClick={() => toggleInjury(part.value)}
-              >
-                <span className="font-semibold">{part.label}</span>
-              </Chip>
-            ))}
-          </div>
+          {/* Grouped and complete, from the one table (PLAN.md M223). This
+              list was written out by hand and had **seven** of the nine
+              parts in it — a climber with a bad hip or ankle could say so
+              on the injuries card and not here, and nothing failed. */}
+          {REGIONS.map((region) => (
+            <div key={region} className="mb-3 last:mb-0">
+              <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mb-1.5">
+                {REGION_LABEL[region]}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {partsIn(region).map((part) => (
+                  <Chip
+                    key={part.id}
+                    selected={injuries.includes(part.id)}
+                    onClick={() => toggleInjury(part.id)}
+                  >
+                    <span className="font-semibold">{part.label}</span>
+                  </Chip>
+                ))}
+              </div>
+            </div>
+          ))}
         </Card>
 
         <Button size="lg" onClick={run} className="w-full">

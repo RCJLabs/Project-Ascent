@@ -27,7 +27,7 @@
  * a ceiling on the effort, or a test told to wait.
  */
 
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import { describeParts } from './bodyLoad';
 import { STALE_DAYS } from './assessments';
 

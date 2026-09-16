@@ -3,7 +3,7 @@ import { reportDbError } from '@/db/db';
 import { enqueueWrite } from './writes';
 import { getDb } from '@/db/db';
 import { registerAdaptations } from '@/content/programs';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import type { Equipment } from '@/content/types';
 import { addDays, today, isDateKey } from '@/engine/dates';
 import { EMPTY_BASELINE, readBaseline, type BaselineAnswers } from '@/engine/onboarding';
@@ -157,7 +157,14 @@ export interface ProfileState {
    */
   restoreProgram: (snapshot: { activeProgramId: string | null; blocks: BlockRecord[] }) => void;
   setEquipment: (equipment: Equipment[]) => void;
-  addInjury: (part: BodyPart, note?: string) => void;
+  /**
+   * Log one. `details` carries what the add form asked for (PLAN.md M223).
+   *
+   * Every field optional and every default the old behaviour, because two
+   * callers — the finder's chips and the guided setup's — still add with a
+   * tap and should keep meaning "this, today, and I am training around it".
+   */
+  addInjury: (part: BodyPart, details?: Partial<Pick<Injury, 'side' | 'since' | 'severity' | 'note'>>) => void;
   updateInjury: (id: string, patch: Partial<Injury>) => void;
   removeInjury: (id: string) => void;
   /**
@@ -263,6 +270,9 @@ async function save(value: Persisted): Promise<void> {
   const db = await getDb();
   await db.put('profile', { key: KEY, value });
 }
+
+/** Makes ids unique inside one millisecond. See `addInjury`. */
+let added = 0;
 
 export const useProfile = create<ProfileState>((set, get) => ({
   hydrated: false,
@@ -413,16 +423,20 @@ export const useProfile = create<ProfileState>((set, get) => ({
     enqueueWrite(() => save(snapshot(get())));
   },
 
-  addInjury: (part, note) => {
+  addInjury: (part, details) => {
     const injury: Injury = {
-      id: `${part}-${Date.now()}`,
+      // A counter as well as the clock: two records added inside the same
+      // millisecond used to share an id, and since M223 a climber can have
+      // a left one and a right one (PLAN.md M223).
+      id: `${part}-${Date.now()}-${(added += 1)}`,
       part,
-      since: today(),
+      since: details?.since ?? today(),
       // The middle of the three: someone marking an injury is usually
       // training around it, and the two extremes are one tap away.
-      severity: 'managing',
+      severity: details?.severity ?? 'managing',
       status: 'active',
-      ...(note ? { note } : {}),
+      ...(details?.side ? { side: details.side } : {}),
+      ...(details?.note ? { note: details.note } : {}),
     };
     set({ injuries: [...get().injuries, injury] });
     enqueueWrite(() => save(snapshot(get())));

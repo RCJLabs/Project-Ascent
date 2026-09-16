@@ -9,17 +9,8 @@
  */
 
 import type { Equipment } from './types';
+import type { BodyPart } from './bodyParts';
 
-export type BodyPart =
-  | 'fingers'
-  | 'pulley'
-  | 'wrist'
-  | 'elbow'
-  | 'shoulder'
-  | 'back'
-  | 'hip'
-  | 'knee'
-  | 'ankle';
 
 export type WarmupCategory = 'pulse' | 'shoulder' | 'fingers' | 'hips' | 'core' | 'climbing';
 
@@ -45,7 +36,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 300,
     category: 'pulse',
     equipment: ['none'],
-    loads: ['knee', 'ankle'],
+    loads: ['knee', 'ankle', 'achilles', 'foot'],
   },
   {
     id: 'jumping_jacks',
@@ -54,7 +45,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 120,
     category: 'pulse',
     equipment: ['none'],
-    loads: ['knee', 'ankle', 'shoulder'],
+    loads: ['knee', 'ankle', 'achilles', 'foot', 'shoulder'],
   },
   {
     id: 'arm_swings',
@@ -63,7 +54,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 90,
     category: 'pulse',
     equipment: ['none'],
-    loads: ['shoulder'],
+    loads: ['shoulder', 'lat'],
   },
   {
     id: 'brisk_walk',
@@ -101,7 +92,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 90,
     category: 'shoulder',
     equipment: ['hangboard'],
-    loads: ['shoulder', 'fingers', 'elbow'],
+    loads: ['shoulder', 'lat', 'fingers', 'hand', 'forearm', 'elbow'],
   },
   {
     id: 'wall_angels',
@@ -110,7 +101,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 90,
     category: 'shoulder',
     equipment: ['none'],
-    loads: ['shoulder'],
+    loads: ['shoulder', 'neck', 'back'],
   },
   {
     id: 'shoulder_cars',
@@ -139,7 +130,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 90,
     category: 'fingers',
     equipment: ['none'],
-    loads: ['wrist'],
+    loads: ['wrist', 'hand', 'forearm'],
   },
   {
     id: 'rubber_band_extensions',
@@ -148,7 +139,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 75,
     category: 'fingers',
     equipment: ['gym'],
-    loads: ['fingers', 'wrist'],
+    loads: ['fingers', 'hand', 'forearm', 'wrist'],
   },
   {
     id: 'jug_hangs',
@@ -157,7 +148,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 120,
     category: 'fingers',
     equipment: ['hangboard'],
-    loads: ['fingers', 'pulley', 'shoulder', 'elbow'],
+    loads: ['fingers', 'pulley', 'hand', 'forearm', 'shoulder', 'lat', 'elbow'],
   },
   {
     id: 'hang_ladder',
@@ -166,7 +157,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 240,
     category: 'fingers',
     equipment: ['hangboard'],
-    loads: ['fingers', 'pulley', 'elbow'],
+    loads: ['fingers', 'pulley', 'hand', 'forearm', 'lat', 'elbow'],
   },
 
   // ── Hips and legs ───────────────────────────────────────────────────────
@@ -177,7 +168,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 120,
     category: 'hips',
     equipment: ['none'],
-    loads: ['hip'],
+    loads: ['hip', 'groin', 'hamstring'],
   },
   {
     id: 'deep_squat_hold',
@@ -186,7 +177,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 60,
     category: 'hips',
     equipment: ['none'],
-    loads: ['hip', 'knee', 'ankle'],
+    loads: ['hip', 'groin', 'knee', 'ankle', 'achilles'],
   },
   {
     id: 'worlds_greatest_stretch',
@@ -204,7 +195,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 120,
     category: 'hips',
     equipment: ['none'],
-    loads: ['hip', 'knee'],
+    loads: ['hip', 'groin', 'hamstring', 'knee'],
   },
 
   // ── Core and tension ────────────────────────────────────────────────────
@@ -215,7 +206,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 90,
     category: 'core',
     equipment: ['none'],
-    loads: ['back'],
+    loads: ['back', 'neck'],
   },
   {
     id: 'dead_bugs_warmup',
@@ -233,7 +224,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 75,
     category: 'core',
     equipment: ['none'],
-    loads: ['hip', 'back'],
+    loads: ['hip', 'hamstring', 'back'],
   },
   {
     id: 'plank_warmup',
@@ -242,7 +233,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 60,
     category: 'core',
     equipment: ['none'],
-    loads: ['shoulder', 'back'],
+    loads: ['shoulder', 'back', 'rib'],
   },
 
   // ── On the wall ─────────────────────────────────────────────────────────
@@ -253,7 +244,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 300,
     category: 'climbing',
     equipment: ['wall'],
-    loads: ['fingers', 'shoulder', 'elbow'],
+    loads: ['fingers', 'hand', 'forearm', 'shoulder', 'lat', 'elbow', 'foot'],
   },
   {
     id: 'easy_problems',
@@ -262,7 +253,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 480,
     category: 'climbing',
     equipment: ['wall'],
-    loads: ['fingers', 'pulley', 'shoulder', 'elbow'],
+    loads: ['fingers', 'pulley', 'hand', 'forearm', 'shoulder', 'lat', 'elbow', 'foot'],
   },
   {
     id: 'downclimbing',
@@ -271,7 +262,7 @@ export const WARMUP_EXERCISES: WarmupExercise[] = [
     seconds: 300,
     category: 'climbing',
     equipment: ['wall'],
-    loads: ['fingers', 'shoulder', 'knee'],
+    loads: ['fingers', 'hand', 'forearm', 'shoulder', 'knee', 'ankle', 'foot'],
   },
 ];
 

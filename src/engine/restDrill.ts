@@ -43,7 +43,7 @@
  */
 
 import { offWallDrills } from '@/content/drills';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import type { Drill } from '@/content/types';
 import { drillConflict } from './bodyLoad';
 import { daysBetween } from './dates';

@@ -19,7 +19,7 @@
  * place to fix, and every rule carries the words that trigger it.
  */
 
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import type { Drill, DrillLoad, Equipment, Exercise, Metric, Protocol, SessionType } from '@/content/types';
 
 export interface LoadRule {
@@ -319,13 +319,28 @@ export function sessionConflicts(
 export const PART_WORDS: Record<BodyPart, RegExp> = {
   fingers: /\bfingers?\b|\bpulley\b|\btendons?\b/i,
   pulley: /\bfingers?\b|\bpulley\b/i,
+  // A hand rule covers the thumb and the knuckles, which is what a climber
+  // means by it, and *not* the fingers — a finger rule already exists and
+  // an author who wrote "finger" did not write "hand" (PLAN.md M223).
+  hand: /\bhands?\b|\bthumbs?\b|\bknuckles?\b|\bpalms?\b/i,
+  forearm: /\bforearms?\b|\bflexors?\b|\bextensors?\b/i,
   wrist: /\bwrists?\b/i,
   elbow: /\belbows?\b/i,
-  shoulder: /\bshoulders?\b/i,
+  shoulder: /\bshoulders?\b|\brotator cuff\b/i,
+  lat: /\blats?\b|\blatissimus\b/i,
+  neck: /\bneck\b|\bcervical\b/i,
   back: /\bback\b|\bspine\b|\blower back\b/i,
-  hip: /\bhips?\b|\bgroin\b/i,
+  rib: /\bribs?\b|\bintercostals?\b/i,
+  hip: /\bhips?\b/i,
+  // Its own rule now. The hip rule used to answer for the groin, which
+  // reported a hip injury on a sentence about adductors and no groin injury
+  // on one about hips.
+  groin: /\bgroin\b|\badductors?\b/i,
+  hamstring: /\bhamstrings?\b/i,
   knee: /\bknees?\b|\bmeniscus\b/i,
   ankle: /\bankles?\b/i,
+  achilles: /\bachilles\b|\bheel\b/i,
+  foot: /\bfeet\b|\bfoot\b|\btoes?\b/i,
 };
 
 /** The parts a sentence names outright. Empty when it names none. */

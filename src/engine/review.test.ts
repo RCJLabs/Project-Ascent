@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import { getProgram } from '@/content/programs';
 import { newProject } from '@/db/projects';
 import { newSession, type Session } from '@/db/sessions';

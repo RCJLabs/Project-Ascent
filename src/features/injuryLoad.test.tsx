@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { getProgram } from '@/content/programs';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import { newSession, putSession } from '@/db/sessions';
 import { dayOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';

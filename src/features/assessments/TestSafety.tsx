@@ -1,6 +1,6 @@
 import { AlertTriangle } from 'lucide-react';
 import type { Metric } from '@/content/types';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import { describeParts, metricConflict } from '@/engine/bodyLoad';
 
 /**

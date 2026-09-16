@@ -19,7 +19,7 @@ import { DRILL_CATEGORIES, filterDrills } from '@/content/drills';
 import type { DrillCategory, Equipment, MetricId, Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import type { Session } from '@/db/sessions';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import { getDrill } from '@/content/drills';
 import { getMetric } from '@/content/metrics';
 import { article } from './phrase';

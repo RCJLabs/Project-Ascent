@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { ArrowLeft, ArrowRight, Check, ShieldAlert } from 'lucide-react';
 import { METRICS } from '@/content/metrics';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import type { Discipline, Equipment } from '@/content/types';
 import { today } from '@/engine/dates';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';

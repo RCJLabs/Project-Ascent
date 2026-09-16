@@ -37,7 +37,7 @@
  * lie to it, and the one place that must never happen is here.
  */
 
-import type { BodyPart } from './warmups';
+import type { BodyPart } from './bodyParts';
 
 export interface ReturnStep {
   id: string;
@@ -105,6 +105,44 @@ export const PART_STEPS: Partial<Record<BodyPart, ReturnStep[]>> = {
   ankle: [
     { id: 'hop', text: 'I can take my weight on it on one leg without hesitating.' },
     { id: 'ground', text: 'Landing and stepping down feel steady rather than careful.' },
+  ],
+  // The nine M223 added. Same rule as the nine above: questions about what
+  // the tissue does, never a schedule and never a threshold.
+  hand: [
+    { id: 'grip-shape', text: 'I can make and hold a fist, and open it flat, without protecting it.' },
+    { id: 'pinch', text: 'Pinching and thumb-side pressure are symmetrical and quiet.' },
+  ],
+  forearm: [
+    { id: 'pump', text: 'It pumps and recovers like the other arm rather than seizing.' },
+    { id: 'grip-repeat', text: 'Repeated gripping does not leave an ache that outlasts the session.' },
+  ],
+  lat: [
+    { id: 'reach-lat', text: 'Hanging at full reach does not pull anything down the side.' },
+    { id: 'pull-lat', text: 'Pulling hard from a long lock is symmetrical.' },
+  ],
+  neck: [
+    { id: 'look-up', text: 'I can look up for a spell of belaying without it stiffening.' },
+    { id: 'turn', text: 'Turning my head reaches the same distance both ways.' },
+  ],
+  rib: [
+    { id: 'breathe', text: 'A deep breath, a cough and a laugh are all unremarkable.' },
+    { id: 'lock', text: 'Locking off hard on that side does not catch it.' },
+  ],
+  groin: [
+    { id: 'wide', text: 'Drop knees and wide stems reach as far as the other side.' },
+    { id: 'push-groin', text: 'Pushing in from a wide foot does not produce symptoms.' },
+  ],
+  hamstring: [
+    { id: 'heel-ham', text: 'A hard heel hook pulls rather than pinches or tears.' },
+    { id: 'stretch-ham', text: 'Reaching for my toes is symmetrical, and easing out of it is quiet.' },
+  ],
+  achilles: [
+    { id: 'calf-raise', text: 'I can rise onto that toe on one leg, repeatedly, without a change in feel.' },
+    { id: 'morning', text: 'The first steps in the morning are like the other side.' },
+  ],
+  foot: [
+    { id: 'shoe', text: 'A climbing shoe does what it always did rather than becoming the problem.' },
+    { id: 'edge-foot', text: 'Standing on a small edge and rocking over it is quiet.' },
   ],
 };
 

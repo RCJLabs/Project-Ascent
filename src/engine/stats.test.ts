@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { MetricEntry } from '@/db/metrics';
 import { newProject } from '@/db/projects';
 import { newSession, type Session } from '@/db/sessions';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import type { Injury, InjurySeverity } from '@/store/profile';
 import { SEVERITY_COST } from './injury';
 import { addDays, startOfWeek } from './dates';

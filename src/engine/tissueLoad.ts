@@ -1,5 +1,5 @@
 import type { Session } from '@/db/sessions';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import { addDays, daysBetween } from './dates';
 import { partsInText } from './bodyLoad';
 import { loadOrZero } from './derive';

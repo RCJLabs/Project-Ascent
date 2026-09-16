@@ -8,7 +8,7 @@ import { FINGER_CHIP, FINGER_LABEL, SLEEP_CHIP, SLEEP_LABEL } from '@/engine/rea
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { DayBody } from '@/features/log/LogPage';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import { useSettings } from '@/store/settings';
 
 /** The card under test is behind the fold (PLAN.md M120); open it. */

@@ -20,7 +20,7 @@
  * healing, back to training, needing a warning rather than a wall.
  */
 
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import type { Injury, InjurySeverity } from '@/store/profile';
 
 export interface InjuryPolicy {

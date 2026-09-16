@@ -34,7 +34,7 @@
  */
 
 import type { Session } from '@/db/sessions';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 import type { Injury } from '@/store/profile';
 import type { TissueFeel } from './readiness';
 import { addDays, daysBetween } from './dates';

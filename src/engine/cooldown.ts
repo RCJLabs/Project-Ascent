@@ -28,7 +28,7 @@
  */
 
 import { COOLDOWN_EXERCISES, type CooldownExercise } from '@/content/cooldowns';
-import type { BodyPart } from '@/content/warmups';
+import type { BodyPart } from '@/content/bodyParts';
 
 export interface CooldownRequest {
   /** What the session just loaded — from `sessionParts`. Weighted toward. */
