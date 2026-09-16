@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { resetDbForTests } from '@/db/db';
 import { EMPTY_ASCENT, getWallet } from '@/db/game';
+import { GAME_ACHIEVEMENTS, gameAchievements } from '@/engine/achievements';
 import { WALLS, shopWalls, wall } from '@/engine/ascent/walls';
 import { shopOutfits } from '@/engine/kits';
 import { useGame } from '@/store/game';
+import { playableCanvas } from '@/test/canvas';
 import { renderAt, reset } from '@/test/render';
 import { AscentPage } from './AscentPage';
 
@@ -137,5 +139,97 @@ describe('every wall is reachable', () => {
     await withCoins(0);
     for (const w of WALLS) expect(row(w.name), w.id).toBeTruthy();
     expect(row('Automatic')).toBeTruthy();
+  });
+});
+
+describe('the achievement a run can earn (PLAN.md M229)', () => {
+  /**
+   * `no-takes` is the one achievement that is not in the training log
+   * (M212), so the reward card after a session can never report it. It is
+   * reported where it happens instead, and compared before against after —
+   * otherwise every run after the one that earned it claims it again.
+   *
+   * **A run cannot earn it in jsdom**: it wants a pure run past El Capitan
+   * and the wall ends an unsteered run in seconds. So the qualifying day is
+   * put into the record *while the run is in the air* — `hadRef` was taken
+   * when it started, the reading after it lands differs, and that is exactly
+   * the transition. `runEarned` is tested directly for the decision itself.
+   */
+  const PURE = {
+    date: '2026-01-02',
+    metres: 99_999,
+    coins: 0,
+    mode: 'ascent' as const,
+    pureMetres: 99_999,
+  };
+
+  /** Let the run get airborne, then make the record qualify. */
+  async function qualifyMidRun(): Promise<void> {
+    await new Promise((r) => setTimeout(r, 60));
+    await act(async () => {
+      const game = useGame.getState();
+      useGame.setState({ ascent: { ...game.ascent, days: [PURE, ...game.ascent.days] } });
+    });
+  }
+
+  it('reports it on the run that earned it, and not on the next one', async () => {
+    const stop = playableCanvas();
+    try {
+      await useGame.getState().load();
+      renderAt('/ascent', <AscentPage />);
+      fireEvent.click(await screen.findByRole('button', { name: /Climb/ }));
+      await qualifyMidRun();
+      // The run lands and the page asks what changed.
+      expect(await screen.findByText('No Takes', undefined, { timeout: 15_000 })).toBeTruthy();
+      expect(screen.getByText('Achievement')).toBeTruthy();
+
+      // The next run holds it already, so it says nothing — which is the
+      // whole reason this is a comparison and not "do I hold it".
+      fireEvent.click(screen.getByRole('button', { name: /Again/ }));
+      await waitFor(() => expect(screen.queryByText('No Takes')).toBeNull());
+      await screen.findByRole('button', { name: /Again/ }, { timeout: 15_000 });
+      await waitFor(() => expect(useGame.getState().ascent.runs).toBeGreaterThan(1));
+      // `runs` is set by `recordRun` and the report is the continuation of
+      // the promise it returns, so seeing the count move is not the question
+      // having been asked. One turn of the queue is: the callback is already
+      // scheduled by then, and `act` flushes the render it causes.
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(screen.queryByText('No Takes')).toBeNull();
+      expect(screen.queryByText('Achievement')).toBeNull();
+    } finally {
+      stop();
+    }
+  }, 40_000);
+
+  it('says nothing on a run that earned nothing', async () => {
+    const stop = playableCanvas();
+    try {
+      await useGame.getState().load();
+      renderAt('/ascent', <AscentPage />);
+      fireEvent.click(await screen.findByRole('button', { name: /Climb/ }));
+      await screen.findByRole('button', { name: /Again/ }, { timeout: 15_000 });
+      // `setPhase('over')` is synchronous and the report happens once
+      // `recordRun` resolves, so *Again* being on screen is not the run
+      // having landed. Two mutants survived a version of this that assumed
+      // it was.
+      await waitFor(() => expect(useGame.getState().ascent.runs).toBeGreaterThan(0));
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(screen.queryByText('Achievement')).toBeNull();
+      expect(screen.queryByText('No Takes')).toBeNull();
+    } finally {
+      stop();
+    }
+  }, 30_000);
+
+  it('holds the whole list to what the game can earn', () => {
+    // A definition that stopped reading the sessions would go unreported by
+    // the run card and unreportable by the session card. `achievements.test`
+    // holds the list complete; this holds the page to that list.
+    expect(GAME_ACHIEVEMENTS).toContain('no-takes');
+    expect(gameAchievements([]).map((a) => a.id)).toEqual([...GAME_ACHIEVEMENTS]);
   });
 });

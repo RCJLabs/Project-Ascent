@@ -28,6 +28,7 @@ import { describeBurns, describeClimb, restingFor } from '@/engine/ascent/restin
 import { describeScale, runHeight } from '@/engine/ascent/scale';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveAvatar } from '@/engine/avatar';
+import { gameAchievements, runEarned, type Achievement } from '@/engine/achievements';
 import { pageScroller } from '@/ui/mainScroll';
 import { GAME_MARGIN, fitGameWidth, gameHeight } from './fit';
 import { addDays, daysBetween, today as todayKey } from '@/engine/dates';
@@ -133,6 +134,17 @@ export function AscentPage() {
   const [mode, setMode] = useState<Mode>('ascent');
   const [hud, setHud] = useState<Hud>(EMPTY_HUD);
   const [payout, setPayout] = useState<AscentPayout | null>(null);
+  /**
+   * The one achievement the game can earn, reported where it happens
+   * (PLAN.md M212, M229).
+   *
+   * Captured before the run and compared after, rather than asked as "is it
+   * earned now" — which is true of every run after the first that crossed
+   * it. The same shape the reward card uses for the other twenty-five, and
+   * for the same reason: the question is which *run* earned it.
+   */
+  const [runAchievement, setRunAchievement] = useState<Achievement | null>(null);
+  const hadRef = useRef<boolean>(false);
   const [newBest, setNewBest] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   /** The record to beat, read before the run so recordRun cannot move it. */
@@ -337,6 +349,7 @@ function WallRow({
       }
 
       setFinished(tape ? { tape, date, metres: climbed } : null);
+      const had = hadRef.current;
       void recordRun({
         mode: run.mode,
         metres: climbed,
@@ -347,7 +360,13 @@ function WallRow({
         units,
         endedBy: run.endedBy,
         ...(tape ? { tape } : {}),
-      }).then(setPayout);
+      }).then((paid) => {
+        setPayout(paid);
+        // After the write, because the achievement is a question asked of
+        // the day records and this run is not in them until `recordRun`
+        // resolves.
+        setRunAchievement(runEarned(had, gameAchievements(useGame.getState().ascent.days)));
+      });
     },
     [recordRun, derived.restedToday, seed, units],
   );
@@ -399,6 +418,8 @@ function WallRow({
       setPayout(null);
       setFinished(null);
       setNewBest(false);
+      setRunAchievement(null);
+      hadRef.current = gameAchievements(useGame.getState().ascent.days).some((a) => a.date !== null);
       setHud(EMPTY_HUD);
       setPhase('playing');
     },
@@ -974,6 +995,18 @@ function WallRow({
                       ? 'Rest day, so it pays half again as much.'
                       : 'Paid on your best run of the day. A rest day pays ×1.5.'}
                 </p>
+              </div>
+            )}
+
+            {runAchievement && (
+              <div className="border-t border-line pt-3 mb-3">
+                <div className="text-2xs font-bold uppercase tracking-widest text-accent">
+                  Achievement
+                </div>
+                <p className="text-lg font-black tracking-tight leading-tight mt-1">
+                  {runAchievement.name}
+                </p>
+                <p className="text-sm text-ink-soft mt-1 leading-relaxed">{runAchievement.detail}</p>
               </div>
             )}
 

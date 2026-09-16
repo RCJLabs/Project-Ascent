@@ -12,6 +12,7 @@ import {
   COMEBACK_DAYS,
   DELOAD_RPE_CAP,
   EASY_RPE,
+  GAME_ACHIEVEMENTS,
   LONG_SESSION_MIN,
   OUTDOOR_MONTHS,
   MAXIMAL_RPE,
@@ -21,6 +22,9 @@ import {
   WEEK_DAYS,
   deriveAchievements,
   earnedCount,
+  earnedSince,
+  gameAchievements,
+  runEarned,
   sortAchievements,
   type Achievement,
   type AchievementId,
@@ -708,5 +712,94 @@ describe('the one that is not in the log (PLAN.md M212)', () => {
   it('is absent, not failed, for a climber who has never played', () => {
     expect(earned([])).toBeNull();
     expect(deriveAchievements({ sessions: [] }).some((a) => a.id === 'no-takes')).toBe(true);
+  });
+});
+
+// ── The moment they arrive (PLAN.md M229) ────────────────────────────────
+
+describe('which session earned it', () => {
+  const all = (): Achievement[] => deriveAchievements({ sessions: [] });
+
+  it('reports what the second reading has and the first did not', () => {
+    const before = all().map((a) => (a.id === 'full-week' ? { ...a, date: '2026-01-01' } : a));
+    const after = before.map((a) =>
+      a.id === 'clean-sheet' ? { ...a, date: '2026-02-02' } : a,
+    );
+    expect(earnedSince(before, after).map((a) => a.id)).toEqual(['clean-sheet']);
+  });
+
+  it('says nothing about one that was already held', () => {
+    // The whole reason this is a comparison rather than "dated today": a
+    // climber who earned it in March and logs a session in June has not
+    // just earned it, and every run after the first would claim the game's.
+    const held = all().map((a) => (a.id === 'full-week' ? { ...a, date: '2026-01-01' } : a));
+    expect(earnedSince(held, held)).toEqual([]);
+  });
+
+  it('reports one earned on a day that is not today', () => {
+    // A session logged late for last Tuesday is the session that earned it,
+    // and its date is last Tuesday. "Dated today" would miss it entirely.
+    const before = all();
+    const after = all().map((a) => (a.id === 'the-double' ? { ...a, date: '2025-11-03' } : a));
+    expect(earnedSince(before, after).map((a) => a.id)).toEqual(['the-double']);
+  });
+
+  it('survives an achievement being taken back', () => {
+    // Editing a session away takes one back — the module's own promise — so
+    // `after` can hold fewer than `before` and that is not an error.
+    const before = all().map((a) => (a.id === 'listened' ? { ...a, date: '2026-01-01' } : a));
+    expect(earnedSince(before, all())).toEqual([]);
+  });
+});
+
+describe('the ones the game earns', () => {
+  it('is the list, and the list is complete', () => {
+    /**
+     * `GAME_ACHIEVEMENTS` is named rather than inferred, so this holds it
+     * honest: derive over an **empty training log** and nothing outside the
+     * list may come back earned. A definition that stopped reading the
+     * sessions — or a new one that reads only the game — fails here rather
+     * than quietly going unreported when a run ends.
+     */
+    const withoutSessions = deriveAchievements({
+      sessions: [],
+      ascent: [{ date: '2026-03-01', metres: 99_999, coins: 0, mode: 'ascent', pureMetres: 99_999 }],
+    });
+    const earned = withoutSessions.filter((a) => a.date !== null).map((a) => a.id);
+    expect(earned.length).toBeGreaterThan(0);
+    for (const id of earned) expect(GAME_ACHIEVEMENTS, id).toContain(id);
+  });
+
+  it('returns only those, whatever else the log holds', () => {
+    const found = gameAchievements([
+      { date: '2026-03-01', metres: 99_999, coins: 0, mode: 'ascent', pureMetres: 99_999 },
+    ]);
+    expect(found.map((a) => a.id)).toEqual([...GAME_ACHIEVEMENTS]);
+    expect(found.every((a) => a.date !== null)).toBe(true);
+  });
+
+  it('holds none of them before the run that earns one', () => {
+    expect(gameAchievements([]).every((a) => a.date === null)).toBe(true);
+  });
+});
+
+describe('what a run earned', () => {
+  const held: Achievement[] = [
+    { id: 'no-takes', name: 'No Takes', detail: 'x', date: '2026-01-02' },
+  ];
+  const unheld: Achievement[] = [{ id: 'no-takes', name: 'No Takes', detail: 'x', date: null }];
+
+  it('reports the one this run crossed', () => {
+    expect(runEarned(false, held)?.id).toBe('no-takes');
+  });
+
+  it('says nothing when it was already held', () => {
+    // Without this every run after the one that earned it claims it again.
+    expect(runEarned(true, held)).toBeNull();
+  });
+
+  it('says nothing when the run did not earn it', () => {
+    expect(runEarned(false, unheld)).toBeNull();
+    expect(runEarned(true, unheld)).toBeNull();
   });
 });

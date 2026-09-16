@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { useEffect } from 'react';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { newSession, putSession, type Session } from '@/db/sessions';
-import { today } from '@/engine/dates';
+import { addDays, today } from '@/engine/dates';
 import { useXp } from '@/store/game';
 import type { SessionXp } from '@/engine/xp';
 import { hydrate, renderAt, reset } from '@/test/render';
@@ -25,10 +25,18 @@ const TODAY = today();
  * A plain session: not the first, not a record, nothing to celebrate. The
  * milestone lead is M26's and is not what this file is about, so the
  * fixture puts three harder days before today.
+ *
+ * **The days are relative now, and that is not tidying (PLAN.md M229).**
+ * They were fixed at 2026-01-05/07/09 against a `today()` that moves, so by
+ * the time this was read again the gap was **250 days** and the fixture's
+ * session was a comeback after eight months — *The Long Way Back*, which is
+ * a great deal to celebrate. Nothing noticed because nothing read the
+ * achievements; giving them a moment is what made the claim in the sentence
+ * above testable for the first time.
  */
 async function logged(): Promise<string> {
   await reset();
-  for (const [i, date] of ['2026-01-05', '2026-01-07', '2026-01-09'].entries()) {
+  for (const [i, date] of [-14, -10, -6].map((d) => addDays(TODAY, d)).entries()) {
     await putSession({
       ...newSession(date, 0),
       completed: true,

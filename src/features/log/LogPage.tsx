@@ -1,6 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { AlertTriangle, Check, ChevronDown, ChevronUp, Clock, Copy, Flame, Plus, RotateCw, Snowflake, Sparkles, Timer, Trash2, TrendingDown, TrendingUp, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  Award,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Copy,
+  Flame,
+  Plus,
+  RotateCw,
+  Snowflake,
+  Sparkles,
+  Timer,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+  X,
+} from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getDrill } from '@/content/drills';
 import { drillText } from '@/content/drillText';
@@ -24,8 +42,15 @@ import {
   type Milestone,
   type MilestoneKind,
 } from '@/engine/milestones';
-import { recordCard } from '@/ui/shareCard';
+import { achievementCard, recordCard } from '@/ui/shareCard';
 import { useClimberAvatar } from '@/ui/useClimberAvatar';
+import {
+  ACHIEVEMENT_COUNT,
+  deriveAchievements,
+  earnedCount,
+  earnedSince,
+  type Achievement,
+} from '@/engine/achievements';
 import { ShareButton } from '@/features/share/ShareSheet';
 import {
   describeSpan,
@@ -43,7 +68,7 @@ import { V_GRADES, YDS_GRADES, displayGrade, type GradeScale } from '@/engine/gr
 import type { Climb, LoggedExercise, ProjectAttempt, RopeStyle, Session, WallAngle } from '@/db/sessions';
 import type { AttemptOutcome } from '@/db/projects';
 import { OUTCOME_HIGH_POINT, OUTCOME_LABEL } from '@/engine/projects';
-import { useXp } from '@/store/game';
+import { useGame, useXp } from '@/store/game';
 import { useProjects } from '@/store/projects';
 import { useSkillEffects } from '@/store/skills';
 import { useProfile, type Injury } from '@/store/profile';
@@ -1968,12 +1993,51 @@ function useSessionMilestones(session: Session, detail: SessionXp | undefined): 
   }, [byDate, projects, display, session, detail]);
 }
 
+/**
+ * What this session earned that the log did not have before it (M229).
+ *
+ * Twenty-six achievements existed from M32 and the engine had two readers,
+ * both of them a list: you could earn every one of them and never once be
+ * told. This is the same moment M26 built for the six milestones, using the
+ * same split of the log the hook above uses — sessions before this one
+ * against sessions including it — because "dated today" is not the same
+ * question (see `earnedSince`).
+ *
+ * The derivation runs twice over the whole log, which sounds worse than it
+ * is: twenty-six predicates over a year of sessions, memoised, against a
+ * card that is already assembling a climber's records. It is not
+ * `deriveClimberState`, which is the cost `milestones.ts` went out of its
+ * way to avoid paying here.
+ */
+function useNewAchievements(session: Session): { earned: Achievement[]; total: number } {
+  const byDate = useSessions((s) => s.byDate);
+  const projects = useProjects((s) => s.projects);
+  const ascent = useGame((s) => s.ascent.days);
+
+  return useMemo(() => {
+    const all = allSessions(byDate);
+    const before = all.filter(
+      (s) => s.date < session.date || (s.date === session.date && s.id < session.id),
+    );
+    const input = { projects, ascent, programWeeks: (id: string) => getProgram(id)?.weeks };
+    const after = deriveAchievements({ ...input, sessions: all });
+    return {
+      earned: earnedSince(deriveAchievements({ ...input, sessions: before }), after),
+      total: earnedCount(after),
+    };
+  }, [byDate, projects, ascent, session.date, session.id]);
+}
+
 function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledge: () => void }) {
   const xp = useXp();
   const detail = xp.bySession[session.id];
   const levelled = detail !== undefined && detail.levelAfter > detail.levelBefore;
   const milestones = useSessionMilestones(session, detail);
   const lead = headlineMilestone(milestones);
+  const { earned: unlocked, total: totalEarned } = useNewAchievements(session);
+  /** An achievement carries the card when no milestone does — it is a shape
+   *  in the log, which is more than "Session logged." */
+  const achievementLead = lead === null ? (unlocked[0] ?? null) : null;
   const display = useSettings((s) => s.display);
   const [counting, setCounting] = useState(false);
   // Only derived when there is actually a card to put it on — see the hook.
@@ -1986,8 +2050,8 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
   // hardest thing you ever have.
   useEffect(() => {
     if (detail === undefined || session.rewarded) return;
-    announce(announcementFor(milestones, detail.xp));
-  }, [detail?.xp, session.rewarded, detail, session.id, milestones]);
+    announce(announcementFor(milestones, detail.xp, unlocked.map((a) => a.name)));
+  }, [detail?.xp, session.rewarded, detail, session.id, milestones, unlocked]);
 
   if (!detail) return null;
 
@@ -2007,15 +2071,17 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
           find that out. M118 made the no-milestone case the same line: a
           session is a session, and the number it paid is the game's
           business, one tap away on its own tab. */}
-      {lead ? (
+      {lead || achievementLead ? (
         <div className="text-center mb-3">
           <div className="text-2xs font-bold uppercase tracking-widest text-accent">
-            {MILESTONE_EYEBROW[lead.kind]}
+            {lead ? MILESTONE_EYEBROW[lead.kind] : 'Achievement'}
           </div>
           <div className="text-3xl font-black tracking-tight leading-tight mt-1">
-            {lead.headline}
+            {lead ? lead.headline : achievementLead!.name}
           </div>
-          <p className="text-sm text-ink-soft mt-1.5 leading-relaxed">{lead.detail}</p>
+          <p className="text-sm text-ink-soft mt-1.5 leading-relaxed">
+            {lead ? lead.detail : achievementLead!.detail}
+          </p>
         </div>
       ) : (
         <p className="text-center font-bold mb-3">Session logged.</p>
@@ -2028,6 +2094,22 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
             <li key={`${m.kind}-${m.headline}`} className="flex items-center gap-2 text-sm">
               <Sparkles size={13} className="text-accent shrink-0" aria-hidden />
               <span className="font-semibold">{m.headline}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Achievements this session earned, under whatever led (PLAN.md
+          M229). The one that led the card is not repeated here. */}
+      {unlocked.length > (achievementLead ? 1 : 0) && (
+        <ul className="grid grid-cols-1 gap-1 mb-3">
+          {unlocked.slice(achievementLead ? 1 : 0).map((a) => (
+            <li key={a.id} className="flex items-baseline gap-2 text-sm">
+              <Award size={13} className="text-accent shrink-0 translate-y-0.5" aria-hidden />
+              <span className="min-w-0">
+                <span className="font-semibold">{a.name}</span>
+                <span className="block text-xs text-ink-soft leading-relaxed">{a.detail}</span>
+              </span>
             </li>
           ))}
         </ul>
@@ -2095,13 +2177,31 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
       <div className="grid grid-cols-1 gap-2">
         {/* The card for exactly this was written in M13 and reachable from
             nowhere until now. */}
-        {lead?.shareable && lead.record && (
+        {lead?.shareable && lead.record ? (
           <ShareButton
             content={recordCard(lead.record.grade, lead.record.date, avatar, lead.record.scale, display)}
             filename={`personal-record-${lead.record.grade}`}
             label="Share this"
             className="w-full justify-center"
           />
+        ) : (
+          // One button, not two: a grade record is a thing you did and it
+          // wins. An achievement takes the slot when there is no record in
+          // it, rather than queueing behind one (PLAN.md M229).
+          unlocked[0] && (
+            <ShareButton
+              content={achievementCard({
+                name: unlocked[0].name,
+                detail: unlocked[0].detail,
+                date: unlocked[0].date!,
+                earned: totalEarned,
+                total: ACHIEVEMENT_COUNT,
+              })}
+              filename={`ascent-${unlocked[0].id}.png`}
+              label="Share this"
+              className="w-full justify-center"
+            />
+          )
         )}
         <Button className="w-full" onClick={onAcknowledge}>
           <Sparkles size={16} /> Nice

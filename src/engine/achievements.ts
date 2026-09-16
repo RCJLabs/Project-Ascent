@@ -669,3 +669,68 @@ export function sortAchievements(achievements: readonly Achievement[]): Achievem
 
 /** The total, so a screen can say "nine of fourteen" without counting. */
 export const ACHIEVEMENT_COUNT = DEFINITIONS.length;
+
+/**
+ * The ones that arrived between two readings of the log (PLAN.md M229).
+ *
+ * Both halves are derived, which is what makes this honest: nothing is
+ * stored saying "you have been told about this", so the question is asked of
+ * the log the same way the list is. Derive over the sessions before this one
+ * and over the sessions including it, and the difference is what this one
+ * earned.
+ *
+ * **Not "dated today".** Two sessions on one day would each claim whatever
+ * the first of them crossed, and a session logged late for last Tuesday
+ * would claim nothing at all despite being the session that earned it. The
+ * date on an achievement is the day the *log* crossed it; the comparison is
+ * how you find out which *session* did.
+ */
+export function earnedSince(
+  before: readonly Achievement[],
+  after: readonly Achievement[],
+): Achievement[] {
+  const had = new Set(before.filter((a) => a.date !== null).map((a) => a.id));
+  return after.filter((a) => a.date !== null && !had.has(a.id));
+}
+
+/**
+ * The achievements that come from the game rather than from the log.
+ *
+ * One, and it is `no-takes` (PLAN.md M212). Named in a list rather than
+ * inferred, because "which definitions read `log.ascent`" is not a question
+ * this module can answer about itself — and a rule in `achievements.test.ts`
+ * holds the list complete by deriving over an empty training log and
+ * checking that nothing outside it comes back earned.
+ */
+export const GAME_ACHIEVEMENTS: readonly AchievementId[] = ['no-takes'];
+
+/**
+ * What the game alone has earned, for the card shown when a run ends.
+ *
+ * Derived with no sessions on purpose: every other definition is a shape in
+ * the training log and returns null without one, so this cannot report a
+ * training achievement by accident. The filter is belt and braces over that.
+ */
+/**
+ * What a finished run earned, given what was held before it started.
+ *
+ * Its own function because the page cannot be driven into earning one: a
+ * pure run past El Capitan takes a real climber several minutes, and in
+ * jsdom the wall ends the run in seconds. The page test proves the wiring —
+ * that a run which earns nothing reports nothing — and this proves the
+ * decision, which is the half that would otherwise be checked by nothing.
+ * The same split `ascent/fit.ts` makes for the same reason.
+ */
+export function runEarned(
+  heldBefore: boolean,
+  after: readonly Achievement[],
+): Achievement | null {
+  if (heldBefore) return null;
+  return after.find((a) => a.date !== null) ?? null;
+}
+
+export function gameAchievements(ascent: readonly DayRecord[]): Achievement[] {
+  return deriveAchievements({ sessions: [], ascent }).filter((a) =>
+    GAME_ACHIEVEMENTS.includes(a.id),
+  );
+}

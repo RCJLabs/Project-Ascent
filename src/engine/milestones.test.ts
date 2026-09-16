@@ -7,6 +7,7 @@ import {
   headlineMilestone,
   recordsInReward,
   sessionMilestones,
+  type Milestone,
   type MilestoneInput,
 } from './milestones';
 
@@ -291,5 +292,35 @@ describe('the card actually uses this', () => {
     // The derivation walks the whole log; a record is rare and the rest of
     // the time there is no card to put one on.
     expect(LOG).toContain('useClimberAvatar(Boolean(lead?.shareable');
+  });
+});
+
+describe('what the announcement carries (PLAN.md M229)', () => {
+  const none: Milestone[] = [];
+  const pr: Milestone[] = [
+    { kind: 'grade-pr', headline: 'V7', detail: 'A new hardest boulder.', shareable: true },
+  ];
+
+  it('names an achievement rather than counting it', () => {
+    // "And one more" is the least interesting way to say *Full circle*.
+    expect(announcementFor(none, 300, ['Clean Sheet'])).toContain('Clean Sheet');
+    expect(announcementFor(none, 300, ['Clean Sheet'])).not.toContain('Session logged');
+  });
+
+  it('keeps the record first and the achievement after it', () => {
+    // The card does the same: a grade is a thing you did, and it leads.
+    const said = announcementFor(pr, 300, ['Clean Sheet']);
+    expect(said.indexOf('V7')).toBeLessThan(said.indexOf('Clean Sheet'));
+    expect(said).toContain('300 XP earned.');
+  });
+
+  it('pluralises when there is more than one', () => {
+    expect(announcementFor(pr, 300, ['A', 'B'])).toContain('Achievements: A, B.');
+    expect(announcementFor(pr, 300, ['A'])).toContain('Achievement: A.');
+  });
+
+  it('is what it always was when none were earned', () => {
+    expect(announcementFor(none, 300)).toBe('Session logged. 300 XP earned.');
+    expect(announcementFor(none, 300, [])).toBe('Session logged. 300 XP earned.');
   });
 });

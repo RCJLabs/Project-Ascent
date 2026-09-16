@@ -13852,6 +13852,16 @@ which is the right shape.*
   Someone plays the sender's seed through `raceSetup`, so racing a past day's wall is the same
   path with a different source.
   *Small, and the storage cost is one tape.*
+  ***SCRAPPED on the day it was proposed, and the objection was one sentence: doesn't the wall
+  change every day?*** *It does. `dailySeed` is an FNV hash of the date string, so every day is a
+  different wall, and the item's own last line — "racing a past day's wall is the same path with a
+  different source" — walks past the thing that matters instead of following it through. Racing
+  your best-ever run means playing **that day's** wall, not today's, which abandons the premise the
+  daily wall exists for; and the height you would be chasing was set on a different seed, so it was
+  never comparable to a height set on this one. That is not a gap in the feature. **It is the
+  reason the ghost is a today-only opponent**: today is the only day on which "my best so far"
+  is a live target on the wall in front of you. Not built, and the storage the item wanted to add
+  would have bought nothing.*
 
 - **M229 — twenty-six achievements, and not one moment.** `engine/achievements.ts` is imported by
   exactly two files: `AchievementsCard` (a count) and `AchievementsPage` (a list). Nothing compares
@@ -13935,3 +13945,95 @@ which is the right shape.*
   the catalogue's own prose asks for is readable. What is missing is the last step: a **suggested**
   next number beside the authored one.
   *Medium, and it stays a suggestion, for exactly the reason M129 gives.*
+
+## M229 — twenty-six achievements, and not one moment
+
+`engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
+renders a count, and `AchievementsPage`, which renders the list. Nothing compared one reading of
+the log against another, nothing announced, nothing offered a card. **You could earn all
+twenty-six and never once be told.**
+
+M26 built precisely this for the six `milestones` — ranked so a session that sets a grade record
+*and* levels you up has one headline, with a share card behind it — and the achievements never
+joined it. They are shapes the module went to real trouble to define: *one day with a property, or
+a pattern across time, never a running total*, which is the rule that stops them duplicating the
+career counters and the 130 skill rungs. And the only way to find out you had one was to go and
+look.
+
+### Which session earned it, not which day
+
+The date on an achievement is **the day the log crossed it**, which is not the same question as
+which session did. Two sessions on one day would each claim whatever the first of them crossed,
+and a session logged late for last Tuesday would claim nothing at all despite being the one that
+earned it.
+
+So it is a comparison: derive over the sessions before this one, derive over the sessions including
+it, and the difference is what this session earned. Both halves are derived, which keeps the
+module's own promise — **nothing is stored saying "you have been told about this"**, so editing a
+session away takes the achievement back the way it always did.
+
+The cost is twenty-six predicates over the log, twice, memoised. That is not `deriveClimberState`,
+which is the expense `milestones.ts` went out of its way not to pay on a card that appears the
+moment a session is saved.
+
+### What the card does with it
+
+A grade record still leads: it is a thing you did, and the app's own arithmetic is not. Anything
+else the session earned goes under it, and an achievement carries its sentence there — *"A session
+of 5 climbs or more with no failed attempt in it"* — because unlike a milestone it needs to say
+what it took.
+
+**When nothing else led, the achievement leads.** A session that produced a shape in the log is
+more than *Session logged.*
+
+And one share button, not two. The record's card wins the slot when there is one; an achievement
+takes it when there is not, which is the first time `achievementCard` has been reachable from
+anywhere but the list page.
+
+### The one that is not in the log
+
+`no-takes` is a shape on the game's wall (M212), so a session can never earn it and the reward card
+can never report it. It is reported where it happens — the card a run ends on — captured before the
+run and compared after, for the same reason the sessions are: *"do I hold it"* is true of every run
+after the one that earned it.
+
+`GAME_ACHIEVEMENTS` names that split rather than inferring it, and a rule holds the list complete
+by deriving over an **empty training log** and failing if anything outside the list comes back
+earned. A definition that stopped reading the sessions would otherwise be unreportable by both
+cards at once.
+
+### Three things the work found
+
+**A fixture that had been lying for months.** `rewardCard.test.tsx` opens by describing its own
+setup as *"a plain session: not the first, not a record, nothing to celebrate"* — and its three
+earlier days were pinned at `2026-01-05/07/09` against a `today()` that moves. By the time this was
+read the gap was **250 days**, so the fixture's session was *The Long Way Back*: a comeback after
+eight months. Nothing noticed, because nothing read the achievements. The dates are relative now.
+
+**A value the type does not have.** The first draft of the new fixture wrote `result: 'fail'` where
+`ClimbResult` is `'send' | 'attempt'`, and it took a failing test rather than the compiler to find
+it — the literal was inside a `? :` that widened before the annotation could bite.
+
+**Two mutants that survived because the test asserted too early.** `setPhase('over')` is synchronous
+and the run's report is the continuation of the promise `recordRun` returns, so the *Again* button
+is on screen before the question has been asked. Both Ascent mutants passed against that. The fix
+is in two parts: the **decision** moved into `runEarned`, a pure function, because a run cannot earn
+this one in jsdom — a pure run past El Capitan takes minutes and the unsteered wall ends a run in
+seconds — and the **wiring** is proved by putting the qualifying day into the record *while the run
+is in the air*, which is exactly the transition, then checking the next run says nothing. The same
+split `ascent/fit.ts` makes, for the same reason.
+
+### Measured
+
+**14 of 14 mutants caught, sanity no-op survived**: `earnedSince` ignoring what was held and
+reporting nothing; the game list emptied; `gameAchievements` returning the whole table; the
+announcement dropping them and refusing to lead with one; the card never leading with one, dropping
+the list, and offering no share; `runEarned` ignoring what was held, reporting nothing, and
+reporting an unearned one; the page never asking and arming its capture from nothing.
+
+Browser-verified on a seeded clean sheet, both themes: the record leads, the two other milestones
+are sparkle rows, the achievement carries an award icon and its sentence, and the live region says
+*"First V3. … 1,650 XP earned. And 2 more. Achievement: Clean Sheet."*
+
+**6,085 tests over 348 files.** First load **137.66KB against the 138.0 budget, 0.34 of slack.** The
+achievements engine and the share card were both already in the chunks that needed them.

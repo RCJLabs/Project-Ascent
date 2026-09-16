@@ -183,10 +183,26 @@ export function headlineMilestone(milestones: readonly Milestone[]): Milestone |
  * about the fact that they had just climbed the hardest thing they ever
  * have.
  */
-export function announcementFor(milestones: readonly Milestone[], xp: number): string {
+export function announcementFor(
+  milestones: readonly Milestone[],
+  xp: number,
+  /** Achievements this session earned (PLAN.md M229). Named, not counted:
+   *  "and one more" is the least interesting way to say *Full circle*. */
+  achievements: readonly string[] = [],
+): string {
   const lead = headlineMilestone(milestones);
   const earned = `${xp.toLocaleString()} XP earned.`;
-  if (!lead) return `Session logged. ${earned}`;
+  const unlocked =
+    achievements.length === 0
+      ? ''
+      : ` Achievement${achievements.length === 1 ? '' : 's'}: ${achievements.join(', ')}.`;
+  if (!lead) {
+    // An achievement carries the sentence when nothing else does, because it
+    // is a shape in the log rather than another session going by — which is
+    // also what the card does with it, and the two must not disagree.
+    if (achievements.length > 0) return `Achievement: ${achievements.join(', ')}. ${earned}`;
+    return `Session logged. ${earned}`;
+  }
   const rest = milestones.length > 1 ? ` And ${milestones.length - 1} more.` : '';
-  return `${lead.headline}. ${lead.detail} ${earned}${rest}`;
+  return `${lead.headline}. ${lead.detail} ${earned}${rest}${unlocked}`;
 }
