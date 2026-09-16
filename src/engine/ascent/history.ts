@@ -47,8 +47,16 @@ export function recordDay(days: readonly DayRecord[], run: ClimbedDay): DayRecor
   // supersedes it outright, even a lower one: keeping the parsed height
   // beside the new run's tape would put a ghost on the wall claiming a
   // height it never climbed.
-  const kept =
+  const picked =
     existing === null || existing.recovered === true || run.metres > existing.metres ? run : existing;
+  // The height is a pick between two runs; the best *pure* height is a max
+  // across both, because the day's highest run and its highest pure run are
+  // not always the same run (PLAN.md M212).
+  const pureMetres = Math.max(
+    existing !== null && existing.recovered !== true ? (existing.pureMetres ?? 0) : 0,
+    run.pureMetres ?? 0,
+  );
+  const kept: ClimbedDay = pureMetres > 0 ? { ...picked, pureMetres } : picked;
   const merged = [...days.filter((d) => d.date !== run.date), kept].sort((a, b) =>
     a.date.localeCompare(b.date),
   );

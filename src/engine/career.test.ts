@@ -288,3 +288,99 @@ describe('grouping', () => {
     expect(years).toContain(2026);
   });
 });
+
+describe('the Ascent on the career page (PLAN.md M212)', () => {
+  const wall = (date: string, metres: number) => ({ date, metres, coins: 0, mode: 'ascent' as const });
+  const career = (ascent: ReturnType<typeof wall>[], sessions: Session[] = []) =>
+    deriveCareer({ sessions, records: [], ascent, today: '2026-09-15' });
+
+  const ascentRows = (state: ReturnType<typeof career>) =>
+    state.achieved.filter((m) => m.category === 'ascent');
+
+  it('says nothing at all until the game has been played', () => {
+    expect(ascentRows(career([]))).toEqual([]);
+    expect(career([]).next.some((n) => n.category === 'ascent')).toBe(false);
+  });
+
+  it('dates the walls to the day the count was reached', () => {
+    const days = Array.from({ length: 10 }, (_, i) => wall(`2026-06-${String(i + 1).padStart(2, '0')}`, 100));
+    const rows = ascentRows(career(days)).filter((m) => m.label.includes('walls'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.label).toBe('10 walls');
+    expect(rows[0]!.date).toBe('2026-06-10');
+  });
+
+  it('names the climb a single run passed, on the day it first did', () => {
+    // 900 m is 2,953 ft, past El Capitan's 2,900 and short of Mt. Washington.
+    const rows = ascentRows(career([wall('2026-06-01', 300), wall('2026-06-02', 900)]));
+    const climbs = rows.filter((m) => m.label.startsWith('Past '));
+    // Newest first, and within a day the taller climb first — the career
+    // list is a timeline read backwards, which is what the page shows.
+    expect(climbs.map((m) => m.label)).toEqual([
+      'Past El Capitan, on the Ascent',
+      'Past Half Dome, on the Ascent',
+      'Past Devils Tower, on the Ascent',
+      'Past First gym wall, on the Ascent',
+    ]);
+    // 300 m is 984 ft: past Devils Tower, short of Half Dome.
+    expect(climbs.map((m) => m.date)).toEqual(['2026-06-02', '2026-06-02', '2026-06-01', '2026-06-01']);
+  });
+
+  it('never claims the altimeter', () => {
+    // `altimeter.ts` promises no game action adds a foot, and that promise
+    // is why "Everest in eleven months" means anything.
+    // Where a row mentions the altimeter at all it is to disclaim it, never
+    // to claim it — so the word only appears next to a denial.
+    for (const row of ascentRows(career([wall('2026-06-02', 900)]))) {
+      if (/altimeter/i.test(row.detail)) {
+        expect(row.detail).toMatch(/nothing[^.]*moves the altimeter|not the altimeter/i);
+      }
+      expect(`${row.label} ${row.detail}`).toMatch(/wall|Ascent/);
+    }
+    expect(career([wall('2026-06-02', 900)]).achieved.some((m) => m.category === 'height')).toBe(false);
+  });
+
+  it('stops at Everest, because above it the ladder stacks', () => {
+    // `MILESTONES` keeps climbing past Everest by *adding* each peak to the
+    // running total, so K2's rung reads 57,283 feet. Naming those for a run
+    // would be wrong by an Everest, which is why this borrows the ten.
+    const huge = ascentRows(career([wall('2026-06-02', 60_000)]));
+    const climbs = huge.filter((m) => m.label.startsWith('Past '));
+    expect(climbs).toHaveLength(10);
+    expect(climbs[0]!.label).toBe('Past Everest, on the Ascent');
+    expect(climbs.some((m) => m.label.includes('K2'))).toBe(false);
+  });
+
+  it('reports how far the next wall count is, once there is one', () => {
+    const played = career([wall('2026-06-01', 100), wall('2026-06-02', 100)]);
+    const next = played.next.find((n) => n.category === 'ascent')!;
+    expect(next.current).toBe(2);
+    expect(next.target).toBe(10);
+    expect(next.toGo).toBe(8);
+  });
+
+  it('does not lengthen the career it appears in', () => {
+    // A climber who has played a game and logged nothing does not have a
+    // two-year career, however many walls they have climbed.
+    const played = career([wall('2020-01-01', 900), wall('2026-06-02', 900)]);
+    expect(played.first).toBeNull();
+    expect(played.last).toBeNull();
+    expect(played.years).toBe(0);
+  });
+
+  it('comes last within a day, behind the day’s real news', () => {
+    // A day holding a first V6 *and* a wall: the grade is the news. The
+    // first version of this test put nothing but Ascent rows on the day, so
+    // the last row was an Ascent row whatever the ranking said.
+    const state = deriveCareer({
+      sessions: [session('2026-06-10', { durationMin: 60 })],
+      records: [{ date: '2026-06-10', grade: 'V6', scale: 'V' } as PersonalRecord],
+      ascent: [wall('2026-06-10', 900)],
+      today: '2026-09-15',
+    });
+    const onTheDay = state.achieved.filter((m) => m.date === '2026-06-10');
+    expect(onTheDay[0]!.category).toBe('grade');
+    expect(onTheDay.at(-1)!.category).toBe('ascent');
+    expect(new Set(onTheDay.map((m) => m.category)).size).toBeGreaterThan(1);
+  });
+});

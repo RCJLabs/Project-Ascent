@@ -9,6 +9,7 @@ import { venueHref } from '@/ui/routes';
 import { useGradeLabel } from '@/ui/useGrade';
 import { useVenues } from '@/features/venues/useVenues';
 import { useSessions, allSessions } from '@/store/sessions';
+import { useGame } from '@/store/game';
 import { useSettings } from '@/store/settings';
 import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
@@ -25,6 +26,8 @@ const DOT: Record<CareerCategory, string> = {
   sends: 'bg-ink-soft',
   sessions: 'bg-ink-soft',
   hours: 'bg-ink-soft',
+  // The game's rows read as the game's: the quietest dot there is.
+  ascent: 'bg-line',
 };
 
 /**
@@ -43,13 +46,16 @@ export function CareerPage() {
   // reading of this block's load.
   const gradeLabel = useGradeLabel();
   const places = useVenues();
+  // The days on the game's wall (PLAN.md M212). They earn dated rows in the
+  // list; they do not move the span the list is measured over.
+  const ascent = useGame((s) => s.ascent.days);
 
 
   const career = useMemo(() => {
     const sessions = allSessions(byDate);
     const state = deriveClimberState(sessions);
-    return deriveCareer({ sessions, records: state.personalRecords, display });
-  }, [byDate, display]);
+    return deriveCareer({ sessions, records: state.personalRecords, display, ascent });
+  }, [byDate, display, ascent]);
 
   const years = useMemo(() => {
     const filtered =

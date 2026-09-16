@@ -158,3 +158,25 @@ describe('the tally of how runs end (PLAN.md M214)', () => {
     expect((await getAscent()).endings).toEqual(EMPTY_ASCENT.endings);
   });
 });
+
+describe('what a run tells the record about purity (PLAN.md M212)', () => {
+  const play = (metres: number, pure: boolean) =>
+    useGame.getState().recordRun({
+      mode: 'ascent', metres, coins: 0, pure, date: DAY, rested: false,
+      units: 'metric', endedBy: 'rock',
+    });
+
+  it('writes the height only when the run was pure', async () => {
+    await play(900, false);
+    expect('pureMetres' in (todayRecord() as object)).toBe(false);
+    await play(600, true);
+    expect((todayRecord() as { pureMetres?: number }).pureMetres).toBe(600);
+  });
+
+  it('keeps the day’s best pure run, not the day’s best run', async () => {
+    await play(600, true);
+    await play(900, false);
+    expect(todayRecord()?.metres).toBe(900);
+    expect((todayRecord() as { pureMetres?: number }).pureMetres).toBe(600);
+  });
+});

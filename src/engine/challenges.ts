@@ -12,6 +12,22 @@
  *
  * Pure: sessions in, challenges out. Generation is deterministic from the
  * date, so the same day always produces the same board.
+ *
+ * ## No Ascent challenge, decided at M212 rather than left open
+ *
+ * The Ascent reached the achievements and the career page at M212, and it
+ * deliberately did not reach here. A challenge resolves from the log, and
+ * that is not a detail of how it was built — it is the property that makes
+ * the board worth having, and it is why `xp.ts` treats a claimed challenge
+ * as **real** climbing rather than capping it at `GAME_ACTION_CAP`.
+ *
+ * A task that read *"climb 2,000 m on the wall"* would be a board entry
+ * completed by playing a game, priced as if it were training. Either it
+ * pays like the rest of the board, which breaks the economy's one rule, or
+ * it is capped, which makes it the one row on the board that means less
+ * than the others. Neither is worth the third of a screen it would take.
+ *
+ * Not built, and not to be proposed again without an answer to that.
  */
 
 import { DRILL_CATEGORIES, drillsByCategory, getDrill } from '@/content/drills';

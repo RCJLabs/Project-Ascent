@@ -41,12 +41,23 @@
  */
 
 import type { Session } from '@/db/sessions';
-import { LADDER_TOP, MILESTONES, sessionHeight } from './altimeter';
+import type { DayRecord } from '@/db/game';
+import { CLIMBS_TO_EVEREST, LADDER_TOP, MILESTONES, sessionHeight } from './altimeter';
+import { feetFromMetres } from './units';
 import { daysBetween, fromKey, toKey, today as todayKey } from './dates';
 import { DEFAULT_DISPLAY, displayGrade, type GradeDisplay } from './grades';
 import type { PersonalRecord } from './derive';
 
-export type CareerCategory = 'grade' | 'sessions' | 'hours' | 'outdoor' | 'sends' | 'years' | 'height';
+export type CareerCategory =
+  | 'grade'
+  | 'sessions'
+  | 'hours'
+  | 'outdoor'
+  | 'sends'
+  | 'years'
+  | 'height'
+  // The game, decided at M212 rather than left undecided — see below.
+  | 'ascent';
 
 export const CATEGORY_LABEL: Record<CareerCategory, string> = {
   grade: 'Grades',
@@ -56,6 +67,7 @@ export const CATEGORY_LABEL: Record<CareerCategory, string> = {
   sends: 'Sends',
   years: 'Years',
   height: 'Height',
+  ascent: 'The Ascent',
 };
 
 export interface CareerMilestone {
@@ -147,6 +159,21 @@ const COUNTERS: Counter[] = [
   },
 ];
 
+/**
+ * Days on the Ascent's wall, on the same ladder as everything else.
+ *
+ * Its own constant rather than a row in `COUNTERS`, because that table is
+ * walked inside the pass over *sessions* and a day on the wall is not a
+ * session. Written once here so the dated row and the "next" row cannot
+ * come to describe it differently.
+ */
+const WALLS: Counter = {
+  category: 'ascent',
+  first: 10,
+  label: (n) => `${format(n)} walls`,
+  detail: (n) => `${format(n)} separate days on the Ascent. The game's wall, not the altimeter.`,
+};
+
 /** Within one day: a new grade is the news, a session count is not. */
 const RANK: Record<CareerCategory, number> = {
   grade: 0,
@@ -156,6 +183,9 @@ const RANK: Record<CareerCategory, number> = {
   sends: 4,
   sessions: 5,
   hours: 6,
+  // Last, always. A day on the wall is a day in this list, but it is never
+  // the headline on a day that also holds a grade or a hundredth session.
+  ascent: 7,
 };
 
 export interface CareerInput {
@@ -164,6 +194,15 @@ export interface CareerInput {
   records: PersonalRecord[];
   display?: GradeDisplay;
   today?: string;
+  /**
+   * The Ascent's days, oldest or newest first — this sorts them (PLAN.md M212).
+   *
+   * **It does not move `first`, `last` or `years`.** That span is the span
+   * of a climbing life, and a climber who has played an arcade game and
+   * logged nothing does not have a two-year career. The game earns dated
+   * rows in the list; it does not earn the dates the list is measured by.
+   */
+  ascent?: readonly DayRecord[];
 }
 
 export function deriveCareer(input: CareerInput): CareerState {
@@ -227,7 +266,61 @@ export function deriveCareer(input: CareerInput): CareerState {
     }
   }
 
-  const achieved: CareerMilestone[] = [];
+  // ── The Ascent (PLAN.md M212) ────────────────────────────────────────
+  // Its own pass, because its days are not sessions. Two axes: how many
+  // walls have been climbed, and the tallest named climb a single run has
+  // passed — the same ten `scale.ts` compares a run against, so the game
+  // and the career say the same thing about El Capitan.
+  const wallDays = [...(input.ascent ?? [])].sort((a, b) => a.date.localeCompare(b.date));
+  const ascentCrossings: CareerMilestone[] = [];
+  let walls = 0;
+  {
+    const rungs = counterLadder(WALLS.first, wallDays.length);
+    let rung = 0;
+    let bestFeet = 0;
+    let climb = 0;
+    for (const day of wallDays) {
+      walls += 1;
+      while (rung < rungs.length && (rungs[rung] ?? Infinity) <= walls) {
+        ascentCrossings.push({
+          id: `ascent-walls-${rungs[rung]!}`,
+          category: 'ascent',
+          label: WALLS.label(rungs[rung]!),
+          detail: WALLS.detail(rungs[rung]!),
+          date: day.date,
+          value: rungs[rung]!,
+        });
+        rung += 1;
+      }
+
+      // The tallest single run so far, not today's. The pointer below only
+      // moves forward, so the two happen to agree today — this keeps them
+      // agreeing if the pointer is ever reset or the days reordered.
+      bestFeet = Math.max(bestFeet, feetFromMetres(day.metres));
+      while (climb < CLIMBS_TO_EVEREST.length && CLIMBS_TO_EVEREST[climb]!.feet <= bestFeet) {
+        const passed = CLIMBS_TO_EVEREST[climb]!;
+        ascentCrossings.push({
+          id: `ascent-climb-${climb}`,
+          category: 'ascent',
+          // "on the Ascent", not "on the wall": the ladder's first rung is
+          // *First gym wall*, and "Past First gym wall, on the wall" is a
+          // sentence only a machine would write. Naming the game also keeps
+          // the row apart from the altimeter's own `El Capitan`, which sits
+          // in the same list.
+          label: `Past ${passed.name}, on the Ascent`,
+          // Short, because every other row on this page is one line and
+          // these would otherwise be the three-line ones. The label already
+          // names the climb; this says whose wall it was.
+          detail: `One run past its height. The game's wall, not the altimeter.`,
+          date: day.date,
+          value: passed.feet,
+        });
+        climb += 1;
+      }
+    }
+  }
+
+  const achieved: CareerMilestone[] = [...ascentCrossings];
 
   for (const crossing of crossings) {
     const counter = COUNTERS.find((c) => c.category === crossing.category)!;
@@ -291,7 +384,7 @@ export function deriveCareer(input: CareerInput): CareerState {
 
   return {
     achieved,
-    next: nextMilestones(totals, outdoorDays.size, first, today),
+    next: nextMilestones(totals, outdoorDays.size, walls, first, today),
     first,
     last,
     years: first === null ? 0 : daysBetween(first, today) / 365.25,
@@ -301,13 +394,21 @@ export function deriveCareer(input: CareerInput): CareerState {
 function nextMilestones(
   totals: Record<string, number>,
   outdoor: number,
+  walls: number,
   first: string | null,
   today: string,
 ): NextMilestone[] {
   const out: NextMilestone[] = [];
 
-  for (const counter of COUNTERS) {
-    const raw = counter.category === 'outdoor' ? outdoor : totals[counter.category] ?? 0;
+  // The Ascent only when it has been played: a climber who has never opened
+  // the game should not be told they are eight walls from ten.
+  for (const counter of walls > 0 ? [...COUNTERS, WALLS] : COUNTERS) {
+    const raw =
+      counter.category === 'outdoor'
+        ? outdoor
+        : counter.category === 'ascent'
+          ? walls
+          : totals[counter.category] ?? 0;
     const value = counter.category === 'hours' ? Math.floor(raw) : raw;
     const rungs = counterLadder(counter.first, value);
     const target = rungs.at(-1);

@@ -1,5 +1,8 @@
 import type { Session } from '@/db/sessions';
 import type { Project } from '@/db/projects';
+import type { DayRecord } from '@/db/game';
+import { CLIMBS_TO_EVEREST } from './altimeter';
+import { feetFromMetres } from './units';
 import { addDays, daysBetween, startOfWeek } from './dates';
 import { gradeOrdinal, type GradeScale } from './grades';
 import { isRestSession } from './rest';
@@ -27,11 +30,11 @@ import { isRestSession } from './rest';
  *
  * ## Finite on purpose
  *
- * Twenty-five, fixed. "Nine of twenty-five" is a thing to aim at in a way
+ * Twenty-six, fixed. "Nine of twenty-six" is a thing to aim at in a way
  * that "250 sends, then 500" is not — the counters are a timeline, and this
  * is a list. Adding one is a deliberate act, not an emergent consequence of
- * logging more: fourteen were written for M32 and eleven more added at
- * once, each of them a shape rather than a threshold.
+ * logging more: fourteen were written for M32, eleven more added at once,
+ * and one at M212, each of them a shape rather than a threshold.
  *
  * **One was considered and rejected**, and it is worth writing down why. A
  * dawn-patrol achievement — a session started before six — reads an hour out
@@ -39,6 +42,22 @@ import { isRestSession } from './rest';
  * needs the runtime's timezone, so the same log would earn it on a phone at
  * home and not on the same phone in Spain. Everything here is a fact about
  * the log; a fact that moves with the reader is not one.
+ *
+ * ## One that is not in the log
+ *
+ * Twenty-five of these are shapes in the training log and `no-takes` is a
+ * shape on the game's wall (PLAN.md M212). It keeps the rule above — one
+ * run with a property, not a tally of runs — and breaks the assumption
+ * underneath it, that the shape is in the log. That was the decision M212
+ * existed to make, and it is **one**: the challenge board deliberately took
+ * none, because a challenge resolves from the log and `xp.ts` prices it as
+ * real climbing, which a game task could not be without breaking the
+ * economy's one rule. `challenges.ts` says so at length.
+ *
+ * It is also not grindable. Playing more cannot earn it; only playing
+ * better can, which is why it asks for a run with nothing picked up rather
+ * than a height — a height is what the career page counts, and counting it
+ * twice is what this module's opening rule forbids.
  *
  * ## Derived, dated, and unpaid
  *
@@ -75,7 +94,9 @@ export type AchievementId =
   | 'the-comeback'
   | 'months-outside'
   | 'rested-and-ready'
-  | 'redemption';
+  | 'redemption'
+  // One from the game, added at M212 — see "One that is not in the log".
+  | 'no-takes';
 
 export interface Achievement {
   id: AchievementId;
@@ -91,7 +112,19 @@ export interface AchievementInput {
   projects?: readonly Project[];
   /** A program's length in weeks. A callback, so this module stays pure. */
   programWeeks?: (programId: string) => number | undefined;
+  /** The Ascent's day records, for the one achievement that is not in the log. */
+  ascent?: readonly DayRecord[];
 }
+
+/**
+ * The height a pure run has to pass, and why it is that one.
+ *
+ * El Capitan on the app's own ladder (`CLIMBS_TO_EVEREST`), which the game
+ * has borrowed since M210 to say what a run amounted to. In feet, because
+ * the ladder is, and a run's metres are converted to meet it — the same
+ * direction `scale.ts` goes, through the one conversion in `units.ts`.
+ */
+export const PURE_RUN_FEET = CLIMBS_TO_EVEREST.find((c) => c.name === 'El Capitan')!.feet;
 
 /** Consecutive completed sessions with the warmup ticked. */
 export const WARM_RUN = 20;
@@ -135,9 +168,44 @@ interface Log {
   dates: string[];
   projects: readonly Project[];
   programWeeks: (programId: string) => number | undefined;
+  /** Oldest first, like `completed`. Empty when the game has not been played. */
+  ascent: DayRecord[];
 }
 
 const DEFINITIONS: Definition[] = [
+  {
+    /**
+     * The one that is not in the log (PLAN.md M212).
+     *
+     * Every other achievement here is a shape in the training log, and the
+     * module's rule — *a shape, never a running total* — is what keeps this
+     * from being a fourth list of the same facts. This one still obeys that
+     * rule: it is **one run with a property**, not a tally of runs. What it
+     * breaks is the other assumption, that the shape is in the log, and that
+     * is the decision M212 was asked to make rather than duck.
+     *
+     * **It is deliberately not grindable.** Playing more cannot earn it;
+     * only playing better can. That is why it is a *pure* run — nothing
+     * picked up — rather than a height, which is the shape the career page
+     * counts and which would have made this a duplicate of it.
+     *
+     * An older day with no `pureMetres` at all is no evidence rather than a
+     * failure, which is why the check is `?? 0` and not a boolean.
+     */
+    id: 'no-takes',
+    name: 'No Takes',
+    detail: 'One run on the Ascent past El Capitan’s height, with no power-up touched.',
+    find: (log) =>
+      log.ascent.find((day) => {
+        // A recovered day is a height parsed out of a ledger label and knows
+        // nothing about power-ups, so it can never earn this. Narrowing the
+        // union is all this line does — a `RecoveredDay` has no
+        // `pureMetres` and the `?? 0` below would refuse it anyway — which
+        // is why a mutation removing it changes no behaviour.
+        if (day.recovered === true) return false;
+        return feetFromMetres(day.pureMetres ?? 0) >= PURE_RUN_FEET;
+      })?.date ?? null,
+  },
   {
     id: 'full-circle',
     name: 'Full Circle',
@@ -572,6 +640,9 @@ export function deriveAchievements(input: AchievementInput): Achievement[] {
     completed,
     byDate,
     dates: [...byDate.keys()],
+    // Oldest first, so `find` returns the day it first happened rather than
+    // whichever day the store happened to write last.
+    ascent: [...(input.ascent ?? [])].sort((a, b) => a.date.localeCompare(b.date)),
     projects: input.projects ?? [],
     programWeeks: input.programWeeks ?? (() => undefined),
   };

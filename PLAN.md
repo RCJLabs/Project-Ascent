@@ -11898,6 +11898,9 @@ thresholds beside them.*
   day you climbed the height of El Capitan on the wall"* is a dated day. Decide it in writing
   either way, the way M192 recorded circuits and M206 recorded the changelog.
   *Small if the answer is no, medium if it is yes.*
+  *Done, and the answer is three answers — see the entry at the end of this document. One
+  achievement, two career axes, and nothing at all on the challenge board, which is the one the
+  economy decides for us.*
 
 - **M213 — the currency runs out at about level 26 and the card never says so.** `CURRENCY_RATE`
   is 0.25, so coins are a quarter of lifetime XP. The four priced kits cost 1,200, 2,500, 5,000
@@ -12711,3 +12714,88 @@ overflow at either width.
 `content/skills.ts` reads `boonLabel` from it, so a dependency there would drag the arcade's tuning
 table onto the boot path, which is the leak M214 had to split a module to undo. 0.52KB of slack.
 **5,858 tests pass, up from 5,847.**
+
+
+## M212 — the game is in the record now, in two places and deliberately not a third
+
+**Zero mentions between them.** `achievements.ts`, `career.ts` and `challenges.ts` did not name
+the Ascent once. M212 asked for that to be *decided* rather than left undecided, and the decision
+is three different answers.
+
+### The challenge board takes none, and that is the interesting one
+
+A challenge resolves from the log, and that is not a detail of how the board was built — it is the
+property that makes it worth having, and it is why `xp.ts` prices a claimed challenge as **real**
+climbing instead of capping it at `GAME_ACTION_CAP`. A task reading *"climb 2,000 m on the wall"*
+would be a board entry completed by playing a game and paid as if it were training. Either it pays
+like the rest of the board, which breaks the economy's one rule, or it is capped, which makes it
+the one row on the board worth less than the others. Neither is worth the third of a screen it
+would take. Written into `challenges.ts` so nobody proposes it again without answering that.
+
+### One achievement, and it is a shape rather than a total
+
+`achievements.ts` opens with the rule that keeps it from being a fourth list of the same facts —
+**a shape in the log, never a running total** — and `no-takes` keeps the second half while breaking
+the first. *One run on the Ascent past El Capitan's height, with no power-up touched.* One day with
+a property, not a tally of runs.
+
+**It is deliberately not grindable**, which is the whole reason it asks for a *pure* run rather
+than a height. Playing more cannot earn it; only playing better can. A height would have been the
+thing the career page counts, and counting it twice is what the module's own opening rule forbids.
+Twenty-five to twenty-six, and the prose that said *"twenty-five, fixed"* now says why it moved.
+
+**It needed a new number to be datable.** `pureBest` is one lifetime figure with no date on it, and
+`ClimbedDay` kept the day's *highest* run — so a boolean on that record would have thrown away a
+climber whose best run took a heart and whose second-best was pure and longer. `pureMetres` is the
+day's best **pure** height: a pick between two runs for the height, a max across both for this.
+Absent on every day written before M212, and absent is unknown rather than zero, which is why the
+achievement reads `?? 0` instead of a flag.
+
+**M199's guard caught it within a minute of being written.** That milestone built *every achievement
+can be earned* against a list of synthetic scenarios, and the new one had no scenario, so the guard
+failed on the first run. It has an Ascent scenario now — the first in that file whose shape is not
+in the training log at all.
+
+### The career page takes two axes
+
+*Walls* — separate days on the Ascent, on the same 1 · 2.5 · 5 ladder as sessions and days on rock.
+And *the climb a single run has passed*, from `CLIMBS_TO_EVEREST`, the same ten `scale.ts` compares
+a run against since M210 — so the game and the career say the same thing about El Capitan. Both
+dated, both filterable under a **The Ascent** chip, and both ranked last within a day: a wall is a
+row in this list, never the headline on a day that also holds a first V6.
+
+**It does not lengthen the career it appears in.** `first`, `last` and `years` still come from
+sessions alone. A climber who has played an arcade game and logged nothing does not have a two-year
+climbing career, however many walls are behind them.
+
+**And it never claims the altimeter.** That module opens by promising no game action adds a foot,
+which is the only reason *"Everest in eleven months"* means anything. The rows say *"Past Devils
+Tower, on the Ascent"* and *"The game's wall, not the altimeter"*, and a test fails if the word
+appears anywhere but next to a denial.
+
+**Two copy faults the browser found, neither visible in a test.** The detail ran to three lines
+where every neighbouring row runs one — shortened. And the label read *"Past First gym wall, on the
+wall"*, which is a sentence only a machine would write; naming the game instead also keeps the row
+apart from the altimeter's own *El Capitan*, which sits in the same list.
+
+**Eighteen mutants, sixteen killed, and ten of them survived the first pass.** Every one of those
+ten was a test gap rather than a wrong mutant, and they clustered in one place: **the wiring**. The
+engines were right and nothing held the two call sites that feed them, so dropping `ascent` from
+`CareerPage` or from `useAchievements` left every engine test green. There are page tests for both
+now. The rest were the purity record (four mutants, no test at all on the store or `recordDay`),
+the ladder above Everest, the ranking within a day — my fixture put nothing but Ascent rows on the
+day, so the last row was an Ascent row whatever the ranking said — and the *next* row's total.
+
+**Two are equivalent and stay that way.** Removing the `recovered` guard in the achievement changes
+no behaviour: it narrows a union for the compiler, and a `RecoveredDay` has no `pureMetres` for the
+`?? 0` to find. And `bestFeet = Math.max(...)` against a plain assignment cannot differ while the
+climb pointer only moves forward — it is kept because it makes the line true independently of that
+pointer, and both are now commented so the next battery does not re-litigate them.
+
+**In a browser, both themes, 430px and 1280px**, on the sample climber with a run behind it: the
+career page carries a **The Ascent** chip and the rows filter to it, and the achievements page
+lists **No Takes**. No page errors.
+
+**Budget** 137.48 → **137.52**, which is `career.ts` and `achievements.ts` gaining a conversion and
+a ladder they both already had neighbours for. 0.48KB of slack under the 138.0 ceiling. **5,880
+tests pass, up from 5,858.**

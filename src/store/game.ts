@@ -120,7 +120,15 @@ export const useGame = create<GameState>((set, get) => ({
     const current = get().ascent;
     // The day is priced on its best run, so a worse one changes nothing —
     // and the day is kept rather than overwritten (PLAN.md M96).
-    const run = { date, metres, coins, mode, ...(tape ? { tape } : {}) };
+    const run = {
+      date,
+      metres,
+      coins,
+      mode,
+      // Only when it was one: a zero would claim a pure run of no height.
+      ...(pure ? { pureMetres: metres } : {}),
+      ...(tape ? { tape } : {}),
+    };
     const days = recordDay(current.days, run);
     // The day's kept record, which is `run` unless an earlier run today was
     // better. Never a recovered day: `recordDay` replaces one of those with

@@ -242,3 +242,36 @@ describe('said out loud', () => {
     );
   });
 });
+
+describe('the day’s best pure run (PLAN.md M212)', () => {
+  const run = (metres: number, pureMetres?: number): ClimbedDay => ({
+    date: TODAY,
+    metres,
+    coins: 0,
+    mode: 'ascent',
+    ...(pureMetres === undefined ? {} : { pureMetres }),
+  });
+  const after = (...runs: ClimbedDay[]) =>
+    dayRun(runs.reduce<DayRecord[]>((days, r) => recordDay(days, r), []), TODAY);
+
+  it('is absent on a day with no pure run, rather than zero', () => {
+    // Absent is unknown; zero would claim a pure run of no height, and the
+    // achievement that reads it would then treat every old day as a failure.
+    const day = after(run(900));
+    expect(day).not.toBeNull();
+    expect('pureMetres' in day!).toBe(false);
+  });
+
+  it('keeps the best pure run even when a better impure one beat it', () => {
+    // The record is the day's *highest* run. The highest pure run is a
+    // different question, and a flag on the record could not answer it.
+    const day = after(run(600, 600), run(900));
+    expect(day?.metres).toBe(900);
+    expect((day as ClimbedDay).pureMetres).toBe(600);
+  });
+
+  it('takes the higher of two pure runs', () => {
+    expect((after(run(600, 600), run(400, 400)) as ClimbedDay).pureMetres).toBe(600);
+    expect((after(run(400, 400), run(600, 600)) as ClimbedDay).pureMetres).toBe(600);
+  });
+});

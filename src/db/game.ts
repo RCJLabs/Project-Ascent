@@ -53,6 +53,17 @@ export interface ClimbedDay {
   coins: number;
   mode: 'ascent' | 'freesolo';
   /**
+   * The best run that day with no power-up touched (PLAN.md M212).
+   *
+   * Its own number rather than a flag on the record, because the record
+   * keeps the day's **highest** run: a climber whose best run took a heart
+   * and whose second-best was pure and long would have had the pure one
+   * thrown away by a boolean. Absent on every day written before M212, and
+   * absent is not zero — it is unknown, which is why the achievement that
+   * reads it treats a missing value as no evidence rather than as a failure.
+   */
+  pureMetres?: number;
+  /**
    * The inputs that climbed it, so it can be raced (PLAN.md M81).
    *
    * Kept on the newest day and pruned from the rest: the wall is seeded

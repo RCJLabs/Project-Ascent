@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { DayRecord } from '@/db/game';
 import { SKILL_TREES } from '@/content/skills';
 import { newSession, type Session } from '@/db/sessions';
 import { newProject, type Project } from '@/db/projects';
@@ -660,5 +661,52 @@ describe('a grade that beat you first', () => {
       session(TODAY, { climbs: [climb('V6')] }),
     ];
     expect(dateOf(log, 'redemption')).toBeNull();
+  });
+});
+
+describe('the one that is not in the log (PLAN.md M212)', () => {
+  const day = (date: string, metres: number, pureMetres?: number) => ({
+    date,
+    metres,
+    coins: 0,
+    mode: 'ascent' as const,
+    ...(pureMetres === undefined ? {} : { pureMetres }),
+  });
+  /** El Capitan is 2,900 ft, which is 884 m. */
+  const PAST = 900;
+  const SHORT = 800;
+
+  const earned = (ascent: DayRecord[]) =>
+    deriveAchievements({ sessions: [], ascent }).find((a) => a.id === 'no-takes')?.date ?? null;
+
+  it('is earned by one pure run past El Capitan’s height', () => {
+    expect(earned([day('2026-09-10', PAST, PAST)])).toBe('2026-09-10');
+  });
+
+  it('is not earned by a run that went as far with help', () => {
+    // The whole point: playing more cannot earn it, only playing better.
+    expect(earned([day('2026-09-10', 99_999)])).toBeNull();
+    expect(earned([day('2026-09-10', 99_999, SHORT)])).toBeNull();
+  });
+
+  it('dates it to the first day it happened, not the best one', () => {
+    expect(
+      earned([
+        day('2026-09-12', 5_000, 5_000),
+        day('2026-09-10', PAST, PAST),
+        day('2026-09-11', SHORT, SHORT),
+      ]),
+    ).toBe('2026-09-10');
+  });
+
+  it('reads a day recovered from a ledger label as no evidence', () => {
+    // A recovered day is a height parsed out of a string and knows nothing
+    // about power-ups, so it can neither earn this nor be blamed for it.
+    expect(earned([{ date: '2026-09-10', metres: 99_999, recovered: true }])).toBeNull();
+  });
+
+  it('is absent, not failed, for a climber who has never played', () => {
+    expect(earned([])).toBeNull();
+    expect(deriveAchievements({ sessions: [] }).some((a) => a.id === 'no-takes')).toBe(true);
   });
 });

@@ -92,6 +92,11 @@ function scenario(name: string, sessions: Session[], projects: Project[] = []): 
   SCENARIOS.push({ name, input: { sessions, projects, programWeeks: () => 12 } });
 }
 
+/** A scenario whose shape is on the game's wall rather than in the log. */
+function ascentScenario(name: string, ascent: AchievementInput['ascent']): void {
+  SCENARIOS.push({ name, input: { sessions: [], projects: [], ascent, programWeeks: () => 12 } });
+}
+
 beforeAll(async () => {
   await Promise.all([loadPrograms(), loadDrills()]);
 
@@ -146,6 +151,14 @@ beforeAll(async () => {
   scenario('deload honoured', [
     made('2026-09-07', { id: 'd1', deload: true, rpe: 6, climbs: [send('V3')] }),
     made('2026-09-09', { id: 'd2', deload: true, rpe: 5, climbs: [send('V3')] }),
+  ]);
+
+  // One run on the game's wall, past El Capitan, with nothing picked up.
+  // This is the only scenario here whose shape is not in the training log
+  // (PLAN.md M212), and it is why this guard needed a second door.
+  ascentScenario('a pure run past El Capitan', [
+    { date: addDays(TODAY, -10), metres: 400, coins: 3, mode: 'ascent' },
+    { date: addDays(TODAY, -5), metres: 1_200, coins: 9, mode: 'ascent', pureMetres: 1_200 },
   ]);
 
   // A twelve-week block with a session in every week.

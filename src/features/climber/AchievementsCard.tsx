@@ -9,6 +9,7 @@ import {
 } from '@/engine/achievements';
 import { getProgram } from '@/content/programs';
 import { fromKey } from '@/engine/dates';
+import { useGame } from '@/store/game';
 import { useProjects } from '@/store/projects';
 import { useSessions, allSessions } from '@/store/sessions';
 import { Card } from '@/ui/Card';
@@ -20,8 +21,8 @@ import { achievementCard } from '@/ui/shareCard';
  *
  * M63 moved them onto the climber page, off the career page that hangs
  * under seven charts on Progress. They stay one tap from the climber — but
- * the list is its own page now that it is twenty-five long, because a card
- * holding twenty-five rows is the reason a page about *who you are* becomes
+ * the list is its own page now that it is twenty-six long, because a card
+ * holding twenty-six rows is the reason a page about *who you are* becomes
  * a page about scrolling.
  *
  * Reads its own stores rather than taking props, which is how every other
@@ -31,16 +32,20 @@ import { achievementCard } from '@/ui/shareCard';
 export function useAchievements() {
   const byDate = useSessions((s) => s.byDate);
   const projects = useProjects((s) => s.projects);
+  // One achievement is not in the log (PLAN.md M212). Every other one here
+  // is a shape in the training history; this one is a shape in the game's.
+  const ascent = useGame((s) => s.ascent.days);
   const achievements = useMemo(
     () =>
       sortAchievements(
         deriveAchievements({
           sessions: allSessions(byDate),
           projects,
+          ascent,
           programWeeks: (id) => getProgram(id)?.weeks,
         }),
       ),
-    [byDate, projects],
+    [byDate, projects, ascent],
   );
   return { achievements, earned: earnedCount(achievements) };
 }
@@ -74,7 +79,7 @@ export function AchievementsCard() {
  * The whole list, on a page of its own.
  *
  * No title and no count: the page header above it carries both, and a card
- * repeating them says "Achievements — 7 of 25" twice on one screen.
+ * repeating them says "Achievements — 7 of 26" twice on one screen.
  */
 export function AchievementList() {
   const { achievements, earned } = useAchievements();
