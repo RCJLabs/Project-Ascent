@@ -919,9 +919,23 @@ describe('nothing is on the first-paint path that does not have to be', () => {
       /^import .*HomeCoachCard/m,
     );
     expect(home).toMatch(/lazyRoute\(\s*\(\) => import\('@\/features\/coach\/HomeCoachCard'\)/);
-    expect(home, 'a null fallback collapses the slot — PLAN.md M183').toMatch(
-      /<Suspense[\s\S]{0,400}?fallback=\{[\s\S]{0,400}?<SkeletonCard/,
-    );
+    /**
+     * Every boundary on the page, not the first one that matches.
+     *
+     * This was a single `toMatch`, which was the same thing while Home had
+     * one lazy card. M231 gave it a second, and a regex that stops at the
+     * first hit would have read the coach card's fallback and called the
+     * daily's checked — a `null` behind the new boundary would have shipped
+     * green.
+     */
+    const boundaries = home.split('<Suspense').slice(1);
+    expect(boundaries.length, 'no lazy boundary on Home at all').toBeGreaterThan(0);
+    for (const boundary of boundaries) {
+      expect(
+        boundary.slice(0, 500),
+        'a boundary with nothing card-shaped behind it — PLAN.md M183',
+      ).toMatch(/fallback=\{[\s\S]{0,400}?<SkeletonCard/);
+    }
     expect(home, 'a null fallback collapses the slot — PLAN.md M183').not.toMatch(
       /fallback=\{null\}/,
     );

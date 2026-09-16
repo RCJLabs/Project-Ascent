@@ -13887,8 +13887,13 @@ which is the right shape.*
   placement had already been decided. A card was written, and both rules failed it within a minute
   of the first full run. **What the investigation found instead was real and shipped** — see the
   entry at the end of this document.*
+  ***And then the author reversed the decision, for the daily and only the daily.*** *Asked
+  directly rather than worked around: "Yes move dailies to the home". M231 carries it, and the
+  reversal is recorded where M117's rules live rather than deleted from them — the withdrawal
+  above still stands, because the objection was never that the daily should not be on Home. It
+  was that a rule written on purpose is not something to design around without asking.*
 
-- **M231 — a run has no shape after ninety seconds.** `DIFFICULTY` ramps speed to about 32 seconds
+- **M232 — a run has no shape after ninety seconds.** `DIFFICULTY` ramps speed to about 32 seconds
   and density to 90, and `config.ts` says the rest out loud: *"After ninety seconds nothing changes
   again — the wall is as hard as it gets, and staying on it is the whole test."* That is a fine
   design for the test and a poor one for a climb. Meanwhile `altimeter.ts` owns ten named climbs
@@ -13897,7 +13902,7 @@ which is the right shape.*
   across the wall and a word as you cross it.
   *Small as naming, large as mechanics — and the small one is the one to build.*
 
-- **M232 — the coins run out of anywhere to go.** The kits total 90,700 and the walls 57,000, and
+- **M233 — the coins run out of anywhere to go.** The kits total 90,700 and the walls 57,000, and
   `describeShop` already says the quiet part: *"All N bought — nothing left to spend on."* At
   `CURRENCY_RATE` 0.25 that is 590,800 XP of climbing, after which every coin the game pays is
   inert. There is no consumable and there never was — `spend()` was deleted at M155 for having no
@@ -13907,7 +13912,7 @@ which is the right shape.*
 
 ### The app and the programs
 
-- **M233 — the app tracks the weight you add and never the weight you are.** Thirty-seven metrics,
+- **M234 — the app tracks the weight you add and never the weight you are.** Thirty-seven metrics,
   and `max_hang_20mm_7s` — the one the description itself calls *"the standard finger-strength
   benchmark"* — has the unit `BW+lbs`. Nothing anywhere stores a bodyweight: the sweep finds the
   word only in comments explaining that a blank load column means one. So BW+20 kg recorded two
@@ -13918,7 +13923,7 @@ which is the right shape.*
   pointing down, never spoken about by the coach engine.
   *Medium, and worth refusing outright if the safe version cannot be drawn.*
 
-- **M234 — every number is compared only to itself.** `assessments.ts` exports `seriesFor`,
+- **M235 — every number is compared only to itself.** `assessments.ts` exports `seriesFor`,
   `changeOf`, `testWeeks` and `dueReason` — your history, your change, your schedule — and
   `content/metrics.ts` carries a prose description per metric and no reference value of any kind.
   A climber's first hangboard result therefore has nothing to be placed against, and the second one
@@ -13927,7 +13932,7 @@ which is the right shape.*
   content the way the guides are, is the difference between a number and a reading.
   *Medium, and most of it is content rather than code.*
 
-- **M235 — equipment is a capability, never a thing you own.** `Equipment` is six strings —
+- **M236 — equipment is a capability, never a thing you own.** `Equipment` is six strings —
   `'none' | 'wall' | 'hangboard' | 'campus' | 'gym' | 'weight'` — answering *what can you train
   on*. There is no gear instance anywhere in the model, so nothing knows a rope's age, a harness's,
   or how many sessions a pair of shoes has done. The app already carries a *Before you train* card
@@ -13935,7 +13940,7 @@ which is the right shape.*
   date and a count rather than a judgement call.
   *Medium, and the honest first question is whether it belongs in training software at all.*
 
-- **M236 — the log never records who you climbed with.** A `Climb` holds grade, scale, count,
+- **M237 — the log never records who you climbed with.** A `Climb` holds grade, scale, count,
   result, style, angle, rope style and a name. A `Session` holds mode, RPE, duration, drill,
   exercises, check-in, project attempts, rest checklist and notes. Neither holds a person, and
   every occurrence of "partner" in `src/` is prose in the glossary or a guide. Roped climbing has
@@ -13943,7 +13948,7 @@ which is the right shape.*
   not lead"* as a constraint it cannot see.
   *Small, and it is one optional field plus whatever chooses to read it.*
 
-- **M237 — the app has now met the climber the content never could.** `content/types.ts` explains
+- **M238 — the app has now met the climber the content never could.** `content/types.ts` explains
   why a dose does not move on its own: *"add 2.5kg if last week's top set felt solid" depends on a
   climber the content has never met* — so the rule lives in `WeekStep.step` as a sentence rather
   than a number, and the catalogue says things like *"add 2-5lb a week when the last set felt
@@ -14119,3 +14124,103 @@ Browser-verified: Home carries no link to the board, the review page's board sec
 challenges"* against a seeded week, and the board page is untouched.
 
 **6,089 tests over 349 files.**
+
+
+## M231 — today's task on the screen the day starts on
+
+**This reverses part of M117, deliberately and on the author's word.** That milestone moved four
+cards off Home for the game tab — the climber strip, the altimeter, the board and the arcade — on
+the principle that *"the point of a move is that the thing is in one place afterwards"*, and two
+rules in `gamePage.test.tsx` have held it there since. M230 walked into those rules without reading
+them and was withdrawn for it. The question then went to the author, who answered: **"Yes move
+dailies to the home."**
+
+So the rules were amended rather than deleted, and the reversal is recorded inside them.
+
+### Why the daily is the exception and the other three are not
+
+The climber strip, the altimeter and the arcade are *readings*: how high you have climbed, what
+level you are, a game to play. They are things to go and look at, which is exactly what a tab is
+for. The daily is none of those. Every rung of the ladder in `challenges.ts` is a **quality rung for
+the session you have not done yet** — warm up, rate the effort, leave a note, complete the drill,
+rest properly — picked by how much has been logged.
+
+That makes it the one thing on the board worth reading *before* training rather than after, and a
+page under Game could never be that: you open Home on the way to the gym and the game tab on the way
+home. It sits last in `AroundTheSession`, so on a phone it is the card directly above today's
+session.
+
+**The daily, and nothing else off the board.** Not the weekly set, which counts sessions against the
+program's target — the fact `YourWeekCard` already states, in the climber's own week, on the same
+screen. Not the bounties, which are accepted rather than given and so are a thing to go and choose.
+A new rule, *"carries the daily task on Home, and nothing else off the board"*, asserts the card
+never matches `board.weekly.map`, `board.bounties.map` or `claim(`, so the exception cannot widen
+without a test failing.
+
+**Claiming stays on the board.** The count of what is ready is here, because that is the state worth
+acting on. The button is not: a claim writes to the ledger, and Home has never paid anything. A
+reward button on the screen the app opens on would make the first thing a climber sees a thing to
+press.
+
+### The bug that was not in the brief
+
+The card reads `claimed` from the game ledger — and **nothing on Home had ever loaded that store.**
+`BoardPage` held the `useEffect` that fetched it, which was true for as long as the board was its
+only reader. An unloaded ledger does not read as missing; it reads as *nothing claimed*, so a task
+taken this morning would have sat on Home all day looking untouched and been counted again in what
+is ready.
+
+The effect moved into `useBoard` — the hook that reads the ledger is the one that has to make sure
+it is there — and `BoardPage` lost three lines. Browser-verified end to end: claim on the board,
+return to Home, the badge reads *Claimed* and *"1 ready to claim"* becomes *"The board"*.
+
+### A rule that only ever checked the first boundary
+
+M183's fallback rule was one `toMatch` for `<Suspense … fallback={… <SkeletonCard`, which was the
+same thing while Home had one lazy card. This milestone gave it a second, and a regex that stops at
+the first hit would have read the coach card's fallback and called the daily's checked — a `null`
+behind the new boundary would have shipped green. It splits on `<Suspense` and checks every
+boundary now.
+
+### An equivalent mutant, and the guard that goes where the guard can bite
+
+The meter fills by `progress / target`, and **every rung of the daily ladder has a target of one** —
+so the fraction is nought or one, and a card that filled from the raw count is indistinguishable
+from this one. The battery says so: that swap survives the whole suite, because on this content it
+is not a change. Writing a test that pretended to catch it would have been a test that catches
+nothing.
+
+The guard went on the fact the equivalence rests on instead: *"has no daily that asks for more than
+one of anything"*, across three tiers and a year of dates, because the rung is hashed off the date
+and one day proves nothing about the other 364. Verified by planting a `target: 2` daily — it fires.
+The day a daily asks for two of something, that is the day the bar needs a test of its own.
+
+The same pass dropped a dead branch: `daily.target === 0 ? 0 : …` guarded a division `Meter`
+already clamps (`Number.isFinite(value) ? value : 0`).
+
+### A test whose premise was wrong
+
+A fourth test asserted the skeleton was on screen before the chunk landed. It failed, and the reason
+was already written down at M183: *"under the test runner the chunk is already in the module graph
+and React resolves it inside the same `act`, so the fallback is never on screen to query."* The
+structural half belongs in `wired.test.ts` and is now stronger than it was. The two tests that
+replaced it check things that are real — the claimed round-trip, and day one, where an unlogged log
+still has a task at zero, which is what the card's lack of a hydration gate rests on.
+
+### Measured
+
+**11 of 12 mutants caught, sanity no-op survived.** The ready count ignoring what was claimed, the
+badge never showing, the detail line dropped, the progress line dropped, the link pointed at the
+game, a hydration gate that collapses the slot, the card dropped from Home, the card imported
+eagerly, the fallback nulled, the fallback stripped to a bare div, and the ledger never loaded. The
+twelfth is the equivalent one above, recorded rather than papered over.
+
+**135.61KB against a 136.9 ceiling** — the card costs 0.07KB on the entry chunk, which is the
+`lazyRoute` call site and nothing else. The board travels in its own chunk behind the boundary, so
+the 2.12KB M230 cut out of the entry stays out.
+
+Browser-verified in both themes at 430px and 1280px: the card is last in the grid, reads
+*"TODAY'S TASK · Warm up · 1 / 1 session · Warm up before today's session. · 1 ready to claim"*,
+leads to `#/board`, is not clipped at either width, and the console is clean.
+
+**6,096 tests over 350 files.**

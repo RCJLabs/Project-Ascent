@@ -87,6 +87,21 @@ const HomeCoachCard = lazyRoute(
   (m) => m.HomeCoachCard,
 );
 
+/**
+ * The board's daily task, lazily (PLAN.md M231).
+ *
+ * Lazy for the reason the coach card is: Home is the one eager route, and a
+ * static import here would put `engine/challenges.ts` — the daily ladder,
+ * the weekly table, the bounty generator and the copy for all of it — into
+ * the entry chunk of an app that opens on this screen. M230 measured that
+ * cost at 2.12KB when it arrived by a different door, and `perf.test.ts`
+ * holds it out.
+ */
+const DailyTaskCard = lazyRoute(
+  () => import('@/features/challenges/DailyTaskCard'),
+  (m) => m.DailyTaskCard,
+);
+
 export function HomePage() {
   const date = today();
   return (
@@ -119,6 +134,18 @@ function AroundTheSession() {
         <ReviewCard />
       </Link>
       {program && <YourWeekCard program={program} />}
+      {/* Last, so on a phone it is the card directly above today's session —
+          a quality rung for a session not done yet, read on the way to the
+          gym rather than on the way home (PLAN.md M231). */}
+      <Suspense
+        fallback={
+          <div aria-busy="true" aria-live="polite" aria-label="Loading today's task">
+            <SkeletonCard lines={3} />
+          </div>
+        }
+      >
+        <DailyTaskCard />
+      </Suspense>
     </PageGrid>
   );
 }

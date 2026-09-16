@@ -29,7 +29,23 @@ export function useBoard() {
   const byDate = useSessions((s) => s.byDate);
   const bounties = useGame((s) => s.bounties);
   const ledger = useGame((s) => s.ledger);
+  const hydrated = useGame((s) => s.hydrated);
+  const load = useGame((s) => s.load);
   const activeProgramId = useProfile((s) => s.activeProgramId);
+
+  /**
+   * The ledger is what says which challenges have already been claimed, so
+   * the hook that reads it is the one that has to make sure it is there.
+   *
+   * This was the page's own effect, which was true for as long as the board
+   * was the only caller. M231 gave the daily a second one on Home, where
+   * nothing else touches the game store — and an unloaded ledger there does
+   * not read as missing, it reads as *nothing claimed*: a task taken this
+   * morning shown as still open, counted again in what is ready.
+   */
+  useEffect(() => {
+    if (!hydrated) void load();
+  }, [hydrated, load]);
 
   const display = useSettings((s) => s.display);
   const injuries = useProfile((s) => s.injuries);
@@ -55,13 +71,8 @@ export function useBoard() {
 }
 
 export function BoardPage() {
-  const hydrated = useGame((s) => s.hydrated);
-  const load = useGame((s) => s.load);
+  // The ledger is loaded by `useBoard` — it is the hook that reads it.
   const { board, claimed } = useBoard();
-
-  useEffect(() => {
-    if (!hydrated) void load();
-  }, [hydrated, load]);
 
   const open = [board.daily, ...board.weekly, ...board.bounties].filter(
     (c) => c.done && !claimed.has(c.id),
