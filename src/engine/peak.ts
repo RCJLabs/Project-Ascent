@@ -41,7 +41,7 @@ import {
   ACWR_BOUNDS,
   CHRONIC_DAYS,
   MIN_CHRONIC_DAYS,
-  MIN_HISTORY_DAYS,
+  MIN_RATIO_DAYS,
   RATIO_NEEDS,
   buildLoadIndex,
   type LoadIndex,
@@ -265,7 +265,7 @@ function hasBaseline(index: LoadIndex, from: string, baseline: number): boolean 
   // bare literals, which is how a second copy of a rule starts drifting from
   // the first. `loadModel.test.ts` holds the two answers together.
   if (baseline <= 0) return false;
-  if (index.earliest === null || daysBetween(index.earliest, from) + 1 < MIN_HISTORY_DAYS) {
+  if (index.earliest === null || daysBetween(index.earliest, from) + 1 < MIN_RATIO_DAYS) {
     return false;
   }
   let days = 0;

@@ -24,7 +24,7 @@ import type { MetricId } from '@/content/types';
 import { METRICS } from '@/content/metrics';
 import { assessmentStatus } from './assessments';
 import { daysBetween, today as todayKey } from './dates';
-import { MIN_CHRONIC_DAYS, MIN_HISTORY_DAYS, type ClimberState } from './derive';
+import { MIN_CHRONIC_DAYS, MIN_RATIO_DAYS, type ClimberState } from './derive';
 import { recoverySentence, type Diagnosis } from './plateau';
 import { activeProjects, attemptsFor, highPointOf } from './projects';
 import type { BlockAdherence } from './adherence';
@@ -236,7 +236,7 @@ function firstSession({ state }: CoachInput): Tip | null {
  *
  * ## And for some climbers it is not a window
  *
- * A readable ratio needs both of `derive.ts`'s conditions: `MIN_HISTORY_DAYS`
+ * A readable ratio needs both of `derive.ts`'s conditions: `MIN_RATIO_DAYS`
  * of span *and* `MIN_CHRONIC_DAYS` of scored training inside the rolling
  * 28-day window. Density is the one nobody had counted against a real
  * schedule. **At one session a week it tops out at four**, so the second
@@ -285,8 +285,8 @@ function coldStart({ state }: CoachInput): Tip | null {
 
   // Span short: a real countdown, from a number the app already holds and
   // no screen has ever shown.
-  if (daysOfHistory < MIN_HISTORY_DAYS) {
-    const left = MIN_HISTORY_DAYS - daysOfHistory;
+  if (daysOfHistory < MIN_RATIO_DAYS) {
+    const left = MIN_RATIO_DAYS - daysOfHistory;
     return {
       id: 'cold-start',
       // Weekly, so setting it aside in week one does not also set aside
@@ -296,7 +296,7 @@ function coldStart({ state }: CoachInput): Tip | null {
       tone: 'neutral',
       weight: 55,
       headline: `${left} more ${left === 1 ? 'day' : 'days'} before the load ratio can say anything`,
-      body: `The ratio compares your last week against your own four-week baseline, and you do not have four weeks yet — so the app would rather show nothing than divide one small number by another. What it needs is ${MIN_HISTORY_DAYS} days of span and at least ${MIN_CHRONIC_DAYS} days of scored training inside the last four weeks. Everything else works now: the grades, the pyramid, the projects and the log itself do not wait on this.`,
+      body: `The ratio compares your last week against your own four-week baseline, and you do not have four weeks yet — so the app would rather show nothing than divide one small number by another. What it needs is ${MIN_RATIO_DAYS} days of span and at least ${MIN_CHRONIC_DAYS} days of scored training inside the last four weeks. Everything else works now: the grades, the pyramid, the projects and the log itself do not wait on this.`,
     };
   }
 

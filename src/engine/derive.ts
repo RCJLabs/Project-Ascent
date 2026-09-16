@@ -140,7 +140,7 @@ export interface LoadState {
   zone: AcwrZone;
   /** True when the current week is a planned deload, which explains a dip. */
   inPlannedDeload: boolean;
-  /** Days of history available — ACWR is meaningless below `MIN_HISTORY_DAYS`. */
+  /** Days of history available — ACWR is meaningless below `MIN_RATIO_DAYS`. */
   daysOfHistory: number;
   /**
    * Training days *with a load* inside the 28-day window (PLAN.md M173).
@@ -450,7 +450,7 @@ function deriveClimberStateUncached(sessions: Session[], options: DeriveOptions)
 /**
  * The two conditions a readable ratio needs, named once (PLAN.md M173).
  *
- * `MIN_HISTORY_DAYS` was a bare `21` in three places — the readiness check
+ * `MIN_RATIO_DAYS` was a bare `21` in three places — the readiness check
  * here, the same check inside `loadSeries`, and M162's `wouldAnswer` — which
  * is the shape M168 removed from the acute and chronic windows for the same
  * reason. `MIN_CHRONIC_DAYS` was private, and the coach now has to say which
@@ -464,7 +464,7 @@ function deriveClimberStateUncached(sessions: Session[], options: DeriveOptions)
  * after a year. The app used to tell them *"three weeks of logged sessions
  * and this becomes meaningful"*, which was a promise it could not keep.
  */
-export const MIN_HISTORY_DAYS = 21;
+export const MIN_RATIO_DAYS = 21;
 
 /** Training days inside the 28-day window before a chronic baseline means
  *  anything — roughly a session and a half a week. */
@@ -483,7 +483,7 @@ export const MIN_CHRONIC_DAYS = 6;
  * Both numbers are interpolated, so the sentence cannot drift from the
  * condition the way the guide drifted from the bands before M168.
  */
-export const RATIO_NEEDS = `Needs ${MIN_HISTORY_DAYS} days of logging and at least ${MIN_CHRONIC_DAYS} scored training days inside the last ${CHRONIC_DAYS}.`;
+export const RATIO_NEEDS = `Needs ${MIN_RATIO_DAYS} days of logging and at least ${MIN_CHRONIC_DAYS} scored training days inside the last ${CHRONIC_DAYS}.`;
 
 /** The zone a ratio falls in. One definition, read from two windows. */
 function zoneOf(acwr: number, inDeload: boolean): AcwrZone {
@@ -765,7 +765,7 @@ export function loadSeries(index: LoadIndex, dates: readonly string[]): LoadPoin
     const daysOfHistory = earliestDay === null || earliestDay > today ? 0 : today - earliestDay + 1;
     const baseline = chronic / CHRONIC_WEEKS;
     const deload = deloadDays > 0;
-    if (daysOfHistory < MIN_HISTORY_DAYS || chronicDays < MIN_CHRONIC_DAYS || baseline <= 0) {
+    if (daysOfHistory < MIN_RATIO_DAYS || chronicDays < MIN_CHRONIC_DAYS || baseline <= 0) {
       return { date, acwr: null, zone: 'unknown', acute, chronic: baseline, deload, estimated: false };
     }
 
@@ -825,7 +825,7 @@ function deriveLoad(
   // window and enough sessions inside it. Three weeks of calendar with two
   // sessions in it produces arithmetic like 4.0 — true division, no
   // meaning — so density is a condition, not just span.
-  const ready = daysOfHistory >= MIN_HISTORY_DAYS && chronicDays >= MIN_CHRONIC_DAYS && chronic > 0;
+  const ready = daysOfHistory >= MIN_RATIO_DAYS && chronicDays >= MIN_CHRONIC_DAYS && chronic > 0;
   const inPlannedDeload = daily.slice(-ACUTE_DAYS).some((d) => d.deload);
 
   if (!ready) {
@@ -838,7 +838,7 @@ function deriveLoad(
       index.earliestSeen === null || index.earliestSeen > today
         ? 0
         : daysBetween(index.earliestSeen, today) + 1;
-    const wouldAnswer = span >= MIN_HISTORY_DAYS && chronicDays + unmeasuredDays >= MIN_CHRONIC_DAYS;
+    const wouldAnswer = span >= MIN_RATIO_DAYS && chronicDays + unmeasuredDays >= MIN_CHRONIC_DAYS;
     return {
       daily,
       acute,

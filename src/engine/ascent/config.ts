@@ -7,6 +7,11 @@
  * phone and the shared seed would be decoration.
  */
 
+/**
+ * The fixed virtual resolution the simulation runs in, and the three lanes
+ * across it. Fixed because the seed has to mean the same wall on every
+ * phone — see the note above.
+ */
 export const VIEW = { width: 360, height: 640 } as const;
 export const LANES = 3;
 export const LANE_WIDTH = VIEW.width / LANES;

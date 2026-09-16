@@ -52,6 +52,13 @@ export interface Template {
   updatedAt: string;
 }
 
+/**
+ * A cap so the picker stays a picker, and a name that fits one line of it.
+ *
+ * The store drops the **oldest unused** first (`rankTemplates`), because a
+ * cap that threw away the one you reach for every week would be worse than
+ * no cap at all.
+ */
 export const MAX_TEMPLATES = 12;
 export const MAX_NAME = 40;
 

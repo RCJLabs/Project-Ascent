@@ -86,6 +86,16 @@ const KIND_WEIGHT: Record<ResultKind, number> = {
   session: 1,
 };
 
+/**
+ * How good the match was, before the kind's weight above breaks the tie.
+ *
+ * The gaps are wide on purpose. A title that *starts* with what you typed is
+ * a different event from a title that merely contains it, and these sit far
+ * enough apart that no amount of kind-weight can reorder them — a session
+ * whose title starts with the needle still beats a page that only contains
+ * it. Body text is last and by a long way: it is the widest net here and the
+ * one most likely to be a coincidence.
+ */
 const STARTS = 1000;
 const WORD = 700;
 const CONTAINS = 400;

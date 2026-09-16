@@ -9,6 +9,10 @@ import type { Mark } from '@/lib/marks';
  * without touching call sites.
  */
 export const DB_NAME = 'project-ascent';
+/**
+ * The IndexedDB version, and the number a backup carries so an older file
+ * can be recognised rather than guessed at.
+ */
 export const SCHEMA_VERSION = 2;
 
 /** Stores included in the plain JSON export. `media` holds Blobs, which do

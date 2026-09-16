@@ -5,7 +5,7 @@ import { newProject, putProject } from '@/db/projects';
 import { newSession, putSession } from '@/db/sessions';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { ProjectsPage } from '@/features/projects/ProjectsPage';
-import { ENOUGH } from '@/engine/projectHistory';
+import { ENOUGH_AT_GRADE } from '@/engine/projectHistory';
 
 /** What the projects cost, on the page that lists them (PLAN.md M69). */
 
@@ -45,7 +45,7 @@ describe('the cost card', () => {
     await hydrate();
     renderAt('/projects', <ProjectsPage />);
     expect(screen.getByText('What they cost')).toBeTruthy();
-    expect(screen.getByText(new RegExp(`Fewer than ${ENOUGH} sends`))).toBeTruthy();
+    expect(screen.getByText(new RegExp(`Fewer than ${ENOUGH_AT_GRADE} sends`))).toBeTruthy();
   });
 
   // Two sends is an anecdote; the card should not read as a pattern.

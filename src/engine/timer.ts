@@ -31,6 +31,13 @@ export interface TimerPlan {
   repsPerSet: number;
 }
 
+/**
+ * The count-in before the first rep, when the caller names none.
+ *
+ * Ten seconds is long enough to get off the phone and onto the wall, and a
+ * caller passing zero drops the segment entirely rather than getting an
+ * instant one.
+ */
 export const DEFAULT_PREPARE_SEC = 10;
 
 /**

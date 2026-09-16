@@ -10,7 +10,7 @@ import {
   CHRONIC_DAYS,
   CHRONIC_WEEKS,
   MIN_CHRONIC_DAYS,
-  MIN_HISTORY_DAYS,
+  MIN_RATIO_DAYS,
   RATIO_NEEDS,
   buildLoadIndex,
   deriveClimberState,
@@ -351,14 +351,14 @@ describe('what the app is allowed to claim about it', () => {
 describe('the two conditions on a readable ratio', () => {
   it('reads the same span from the source rather than from a literal', () => {
     const source = readFileSync('src/engine/derive.ts', 'utf8');
-    const body = source.slice(source.indexOf('export const MIN_HISTORY_DAYS'));
-    expect(MIN_HISTORY_DAYS).toBe(21);
+    const body = source.slice(source.indexOf('export const MIN_RATIO_DAYS'));
+    expect(MIN_RATIO_DAYS).toBe(21);
     expect(MIN_CHRONIC_DAYS).toBe(6);
     // A floor rather than a count: an exact number fails the next time
     // something legitimately reads the constant, which is what happened the
     // first time this ran — `RATIO_NEEDS` interpolates it. What actually
     // matters is that no comparison went back to a literal.
-    expect(body.match(/MIN_HISTORY_DAYS/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
+    expect(body.match(/MIN_RATIO_DAYS/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
     expect(body).not.toMatch(/(daysOfHistory|span|chronicDays) [<>]=? \d/);
     expect(readFileSync('src/engine/peak.ts', 'utf8')).not.toMatch(/\+ 1 < 21|days >= 6|i < 28/);
   });
@@ -391,7 +391,7 @@ describe('the two conditions on a readable ratio', () => {
       weekly.push({ ...newSession(addDays('2026-03-01', -d), 0), completed: true, rpe: 7, durationMin: 60 });
     }
     const state = deriveClimberState(weekly, { today: '2026-03-01' });
-    expect(state.load.daysOfHistory).toBeGreaterThan(MIN_HISTORY_DAYS);
+    expect(state.load.daysOfHistory).toBeGreaterThan(MIN_RATIO_DAYS);
     expect(state.load.scoredDays).toBeLessThan(MIN_CHRONIC_DAYS);
     expect(state.load.zone).toBe('unknown');
     expect(state.load.unknownBecause).toBe('history');
@@ -429,7 +429,7 @@ describe('the two conditions on a readable ratio', () => {
   /** And the sentence has one definition, interpolated from the conditions. */
   it('states it once, built from the two numbers', () => {
     expect(RATIO_NEEDS).toBe(
-      `Needs ${MIN_HISTORY_DAYS} days of logging and at least ${MIN_CHRONIC_DAYS} scored training days inside the last ${CHRONIC_DAYS}.`,
+      `Needs ${MIN_RATIO_DAYS} days of logging and at least ${MIN_CHRONIC_DAYS} scored training days inside the last ${CHRONIC_DAYS}.`,
     );
     const zone = readFileSync('src/ui/loadZone.ts', 'utf8');
     expect(zone).toContain('history: RATIO_NEEDS');

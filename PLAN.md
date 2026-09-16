@@ -11683,6 +11683,10 @@ counted — those are one chart's layout, local by nature.
   site to the question it answers, with `MIN_HISTORY_DAYS` split the same way. Nothing changes
   value: this is the reader's problem, not the climber's.
   *Small, and it is the whole of what the ninth brainstorm found.*
+  *Done — see the entry at the end of this document. Four of the seven were already documented as
+  part of a group, and a proper sweep found seventeen this bullet never named. Both name claims
+  held, and there was a third: `BLOCK_DAYS` in two files, the second carrying a comment saying it
+  was the same 28 as the first.*
 
 ***The recommendation is to stop auditing.*** *Four passes now — M179's module sweep, the
 seventh's boundary sweep, the eighth's eight sweeps, and this one — have returned progressively
@@ -12799,3 +12803,70 @@ lists **No Takes**. No page errors.
 **Budget** 137.48 → **137.52**, which is `career.ts` and `achievements.ts` gaining a conversion and
 a ladder they both already had neighbours for. 0.48KB of slack under the 138.0 ceiling. **5,880
 tests pass, up from 5,858.**
+
+## M198 — a chosen number and an accidental one looked identical
+
+**Four of the seven this milestone named were already documented.** `SETTLED_WEEKS`,
+`CHRONIC_DAYS`, `GAIN_WINDOW_DAYS` and `BACKUP_RETURN` each sit under a comment covering the run of
+declarations they belong to — which is how `ACUTE_DAYS` and `CHRONIC_DAYS` are written and how they
+should be written. The ninth brainstorm had counted comments on the line directly above and called
+the rest bare. A sweep that understood a shared comment found **seventeen across fifteen files** the
+bullet never mentioned: `MAX_TEMPLATES`, `MAX_NAME`, `DEFAULT_TARGET_SECONDS`, `MAX_WEEKS`,
+`MIN_WEEKS`, the four search weights, `REST_DAYS`, `BASE_STAT`, `MAX_STAT`, `CURRENCY_RATE`,
+`SKIPPED_WARMUP_COST`, `TREND_DAYS`, `DEFAULT_DURATION`, `DEFAULT_PREPARE_SEC`, `QUALITY`, `VIEW`
+and `LANES`, `EOCD_SIZE`, `SCHEMA_VERSION`. They have comments now, in the voice the other
+seventy-five use: what the number is, and why it is not a different number.
+
+### Both name claims held, and there was a third
+
+`ENOUGH` was **3, 8, 10 and 3** in `projectHistory`, `ropeStyle`, `angles` and `calendar`, while
+eight other modules had already qualified theirs — `ENOUGH_SENDS`, `ENOUGH_TRIES`, `ENOUGH_REST`.
+It is `ENOUGH_AT_GRADE`, `ENOUGH_ROUTES`, `ENOUGH_CLIMBS` and `ENOUGH_SESSIONS` now. And
+`MIN_HISTORY_DAYS` was **21 in `derive.ts` and 60 in `statHistory.ts`**, so half the time a grep
+for it answered the wrong question; they are `MIN_RATIO_DAYS` and `MIN_COMPARE_DAYS`, and the
+sixty is pinned by a test that says out loud what it is.
+
+The third was not in the bullet. **`BLOCK_DAYS` was 28 in two files**, and the second carried a
+comment reading *"The same 28 as M28 and the load model"* — a copy of a decision announcing that it
+is a copy. `conversion.ts` re-exports `blockCompare`'s now. A comment saying two numbers agree is
+not a guarantee that they will; one owner is.
+
+### Two rules, and one of them is a floor rather than a proof
+
+`src/engine/tuning.test.ts` holds both. *Every tuning number says why it is that number* walks
+upward from a declaration through blank lines and sibling declarations to whatever comes first, so
+a comment over a group counts for the group. **It cannot tell whether that shared comment actually
+covers the second constant** — `DEFAULT_START` and `DEFAULT_DURATION` sat together under a sentence
+about six o'clock, and this rule would have passed them; reading found those. So it is a floor: it
+stops the empty case, which is the one that keeps happening. And *no two tuning names collide* is
+blunt on purpose — one name, one owner, even where the values agree.
+
+**Their scope is `engine`, `lib`, `db` and `store`, and explicitly not `ui` or `features`**, where
+a bare number is almost always a pixel. `PAD_L = 42` and `CELL = 10` are one chart's geometry, read
+in the twenty lines beneath them and meaningless anywhere else; demanding a sentence about each
+would bury the cases this exists for. A tuning decision that found its way into a component escapes
+this, and the answer to that is to move it rather than widen the sweep.
+
+**The first version of the sweep was wrong twice**, and its own corpus caught both: the walk
+stopped at any non-numeric declaration, so `LANES` and `RETRY_EDGE` were reported as bare when a
+`VIEW = { … }` sat between them and their comment; and it swept the chart files before the scope
+above was drawn.
+
+### The battery found a line that could never run
+
+Ten mutants, six killed on the first pass, and the four survivors were all real gaps — *a blank
+line counts as a comment*, *a tuning number loses its comment*, *the two history windows collide
+again*, *a renamed constant changes value*. A second battery killed those and three more.
+
+One survivor was not a gap. The collision rule had a special case letting `export { X } from './a'`
+through as not-a-second-owner, and **no mutation of it could change any result**: the pattern it
+guards against requires `export const`, so a re-export line never reaches it. Dead code, removed
+rather than tested around. What *would* be a second owner is a module aliasing the value into a
+constant of its own, and there is a test for that instead.
+
+**No browser check, because nothing rendered changed.** Seventeen comments, six renames and a
+re-export; the diff contains no user-facing string. The claim is checked rather than asserted — a
+grep for changed lines carrying quoted prose returns three test descriptions and nothing else.
+
+**Budget** 137.52 → **137.53**, which is noise: no value moved and no module boundary did. **5,888
+tests pass, up from 5,880.**

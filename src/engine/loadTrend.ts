@@ -47,6 +47,13 @@ export interface TrendInput {
   days?: number;
 }
 
+/**
+ * The window the trend is drawn over, when the caller names none.
+ *
+ * Ninety days shows a training block and the deloads inside it, which is the
+ * shape this chart exists to make visible. Shorter and a deload reads as a
+ * collapse; longer and the block stops being legible as one.
+ */
 export const TREND_DAYS = 90;
 
 export function loadTrend(input: TrendInput): LoadTrend {

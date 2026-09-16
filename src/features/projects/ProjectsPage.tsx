@@ -7,7 +7,7 @@ import { V_GRADES, YDS_GRADES, displayGrade, type GradeScale } from '@/engine/gr
 import { PageGrid } from '@/ui/PageGrid';
 import { useGradeLabel, useGradeOptions } from '@/ui/useGrade';
 import { suggestProjects, summariseProject, type ProjectSuggestion } from '@/engine/projects';
-import { ENOUGH, projectHistory } from '@/engine/projectHistory';
+import { ENOUGH_AT_GRADE, projectHistory } from '@/engine/projectHistory';
 import { useSettings } from '@/store/settings';
 import { VENUE_LIST_ID, VenueOptions, useVenues } from '@/features/venues/useVenues';
 import { useProjects } from '@/store/projects';
@@ -164,7 +164,7 @@ function CostCard({ projects, sessions }: { projects: Project[]; sessions: Sessi
         </p>
       ) : (
         <p className="text-sm text-ink-soft leading-relaxed">
-          {history.sent.length} sent so far. {ENOUGH} is where these numbers start meaning
+          {history.sent.length} sent so far. {ENOUGH_AT_GRADE} is where these numbers start meaning
           something rather than describing one climb.
         </p>
       )}
@@ -191,7 +191,7 @@ function CostCard({ projects, sessions }: { projects: Project[]; sessions: Sessi
 
       {history.byGrade.some((row) => !row.solid) && (
         <p className="text-xs text-warn mt-2 leading-relaxed">
-          * Fewer than {ENOUGH} sends at that grade — one climb, not a pattern.
+          * Fewer than {ENOUGH_AT_GRADE} sends at that grade — one climb, not a pattern.
         </p>
       )}
 

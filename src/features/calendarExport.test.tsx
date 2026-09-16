@@ -5,7 +5,7 @@ import type { Session } from '@/db/sessions';
 import { putSession } from '@/db/sessions';
 import { getProgram } from '@/content/programs';
 import { addDays, dayOfWeek, today } from '@/engine/dates';
-import { ENOUGH } from '@/engine/calendar';
+import { ENOUGH_SESSIONS } from '@/engine/calendar';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { SettingsPage } from '@/features/settings/SettingsPage';
@@ -109,7 +109,7 @@ describe('the card', () => {
   });
 
   it('stops guessing once there is a log to read', async () => {
-    await page({ sessions: live(ENOUGH, 19, 75) });
+    await page({ sessions: live(ENOUGH_SESSIONS, 19, 75) });
     expect(await screen.findByText(/19:00 for 75 minutes, which is the middle/)).toBeTruthy();
   });
 });
@@ -117,7 +117,7 @@ describe('the card', () => {
 describe('the file it writes', () => {
   it('puts the events at the hour the log says, not at a default', async () => {
     const written = capture();
-    await page({ sessions: live(ENOUGH + 2, 7, 60) });
+    await page({ sessions: live(ENOUGH_SESSIONS + 2, 7, 60) });
     fireEvent.click(await screen.findByRole('button', { name: /Download the schedule/ }));
     const file = await written.file();
     expect(file).toMatch(/DTSTART:\d{8}T070000/);
@@ -126,7 +126,7 @@ describe('the file it writes', () => {
 
   it('exports what is left, not what has already been and gone', async () => {
     const written = capture();
-    await page({ sessions: live(ENOUGH, 18, 90) });
+    await page({ sessions: live(ENOUGH_SESSIONS, 18, 90) });
     fireEvent.click(await screen.findByRole('button', { name: /Download the schedule/ }));
     const dates = [...(await written.file()).matchAll(/DTSTART:(\d{4})(\d{2})(\d{2})/g)].map(
       (m) => `${m[1]}-${m[2]}-${m[3]}`,
@@ -139,7 +139,7 @@ describe('the file it writes', () => {
 
   it('is a calendar with an alarm on every session', async () => {
     const written = capture();
-    await page({ sessions: live(ENOUGH, 18, 90) });
+    await page({ sessions: live(ENOUGH_SESSIONS, 18, 90) });
     fireEvent.click(await screen.findByRole('button', { name: /Download the schedule/ }));
     const file = await written.file();
     expect(file.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true);

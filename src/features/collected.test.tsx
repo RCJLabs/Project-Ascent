@@ -6,7 +6,7 @@ import { resetDbForTests } from '@/db/db';
 import { loadPrograms } from '@/content/programs';
 import { newSession, putSession, type Climb } from '@/db/sessions';
 import { today } from '@/engine/dates';
-import { ENOUGH } from '@/engine/ropeStyle';
+import { ENOUGH_ROUTES } from '@/engine/ropeStyle';
 import { useObjectives } from '@/store/objectives';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
@@ -99,8 +99,8 @@ describe('lead against top-rope, finally read', () => {
   }
 
   const both = () => [
-    ...Array.from({ length: ENOUGH }, () => route('5.10d', 'lead')),
-    ...Array.from({ length: ENOUGH }, () => route('5.12a', 'toprope')),
+    ...Array.from({ length: ENOUGH_ROUTES }, () => route('5.10d', 'lead')),
+    ...Array.from({ length: ENOUGH_ROUTES }, () => route('5.12a', 'toprope')),
   ];
 
   it('shows the split once routes carry one', async () => {

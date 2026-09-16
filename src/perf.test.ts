@@ -950,7 +950,7 @@ describe('the bundle stays small', () => {
     // the same reason M163's two rewrote bodies cost 0.45KB. The logic is
     // nine lines and `scoredDays` is a number the derivation already had.
     //
-    // It is not all spending. `MIN_HISTORY_DAYS` replaced three bare
+    // It is not all spending. `MIN_RATIO_DAYS` replaced three bare
     // literals, `MIN_CHRONIC_DAYS` stopped being private, and `RATIO_NEEDS`
     // replaced **four** copies of one sentence across `loadZone`,
     // `loadTrend` and `peak` — so some of the 0.57 was bought back by the

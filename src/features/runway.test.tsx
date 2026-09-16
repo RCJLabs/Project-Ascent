@@ -6,7 +6,7 @@ import { putSession } from '@/db/sessions';
 import { addDays, today } from '@/engine/dates';
 import { loadTrend } from '@/engine/loadTrend';
 import { MAX_RUNWAY_WEEKS, peakPlan } from '@/engine/peak';
-import { MIN_CHRONIC_DAYS, MIN_HISTORY_DAYS } from '@/engine/derive';
+import { MIN_CHRONIC_DAYS, MIN_RATIO_DAYS } from '@/engine/derive';
 import { newObjectiveId, type Objective } from '@/engine/objectives';
 import { useObjectives } from '@/store/objectives';
 import { useProfile } from '@/store/profile';
@@ -137,7 +137,7 @@ describe('the card', () => {
    */
   it('withholds the whole thing when the log cannot support a baseline', async () => {
     await page(trip(4), steady(2));
-    expect(await screen.findByText(new RegExp(`${MIN_HISTORY_DAYS} days of logging`))).toBeTruthy();
+    expect(await screen.findByText(new RegExp(`${MIN_RATIO_DAYS} days of logging`))).toBeTruthy();
     expect(document.body.textContent ?? '').toMatch(
       new RegExp(`${MIN_CHRONIC_DAYS} scored training days`),
     );

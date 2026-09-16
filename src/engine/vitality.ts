@@ -22,6 +22,7 @@ export const VITALITY_CEILING = 500;
 
 /** Consecutive training days → points drained. */
 export const GRIND_COST: Record<number, number> = { 3: 10, 4: 30, 5: 50, 6: 70 };
+/** Per skipped warmup — the same as the first grind day, and it stacks. */
 export const SKIPPED_WARMUP_COST = 10;
 
 /** A rest day inside 24 hours divides the day's damage by this. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { newSession, type Climb, type Session } from '@/db/sessions';
-import { describeRopeSplit, ENOUGH, ropeSplit } from './ropeStyle';
+import { describeRopeSplit, ENOUGH_ROUTES, ropeSplit } from './ropeStyle';
 
 /**
  * Lead against top-rope (PLAN.md M133).
@@ -23,9 +23,9 @@ const climb = (grade: string, patch: Partial<Climb> = {}): Climb =>
 const day = (climbs: Climb[], completed = true): Session =>
   newSession('2026-01-09', 0, { completed, climbs } as never);
 
-/** `ENOUGH` routes of one style, so the split is not thin. */
+/** `ENOUGH_ROUTES` routes of one style, so the split is not thin. */
 const many = (style: 'lead' | 'toprope', grade: string): Climb[] =>
-  Array.from({ length: ENOUGH }, () => climb(grade, { ropeStyle: style }));
+  Array.from({ length: ENOUGH_ROUTES }, () => climb(grade, { ropeStyle: style }));
 
 describe('counting what was said', () => {
   it('counts only the routes that say which', () => {

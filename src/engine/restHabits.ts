@@ -54,6 +54,13 @@ export const NO_HABITS: RestChecklist = Object.fromEntries(
   REST_ITEMS.map(({ key }) => [key, false]),
 ) as Record<RestItem, boolean>;
 
+/**
+ * The window a habit is read over, when the caller names none.
+ *
+ * Ninety days is a season: long enough that a fortnight of illness does not
+ * decide what your rest looks like, short enough that last winter does not
+ * either.
+ */
 export const REST_DAYS = 90;
 
 /** Below this a share is a coincidence rather than a habit. */

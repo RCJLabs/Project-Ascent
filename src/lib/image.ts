@@ -12,6 +12,7 @@
 
 /** Longest edge, in pixels. Enough to read beta off a boulder on a phone. */
 export const MAX_EDGE = 1600;
+/** First encode. The second, smaller and harder, is `RETRY_QUALITY` below. */
 export const QUALITY = 0.82;
 
 /**

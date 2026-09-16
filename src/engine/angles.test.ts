@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { newSession, type Climb, type Session, type WallAngle } from '@/db/sessions';
-import { angles, describeAngles, ENOUGH } from './angles';
+import { angles, describeAngles, ENOUGH_CLIMBS } from './angles';
 
 /**
  * What you avoid (PLAN.md M108).
@@ -82,13 +82,13 @@ describe('what it says', () => {
   // A climber who tagged four roofs in one session and nothing else would
   // otherwise be told roofs are their strength.
   it('refuses a shape until enough climbs carry an angle', () => {
-    const out = say([many('V6', 'roof', ENOUGH - 1), climb('V3', 'slab', 0)])!;
+    const out = say([many('V6', 'roof', ENOUGH_CLIMBS - 1), climb('V3', 'slab', 0)])!;
     expect(out).toMatch(/Not enough yet to read a shape from/);
     expect(out).not.toMatch(/rungs between them/);
   });
 
   it('reads a shape at exactly the threshold, not one past it', () => {
-    const half = ENOUGH / 2;
+    const half = ENOUGH_CLIMBS / 2;
     const at = say([many('V6', 'roof', half), many('V4', 'slab', half)])!;
     expect(at).toMatch(/rungs between them/);
     const under = say([many('V6', 'roof', half), many('V4', 'slab', half - 1)])!;
@@ -100,7 +100,7 @@ describe('what it says', () => {
    * one in compares a grade that was sent against a grade that was not.
    */
   it('will not make an angle with no send one of the ends', () => {
-    const out = say([many('V5', 'slab', ENOUGH), climb('V9', 'roof', 4, { result: 'attempt' })])!;
+    const out = say([many('V5', 'slab', ENOUGH_CLIMBS), climb('V9', 'roof', 4, { result: 'attempt' })])!;
     expect(out).toMatch(/all the sends are slab/);
     expect(out).not.toMatch(/V9/);
   });
@@ -143,12 +143,12 @@ describe('what it says', () => {
   });
 
   it('will not read a shape from one angle', () => {
-    const out = say([many('V6', 'roof', ENOUGH + 2)])!;
+    const out = say([many('V6', 'roof', ENOUGH_CLIMBS + 2)])!;
     expect(out).toMatch(/One angle is not a shape/);
   });
 
   it('says so when the tagged climbs were all attempts', () => {
-    const out = say([climb('V9', 'roof', ENOUGH + 2, { result: 'attempt' })])!;
+    const out = say([climb('V9', 'roof', ENOUGH_CLIMBS + 2, { result: 'attempt' })])!;
     expect(out).toMatch(/none of them were sent/);
   });
 });

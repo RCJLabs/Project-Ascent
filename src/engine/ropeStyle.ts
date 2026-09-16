@@ -47,7 +47,7 @@ export const ROPE_LABEL: Record<RopeStyle, string> = {
 };
 
 /** Routes carrying a rope style before any of this is worth reading. */
-export const ENOUGH = 8;
+export const ENOUGH_ROUTES = 8;
 
 export interface RopeSide {
   style: RopeStyle;
@@ -87,7 +87,7 @@ export function ropeSplit(sessions: readonly Session[]): RopeSplit {
     sides: ROPE_ORDER.filter((s) => tallies.has(s)).map((s) => ({ style: s, tally: tallies.get(s)! })),
     said,
     total,
-    thin: said < ENOUGH,
+    thin: said < ENOUGH_ROUTES,
   };
 }
 

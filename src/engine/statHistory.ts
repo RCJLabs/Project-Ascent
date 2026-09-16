@@ -60,7 +60,7 @@ export const COMPARE_DAYS = 182;
  * pinned to the centre is not a comparison — it is a picture of the app not
  * having existed yet. Below this the radar draws one shape and says so.
  */
-export const MIN_HISTORY_DAYS = 60;
+export const MIN_COMPARE_DAYS = 60;
 
 export interface ComparisonInput {
   sessions: readonly Session[];
@@ -85,7 +85,7 @@ export function compareStats(input: ComparisonInput): StatComparison {
       ? 0
       : Math.max(0, Math.round((Date.parse(input.today) - Date.parse(earliest)) / 86_400_000));
 
-  if (historyDays < MIN_HISTORY_DAYS) return { then: null, asOf: null, historyDays };
+  if (historyDays < MIN_COMPARE_DAYS) return { then: null, asOf: null, historyDays };
 
   const asOf = addDays(input.today, -COMPARE_DAYS);
   return {

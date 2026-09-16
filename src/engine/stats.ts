@@ -37,6 +37,14 @@ export const STAT_LABELS: Record<StatId, { name: string; blurb: string }> = {
   AGI: { name: 'Mobility', blurb: 'Flexibility, shoulder health, and committing to movement.' },
 };
 
+/**
+ * The floor every stat starts on and the ceiling none can pass.
+ *
+ * Not a clamp: the table's caps sum to exactly 90 over this base, so 100 is
+ * what a maxed stat *adds up to* rather than what it is cut down to — see
+ * the module note above. A climber who has logged nothing sits at the floor,
+ * which is why the Ascent's hooks pay out nothing there.
+ */
 export const BASE_STAT = 10;
 export const MAX_STAT = 100;
 

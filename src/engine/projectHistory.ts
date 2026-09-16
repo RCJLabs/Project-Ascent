@@ -21,7 +21,7 @@ import { attemptsFor } from './projects';
 import type { GradeScale } from './grades';
 
 /** Below this many sends at a grade, a number is an anecdote. */
-export const ENOUGH = 3;
+export const ENOUGH_AT_GRADE = 3;
 
 export interface SentProject {
   id: string;
@@ -121,7 +121,7 @@ export function projectHistory(
       burns: median(group.map((p) => p.burns)),
       sessions: median(group.map((p) => p.sessions)),
       span: median(group.map((p) => p.span)),
-      solid: group.length >= ENOUGH,
+      solid: group.length >= ENOUGH_AT_GRADE,
     }))
     .sort((a, b) => b.sends - a.sends || a.grade.localeCompare(b.grade));
 
@@ -140,7 +140,7 @@ export function projectHistory(
     openest,
     shelved: projects.filter((p) => p.status === 'shelved').length,
     overall:
-      sent.length >= ENOUGH
+      sent.length >= ENOUGH_AT_GRADE
         ? {
             sends: sent.length,
             burns: median(sent.map((p) => p.burns)),

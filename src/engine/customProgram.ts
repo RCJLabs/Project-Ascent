@@ -25,6 +25,14 @@ import type {
 } from '@/content/types';
 
 export const CUSTOM_PREFIX = 'custom_';
+/**
+ * What a program's length is allowed to be, said in the error when it is not.
+ *
+ * A year at the top because nothing anyone plans for is longer, and a plan
+ * that long is already a sequence of blocks rather than one program. One at
+ * the bottom because a single week is still a week of training; zero is not
+ * a program, it is an empty object with a name.
+ */
 export const MAX_WEEKS = 52;
 export const MIN_WEEKS = 1;
 

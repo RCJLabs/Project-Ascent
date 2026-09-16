@@ -4,7 +4,7 @@ import type { Session } from '@/db/sessions';
 import { buildTips, visibleTips, type Tip } from './coach';
 import {
   MIN_CHRONIC_DAYS,
-  MIN_HISTORY_DAYS,
+  MIN_RATIO_DAYS,
   deriveClimberState,
   type ClimberState,
 } from './derive';
@@ -175,7 +175,7 @@ describe('the countdown, for the climber who only has to wait', () => {
   it('names the days left from the span the app already held', () => {
     const sessions = log(7, THREE_A_WEEK);
     const { state } = tipsFor(sessions);
-    const left = MIN_HISTORY_DAYS - state.load.daysOfHistory;
+    const left = MIN_RATIO_DAYS - state.load.daysOfHistory;
     expect(left).toBeGreaterThan(0);
     expect(cold(sessions)!.headline).toBe(`${left} more days before the load ratio can say anything`);
   });
@@ -216,7 +216,7 @@ describe('the countdown, for the climber who only has to wait', () => {
    *  still be short when the first is met. */
   it('names both conditions rather than only the one being counted', () => {
     const body = cold(log(7, THREE_A_WEEK))!.body;
-    expect(body).toContain(`${MIN_HISTORY_DAYS} days of span`);
+    expect(body).toContain(`${MIN_RATIO_DAYS} days of span`);
     expect(body).toContain(`${MIN_CHRONIC_DAYS} days of scored training`);
   });
 });

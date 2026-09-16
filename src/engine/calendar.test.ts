@@ -7,7 +7,7 @@ import {
   DEFAULT_ALARM_MINUTES,
   DEFAULT_DURATION,
   DEFAULT_START,
-  ENOUGH,
+  ENOUGH_SESSIONS,
   lastDayOf,
   scheduleEvents,
   timesAreKnown,
@@ -85,7 +85,7 @@ describe('when you actually train', () => {
   });
 
   it('is only known once there is enough of a log to know it from', () => {
-    const few = Array.from({ length: ENOUGH - 1 }, () =>
+    const few = Array.from({ length: ENOUGH_SESSIONS - 1 }, () =>
       session({ startedAt: startedAt(18), durationMin: 90 }),
     );
     expect(timesAreKnown(usualSession(few))).toBe(false);

@@ -28,6 +28,7 @@ export interface ZipEntry {
 const LOCAL_SIG = 0x04034b50;
 const CENTRAL_SIG = 0x02014b50;
 const EOCD_SIG = 0x06054b50;
+/** The End Of Central Directory record's fixed size, from the ZIP spec. */
 const EOCD_SIZE = 22;
 /** Store, i.e. no compression. */
 const STORED = 0;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Session } from '@/db/sessions';
-import { COMPARE_DAYS, MIN_HISTORY_DAYS, compareStats, statsAsOf } from './statHistory';
+import { COMPARE_DAYS, MIN_COMPARE_DAYS, compareStats, statsAsOf } from './statHistory';
 import { addDays } from './dates';
 
 const TODAY = '2026-09-10';
@@ -26,6 +26,20 @@ const session = (date: string, patch: Partial<Session> = {}): Session =>
 function run(count: number, to: string): Session[] {
   return Array.from({ length: count }, (_, i) => session(addDays(to, -(count - 1 - i) * 2)));
 }
+
+/**
+ * Pinned, not derived (PLAN.md M198).
+ *
+ * Every other use of this constant here builds its fixture out of it, so a
+ * changed value moves the test with it and proves nothing — which is how a
+ * mutation of `60` survived M198's first battery. `MIN_RATIO_DAYS` has had
+ * the same pin in `loadModel.test.ts` since it was named.
+ */
+describe('the window a comparison needs', () => {
+  it('is sixty days, which is when a "six months ago" stops being all zeroes', () => {
+    expect(MIN_COMPARE_DAYS).toBe(60);
+  });
+});
 
 describe('standing on an earlier day', () => {
   it('ignores everything after it', () => {
@@ -102,9 +116,9 @@ describe('whether a past shape is worth drawing', () => {
   });
 
   it('measures history from the first logged day', () => {
-    const sessions = [session(addDays(TODAY, -MIN_HISTORY_DAYS - 1)), ...run(10, TODAY)];
+    const sessions = [session(addDays(TODAY, -MIN_COMPARE_DAYS - 1)), ...run(10, TODAY)];
     const result = compareStats({ sessions, metrics: [], projects: [], today: TODAY });
-    expect(result.historyDays).toBe(MIN_HISTORY_DAYS + 1);
+    expect(result.historyDays).toBe(MIN_COMPARE_DAYS + 1);
     expect(result.then).not.toBeNull();
   });
 

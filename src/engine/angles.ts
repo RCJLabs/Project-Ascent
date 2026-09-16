@@ -15,7 +15,7 @@
  * climbs in any log written before M108 are exactly that. So every reading
  * here reports how many climbs actually carry an angle before it says
  * anything about the shape of them, and refuses the comparison outright
- * under `ENOUGH`.
+ * under `ENOUGH_CLIMBS`.
  *
  * That is the same rule `ladders.ts` and `conversion.ts` follow, and the
  * reason is sharper here: a climber who tagged four roof problems in one
@@ -46,7 +46,7 @@ export const ANGLE_LABEL: Record<WallAngle, string> = {
 };
 
 /** Climbs carrying an angle before any of this is worth reading. */
-export const ENOUGH = 10;
+export const ENOUGH_CLIMBS = 10;
 
 export interface AngleSide {
   angle: WallAngle;
@@ -88,7 +88,7 @@ export function angles(sessions: readonly Session[], scale: GradeScale): Angles 
     sides: ANGLE_ORDER.filter((a) => tallies.has(a)).map((a) => ({ angle: a, tally: tallies.get(a)! })),
     said,
     total,
-    thin: said < ENOUGH,
+    thin: said < ENOUGH_CLIMBS,
   };
 }
 

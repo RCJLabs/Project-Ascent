@@ -25,10 +25,11 @@ import { TEST_REASON_LABEL } from './assessments';
 
 /** 6pm, used only when the log cannot say otherwise. */
 export const DEFAULT_START = 18 * 60;
+/** And an hour and a half, for a planned session that has no length yet. */
 export const DEFAULT_DURATION = 90;
 
 /** Sessions to read before the app stops calling it a guess. */
-export const ENOUGH = 3;
+export const ENOUGH_SESSIONS = 3;
 
 /** How long before the session the alarm fires. */
 export const DEFAULT_ALARM_MINUTES = 120;
@@ -45,7 +46,7 @@ export interface UsualSession {
   /** Minutes after midnight. */
   startMinute: number;
   durationMinutes: number;
-  /** Sessions the start time was read from. Below `ENOUGH` it is a guess. */
+  /** Sessions the start time was read from. Below `ENOUGH_SESSIONS` it is a guess. */
   starts: number;
   /** Sessions the length was read from. */
   durations: number;
@@ -96,7 +97,7 @@ export function usualSession(sessions: readonly Session[]): UsualSession {
 
 /** Whether the times above were read from enough of a log to mean anything. */
 export function timesAreKnown(usual: UsualSession): boolean {
-  return usual.starts >= ENOUGH && usual.durations >= ENOUGH;
+  return usual.starts >= ENOUGH_SESSIONS && usual.durations >= ENOUGH_SESSIONS;
 }
 
 export interface ScheduleRequest {

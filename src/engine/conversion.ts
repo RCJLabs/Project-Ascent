@@ -38,9 +38,16 @@ import {
   type GradeScale,
 } from './grades';
 
-/** Days in a block. The same 28 as M28 and the load model, so "this block"
- *  means one thing across the Progress page. */
-export const BLOCK_DAYS = 28;
+/**
+ * Days in a block — M28's, re-exported rather than re-typed (PLAN.md M198).
+ *
+ * This file used to carry its own `28` with a comment saying it was "the
+ * same 28 as M28 and the load model", which is a copy of a decision
+ * announcing that it is a copy. Two modules owning one name is how a reader
+ * who greps finds the wrong one, and how the two come to disagree.
+ */
+export { BLOCK_DAYS } from './blockCompare';
+import { BLOCK_DAYS } from './blockCompare';
 
 /** Blocks shown. Six of them is roughly half a year, which is the shortest
  *  span over which a conversion change is a change rather than a fortnight. */

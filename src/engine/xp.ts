@@ -80,6 +80,14 @@ export interface XpState {
   earned: number;
 }
 
+/**
+ * A coin is a quarter of an XP point, and that is the only exchange there is.
+ *
+ * Derived rather than banked, like XP itself — the balance is a reading of
+ * the log times this number, so there is no wallet to fall out of step with
+ * it. The kit prices in `engine/avatar.ts` are set against this rate, so
+ * moving it reprices the whole shop.
+ */
 export const CURRENCY_RATE = 0.25;
 
 export interface XpSources {

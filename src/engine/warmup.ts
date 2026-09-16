@@ -45,6 +45,14 @@ export interface WarmupPlan {
   injuryFilterRelaxed: boolean;
 }
 
+/**
+ * Seven minutes, when the caller names no target.
+ *
+ * Long enough to get through pulses, mobility and a few easy problems; short
+ * enough that nobody skips it to get on the wall. The logger adds a minute
+ * per point of variety on top, so a climber asking for more gets more time
+ * rather than the same time cut finer.
+ */
 export const DEFAULT_TARGET_SECONDS = 420;
 
 /** Deterministic shuffle, so a given seed always produces the same warmup. */

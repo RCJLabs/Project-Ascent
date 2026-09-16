@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ENOUGH, costOf, projectHistory } from './projectHistory';
+import { ENOUGH_AT_GRADE, costOf, projectHistory } from './projectHistory';
 import type { Project } from '@/db/projects';
 import type { Session } from '@/db/sessions';
 
@@ -95,7 +95,7 @@ describe('across the log', () => {
     const v6 = history.byGrade.find((g) => g.grade === 'V6')!;
     expect(v6.sends).toBe(1);
     expect(v6.solid).toBe(false);
-    expect(ENOUGH).toBeGreaterThan(1);
+    expect(ENOUGH_AT_GRADE).toBeGreaterThan(1);
   });
 
   it('stays quiet overall until there is enough of it', () => {
