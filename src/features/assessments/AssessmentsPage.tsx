@@ -33,7 +33,7 @@ import { Input, Select } from '@/ui/Field';
 import { BackLink } from '@/ui/BackLink';
 import { PageHeader } from '@/ui/PageHeader';
 import { BlockReportChart, BlockReportRest } from '@/ui/charts/BlockReportChart';
-import { unitLabel } from '@/engine/units';
+import { isAddedWeight, unitLabel } from '@/engine/units';
 
 export function AssessmentsPage() {
   const entries = useMetrics((s) => s.entries);
@@ -184,6 +184,7 @@ function MetricRow({
   onToggle: () => void;
 }) {
   const display = useSettings((s) => s.display);
+  const units = useSettings((s) => s.units);
   const injuries = useProfile((s) => s.injuries);
   const hurt = useMemo(() => concerning(injuryPolicy(injuries)), [injuries]);
   const { metric, latest, change } = status;
@@ -200,7 +201,16 @@ function MetricRow({
           <TestSafety metric={metric} injured={hurt} compact />
         </div>
         <div className="text-right shrink-0">
-          <div className="font-bold text-sm tabular-nums">{latest ? formatEntry(metric, latest, display) : '—'}</div>
+          {/* `units`, which this one call was missing (PLAN.md M234).
+              `formatEntry` takes it fourth and defaults it to imperial, so
+              the omission did not fail — it just read every weight in pounds
+              on the one screen a climber goes to for their benchmarks, while
+              the detail page for the same metric read kilos. Found in the
+              browser, on the wall M48 exists to stop: *the number and its
+              label have to move together*. */}
+          <div className="font-bold text-sm tabular-nums">
+            {latest ? formatEntry(metric, latest, display, units) : '—'}
+          </div>
           {change && (
             <div
               className={`text-xs font-semibold ${
@@ -349,7 +359,23 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
           means bodyweight and that a negative is allowed. */}
       {entry !== undefined && <p className="text-xs text-ink-soft mt-2">{entry}</p>}
       {metric.unit && metric.kind === 'number' && (
-        <p className="text-xs text-ink-soft mt-2">Measured in {unitLabel(metric.unit, units)}.</p>
+        <p className="text-xs text-ink-soft mt-2">
+          Measured in {unitLabel(metric.unit, units)}.
+          {/* What the number is, for the two benchmarks that record the plate
+              rather than the load (PLAN.md M234). The app has never known
+              what a climber weighs and is not going to start: what it can do
+              is stop letting the number be read as something it is not. The
+              percentage went with it — `changeOf` gives none here, because a
+              percentage of the plate is not a percentage of the load. */}
+          {isAddedWeight(metric.unit) && (
+            <>
+              {' '}
+              This is what you <em>added</em>, not what you held — so it reads
+              against your own results at a similar bodyweight, and a change in
+              weight changes what it means.
+            </>
+          )}
+        </p>
       )}
       {/* The clock fills the box; it never saves. Nothing here records a
           result the climber did not confirm on screen. */}

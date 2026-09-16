@@ -34,6 +34,7 @@ import type { Objective } from './objectives';
 import { tripNow } from './trip';
 import { comedownNow, type Comedown } from './comedown';
 import { isRestSession } from './rest';
+import { isAddedWeight } from './units';
 
 export type TipTone = 'good' | 'neutral' | 'caution';
 
@@ -131,6 +132,17 @@ export const BACKUP_INTERVAL_DAYS = 30;
  * knew; two readings eleven weeks apart say the block worked.
  */
 export const GAIN_PERCENT = 5;
+
+/**
+ * The same floor for a metric that carries no percentage because it measures
+ * added weight (PLAN.md M234).
+ *
+ * Five pounds: the smallest plate most climbers can actually add, and past
+ * the noise of a retest on the same hand and the same edge. A block moves a
+ * max hang by five to ten, so this is the bottom of "the block worked" and
+ * not the top of it.
+ */
+export const GAIN_ADDED_LBS = 5;
 export const GAIN_WINDOW_DAYS = 120;
 
 /**
@@ -922,7 +934,21 @@ function benchmarkGain({ metrics }: CoachInput, today: string): Tip | null {
       // A grade, a pass, or a number that used to be zero carries no
       // percentage and needs none — a step up a ladder is already the size,
       // and off zero is every percentage there is. The rest clear the noise.
-      const size = change.percent === null ? Infinity : Math.abs(change.percent);
+      //
+      // **Added weight carries none either, and does need one** (PLAN.md
+      // M234). It used to carry a percentage and the percentage was wrong —
+      // of the plate rather than of the load — and taking it away left the
+      // metric on `Infinity`, where a one-pound retest outranked a grade.
+      //
+      // So both are ranked as multiples of their own noise floor, which is
+      // the only scale the two share: five per cent for the things that
+      // carry a percentage, five pounds for the things that cannot.
+      const size =
+        change.percent === null
+          ? isAddedWeight(metric.unit)
+            ? (Math.abs(change.delta) / GAIN_ADDED_LBS) * GAIN_PERCENT
+            : Infinity
+          : Math.abs(change.percent);
       if (size < GAIN_PERCENT) return [];
       return [{ metric, change, latest, span, size }];
     })

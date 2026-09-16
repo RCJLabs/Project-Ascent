@@ -13930,6 +13930,11 @@ which is the right shape.*
   a bodyweight target unless it is built not to be. Optional, never a goal, never a trend line
   pointing down, never spoken about by the coach engine.
   *Medium, and worth refusing outright if the safe version cannot be drawn.*
+  ***Refused, on its own terms, and the defect underneath it was fixed instead.*** *The safe
+  version cannot be drawn: a single current weight is safe and does not fix the comparability the
+  item is about, and per-reading weight fixes it by being a weight log asked for at the moment of a
+  performance test. What was real and fixable without one: the app was reporting a percentage of
+  the plate as though it were a percentage of the load. See the entry at the end of this document.*
 
 - **M235 — every number is compared only to itself.** `assessments.ts` exports `seriesFor`,
   `changeOf`, `testWeeks` and `dueReason` — your history, your change, your schedule — and
@@ -14476,3 +14481,94 @@ everything-bought — plus both new walls rendered in a real run. Desert tower's
 than the house level on the first render and were pulled down a notch.
 
 **6,145 tests over 353 files.**
+
+
+## M234 — a percentage of the plate is not a percentage of the load
+
+The item is right about the facts. Thirty-seven metrics; `max_hang_20mm_7s` — the one its own
+description calls *"the standard finger-strength benchmark"* — has the unit `BW+lbs`; and **nothing
+anywhere stores a bodyweight**. Every occurrence of the word in `src/` is prose or means *load
+is zero*. So strength-to-weight cannot be computed, and two readings at two bodyweights are two
+different results the app reads as one.
+
+### The bodyweight field is refused, and the reason is that the safe version does not exist
+
+The item asked for one and said it was worth refusing if the safe version could not be drawn. It
+cannot, and the shape of the impossibility is worth writing down rather than gesturing at:
+
+- **A single current weight is safe and fixes nothing.** It gives today's ratio and says nothing
+  about two readings a year apart, which is the comparability the item is about.
+- **A weight per reading fixes it and is a weight log by construction** — asked for at the exact
+  moment of a performance test, which is the worst pairing there is. "Never charted" is one
+  milestone from charted, in a codebase whose whole habit is deriving everything from what it
+  stores.
+
+There is no third shape. The comparability *is* the time series.
+
+And the case for it is weaker than it looks. Strength-to-weight is the right quantity when you
+compare **climbers** — and this app never does: `Metric` has no reference field, `content/metrics.ts`
+carries no reference value, and there is no percentile anywhere in `src/`. Within one climber's own
+log the decision a max hang actually drives is *what to load next session*, and that reads off added
+weight either way.
+
+### What was real, and was a defect rather than a gap
+
+`changeOf` computed `percent = delta / |previous|` for every numeric metric. On a `BW+lbs` metric the
+previous value is **the plate**, so thirty pounds becoming thirty-three is ten per cent of what is
+recorded and **about two per cent of what the fingers hold** — a 150 lb climber went from holding 180
+to 183. The coach said it out loud:
+
+> Max Hang 20mm 7s improved: +3 BW+lbs (10%)
+
+Six times the truth, on the front door, in the one tip whose entire job is saying something true.
+
+`changeOf` gives no percentage for added weight now — the same answer it already gave for grades and
+pass/fail, for the same reason. The delta is untouched, because the delta is right: three pounds more
+is three pounds more however much the climber weighs.
+
+### Taking the percentage away broke the ranking, which is the half a smaller fix would have shipped
+
+`benchmarkGain` ranks gains by percentage and treats a percentless one as `Infinity` — correct for a
+grade, where *a step up a ladder is already the size*. Dropping the percentage put the max hang in
+that bucket, and **a one-pound retest would have outranked every real gain in the log**. A test
+caught it immediately: *"40% beats 10%"* started failing the other way.
+
+So both are ranked as multiples of their own noise floor, which is the only scale the two share: five
+per cent for the things that carry a percentage, **five pounds** — the smallest plate most climbers
+can add, and past the noise of a retest on the same hand and the same edge — for the things that
+cannot.
+
+### And the page says what the number is
+
+*"Measured in BW+kg"* told a climber the unit and not the meaning. It now adds, on those two metrics
+only: **this is what you added, not what you held — so it reads against your own results at a similar
+bodyweight, and a change in weight changes what it means.** That is the honest version of what a
+bodyweight field would have bought, and it costs nothing to store.
+
+### A units bug found in the browser, on the wall M48 built
+
+`formatEntry` takes `units` fourth and **defaults it to imperial**. The benchmark list passed three
+arguments. So the one screen a climber goes to for their benchmarks read every weight in pounds
+whatever they had chosen, while the detail page for the same metric read kilos — and it did not fail,
+because the default caught it. M48's own line is *"the number and its label have to move together"*.
+Fixed, and it is a one-word fix that no test had any way to want: it was found by seeding a metric
+climber in a browser and reading the screen.
+
+**Left standing, and named rather than half-done:** `changeOf` builds its label off `metric.unit`
+raw, so the delta beside that now-correct value still reads `+10 BW+lbs` to a climber reading kilos,
+and so does the coach's headline. Fixing it means threading units through `assessmentStatus`, the
+whole of `CoachInput` and every caller of `buildTips` — which is a milestone about whether the engine
+should render display strings at all, not a footnote to this one.
+
+### Measured
+
+**10 of 10 mutants caught, sanity no-op survived.** The percentage returning, the delta going with
+it, the added-weight set widening to every weight unit or emptying, the ranking back on `Infinity`,
+the floor at one pound or at forty, the note removed or shown on every metric, and the list dropped
+back to pounds.
+
+**135.71KB against a 136.9 ceiling.** Browser-verified in both themes at 430px and 1280px and in both
+unit systems: the coach reads *"Max Hang 20mm 7s improved: +10 BW+lbs"* with no percentage, the note
+reads in the climber's own units, and the list reads **18.1 BW+kg** where it read 40 BW+lbs.
+
+**6,156 tests over 354 files.**

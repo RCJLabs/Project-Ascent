@@ -13,7 +13,7 @@ import { getMetric, METRICS } from '@/content/metrics';
 import { phaseForWeek, type Metric, type MetricId, type Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import { addDays, daysBetween, programWeek, today as todayKey } from './dates';
-import { fromInput, toDisplay, unitLabel, type UnitSystem } from './units';
+import { fromInput, isAddedWeight, toDisplay, unitLabel, type UnitSystem } from './units';
 import {
   DEFAULT_DISPLAY,
   V_GRADES,
@@ -98,7 +98,19 @@ export function seriesFor(entries: MetricEntry[], metricId: MetricId): MetricEnt
 
 export interface Change {
   delta: number;
-  /** Null for grades and pass/fail, where a percentage is meaningless. */
+  /**
+   * Null for grades, pass/fail and added weight, where a percentage is
+   * meaningless or wrong (PLAN.md M234).
+   *
+   * The third was a bug rather than a gap. A `BW+lbs` metric stores the
+   * plate, not the load, so thirty pounds becoming thirty-three is ten per
+   * cent of what is recorded and about two per cent of what the fingers
+   * hold — and *"Max Hang 20mm 7s improved: +3 BW+lbs (10%)"* is what the
+   * coach said about it. The number was six times the truth.
+   *
+   * The delta is untouched, because the delta is right: three pounds more is
+   * three pounds more however much the climber weighs.
+   */
   percent: number | null;
   /** Null when the metric cannot improve in a numeric sense (text). */
   improved: boolean | null;
@@ -127,7 +139,12 @@ export function changeOf(metric: Metric, series: MetricEntry[]): Change | null {
     return { delta, percent: null, improved: better, label: delta > 0 ? 'now passing' : 'now failing' };
   }
 
-  const percent = previous.value === 0 ? null : (delta / Math.abs(previous.value)) * 100;
+  // A percentage of added weight is a percentage of the wrong number: the
+  // climber is most of the load and this app has never known their weight.
+  const percent =
+    previous.value === 0 || isAddedWeight(metric.unit)
+      ? null
+      : (delta / Math.abs(previous.value)) * 100;
   return {
     delta,
     percent,

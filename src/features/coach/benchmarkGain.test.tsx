@@ -60,9 +60,15 @@ async function withAGain(): Promise<void> {
       updatedAt: `${date}T18:00:00.000Z`,
     } as Session);
   }
+  // Thirty pounds to forty, since M234. It was thirty to thirty-three, which
+  // the coach reported as "+3 BW+lbs (10%)" — ten per cent of the plate,
+  // where a 150 lb climber had gone from holding 180 to 183 and gained under
+  // two. There is no percentage on this metric now and the gain has to clear
+  // five pounds, the smallest plate, so the fixture is a block's worth of
+  // work rather than a retest.
   for (const [daysAgo, value] of [
     [56, 30],
-    [7, 33],
+    [7, 40],
   ] as [number, number][]) {
     const date = addDays(DAY, -daysAgo);
     await putMetricEntry({ metricId: 'max_hang_20mm_7s', date, value });
@@ -92,8 +98,11 @@ describe('a benchmark that went up', () => {
     renderAt('/', <HomePage />);
     await screen.findByText("Coach's Corner");
     expect(body(), 'the only card Home shows was still a fault').toMatch(
-      /Max Hang 20mm 7s improved: \+3 BW\+lbs \(10%\)/,
+      /Max Hang 20mm 7s improved: \+10 BW\+lbs/,
     );
+    // And no percentage, because a percentage of added weight is a
+    // percentage of the wrong number (PLAN.md M234).
+    expect(body()).not.toMatch(/Max Hang 20mm 7s improved: [^.]*%/);
   });
 
   it('carries the window and somewhere to look on the board', async () => {

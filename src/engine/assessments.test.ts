@@ -16,6 +16,7 @@ import {
   STALE_DAYS,
 } from './assessments';
 import { addDays } from './dates';
+import { isAddedWeight } from './units';
 
 const TODAY = '2026-09-09';
 
@@ -110,6 +111,40 @@ describe('changeOf', () => {
       entry('max_boulder_grade', TODAY, 7, 'V7'),
     ]);
     expect(change).toMatchObject({ improved: true, percent: null, label: '+2 grades' });
+  });
+
+  /**
+   * Added weight, where a percentage is of the wrong number (PLAN.md M234).
+   *
+   * `max_hang_20mm_7s` stores the plate and not the load: thirty pounds
+   * becoming thirty-three is ten per cent of what is recorded and under two
+   * per cent of what the fingers hold, because the climber is most of the
+   * load and this app has never known what they weigh. It reported the first
+   * — *"Max Hang 20mm 7s improved: +3 BW+lbs (10%)"* — six times over.
+   *
+   * The delta stays, because the delta is right either way.
+   */
+  it('gives no percentage for a benchmark measured in added weight', () => {
+    const hang = getMetric('max_hang_20mm_7s')!;
+    const change = changeOf(hang, [
+      entry('max_hang_20mm_7s', '2026-08-01', 30),
+      entry('max_hang_20mm_7s', TODAY, 33),
+    ]);
+    expect(change).toMatchObject({ delta: 3, improved: true, percent: null, label: '+3 BW+lbs' });
+  });
+
+  /**
+   * And exactly the two, pinned. A set that quietly widened would take the
+   * percentage off metrics that have every right to one; a set that quietly
+   * narrowed would put the wrong number back.
+   */
+  it('is added weight for the two benchmarks that measure it, and nothing else', () => {
+    const relative = Object.values(METRICS).filter((m) => isAddedWeight(m.unit)).map((m) => m.id);
+    expect(relative.sort()).toEqual(['max_hang_20mm_7s', 'weighted_pullup_3rm']);
+    // And the units they are not: a plain `lbs` metric records what was
+    // lifted, so a percentage of it is a percentage of it.
+    expect(isAddedWeight('lbs')).toBe(false);
+    expect(isAddedWeight('sec')).toBe(false);
   });
 
   it('says nothing improved when nothing moved', () => {

@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadPrograms } from '@/content/programs';
 import type { MetricEntry } from '@/db/metrics';
 import type { Session } from '@/db/sessions';
-import { GAIN_PERCENT, GAIN_WINDOW_DAYS, buildTips, type Tip } from './coach';
+import { GAIN_ADDED_LBS, GAIN_PERCENT, GAIN_WINDOW_DAYS, buildTips, type Tip } from './coach';
 import { deriveClimberState } from './derive';
 import { addDays } from './dates';
 import { diagnose } from './plateau';
@@ -94,16 +94,25 @@ function tipsFor(metrics: MetricEntry[], days = 60): Tip[] {
 const gain = (metrics: MetricEntry[], days = 60): Tip | undefined =>
   tipsFor(metrics, days).find((t) => t.id === 'benchmark-gain');
 
-/** +10% on the hang: 30 lbs eight weeks ago, 33 lbs last week. */
+/**
+ * +10% on the hang: 30 seconds eight weeks ago, 33 last week.
+ *
+ * A dead hang rather than a max hang, since M234. This file's workhorse was
+ * `max_hang_20mm_7s`, whose unit is *added* weight — so every "+3 BW+lbs
+ * (10%)" in it was the app reporting ten per cent of the plate as though it
+ * were ten per cent of what the fingers hold. The percentage is gone from
+ * that metric now, and the tests about the *rule* use a metric where a
+ * percentage means what it says. Added weight has its own block below.
+ */
 const TEN_PERCENT = [
-  reading('max_hang_20mm_7s', 60, 30),
-  reading('max_hang_20mm_7s', 4, 33),
+  reading('dead_hang', 60, 30),
+  reading('dead_hang', 4, 33),
 ];
 
 describe('a number that moved', () => {
   it('names the number, the size and the window', () => {
     const tip = gain(TEN_PERCENT)!;
-    expect(tip.headline).toBe('Max Hang 20mm 7s improved: +3 BW+lbs (10%)');
+    expect(tip.headline).toBe('Dead Hang improved: +3 sec (10%)');
     expect(tip.body).toMatch(/over 8 weeks/);
     expect(tip.tone).toBe('good');
     expect(tip.action?.href).toBe('/assessments');
@@ -117,18 +126,18 @@ describe('a number that moved', () => {
   it('says all three, not two of them', () => {
     const tip = gain(TEN_PERCENT)!;
     const said = `${tip.headline} ${tip.body}`;
-    expect(said, 'which number').toContain('Max Hang 20mm 7s');
-    expect(said, 'how much').toContain('+3 BW+lbs');
+    expect(said, 'which number').toContain('Dead Hang');
+    expect(said, 'how much').toContain('+3 sec');
     expect(said, 'over how long').toMatch(/8 weeks/);
   });
 
   it('is silent on one reading, because one reading is not a change', () => {
-    expect(gain([reading('max_hang_20mm_7s', 4, 33)])).toBeUndefined();
+    expect(gain([reading('dead_hang', 4, 33)])).toBeUndefined();
   });
 
   it('is silent on a decline', () => {
     expect(
-      gain([reading('max_hang_20mm_7s', 60, 33), reading('max_hang_20mm_7s', 4, 30)]),
+      gain([reading('dead_hang', 60, 33), reading('dead_hang', 4, 30)]),
     ).toBeUndefined();
   });
 
@@ -235,8 +244,8 @@ describe('a metric with no percentage', () => {
 describe('when more than one thing went right', () => {
   it('says the biggest, not the first', () => {
     const tip = gain([
-      reading('max_hang_20mm_7s', 50, 30),
-      reading('max_hang_20mm_7s', 5, 33),
+      reading('dead_hang', 50, 30),
+      reading('dead_hang', 5, 33),
       reading('max_pullups', 50, 10),
       reading('max_pullups', 5, 14),
     ])!;
@@ -245,8 +254,8 @@ describe('when more than one thing went right', () => {
 
   it('says one thing, not a list', () => {
     const many = tipsFor([
-      reading('max_hang_20mm_7s', 50, 30),
-      reading('max_hang_20mm_7s', 5, 33),
+      reading('dead_hang', 50, 30),
+      reading('dead_hang', 5, 33),
       reading('max_pullups', 50, 10),
       reading('max_pullups', 5, 14),
       reading('max_pushups', 50, 20),
@@ -259,8 +268,8 @@ describe('when more than one thing went right', () => {
 describe('said once', () => {
   it('signs the reading it is about, so the next retest earns its own', () => {
     const first = gain(TEN_PERCENT)!;
-    const next = gain([...TEN_PERCENT, reading('max_hang_20mm_7s', 1, 37)])!;
-    expect(first.signature).toBe(`max_hang_20mm_7s:${addDays(DAY, -4)}`);
+    const next = gain([...TEN_PERCENT, reading('dead_hang', 1, 37)])!;
+    expect(first.signature).toBe(`dead_hang:${addDays(DAY, -4)}`);
     expect(next.signature).not.toBe(first.signature);
   });
 
@@ -278,10 +287,80 @@ describe('said once', () => {
    * sentence.
    */
   it('reports the step it is about, not the series', () => {
-    const third = gain([...TEN_PERCENT, reading('max_hang_20mm_7s', 1, 37)])!;
-    expect(third.headline).toBe('Max Hang 20mm 7s improved: +4 BW+lbs (12%)');
+    const third = gain([...TEN_PERCENT, reading('dead_hang', 1, 37)])!;
+    expect(third.headline).toBe('Dead Hang improved: +4 sec (12%)');
     expect(third.body).toMatch(/over 1 week,/);
     expect(third.body, 'a plural week').not.toMatch(/over 1 weeks/);
+  });
+});
+
+/**
+ * Added weight, which used to carry a percentage and carried the wrong one
+ * (PLAN.md M234).
+ *
+ * `max_hang_20mm_7s` and `weighted_pullup_3rm` store the plate and not the
+ * load: thirty pounds becoming thirty-three is ten per cent of what is
+ * recorded and under two per cent of what the fingers hold. The app reported
+ * the first, six times over.
+ *
+ * Taking the percentage away was half the fix. The other half is that the
+ * rule ranked percentless metrics as `Infinity` — right for a grade, where a
+ * step up a ladder is already the size, and wrong here, where a one-pound
+ * retest would have outranked every real gain in the log.
+ */
+describe('a benchmark measured in added weight', () => {
+  const added = (from: number, to: number) => [
+    reading('max_hang_20mm_7s', 50, from),
+    reading('max_hang_20mm_7s', 5, to),
+  ];
+
+  it('never claims a percentage of a number it does not have', () => {
+    const tip = gain(added(30, 40))!;
+    expect(tip.headline).toBe('Max Hang 20mm 7s improved: +10 BW+lbs');
+    expect(tip.headline, 'a percentage of the plate is not a percentage').not.toMatch(/%/);
+  });
+
+  /**
+   * And it still has a floor. Five pounds is the smallest plate most climbers
+   * can add and past the noise of a retest on the same hand and the same
+   * edge; three is the retest.
+   */
+  it('stays quiet under the smallest plate there is', () => {
+    expect(GAIN_ADDED_LBS).toBe(5);
+    expect(gain(added(30, 33)), '+3 lbs is a retest').toBeUndefined();
+    expect(gain(added(30, 35)), '+5 lbs is a block').toBeDefined();
+  });
+
+  /**
+   * The ranking, which is the half that taking the percentage away broke.
+   * A ten-pound max hang is twice its floor and a 40% pull-up gain is eight
+   * times its own, so the pull-ups lead — and `Infinity` would have had the
+   * hang lead on a single pound.
+   */
+  it('ranks against its own floor rather than above everything', () => {
+    const tip = gain([
+      ...added(30, 40),
+      reading('max_pullups', 50, 10),
+      reading('max_pullups', 5, 14),
+    ])!;
+    expect(tip.headline, '40% of a real percentage beats ten pounds').toMatch(/^Max Pull-Ups/);
+
+    // And it does lead when the gain is the larger multiple: +30 lbs is six
+    // floors against the pull-ups' eight per cent, which is under two.
+    const bigger = gain([
+      ...added(30, 60),
+      reading('max_pullups', 50, 12),
+      reading('max_pullups', 5, 13),
+    ])!;
+    expect(bigger.headline).toMatch(/^Max Hang/);
+  });
+
+  it('says it of the pull-up benchmark too, not just the hang', () => {
+    const tip = gain([
+      reading('weighted_pullup_3rm', 50, 20),
+      reading('weighted_pullup_3rm', 5, 30),
+    ])!;
+    expect(tip.headline).toBe('Weighted Pull-Ups 3RM improved: +10 BW+lbs');
   });
 });
 

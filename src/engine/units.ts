@@ -31,6 +31,36 @@ const CONVERSIONS: Record<string, { label: string; perImperial: number }> = {
   ft: { label: 'm', perImperial: 0.3048 },
 };
 
+/**
+ * Units that measure *added* weight rather than weight held (PLAN.md M234).
+ *
+ * `BW+lbs` is the unit of the two benchmarks this app calls standard — the
+ * 20mm max hang and the weighted pull-up 3RM — and what it stores is the
+ * plate, not the load. The climber is the rest of the load and the app has
+ * never known what the climber weighs.
+ *
+ * That is fine for the thing the number is actually used for: what to load
+ * next session reads off added weight either way, and nothing in this app
+ * compares one climber to another — there are no reference values in
+ * `content/metrics.ts` and no percentiles anywhere.
+ *
+ * It is not fine for a **percentage**. Thirty pounds added becoming
+ * thirty-three is ten per cent of the plate and under two per cent of what
+ * the fingers hold, and the app reported the first as a gain. See `changeOf`
+ * in `engine/assessments.ts`, which now declines to give one, and the note
+ * this drives on the assessment page.
+ *
+ * A set rather than a flag on `Metric`, because the unit already says it and
+ * a second marker is a second thing to drift. `assessments.test.ts` pins
+ * which metrics it covers so the set cannot quietly widen.
+ */
+const ADDED_WEIGHT = new Set(['BW+lbs']);
+
+/** Whether this unit measures what was added rather than what was held. */
+export function isAddedWeight(unit: string): boolean {
+  return ADDED_WEIGHT.has(unit);
+}
+
 /** What to call this unit for a climber reading in `system`. */
 export function unitLabel(unit: string, system: UnitSystem): string {
   if (system === 'imperial') return unit;
