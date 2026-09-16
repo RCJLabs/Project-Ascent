@@ -11842,6 +11842,13 @@ content — `SearchBody` feeds it `allSessions` and reads `session.notes`.*
   let them run it in their own copy. But the decision is not in this document, and the gap is
   real for whoever is coaching rather than training.
   *Large as a build, small as a decision. Worth settling before it is asked for.*
+  ***SCRAPPED at the twelfth brainstorm, on the author's word and without the decision being
+  written.*** *Asked for directly — "scrap 208" — after it had stood open through two brainstorms
+  as the one item whose proposed outcome was a recorded refusal rather than a build. It is dropped
+  rather than refused, and the difference matters: a refusal is an argument that survives being
+  re-read, and there is no argument here beyond the author's. The gap is still real for anyone
+  coaching rather than training, and `programFile.ts` is still the answer the app already has —
+  write a block, hand over the file, let them run it in their own copy.*
 
 
 ## The eleventh brainstorm — the game, and what of real climbing it touches
@@ -11967,6 +11974,13 @@ thresholds beside them.*
   must pay nothing, or pay under the same `GAME_ACTION_CAP`, or it becomes a way to farm your own
   history.
   *Large, and the reward rule is the hard part rather than the generator.*
+  ***SCRAPPED at the twelfth brainstorm.*** *Parked when it was proposed and dropped when it was
+  asked about — "scrap 216". The premise survives re-reading: `buildWall(dailySeed(date))` is
+  still the only generator, and a wall seeded from your own log would still be the first time the
+  game was made out of climbing that happened. What killed it is the half that was flagged as the
+  hard part and never got easier — **a wall generated from your training either pays, which makes
+  your own history farmable, or it does not, which makes it a mode with no reason to open it.**
+  Not built, and not to be proposed again without an answer to that.*
 
 - **M217 — the Ascent has never heard of a grade, a project or a venue.** Zero matches for any of
   them across `engine/ascent` and `features/ascent`. The app knows your hardest send, the name of
@@ -13806,3 +13820,118 @@ which matters more here than it did for the kits: the chosen wall is an id on th
 `db/game.ts` and `store/game.ts` both touch this concept and both are read before anything renders.
 What the 0.14KB bought is that reading. **The next milestone touching the boot path should expect to
 pay for itself.**
+
+## The twelfth brainstorm — five for the game, five for the rest
+
+*Asked for in those terms: five Ascent or gamified items, five for the app and the programs. The
+eleventh brainstorm's rule holds and is the reason this took a survey before it took an opinion —
+**an absence is not established by a search that found nothing, it is established by opening the
+module that would hold the thing and finding it absent.** Every item below names what was read.*
+
+*The queue was emptied first. **M216 and M208 are scrapped**, annotated in place above; nothing else
+was open.*
+
+***Seven candidates died in the survey and are recorded so nobody proposes them again.*** *Retest
+scheduling is built — `assessments.ts` owns `STALE_DAYS = 56`, `testWeeks` and `dueReason`.
+Week-by-week progression inside a phase is built — M127's `WeekStep`, and M33 makes a block whose
+dose never moves say why out loud. Readiness already reaches the dose (M129,
+`readinessDose.test.tsx`). Metric numbers are already read against climbing — `plateau.ts` takes
+both `seriesFor` and `pyramid`. Named ticks exist: `Climb.name`. Video is a recorded refusal
+(M50), thrown by name in `lib/image.ts`. And a program generated for you is the prototype rot the
+app escaped (AUDIT.md §8) — `customProgram.ts` is a validity layer for a program **you** write,
+which is the right shape.*
+
+### The game
+
+- **M228 — the ghost you race exists for one day.** `recordDay` ends
+  `.map((d) => (d.date === newest ? d : stripTape(d)))` — every tape but the newest is thrown away
+  — and `tapeToRace` returns `null` unless `daily.date === now.date`. So the only opponent the game
+  has ever offered is your own best run *today*. Your best run **ever** is kept forever as a number
+  (`best.ascent`, printed in *Your records*) and leaves nothing to climb against. Keeping one more
+  tape — the one that set `best` — bounds the cost at two, and the machinery already exists: Race
+  Someone plays the sender's seed through `raceSetup`, so racing a past day's wall is the same
+  path with a different source.
+  *Small, and the storage cost is one tape.*
+
+- **M229 — twenty-six achievements, and not one moment.** `engine/achievements.ts` is imported by
+  exactly two files: `AchievementsCard` (a count) and `AchievementsPage` (a list). Nothing compares
+  before against after, nothing announces, nothing offers a card. M26 built precisely this for the
+  six `milestones` — ranked so a session that sets a grade record *and* levels you up has one
+  headline, with a share card behind it — and the achievements never joined it. Twenty-six shapes
+  in the log that the app went to real trouble to define, and the only way to learn you have one
+  is to go and look.
+  *Small, and the pattern to copy is already written.*
+
+- **M230 — the board is a page nobody opens.** `engine/challenges.ts` generates a daily quality
+  task, a weekly set scaled to your own numbers, and bounties you accept, all resolving from the
+  log so none of it can be ticked without doing the thing. It is imported by `BoardPage` and by
+  `review.ts`, and by nothing else. Home carries the date, the coach, your week and the session;
+  the one part of the app with a deadline on it is two taps away under Game. **A daily task nobody
+  sees is not a daily task.**
+  *Small, and it is placement rather than a build.*
+
+- **M231 — a run has no shape after ninety seconds.** `DIFFICULTY` ramps speed to about 32 seconds
+  and density to 90, and `config.ts` says the rest out loud: *"After ninety seconds nothing changes
+  again — the wall is as hard as it gets, and staying on it is the whole test."* That is a fine
+  design for the test and a poor one for a climb. Meanwhile `altimeter.ts` owns ten named climbs
+  from a 45 ft gym wall to Everest, and M210 names the one your run matched **after** it ends.
+  Nothing marks passing one *during* it. The cheapest version changes no mechanic at all: a line
+  across the wall and a word as you cross it.
+  *Small as naming, large as mechanics — and the small one is the one to build.*
+
+- **M232 — the coins run out of anywhere to go.** The kits total 90,700 and the walls 57,000, and
+  `describeShop` already says the quiet part: *"All N bought — nothing left to spend on."* At
+  `CURRENCY_RATE` 0.25 that is 590,800 XP of climbing, after which every coin the game pays is
+  inert. There is no consumable and there never was — `spend()` was deleted at M155 for having no
+  caller. **This item is the question, not the answer.** A sink that sells power breaks the rule
+  the whole economy rests on; a sink that sells more paint moves the wall without removing it.
+  *Medium, and the shape of the answer is the hard part rather than the build.*
+
+### The app and the programs
+
+- **M233 — the app tracks the weight you add and never the weight you are.** Thirty-seven metrics,
+  and `max_hang_20mm_7s` — the one the description itself calls *"the standard finger-strength
+  benchmark"* — has the unit `BW+lbs`. Nothing anywhere stores a bodyweight: the sweep finds the
+  word only in comments explaining that a blank load column means one. So BW+20 kg recorded two
+  years apart at two bodyweights is two different results that the app reads as the same number,
+  and strength-to-weight — which is what the metric is a proxy for — cannot be computed at all.
+  **This one carries a real risk and it is not hypothetical in this sport**: a bodyweight field is
+  a bodyweight target unless it is built not to be. Optional, never a goal, never a trend line
+  pointing down, never spoken about by the coach engine.
+  *Medium, and worth refusing outright if the safe version cannot be drawn.*
+
+- **M234 — every number is compared only to itself.** `assessments.ts` exports `seriesFor`,
+  `changeOf`, `testWeeks` and `dueReason` — your history, your change, your schedule — and
+  `content/metrics.ts` carries a prose description per metric and no reference value of any kind.
+  A climber's first hangboard result therefore has nothing to be placed against, and the second one
+  can only be compared to the first. **Not a leaderboard** — nothing leaves the phone and that is
+  the app's whole premise — but a stated reference band per metric, sourced and dated in the
+  content the way the guides are, is the difference between a number and a reading.
+  *Medium, and most of it is content rather than code.*
+
+- **M235 — equipment is a capability, never a thing you own.** `Equipment` is six strings —
+  `'none' | 'wall' | 'hangboard' | 'campus' | 'gym' | 'weight'` — answering *what can you train
+  on*. There is no gear instance anywhere in the model, so nothing knows a rope's age, a harness's,
+  or how many sessions a pair of shoes has done. The app already carries a *Before you train* card
+  and a `programSafety` engine, and rope retirement is the one piece of climbing safety that is a
+  date and a count rather than a judgement call.
+  *Medium, and the honest first question is whether it belongs in training software at all.*
+
+- **M236 — the log never records who you climbed with.** A `Climb` holds grade, scale, count,
+  result, style, angle, rope style and a name. A `Session` holds mode, RPE, duration, drill,
+  exercises, check-in, project attempts, rest checklist and notes. Neither holds a person, and
+  every occurrence of "partner" in `src/` is prose in the glossary or a guide. Roped climbing has
+  a second person in it by definition — `ropeStyle.ts` already reasons about *"a partner who does
+  not lead"* as a constraint it cannot see.
+  *Small, and it is one optional field plus whatever chooses to read it.*
+
+- **M237 — the app has now met the climber the content never could.** `content/types.ts` explains
+  why a dose does not move on its own: *"add 2.5kg if last week's top set felt solid" depends on a
+  climber the content has never met* — so the rule lives in `WeekStep.step` as a sentence rather
+  than a number, and the catalogue says things like *"add 2-5lb a week when the last set felt
+  solid"* in prose. **That was true when M127 wrote it and it is not true now.** `exerciseLog.ts`
+  exports `lastLogged` and `againstPrescription` — met, short or over — and both are already on the
+  logging screen beside the prescription; the session carries an RPE and a check-in. Every input
+  the catalogue's own prose asks for is readable. What is missing is the last step: a **suggested**
+  next number beside the authored one.
+  *Medium, and it stays a suggestion, for exactly the reason M129 gives.*
