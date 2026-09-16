@@ -13477,5 +13477,27 @@ deploys builds before it tests, and that it uploads the directory those tests ju
 checked.
 
 **Verified as the workflow runs it**, from a removed `dist/`: lint, build, then the whole suite —
-**5,998 tests pass, none skipped**. No budget change; nothing shipped in this milestone but the
-order of two lines and a `? :`.
+**5,998 tests pass, none skipped**.
+
+### And it was still red, for a second reason entirely
+
+The first run after the reorder got through lint and build — the fix worked — and then failed
+`npm test` on something that passes here every time:
+
+> `/objectives/:id has a parent and no BackLink (src/features/objectives/requirements.test.tsx)`
+
+`reachable.test.ts` finds the page that renders a route by grepping the tree for
+`export function <Component>` and taking **`found.split('\n')[0]`** — the first line `grep -r`
+happens to print, which is **directory order**. M222's new test slices the page apart and quoted
+that declaration verbatim in a `PAGE.indexOf(...)`, so two files matched, and *which one the rule
+read was decided by the filesystem*. This machine printed the page first. The runner printed the
+test.
+
+Both halves are fixed. The resolver skips test files and **throws on two candidates** rather than
+picking one — if a component is exported from two places the rule cannot know which the route
+renders, and a coin toss is the worst available answer. And the test builds that string from parts
+instead of holding it, so it stops baiting a sweep that has no business reading it.
+
+**A local pass was never going to predict this**, which is the lesson worth keeping: a rule that
+resolves a file by `grep`'s output order gives a different answer on a different machine, and every
+green run here was luck rather than evidence.

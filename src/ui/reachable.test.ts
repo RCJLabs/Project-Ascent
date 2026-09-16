@@ -49,7 +49,26 @@ function screenFor(path: string): string | null {
   const found = execSync(`grep -rl "export function ${match[1]}\\b" src --include=*.tsx || true`, {
     encoding: 'utf8',
   }).trim();
-  return found === '' ? null : (found.split('\n')[0] ?? null);
+  /**
+   * Never a test file, and never a silent pick between several
+   * (PLAN.md M224).
+   *
+   * This took `found.split('\n')[0]` — the first line `grep -r` happened to
+   * print, which is **directory order**, which differs between one machine
+   * and another. A test that quotes `export function ObjectiveDetailPage`
+   * in a string (M222's does, to slice the page apart) matches the grep,
+   * and whether this rule read the page or the test was decided by the
+   * filesystem. It passed here and failed on the CI runner.
+   *
+   * So: tests are excluded, and two candidates is a failure rather than a
+   * coin toss — if a component is exported from two places the rule cannot
+   * know which one the route renders, and should say so.
+   */
+  const files = found === '' ? [] : found.split('\n').filter((f) => !/\.test\.tsx?$/.test(f));
+  if (files.length > 1) {
+    throw new Error(`${match[1]} is exported from ${files.length} files: ${files.join(', ')}`);
+  }
+  return files[0] ?? null;
 }
 
 describe('every page with a parent offers the way back', () => {

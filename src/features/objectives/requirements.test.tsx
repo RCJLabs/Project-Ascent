@@ -45,7 +45,14 @@ function declared(source: string): string[] {
 }
 
 const KINDS = declared(ENGINE);
-const ADDABLE = PAGE.slice(PAGE.indexOf('const ADDABLE'), PAGE.indexOf('export function ObjectiveDetailPage'));
+// Built rather than written out. `reachable.test.ts` greps the tree for a
+// component's declaration to find the page that renders a route, and a test
+// quoting that declaration verbatim is a file it can pick up instead — which
+// is what put CI red for a run, because which of the two `grep -r` printed
+// first is directory order (PLAN.md M224). That rule skips tests now; this
+// stops baiting it either way.
+const PAGE_FN = ['export', 'function', 'ObjectiveDetailPage'].join(' ');
+const ADDABLE = PAGE.slice(PAGE.indexOf('const ADDABLE'), PAGE.indexOf(PAGE_FN));
 
 const authored = (kind: string) => new RegExp(`kind: '${kind}'`).test(TREES);
 const offerable = (kind: string) =>
