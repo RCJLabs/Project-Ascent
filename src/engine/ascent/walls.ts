@@ -105,14 +105,16 @@ export const WALLS: Wall[] = [
     },
   },
 
-  // Bought. Priced in the same band as the kits, and for the same reason: a
-  // coin is a quarter of an XP point, so these land at roughly levels 7, 11,
-  // 15, 22 and 31 for a climber who buys nothing else.
+  // Bought. One balance pays for these and for the kits, so they are rungs
+  // of the same ladder rather than a second one — which is the thing M227
+  // got wrong by pricing them "in the same band" and leaving it there. The
+  // ladder, and what each rung is spaced against, is `engine/shop.ts`
+  // (PLAN.md M233).
   {
     id: 'limestone',
     name: 'Limestone',
     blurb: 'Blue tufas and a hot sky.',
-    price: 1_500,
+    price: 2_000,
     palette: {
       sky: '#1d3140', rockNear: '#3b4f55', rockFar: '#2c3d44', strata: '#4d6a6f',
       lane: 'rgba(255,255,255,0.06)', rock: '#cbb994', boulder: '#a6946f', debris: '#efe4c9',
@@ -123,7 +125,7 @@ export const WALLS: Wall[] = [
     id: 'gritstone',
     name: 'Gritstone',
     blurb: 'Dark, rounded and unfriendly. No holds.',
-    price: 3_500,
+    price: 4_400,
     palette: {
       sky: '#241f1c', rockNear: '#3d352f', rockFar: '#2e2823', strata: '#4f453c',
       lane: 'rgba(255,255,255,0.05)', rock: '#a99172', boulder: '#87735a', debris: '#e0d2ba',
@@ -134,7 +136,7 @@ export const WALLS: Wall[] = [
     id: 'seacliff',
     name: 'Sea cliff',
     blurb: 'Green rock over deep water. The fall is the least of it.',
-    price: 7_000,
+    price: 5_200,
     palette: {
       sky: '#0f2c2e', rockNear: '#1f4445', rockFar: '#173536', strata: '#2a5a5a',
       lane: 'rgba(255,255,255,0.06)', rock: '#9fc4ae', boulder: '#7aa48d', debris: '#dcefe2',
@@ -145,22 +147,49 @@ export const WALLS: Wall[] = [
     id: 'moonlight',
     name: 'Moonlight',
     blurb: 'A headtorch, and the rest of the route in the dark.',
-    price: 15_000,
+    price: 6_800,
     palette: {
       sky: '#0c1020', rockNear: '#1d2340', rockFar: '#151a30', strata: '#2b3358',
       lane: 'rgba(255,255,255,0.07)', rock: '#aab4e0', boulder: '#8690c2', debris: '#e4e8ff',
       coin: '#ffe08a', slowmo: '#8fd6f5', magnet: '#d3b0f0', heart: '#f0736a', ink: '#eef1ff',
     },
   },
+
+  // Added at M233, to fill the stretch of the ladder that had one rung in
+  // it. Picked to be told apart from what is already here at a glance:
+  // Moonlight is the night wall and Volcanic the black one, so this is warm
+  // rock in low sun.
+  {
+    id: 'desert',
+    name: 'Desert tower',
+    blurb: 'Soft golden sandstone, a long way from the road.',
+    price: 8_400,
+    palette: {
+      sky: '#2e2113', rockNear: '#5c3f1c', rockFar: '#412c14', strata: '#6b4d21',
+      lane: 'rgba(255,255,255,0.06)', rock: '#e8bb63', boulder: '#c79a45', debris: '#f7e8bd',
+      coin: '#ffd166', slowmo: '#6fb3d9', magnet: '#cf9ae0', heart: '#ef6a5e', ink: '#fbeade',
+    },
+  },
   {
     id: 'volcanic',
     name: 'Volcanic',
     blurb: 'Black rock, and the glow behind it.',
-    price: 30_000,
+    price: 9_200,
     palette: {
       sky: '#1a0f12', rockNear: '#33201f', rockFar: '#241617', strata: '#552a22',
       lane: 'rgba(255,255,255,0.06)', rock: '#d99a6c', boulder: '#b57850', debris: '#f5d9bc',
       coin: '#ffca45', slowmo: '#6fb3d9', magnet: '#cf9ae0', heart: '#ff7a68', ink: '#f8e9e2',
+    },
+  },
+  {
+    id: 'quartzite',
+    name: 'Quartzite',
+    blurb: 'Pale banded rock, no features, and a hard blue sky.',
+    price: 10_800,
+    palette: {
+      sky: '#12283d', rockNear: '#4a5560', rockFar: '#37414b', strata: '#5f6d7a',
+      lane: 'rgba(255,255,255,0.06)', rock: '#d8d2c4', boulder: '#b3aa98', debris: '#f2ece0',
+      coin: '#ffd166', slowmo: '#7dc3e8', magnet: '#c8a4e0', heart: '#e2574c', ink: '#f4f2ec',
     },
   },
 ];

@@ -13913,6 +13913,10 @@ which is the right shape.*
   caller. **This item is the question, not the answer.** A sink that sells power breaks the rule
   the whole economy rests on; a sink that sells more paint moves the wall without removing it.
   *Medium, and the shape of the answer is the hard part rather than the build.*
+  ***Built, and the answer was that the far end was the wrong end to look at.*** *The coins do go
+  inert — 564 sessions out, about three and a half years. What was not years out was the top of
+  the ladder, where the last four rungs sat 57, 91, 115 and 191 sessions apart. See the entry at
+  the end of this document.*
 
 ### The app and the programs
 
@@ -14363,3 +14367,112 @@ the tick that crosses it. The screenshots read *1,978 ft* and *1,995 ft* under a
 written down here because the next person to see it should not have to find that out.
 
 **6,126 tests over 352 files.**
+
+
+## M233 — one ladder, two shops, and a year of nothing in the middle of it
+
+The item asked what a coin is for once there is nothing left to buy, and answered its own question
+honestly: *a sink that sells power breaks the rule the whole economy rests on; a sink that sells more
+paint moves the wall without removing it.* Both halves are true, and the third option it did not name
+is that **a shop of permanent things runs out by definition**, so the end is not a defect to design
+away — it is a state to describe.
+
+### The numbers hold, and they point somewhere else
+
+Kits total 90,700 and walls 57,000, so 147,700 coins. Measured rather than assumed, an ordinary
+indoor session — warmed up, drill done, RPE 7, five sends at V4 — pays **262 coins**, which puts the
+whole shop at **564 sessions**: three and a half years at three a week, and level 76, exactly as the
+item computed.
+
+That is a long way off. What was not a long way off, merging both shops into the one cheapest-first
+ladder a climber actually walks:
+
+```
+Basalt (kit)      1,200   session   5      Copper (kit)      8,000   session 110  (+31)
+Limestone (wall)  1,500   session  10      Moonlight (wall) 15,000   session 167  (+57)
+Lichen (kit)      2,500   session  20      Serac (kit)      24,000   session 258  (+91)
+Gritstone (wall)  3,500   session  33      Volcanic (wall)  30,000   session 373 (+115)
+Dusk (kit)        5,000   session  52      Bivouac (kit)    50,000   session 564 (+191)
+Sea cliff (wall)  7,000   session  79
+```
+
+Seven months, then nine, then **fifteen** with one thing to aim at. "There has been nothing to save
+for since last spring" arrives years before "there is nothing left to save for" does.
+
+### And the merged ladder was nobody's
+
+M213 priced the kits to arrive with the gear stages in `avatar.ts` — Basalt with the chalk bag at 8,
+Dusk with the harness at 20, Serac with the rope and helmet at 40, Bivouac with the pack at 60 — and
+wrote a test for it. M227 then put five walls at a price "in the same band" **on the same balance**,
+and nothing recomputed anything. Bought cheapest-first the six kits landed at **6, 14, 23, 33, 52 and
+76**: Serac twelve levels late, Bivouac sixteen, and the rule in `kits.ts` no longer describing the
+app.
+
+M213's test stayed green for all of it, because it measured the kits alone — it was asking about a
+shop that had stopped existing. That is the same failure as M232's viewport and M231's meter: a rule
+that cannot see the thing it is about.
+
+`engine/shop.ts` is the merged ladder, built from both tables rather than authored, and the gear tie
+is checked there now. What is left in `kits.test.ts` is the fact that file *can* see: the kits alone
+are no longer the ladder.
+
+### The shape now
+
+Fourteen rungs, and no two more than **45 sessions** apart:
+
+```
+Basalt (kit)      1,600  L8  ← chalk bag     Serac (kit)       7,600  L40 ← rope + helmet
+Limestone (wall)  2,000  L12                 Desert tower      8,400  L44   (new)
+Lichen (kit)      2,600  L15                 Volcanic (wall)   9,200  L48
+Dusk (kit)        3,800  L20 ← harness       Cornice (kit)    10,000  L52   (new)
+Gritstone (wall)  4,400  L24                 Quartzite (wall) 10,800  L56   (new)
+Sea cliff (wall)  5,200  L28                 Bivouac (kit)    11,600  L60 ← pack
+Copper (kit)      6,000  L32
+```
+
+Three items added, the top repriced down, and all four gear ties back on their stages.
+
+**The trade is deliberate and it is the cost of this milestone:** the shop now completes at 344
+sessions rather than 564, about sixteen months sooner. A shop that finishes at two and a bit years
+with nothing dead in it is better than one that finishes at three and a half with a year of nothing
+in the middle — and the 564 was never designed anyway, it was M227's second shop landing on M213's
+balance.
+
+### A bug the walls left behind
+
+`describeShop`'s terminal sentence read *"All 6 bought — nothing left to spend on."* True when the
+kits were the only thing money bought, and false from the day M227 shipped: **a climber holding every
+kit and no walls was told there was nothing to spend on while five things were for sale.** It says
+`All 7 kits bought.` now and claims nothing about the app, because whether the app has anything left
+to sell is the only question a module seeing both halves can answer.
+
+### The end, said plainly
+
+A spendable figure is an invitation to spend, and past the end of both shops there is nothing to
+accept it with. So the Currency card's headline stops being a balance and becomes what it actually
+is — **200,927 earned** — with the tail dropping the half that repeated it. The two shelves that sell
+things say the same: *"200,927 coins earned, and everything bought."*
+
+### Measured
+
+**18 of 18 mutants caught, sanity no-op survived.** The ladder forgetting either shop, not sorting,
+totalling each price on its own, reading a level off XP rather than coins; what-is-left counting one
+shop or counting the free walls; the coin line never giving up the balance or giving it up a rung
+early; Serac repriced back where M227 left it; the top of the ladder reopened; either new item taken
+out; the kit shop speaking for the app; the currency card ignoring the walls, keeping a balance for
+ever, and each of the two shelves going back to a bare one.
+
+Five of those survived the first battery and every one was a real hole. The worst: the end-state test
+seeded a climber who had **spent nothing**, so `earned` and `balance` were the same number and a card
+still showing the balance was indistinguishable from one showing the total. The fixture spends 90,000
+now.
+
+**135.68KB against a 136.9 ceiling**, entry unmoved. `shop.ts` pulls both tables into a shared 7.07KB
+chunk (2.72KB gzipped) that the two lazy routes share, so each now carries the other's table — about
+1.5KB gzipped apiece, on routes rather than on boot.
+
+Browser-verified in both themes at 430px and 1280px across all three states — midway, kits-done, and
+everything-bought — plus both new walls rendered in a real run. Desert tower's strata came back louder
+than the house level on the first render and were pulled down a notch.
+
+**6,145 tests over 353 files.**

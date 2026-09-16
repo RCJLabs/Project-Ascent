@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { earnedOutfits, shopOutfits } from '@/engine/kits';
 import { useGame } from '@/store/game';
+import { WALLS } from '@/engine/ascent/walls';
+import { ALL_BOUGHT } from '@/engine/shop';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { GamePage } from '@/features/game/GamePage';
@@ -142,15 +144,99 @@ describe('the currency card', () => {
     expect(screen.getByText(new RegExp(`^1 of ${ladder.length} bought\\. ${ladder[1]!.name} next,`))).toBeTruthy();
   });
 
-  it('says the shop is finished rather than counting a balance that buys nothing', async () => {
-    // The state M213 exists for. Adding two kits moved this from level 25 to
-    // level 60; it did not remove it.
+  /**
+   * Every kit and no walls, which is the state M227 made unreadable.
+   *
+   * The card said "nothing left to spend on" here, on the kit shop's word,
+   * while every wall in the Ascent was still for sale. It says what it can
+   * actually see now, and the balance stays a balance because there is still
+   * something to spend it on (PLAN.md M233).
+   */
+  it('finishes the kits without claiming the app is finished', async () => {
     await withCoins(400);
+    useGame.setState({ wallet: { spent: 0, owned: ladder.map((kit) => kit.name) } });
+    renderAt('/game', <GamePage />);
+    expect(screen.getByText(`All ${ladder.length} kits bought.`)).toBeTruthy();
+    expect(screen.queryByText(/nothing left to spend on/)).toBeNull();
+    // Still a spendable number, because the walls are still for sale: the
+    // big figure carries no "earned" beside it and the tail still offers the
+    // two-part reading. (`withCoins` seeds *levels*, so the balance here is
+    // six figures rather than the 400 it is handed.)
+    expect(screen.queryByText('earned')).toBeNull();
+    expect(screen.getByText(/earned · .* spent\./)).toBeTruthy();
+  });
+
+  /**
+   * And when there really is nothing left, the number stops being a balance.
+   *
+   * A spendable figure is an invitation to spend, and past the end of both
+   * shops there is nothing to accept it with — so it becomes the total the
+   * training paid, which is worth keeping and is not an offer.
+   */
+  it('stops offering a balance once both shops are empty', async () => {
+    await withCoins(400);
+    // Spent on purpose, and it is the whole point of the fixture: with
+    // nothing spent the balance and the lifetime total are the same number,
+    // so a card still showing the balance is indistinguishable from one
+    // showing the total. A mutation battery walked through the first version
+    // of this test for exactly that reason.
+    const spent = 90_000;
     useGame.setState({
-      wallet: { spent: 0, owned: ladder.map((kit) => kit.name) },
+      wallet: {
+        spent,
+        owned: ladder.map((kit) => kit.name),
+        walls: WALLS.filter((w) => w.price !== undefined).map((w) => w.id),
+      },
     });
     renderAt('/game', <GamePage />);
-    expect(screen.getByText(`All ${ladder.length} bought — nothing left to spend on.`)).toBeTruthy();
+    expect(screen.getByText(ALL_BOUGHT)).toBeTruthy();
+
+    // 400 levels of ledger is 800,000 XP, and a coin is a quarter of one.
+    const earned = 200_000;
+    expect(screen.getByText(earned.toLocaleString())).toBeTruthy();
+    expect(
+      screen.queryByText((earned - spent).toLocaleString()),
+      'the balance is still the headline',
+    ).toBeNull();
+
+    // Said so beside it, and the tail has dropped the half that repeated it.
+    expect(screen.getByText('earned')).toBeTruthy();
+    expect(screen.getByText(`${spent.toLocaleString()} spent.`, { exact: false })).toBeTruthy();
+    expect(screen.queryByText(/earned · /), 'still reading as a balance').toBeNull();
+  });
+
+  /**
+   * The kit card's own coin line, which is a second place the same claim is
+   * made and was a second place nothing checked it.
+   */
+  it('stops offering a balance on the kit shelf too', async () => {
+    await withCoins(400);
+    useGame.setState({
+      wallet: {
+        spent: 90_000,
+        owned: ladder.map((kit) => kit.name),
+        walls: WALLS.filter((w) => w.price !== undefined).map((w) => w.id),
+      },
+    });
+    renderAt('/game', <GamePage />);
+    expect(
+      screen.getByText(/200,000 coins earned, and everything bought\./),
+    ).toBeTruthy();
+    expect(screen.queryByText(/^110,000 coins\./)).toBeNull();
+  });
+
+  it('keeps offering one while a single thing is still for sale', async () => {
+    await withCoins(400);
+    // Every kit and every wall but one. The boundary the coin line turns on,
+    // and a line that turned one rung early would read as finished here.
+    const walls = WALLS.filter((w) => w.price !== undefined).map((w) => w.id);
+    useGame.setState({
+      wallet: { spent: 0, owned: ladder.map((k) => k.name), walls: walls.slice(0, -1) },
+    });
+    renderAt('/game', <GamePage />);
+    expect(screen.queryByText(ALL_BOUGHT)).toBeNull();
+    expect(screen.queryByText('earned')).toBeNull();
+    expect(screen.getByText(/200,000 coins\./)).toBeTruthy();
   });
 });
 

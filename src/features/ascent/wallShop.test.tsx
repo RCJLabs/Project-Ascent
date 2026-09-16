@@ -233,3 +233,40 @@ describe('the achievement a run can earn (PLAN.md M229)', () => {
     expect(gameAchievements([]).map((a) => a.id)).toEqual([...GAME_ACHIEVEMENTS]);
   });
 });
+
+/**
+ * What the wall card says about the coins (PLAN.md M233).
+ *
+ * The same claim the kit card makes, in a second place, and until this it was
+ * a second place nothing checked. Both read `coinLine`, which is the only
+ * thing that can see both shops — a wall card answering out of its own table
+ * would call the app finished while three kits were still for sale.
+ */
+describe('the coins, on the wall card', () => {
+  const everyWall = shopWalls().map((w) => w.id);
+  const everyKit = shopOutfits().map((o) => o.name);
+
+  it('offers a balance while anything at all is for sale', async () => {
+    await withCoins(400);
+    // Every wall, no kits: the half this card can see is finished and the
+    // app is not.
+    act(() => {
+      useGame.setState({ wallet: { spent: 0, owned: [], walls: everyWall, wall: null } });
+    });
+    expect(screen.getByText(/200,000 coins\. Cosmetic only/)).toBeTruthy();
+    expect(screen.queryByText(/everything bought/)).toBeNull();
+  });
+
+  it('stops offering one when both shops are empty', async () => {
+    await withCoins(400);
+    act(() => {
+      useGame.setState({
+        wallet: { spent: 90_000, owned: everyKit, walls: everyWall, wall: null },
+      });
+    });
+    expect(
+      screen.getByText(/200,000 coins earned, and everything bought\. Cosmetic only/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/^110,000 coins\./)).toBeNull();
+  });
+});

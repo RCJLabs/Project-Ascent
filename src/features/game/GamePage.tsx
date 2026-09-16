@@ -21,7 +21,8 @@ import type { XpEvent } from '@/engine/xp';
 import { BoardCard } from '@/features/challenges/BoardPage';
 import { AchievementsCard } from '@/features/climber/AchievementsCard';
 import { ShareButton } from '@/features/share/ShareSheet';
-import { useCurrency, useOwned, useXp } from '@/store/game';
+import { useCurrency, useOwned, useOwnedWalls, useXp } from '@/store/game';
+import { ALL_BOUGHT, unbought } from '@/engine/shop';
 import { useProfile } from '@/store/profile';
 import { useSessions, allSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
@@ -192,18 +193,32 @@ function CurrencyCard() {
   const owned = useOwned();
   // What the coins are *for*, which this card never said until M213 — at any
   // balance, not only at the end of the shop.
-  const shop = describeShop(shopProgress(owned, currency.balance));
+  //
+  // Two sentences since M233, because there are two shops on this balance.
+  // `describeShop` speaks for the kits and stops there; whether the app has
+  // anything left to sell is a question only `unbought` can answer, and it is
+  // the one that decides whether the big number is still a balance.
+  const left = unbought(owned, useOwnedWalls());
+  const shop = left === 0 ? ALL_BOUGHT : describeShop(shopProgress(owned, currency.balance));
   return (
     <Card title="Currency">
       <div className="flex items-center gap-3">
         <Coins size={18} className="text-accent shrink-0" />
         <div className="flex-1">
+          {/* The number stops being a balance when a balance stops meaning
+              anything: a spendable figure is an invitation to spend, and past
+              the end of the shop there is nothing to accept it with. What is
+              left is worth keeping, so it becomes what it actually is — the
+              total the training paid (PLAN.md M233). */}
           <div className="text-2xl font-black tabular-nums leading-none">
-            {currency.balance.toLocaleString()}
+            {(left === 0 ? currency.earned : currency.balance).toLocaleString()}
+            {left === 0 && <span className="text-sm text-ink-soft font-bold ml-1.5">earned</span>}
           </div>
           <p className="text-xs text-ink mt-1">{shop}</p>
           <p className="text-xs text-ink-soft mt-1">
-            {currency.earned.toLocaleString()} earned · {currency.spent.toLocaleString()} spent.
+            {left === 0
+              ? `${currency.spent.toLocaleString()} spent.`
+              : `${currency.earned.toLocaleString()} earned · ${currency.spent.toLocaleString()} spent.`}{' '}
             Cosmetics only — nothing you can buy makes you climb harder.
           </p>
         </div>

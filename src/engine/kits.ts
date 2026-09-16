@@ -39,16 +39,25 @@ export interface Outfit {
    * 10, 14 and 18", which was wrong twice — those are each price on its own,
    * for a climber who buys nothing, and they are rounded up from 6, 10, 14
    * and 17. A shop priced on the assumption that nothing in it is bought.
-   * Bought in order, the six land at levels **6, 12, 18, 25, 40 and 60**.
    *
-   * Those last two are not round numbers picked to be large. **A kit is
-   * priced to arrive with a piece of gear**, from `GEAR_STAGE_LEVELS` in
-   * `avatar.ts`:
-   * Basalt lands about when the chalk bag does and Dusk about when the
-   * harness does, which was a coincidence until M213 made it the rule.
-   * `Serac` arrives with the rope and helmet and `Bivouac` with the pack, so
-   * a kit bought late is bought for a figure that is mostly gear — and the
-   * `gear` colour is the one that carries on that climber.
+   * **A kit is priced to arrive with a piece of gear**, from
+   * `GEAR_STAGE_LEVELS` in `avatar.ts`: Basalt with the chalk bag at 8, Dusk
+   * with the harness at 20, Serac with the rope and helmet at 40, Bivouac
+   * with the pack at 60. A kit bought late is bought for a figure that is
+   * mostly gear, and the `gear` colour is the one that carries on that
+   * climber.
+   *
+   * ## Cumulatively across *both* shops, since M233
+   *
+   * M213 made those numbers true of a climber buying kits and nothing else,
+   * and M227 then put a second shop — the Ascent's walls — on the same
+   * balance without repricing either. Bought cheapest-first across both, the
+   * six landed at **6, 14, 23, 33, 52 and 76**: Serac twelve levels late and
+   * Bivouac sixteen. The rule had quietly stopped describing anything.
+   *
+   * These prices are set against the merged ladder in `engine/shop.ts`,
+   * which is where the whole thing is laid out and held to its shape. Change
+   * one price here and that file's tests will say what it did to the rest.
    */
   price?: number;
 }
@@ -79,15 +88,21 @@ export const OUTFITS: Outfit[] = [
   { name: 'Weathered', top: '#8a6a3f', shorts: '#3a2f26', shoes: '#d9cbb4', gear: '#6f5a3e', unlock: 'kit-granite' },
   { name: 'Summit', top: '#f2f4f7', shorts: '#2c3e50', shoes: '#e0533d', gear: '#8fa3b3', unlock: 'kit-alpine' },
 
-  // Bought. The only thing in the app that costs anything.
-  { name: 'Basalt', top: '#33383d', shorts: '#1b1e21', shoes: '#c86b3c', gear: '#585f66', price: 1_200 },
-  { name: 'Lichen', top: '#6f8a5c', shorts: '#2f3a2c', shoes: '#e4dcc6', gear: '#55684a', price: 2_500 },
-  { name: 'Dusk', top: '#4a4270', shorts: '#221f33', shoes: '#f0a35e', gear: '#6b6294', price: 5_000 },
-  { name: 'Copper', top: '#a75a35', shorts: '#2d2723', shoes: '#f0e2cf', gear: '#7d4526', price: 8_000 },
+  // Bought. Kits and the Ascent's walls are the only things in the app that
+  // cost anything, and they share one balance — so these prices are rungs of
+  // one ladder rather than of two. `engine/shop.ts` is that ladder.
+  { name: 'Basalt', top: '#33383d', shorts: '#1b1e21', shoes: '#c86b3c', gear: '#585f66', price: 1_600 },
+  { name: 'Lichen', top: '#6f8a5c', shorts: '#2f3a2c', shoes: '#e4dcc6', gear: '#55684a', price: 2_600 },
+  { name: 'Dusk', top: '#4a4270', shorts: '#221f33', shoes: '#f0a35e', gear: '#6b6294', price: 3_800 },
+  { name: 'Copper', top: '#a75a35', shorts: '#2d2723', shoes: '#f0e2cf', gear: '#7d4526', price: 6_000 },
   // The two the shop gained at M213, for the climbers the first four ran out
   // on. Both are named for the gear they arrive with rather than a colour.
-  { name: 'Serac', top: '#1d6b74', shorts: '#0e2429', shoes: '#e8f1f4', gear: '#7fb4c4', price: 24_000 },
-  { name: 'Bivouac', top: '#38474a', shorts: '#1a2022', shoes: '#f2a33c', gear: '#c9a227', price: 50_000 },
+  { name: 'Serac', top: '#1d6b74', shorts: '#0e2429', shoes: '#e8f1f4', gear: '#7fb4c4', price: 7_600 },
+  // And the one M233 added, for the fifteen months that used to sit between
+  // Serac and Bivouac with a single thing in them. Named for the snow ridge
+  // rather than a colour, like the two above it.
+  { name: 'Cornice', top: '#1f4f6b', shorts: '#121c24', shoes: '#f0d9a8', gear: '#7fa3b8', price: 10_000 },
+  { name: 'Bivouac', top: '#38474a', shorts: '#1a2022', shoes: '#f2a33c', gear: '#c9a227', price: 11_600 },
 ];
 
 /** Free to everyone, from the first run. */
@@ -156,10 +171,18 @@ export function shopProgress(owned: readonly string[], balance: number): ShopPro
  * spent that can never move again is a card lying by omission. The count
  * leads in every state, because "4 of 6" is the fact that makes the
  * remaining number mean something.
+ *
+ * **It says it about the kits and not about the app** (PLAN.md M233). The
+ * terminal sentence read *"nothing left to spend on"*, which was true when
+ * the kits were the only thing money bought and stopped being true the day
+ * M227 put five walls on the same balance: a climber holding every kit and
+ * no walls was told there was nothing to spend on while five things were for
+ * sale. Whether the *shop* is finished is `engine/shop.ts`'s question,
+ * because it is the only thing that can see both halves.
  */
 export function describeShop(progress: ShopProgress): string {
   const { next, owned, total, short } = progress;
-  if (next === null) return `All ${total} bought — nothing left to spend on.`;
+  if (next === null) return `All ${total} kits bought.`;
   const price = (next.price ?? 0).toLocaleString();
   const lead = `${owned} of ${total} bought.`;
   // `=== 0` rather than `<= 0`, and the two are equivalent because

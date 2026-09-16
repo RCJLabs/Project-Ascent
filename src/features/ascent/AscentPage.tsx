@@ -45,7 +45,8 @@ import {
   cueSave,
   unlock,
 } from '@/lib/cues';
-import { useChosenWall, useCurrency, useGame, useOwnedWalls, useXp } from '@/store/game';
+import { useChosenWall, useCurrency, useGame, useOwned, useOwnedWalls, useXp } from '@/store/game';
+import { coinLine, unbought } from '@/engine/shop';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
@@ -300,8 +301,11 @@ function WallRow({
 
   // Rest days get their own sky. Otherwise the wall follows the altimeter.
   const currency = useCurrency();
+
   const chosenWall = useChosenWall();
   const ownedWalls = useOwnedWalls();
+  // Both shops: the coin line is a claim about the app (PLAN.md M233).
+  const shopLeft = unbought(useOwned(), ownedWalls);
   const chooseWall = useGame((s) => s.chooseWall);
   const buyWall = useGame((s) => s.buyWall);
   const access = useMemo(
@@ -909,8 +913,11 @@ function WallRow({
                 climbing (`engine/ascent/walls.ts`). */}
             <Card title="Walls">
               <p className="text-xs text-ink-soft mb-2 leading-relaxed">
-                {currency.balance.toLocaleString()} coins. Cosmetic only — the same climb on
-                every one of them.
+                {/* Both shops: a wall card saying "nothing left" while three
+                    kits were for sale would be a card that had only looked at
+                    itself (PLAN.md M233). */}
+                {coinLine(currency.balance, currency.earned, shopLeft)} Cosmetic only — the same
+                climb on every one of them.
               </p>
               <div className="grid grid-cols-1 gap-1.5">
                 {/* Its swatch is whichever wall it resolves to today, so the

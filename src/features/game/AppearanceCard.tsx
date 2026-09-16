@@ -11,7 +11,8 @@ import {
 } from '@/engine/kits';
 import { cosmeticSources } from '@/engine/skills';
 import { SKILL_TREES } from '@/content/skills';
-import { useCurrency, useGame, useOwned } from '@/store/game';
+import { useCurrency, useGame, useOwned, useOwnedWalls } from '@/store/game';
+import { coinLine, unbought } from '@/engine/shop';
 import { useProfile } from '@/store/profile';
 import { useSkillEffects } from '@/store/skills';
 import { Card } from '@/ui/Card';
@@ -30,6 +31,9 @@ export function AppearanceCard({ palette }: { palette: AvatarPalette }) {
   const setFigure = useProfile((s) => s.setAvatarFigure);
   const currency = useCurrency();
   const owned = useOwned();
+  // Both shops, because the coin line is a claim about the app and not about
+  // this card (PLAN.md M233).
+  const left = unbought(owned, useOwnedWalls());
   const buy = useGame((state) => state.buy);
   const cosmetics = useSkillEffects().cosmetics;
   const unlocked = useMemo(() => new Set(cosmetics.map((c) => c.id)), [cosmetics]);
@@ -111,7 +115,7 @@ export function AppearanceCard({ palette }: { palette: AvatarPalette }) {
       {/* The only thing in the app that costs anything, and it is paint. */}
       <KitRow
         title="Bought"
-        note={`${currency.balance.toLocaleString()} coins. Cosmetic only — nothing here trains for you.`}
+        note={`${coinLine(currency.balance, currency.earned, left)} Cosmetic only — nothing here trains for you.`}
         outfits={shopOutfits()}
         active={activeOutfit?.name}
         locked={(outfit) => !owned.includes(outfit.name)}

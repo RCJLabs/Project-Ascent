@@ -11,6 +11,7 @@ import {
   shopProgress,
 } from './kits';
 import { levelFor } from './economy';
+import { purchaseLadder } from './shop';
 import { CURRENCY_RATE } from './xp';
 import { cosmeticSources } from './skills';
 import { SKILL_TREES } from '@/content/skills';
@@ -109,13 +110,29 @@ describe('the shop ladder', () => {
     expect([...GEAR_STAGE_LEVELS]).toEqual([8, 20, 40, 60, 90]);
   });
 
-  it('lands the last two kits exactly on a gear stage', () => {
-    // The point of the prices, not a coincidence like the first four: a kit
-    // bought late is bought for a figure that is mostly gear.
-    const levels = levelsInOrder();
-    const late = levels.slice(-2);
-    for (const level of late) expect(GEAR_STAGE_LEVELS, `level ${level}`).toContain(level);
-    expect(late).toEqual([40, 60]);
+  /**
+   * The gear tie moved to `shop.ts` at M233, and this says why rather than
+   * quietly vanishing.
+   *
+   * It used to assert the last two kits land on a gear stage, measured
+   * against **the kits alone** — which was the whole app when M213 wrote it.
+   * M227 then put five walls on the same balance, and this rule stayed green
+   * for the whole of it while the thing it was about stopped being true: a
+   * climber buying both reached Serac at level 52 and Bivouac at 76, twelve
+   * and sixteen levels late.
+   *
+   * A rule that cannot see the second shop cannot check a claim about the
+   * first. `shop.test.ts` asks it of the merged ladder, which is the one a
+   * climber walks, so what is left here is the fact this file *can* see: the
+   * kits alone are no longer the ladder.
+   */
+  it('is no longer the whole ladder, so the gear tie is checked elsewhere', () => {
+    const kitsOnly = levelsInOrder();
+    expect(kitsOnly, 'measured against the kits alone').not.toEqual([8, 20, 40, 60]);
+    // And the merged answer, which is `shop.test.ts`'s to hold in full.
+    const merged = purchaseLadder();
+    const at = (name: string) => merged.find((p) => p.name === name)?.level;
+    expect([at('Basalt'), at('Dusk'), at('Serac'), at('Bivouac')]).toEqual([8, 20, 40, 60]);
   });
 
   it('ends below the top gear stage, because a price nobody reaches is not a price', () => {
@@ -125,10 +142,13 @@ describe('the shop ladder', () => {
     expect(last).toBeLessThan(GEAR_STAGE_LEVELS.at(-1)!);
   });
 
-  it('costs, all in, the level the last kit lands at', () => {
+  it('costs, all in, the level the last kit lands at — among the kits', () => {
     const total = ladder.reduce((sum, kit) => sum + (kit.price ?? 0), 0);
-    expect(total).toBe(90_700);
+    expect(total).toBe(43_200);
     expect(levelFor(total / CURRENCY_RATE)).toBe(levelsInOrder().at(-1));
+    // 90,700 until M233 repriced the top of the merged ladder down. The
+    // number a climber actually pays for everything is larger, because the
+    // walls are on the same balance — `shop.test.ts` holds that one.
   });
 });
 
@@ -153,11 +173,24 @@ describe('where a climber is on that ladder', () => {
     expect(shopProgress([], 1_000_000).short).toBe(0);
   });
 
-  it('runs out, and says so rather than counting on', () => {
+  /**
+   * It runs out, and says so about *itself*.
+   *
+   * The sentence was "nothing left to spend on", which M227 made false the
+   * day it put five walls on the same balance: a climber holding every kit
+   * and no walls was told there was nothing to spend on while five things
+   * were for sale. Whether the app has anything left to sell is
+   * `engine/shop.ts`'s claim, because it is the only thing that can see both
+   * halves (PLAN.md M233).
+   */
+  it('runs out, and says so about the kits without speaking for the app', () => {
     const done = shopProgress(names, 500_000);
     expect(done.next).toBeNull();
     expect(done.owned).toBe(ladder.length);
-    expect(describeShop(done)).toBe(`All ${ladder.length} bought — nothing left to spend on.`);
+    expect(describeShop(done)).toBe(`All ${ladder.length} kits bought.`);
+    expect(describeShop(done), 'the kit shop is claiming the walls are done too').not.toContain(
+      'nothing left',
+    );
   });
 
   it('says the count first at every rung, which is what makes the gap mean anything', () => {
