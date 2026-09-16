@@ -4,6 +4,7 @@ import { DEFAULT_DISPLAY, type BoulderDisplay, type GradeDisplay, type RouteDisp
 import { setCuesEnabled } from '@/lib/cues';
 import { CONTRAST_THEME_ID, DEFAULT_THEME_ID, applyPalette, getTheme } from '@/ui/themes';
 import type { UnitSystem } from '@/engine/units';
+import { enqueueWrite } from './writes';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
@@ -179,15 +180,15 @@ export const useSettings = create<SettingsState>((set, get) => ({
   },
   setUnits: (value) => {
     set({ units: value });
-    void saveClimber(climberSettings(get()));
+    enqueueWrite(() => saveClimber(climberSettings(get())));
   },
   setBoulderDisplay: (value) => {
     set({ display: { ...get().display, boulder: value } });
-    void saveClimber(climberSettings(get()));
+    enqueueWrite(() => saveClimber(climberSettings(get())));
   },
   setRouteDisplay: (value) => {
     set({ display: { ...get().display, route: value } });
-    void saveClimber(climberSettings(get()));
+    enqueueWrite(() => saveClimber(climberSettings(get())));
   },
 }));
 

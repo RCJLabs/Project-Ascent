@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { reportDbError } from '@/db/db';
+import { enqueueWrite } from './writes';
 import { getDb } from '@/db/db';
 import { registerAdaptations } from '@/content/programs';
 import type { BodyPart } from '@/content/warmups';
@@ -286,7 +287,7 @@ export const useProfile = create<ProfileState>((set, get) => ({
 
   completeOnboarding: (baseline) => {
     set({ baseline, onboardedAt: new Date().toISOString() });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   /**
@@ -304,29 +305,29 @@ export const useProfile = create<ProfileState>((set, get) => ({
    */
   updateBaseline: (patch) => {
     set({ baseline: { ...(get().baseline ?? EMPTY_BASELINE), ...patch } });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   dismissTip: (id, signature) => {
     set({ dismissedTips: { ...get().dismissedTips, [id]: signature } });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   restoreTips: () => {
     set({ dismissedTips: {} });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   dismissCard: (id) => {
     const cards = get().dismissedCards;
     if (cards.includes(id)) return;
     set({ dismissedCards: [...cards, id] });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   markExported: () => {
     set({ lastExportAt: today() });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   /**
@@ -354,7 +355,7 @@ export const useProfile = create<ProfileState>((set, get) => ({
       // about, so the answer is recorded rather than re-derived (M149).
       resumedAt: { ...s.resumedAt, [programId]: today() },
     });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   startProgram: (programId, plan, trackId, restart = false) => {
@@ -373,7 +374,7 @@ export const useProfile = create<ProfileState>((set, get) => ({
       tracks: trackId ? { ...s.tracks, [programId]: trackId } : s.tracks,
       plans: { ...s.plans, [programId]: plan },
     });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   setPlan: (programId, plan) => {
@@ -381,35 +382,35 @@ export const useProfile = create<ProfileState>((set, get) => ({
     // one: they were written against a shape that no longer exists.
     const { [programId]: _dropped, ...rest } = get().weekOverrides;
     set({ plans: { ...get().plans, [programId]: plan }, weekOverrides: rest });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   setProgramLength: (programId, weeks) => {
     const { [programId]: _dropped, ...rest } = get().adaptations;
     set({ adaptations: adopt(weeks === null ? rest : { ...rest, [programId]: Math.round(weeks) }) });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   setWeekPlan: (programId, weekStart, plan) => {
     const base = get().plans[programId] ?? {};
     const forProgram = withOverride(get().weekOverrides[programId] ?? {}, weekStart, plan, base);
     set({ weekOverrides: { ...get().weekOverrides, [programId]: pruneOverrides(forProgram, today()) } });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   stopProgram: () => {
     set({ activeProgramId: null, blocks: closeBlock(get().blocks, today(), 'stopped') });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   restoreProgram: ({ activeProgramId, blocks }) => {
     set({ activeProgramId, blocks });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   setEquipment: (equipment) => {
     set({ equipment });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   addInjury: (part, note) => {
@@ -424,17 +425,17 @@ export const useProfile = create<ProfileState>((set, get) => ({
       ...(note ? { note } : {}),
     };
     set({ injuries: [...get().injuries, injury] });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   updateInjury: (id, patch) => {
     set({ injuries: get().injuries.map((i) => (i.id === id ? { ...i, ...patch } : i)) });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   removeInjury: (id) => {
     set({ injuries: get().injuries.filter((i) => i.id !== id) });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   healInjury: (id) => {
@@ -450,7 +451,7 @@ export const useProfile = create<ProfileState>((set, get) => ({
         { ...injury, healedAt: today() },
       ],
     });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   restoreInjury: (injury) => {
@@ -464,18 +465,18 @@ export const useProfile = create<ProfileState>((set, get) => ({
       injuries: [...get().injuries.filter((i) => i.id !== injury.id), injury],
       healedInjuries: get().healedInjuries.filter((i) => i.id !== injury.id),
     });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   rememberWarmup: (ids) => {
     // Keep the last two warmups' worth so the generator can vary from them.
     set({ recentWarmups: [...ids, ...get().recentWarmups].slice(0, 16) });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 
   setAvatarPalette: (patch) => {
     set({ avatarPalette: { ...get().avatarPalette, ...patch } });
-    void save(snapshot(get()));
+    enqueueWrite(() => save(snapshot(get())));
   },
 }));
 

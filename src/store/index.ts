@@ -8,6 +8,7 @@ import { useTemplates } from './templates';
 import { useSessions } from './sessions';
 import { hydrateSettings } from './settings';
 import { beginHydration, endHydration } from './hydrating';
+import { writesSettled } from './writes';
 import { loadPrograms } from '@/content/programs';
 import { loadDrills } from '@/content/drills';
 
@@ -21,6 +22,18 @@ import { loadDrills } from '@/content/drills';
  * was full of (AUDIT.md §8).
  */
 export async function hydrateAll(): Promise<void> {
+  /**
+   * First, because a read that overtakes a write returns the state before
+   * it (PLAN.md M220).
+   *
+   * Twenty-four store actions persist fire-and-forget, and every caller of
+   * this function is something that just finished changing the app —
+   * loading the sample climber, clearing it, importing a backup. Reading
+   * before those writes land puts the *old* value back into memory, and the
+   * change the climber just made is gone with no error anywhere. `writes.ts`
+   * has the measurement.
+   */
+  await writesSettled();
   // Held across the whole load, because a store that finishes early must not
   // be reconciled against one that has not started. `hydrating.ts` has the
   // measurement: without this, emptying the database and reloading left one

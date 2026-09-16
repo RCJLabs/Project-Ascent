@@ -13106,3 +13106,67 @@ the control that they are still there on an ordinary run.
 
 **Budget** 136.93 → **136.95**, which is noise: the arcade is a lazy route and none of this is on
 the boot path. **5,944 tests pass, up from 5,915.**
+
+## M220 — twenty-four writes nobody awaited, and a read that overtook them
+
+**M207's objectives half was reverted over a flake, and the flake was not about objectives.** That
+milestone measured four hypotheses and disproved all four — slowness, test pollution, two round
+trips, ordering — and recorded *"the cause is somewhere I did not reach."* It was one line further
+down than any of them: **`hydrationInProgress()` is honoured by exactly one store out of ten**, and
+the profile store persists every action with `void save(...)`.
+
+`startDemo` writes the program and the injury fire-and-forget and then calls `hydrateAll`. Whether
+the sample climber keeps its program depends on which microtask ran first, because `hydrateProfile`
+reads the record the writes have not landed in yet and puts the *old* value back into memory. The
+change the climber just made is gone, with no error anywhere.
+
+**Measured rather than argued.** A five-millisecond delay inside the profile's `save` turns
+*"expected null to be 'iron_grip'"* and *"expected [] to have a length of 1"* from three failures in
+eighteen runs into **every run**. On a real device a slow disk or a busy main thread is that delay —
+so this is a defect in the app, not a flake in a test, and it was always going to be reported as
+"it lost my program" rather than as anything traceable.
+
+### The fix is in `hydrateAll`, not at the call site
+
+The same reasoning `hydrating.ts` gives for a flag over an ordering. Making `startDemo` await its
+own two writes fixes `startDemo`; every future action followed by a re-read has the same window and
+no way to see it in review. `writes.ts` holds one chain, `hydrateAll` waits for whatever is in
+flight before it reads, and the class is closed.
+
+**Serialising them is the second bug, found on the way.** Two rapid actions used to issue two
+independent saves whose transactions were created in whatever order their `await getDb()` resolved
+in — so last-write-wins did not reliably mean last-action-wins. And a failed write is reported now
+rather than thrown into a promise nobody holds: `void save(...)` on a broken database was an
+unhandled rejection and a silent loss, which is M151's rule reached from a new direction.
+
+### Making the writes land broke six tests, and that is the point
+
+Three files read the database straight after an action and had been winning the race. Two fixes,
+both about draining rather than about any individual test: the shared `reset()` drains **before**
+it clears, and a global `beforeEach` drains between tests — the queue is module-level because in
+the app there is one of it, so a write enqueued by the last test would otherwise land after the
+next one has seeded the database. `blocks.test.ts` found that second one by putting an old-shape
+profile record directly and reading back the current in-memory one.
+
+**The `reset()` drain looked redundant and is not.** The battery said it survived; removing it and
+running the *whole* suite failed `overBudget.test.tsx`, which calls `reset()` after store actions
+inside a single test. The battery's target list was too narrow to see it — a lesson about the
+battery rather than about the code.
+
+### A sweep, because a queue is only worth having if nothing bypasses it
+
+The battery reverted **one** of the twenty-four call sites to `void save(...)` and every test still
+passed. One site outside the queue is one action whose write can still be overtaken, and the two
+lines differ by six characters. `writes.test.ts` sweeps `src/store` for a thrown-away persist call
+— and skips comments, which is not a convenience: this module's own doc has to be able to name the
+pattern it replaced, and its first version flagged its own prose twice.
+
+**Eleven mutants, ten killed, one survivor that was a narrow battery rather than a gap.** The
+sanity no-op survived.
+
+**In a browser, both themes**: loading the sample climber leaves `activeProgramId` at `iron_grip`,
+one injury and one block in the stored profile, and clearing takes all three back out. No page
+errors.
+
+**Budget** 136.95 → **137.02**, which is the queue itself — it is store-layer code and belongs on
+the boot path. **5,952 tests pass, up from 5,944.**

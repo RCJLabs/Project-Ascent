@@ -7,6 +7,7 @@ import type { ReactElement } from 'react';
 import { getDb } from '@/db/db';
 import { EXPORTABLE_STORES } from '@/db/schema';
 import { hydrateAll } from '@/store';
+import { writesSettled } from '@/store/writes';
 
 /**
  * Mount a page the way the app mounts it (PLAN.md M43).
@@ -62,6 +63,17 @@ export async function hydrate(): Promise<void> {
  * and cost a confused half-hour before this existed (PLAN.md M46).
  */
 export async function reset(): Promise<void> {
+  /**
+   * Drain first (PLAN.md M220).
+   *
+   * The store write queue is module-level and outlives a test, because in
+   * the app there is one of it. A fire-and-forget write from the previous
+   * test would otherwise land *after* this clear and repopulate the
+   * database the next test is about to read — which is what six tests in
+   * three files started failing on the moment those writes stopped being
+   * dropped on the floor.
+   */
+  await writesSettled();
   const db = await getDb();
   const tx = db.transaction(EXPORTABLE_STORES, 'readwrite');
   await Promise.all([...EXPORTABLE_STORES.map((store) => tx.objectStore(store).clear()), tx.done]);

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect } from 'vitest';
 import { noAssertionMade } from './assertions';
 import { loadPrograms } from '@/content/programs';
 import { loadDrills } from '@/content/drills';
+import { writesSettled } from '@/store/writes';
 
 // The shipped programs are loaded, not imported (PLAN.md M78), and the drill
 // library with them (M185); dozens of test files call `getProgram` or
@@ -55,6 +56,26 @@ if (typeof window !== 'undefined') {
       }) as unknown as MediaQueryList;
   }
 }
+
+/**
+ * No test inherits the previous one's unwritten writes (PLAN.md M220).
+ *
+ * Store actions persist fire-and-forget, on one module-level queue, because
+ * in the app there is one of it. Before M220 those writes were dropped on
+ * the floor often enough that nobody noticed; now they land, and a write
+ * enqueued by the last test would otherwise land *after* the next one has
+ * seeded the database and overwrite what it seeded. Four tests in
+ * `blocks.test.ts` found this: they put an old-shape profile record
+ * directly and read back the current in-memory one.
+ *
+ * Here rather than in each file's own `beforeEach`, for the reason
+ * `hydrating.ts` gives for a flag over an ordering — any future file that
+ * writes through a store and then seeds the database has the same window,
+ * and there is no way to see it in review.
+ */
+beforeEach(async () => {
+  await writesSettled();
+});
 
 // No test passes without asserting anything (PLAN.md M197). The rule itself
 // lives in `assertions.ts`, where it is a pure function with tests of its
