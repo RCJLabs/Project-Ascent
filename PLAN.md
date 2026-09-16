@@ -11996,6 +11996,11 @@ thresholds beside them.*
   no server, no account, nothing leaving the phone that the climber did not send. What exists
   today is a share **card**, which is a picture of a number.
   *Medium, and it is the only item here that would put two climbers on the same wall.*
+  *Done — see the entry at the end of this document. The tape was self-contained enough to replay
+  and not enough to travel: `isModifiers` checked types and not ranges, and did not look at the
+  three fields M211 added at all. Bounding it is what makes the feature trustworthy, and the
+  property it buys is the good one — **a tape cannot lie about its height, because the height is
+  not in the tape.***
 
 ***The recommendation.*** *M210 and M217 first — they are both small, they are both naming rather
 than mechanics, and between them they put the climber's own units, a climb they have heard of and
@@ -13019,3 +13024,85 @@ unlock it"* onto its own line; the parenthetical sits beside the name it qualifi
 
 **Budget** 136.95 → **136.93**, which is noise: the constant moved between two lazy modules and
 the entry chunk never held it. **5,915 tests pass, up from 5,904.**
+
+## M219 — the tape travels, and it cannot lie about where it got to
+
+**"Self-contained by design" was true for replay and not for travel.** The tape carried its own
+modifiers so that a run recorded this morning would not be replayed tonight by a different climber,
+and that was enough while every tape came from this device. `isModifiers` checked *types and not
+ranges* — and did not look at `extraLives`, `slowmoScale` or `invulnScale` at all, because M211
+added those three to `Modifiers` and did not extend the validator. A tape claiming
+`rampReduction: 1` and `hitboxTrim: 1` is a climber the wall never speeds up for and nothing can
+hit, and it passed.
+
+That was survivable: the only reader was `tapeToRace`, on a tape from this device, drawing a ghost
+whose height is never recorded. It stops being survivable the moment a tape is a file someone else
+wrote. So the bound came first, and it is derived rather than authored —
+`modifiersFrom` at every stat's ceiling holding every boon — so that retuning `HOOKS` or adding a
+boon moves it instead of starting to refuse legitimate runs.
+
+### The property that makes this work without a server
+
+**A tape cannot lie about its height, because the height is not in the tape.** `decodeTape` replays
+the inputs and takes what they climb; the sender's figure is carried in the envelope and *checked*,
+never trusted. A file claiming twelve thousand metres is worth whatever its moves actually survive,
+and the disagreement is shown beside the real number rather than hidden — a claim that does not
+match is the signature of a file that was edited, and the climber is told rather than protected.
+
+That is stronger than a signature would be, and it is a consequence of a design that was already
+there. The one thing a forger could still reach for was the climber, and that is what the bounds
+close.
+
+### A race is a race
+
+`upsertLedger({ id: `ascent:${date}` })` prices **one entry per day on that day's best run**, and
+`best` is a lifetime record. A run on someone else's wall that set records would make shopping for
+an easy seed a way to earn. So a challenge run is played and scored and paid nothing: no record, no
+day, no ledger. The card says so, and a browser confirms the store is untouched after one — `best`
+null, `days` zero.
+
+It is played on **their wall and their mode, with your climber**. `raceSetup` is a function rather
+than two lines in the page because it is the whole of the race's fairness, and returns no modifiers
+on purpose: racing with the sender's stats would be racing a copy of them, and the gap between the
+two ghosts is what the skill trees are for. A reply is writable from a race, on the same wall,
+which is what the seed-in-the-tape design was always for.
+
+**And a Free Solo tape does not open a locked Free Solo.** M218 made that unlock a proficiency
+check; a friend's file is not a way around the belay check.
+
+### Seventeen mutants, sixteen killed, one equivalent — and the battery earned its keep twice
+
+Three survivors in the first pass were real gaps, and two of them were **invisible by construction**:
+a page that quietly raced on today's wall instead of the sender's, and one that handed the live run
+the sender's modifiers, both passed everything. The answer was to change the shape of the code until
+they were observable — `raceSetup` for the first, and a recorder that reads the run's own climber
+rather than a second copy of it for the second. The third was a fixture fault worth recording:
+`modifiersFrom` with every stat at base is *identical* to `NO_MODIFIERS`, so a test using the
+untrained climber cannot tell "your modifiers" from "theirs". The sender in that fixture has trained
+now.
+
+Four of the first pass's "kills" were malformed mutants failing to typecheck, which proves nothing,
+and one survivor was a mutant that did not change behaviour at all. The one genuine equivalent is
+commented: the recorder reading `run.modifiers` cannot differ from `modifiers` while `createRun`
+spreads its input, and it is kept because the copy it removes is the one the other mutant exploited.
+
+### The tests had to learn to play the game
+
+A page test that clicks *"Race it"* and asserts the store is untouched **proves nothing**, because
+the frame loop bails on `canvas.getContext('2d')` and jsdom returns null — the run never starts.
+That is what the first version did. A context that accepts every call, a stubbed `Path2D`, a
+measurable canvas and a clock that advances per frame make the loop run for real, and the wall ends
+it in about half a second. There is a control beside it: an ordinary run **does** call `recordRun`,
+without which "not called" is also what a run that never started looks like.
+
+**In a browser, both themes, 430px and 1280px**, the whole round trip: played a run, downloaded
+`ascent-2026-09-16-589m.json` — **503 bytes**, and readable, because someone will open it before
+sending it — loaded it back, raced it, came up 305 ft short. No page errors.
+
+It found two copy faults no test would have. The header compared a race to a lifetime record it
+never touches, reading *"Best is 0 ft"*. And the daily-wall share card was offered for a run that
+may be on any wall the sender's file carries. Both are gone, and both are pinned now — including
+the control that they are still there on an ordinary run.
+
+**Budget** 136.93 → **136.95**, which is noise: the arcade is a lazy route and none of this is on
+the boot path. **5,944 tests pass, up from 5,915.**

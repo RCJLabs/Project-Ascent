@@ -1,8 +1,11 @@
+import { MAX_STAT } from '../stats';
+import { BOON_IDS } from './boons';
 import { CLIMBER, TICK_MS } from './config';
 import {
   NO_MODIFIERS,
   createRun,
   metres,
+  modifiersFrom,
   step,
   type Input,
   type Mode,
@@ -149,18 +152,71 @@ export function isTape(value: unknown): value is Tape {
   );
 }
 
+/**
+ * The strongest climber the game can produce, derived rather than authored.
+ *
+ * Every stat at its ceiling and every boon held. `isModifiers` refuses
+ * anything past this, which is the whole trust model once a tape can arrive
+ * from someone else (PLAN.md M219): **a tape cannot lie about its height,
+ * because the height is not in the tape** — it is recomputed by replaying
+ * the inputs. That property only holds while the climber those inputs are
+ * played by is one the game could have made.
+ *
+ * Computed from `modifiersFrom` and `BOON_IDS` so that retuning `HOOKS` or
+ * adding a boon moves the ceiling with it. A hand-written table here would
+ * start refusing legitimate tapes the first time a cap went up.
+ */
+const CEILING: Modifiers = modifiersFrom({
+  end: MAX_STAT,
+  agi: MAX_STAT,
+  men: MAX_STAT,
+  tec: MAX_STAT,
+  str: MAX_STAT,
+  boons: BOON_IDS,
+});
+
+/** Floating-point slack, so a value that round-tripped through JSON fits. */
+const SLACK = 1e-9;
+
+const within = (value: unknown, ceiling: number, floor = 0): boolean =>
+  typeof value === 'number' &&
+  Number.isFinite(value) &&
+  value >= floor - SLACK &&
+  value <= ceiling + SLACK;
+
+/**
+ * A climber the game could have produced.
+ *
+ * Before M219 this checked types and not ranges, and did not look at
+ * `extraLives`, `slowmoScale` or `invulnScale` at all — M211 added those
+ * three to `Modifiers` and did not extend the validator. A tape claiming
+ * `rampReduction: 1` and `hitboxTrim: 1` is a climber the wall never speeds
+ * up for and nothing can hit, and it passed. That was survivable while
+ * every tape came from this device and the ghost was decoration whose height
+ * is never recorded. It is not survivable once a tape is a file someone
+ * else wrote.
+ */
 function isModifiers(value: unknown): value is Modifiers {
   if (typeof value !== 'object' || value === null) return false;
   const m = value as Partial<Modifiers>;
   return (
-    typeof m.rampReduction === 'number' &&
-    typeof m.hitboxTrim === 'number' &&
-    typeof m.chalkSaves === 'number' &&
-    typeof m.laneTrim === 'number' &&
-    typeof m.coinMultiplier === 'number' &&
-    typeof m.startWithSlowmo === 'boolean'
+    within(m.rampReduction, CEILING.rampReduction) &&
+    within(m.hitboxTrim, CEILING.hitboxTrim) &&
+    within(m.chalkSaves, CEILING.chalkSaves) &&
+    within(m.laneTrim, CEILING.laneTrim) &&
+    within(m.coinMultiplier, CEILING.coinMultiplier, 1) &&
+    typeof m.startWithSlowmo === 'boolean' &&
+    // The three M211 added. Absent is a tape written before it, and absent
+    // is the neutral value rather than a rejection — `createRun` spreads
+    // `NO_MODIFIERS` under whatever it is given.
+    withinOrAbsent(m.extraLives, CEILING.extraLives, 0) &&
+    withinOrAbsent(m.slowmoScale, CEILING.slowmoScale, 1) &&
+    withinOrAbsent(m.invulnScale, CEILING.invulnScale, 1)
   );
 }
+
+const withinOrAbsent = (value: unknown, ceiling: number, floor: number): boolean =>
+  value === undefined || within(value, ceiling, floor);
 
 /**
  * The input a tape calls for at a given tick, and where to look next.

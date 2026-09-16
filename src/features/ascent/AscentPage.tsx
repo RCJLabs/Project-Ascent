@@ -18,6 +18,7 @@ import {
   ghostGap,
   tapeToRace,
   type Ghost,
+  type Tape,
 } from '@/engine/ascent/replay';
 import { payoutFor, wallNumber, type AscentPayout } from '@/engine/ascent/rewards';
 import { BOONS, BOON_IDS } from '@/engine/ascent/boons';
@@ -52,11 +53,23 @@ import { unitsToXp } from '@/engine/economy';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+// Aliased: the engine's `Input` in this file is a lane-change direction.
+import { Input as FileInput } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { dailyWallCard } from '@/ui/shareCard';
 import { ascentHistory, dayRun, describeAscent, type AscentHistory } from '@/engine/ascent/history';
 import { FREE_SOLO_UNLOCK, describeFreeSoloUnlock } from '@/engine/ascent/unlock';
+import {
+  TAPE_PROBLEMS,
+  decodeTape,
+  describeTape,
+  raceSetup,
+  encodeTape,
+  tapeFilename,
+  type LoadedTape,
+} from '@/engine/ascent/tapeFile';
+import { downloadFile } from '@/lib/download';
 import { THEME_UNLOCKS, buildWall, render, themeForHeight } from './render';
 
 /** How many coins in one frame get their own note. */
@@ -125,6 +138,22 @@ export function AscentPage() {
   /** The inputs of the run in progress, kept so the day's best can be raced. */
   const recorderRef = useRef<Recorder | null>(null);
   const ghostRef = useRef<Ghost | null>(null);
+  /**
+   * Someone else's run, loaded from a file and waiting to be raced
+   * (PLAN.md M219).
+   *
+   * A ref as well as state: the frame loop's `finish` needs to know whether
+   * the run it is closing was a challenge, and it must read that without
+   * being re-created every time the menu's copy of it changes.
+   */
+  const [challenge, setChallenge] = useState<LoadedTape | null>(null);
+  const [tapeProblem, setTapeProblem] = useState<string | null>(null);
+  const challengeRef = useRef<LoadedTape | null>(null);
+  /** The challenge the *finished* run was against, for the card to read. */
+  const [raced, setRaced] = useState<LoadedTape | null>(null);
+  const tapeFileRef = useRef<HTMLInputElement>(null);
+  /** The run just finished, kept so it can be written to a file. */
+  const [finished, setFinished] = useState<{ tape: Tape; date: string; metres: number } | null>(null);
 
   useEffect(() => {
     if (!hydrated) void loadGame();
@@ -215,6 +244,28 @@ export function AscentPage() {
       // because it would replay a pattern nobody can race today.
       const onTodaysWall = seed === dailySeed(date);
       const tape = onTodaysWall ? recorderRef.current?.take(run) : undefined;
+
+      /**
+       * A race is a race, and nothing else (PLAN.md M219).
+       *
+       * A challenge run is played on whatever wall the sender's tape was
+       * recorded on. Recording it would set `best`, enter the day's history
+       * and re-price the single `ascent:<date>` ledger entry on it — which
+       * would make picking an easy wall a way to earn. So the run counts for
+       * the race and for nothing else, and the card says so.
+       */
+      const against = challengeRef.current;
+      setRaced(against);
+      if (against !== null) {
+        // Still writable to a file, so a reply can be sent back on the same
+        // wall — that is the whole point of a tape that carries its seed.
+        const own = recorderRef.current?.take(run);
+        setFinished(own ? { tape: own, date: against.date, metres: climbed } : null);
+        setPayout(null);
+        return;
+      }
+
+      setFinished(tape ? { tape, date, metres: climbed } : null);
       void recordRun({
         mode: run.mode,
         metres: climbed,
@@ -241,24 +292,78 @@ export function AscentPage() {
     [today, seed],
   );
 
+  /**
+   * Start a run, optionally against a run someone sent (PLAN.md M219).
+   *
+   * A challenge is played on **their** seed with **your** modifiers: the
+   * same wall, each climber as they actually are. Handing the sender's
+   * modifiers to the live run would be racing a copy of them rather than
+   * racing them, and the difference between the two ghosts is the thing the
+   * skill trees are for.
+   */
   const start = useCallback(
-    (chosen: Mode) => {
+    (chosen: Mode, against: LoadedTape | null = null) => {
       // Browsers refuse to start audio outside a gesture, and this is one.
       unlock();
-      setMode(chosen);
-      beatRef.current = records.best[chosen];
-      runRef.current = createRun({ mode: chosen, seed, modifiers });
+      const { seed: wall, mode: played } = raceSetup(against, { seed, mode: chosen });
+      setMode(played);
+      challengeRef.current = against;
+      beatRef.current = against?.metres ?? records.best[played];
+      const run = createRun({ mode: played, seed: wall, modifiers });
+      runRef.current = run;
       inputRef.current = 0;
-      recorderRef.current = new Recorder(seed, chosen, modifiers);
-      const tape = raceable(chosen);
+      // Read off the run rather than from `modifiers` again: a tape has to
+      // record the climber the run was *actually* played by, and two
+      // parallel copies of that are two chances to disagree.
+      //
+      // **Equivalent to passing `modifiers` here**, and M219's battery said
+      // so: `createRun` spreads its input over `NO_MODIFIERS`, so the two
+      // are deep-equal. It is kept because the copy it removes is the one
+      // the *other* mutant exploited — a `createRun` handed the sender's
+      // modifiers while the recorder wrote down yours produced a tape that
+      // described a run nobody played, and no test could see it.
+      recorderRef.current = new Recorder(run.seed, run.mode, run.modifiers);
+      const tape = against?.tape ?? raceable(played);
       ghostRef.current = tape ? createGhost(tape) : null;
       setPayout(null);
+      setFinished(null);
       setNewBest(false);
       setHud(EMPTY_HUD);
       setPhase('playing');
     },
     [seed, modifiers, records.best, raceable],
   );
+
+  /** Read a run file the climber picked, and say what is wrong when it is. */
+  const pickTape = useCallback(async (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file) return;
+    setChallenge(null);
+    let text: string;
+    try {
+      text = await file.text();
+    } catch {
+      setTapeProblem(TAPE_PROBLEMS.unreadable);
+      return;
+    }
+    const loaded = decodeTape(text);
+    if (typeof loaded === 'string') {
+      setTapeProblem(TAPE_PROBLEMS[loaded]);
+      return;
+    }
+    setTapeProblem(null);
+    setChallenge(loaded);
+  }, []);
+
+  const saveRun = useCallback(() => {
+    if (finished === null) return;
+    downloadFile(
+      new Blob([encodeTape(finished.tape, finished.date, finished.metres)], {
+        type: 'application/json',
+      }),
+      tapeFilename(finished.date, finished.metres),
+    );
+  }, [finished]);
 
   // The loop. React never re-renders per frame — the HUD is refreshed on a
   // timer instead, so sixty frames a second cost one canvas draw each.
@@ -459,6 +564,76 @@ export function AscentPage() {
               </Button>
             </Card>
 
+            {/* Two climbers on the same wall, with no server and no account
+                (PLAN.md M219). */}
+            <Card title="Race someone">
+              <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+                Save a run to a file and send it however you like. Whoever opens it climbs the same
+                wall against your line — the file is the inputs, not the score, so it cannot claim a
+                height it did not climb.
+              </p>
+              {challenge !== null ? (
+                <>
+                  <div className="rounded-xl bg-sunken px-3 py-2.5 mb-3">
+                    <div className="text-lg font-black tabular-nums leading-none">
+                      {runHeight(challenge.metres, units).label}
+                    </div>
+                    <p className="text-xs text-ink-soft mt-1 leading-relaxed">
+                      {describeTape(challenge, todayKey())}
+                      {challenge.claimed !== null &&
+                        ` The file claimed ${runHeight(challenge.claimed, units).label}; this is what its inputs actually climb.`}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {/* A Free Solo tape does not get past M218's gate. That
+                        unlock is a proficiency check on the easier mode, and
+                        a file from a friend is not a way to skip the belay
+                        check — the race would otherwise be the one door into
+                        a mode this climber has not opened. */}
+                    <Button
+                      className="flex-1"
+                      disabled={challenge.tape.mode === 'freesolo' && !freeSoloUnlocked}
+                      onClick={() => start(challenge.tape.mode, challenge)}
+                    >
+                      <Play size={16} /> Race it
+                    </Button>
+                    <Button variant="outline" onClick={() => setChallenge(null)}>
+                      Clear
+                    </Button>
+                  </div>
+                  {challenge.tape.mode === 'freesolo' && !freeSoloUnlocked && (
+                    <p className="text-xs text-ink-soft mt-2 leading-relaxed">
+                      That is a Free Solo run. {describeFreeSoloUnlock(units)}
+                    </p>
+                  )}
+                  <p className="text-xs text-ink-soft mt-2 leading-relaxed">
+                    A race counts for the race. It sets no record and pays nothing — the payout is
+                    for your own wall, once a day.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => tapeFileRef.current?.click()}
+                  >
+                    Open a run file
+                  </Button>
+                  {tapeProblem !== null && (
+                    <p className="text-xs text-danger mt-2 leading-relaxed">{tapeProblem}</p>
+                  )}
+                </>
+              )}
+              <FileInput
+                ref={tapeFileRef}
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={(e) => void pickTape(e.target.files)}
+              />
+            </Card>
+
             <Card title={`Today's payout`}>
               <TodayPayout
                 daily={today}
@@ -622,7 +797,15 @@ export function AscentPage() {
                 <span className="text-lg text-ink-soft ml-1.5">{runHeight(hud.metres, units).unit}</span>
               </div>
               <p className="text-sm text-ink-soft mt-1.5">
-                {newBest ? 'A new best.' : `Best is ${runHeight(best, units).label}.`}
+                {/* A race is measured against the run it is racing, and the
+                    line below says so. Printing "Best is 0 ft" beside it
+                    compares a race to a lifetime record it never touched
+                    — which is what the browser showed on the first pass. */}
+                {raced !== null
+                  ? null
+                  : newBest
+                    ? 'A new best.'
+                    : `Best is ${runHeight(best, units).label}.`}
                 {hud.pure && ' No power-ups touched.'}
               </p>
               {runScale !== null && <p className="text-sm text-ink-soft mt-1">{runScale}</p>}
@@ -656,8 +839,19 @@ export function AscentPage() {
               </div>
             )}
 
+            {raced !== null && (
+              <div className="border-t border-line pt-3 mb-3">
+                <p className="text-sm text-ink-soft leading-relaxed">
+                  {hud.metres > raced.metres
+                    ? `You beat it by ${runHeight(hud.metres - raced.metres, units).label}.`
+                    : `${runHeight(raced.metres - hud.metres, units).label} short.`}{' '}
+                  A race sets no record and pays nothing.
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-2 mb-3">
-              <Button className="flex-1" onClick={() => start(mode)}>
+              <Button className="flex-1" onClick={() => start(mode, raced)}>
                 <Play size={16} /> Again
               </Button>
               <Button variant="outline" onClick={() => setPhase('menu')}>
@@ -665,6 +859,18 @@ export function AscentPage() {
               </Button>
             </div>
 
+            {finished !== null && (
+              <div className="flex justify-center mb-2">
+                <Button variant="outline" size="sm" onClick={saveRun}>
+                  Save this run to a file
+                </Button>
+              </div>
+            )}
+
+            {/* Not on a race: that card is titled with today's daily wall,
+                and a race can be on any wall the sender's file carries. The
+                file is the share that fits a race. */}
+            {raced === null && (
             <div className="flex justify-center">
               <ShareButton
                 label={`Share Daily Wall #${wallNumber(todayKey())}`}
@@ -680,6 +886,7 @@ export function AscentPage() {
                 })}
               />
             </div>
+            )}
           </Card>
         )}
       </div>
