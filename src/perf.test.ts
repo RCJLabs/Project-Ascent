@@ -1402,6 +1402,37 @@ describe('the bundle stays small', () => {
     expect(entry.includes('Rental shoes'), 'the figure itself is in the entry').toBe(true);
   });
 
+  it.runIf(built)('keeps the wall palettes out of the entry chunk', () => {
+    /**
+     * Nine walls of thirteen colours each, plus a line of copy apiece, on
+     * the boot path of an app that opens on Home (PLAN.md M227).
+     *
+     * The same shape as the arcade and the kits above, and the reason it is
+     * a real risk here: the **chosen wall is an id on the wallet**, so
+     * `db/game.ts` and `store/game.ts` — both read before anything renders —
+     * touch this concept. They must carry a string and never the table. This
+     * fails the moment one of them imports `engine/ascent/walls`.
+     */
+    const html = readFileSync('dist/index.html', 'utf8');
+    const entryName = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)![1]!;
+    const entry = readFileSync(`${dist}/${entryName}`, 'utf8');
+    // One marker per group — free, earned and bought — because a partial
+    // leak would pass a single probe, and one blurb, which nothing else in
+    // the app says.
+    for (const marker of [
+      'Recovery skies',
+      'Everest, in feet',
+      'Moonlight',
+      'the glow behind it',
+      'rgba(255,255,255,0.07)',
+    ]) {
+      expect(entry.includes(marker), `${marker} is in the entry chunk`).toBe(false);
+    }
+    // The control: the game's *route* is eager, so a sweep finding nothing
+    // at all would mean it was reading the wrong file rather than passing.
+    expect(entry.includes('minigame'), 'the route table is in the entry').toBe(true);
+  });
+
   it.runIf(built)('keeps the drill text out of the entry chunk', () => {
     // A marker per drill, not one marker, for the reason the program-body
     // check above gives: a split that leaks half the text back into the

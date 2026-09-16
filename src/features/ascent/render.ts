@@ -12,6 +12,7 @@ import { CLIMBER, LANES, LANE_WIDTH, VIEW } from '@/engine/ascent/config';
 import { climberX, isObstacle, screenY, type Entity, type RunState } from '@/engine/ascent/game';
 import { ghostY } from '@/engine/ascent/replay';
 import { createRng, next } from '@/engine/ascent/rng';
+import type { Palette } from '@/engine/ascent/walls';
 import { POSES, climberShapes, climbingPose, type Shape } from '@/ui/climberShapes';
 
 /**
@@ -24,61 +25,15 @@ import { POSES, climberShapes, climbingPose, type Shape } from '@/ui/climberShap
  */
 const CLIMB_CYCLE_PX = 190;
 
-export interface Palette {
-  sky: string;
-  rockNear: string;
-  rockFar: string;
-  strata: string;
-  lane: string;
-  rock: string;
-  boulder: string;
-  debris: string;
-  coin: string;
-  slowmo: string;
-  magnet: string;
-  heart: string;
-  ink: string;
-}
-
-export const WALL_THEMES: Record<string, Palette> = {
-  granite: {
-    sky: '#1b2733', rockNear: '#2e3d4c', rockFar: '#243141', strata: '#35465a',
-    lane: 'rgba(255,255,255,0.05)', rock: '#8a97a5', boulder: '#6d7d8d', debris: '#c2ccd6',
-    coin: '#f2b705', slowmo: '#5aa3d4', magnet: '#b57edc', heart: '#e2574c', ink: '#e8eef3',
-  },
-  sandstone: {
-    sky: '#2b1d18', rockNear: '#4a2f24', rockFar: '#3a251d', strata: '#5d3b2c',
-    lane: 'rgba(255,255,255,0.05)', rock: '#c98b5f', boulder: '#a86f47', debris: '#e8c9a8',
-    coin: '#ffd166', slowmo: '#6fb3d9', magnet: '#c48fd6', heart: '#e2574c', ink: '#f6ece3',
-  },
-  alpine: {
-    sky: '#101c28', rockNear: '#22323f', rockFar: '#1a2733', strata: '#2c4050',
-    lane: 'rgba(255,255,255,0.06)', rock: '#b9c9d6', boulder: '#94a8b8', debris: '#e9f2f8',
-    coin: '#ffd166', slowmo: '#7dc3e8', magnet: '#c8a4e0', heart: '#e2574c', ink: '#eef6fb',
-  },
-  /** Rest-day weather: lighter, calmer, unmistakably different. */
-  recovery: {
-    sky: '#22384a', rockNear: '#365065', rockFar: '#2b4155', strata: '#436a85',
-    lane: 'rgba(255,255,255,0.07)', rock: '#9fb6c9', boulder: '#7f9ab0', debris: '#d9e6f0',
-    coin: '#ffd97d', slowmo: '#8fd0f0', magnet: '#cfa8e8', heart: '#ef7f74', ink: '#eef6fb',
-  },
-};
+/**
+ * The palette a wall is drawn in, and the walls themselves, moved to
+ * `engine/ascent/walls.ts` at M227 so the picker and the shop could reach
+ * them without this renderer coming along. Re-exported because the type is
+ * this module's whole interface with the page.
+ */
+export type { Palette } from '@/engine/ascent/walls';
 
 /** Repeating jagged edge, generated once per run from its seed. */
-/** Cosmetic walls, unlocked by height on the altimeter. */
-export const THEME_UNLOCKS: { id: string; name: string; feet: number }[] = [
-  { id: 'granite', name: 'Granite', feet: 0 },
-  { id: 'sandstone', name: 'Sandstone', feet: 2_900 },
-  { id: 'alpine', name: 'Alpine', feet: 29_032 },
-];
-
-/** The best wall the climber has earned. Rest days override it. */
-export function themeForHeight(feet: number, rested: boolean): Palette {
-  if (rested) return WALL_THEMES.recovery!;
-  let chosen = THEME_UNLOCKS[0]!;
-  for (const theme of THEME_UNLOCKS) if (feet >= theme.feet) chosen = theme;
-  return WALL_THEMES[chosen.id]!;
-}
 
 export interface WallPattern {
   left: number[];

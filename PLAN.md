@@ -13717,3 +13717,92 @@ and what the rule watches for — `facing: 'front'` would make it 6 — is untou
 this milestone could use it too, needed its reason in `wired.test.ts`'s exemption table.
 
 **6,038 tests over 345 files.** First load **137.50KB against the 138.0 budget, 0.50 of slack**.
+
+## M227 — the walls existed, and nobody could pick one
+
+> "I want to have unlockable themes for the Ascent game to change the looks. Different color rocks
+> and background etc."
+
+**Most of this was already built and invisible.** Four wall palettes have shipped since M31 —
+granite, sandstone, alpine and a lighter rest-day sky — and the page has carried a card listing
+three of them since. What it could not do was let you have one: the palette was chosen *for* you
+from the altimeter, the rest-day wall was forced over the top of it, and the card was a read-only
+list with a tick beside whichever you had reached. So the ask is mostly the picking, and the
+milestone is mostly a picker.
+
+### What is new
+
+Nine walls, in the vocabulary the kit shop already uses, because a second vocabulary for the same
+idea is how M62 got into trouble:
+
+- **Free** — Granite. Where everyone starts, and it stays free.
+- **Earned** — Sandstone at 2,900 ft and Alpine at 29,032 ft on the altimeter, unchanged. This is
+  the one-way wall the game is built on: **training feeds the game and the game never feeds
+  training**, so a wall opened by real climbing is the good direction and there is no field to set
+  for the other one.
+- **Bought** — Limestone, Gritstone, Sea cliff, Moonlight and Volcanic, 1,500 to 30,000 coins,
+  priced into the same band as the kits.
+- **Recovery skies** stays what it was: given on a logged rest day, and not pickable otherwise.
+
+`null` is **Automatic**, which is exactly what every climber has had since M31 — the best wall the
+altimeter has opened, with rest-day weather over it — and is what they keep unless they touch this.
+Picking a wall pins it over both.
+
+### Two buckets, one record, and the write that nearly dropped half of it
+
+Three walls and three kits share a name: Granite, Sandstone and Alpine. One list of owned things
+would have buying a kit hand you a wall, so bought walls are their own list on the wallet, and a
+rule holds that no purchasable wall shares a name with a kit.
+
+The wallet is **one record**, though, and `buy` wrote it back as
+`putWallet({ spent, owned: [...] })` — the two fields a kit cares about. Adding two more fields to
+that record would have made every kit purchase silently delete the walls and the chosen wall. Both
+purchases go through one function that spreads the current wallet now, and the rule that catches it
+buys a wall, pins it, buys a kit and reads all four fields back out of the database.
+
+### The rule with teeth
+
+Everything else about a wall is taste. This one is not: **a rock you cannot see is a rock that kills
+you**, so the three obstacle colours and the four pickup colours are held to a contrast against the
+sky and both rock fields on every wall — including the one that costs thirty thousand coins, where
+"hard to read" would be something a climber had paid for.
+
+`strata` is deliberately *not* in that set. It is a stroke — one line every 64 units — so an
+obstacle crossing it is still read against the rock face either side, and including it condemned
+`recovery`, which has been drawn that way since M31 and is perfectly legible. A rule that fails a
+wall people have been playing on for months is measuring the wrong thing.
+
+### Found by the suite and by the browser
+
+- **The lock note printed `2,900 ft` whatever the unit setting was**, and M201's rule — whose
+  example *is* this wall list — caught it within the same run that introduced it. Heights are stored
+  in feet because the altimeter is; nothing prints them raw.
+- **The row hand-rolled `border-accent bg-accent/10`**, which `ui.test.ts` has forbidden since M13.
+  It is `SelectableCard` now, like the kit rows.
+- The browser found **Automatic with an empty swatch** beside eight coloured ones. It shows the wall
+  it resolves to today. And the swatch is two colours — sky and rock — because one is not enough:
+  two walls that differ only in the sky would otherwise show an identical square.
+
+### The sanity mutant earned its place
+
+**12 of 12 mutants caught — and the no-op failed**, which is the whole reason a battery carries one.
+Rewording a comment made `buys, pins and pays for it in one tap` fail, and the comment was innocent:
+buying and pinning are two writes, the test waited on the *first* and asserted the second, and a few
+milliseconds of timing shift was all it took. A test that passes because of when it happens to run
+is a test that will fail on a runner, which is M224's lesson arriving from a different direction.
+It waits on the pin now.
+
+The twelve: the choice ignored, a locked wall honoured anyway, the rest-day override removed, an
+earned wall opened a foot early, a bought wall made free, the lock note hardcoded to feet, a wall's
+rocks painted the colour of its own face, the wallet written back from two fields, walls filed in
+the kit bucket, a purchase allowed twice, a pin never written down, and the stored wall dropped on
+read.
+
+### Measured
+
+**6,063 tests over 347 files.** First load **137.63KB against the 138.0 budget, 0.37 of slack** —
+the thinnest it has been. The table itself is out of the entry chunk and a new rule holds it there,
+which matters more here than it did for the kits: the chosen wall is an id on the wallet, so
+`db/game.ts` and `store/game.ts` both touch this concept and both are read before anything renders.
+What the 0.14KB bought is that reading. **The next milestone touching the boot path should expect to
+pay for itself.**

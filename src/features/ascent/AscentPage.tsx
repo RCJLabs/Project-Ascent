@@ -43,18 +43,19 @@ import {
   cueSave,
   unlock,
 } from '@/lib/cues';
-import { useGame, useXp } from '@/store/game';
+import { useChosenWall, useCurrency, useGame, useOwnedWalls, useXp } from '@/store/game';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
 import { useAllSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
-import { formatHeight, type UnitSystem } from '@/engine/units';
+import type { UnitSystem } from '@/engine/units';
 import { useSkills } from '@/store/skills';
 import { unitsToXp } from '@/engine/economy';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { SelectableCard } from '@/ui/Chip';
 // Aliased: the engine's `Input` in this file is a lane-change direction.
 import { Input as FileInput } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
@@ -72,7 +73,8 @@ import {
   type LoadedTape,
 } from '@/engine/ascent/tapeFile';
 import { downloadFile } from '@/lib/download';
-import { THEME_UNLOCKS, buildWall, render, themeForHeight } from './render';
+import { buildWall, render } from './render';
+import { WALLS, lockNote, unlocked, wallFor, type Palette } from '@/engine/ascent/walls';
 
 /** How many coins in one frame get their own note. */
 const COIN_CUES = 5;
@@ -193,7 +195,63 @@ export function AscentPage() {
     [xp.progress.level, derived.vitality.state, derived.feet, palette, figure],
   );
 
-  /** The boons the climber holds, for the list that says so. */
+  /**
+ * One wall in the picker: a swatch, a name, and why you cannot have it yet.
+ *
+ * `aria-pressed` rather than a checkmark, because that is the difference
+ * between a button that does something and a button that *is* something —
+ * and a locked row that can be bought is still a button, so the label has to
+ * say which of the two a tap will do.
+ */
+function WallRow({
+  name,
+  blurb,
+  palette,
+  open,
+  buyable = false,
+  selected,
+  onPick,
+}: {
+  name: string;
+  blurb: string;
+  palette: Palette;
+  open: boolean;
+  buyable?: boolean;
+  selected: boolean;
+  onPick: () => void;
+}) {
+  const shut = !open && !buyable;
+  return (
+    <SelectableCard
+      selected={selected}
+      onClick={onPick}
+      disabled={shut}
+      padded={false}
+      label={open ? `Wall: ${name}` : `${name}: ${buyable ? `buy for ${blurb}` : blurb}`}
+      className={`flex items-center gap-2.5 bg-sunken px-2.5 py-2 ${shut ? 'opacity-55' : ''}`}
+    >
+      {/* Two colours, because one is not enough to tell these apart: the
+          sky is what most of the screen is and the rock is what you are
+          dodging, and a wall that changed only the second would show an
+          identical swatch to one that changed only the first. */}
+      <span
+        aria-hidden
+        className="w-5 h-5 shrink-0 rounded border border-line"
+        style={{
+          background: `linear-gradient(135deg, ${palette.sky} 0 50%, ${palette.rock} 50% 100%)`,
+        }}
+      />
+      <span className="min-w-0">
+        <span className={`block text-sm ${selected ? 'font-semibold' : ''}`}>{name}</span>
+        <span className="block text-2xs text-ink-soft leading-tight">
+          {buyable ? `Buy · ${blurb}` : blurb}
+        </span>
+      </span>
+    </SelectableCard>
+  );
+}
+
+/** The boons the climber holds, for the list that says so. */
   const held = useMemo(
     () => new Set(skills.effects.ascentBoons.map((b) => b.id)),
     [skills.effects.ascentBoons],
@@ -213,7 +271,16 @@ export function AscentPage() {
   );
 
   // Rest days get their own sky. Otherwise the wall follows the altimeter.
-  const theme = themeForHeight(derived.feet, derived.restedToday);
+  const currency = useCurrency();
+  const chosenWall = useChosenWall();
+  const ownedWalls = useOwnedWalls();
+  const chooseWall = useGame((s) => s.chooseWall);
+  const buyWall = useGame((s) => s.buyWall);
+  const access = useMemo(
+    () => ({ feet: derived.feet, owned: ownedWalls, rested: derived.restedToday }),
+    [derived.feet, ownedWalls, derived.restedToday],
+  );
+  const theme = wallFor(chosenWall, access).palette;
 
   // Named on the hooks card next to what each one buys. Two of the five are
   // fed almost entirely by assessment numbers, so a climber who only logs
@@ -747,27 +814,52 @@ export function AscentPage() {
               </Card>
             )}
 
+            {/* A picker since M227. It was this list, read-only: four walls
+                chosen for you off the altimeter, with nothing saying they
+                existed and no way to climb the one you wanted. Paint only —
+                the wall you are looking at cannot change the wall you are
+                climbing (`engine/ascent/walls.ts`). */}
             <Card title="Walls">
-              <ul className="grid grid-cols-1 gap-1.5 text-sm">
-                {THEME_UNLOCKS.map((wall) => {
-                  const on = derived.feet >= wall.feet;
+              <p className="text-xs text-ink-soft mb-2 leading-relaxed">
+                {currency.balance.toLocaleString()} coins. Cosmetic only — the same climb on
+                every one of them.
+              </p>
+              <div className="grid grid-cols-1 gap-1.5">
+                {/* Its swatch is whichever wall it resolves to today, so the
+                    row is not a blank square beside eight coloured ones. */}
+                <WallRow
+                  name="Automatic"
+                  blurb="The best wall your altimeter has opened, and recovery skies on a rest day."
+                  palette={wallFor(null, access).palette}
+                  open
+                  selected={chosenWall === null}
+                  onPick={() => void chooseWall(null)}
+                />
+                {WALLS.map((w) => {
+                  const open = unlocked(w, access);
+                  const buyable =
+                    !open && w.price !== undefined && currency.balance >= w.price;
                   return (
-                    <li key={wall.id} className={on ? '' : 'opacity-50'}>
-                      {on ? '✓ ' : '· '}
-                      {wall.name}
-                      {wall.feet > 0 && (
-                        <span className="text-ink-soft">
-                          {' '}· {formatHeight(wall.feet, units)} on the altimeter
-                        </span>
-                      )}
-                    </li>
+                    <WallRow
+                      key={w.id}
+                      name={w.name}
+                      blurb={open ? w.blurb : lockNote(w, units)}
+                      palette={w.palette}
+                      open={open}
+                      buyable={buyable}
+                      selected={chosenWall === w.id}
+                      onPick={() => {
+                        if (open) void chooseWall(w.id);
+                        else if (buyable) {
+                          void buyWall(w, currency.balance).then((bought) => {
+                            if (bought) void chooseWall(w.id);
+                          });
+                        }
+                      }}
+                    />
                   );
                 })}
-                <li className={derived.restedToday ? '' : 'opacity-50'}>
-                  {derived.restedToday ? '✓ ' : '· '}Recovery skies
-                  <span className="text-ink-soft"> · on a logged rest day</span>
-                </li>
-              </ul>
+              </div>
             </Card>
 
             {/* Every stat, with its number, whether it is doing anything

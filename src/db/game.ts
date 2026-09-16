@@ -45,6 +45,16 @@ export interface Wallet {
    * it happened. It rides in the `game` store, so it is in the backup.
    */
   owned?: string[];
+  /**
+   * Wall ids bought for the Ascent (PLAN.md M227).
+   *
+   * Its own list rather than more entries in `owned`, because three walls
+   * and three kits share a name — Granite, Sandstone and Alpine — and one
+   * bucket would have buying a kit hand you a wall.
+   */
+  walls?: string[];
+  /** The wall chosen for the Ascent, or absent for the automatic one. */
+  wall?: string | null;
 }
 
 /** The best run on one day's wall, as the app recorded it (PLAN.md M96). */
@@ -305,7 +315,15 @@ export async function getWallet(): Promise<Wallet> {
   const record = await db.get('game', WALLET_KEY);
   const wallet = record?.value as Wallet | undefined;
   // A wallet written before kits could be bought has no `owned` at all.
-  return { spent: wallet?.spent ?? 0, owned: wallet?.owned ?? [] };
+  return {
+    spent: wallet?.spent ?? 0,
+    owned: wallet?.owned ?? [],
+    walls: wallet?.walls ?? [],
+    // A string or nothing: a wallet restored from a backup file holds
+    // whatever the file held, and `wallFor` falls back rather than refusing
+    // to draw — but the shape has to survive the trip first.
+    wall: typeof wallet?.wall === 'string' ? wallet.wall : null,
+  };
 }
 
 export async function putWallet(wallet: Wallet): Promise<Wallet> {

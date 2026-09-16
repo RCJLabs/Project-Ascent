@@ -81,6 +81,10 @@ export interface GameState {
    * is already owned — a caller that asks twice must not be charged twice.
    */
   buy: (outfit: { name: string; price?: number }, balance: number) => Promise<boolean>;
+  /** The same, for an Ascent wall. See `buyInto`. */
+  buyWall: (wall: { id: string; price?: number }, balance: number) => Promise<boolean>;
+  /** Pin a wall, or `null` for the one the altimeter picks. */
+  chooseWall: (id: string | null) => Promise<void>;
 }
 
 /** Focus mechanic, same shape as the project cap. */
@@ -90,7 +94,7 @@ export const useGame = create<GameState>((set, get) => ({
   hydrated: false,
   ledger: [],
   bounties: [],
-  wallet: { spent: 0 },
+  wallet: { spent: 0, owned: [], walls: [], wall: null },
   ascent: EMPTY_ASCENT,
 
   load: async () => {
@@ -211,20 +215,53 @@ export const useGame = create<GameState>((set, get) => ({
    * coins gone and the kit unowned. A second way to move the same number,
    * with no caller and no such guarantee, was a hole waiting for a caller.
    */
-  buy: async (outfit, balance) => {
-    const price = outfit.price;
-    if (price === undefined || price <= 0) return false;
+  buy: async (outfit, balance) => buyInto(get, set, 'owned', outfit.name, outfit.price, balance),
+
+  /**
+   * The same purchase, into the other bucket (PLAN.md M227).
+   *
+   * Three walls and three kits share a name — Granite, Sandstone, Alpine —
+   * so one list would have buying a kit hand you a wall and the other way
+   * round. Two lists, one code path.
+   */
+  buyWall: async (w, balance) => buyInto(get, set, 'walls', w.id, w.price, balance),
+
+  chooseWall: async (id) => {
     const current = get().wallet;
-    const owned = current.owned ?? [];
-    if (owned.includes(outfit.name)) return false;
-    if (balance < price) return false;
-    // One write, so a purchase cannot leave the coins gone and the kit
-    // unowned, or the other way round.
-    const wallet = await putWallet({ spent: current.spent + price, owned: [...owned, outfit.name] });
-    set({ wallet });
-    return true;
+    set({ wallet: await putWallet({ ...current, wall: id }) });
   },
 }));
+
+/**
+ * One purchase, into whichever list the thing belongs in.
+ *
+ * `...current` matters more than it looks: the wallet is one record, and
+ * writing it back from the two fields a kit cares about would have dropped
+ * the walls and the chosen wall on every kit bought.
+ */
+async function buyInto(
+  get: () => GameState,
+  set: (partial: Partial<GameState>) => void,
+  bucket: 'owned' | 'walls',
+  name: string,
+  price: number | undefined,
+  balance: number,
+): Promise<boolean> {
+  if (price === undefined || price <= 0) return false;
+  const current = get().wallet;
+  const have = current[bucket] ?? [];
+  if (have.includes(name)) return false;
+  if (balance < price) return false;
+  // One write, so a purchase cannot leave the coins gone and the thing
+  // unowned, or the other way round.
+  const wallet = await putWallet({
+    ...current,
+    spent: current.spent + price,
+    [bucket]: [...have, name],
+  });
+  set({ wallet });
+  return true;
+}
 
 /**
  * The climber's XP, folded from everything that earned it.
@@ -255,6 +292,15 @@ export function useXp(): XpState {
 /** Kits this climber has bought. */
 export function useOwned(): string[] {
   return useGame((s) => s.wallet.owned ?? EMPTY_OWNED);
+}
+
+/** The Ascent walls bought, and the one pinned (PLAN.md M227). */
+export function useOwnedWalls(): string[] {
+  return useGame((s) => s.wallet.walls ?? EMPTY_OWNED);
+}
+
+export function useChosenWall(): string | null {
+  return useGame((s) => s.wallet.wall ?? null);
 }
 
 const EMPTY_OWNED: string[] = [];

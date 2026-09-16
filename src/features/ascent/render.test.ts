@@ -3,39 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { CLIMBER, VIEW } from '@/engine/ascent/config';
 import { createRun } from '@/engine/ascent/game';
 import { deriveAvatar } from '@/engine/avatar';
-import {
-  THEME_UNLOCKS,
-  WALL_THEMES,
-  buildWall,
-  edgeProfile,
-  facetLight,
-  render,
-  rockOutline,
-  themeForHeight,
-} from './render';
+import { wall } from '@/engine/ascent/walls';
+import { buildWall, edgeProfile, facetLight, render, rockOutline } from './render';
 
-describe('wall themes', () => {
-  it('unlock by height, keeping the best one earned', () => {
-    expect(themeForHeight(0, false)).toBe(WALL_THEMES.granite);
-    expect(themeForHeight(2_899, false)).toBe(WALL_THEMES.granite);
-    expect(themeForHeight(2_900, false)).toBe(WALL_THEMES.sandstone);
-    expect(themeForHeight(500_000, false)).toBe(WALL_THEMES.alpine);
-  });
-
-  it('give a rest day its own sky, whatever you have unlocked', () => {
-    expect(themeForHeight(0, true)).toBe(WALL_THEMES.recovery);
-    expect(themeForHeight(500_000, true)).toBe(WALL_THEMES.recovery);
-  });
-
-  it('are all complete palettes, so no colour is ever undefined', () => {
-    const keys = Object.keys(WALL_THEMES.granite!);
-    for (const [name, palette] of Object.entries(WALL_THEMES)) {
-      expect(Object.keys(palette).sort(), name).toEqual(keys.sort());
-      for (const value of Object.values(palette)) expect(value, name).toBeTruthy();
-    }
-    for (const unlock of THEME_UNLOCKS) expect(WALL_THEMES[unlock.id], unlock.id).toBeDefined();
-  });
-});
+// The wall palettes and the rules for having one moved to
+// `engine/ascent/walls.ts` at M227, and so did the tests that were here.
 
 describe('the wall pattern', () => {
   it('is the same for one seed and different for another', () => {
@@ -236,7 +208,7 @@ function stubCtx() {
 
 describe('the ghost on the wall', () => {
   const options = {
-    palette: WALL_THEMES.granite!,
+    palette: wall('granite')!.palette,
     wall: buildWall(9),
     avatar: deriveAvatar({ level: 3, vitality: 'fresh', feet: 0 }),
     scale: 1,
@@ -318,7 +290,7 @@ describe('the ghost on the wall', () => {
 
 describe('which way the climber faces', () => {
   const options = {
-    palette: WALL_THEMES.granite!,
+    palette: wall('granite')!.palette,
     wall: buildWall(9),
     avatar: deriveAvatar({ level: 3, vitality: 'fresh', feet: 0 }),
     scale: 1,
