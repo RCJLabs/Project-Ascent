@@ -59,7 +59,6 @@ export const EFFORT: Record<SkillRequirement['kind'], number> = {
   'projects-sent': 8,
   'rest-days': 0.5,
   height: 0.009,
-  level: 4,
   stat: 5,
   metric: 60,
   'metric-under': 60,

@@ -159,7 +159,6 @@ describe('the words', () => {
   it('gives every unmet requirement kind something to say', () => {
     const input = inputOf([]);
     const samples: SkillRequirement[] = [
-      { kind: 'level', level: 5 },
       { kind: 'sessions', count: 10 },
       { kind: 'hours', hours: 20 },
       { kind: 'sends', scale: 'V', grade: 'V5', count: 3 },

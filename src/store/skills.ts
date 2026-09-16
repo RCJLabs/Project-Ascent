@@ -5,7 +5,6 @@ import { deriveClimberState } from '@/engine/derive';
 import { nextUnlock, type NextUnlock } from '@/engine/nextUnlock';
 import { evaluateSkills, type SkillState } from '@/engine/skills';
 import { deriveStats } from '@/engine/stats';
-import { useXp } from './game';
 import { useMetrics } from './metrics';
 import { useProjects } from './projects';
 import { useSessions, allSessions } from './sessions';
@@ -22,7 +21,6 @@ export function useSkills(): SkillState {
   const byDate = useSessions((s) => s.byDate);
   const metrics = useMetrics((s) => s.entries);
   const projects = useProjects((s) => s.projects);
-  const xp = useXp();
   const display = useSettings((s) => s.display);
 
   return useMemo(() => {
@@ -33,11 +31,10 @@ export function useSkills(): SkillState {
       stats: deriveStats({ state, metrics, projects }),
       metrics,
       projects,
-      level: xp.progress.level,
       feet: deriveAltimeter(sessions).feet,
       display,
     });
-  }, [byDate, metrics, projects, xp.progress.level, display]);
+  }, [byDate, metrics, projects, display]);
 }
 
 /**

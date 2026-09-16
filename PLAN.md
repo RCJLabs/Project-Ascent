@@ -13289,3 +13289,73 @@ rows survive, and the gate stays shut.
 **Budget** 137.00 → **137.29**. That is 0.29KB of guards on the boot path, and it is the price of
 the store that opens the game not trusting a file it did not write. `db/game.ts` is read before
 anything renders; there is nowhere cheaper to put this. **5,969 tests pass, up from 5,957.**
+
+## M222 — the requirement vocabulary a climber could not speak
+
+**The proposal was right about two kinds and missed three more.** It said `level` and
+`metric-under` were supported by the engine and authored by nothing. True — and the table is worse
+than that. Of the **fifteen** kinds `SkillRequirement` declared:
+
+- Ten were authored in the skill trees **and** offerable by hand.
+- **`height`, `metric` and `stat`** were used freely by the trees and offerable by nobody.
+- **`level` and `metric-under`** were reachable from neither.
+
+So an objective could ask for sixty sessions and could not ask for a number on a hangboard, on the
+one screen whose whole claim is that it tracks *"what has to be true before it is realistic,
+measured from the log rather than declared"*. The gap was written into the code and left there:
+the editor's switch ended `default: // Level, height, metric and stat requirements … have no
+sensible editor here yet`. A tree-granted requirement — or one of M207's demo objectives — rendered
+with nothing to change.
+
+### `level` is gone, and it is a rule rather than a tidy-up
+
+It measured the climber's **XP level**, which the game lane pays into. An objective or a skill node
+gated on it would make *playing the arcade* a prerequisite for a climbing goal — M218's wall,
+training feeds the game and the game never feeds training, pointed the wrong way.
+
+**Deleting it severed the only connection**, and the compiler proved it: `SkillInput.level` had two
+suppliers and one reader, and with the reader gone both `useSkills` and `useSkillInput` stopped
+needing `useXp()` at all. The requirement evaluator no longer touches the game store.
+
+### A benchmark is one idea read in two directions
+
+`metric` and `metric-under` are not two things to make a climber choose between. `METRICS` already
+knows which way each one improves — `min_edge` and `toe_touch` are the two of thirty-seven where a
+smaller number is a better one — so picking the metric picks the direction. `benchmarkFor` lives in
+`engine/objectives.ts` and the picker offers one **A benchmark** option; choosing *Min Edge
+Achievable* turns the requirement into a `metric-under` on the spot.
+
+**That forced the editor to take a whole requirement rather than a patch.** A patch cannot change a
+`kind`, and merging one over the other leaves a stale `atLeast` beside the new `atMost` — a
+requirement that means two things. It also retired six `as Partial<SkillRequirement>` casts: inside
+a `case` the compiler already knows the shape, and the switch is exhaustive now with no `default`
+to fall through.
+
+### The rule, and what the battery had to teach it
+
+`requirements.test.tsx` reads the kinds **off the type** and fails if one exists that nothing can
+author, or that has no editor, or that the game pays into. It is `wired.test.ts`'s rule and M199's,
+arriving at the vocabulary they both skipped.
+
+**Its first version passed over thirteen of fourteen kinds.** It sliced the union to the first `;`
+— and each member has one of its own, inside the braces, so it parsed exactly one and every rule
+was true of nothing. Caught by its own control, which is what the control is for. It counts to
+fourteen explicitly now.
+
+**And three source rules are not behaviour.** The battery changed the benchmark's metric through a
+patch and every sweep in the file still passed, because a `metric` requirement keeping `atLeast`
+while showing *Min Edge* asks for **at least twelve millimetres of edge** — backwards, and
+invisible to a grep. Editing the *number* on a downward metric had the same hole. There are page
+tests driving the select and the input now.
+
+**Thirteen mutants, twelve killed, and one is the compiler's rather than a test's**: deleting a
+`case` from the editor cannot survive `tsc`, because the switch has no `default` to return through
+— which is the point of removing it. Both sanity no-ops survived. Four of the first pass's results
+were malformed mutants of mine.
+
+**In a browser, both themes, 430px and 1280px**, on the sample climber: the benchmark editor exists
+where there was nothing, switching it to *Min Edge Achievable* rewrites the row to *"Get Min Edge
+Achievable to 52 or under"* with the unit beside the number, and the picker offers all fourteen.
+No page errors.
+
+**Budget** 137.29 → **137.30**. **5,980 tests pass, up from 5,969.**

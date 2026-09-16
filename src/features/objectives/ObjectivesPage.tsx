@@ -18,7 +18,6 @@ import {
   type ObjectiveKind,
 } from '@/engine/objectives';
 import type { SkillInput } from '@/engine/skills';
-import { useXp } from '@/store/game';
 import { useMetrics } from '@/store/metrics';
 import { useObjectives } from '@/store/objectives';
 import { useProjects } from '@/store/projects';
@@ -47,7 +46,6 @@ export function useSkillInput(): SkillInput {
   const byDate = useSessions((s) => s.byDate);
   const metrics = useMetrics((s) => s.entries);
   const projects = useProjects((s) => s.projects);
-  const xp = useXp();
   const display = useSettings((s) => s.display);
 
   return useMemo(() => {
@@ -58,11 +56,10 @@ export function useSkillInput(): SkillInput {
       stats: deriveStats({ state, metrics, projects }),
       metrics,
       projects,
-      level: xp.progress.level,
       feet: deriveAltimeter(sessions).feet,
       display,
     };
-  }, [byDate, metrics, projects, xp.progress.level, display]);
+  }, [byDate, metrics, projects, display]);
 }
 
 export function ObjectivesPage() {

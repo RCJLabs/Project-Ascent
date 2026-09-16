@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ArrowRight, CircleCheck, Plus, Target, Trash2 } from 'lucide-react';
 import { DRILL_CATEGORIES } from '@/content/drills';
+import { METRICS } from '@/content/metrics';
+import type { MetricId } from '@/content/types';
+import { benchmarkFor } from '@/engine/objectives';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
 import { fromKey, today } from '@/engine/dates';
 import {
@@ -14,6 +17,7 @@ import {
   type ObjectiveStatus,
 } from '@/engine/objectives';
 import type { SkillRequirement } from '@/engine/skills';
+import { STAT_LABELS, type StatId } from '@/engine/stats';
 import { WEEK_LABEL, describePeak, keepsFitness, peakPlan, type PeakPlan } from '@/engine/peak';
 import { loadTrend } from '@/engine/loadTrend';
 import { getProgram } from '@/content/programs';
@@ -91,7 +95,16 @@ const STATUSES: { value: ObjectiveStatus; label: string }[] = [
   { value: 'shelved', label: 'Shelved' },
 ];
 
-/** The requirement kinds worth offering by hand, with sensible starting values. */
+/**
+ * The requirement kinds worth offering by hand, with sensible starting values.
+ *
+ * **All fourteen of them, since M222.** Ten were here; the skill trees used
+ * `metric`, `stat` and `height` freely and a climber could not, so an
+ * objective could ask for sixty sessions and not for a number on a
+ * hangboard — on a screen whose whole claim is that it is *"tracked by what
+ * has to be true before it is realistic"*. `requirements.test.ts` now fails
+ * if a kind exists that nothing can author.
+ */
 const ADDABLE: { label: string; make: () => SkillRequirement }[] = [
   { label: 'Sends at a grade', make: () => ({ kind: 'sends', scale: 'V', grade: 'V5', count: 10 }) },
   { label: 'Clean first goes', make: () => ({ kind: 'style-sends', style: 'flash', count: 10 }) },
@@ -103,6 +116,9 @@ const ADDABLE: { label: string; make: () => SkillRequirement }[] = [
   { label: 'Rest days logged', make: () => ({ kind: 'rest-days', count: 20 }) },
   { label: 'Grade variety', make: () => ({ kind: 'grade-variety', count: 6 }) },
   { label: 'Drills of a kind', make: () => ({ kind: 'drills', category: 'technique', count: 10 }) },
+  { label: 'A benchmark', make: () => benchmarkFor('max_hang_20mm_7s', 30) },
+  { label: 'A stat', make: () => ({ kind: 'stat', stat: 'STR', atLeast: 60 }) },
+  { label: 'Feet on the altimeter', make: () => ({ kind: 'height', feet: 29_032 }) },
 ];
 
 export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
@@ -258,7 +274,7 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
                   onChange={(next) =>
                     edit({
                       requirements: objective.requirements.map((r) =>
-                        r.id === m.id ? { ...r, requirement: { ...r.requirement, ...next } as SkillRequirement } : r,
+                        r.id === m.id ? { ...r, requirement: next } : r,
                       ),
                     })
                   }
@@ -376,24 +392,33 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
   );
 }
 
-/** The one or two numbers a requirement actually has. */
+/**
+ * The one or two values a requirement actually has.
+ *
+ * Takes and returns a **whole** `SkillRequirement` rather than a patch
+ * (PLAN.md M222). A patch cannot change a requirement's `kind`, and the
+ * benchmark editor has to: picking `min_edge` turns a `metric` into a
+ * `metric-under`, and merging the two would leave a stale `atLeast` beside
+ * the new `atMost`. It also retires six `as Partial<SkillRequirement>`
+ * casts — inside a `case` the compiler already knows which shape it has.
+ */
 function RequirementFields({
   requirement,
   onChange,
 }: {
   requirement: SkillRequirement;
-  onChange: (patch: Partial<SkillRequirement>) => void;
+  onChange: (next: SkillRequirement) => void;
 }) {
   const gradeOptions = useGradeOptions();
   const small = 'bg-surface w-20';
   const wide = 'bg-surface flex-1 min-w-0';
-  const number = (value: number, label: string, key: string) => (
+  const number = (value: number, label: string, make: (n: number) => SkillRequirement, min = 1) => (
     <Input
       type="number"
-      min={1}
+      min={min}
       value={value}
       aria-label={label}
-      onChange={(e) => onChange({ [key]: Math.max(1, Number(e.target.value) || 1) } as Partial<SkillRequirement>)}
+      onChange={(e) => onChange(make(Math.max(min, Number(e.target.value) || min)))}
       size="compact"
       className={small}
     />
@@ -404,12 +429,12 @@ function RequirementFields({
       const ladder = requirement.scale === 'V' ? V_GRADES : YDS_GRADES;
       return (
         <div className="flex flex-wrap items-center gap-2 mt-2 pl-6">
-          {number(requirement.count, 'How many sends', 'count')}
+          {number(requirement.count, 'How many sends', (count) => ({ ...requirement, count }))}
           <span className="text-xs text-ink-soft">at</span>
           <Select
             value={requirement.grade}
             aria-label="Grade"
-            onChange={(e) => onChange({ grade: e.target.value } as Partial<SkillRequirement>)}
+            onChange={(e) => onChange({ ...requirement, grade: e.target.value })}
             size="compact"
             className={wide}
           >
@@ -425,11 +450,13 @@ function RequirementFields({
     case 'drills':
       return (
         <div className="flex flex-wrap items-center gap-2 mt-2 pl-6">
-          {number(requirement.count, 'How many drills', 'count')}
+          {number(requirement.count, 'How many drills', (count) => ({ ...requirement, count }))}
           <Select
             value={requirement.category}
             aria-label="Drill category"
-            onChange={(e) => onChange({ category: e.target.value } as Partial<SkillRequirement>)}
+            onChange={(e) =>
+              onChange({ ...requirement, category: e.target.value as typeof requirement.category })
+            }
             size="compact"
             className={wide}
           >
@@ -441,21 +468,84 @@ function RequirementFields({
           </Select>
         </div>
       );
+    case 'metric':
+    case 'metric-under': {
+      // One editor for both, because they are one idea read in two
+      // directions — and the metric decides which (PLAN.md M222).
+      const value = requirement.kind === 'metric' ? requirement.atLeast : requirement.atMost;
+      const metric = METRICS[requirement.metricId]!;
+      return (
+        <div className="flex flex-wrap items-center gap-2 mt-2 pl-6">
+          {number(value, metric.higherIsBetter ? 'At least' : 'At most', (n) =>
+            benchmarkFor(requirement.metricId, n),
+          )}
+          <span className="text-xs text-ink-soft">{metric.unit}</span>
+          <Select
+            value={requirement.metricId}
+            aria-label="Benchmark"
+            onChange={(e) => onChange(benchmarkFor(e.target.value as MetricId, value))}
+            size="compact"
+            className={wide}
+          >
+            {Object.values(METRICS).map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+      );
+    }
+    case 'stat':
+      return (
+        <div className="flex flex-wrap items-center gap-2 mt-2 pl-6">
+          {number(requirement.atLeast, 'At least', (atLeast) => ({ ...requirement, atLeast }))}
+          <span className="text-xs text-ink-soft">on</span>
+          <Select
+            value={requirement.stat}
+            aria-label="Stat"
+            onChange={(e) => onChange({ ...requirement, stat: e.target.value as StatId })}
+            size="compact"
+            className={wide}
+          >
+            {Object.entries(STAT_LABELS).map(([id, meta]) => (
+              <option key={id} value={id}>
+                {meta.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+      );
+    case 'height':
+      return (
+        <div className="flex flex-wrap items-center gap-2 mt-2 pl-6">
+          {number(requirement.feet, 'Feet', (feet) => ({ ...requirement, feet }))}
+          <span className="text-xs text-ink-soft">ft on the altimeter</span>
+        </div>
+      );
     case 'hours':
-      return <div className="mt-2 pl-6">{number(requirement.hours, 'Hours', 'hours')}</div>;
+      return (
+        <div className="mt-2 pl-6">
+          {number(requirement.hours, 'Hours', (hours) => ({ ...requirement, hours }))}
+        </div>
+      );
     case 'streak-weeks':
-      return <div className="mt-2 pl-6">{number(requirement.weeks, 'Weeks', 'weeks')}</div>;
+      return (
+        <div className="mt-2 pl-6">
+          {number(requirement.weeks, 'Weeks', (weeks) => ({ ...requirement, weeks }))}
+        </div>
+      );
     case 'sessions':
     case 'style-sends':
     case 'grade-variety':
     case 'outdoor-days':
     case 'projects-sent':
     case 'rest-days':
-      return <div className="mt-2 pl-6">{number(requirement.count, 'How many', 'count')}</div>;
-    default:
-      // Level, height, metric and stat requirements come from the skill
-      // trees' vocabulary and have no sensible editor here yet.
-      return null;
+      return (
+        <div className="mt-2 pl-6">
+          {number(requirement.count, 'How many', (count) => ({ ...requirement, count }))}
+        </div>
+      );
   }
 }
 

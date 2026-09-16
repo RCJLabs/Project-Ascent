@@ -133,13 +133,11 @@ describe('measuring a requirement', () => {
     expect(m).toMatchObject({ current: 1, target: 1, met: true });
   });
 
-  it('reads level, height and projects from what it is given', () => {
+  it('reads height and projects from what it is given', () => {
     const input = inputOf(sessions, {
-      level: 40,
       feet: 30_000,
       projects: [newProject({ id: 'p', name: 'p', grade: 'V5', scale: 'V', status: 'sent' })],
     });
-    expect(measure({ kind: 'level', level: 40 }, input).met).toBe(true);
     expect(measure({ kind: 'height', feet: 29_032 }, input).met).toBe(true);
     expect(measure({ kind: 'projects-sent', count: 1 }, input).met).toBe(true);
   });

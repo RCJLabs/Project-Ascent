@@ -23,8 +23,18 @@ import type { Stat, StatId } from './stats';
 
 export type TreeId = 'power' | 'tension' | 'endurance' | 'technique' | 'grit';
 
+/**
+ * What has to be true, in fifteen — now fourteen — kinds.
+ *
+ * **`level` was here and is gone (PLAN.md M222).** It measured the climber's
+ * XP level, which the game lane pays into: an objective or a skill node
+ * gated on it would make *playing the arcade* a prerequisite for a climbing
+ * goal. That is the wall M218 defended — training feeds the game, the game
+ * never feeds training — pointed the wrong way. No node authored one and the
+ * objective editor never offered one, so nothing had to be migrated; it was
+ * a door left open for four hundred milestones and never walked through.
+ */
 export type SkillRequirement =
-  | { kind: 'level'; level: number }
   | { kind: 'sessions'; count: number }
   | { kind: 'hours'; hours: number }
   | { kind: 'sends'; scale: GradeScale; grade: string; count: number }
@@ -81,7 +91,6 @@ export interface SkillInput {
   stats?: Record<StatId, Stat>;
   metrics?: MetricEntry[];
   projects?: Project[];
-  level?: number;
   feet?: number;
   /** Notation to write grades in. Defaults to the stored ladders. */
   display?: GradeDisplay;
@@ -146,13 +155,6 @@ export function measure(requirement: SkillRequirement, input: SkillInput): Measu
   };
 
   switch (requirement.kind) {
-    case 'level':
-      return done(
-        input.level ?? 0,
-        requirement.level,
-        `Reach level ${requirement.level}`,
-        (n) => `${n} more ${plural(n, 'level')}`,
-      );
     case 'sessions':
       return done(
         s.completedSessions,

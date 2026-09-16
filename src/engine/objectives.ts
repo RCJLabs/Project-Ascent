@@ -34,10 +34,26 @@
  * paying them to tick a return-to-climbing box.
  */
 
-import type { ProgramId } from '@/content/types';
+import { METRICS } from '@/content/metrics';
+import type { MetricId, ProgramId } from '@/content/types';
 import type { GradeScale } from './grades';
 import { measure, type Measurement, type SkillInput, type SkillRequirement } from './skills';
 import { daysBetween, today as todayKey } from './dates';
+
+/**
+ * A benchmark requirement, pointed the way that benchmark improves.
+ *
+ * `metric` and `metric-under` are the same idea read in two directions, and
+ * which one a requirement needs is not a question worth asking a climber:
+ * `METRICS` already knows, because `min_edge` and `toe_touch` are the two of
+ * thirty-seven where a smaller number is a better one. Picking the metric
+ * picks the direction (PLAN.md M222).
+ */
+export function benchmarkFor(metricId: MetricId, value: number): SkillRequirement {
+  return METRICS[metricId]!.higherIsBetter
+    ? { kind: 'metric', metricId, atLeast: value }
+    : { kind: 'metric-under', metricId, atMost: value };
+}
 
 export type ObjectiveStatus = 'planning' | 'training' | 'sent' | 'shelved';
 export type ObjectiveKind = 'boulder' | 'route' | 'trip' | 'other';
