@@ -20,6 +20,7 @@ import { DEFAULT_DISPLAY, displayRange, gradeOrdinal, type GradeDisplay, type Gr
 import { PROGRAMS } from '@/content/programs';
 import { getMetric } from '@/content/metrics';
 import { MIN_ADAPTED_WEEKS } from './adapt';
+import { KIT_NAMES } from './kit';
 import { describeWork, programSessionLengths, type WorkEstimate } from './sessionLength';
 import type { Discipline, Equipment, MetricId, Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
@@ -314,8 +315,16 @@ function meetsPrerequisite(
 }
 
 /** The word a climber would use, not the enum. */
+/**
+ * What to call a kit in a blocker (PLAN.md M236).
+ *
+ * This was `kit === 'weight' ? 'a way to add weight' : kit` — a phrase for
+ * one of the six and the raw enum for the rest, so the sentence read *"Needs
+ * hangboard you do not have access to"* while Settings called the same thing
+ * a **Hangboard**. One table now, in `engine/kit.ts`, which both read.
+ */
 function equipmentWord(kit: Equipment): string {
-  return kit === 'weight' ? 'a way to add weight' : kit;
+  return KIT_NAMES[kit].word;
 }
 
 function gradeIn(scale: GradeScale, grade: string | undefined, min: string, max: string): 'below' | 'in' | 'above' | null {

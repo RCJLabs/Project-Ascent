@@ -18,8 +18,10 @@ import { eraseEverything } from '@/db/erase';
 import { hasDemo } from '@/db/demoFlag';
 import { takeLaunchFile } from '@/lib/launchFile';
 import { getProgram } from '@/content/programs';
+import { KIT_CHIPS, KIT_NAMES, kitOffer, unclaimedKit } from '@/engine/kit';
 import { layoutsFor, planFromLayout } from '@/engine/scheduler';
 import { useSessions, allSessions } from '@/store/sessions';
+import { useMetrics } from '@/store/metrics';
 import { mediaBytes } from '@/db/media';
 import type { Equipment } from '@/content/types';
 import { displayGrade } from '@/engine/grades';
@@ -36,7 +38,7 @@ import { Button } from '@/ui/Button';
 import { announce } from '@/ui/Announce';
 import { Card } from '@/ui/Card';
 import { Meter } from '@/ui/Meter';
-import { Palette } from 'lucide-react';
+import { Palette, Plus } from 'lucide-react';
 import { CHIP_LINK, Chip, SelectableCard } from '@/ui/Chip';
 import { getTheme } from '@/ui/themes';
 import { PageGrid, Wide } from '@/ui/PageGrid';
@@ -50,13 +52,20 @@ import { describeProblem } from '@/engine/dataHealth';
 import { downloadFile } from '@/lib/download';
 import { offerUndo } from '@/store/undo';
 
-const GEAR: { value: Equipment; label: string }[] = [
-  { value: 'wall', label: 'Climbing wall' },
-  { value: 'hangboard', label: 'Hangboard' },
-  { value: 'campus', label: 'Campus board' },
-  { value: 'gym', label: 'Weights & bands' },
-  { value: 'weight', label: 'Added weight' },
-];
+/**
+ * The five, read from `engine/kit.ts` rather than authored again here
+ * (PLAN.md M236).
+ *
+ * These labels were inline, and `finder.ts` had its own one-line version that
+ * returns the raw enum — so the same board was a *Hangboard* on this screen
+ * and a `hangboard` in *"Needs a hangboard you do not have access to"*. One
+ * table now, and the offer below is written in the same words as the chips
+ * it is offering to turn on.
+ */
+const GEAR: { value: Equipment; label: string }[] = KIT_CHIPS.map((value) => ({
+  value,
+  label: KIT_NAMES[value].chip!,
+}));
 
 /** Enough rungs to tell the two notations apart at a glance. */
 const V_SAMPLE = ['V2', 'V5', 'V9'] as const;
@@ -610,6 +619,7 @@ export function SettingsPage() {
               );
             })}
           </div>
+          <KitFromTheLog declared={equipment} onAdd={setEquipment} />
         </Card>
 
         <TemplatesCard />
@@ -1054,5 +1064,65 @@ function StorageCard({
           : 'Caching the app for offline use. Once this finishes it works with no network at all.'}
       </p>
     </Card>
+  );
+}
+
+/**
+ * What the log says the kit list is missing (PLAN.md M236).
+ *
+ * The climber answered this once and the app never looked again — while
+ * scheduling their hangboard program, charting their max hangs and telling
+ * them in the finder that five of the thirteen programs need a board they do
+ * not have access to.
+ *
+ * It offers and never decides. The evidence is a sentence a climber can
+ * check against their own memory, the button is the only thing that writes,
+ * and nothing here fires on the reverse case: a board you own and have not
+ * touched in a year is still a board you own.
+ */
+function KitFromTheLog({
+  declared,
+  onAdd,
+}: {
+  declared: Equipment[];
+  onAdd: (next: Equipment[]) => void;
+}) {
+  const byDate = useSessions((s) => s.byDate);
+  const metrics = useMetrics((s) => s.entries);
+  const activeProgramId = useProfile((s) => s.activeProgramId);
+
+  const evidence = useMemo(
+    () =>
+      unclaimedKit({
+        declared,
+        sessions: allSessions(byDate),
+        metrics,
+        program: activeProgramId ? getProgram(activeProgramId) : undefined,
+      }),
+    [declared, byDate, metrics, activeProgramId],
+  );
+
+  const offer = kitOffer(evidence);
+  if (offer === null) return null;
+
+  return (
+    <div className="mt-3 bg-sunken rounded-xl p-3">
+      <p className="text-sm font-semibold">{offer}</p>
+      <ul className="mt-1.5 grid grid-cols-1 gap-1">
+        {evidence.map((e) => (
+          <li key={e.kit} className="text-xs text-ink-soft leading-relaxed">
+            <span className="font-semibold text-ink">{KIT_NAMES[e.kit].chip}</span> — {e.why}
+          </li>
+        ))}
+      </ul>
+      <Button
+        size="sm"
+        variant="outline"
+        className="mt-2.5"
+        onClick={() => onAdd([...declared, ...evidence.map((e) => e.kit)])}
+      >
+        <Plus size={14} /> Add {evidence.length === 1 ? 'it' : 'them'}
+      </Button>
+    </div>
   );
 }

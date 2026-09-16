@@ -10,6 +10,7 @@ import {
   type Goal,
 } from './finder';
 import { PROGRAMS } from '@/content/programs';
+import { KIT_NAMES } from './kit';
 import type { MetricEntry } from '@/db/metrics';
 
 const ALL_GEAR: FinderInput['equipment'] = ['wall', 'hangboard', 'campus', 'gym'];
@@ -423,7 +424,13 @@ describe('finder', () => {
       const baseCamp = recommend(input({ goal: 'fundamentals', equipment: ['wall'] })).find(
         (r) => r.program.id === 'base_camp',
       )!;
-      expect(baseCamp.blockers.join(' ')).toContain('gym');
+      // `weights and bands` rather than `gym` since M236: the blocker used to
+      // print the raw enum for four of the six kits, so it read *"Needs gym
+      // you do not have access to"* while the chip that turns it on says
+      // **Weights & bands**. Both read `KIT_NAMES` now, which is also why
+      // this asserts the sentence a climber sees rather than the enum.
+      expect(baseCamp.blockers.join(' ')).toContain(KIT_NAMES.gym.word);
+      expect(baseCamp.blockers.join(' ')).toBe('Needs weights and bands you do not have access to');
     });
 
     /**

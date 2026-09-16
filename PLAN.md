@@ -13952,6 +13952,11 @@ which is the right shape.*
   and a `programSafety` engine, and rope retirement is the one piece of climbing safety that is a
   date and a count rather than a judgement call.
   *Medium, and the honest first question is whether it belongs in training software at all.*
+  ***Built, and the answer to that question was no — for the half the item named.*** *A rope's age
+  is a safety verdict an app has no business giving, and `programSafety` is a program-structure
+  validator rather than the safety engine the item takes it for. What was real: the app asks once
+  what you can train on and never looks again, while the default kit blocks five of the thirteen
+  programs. See the entry at the end of this document.*
 
 - **M237 — the log never records who you climbed with.** A `Climb` holds grade, scale, count,
   result, style, angle, rope style and a name. A `Session` holds mode, RPE, duration, drill,
@@ -14572,3 +14577,85 @@ unit systems: the coach reads *"Max Hang 20mm 7s improved: +10 BW+lbs"* with no 
 reads in the climber's own units, and the list reads **18.1 BW+kg** where it read 40 BW+lbs.
 
 **6,156 tests over 354 files.**
+
+
+## M236 — the app asks once what you can train on, and never looks again
+
+Two halves, and only one of them is training software.
+
+### The half that is refused
+
+Rope retirement, which the item calls *"the one piece of climbing safety that is a date and a count
+rather than a judgement call"*. It is not. Manufacturer and UIAA guidance gives a **maximum** age;
+what actually retires a rope is inspection — a core shot, a hard fall, sheath damage — and an app
+that answered *"four years left"* would be making a safety verdict from a date. This one opens by
+saying it is training software and not a clinician; a gear instance with a life on it is the first
+thing it would ever store that is not derived from a session, and the first number it published that
+a climber could be hurt by trusting.
+
+The item also reads `programSafety` as the engine gear would join. It is not that either — it is a
+*would a coach write this block* validator (deload spacing, finger gaps, rest days) and it is
+imported by exactly one file, the builder.
+
+### The half that is real, and measured
+
+`Equipment` is six capability strings, answered once, and **nothing has ever compared it to what the
+climber did.** The default is `['wall', 'gym']`, and:
+
+- **Five of the thirteen programs require a hangboard** — Gravity Defied, Lockdown, Iron Grip, Peak
+  Performance and The Siege, which is most of the serious finger work the app ships.
+- In `finder.ts` a missing requirement is a **blocker**, so those five sort last carrying *"Needs
+  hangboard you do not have access to"*.
+- `startProgram` has no kit check at all, so a climber can be **running Iron Grip** while the finder
+  tells them they have no board. The app will schedule its hangboard sessions and chart its max
+  hangs, and go on saying it.
+
+Every fresh install starts in that state, and the only way out is opening Settings and knowing to
+look.
+
+### The evidence is the app's own, never an inference
+
+`engine/kit.ts` reads three tables the app already authored for something else:
+
+- **The program being run.** `program.equipment` — the strongest statement a climber can make, and
+  one the app acted on.
+- **A benchmark recorded.** `BENCHMARKS` carries `requires` per prompt; it is how the onboarding
+  battery already hides a max hang from a climber with no board. The same field, read backwards.
+- **A drill completed.** `drill.equipment`, cleaned up at M39 so a tag means what the drill makes you
+  *do*. Only three of 156 declare a board, so it is the weakest of the three — measured, and kept
+  because it costs nothing.
+
+Four finger metrics the battery deliberately leaves out — repeaters, min edge, density hangs, dead
+hang — needed naming, and the rule that keeps that list from becoming a guess is that **every id in
+it must be a hang on an edge by the registry's own description**. That rule caught my own entry on
+its first run: `repeater_weight` reads *"Added weight used for 7/3 repeaters"* and never says edge.
+Widening the vocabulary to include `repeater` was a decision, and it is written into the test as one
+rather than quietly made.
+
+### It offers, and only a tap decides
+
+The climber may have moved gym or sold the board. So Settings shows the sentence and the evidence —
+*"Your log has you using a hangboard. **Hangboard** — You recorded a Max Hang 20mm 7s on Aug 11."* —
+and the button is the only thing that writes. One-directional too: *used and not declared* is worth
+raising, and *declared and not used* is a hangboard in a cupboard.
+
+### One table for what a kit is called
+
+Settings authored its five labels inline and `finder.ts` had a one-line `equipmentWord` returning the
+raw enum for four of six — so the same board was a **Hangboard** on one screen and *"Needs hangboard
+you do not have access to"* on the other. `KIT_NAMES` is the one table both read now, and the finder
+says *"Needs a hangboard"* in English.
+
+### Measured
+
+**15 of 15 mutants caught, sanity no-op survived.** Each evidence source removed in turn; kit offered
+that the climber already has; `none` offered as a thing to own; the weakest reason winning; the
+oldest reading cited; a skipped drill counted as done; the edge metrics dropped or one invented; the
+offer never rendered; the button writing nothing or the wrong kit; the chips and the finder each
+going back to their own copy of the labels.
+
+**135.73KB against a 136.9 ceiling.** Browser-verified in both themes at 430px and 1280px: the offer
+appears with its evidence, the tap writes the chip and the offer goes away. The finder's blocker was
+confirmed at the engine level — all five programs, verbatim — rather than by driving its wizard.
+
+**6,178 tests over 356 files.**
