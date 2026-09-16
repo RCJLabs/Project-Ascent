@@ -41,11 +41,28 @@ export function playableCanvas(): () => void {
       clock += 16;
       return setTimeout(() => cb(clock), 0) as unknown as number;
     });
+  /**
+   * And cancelling has to cancel, or the loop cannot be stopped.
+   *
+   * Frames are `setTimeout` handles here, so the real `cancelAnimationFrame`
+   * is handed a timer id it does not recognise and drops it — the run keeps
+   * stepping after the page unmounts, and the frame that lands *after* this
+   * helper is torn down draws into a canvas context that is a real jsdom one
+   * again. Which throws, outside any test, where it reads as three unhandled
+   * errors with no owner (PLAN.md M232).
+   *
+   * It went unnoticed because the runs before M232 all ended: a finished run
+   * returns from the loop without asking for another frame.
+   */
+  const cancel = vi
+    .spyOn(globalThis, 'cancelAnimationFrame')
+    .mockImplementation((handle: number) => clearTimeout(handle as unknown as NodeJS.Timeout));
   return () => {
     context.mockRestore();
     width.mockRestore();
     now.mockRestore();
     raf.mockRestore();
+    cancel.mockRestore();
     if (hadPath2D) (globalThis as { Path2D?: unknown }).Path2D = previousPath2D;
     else delete (globalThis as { Path2D?: unknown }).Path2D;
   };

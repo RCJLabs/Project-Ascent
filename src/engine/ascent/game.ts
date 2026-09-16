@@ -30,6 +30,7 @@ import {
 } from './config';
 import { applyBoons } from './boons';
 import { createRng, next, nextInt, pickWeighted, type Rng } from './rng';
+import { markCrossed, type Mark } from './marks';
 
 export type Mode = 'ascent' | 'freesolo';
 export type ObstacleKind = 'rock' | 'boulder' | 'debris';
@@ -95,6 +96,17 @@ export type RunEvent =
   | { kind: 'coin'; value: number }
   | { kind: 'powerup'; type: Exclude<PickupKind, 'coin'> }
   | { kind: 'hit'; absorbed: 'life' | 'save' }
+  /**
+   * A named climb passed, while the run is still going (PLAN.md M232).
+   *
+   * Raised here rather than worked out by the page, because the page sees
+   * one frame where the engine sees up to thirty ticks — a mark crossed and
+   * re-crossed inside a single resumed frame is a mark the page could only
+   * find by keeping its own copy of the distance, and a second copy of the
+   * distance is a second thing to get wrong. It is also the reason this is
+   * testable at all: an event is a thing `step` can be asked for.
+   */
+  | { kind: 'mark'; mark: Mark }
   | { kind: 'over' };
 
 export interface RunState {
@@ -303,8 +315,12 @@ function tick(state: RunState, dt: number): void {
   state.slowmoMs = Math.max(0, state.slowmoMs - dt);
   state.invulnMs = Math.max(0, state.invulnMs - dt);
 
+  const wasAt = state.distance;
   state.speed = currentSpeed(state);
   state.distance += state.speed * seconds;
+
+  const crossed = markCrossed(wasAt, state.distance);
+  if (crossed !== null) state.events.push({ kind: 'mark', mark: crossed });
 
   for (const entity of state.entities) {
     if (entity.fallRate > 0) entity.worldY -= state.speed * entity.fallRate * seconds;

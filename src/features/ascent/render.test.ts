@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { CLIMBER, VIEW } from '@/engine/ascent/config';
-import { createRun } from '@/engine/ascent/game';
+import { createRun, type RunState } from '@/engine/ascent/game';
+import { RUN_MARKS } from '@/engine/ascent/marks';
 import { deriveAvatar } from '@/engine/avatar';
 import { wall } from '@/engine/ascent/walls';
 import { buildWall, edgeProfile, facetLight, render, rockOutline } from './render';
@@ -318,5 +319,117 @@ describe('which way the climber faces', () => {
     // circle and it costs an arc. The number moved; what the rule is
     // watching for did not.
     expect(arcsPerClimber()).toBe(4);
+  });
+});
+
+/**
+ * The line across the wall (PLAN.md M232).
+ *
+ * The mark's *name* is announced in the page, so what belongs here is the
+ * line: that one is drawn where the climb sits, and that no line is drawn
+ * for a climb the run is nowhere near.
+ *
+ * It is found by its shape. The only perfectly horizontal full-width
+ * segments on the wall are these — the lane lines run vertically and the
+ * strata drop six pixels across the screen, which is what makes them read as
+ * strata in the first place.
+ */
+function horizontals(state: RunState): number[] {
+  const found: number[] = [];
+  let from: [number, number] | null = null;
+  const held: Record<string, unknown> = {};
+  const ctx = new Proxy(held, {
+    get(target, prop: string) {
+      if (prop in target) return target[prop];
+      return (...args: unknown[]) => {
+        if (prop === 'moveTo') from = [args[0] as number, args[1] as number];
+        else if (prop === 'lineTo' && from !== null) {
+          const [x0, y0] = from;
+          const [x1, y1] = [args[0] as number, args[1] as number];
+          if (x0 === 0 && x1 === VIEW.width && y0 === y1) found.push(y0);
+          from = null;
+        }
+        return prop === 'measureText' ? { width: 1 } : undefined;
+      };
+    },
+    set(target, prop: string, value: unknown) {
+      target[prop] = value;
+      return true;
+    },
+  }) as unknown as CanvasRenderingContext2D;
+
+  render(ctx, state, {
+    palette: wall('granite')!.palette,
+    wall: buildWall(9),
+    avatar: deriveAvatar({ level: 3, vitality: 'fresh', feet: 0 }),
+    scale: 1,
+  });
+  return found;
+}
+
+describe('the climbs marked on the wall', () => {
+  const first = RUN_MARKS[0]!;
+
+  it('draws nothing while the first climb is still out of sight', () => {
+    // A run at the start: the first mark is 1,524 px up and the screen shows
+    // 166 of them, so there is nothing to draw and no line to mistake for one.
+    expect(horizontals(createRun({ seed: 9 }))).toEqual([]);
+  });
+
+  it('draws the line where the climb sits', () => {
+    const run = createRun({ seed: 9 });
+    run.distance = first.px - 100;
+    // `screenY`'s own arithmetic: the climber is fixed at CLIMBER.y and the
+    // mark is 100 px above them, so the line lands 100 px higher up.
+    expect(horizontals(run)).toEqual([CLIMBER.y - 100]);
+  });
+
+  it('carries it down past the climber as the run goes on', () => {
+    const above = createRun({ seed: 9 });
+    above.distance = first.px - 200;
+    const past = createRun({ seed: 9 });
+    past.distance = first.px + 60;
+    expect(horizontals(above)[0]!).toBeLessThan(CLIMBER.y);
+    expect(horizontals(past)[0]!).toBeGreaterThan(CLIMBER.y);
+  });
+
+  /**
+   * Never two at once, and it is worth knowing rather than assuming.
+   *
+   * The closest pair on the ladder is Half Dome and El Capitan at 686 px, and
+   * the screen is 640 — so a frame can hold one line and no more. The drawer
+   * still loops, because that is a fact about the tuning and not about the
+   * code, and a retune that brought a pair inside a screen should draw both
+   * rather than pick one.
+   */
+  it('never has two on the wall at the same time', () => {
+    for (let d = 0; d < RUN_MARKS[3]!.px; d += 57) {
+      const run = createRun({ seed: 9 });
+      run.distance = d;
+      expect(horizontals(run).length, `${d} px`).toBeLessThanOrEqual(1);
+    }
+    const gaps = RUN_MARKS.slice(1).map((m, i) => m.px - RUN_MARKS[i]!.px);
+    expect(Math.min(...gaps)).toBeGreaterThan(VIEW.height);
+  });
+
+  /**
+   * And the stretches between are bare.
+   *
+   * The first draft put the run a screen above Half Dome and expected an
+   * empty wall; El Capitan was in view, 686 px up, and the test was wrong
+   * rather than the code. Between El Capitan and Mt. Washington there really
+   * is 2,202 px of nothing, which is where this asks.
+   */
+  it('leaves the wall bare between two climbs', () => {
+    const run = createRun({ seed: 9 });
+    run.distance = 3_000;
+    expect(horizontals(run)).toEqual([]);
+  });
+
+  /** A line only marks a climb while that climb is on the screen. */
+  it('takes the line away once the climb has gone by', () => {
+    const run = createRun({ seed: 9 });
+    run.distance = first.px + VIEW.height;
+    expect(horizontals(run)).not.toContain(CLIMBER.y - (first.px - run.distance));
   });
 });

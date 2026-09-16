@@ -26,6 +26,7 @@ import { dailySeed } from '@/engine/ascent/rng';
 import { describeEndings, readEndings } from '@/engine/ascent/endingsRead';
 import { describeBurns, describeClimb, restingFor } from '@/engine/ascent/resting';
 import { describeScale, runHeight } from '@/engine/ascent/scale';
+import { MARK_HOLD_MS, type Mark } from '@/engine/ascent/marks';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveAvatar } from '@/engine/avatar';
 import { gameAchievements, runEarned, type Achievement } from '@/engine/achievements';
@@ -145,6 +146,21 @@ export function AscentPage() {
    */
   const [runAchievement, setRunAchievement] = useState<Achievement | null>(null);
   const hadRef = useRef<boolean>(false);
+  /**
+   * The named climb the run has just passed (PLAN.md M232).
+   *
+   * The line is drawn on the wall by the renderer; the name is said here,
+   * where it can be read at a glance and by a screen reader rather than
+   * being painted at the simulation's resolution over the part of the screen
+   * the climber has to watch.
+   *
+   * The crossing itself is the engine's: `step` raises a `mark` event the
+   * way it raises a coin or a hit, because the engine sees every tick where
+   * this loop sees one frame of up to thirty. All that is left here is how
+   * long the name stays up.
+   */
+  const [passed, setPassed] = useState<Mark | null>(null);
+  const passedAtRef = useRef(0);
   const [newBest, setNewBest] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   /** The record to beat, read before the run so recordRun cannot move it. */
@@ -419,6 +435,9 @@ function WallRow({
       setFinished(null);
       setNewBest(false);
       setRunAchievement(null);
+      // A climb passed on the last run is not one passed on this one.
+      setPassed(null);
+      passedAtRef.current = 0;
       hadRef.current = gameAchievements(useGame.getState().ascent.days).some((a) => a.date !== null);
       setHud(EMPTY_HUD);
       setPhase('playing');
@@ -533,7 +552,22 @@ function WallRow({
         } else if (event.kind === 'hit') {
           if (event.absorbed === 'save') cueSave();
           else if (!run.over) cueHit();
+        } else if (event.kind === 'mark') {
+          // Last one wins, on the vanishing chance a resumed frame simulated
+          // two: `markCrossed` already reports the higher of any pair inside
+          // one tick, and across ticks the later event is the higher climb.
+          passedAtRef.current = now;
+          setPassed(event.mark);
         }
+      }
+
+      // Cleared here rather than by a timer. The loop is already running and
+      // already cancelled when the run ends, so a `setTimeout` would be a
+      // second lifetime to get wrong — and one left behind by a run that
+      // ended mid-announcement would fire into an unmounted page.
+      if (passedAtRef.current > 0 && now - passedAtRef.current > MARK_HOLD_MS) {
+        passedAtRef.current = 0;
+        setPassed(null);
       }
 
       if (now - hudAt > 100) {
@@ -654,14 +688,47 @@ function WallRow({
           </div>
         )}
 
-        <canvas
-          ref={canvasRef}
-          onPointerDown={onPointerDown}
-          onPointerUp={onPointerUp}
-          className="w-full mx-auto rounded-2xl border border-line touch-none select-none bg-sunken"
-          style={{ aspectRatio: `${VIEW.width} / ${VIEW.height}`, display: phase === 'playing' ? 'block' : 'none' }}
-          aria-label="The Ascent"
-        />
+        {/* The wall, and the name of the climb just passed over it
+            (PLAN.md M232). The wrapper exists only to anchor that banner,
+            and is hidden with the canvas so it holds no height in the menu. */}
+        <div className="relative" style={{ display: phase === 'playing' ? 'block' : 'none' }}>
+          <canvas
+            ref={canvasRef}
+            onPointerDown={onPointerDown}
+            onPointerUp={onPointerUp}
+            className="w-full mx-auto rounded-2xl border border-line touch-none select-none bg-sunken"
+            style={{ aspectRatio: `${VIEW.width} / ${VIEW.height}` }}
+            aria-label="The Ascent"
+          />
+          {passed !== null && (
+            /**
+             * A quarter of the way down, which is above the climber and below
+             * the height readout — the two places the eye already is.
+             *
+             * `pointer-events-none` because the canvas under it is the
+             * control: a banner that swallowed a tap would cost a lane change
+             * at the exact moment the player was told something, and the
+             * crash would be the game's fault.
+             *
+             * Announced politely rather than assertively: it is worth hearing
+             * and never worth cutting off the hit or power-up cues, which are
+             * the ones that change what you should do next.
+             */
+            <div
+              className="absolute inset-x-0 top-1/4 flex justify-center pointer-events-none"
+              aria-live="polite"
+              // Named, because the run-over card says "Past Half Dome. El
+              // Capitan is 285 ft higher." and the two are otherwise the same
+              // words in the same page. A reader gets the region it belongs
+              // to; a test gets something to hold that is not prose.
+              aria-label="Climb passed"
+            >
+              <span className="bg-surface/90 border border-line rounded-full px-3 py-1 text-xs font-bold uppercase tracking-widest shadow-sm">
+                Past {passed.name}
+              </span>
+            </div>
+          )}
+        </div>
 
         {phase === 'menu' && (
           <>

@@ -10,6 +10,7 @@
 import type { AvatarConfig } from '@/engine/avatar';
 import { CLIMBER, LANES, LANE_WIDTH, VIEW } from '@/engine/ascent/config';
 import { climberX, isObstacle, screenY, type Entity, type RunState } from '@/engine/ascent/game';
+import { marksBetween } from '@/engine/ascent/marks';
 import { ghostY } from '@/engine/ascent/replay';
 import { createRng, next } from '@/engine/ascent/rng';
 import type { Palette } from '@/engine/ascent/walls';
@@ -385,6 +386,48 @@ function drawClimber(
   ctx.restore();
 }
 
+/**
+ * The named climbs, as a line across the wall (PLAN.md M232).
+ *
+ * Unlabelled, and that is the design rather than a shortcut. The name is
+ * announced in the page when the line is crossed, where it can be read at a
+ * glance and by a screen reader; a caption on the canvas would be the one
+ * piece of text in the game drawn at the simulation's resolution, and it
+ * would sit exactly where the climber has to look to dodge.
+ *
+ * So the first line a climber ever sees means nothing, and the banner a
+ * second later tells them what it was. Every line after that means
+ * something, which is a thing the feature teaches itself.
+ *
+ * Drawn under the entities: a rock half-hidden behind a line is a rock a
+ * player misreads, and the line losing a few pixels costs nothing.
+ */
+function drawMarks(ctx: CanvasRenderingContext2D, state: RunState, palette: Palette): void {
+  // The window is the screen, read back out of `screenY`: a mark sits at
+  // `CLIMBER.y - (px - distance)`, so the top edge is the climb at
+  // `distance + CLIMBER.y` and the bottom edge is one screen below it.
+  const top = state.distance + CLIMBER.y;
+  const marks = marksBetween(top - VIEW.height, top);
+  if (marks.length === 0) return;
+
+  ctx.save();
+  ctx.strokeStyle = palette.ink;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([14, 10]);
+  for (const mark of marks) {
+    const y = CLIMBER.y - (mark.px - state.distance);
+    // Brightest as it arrives and fading as it falls away, so a line the
+    // climber is about to cross is never the faintest thing on the wall.
+    const above = Math.max(0, Math.min(1, (VIEW.height - y) / VIEW.height));
+    ctx.globalAlpha = 0.18 + 0.34 * above;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(VIEW.width, y);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 export function render(
   ctx: CanvasRenderingContext2D,
   state: RunState,
@@ -423,6 +466,8 @@ export function render(
     ctx.lineTo(lane * LANE_WIDTH, VIEW.height);
     ctx.stroke();
   }
+
+  drawMarks(ctx, state, palette);
 
   for (const entity of state.entities) drawEntity(ctx, state, entity, palette);
 

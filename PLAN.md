@@ -13901,6 +13901,10 @@ which is the right shape.*
   Nothing marks passing one *during* it. The cheapest version changes no mechanic at all: a line
   across the wall and a word as you cross it.
   *Small as naming, large as mechanics — and the small one is the one to build.*
+  ***Built, and the cheapest version marked the wrong end of the run.*** *The ten climbs to
+  Everest are spent at 55 seconds — four of them inside the first nine — so a ladder that stopped
+  where M210's stops would have put every announcement where the run already has a shape and none
+  in the flat stretch this item is named for. See the entry at the end of this document.*
 
 - **M233 — the coins run out of anywhere to go.** The kits total 90,700 and the walls 57,000, and
   `describeShop` already says the quiet part: *"All N bought — nothing left to spend on."* At
@@ -14224,3 +14228,138 @@ Browser-verified in both themes at 430px and 1280px: the card is last in the gri
 leads to `#/board`, is not clipped at either width, and the console is clean.
 
 **6,096 tests over 350 files.**
+
+
+## M232 — the climbs a run passes, marked while it is still going
+
+The item said a run has no shape after ninety seconds, and `config.ts` says it in as many words:
+speed caps at 480 px/s around 32 seconds, density climbs to ninety, and *"after ninety seconds
+nothing changes again — the wall is as hard as it gets, and staying on it is the whole test"*. M210
+gave every run a climb it had heard of; nothing marked passing one during it. **A line across the
+wall and a word as you cross it**, changing no mechanic.
+
+### The obvious version marks the wrong end of the run
+
+`CLIMBS_TO_EVEREST` is the ladder M210 names a finished run against. Timed against the ramp it is
+spent long before the problem starts:
+
+```
+First gym wall   45 ft    0.2s     Mt. Whitney   14,505 ft   32s
+Devils Tower    867 ft    2.9s     Kilimanjaro   19,341 ft   40s
+Half Dome     2,000 ft    6.2s     Denali        20,310 ft   41s
+El Capitan    2,900 ft    8.7s     Aconcagua     22,838 ft   45s
+Mt. Washington 5,790 ft   15.6s    Everest       29,032 ft   55s
+```
+
+Four fire inside the first nine seconds — during the acceleration, which is the part of a run that
+already *has* a shape — and Everest is behind you at 55 seconds, **thirty-five seconds before the
+flat stretch even begins**. Denali lands 1.5 seconds after Kilimanjaro.
+
+### The rungs M210 rejected are the ones this needs
+
+`MILESTONES` carries thirteen more above Everest: the other eight-thousanders, **stacked**, so K2's
+entry reads 57,283 ft because it sits on Everest's shoulders. M210 left those out on the grounds
+that a rung naming a *finished* run should be a height and not a running total.
+
+For a mark passed *during* a run that reasoning inverts — a run is cumulative distance, so a running
+total is exactly the right shape. K2 lands at 100 seconds and every rung after it at another 43–45,
+for as long as anyone can stay on. The flat stretch is the part of the ladder that fits it.
+
+### Two filters, and neither is a taste
+
+A hand-picked list goes stale the first time `SPEED` is retuned, so both cuts read the tuning they
+have to agree with:
+
+- **Below `SPAWN.grace`, nothing is marked.** A run climbs two screens before the first row spawns,
+  so a mark under 1,680 ft would be announced over an empty wall. Out go the gym wall and Devils
+  Tower.
+- **Nothing within `MARK_HOLD_MS` of the mark below it**, timed at the fastest a run can go — Free
+  Solo's 1.3× — because a pair that cannot collide there cannot collide anywhere. Out goes Denali,
+  alone, 969 ft above Kilimanjaro and 1.2 seconds behind it.
+
+Twenty marks, and **El Capitan survives by four tenths of a second** — the right outcome, and not
+one a hand-picked list would have argued for.
+
+### The line is on the canvas, the name is not
+
+The line is drawn under the entities, because a rock half-hidden behind a line is a rock a player
+misreads. The *name* is a DOM element over the wall, not canvas text: a caption drawn at the
+simulation's resolution would be the one piece of text in the game that is, and it would sit exactly
+where the climber has to look to dodge. It is `pointer-events-none`, because the canvas under it is
+the control — a banner that swallowed a tap would cost a lane change at the moment the player was
+being told something, and the crash would be the game's fault.
+
+So the first line a climber ever sees means nothing and the banner a second later says what it was.
+Every line after that means something, which is a thing the feature teaches itself.
+
+### The crossing is the engine's
+
+First draft had the page hold the distance across `step` and compare. That is the page keeping a
+second copy of a number the engine already has — and the engine sees up to thirty ticks where the
+page sees one frame. It is a `RunEvent` now, raised beside `coin`, `powerup` and `hit`, which is
+also what makes it testable: an event is a thing `step` can be asked for.
+
+The closed form that places the marks is checked **against the engine actually running**, because
+an integral of a function is a thing you can get subtly wrong in a way no other test would notice —
+they would all agree with the same mistake.
+
+### Three tests that were wrong, and one mutant that is not
+
+**The renderer's viewport was inverted.** `screenY` puts a mark at `CLIMBER.y - (px - distance)`, so
+the top of the screen is the climb at `distance + CLIMBER.y`; the first version had it mirrored.
+Three render tests caught it at once.
+
+**Two of my own test premises were false.** One expected Half Dome and El Capitan on screen together
+— they are 686 px apart and the screen is 640, so no two marks can ever share a frame. One expected
+a bare wall a screen above Half Dome, where El Capitan was in plain view.
+
+**A test matched the wrong element for an hour.** The run-over card says *"Past Half Dome. El
+Capitan is 285 ft higher."* — M210's sentence, the same opening, in the same page — so a query for
+`/^Past /` found it, and the test that was built to catch a stale banner passed on that match while
+the bug walked straight through. The live region has an `aria-label` now and the test holds a region
+rather than prose.
+
+**A `waitFor` for the banner *gone* is satisfied by the next climb replacing it**, so a banner that
+never cleared at all would have passed. The page test records the DOM frame by frame instead —
+`playableCanvas` queues each frame as a `setTimeout(0)`, so draining one macrotask is exactly one
+frame.
+
+### And a bug in the shared harness
+
+`playableCanvas` mocked `requestAnimationFrame` and not `cancelAnimationFrame`, so cancelling handed
+the real implementation a timer id it did not recognise and dropped it. The run kept stepping after
+the page unmounted, and the frame landing after the helper was torn down drew into a real jsdom
+context — three unhandled errors with no owner. It went unnoticed since M219 because every run
+before this one *ended*, and a finished run returns from the loop without asking for another frame.
+
+### Measured
+
+**19 of 20 mutants caught, sanity no-op survived.** The ladder stopping at Everest, either filter
+dropped, the integral losing its half, the speed never capping, a crossing reporting the lower of
+two or firing again once past, the engine not raising it or measuring the step after itself, the
+line never drawn or drawn at the wrong height or through the wrong window, the page not listening,
+the name never coming down or coming down instantly, the banner swallowing taps or losing its name,
+a climb from the last run still up on this one, and the cancel fix undone.
+
+The twentieth is **equivalent, and recorded rather than papered over**: timing the spacing at 1×
+instead of Free Solo's 1.3× produces exactly the same twenty marks. So the guard went on the fact
+the equivalence rests on — no pair of rungs has a gap between the hold at 1× and the hold at 1.3×,
+and the day one does, the choice starts mattering and the test fires.
+
+**135.62KB against a 136.9 ceiling**, unmoved: `marks.ts` travels in the Ascent chunk, and
+`altimeter.ts` was already in the entry, so the ladder costs nothing twice. The Ascent chunk carries
+0.55KB gzipped for it.
+
+Browser-verified in both themes at 430px and 1280px, playing the real game — the wall is hard enough
+that an unsteered run dies at about 5.3 seconds and the first mark is at 6.2, so the check runs an
+in-page autopilot on a climber who has earned the second-life boon (`lock_off_90` at 22 s unlocks
+*Immovable*). **"PAST HALF DOME"** at 2,021 ft, the dashed line across the wall at the climber's
+height, drawn under the boulder beside it, no console errors.
+
+One thing the browser showed that no test would: **the HUD readout lags the banner by up to a tenth
+of a second**, because the height is pushed to React on a 100 ms throttle while the mark is raised on
+the tick that crosses it. The screenshots read *1,978 ft* and *1,995 ft* under a banner announcing a
+2,000 ft climb. It corrects itself within the throttle and is older than this milestone; it is
+written down here because the next person to see it should not have to find that out.
+
+**6,126 tests over 352 files.**
