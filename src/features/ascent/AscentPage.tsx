@@ -107,6 +107,7 @@ export function AscentPage() {
   const projects = useProjects((s) => s.projects);
   const injuries = useProfile((s) => s.injuries);
   const palette = useProfile((s) => s.avatarPalette);
+  const figure = useProfile((s) => s.avatarFigure);
   const xp = useXp();
   const skills = useSkills();
   const records = useGame((s) => s.ascent);
@@ -185,8 +186,9 @@ export function AscentPage() {
         vitality: derived.vitality.state,
         feet: derived.feet,
         palette,
+        figure,
       }),
-    [xp.progress.level, derived.vitality.state, derived.feet, palette],
+    [xp.progress.level, derived.vitality.state, derived.feet, palette, figure],
   );
 
   /** The boons the climber holds, for the list that says so. */

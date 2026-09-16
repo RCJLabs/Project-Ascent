@@ -30,6 +30,7 @@ export function useClimberAvatar(enabled = true): AvatarConfig | undefined {
   const byDate = useSessions((s) => s.byDate);
   const injuries = useProfile((s) => s.injuries);
   const palette = useProfile((s) => s.avatarPalette);
+  const figure = useProfile((s) => s.avatarFigure);
   const restBonus = useSkillEffects().restRecovery;
 
   return useMemo(() => {
@@ -47,6 +48,7 @@ export function useClimberAvatar(enabled = true): AvatarConfig | undefined {
       vitality: vitality.state,
       feet: deriveAltimeter(sessions).feet,
       palette,
+      figure,
     });
-  }, [enabled, byDate, injuries, palette, restBonus, xp.progress.level]);
+  }, [enabled, byDate, figure, injuries, palette, restBonus, xp.progress.level]);
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { GEAR_STAGE_LEVELS } from './avatar';
+import { DEFAULT_PALETTE, GEAR_STAGE_LEVELS, SKIN_TONES } from './avatar';
 import {
+  FIGURES,
+  HAIR_TONES,
   OUTFITS,
   describeShop,
   earnedOutfits,
@@ -215,5 +217,42 @@ describe('what the skill trees promise', () => {
         expect(effect.label.toLowerCase(), node.name).toContain(kit.name.toLowerCase());
       }
     }
+  });
+});
+
+describe('the figure the picker offers (PLAN.md M225)', () => {
+  it('offers both builds, labelled', () => {
+    expect(FIGURES.map((f) => f.id)).toEqual(['male', 'female']);
+    for (const { label } of FIGURES) expect(label.length).toBeGreaterThan(2);
+  });
+
+  it('offers as many hair colours as skin tones, all distinct', () => {
+    // Fewer than the skin tones and the hair row would look like an
+    // afterthought beside it; the two are picked independently, so the range
+    // has to cover the same ground.
+    expect(HAIR_TONES.length).toBeGreaterThanOrEqual(6);
+    expect(new Set(HAIR_TONES).size).toBe(HAIR_TONES.length);
+    for (const tone of HAIR_TONES) expect(tone).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  it('starts every colour row on one of its own swatches', () => {
+    /**
+     * Found in the browser, which is the only place it shows: the default
+     * hair was a colour the picker did not offer, so a fresh install opened
+     * the card with six hair swatches and none of them selected. Skin got
+     * this right by luck rather than by rule, and the rule is what was
+     * missing — the two constants live in different modules precisely so the
+     * table stays off the boot path, which is exactly the split that lets
+     * them drift.
+     */
+    expect(HAIR_TONES).toContain(DEFAULT_PALETTE.hair);
+    expect(SKIN_TONES).toContain(DEFAULT_PALETTE.skin);
+  });
+
+  it('spans dark to light rather than clustering in the browns', () => {
+    // One narrow band would make five of the six indistinguishable at the
+    // size a profile picture is drawn.
+    const light = HAIR_TONES.map((t) => parseInt(t.slice(1, 3), 16));
+    expect(Math.max(...light) - Math.min(...light)).toBeGreaterThan(120);
   });
 });

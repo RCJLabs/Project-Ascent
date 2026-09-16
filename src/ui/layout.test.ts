@@ -72,9 +72,92 @@ describe('the shell works beyond a phone', () => {
 
   it('turns the bottom bar into a sidebar', () => {
     const nav = SHELL.slice(SHELL.indexOf('<nav'), SHELL.indexOf('</nav>'));
-    expect(nav).toContain('fixed bottom-0');
-    expect(nav).toContain('lg:static');
+    expect(nav).toContain('order-last');
+    expect(nav).toContain('lg:order-first');
     expect(nav).toMatch(/lg:w-\d+/);
+  });
+});
+
+/**
+ * The nav is part of the page, not floating over it (PLAN.md M225).
+ *
+ * It was `fixed bottom-0` from M0 to M224, which is the obvious way to pin a
+ * bar to the bottom of a phone screen and is wrong for one reason: a fixed
+ * element is placed against the *layout* viewport, and on a phone that is the
+ * tall viewport — the one measured with the browser's chrome retracted. With
+ * the chrome showing, the bottom of the bar is underneath it. Reported as
+ * "the bottom navigation buttons scroll with the page", and the two
+ * screenshots were the proof: five icons with their labels cut off at the top
+ * of Home, and the whole bar with its labels once the page had been scrolled.
+ *
+ * The shell is a fixed-height flex box now and `main` is the only thing that
+ * scrolls, so there is no document scroll to retract the chrome and nothing
+ * the chrome can cover.
+ */
+describe('the nav stays where it is put', () => {
+  /**
+   * The shell with its comments removed, and both halves of that were found
+   * by a mutation that survived.
+   *
+   * `SHELL.indexOf('<main')` matches the prose in a doc comment forty lines
+   * above the element — "focusing the `<main>` landmark is what assistive
+   * technology expects" — so the slice began inside a sentence. And the
+   * comment written on the element itself names the classes it is there to
+   * explain, so a rule reading raw text was satisfied by its own
+   * explanation: deleting `min-h-0` from the className left the rule green.
+   */
+  const CODE = SHELL.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/.*$/gm, ' ');
+  const element = (tag: string) => CODE.slice(CODE.indexOf(`<${tag}`), CODE.indexOf(`</${tag}>`));
+  /** Every class token written inside one element, in any kind of quote. */
+  const classes = (tag: string) =>
+    [...element(tag).matchAll(/'([^']*)'|"([^"]*)"|`([^`]*)`/g)]
+      .flatMap((m) => (m[1] ?? m[2] ?? m[3] ?? '').split(/\s+/))
+      .filter((token) => token !== '');
+
+  it('never positions the nav out of the flow', () => {
+    for (const token of classes('nav')) {
+      const position = token.includes(':') ? token.slice(token.lastIndexOf(':') + 1) : token;
+      // `fixed` is the bug by name. `sticky` and `absolute` would each put
+      // the bar back into the same relationship with the viewport.
+      expect(['fixed', 'sticky', 'absolute'], `the nav is ${token}`).not.toContain(position);
+    }
+    // The control: this is reading class tokens at all.
+    expect(classes('nav')).toContain('order-last');
+  });
+
+  it('gives the shell a viewport height that cannot grow', () => {
+    const root = CODE.slice(CODE.indexOf('<div className='), CODE.indexOf('<a'));
+    expect(root).toContain('h-dvh');
+    expect(root).toContain('overflow-hidden');
+    // `min-h-dvh` is the version that lets the document scroll, which is
+    // what put the bar under the chrome in the first place.
+    expect(root).not.toContain('min-h-dvh');
+  });
+
+  it('makes `main` the one thing that scrolls', () => {
+    const main = classes('main');
+    expect(main).toContain('overflow-y-auto');
+    // A flex item will not shrink below its content without this, and an
+    // item that cannot shrink cannot scroll — it pushes the nav off the
+    // bottom instead, which is the same bug with a different cause.
+    expect(main).toContain('min-h-0');
+    // And nothing left over from when a bar floated over it.
+    expect(main.filter((t) => /^pb-(24|36)$/.test(t))).toEqual([]);
+  });
+
+  it('sends a navigation back to the top of the content', () => {
+    // Focusing `main` used to do this by itself, because `main` started at
+    // the top of the document. It is the scroll container now.
+    expect(CODE).toContain('scrollTop = 0');
+  });
+
+  it('leaves no page scrolling the window', () => {
+    // `window.scrollTo` does not throw when the document cannot scroll. It
+    // silently does nothing, which is exactly why this is a rule.
+    const offenders = walk('src')
+      .filter((path) => /\.tsx?$/.test(path) && !path.includes('.test.'))
+      .filter((path) => /window\.scrollTo\(|documentElement\.scrollTop/.test(read(path)));
+    expect(offenders).toEqual([]);
   });
 
   it('lets the content grow, but not without limit', () => {

@@ -11,7 +11,7 @@ import { closeBlock, openBlock, reconstructBlocks, type BlockRecord, moveBlockSt
 import { getProgram } from '@/content/programs';
 import { pruneOverrides, withOverride, type WeekOverrides } from '@/engine/reschedule';
 import type { WeekPlan } from '@/engine/scheduler';
-import { DEFAULT_PALETTE, type AvatarPalette } from '@/engine/avatar';
+import { DEFAULT_PALETTE, type AvatarFigure, type AvatarPalette } from '@/engine/avatar';
 
 /** How much it changes what you can do, not how much it hurts. */
 export type InjurySeverity = 'niggle' | 'managing' | 'serious';
@@ -105,8 +105,12 @@ export interface ProfileState {
   injuries: Injury[];
   /** Warmup ids used recently, freshest first, so warmups stay varied. */
   recentWarmups: string[];
-  /** The avatar's colours — the only part of the figure that is stored. */
+  /** The avatar's colours — one of the two stored parts of the figure. */
   avatarPalette: AvatarPalette;
+  /** Which build the figure has. Its own field rather than a sixth colour
+   *  in the palette above, because `setAvatarPalette` takes a kit's four
+   *  colours wholesale and a build is not something a kit may set. */
+  avatarFigure: AvatarFigure;
   /** When the guided setup was finished, or skipped from inside it. Null
    *  until it has been — and since M123 that is the ordinary state, not
    *  a first-run flag: a new install lands on Home and is offered the
@@ -199,6 +203,7 @@ export interface ProfileState {
   restoreInjury: (injury: Injury) => void;
   rememberWarmup: (ids: string[]) => void;
   setAvatarPalette: (patch: Partial<AvatarPalette>) => void;
+  setAvatarFigure: (figure: AvatarFigure) => void;
 }
 
 const KEY = 'active-plan';
@@ -216,6 +221,7 @@ interface Persisted {
   healedInjuries: Injury[];
   recentWarmups: string[];
   avatarPalette: AvatarPalette;
+  avatarFigure: AvatarFigure;
   onboardedAt: string | null;
   baseline: BaselineAnswers | null;
   dismissedTips: Record<string, string>;
@@ -238,6 +244,7 @@ function snapshot(s: ProfileState): Persisted {
     healedInjuries: s.healedInjuries,
     recentWarmups: s.recentWarmups,
     avatarPalette: s.avatarPalette,
+    avatarFigure: s.avatarFigure,
     onboardedAt: s.onboardedAt,
     baseline: s.baseline,
     dismissedTips: s.dismissedTips,
@@ -288,6 +295,7 @@ export const useProfile = create<ProfileState>((set, get) => ({
   healedInjuries: [],
   recentWarmups: [],
   avatarPalette: DEFAULT_PALETTE,
+  avatarFigure: 'male',
   onboardedAt: null,
   baseline: null,
   dismissedTips: {},
@@ -492,6 +500,11 @@ export const useProfile = create<ProfileState>((set, get) => ({
     set({ avatarPalette: { ...get().avatarPalette, ...patch } });
     enqueueWrite(() => save(snapshot(get())));
   },
+
+  setAvatarFigure: (avatarFigure) => {
+    set({ avatarFigure });
+    enqueueWrite(() => save(snapshot(get())));
+  },
 }));
 
 /**
@@ -546,6 +559,10 @@ export async function hydrateProfile(): Promise<void> {
       healedInjuries: (value.healedInjuries ?? []).map(readInjury),
       recentWarmups: value.recentWarmups ?? [],
       avatarPalette: { ...DEFAULT_PALETTE, ...value.avatarPalette },
+      // Checked against the one value that is not the default rather than
+      // trusted: a backup is whatever was in the file, and every save
+      // written before M225 has no key here at all.
+      avatarFigure: value.avatarFigure === 'female' ? 'female' : 'male',
       onboardedAt: value.onboardedAt ?? null,
       baseline: readBaseline(value.baseline),
       dismissedTips: value.dismissedTips ?? {},

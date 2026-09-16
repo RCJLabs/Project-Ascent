@@ -95,6 +95,27 @@ describe('palette', () => {
   });
 });
 
+describe('the build (PLAN.md M225)', () => {
+  it('defaults to the figure every existing install is already looking at', () => {
+    // Defaulting the other way would reshape a climber somebody has been
+    // growing for months, without being asked and without being told.
+    expect(deriveAvatar({ level: 0 }).figure).toBe('male');
+  });
+
+  it('carries the choice through', () => {
+    expect(deriveAvatar({ level: 0, figure: 'female' }).figure).toBe('female');
+  });
+
+  it('changes nothing else about the climber', () => {
+    // A build is paint. It must not reach the pose, the gear, the ground or
+    // the stage — the pose especially, which is the one number the game
+    // reads from training.
+    const male = deriveAvatar({ level: 42, vitality: 'tired', feet: 30_000 });
+    const female = deriveAvatar({ level: 42, vitality: 'tired', feet: 30_000, figure: 'female' });
+    expect({ ...female, figure: 'male' }).toEqual(male);
+  });
+});
+
 describe('deriveAvatar', () => {
   it('assembles the whole figure from three real numbers', () => {
     const config = deriveAvatar({ level: 42, vitality: 'tired', feet: 30_000 });

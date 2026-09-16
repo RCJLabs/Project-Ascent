@@ -13501,3 +13501,138 @@ instead of holding it, so it stops baiting a sweep that has no business reading 
 **A local pass was never going to predict this**, which is the lesson worth keeping: a rule that
 resolves a file by `grep`'s output order gives a different answer on a different machine, and every
 green run here was luck rather than evidence.
+
+## M225 — the bar under the browser's chrome, and the figure that needed a body
+
+**Four fixes, reported from a phone with three screenshots.** Two about the climber — "he looks
+like he has a penis", "the legs and pants look weird" — one asking for a male/female choice, and
+one about the nav: "the bottom navigation buttons scroll with the page."
+
+### The nav was never scrolling, and that is why it looked like it was
+
+It has been `fixed bottom-0 inset-x-0` since **M0**, which is the obvious way to pin a bar to the
+bottom of a phone and is wrong for one reason: **a fixed element is placed against the *layout*
+viewport**, and on a phone that is the tall viewport — the one measured with the browser's chrome
+retracted. With the chrome showing, the bottom of the bar is underneath it.
+
+The two screenshots are the proof and they disagree with each other, which is the whole diagnosis:
+at the top of Home, five icons with **their labels cut off**; the same bar with Home, Train,
+Calendar, Progress and Game spelled out once the page had been scrolled and the chrome had gone.
+Measured off the images, about 50 CSS px of the bar was under the chrome — the label row and its
+padding exactly.
+
+**The shell is a fixed-height flex box now and `main` is the only thing that scrolls.** There is no
+document scroll, so there is nothing to retract the chrome and nothing the chrome can cover.
+Measured in the browser at 430×740, at the top of the page and scrolled to the bottom of it:
+
+```
+navTop 682  navBottom 740  labelBottom 740  position static
+docScrollHeight 740  docClientHeight 740          (the document does not scroll)
+mainScrollTop 0 → 632   mainScrollHeight 1314
+```
+
+Identical on all five tabs. At 1280 the same element is a full-height sidebar (0–860) and `main`
+still scrolls. The search sheet is `position: fixed` and still covers 0–740 — an ancestor's
+`overflow: hidden` does not clip a fixed descendant, which is the one thing worth checking before
+making a root `overflow-hidden`.
+
+Three consequences, all paid for:
+
+- `main` is `min-h-0` as well as `flex-1`. **A flex item will not shrink below its content without
+  it**, and an item that cannot shrink cannot scroll — it pushes the nav off the bottom instead,
+  which is the same bug with a different cause.
+- Focusing `main` on a route change used to scroll the page to the top by itself, because `main`
+  started at the top of the document. It is the scroll container now, so its `scrollTop` is set by
+  hand.
+- `window.scrollTo` moves nothing when the document cannot scroll — it does not throw and it does
+  not warn. `FinderPage` called it after answering the questions; that is `ui/mainScroll.ts` now,
+  and a sweep holds it.
+
+**The honest cost:** in a phone *browser tab* the URL bar will no longer auto-hide, so the app has
+about 50px less room than before. In the installed app — which is what the screenshots show, and
+where this was reported — there is no chrome to hide, so nothing is lost.
+
+### The figure had no hips, and that is what the report was about
+
+The belay loop was drawn at the centre of the waist because M209 was right about it: it is the part
+of a harness you can only see from the front and the part that says harness rather than belt. What
+M209 did not account for is **what it was hanging into**. The legs were two 15-wide strokes starting
+at the hip joints with nothing between them, so the background ran up between the thighs to the
+shirt hem, and a six-by-ten rounded rect sat in that gap on a figure with no other detail below the
+chin. The report was one sentence long and it was not about climbing equipment.
+
+Both halves are gone:
+
+- **One block across the hips**, so the legs come out of a body. The shorts are as wide as the
+  thighs at the top and the wedge is closed.
+- **Leg loops instead of a belay loop** — two bars across the thighs, symmetric about the centre
+  line rather than sitting on it, and the part of a harness a climber facing you reads first. The
+  rope drops off the left hip rather than out of the middle.
+- **The legs are skin and the clothing goes over them.** They were drawn in the shorts colour from
+  hip to ankle with skin painted back over the shin, which put the hem past the knee: a figure in
+  shorts that read as baggy trousers, which is the second half of "the legs and pants look weird".
+  Shorts stop above the knee now; only the alpinist's jacket brings trousers.
+- The chalk bag hangs beside the hips rather than on the right thigh, where it read as a pocket.
+- The shirt's shoulders sit three units above the joints. The sleeves are 13-wide strokes with round
+  caps centred on them, so a top edge running through the middle of those caps left two bumps with
+  a flat span between — a puff sleeve rather than a shoulder.
+
+**The rule that replaces the loop is not "no belay loop".** It is that nothing narrow is drawn on
+the centre line below the waist, over every level and both builds. Wide things there are the hips
+and the waist belt and they are meant to be; it is the narrow ones that read as anatomy.
+
+### Male and female, and what actually differs
+
+`male` and `female`, in the words they were asked for. It is a silhouette and nothing else: **no
+content changes with it, no number moves**, and both builds share one joint table — the posture is
+the one thing the game reads from training and a cosmetic must not reach it. A test asserts the two
+configs are equal but for the field.
+
+What differs: shoulders 46 wide against hips 40 for one, 38 against 46 with five units off each side
+of the waist for the other, a narrower neck, and hair past the jaw. Everything is measured against
+the size this is actually drawn at — **180 viewBox units map to 96 pixels, so one unit is about half
+a pixel** — and a rule requires the difference to be at least four units, because a choice nobody
+can see is a choice that does not exist.
+
+**Hair is what makes it legible**, and it needed a colour, so the palette has a sixth row and six
+tones beside the six skin tones. `HAIR_TONES` and `FIGURES` live in `engine/kits.ts` rather than
+`engine/avatar.ts` for M213's reason: `store/profile.ts` reads that module before anything renders,
+and everything a picker offers is a table only a lazy page looks at.
+
+`male` is the default, because it is the figure every existing install is already looking at.
+Defaulting the other way would reshape a climber somebody has been growing for months without being
+asked.
+
+### Two faults found by looking, one by the battery
+
+**The first hair I drew was a beard.** One rounded rect behind the head, and everything of it below
+the chin — thirteen units — showed across the jaw. Rendered at 380px it was unmistakable and no test
+would ever have said so. Two lobes either side of the centre line with a gap for the neck.
+
+**The default hair was not one of the six swatches.** `#2b2118` against a table that starts
+`#16120f, #3b2a1e, …` — so a fresh install opened the Appearance card with six hair swatches and
+none of them selected, while the skin row beside it showed one. Skin had got that right by luck
+rather than by rule; the rule is what was missing, and both rows are held to it now.
+
+**And one of my own new rules was reading its own comment.** `SHELL.indexOf('<main')` matches the
+prose in a doc comment forty lines above the element — "focusing the `<main>` landmark is what
+assistive technology expects" — so the slice began mid-sentence, and the comment written on the
+element names the classes it explains. Deleting `min-h-0` from the className left the rule green.
+Found by the mutation battery, which is the only reason it is not still true. Both halves are
+fixed: comments are stripped before the file is read at all, and the check runs against class
+tokens rather than text.
+
+### Measured
+
+**21 of 21 mutants caught, and the sanity no-op survived.** The belay loop put back, the hips block
+removed, shorts to the ankle, the chalk bag back on the thigh, both builds given the same hips and
+then the same shoulders, long hair removed, the rope returned to the centre, the fringe dropped
+over the eyes, hair removed entirely, the build never reaching the drawing, the choice thrown away
+in `deriveAvatar`, the stored build not read back, the nav made `fixed` and then `sticky`, the
+document allowed to scroll, `min-h-0` removed, `pb-24` put back, the scroll reset removed, and the
+finder returned to `window.scrollTo`.
+
+**6,029 tests over 344 files.** First load **137.33KB against the 138.0 budget, 0.67 of slack** —
+*down* from 137.48 at the start of the milestone. It paid for itself: the shell lost
+`backdrop-blur`, `fixed bottom-0 inset-x-0`, four `lg:` positioning utilities and the two bottom
+paddings that existed only to clear a floating bar, which outweighed what the figure cost.

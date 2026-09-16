@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { AlertTriangle, ArrowLeft, Check, Lock, Sparkles } from 'lucide-react';
 import { V_GRADES, YDS_GRADES, displayRange } from '@/engine/grades';
+import { scrollPageToTop } from '@/ui/mainScroll';
 import { useGradeOptions } from '@/ui/useGrade';
 import { PageSkeleton } from '@/ui/Skeleton';
 import { findProgram, type Experience, type FinderHistory, type FinderInput, type FinderResult, type Goal, type Recommendation } from '@/engine/finder';
@@ -306,7 +307,7 @@ function FinderForm({
     // exactly as long as the page did (PLAN.md M93).
     updateBaseline({ discipline, experience, goal, daysPerWeek, boulderGrade, sportGrade });
     setResult(findProgram(input));
-    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    requestAnimationFrame(() => scrollPageToTop());
   }
 
   if (result) {

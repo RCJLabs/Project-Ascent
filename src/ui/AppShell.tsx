@@ -102,6 +102,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       return;
     }
     mainRef.current?.focus();
+    // Focusing `main` used to do this by itself: the browser scrolls a
+    // focused element into view, and `main` started at the top of the
+    // document. It is the scroll container now, so its own `scrollTop` is
+    // not something focus touches — without this line a climber who
+    // navigates from the bottom of the calendar lands halfway down Home.
+    if (mainRef.current) mainRef.current.scrollTop = 0;
   }, [location]);
   // Only a running session holds an update back. A stale one is already over
   // — it is waiting for a decision, not counting — and reloading costs it
@@ -109,7 +115,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const live = banner?.kind === 'running';
 
   return (
-    <div className="min-h-dvh lg:flex">
+    <div className="h-dvh flex flex-col overflow-hidden lg:flex-row">
       {/* Visible only when tabbed to. Without it, every page starts a
           keyboard user at the top of the nav and makes them walk through
           five tabs to reach the content they navigated to.
@@ -135,14 +141,26 @@ export function AppShell({ children }: { children: ReactNode }) {
       <nav
         aria-label="Main"
         className={
-          // Phone: a bar pinned to the bottom. Desktop: a column pinned to
-          // the left, which is why the same element carries both sets of
-          // positioning rather than there being two of them.
+          // Phone: the last row of the shell. Desktop: the first column.
+          // One element carries both, which is why it reads as two sets of
+          // rules rather than there being two navs.
+          //
+          // **In the layout, not over it (PLAN.md M225).** This was
+          // `fixed bottom-0` from M0 to M224, and a fixed element is placed
+          // against the *layout* viewport — which on a phone is the tall
+          // one, measured with the browser's chrome retracted. With the
+          // chrome showing, the bottom of the bar is underneath it:
+          // reported as "the bottom navigation buttons scroll with the
+          // page", and the screenshots showed exactly that — five icons
+          // with their labels cut off at the top of a page, the whole bar
+          // once it had been scrolled. Nothing scrolls past it now because
+          // the document does not scroll at all; `main` does.
+          //
           // `flex flex-col` at both widths so the banners can be placed by
           // order rather than mounted twice (PLAN.md M141). The children
           // stack exactly as they did in block flow.
-          'fixed bottom-0 inset-x-0 z-30 flex flex-col bg-surface/95 backdrop-blur border-t border-line ' +
-          'lg:static lg:inset-auto lg:w-60 lg:shrink-0 lg:border-t-0 lg:border-r lg:h-dvh lg:sticky lg:top-0 lg:backdrop-blur-none'
+          'order-last shrink-0 flex flex-col bg-surface border-t border-line ' +
+          'lg:order-first lg:w-60 lg:border-t-0 lg:border-r lg:overflow-y-auto'
         }
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
@@ -231,13 +249,17 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* `tabIndex={-1}` so the skip link can actually move focus here —
           a heading or a div is not focusable by default, and skipping to
           something unfocusable moves the scroll and leaves focus behind. */}
+      {/* The one thing on the page that scrolls (PLAN.md M225).
+          `min-h-0` because a flex item will not shrink below its content
+          without it, and an item that cannot shrink cannot scroll — it
+          pushes the nav off the bottom instead, which is the bug wearing
+          a different hat. The bottom padding used to clear a bar floating
+          over this; there is nothing to clear now. */}
       <main
         id="main"
         ref={mainRef}
         tabIndex={-1}
-        className={`flex-1 min-w-0 px-4 pt-3 outline-none lg:px-8 lg:pt-6 lg:pb-12 ${
-          banner ? 'pb-36' : 'pb-24'
-        }`}
+        className="flex-1 min-w-0 min-h-0 overflow-y-auto overscroll-y-contain px-4 pt-3 pb-8 outline-none lg:px-8 lg:pt-6 lg:pb-12"
       >
         {/* The content still has a maximum: a paragraph 1,200px wide is
             unreadable whatever the window is doing. Wide enough for two

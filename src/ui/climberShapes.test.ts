@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { SKIN_TONES, deriveAvatar } from '@/engine/avatar';
+import { DEFAULT_PALETTE, SKIN_TONES, deriveAvatar, type AvatarFigure } from '@/engine/avatar';
+import { HAIR_TONES } from '@/engine/kits';
 import { contrast } from './contrast';
 import {
+  BUILDS,
   CLIMBER_VIEWBOX,
   POSES,
   STANDING,
@@ -308,9 +310,16 @@ describe('the two views', () => {
     expect(rects(back).some((s) => s.w === 38 && s.h === 5)).toBe(true);
   });
 
-  it('gives the harness a belay loop only where one would show', () => {
-    expect(rects(front).some((s) => s.w === 6 && s.h === 10)).toBe(true);
-    expect(rects(back).some((s) => s.w === 6 && s.h === 10)).toBe(false);
+  it('puts the harness on the thighs and nothing down the middle', () => {
+    // Two leg loops facing you, and none behind: from the back the belt is
+    // the whole harness at the size the game draws this.
+    const loops = rects(front).filter((s) => s.w === 20 && s.h === 6);
+    expect(loops).toHaveLength(2);
+    expect(rects(back).filter((s) => s.w === 20 && s.h === 6)).toHaveLength(0);
+    // One either side of the centre line, which is the entire point.
+    const centre = (STANDING.steady.hipL[0] + STANDING.steady.hipR[0]) / 2;
+    const sides = loops.map((s) => Math.sign(s.x + s.w / 2 - centre)).sort();
+    expect(sides).toEqual([-1, 1]);
   });
 
   it('joins the head to the shoulders', () => {
@@ -348,16 +357,17 @@ describe('the two views', () => {
     expect(rects(front).some((s) => s.w === 22)).toBe(false);
   });
 
-  it('ties the rope into the belay loop', () => {
-    // Not trailing off a waist you cannot see, which is where the back view
-    // puts it and what a front view inherits if nothing checks.
-    const loop = rects(front).find((s) => s.w === 6 && s.h === 10)!;
+  it('drops the rope off a hip rather than out of the middle', () => {
+    // It used to be tied into the belay loop, which was the right detail and
+    // the wrong place: the loop is gone and a rope leaving the centre line
+    // is the same shape wearing a different name.
     const rope = front.find((s) => s.kind === 'path' && s.stroke === KITTED.palette.gear)!;
     if (rope.kind !== 'path') throw new Error('the rope is a path');
     const [, x, y] = /^M (-?[\d.]+) (-?[\d.]+)/.exec(rope.d)!;
-    expect(Number(x)).toBe(loop.x + loop.w / 2);
-    expect(Number(y)).toBeGreaterThanOrEqual(loop.y);
-    expect(Number(y)).toBeLessThanOrEqual(loop.y + loop.h);
+    const { hipL, hipR } = STANDING.steady;
+    const centre = (hipL[0] + hipR[0]) / 2;
+    expect(Math.abs(Number(x) - centre)).toBeGreaterThan((hipR[0] - hipL[0]) / 2);
+    expect(Number(y)).toBeGreaterThan(hipL[1]);
   });
 
   it('still lets the game drive the joints', () => {
@@ -384,6 +394,201 @@ describe('the eyes', () => {
   it('stays legible on every tone the app offers', () => {
     for (const skin of SKIN_TONES) {
       expect(contrast(eyeColor(skin), skin), skin).toBeGreaterThan(3);
+    }
+  });
+});
+
+// ── The body under the kit (PLAN.md M225) ────────────────────────────────
+
+const FIGURES: AvatarFigure[] = ['male', 'female'];
+const kitted = (figure: AvatarFigure, level = 90) =>
+  deriveAvatar({ level, vitality: 'worked', feet: 0, figure });
+
+describe('the figure below the waist', () => {
+  /**
+   * The report was one sentence long and it was not about equipment: a
+   * six-by-ten rounded rect hanging from the middle of the waist, into the
+   * gap between two leg-shaped tubes that started at the hip joints with
+   * nothing between them. Both halves of that are rules now.
+   */
+  it('draws nothing narrow on the centre line below the waist', () => {
+    for (const figure of FIGURES) {
+      for (const level of [0, 8, 20, 40, 60, 90]) {
+        const config = kitted(figure, level);
+        const shapes = climberShapes(config, { colors: COLORS, facing: 'front' });
+        const { hipL, hipR } = STANDING.steady;
+        const centre = (hipL[0] + hipR[0]) / 2;
+        const span = hipR[0] - hipL[0];
+        for (const shape of rects(shapes)) {
+          // Wide things on the centre line are the hips and the waist belt,
+          // and both of them are meant to be there. It is the narrow ones
+          // that read as anatomy.
+          const onCentre = Math.abs(shape.x + shape.w / 2 - centre) < 4;
+          const narrow = shape.w < span;
+          const belowWaist = shape.y >= hipL[1];
+          expect(
+            onCentre && narrow && belowWaist,
+            `${figure} L${level}: a ${shape.w}×${shape.h} rect at ${shape.x},${shape.y}`,
+          ).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('closes the gap between the thighs with one block of hips', () => {
+    // Without this the background ran up between the legs to the shirt hem.
+    // The block has to be at least as wide as the hips and reach from the
+    // waist down past where the two legs have separated.
+    for (const figure of FIGURES) {
+      const shapes = climberShapes(kitted(figure, 0), { colors: COLORS, facing: 'front' });
+      const { hipL, hipR } = STANDING.steady;
+      const hips = rects(shapes).find((s) => s.fill === DEFAULT_PALETTE.shorts);
+      expect(hips, `${figure} has hips`).toBeDefined();
+      expect(hips!.x).toBeLessThanOrEqual(hipL[0]);
+      expect(hips!.x + hips!.w).toBeGreaterThanOrEqual(hipR[0]);
+      expect(hips!.y).toBeLessThanOrEqual(hipL[1]);
+      expect(hips!.y + hips!.h).toBeGreaterThan(hipL[1] + 16);
+    }
+  });
+
+  it('stops the shorts above the knee, and only the jacket wears trousers', () => {
+    // They were drawn in the shorts colour from hip to ankle with skin
+    // painted back over the shin, which put the hem past the knee: a figure
+    // in shorts that read as baggy trousers.
+    const shortsOf = (level: number) => {
+      const shapes = climberShapes(kitted('male', level), { colors: COLORS, facing: 'front' });
+      return shapes.filter((s) => s.kind === 'polyline' && s.stroke === DEFAULT_PALETTE.shorts);
+    };
+    const { hipL, kneeL, footL } = STANDING.steady;
+    for (const leg of shortsOf(20)) {
+      if (leg.kind !== 'polyline') throw new Error('a leg is a polyline');
+      expect(leg.points).toHaveLength(2);
+      expect(leg.points[1]![1]).toBeLessThan(kneeL[1]);
+    }
+    for (const leg of shortsOf(90)) {
+      if (leg.kind !== 'polyline') throw new Error('a leg is a polyline');
+      expect(leg.points.at(-1)![1]).toBeGreaterThanOrEqual(footL[1]);
+    }
+    // And the leg itself is skin underneath either one, rather than being
+    // the clothing with skin painted back over part of it.
+    const skin = climberShapes(kitted('male', 90), { colors: COLORS, facing: 'front' }).filter(
+      (s) => s.kind === 'polyline' && s.stroke === DEFAULT_PALETTE.skin && s.points[0]?.[1] === hipL[1],
+    );
+    expect(skin).toHaveLength(2);
+  });
+
+  it('hangs the chalk bag beside the hips rather than on a thigh', () => {
+    for (const figure of FIGURES) {
+      const shapes = climberShapes(kitted(figure, 20), { colors: COLORS, facing: 'front' });
+      const hips = rects(shapes).find((s) => s.fill === DEFAULT_PALETTE.shorts)!;
+      const bag = rects(shapes).find((s) => s.w === 16 && s.h === 19)!;
+      expect(bag.x, figure).toBeGreaterThanOrEqual(hips.x + hips.w);
+    }
+  });
+});
+
+describe('the two builds', () => {
+  /**
+   * 180 viewBox units are drawn at 96 pixels on a profile card, so one unit
+   * is about half a pixel. A difference smaller than a few units is a
+   * setting that does nothing, which is worse than not offering it.
+   */
+  const torso = (figure: AvatarFigure) => {
+    const shapes = climberShapes(kitted(figure, 0), { colors: COLORS, facing: 'front' });
+    const path = shapes.find((s) => s.kind === 'path' && s.fill === DEFAULT_PALETTE.top)!;
+    if (path.kind !== 'path') throw new Error('the torso is a path');
+    const xs = [...path.d.matchAll(/(-?[\d.]+) (-?[\d.]+)/g)].map((m) => Number(m[1]));
+    return { min: Math.min(...xs), max: Math.max(...xs) };
+  };
+
+  it('gives one broader shoulders and the other broader hips', () => {
+    const male = torso('male');
+    const female = torso('female');
+    expect(male.max - male.min).toBeGreaterThan(female.max - female.min);
+
+    const hipsOf = (figure: AvatarFigure) => {
+      const shapes = climberShapes(kitted(figure, 0), { colors: COLORS, facing: 'front' });
+      return rects(shapes).find((s) => s.fill === DEFAULT_PALETTE.shorts)!.w;
+    };
+    expect(hipsOf('female')).toBeGreaterThan(hipsOf('male'));
+  });
+
+  it('makes both differences big enough to see at the size this is drawn', () => {
+    // Four units is roughly two pixels at 96 wide. Anything less and the
+    // picker would be a control with no visible effect.
+    const male = torso('male');
+    const female = torso('female');
+    expect(male.max - male.min - (female.max - female.min)).toBeGreaterThanOrEqual(4);
+    expect(BUILDS.female.hip - BUILDS.male.hip).toBeGreaterThanOrEqual(2);
+  });
+
+  it('shares one skeleton, so the build cannot move a joint', () => {
+    // The posture is the one number the game reads from training. A build is
+    // paint; it must not reach the vitality gradient.
+    for (const level of [0, 40, 90]) {
+      const male = climberShapes(kitted('male', level), { colors: COLORS, facing: 'front' });
+      const female = climberShapes(kitted('female', level), { colors: COLORS, facing: 'front' });
+      const feet = (shapes: Shape[]) =>
+        shapes.filter((s) => s.kind === 'ellipse' && s.fill === DEFAULT_PALETTE.shoes);
+      expect(feet(female)).toEqual(feet(male));
+    }
+  });
+});
+
+describe('hair', () => {
+  const hairOf = (figure: AvatarFigure, facing: 'front' | 'back') =>
+    climberShapes(kitted(figure, 0), { colors: COLORS, facing }).filter(
+      (s) => (s.kind === 'rect' || s.kind === 'path') && s.fill === DEFAULT_PALETTE.hair,
+    );
+
+  it('puts some on every head, in both views', () => {
+    // The two builds are a few units apart in the shoulders and the hips,
+    // which is a pixel or two. Hair is what makes the choice legible, and a
+    // bald climber on the wall would be a different person from the one on
+    // the profile.
+    for (const figure of FIGURES) {
+      for (const facing of ['front', 'back'] as const) {
+        expect(hairOf(figure, facing).length, `${figure} ${facing}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('gives only one build hair past the jaw', () => {
+    expect(hairOf('male', 'front').filter((s) => s.kind === 'rect')).toHaveLength(0);
+    expect(hairOf('female', 'front').filter((s) => s.kind === 'rect')).toHaveLength(2);
+  });
+
+  it('leaves a gap down the middle for the neck', () => {
+    // One rounded rect behind the head was the first version, and everything
+    // of it below the chin showed across the jaw: the figure came out with a
+    // full beard.
+    const head = STANDING.steady.head;
+    const lobes = hairOf('female', 'front').filter((s) => s.kind === 'rect');
+    for (const lobe of lobes) {
+      if (lobe.kind !== 'rect') throw new Error('a lobe is a rect');
+      const nearEdge = lobe.x + lobe.w / 2 < head[0] ? lobe.x + lobe.w : lobe.x;
+      expect(Math.abs(nearEdge - head[0])).toBeGreaterThanOrEqual(5);
+    }
+  });
+
+  it('keeps the fringe off the eyes', () => {
+    for (const figure of FIGURES) {
+      const shapes = climberShapes(kitted(figure, 0), { colors: COLORS, facing: 'front' });
+      const fringe = shapes.find((s) => s.kind === 'path' && s.fill === DEFAULT_PALETTE.hair)!;
+      if (fringe.kind !== 'path') throw new Error('the fringe is a path');
+      const brow = Number(/^M [-\d.]+ (-?[\d.]+)/.exec(fringe.d)![1]);
+      for (const eye of circles(shapes).filter((s) => s.r < 5)) {
+        expect(eye.cy - eye.r, figure).toBeGreaterThan(brow);
+      }
+    }
+  });
+
+  it('stays visible against every skin tone the app offers', () => {
+    // Hair the colour of a forehead is a bald climber, and the two tone
+    // lists are picked independently — any pair has to work.
+    for (const skin of SKIN_TONES) {
+      const best = Math.max(...HAIR_TONES.map((hair) => contrast(hair, skin)));
+      expect(best, skin).toBeGreaterThan(2);
     }
   });
 });

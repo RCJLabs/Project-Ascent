@@ -16,6 +16,7 @@ import type { VitalityState } from './vitality';
 
 export interface AvatarPalette {
   skin: string;
+  hair: string;
   top: string;
   shorts: string;
   shoes: string;
@@ -24,11 +25,30 @@ export interface AvatarPalette {
 
 export const DEFAULT_PALETTE: AvatarPalette = {
   skin: '#c68a5e',
+  hair: '#3b2a1e',
   top: '#2f7bb0',
   shorts: '#35434e',
   shoes: '#eb6834',
   gear: '#5b6b78',
 };
+
+/**
+ * Which build the figure has (PLAN.md M225).
+ *
+ * Asked for in those words. It is a silhouette and nothing else: shoulders
+ * against hips, whether there is a waist, how wide the neck is, and whether
+ * the hair goes past the jaw. No content changes with it, no number moves,
+ * and nothing in the app reads it except the code that draws the figure.
+ *
+ * The tones and labels the picker offers live in `engine/kits.ts` with the
+ * rest of the cosmetics, because this module is on the boot path and that
+ * one is not — M213's finding, and the reason the shop moved out.
+ *
+ * `male` is the default because it is the figure every existing install is
+ * already looking at. Defaulting the other way would reshape a climber
+ * somebody has been growing for months, without being asked.
+ */
+export type AvatarFigure = 'male' | 'female';
 
 /** Skin is its own row because it is the one people want to match first. */
 export const SKIN_TONES = [
@@ -147,6 +167,7 @@ export function poseForVitality(state: VitalityState | undefined): AvatarPose {
 
 export interface AvatarConfig {
   pose: AvatarPose;
+  figure: AvatarFigure;
   ground: AvatarGround;
   gear: AvatarGear;
   palette: AvatarPalette;
@@ -160,12 +181,14 @@ export interface AvatarInput {
   /** Lifetime feet from the altimeter. */
   feet?: number;
   palette?: Partial<AvatarPalette>;
+  figure?: AvatarFigure;
 }
 
 export function deriveAvatar(input: AvatarInput): AvatarConfig {
   const level = Math.max(0, input.level);
   return {
     pose: poseForVitality(input.vitality),
+    figure: input.figure ?? 'male',
     ground: groundForHeight(input.feet ?? 0),
     gear: gearForLevel(level),
     palette: { ...DEFAULT_PALETTE, ...input.palette },

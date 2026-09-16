@@ -1,13 +1,21 @@
 import { useMemo } from 'react';
 import { SKIN_TONES, type AvatarPalette } from '@/engine/avatar';
-import { OUTFITS, earnedOutfits, freeOutfits, shopOutfits, type Outfit } from '@/engine/kits';
+import {
+  FIGURES,
+  HAIR_TONES,
+  OUTFITS,
+  earnedOutfits,
+  freeOutfits,
+  shopOutfits,
+  type Outfit,
+} from '@/engine/kits';
 import { cosmeticSources } from '@/engine/skills';
 import { SKILL_TREES } from '@/content/skills';
 import { useCurrency, useGame, useOwned } from '@/store/game';
 import { useProfile } from '@/store/profile';
 import { useSkillEffects } from '@/store/skills';
 import { Card } from '@/ui/Card';
-import { SelectableCard, Swatch } from '@/ui/Chip';
+import { Chip, SelectableCard, Swatch } from '@/ui/Chip';
 
 /**
  * The only stored part of the avatar. Everything else — gear, ground,
@@ -18,6 +26,8 @@ import { SelectableCard, Swatch } from '@/ui/Chip';
  */
 export function AppearanceCard({ palette }: { palette: AvatarPalette }) {
   const setPalette = useProfile((s) => s.setAvatarPalette);
+  const figure = useProfile((s) => s.avatarFigure);
+  const setFigure = useProfile((s) => s.setAvatarFigure);
   const currency = useCurrency();
   const owned = useOwned();
   const buy = useGame((state) => state.buy);
@@ -36,6 +46,19 @@ export function AppearanceCard({ palette }: { palette: AvatarPalette }) {
         Gear, ground and posture come from your training. These are yours to pick.
       </p>
 
+      {/* The build, and it changes the silhouette rather than anything the
+          app says or counts (PLAN.md M225). */}
+      <div className="mb-3">
+        <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mb-1.5">Figure</div>
+        <div className="flex flex-wrap gap-2">
+          {FIGURES.map(({ id, label }) => (
+            <Chip key={id} active={figure === id} onClick={() => setFigure(id)}>
+              {label}
+            </Chip>
+          ))}
+        </div>
+      </div>
+
       <div className="mb-3">
         <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mb-1.5">Skin</div>
         <div className="flex flex-wrap gap-2">
@@ -45,6 +68,21 @@ export function AppearanceCard({ palette }: { palette: AvatarPalette }) {
               active={palette.skin === tone}
               onClick={() => setPalette({ skin: tone })}
               label={`Skin tone ${tone}`}
+              color={tone}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-3">
+        <div className="text-2xs font-bold uppercase tracking-widest text-ink-soft mb-1.5">Hair</div>
+        <div className="flex flex-wrap gap-2">
+          {HAIR_TONES.map((tone) => (
+            <Swatch
+              key={tone}
+              active={palette.hair === tone}
+              onClick={() => setPalette({ hair: tone })}
+              label={`Hair colour ${tone}`}
               color={tone}
             />
           ))}

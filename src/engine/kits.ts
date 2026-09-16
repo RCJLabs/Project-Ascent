@@ -13,6 +13,8 @@
  * what it cost.
  */
 
+import type { AvatarFigure } from './avatar';
+
 export interface Outfit {
   name: string;
   top: string;
@@ -166,3 +168,37 @@ export function describeShop(progress: ShopProgress): string {
   if (short === 0) return `${lead} ${next.name} is yours for ${price}.`;
   return `${lead} ${next.name} next, ${short.toLocaleString()} to go.`;
 }
+
+// ── The figure itself (PLAN.md M225) ─────────────────────────────────────
+
+/**
+ * The two builds, and what to call them on the card.
+ *
+ * A table rather than a bare union so the picker cannot drift from the type,
+ * and here rather than in `engine/avatar.ts` for the reason this whole
+ * module exists: that one is read by `store/profile.ts` before anything
+ * renders, and everything a picker offers is a table only a lazy page looks
+ * at.
+ */
+export const FIGURES: readonly { id: AvatarFigure; label: string }[] = [
+  { id: 'male', label: 'Male' },
+  { id: 'female', label: 'Female' },
+];
+
+/**
+ * Hair, which is what makes the build above legible at all.
+ *
+ * Six, the same count as the skin tones and chosen the same way: the range
+ * has to hold up against every one of those tones and against both themes,
+ * so it runs from near-black to near-white rather than clustering in the
+ * browns. `climberShapes.test.ts` holds it to a contrast against the skin —
+ * hair that disappears into a forehead is a bald climber.
+ */
+export const HAIR_TONES = [
+  '#16120f',
+  '#3b2a1e',
+  '#7a4a24',
+  '#a8511f',
+  '#d9b468',
+  '#b9c2c8',
+] as const;
