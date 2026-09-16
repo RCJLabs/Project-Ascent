@@ -343,17 +343,26 @@ export function eyeColor(skin: string): string {
 }
 
 /**
- * The top of the head, cut `down` units below its centre.
+ * The top of the head, cut `above` units above its centre (PLAN.md M226).
  *
  * An arc of the head's own radius between two points on the head's own
  * circle, so the hair hugs the skull instead of hovering over it — which is
- * what a rounded rect across the top of a circle does, and what the first
- * pass drew. `down` is negative for a fringe above the eyes and positive for
- * the fuller cap the back of the head takes.
+ * what a rounded rect across the top of a circle does, and what M225's first
+ * pass drew.
+ *
+ * **It takes a height above the centre, and that is not a style choice.**
+ * `A 15 15 0 0 1` between two points at the same height has two candidate
+ * centres and picks the one that makes the arc *minor* and clockwise. Above
+ * the centre that is the cap over the crown, which is the shape this is for.
+ * Below it, the minor arc is the shallow one between the two points — a lens
+ * four units tall sitting low on the face. M225 called this with `down: 11`
+ * for the back of the head and shipped a **moustache**, on a figure whose
+ * back view has no face at all. Taking the distance the other way up makes
+ * the wrong shape unreachable rather than one sign away.
  */
-export function scalp(head: Point, down: number, fill: string): Shape {
-  const half = Math.sqrt(HEAD * HEAD - down * down);
-  const y = head[1] + down;
+export function scalp(head: Point, above: number, fill: string): Shape {
+  const half = Math.sqrt(HEAD * HEAD - Math.min(Math.abs(above), HEAD) ** 2);
+  const y = head[1] - Math.abs(above);
   return {
     kind: 'path',
     d: `M ${(head[0] - half).toFixed(2)} ${y} A ${HEAD} ${HEAD} 0 0 1 ${(head[0] + half).toFixed(2)} ${y} Z`,
@@ -551,10 +560,7 @@ export function climberShapes(config: AvatarConfig, options: ShapeOptions): Shap
    *
    * Long hair falls *behind* the face and *in front of* the back of the
    * head, which is the same hair drawn in two orders rather than two
-   * different shapes. Cropped hair is an arc cut from the head's own circle,
-   * higher in front so it clears the eyes, much lower behind because there
-   * is nothing back there to clear and a cap cut at the crown reads as a
-   * hat — the helmet brim makes the same trade, two units of it.
+   * different shapes.
    */
   //
   // Two lobes in front and one mass behind, not one mass in both. The first
@@ -577,7 +583,13 @@ export function climberShapes(config: AvatarConfig, options: ShapeOptions): Shap
   if (b.longHair && front) out.push(...mane);
   out.push({ kind: 'circle', cx: j.head[0], cy: j.head[1], r: HEAD, fill: c.skin });
   if (b.longHair && !front) out.push(...mane);
-  else out.push(scalp(j.head, front ? -3 : 11, c.hair));
+  // Facing you there is a face to keep clear of, so cropped hair is a cap cut
+  // three units above the centre — above the eyes, which sit three below it.
+  // From behind there is nothing to keep clear of and the hair is the whole
+  // head: a circle rather than an arc, which also puts the shape M225 got
+  // wrong out of reach entirely.
+  else if (front) out.push(scalp(j.head, 3, c.hair));
+  else out.push({ kind: 'circle', cx: j.head[0], cy: j.head[1], r: HEAD, fill: c.hair });
   // Cropped hair still needs a fringe on a face with long hair beside it,
   // or the crown is bare between the two lobes.
   if (b.longHair && front) out.push(scalp(j.head, -3, c.hair));

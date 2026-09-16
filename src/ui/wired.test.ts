@@ -936,6 +936,7 @@ describe('nothing is on the first-paint path that does not have to be', () => {
  */
 const TEST_ONLY: Record<string, string> = {
   'src/content/validate.ts': 'its own header: runs over the whole catalog in tests',
+  'src/test/canvas.ts': 'the jsdom canvas M219 built and M226 shared, imported only by tests',
   'src/test/render.tsx': 'the harness the screen tests render through, imported only by tests',
   'src/test/setup.ts': 'named by vite.config.ts as setupFiles, so the runner loads it, not the app',
   'src/ui/paletteRules.ts': 'moved out of a script at M61 so the tool could itself be tested',

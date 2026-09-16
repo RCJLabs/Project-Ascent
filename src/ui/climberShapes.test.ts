@@ -5,11 +5,13 @@ import { contrast } from './contrast';
 import {
   BUILDS,
   CLIMBER_VIEWBOX,
+  HEAD,
   POSES,
   STANDING,
   climberShapes,
   climbingPose,
   eyeColor,
+  scalp,
   type Joints,
   type Point,
   type Shape,
@@ -538,7 +540,7 @@ describe('the two builds', () => {
 describe('hair', () => {
   const hairOf = (figure: AvatarFigure, facing: 'front' | 'back') =>
     climberShapes(kitted(figure, 0), { colors: COLORS, facing }).filter(
-      (s) => (s.kind === 'rect' || s.kind === 'path') && s.fill === DEFAULT_PALETTE.hair,
+      (s) => s.kind !== 'polyline' && s.fill === DEFAULT_PALETTE.hair,
     );
 
   it('puts some on every head, in both views', () => {
@@ -568,6 +570,60 @@ describe('hair', () => {
       if (lobe.kind !== 'rect') throw new Error('a lobe is a rect');
       const nearEdge = lobe.x + lobe.w / 2 < head[0] ? lobe.x + lobe.w : lobe.x;
       expect(Math.abs(nearEdge - head[0])).toBeGreaterThanOrEqual(5);
+    }
+  });
+
+  it('covers the whole of the back of the head', () => {
+    /**
+     * There is no face back there to keep clear of, so hair from behind is
+     * the whole head rather than a cap cut out of it — and drawn *over* the
+     * head rather than under it.
+     *
+     * M225 cut a cap eleven units **below** the centre and shipped a
+     * moustache (see `scalp`). Reported as "there's like a mustache on the
+     * back of the head during the Ascent game", which is exactly what it
+     * was, on the one view of the figure that has no face at all.
+     */
+    for (const figure of FIGURES) {
+      const back = climberShapes(kitted(figure, 0), { colors: COLORS, facing: 'back' });
+      const skull = back.findIndex(
+        (s) => s.kind === 'circle' && s.r === HEAD && s.fill === DEFAULT_PALETTE.skin,
+      );
+      const hair = back.findIndex(
+        (s) => s.kind !== 'polyline' && s.fill === DEFAULT_PALETTE.hair,
+      );
+      expect(skull, `${figure} has a head`).toBeGreaterThanOrEqual(0);
+      expect(hair, `${figure} has hair behind`).toBeGreaterThan(skull);
+      // Whatever shape it is, it reaches the crown: a band across the middle
+      // of the head is the failure this rule exists for.
+      const shape = back[hair]!;
+      const top =
+        shape.kind === 'circle' ? shape.cy - shape.r
+        : shape.kind === 'rect' ? shape.y
+        : Number.NaN;
+      expect(top, `${figure} hair top`).toBeLessThanOrEqual(POSES.steady.head[1] - HEAD);
+    }
+  });
+
+  it('cuts the fringe above the head, whatever number it is handed', () => {
+    /**
+     * `A 15 15 0 0 1` between two points at the same height has two
+     * candidate centres, and picks the one that makes the arc minor and
+     * clockwise. Above the centre that is the cap over the crown. **Below
+     * it, the minor arc is the shallow one between the two points** — a lens
+     * four units tall sitting low on the face.
+     *
+     * So the helper takes a distance *above* the centre and takes its
+     * absolute value, which makes the wrong shape unreachable rather than
+     * one sign away from the right one.
+     */
+    for (const above of [0, 3, 7, 11, 14, -11]) {
+      const cap = scalp([90, 60], above, '#000000');
+      if (cap.kind !== 'path') throw new Error('a scalp is a path');
+      const [, y0, y1] = /^M [-\d.]+ ([-\d.]+) A [\d.]+ [\d.]+ 0 0 1 [-\d.]+ ([-\d.]+) Z$/
+        .exec(cap.d)!;
+      expect(Number(y0), `above ${above}`).toBeLessThanOrEqual(60);
+      expect(Number(y1), `above ${above}`).toBe(Number(y0));
     }
   });
 

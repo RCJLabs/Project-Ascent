@@ -8,6 +8,10 @@
  * not throw, it does not warn, it silently does nothing, which is exactly
  * the kind of regression a rule has to hold rather than a reviewer.
  */
+export function pageScroller(): HTMLElement | null {
+  return document.getElementById('main');
+}
+
 export function scrollPageToTop(behavior: ScrollBehavior = 'smooth'): void {
-  document.getElementById('main')?.scrollTo({ top: 0, behavior });
+  pageScroller()?.scrollTo({ top: 0, behavior });
 }

@@ -335,10 +335,16 @@ describe('which way the climber faces', () => {
     return (two.calls.arc ?? 0) - (one.calls.arc ?? 0);
   };
 
-  it('draws a back, and a back has no face on it (PLAN.md M209)', () => {
-    // A head and two hands. The portrait and the share card turned around
-    // at M209 and this one did not, because a climber on a wall is a back —
-    // `facing: 'front'` here would add two eyes and this count would be 5.
-    expect(arcsPerClimber()).toBe(3);
+  it('draws a back, and a back has no face on it (PLAN.md M209, M226)', () => {
+    // A head, the hair over it and two hands. The portrait and the share
+    // card turned around at M209 and this one did not, because a climber on
+    // a wall is a back — `facing: 'front'` here would add two eyes and this
+    // count would be six.
+    //
+    // Three until M226, which gave the back of the head hair: from behind
+    // that is the whole head rather than a cap cut out of it, so it is a
+    // circle and it costs an arc. The number moved; what the rule is
+    // watching for did not.
+    expect(arcsPerClimber()).toBe(4);
   });
 });

@@ -13636,3 +13636,84 @@ finder returned to `window.scrollTo`.
 *down* from 137.48 at the start of the milestone. It paid for itself: the shell lost
 `backdrop-blur`, `fixed bottom-0 inset-x-0`, four `lg:` positioning utilities and the two bottom
 paddings that existed only to clear a floating bar, which outweighed what the figure cost.
+
+## M226 — the moustache, and a game you had to scroll
+
+Two faults in the milestone before this, both reported from a phone with the game running.
+
+### The moustache
+
+> "There's like a mustache on the back of the head during the Ascent game."
+
+Exactly that, and on the one view of the figure that has no face at all.
+
+M225 drew cropped hair as an arc cut from the head's own circle, so it would hug the skull rather
+than hover over it: `scalp(head, down, fill)`, where `down` is how far below the centre the cut sits.
+Negative in front so the fringe clears the eyes, positive behind — eleven — because there is nothing
+back there to clear and a cap cut at the crown reads as a hat.
+
+**`A 15 15 0 0 1` between two points at the same height has two candidate centres**, and the
+renderer picks the one that makes the arc minor and clockwise. Above the centre, that is the cap
+over the crown — the shape this is for. **Below it, the minor arc is the shallow one between the two
+points**: a lens twenty wide and four tall, sitting low on the face. A moustache.
+
+`scalp` takes a distance *above* the centre now and takes its absolute value, so the wrong shape is
+unreachable rather than one sign away from the right one. And the back of the head does not use it:
+there is no face to keep clear of back there, so the hair is the whole head — a circle drawn over
+it. Two rules hold both halves.
+
+**I had this in front of me and read it wrong.** M225's back-view render sheet was drawn at
+`down: 7`, which is the same lens a little higher and wider, and the note I wrote about it says "a
+dark cap that reads as a bowl — a light circle with a dark band across the top". It was a band
+across the *middle*, which is what the screenshot shows. I then changed 7 to 11 to "deepen" it and
+never re-rendered the back view at all. The browser check that would have caught this is the one I
+decided I had already done.
+
+### A game you had to scroll
+
+> "You have to scroll down to see the entire game."
+
+The canvas is 360 by 640 and was `w-full`, so its height was whatever its width implied: **398 wide
+on a phone is 708 tall**, against 682 of page under a nav that — since M225 — is properly always
+there. With the heading and the height read-out above it, the bottom of a running wall was below the
+fold. A game you have to scroll is a game you cannot play.
+
+Width was never the binding constraint; height is. The canvas takes the smaller of the column's
+width and the width the aspect ratio allows in the room left under the HUD. Measured in the browser,
+mid-run:
+
+```
+430x740  canvas 291x518, top 152, bottom 670, nav at 682   whole wall visible
+390x664  canvas 249x442, top 152, bottom 594, nav at 606   whole wall visible
+1280x860 canvas 414x736, top 112, bottom 848               whole wall visible
+```
+
+Sixty of those pixels came from the heading: while a run is on, the way back and the wall's name are
+not drawn. **The `h1` stays** — a page with no heading is a page you cannot tell you have landed on
+— and both of the others are readable from the menu, a tap away.
+
+**The arithmetic is its own module (`ascent/fit.ts`) because the measuring cannot be tested.** jsdom
+has no layout: every width and height a page reads there is zero, so a test of the whole thing would
+assert against zeros and pass however wrong the decision was. Split, the decision is checked against
+real numbers — a phone, a laptop, a short landscape window, a narrow column with height to spare —
+and the page is left with nothing but the reading. The page half is browser-verified, above, and
+says so.
+
+### Measured
+
+**11 of 11 mutants caught, sanity no-op survived**: the moustache put back, the back of the head
+left bare, the hair drawn under the head where none of it shows, long hair moved behind the back of
+the head, `scalp` trusting the sign it is given, the wall sized by width alone, the room measured
+against the wrong side of the ratio, the floor raised to swallow every real width, the margin
+removed, the heading's trimmings kept mid-run, and the `h1` dropped with them.
+
+The first battery had a survivor and **the mutant was the fault, not the rule**: it added a second
+hair circle rather than moving the one there is, which a rule about ordering has no reason to mind.
+
+Two existing rules moved with the change rather than against it. `render.test.ts` counts the arcs
+one climber costs in the game and read 3; hair on the back of the head is a circle, so it reads 4,
+and what the rule watches for — `facing: 'front'` would make it 6 — is untouched. And
+`src/test/canvas.ts`, which is M219's jsdom canvas harness lifted out of `raceSomeone.test.tsx` so
+this milestone could use it too, needed its reason in `wired.test.ts`'s exemption table.
+
+**6,038 tests over 345 files.** First load **137.50KB against the 138.0 budget, 0.50 of slack**.

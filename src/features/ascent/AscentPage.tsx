@@ -28,6 +28,8 @@ import { describeBurns, describeClimb, restingFor } from '@/engine/ascent/restin
 import { describeScale, runHeight } from '@/engine/ascent/scale';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveAvatar } from '@/engine/avatar';
+import { pageScroller } from '@/ui/mainScroll';
+import { GAME_MARGIN, fitGameWidth, gameHeight } from './fit';
 import { addDays, daysBetween, today as todayKey } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { deriveStats } from '@/engine/stats';
@@ -376,10 +378,38 @@ export function AscentPage() {
     if (!canvas || !ctx) return;
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const width = canvas.clientWidth;
-    canvas.width = Math.round(width * dpr);
-    canvas.height = Math.round(width * (VIEW.height / VIEW.width) * dpr);
-    const scale = (width * dpr) / VIEW.width;
+    let scale = 1;
+
+    /**
+     * Measure the room and hand it to `fitGameWidth` (PLAN.md M226).
+     *
+     * Only the reading lives here. What to do with the numbers is in
+     * `./fit`, where it can be tested — jsdom has no layout, so everything
+     * this function measures comes back zero there.
+     */
+    const fit = () => {
+      // `|| `, not `?? `: jsdom measures every element as zero, and a column
+      // of no width would pin the wall to its floor in every page test.
+      const column = canvas.parentElement?.clientWidth || canvas.clientWidth || VIEW.width;
+      const scroller = pageScroller();
+      let room = window.innerHeight;
+      if (scroller) {
+        // Measured from an unscrolled page, because what is wanted is the
+        // canvas's place in the content rather than where it happens to be
+        // sitting. Starting a run scrolled halfway down the menu is its own
+        // small bug anyway.
+        scroller.scrollTop = 0;
+        const top = canvas.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+        room = scroller.clientHeight - top - GAME_MARGIN;
+      }
+      const width = fitGameWidth(column, room);
+      canvas.style.width = `${width}px`;
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(gameHeight(width) * dpr);
+      scale = (width * dpr) / VIEW.width;
+    };
+    fit();
+    window.addEventListener('resize', fit);
 
     let last = performance.now();
     let hudAt = 0;
@@ -444,7 +474,10 @@ export function AscentPage() {
     };
 
     frameRef.current = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(frameRef.current);
+    return () => {
+      window.removeEventListener('resize', fit);
+      cancelAnimationFrame(frameRef.current);
+    };
   }, [phase, theme, wall, avatar, finish]);
 
   // Keys, taps and swipes all end up as the same single input.
@@ -488,11 +521,22 @@ export function AscentPage() {
 
   return (
     <>
-      <BackLink />
+      {/* The wall gets the room a run needs (PLAN.md M226). The `h1` stays —
+          a page without a heading is a page you cannot tell you have landed
+          on — but the way back and the wall's name are both readable from
+          the menu a tap away, and between them they are sixty pixels of a
+          game that has to fit. */}
+      {phase !== 'playing' && <BackLink />}
 
       <PageHeader
         title="The Ascent"
-        subtitle={`Daily Wall #${wallNumber(todayKey())}${derived.restedToday ? ' · recovery skies' : ''}`}
+        {...(phase === 'playing'
+          ? {}
+          : {
+              subtitle: `Daily Wall #${wallNumber(todayKey())}${
+                derived.restedToday ? ' · recovery skies' : ''
+              }`,
+            })}
       />
 
       <div className="grid grid-cols-1 gap-3">
@@ -526,7 +570,7 @@ export function AscentPage() {
           ref={canvasRef}
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
-          className="w-full rounded-2xl border border-line touch-none select-none bg-sunken"
+          className="w-full mx-auto rounded-2xl border border-line touch-none select-none bg-sunken"
           style={{ aspectRatio: `${VIEW.width} / ${VIEW.height}`, display: phase === 'playing' ? 'block' : 'none' }}
           aria-label="The Ascent"
         />

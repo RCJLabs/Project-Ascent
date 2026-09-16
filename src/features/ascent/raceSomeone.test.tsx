@@ -10,6 +10,7 @@ import { runHeight } from '@/engine/ascent/scale';
 import { encodeTape } from '@/engine/ascent/tapeFile';
 import { FREE_SOLO_UNLOCK } from '@/engine/ascent/unlock';
 import { useGame } from '@/store/game';
+import { playableCanvas } from '@/test/canvas';
 import { renderAt, reset } from '@/test/render';
 import { AscentPage } from './AscentPage';
 
@@ -143,60 +144,12 @@ describe('opening a run someone sent', () => {
   });
 });
 
-/**
- * Playing a run to its end, in jsdom.
- *
- * The frame loop bails on `canvas.getContext('2d')`, which jsdom returns
- * null for — so a test that clicks "Race it" and asserts on the store
- * proves nothing, because the run never starts. That is what the first
- * version of the test below did. A context that accepts every call, a
- * measurable canvas and a clock that advances per frame make the loop run
- * for real; the climber never steers, so the wall ends it.
- */
-function playable(): () => void {
-  const sink: unknown = new Proxy(function () {} as object, {
-    get: () => sink,
-    apply: () => sink,
-    set: () => true,
-  });
-  const context = vi
-    .spyOn(HTMLCanvasElement.prototype, 'getContext')
-    .mockReturnValue(sink as CanvasRenderingContext2D);
-  const width = vi
-    .spyOn(HTMLCanvasElement.prototype, 'clientWidth', 'get')
-    .mockReturnValue(430);
-
-  // jsdom has no Path2D, and the renderer builds one per climber limb.
-  const hadPath2D = 'Path2D' in globalThis;
-  const previousPath2D = (globalThis as { Path2D?: unknown }).Path2D;
-  (globalThis as { Path2D?: unknown }).Path2D = class {};
-
-  let clock = 0;
-  const now = vi.spyOn(performance, 'now').mockImplementation(() => clock);
-  const raf = vi
-    .spyOn(globalThis, 'requestAnimationFrame')
-    .mockImplementation((cb: FrameRequestCallback) => {
-      // 16ms a frame, and queued rather than called inline: a synchronous
-      // callback would recurse until the stack gave out.
-      clock += 16;
-      return setTimeout(() => cb(clock), 0) as unknown as number;
-    });
-  return () => {
-    context.mockRestore();
-    width.mockRestore();
-    now.mockRestore();
-    raf.mockRestore();
-    if (hadPath2D) (globalThis as { Path2D?: unknown }).Path2D = previousPath2D;
-    else delete (globalThis as { Path2D?: unknown }).Path2D;
-  };
-}
-
 describe('racing it', () => {
   it('counts for the race and for nothing else', async () => {
     // Recording it would set `best`, enter the day's history and re-price
     // the one `ascent:<date>` ledger entry — which would make picking an
     // easy wall a way to earn.
-    const stop = playable();
+    const stop = playableCanvas();
     try {
       const { tape, climbed } = playedTape(4242);
       await open();
@@ -226,7 +179,7 @@ describe('racing it', () => {
      * one holding the device. Both land in the file the race writes, which
      * is the only place a test can read them back out.
      */
-    const stop = playable();
+    const stop = playableCanvas();
     try {
       const { tape, climbed } = playedTape(4242);
       await open();
@@ -254,7 +207,7 @@ describe('racing it', () => {
     // compared a race to a lifetime record it never touches, reading "Best
     // is 0 ft"; and the daily-wall share card was offered for a run that
     // may be on any wall the sender's file carries.
-    const stop = playable();
+    const stop = playableCanvas();
     try {
       const { tape, climbed } = playedTape(4242);
       await open();
@@ -273,7 +226,7 @@ describe('racing it', () => {
   it('records an ordinary run, which is what makes the rule above a rule', async () => {
     // The control. Without it, "recordRun was not called" is also what a
     // run that never started looks like.
-    const stop = playable();
+    const stop = playableCanvas();
     try {
       await open();
       const record = vi.spyOn(useGame.getState(), 'recordRun');
