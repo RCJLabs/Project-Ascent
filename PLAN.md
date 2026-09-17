@@ -14176,6 +14176,19 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   gets "None of the 7 … has been taken this block" on identical data. See the entry at the end of
   this document.*
 
+- **M254 — a part-week against a whole one.** The weekly note is read fifty-two times a year and had
+  never been driven. Eight week shapes later: on a Thursday it takes **all seven days of last week**
+  and divides by however much of this one has happened, so a climber who has trained exactly as much
+  so far reads *"-50% on last week"*. And it delivers its verdict in the past tense on a week that
+  is still going — *"1 of 4 sessions. A short week is not a failure — next week starts clean"* — on
+  a page whose own subtitle two lines above says **still running**.
+  `yearReview.ts` opens with an essay about precisely this failure and `blockCompare.ts` guards it
+  from the other side; `inProgress` has been on `WeekReview` all along, read by nothing but that
+  subtitle.
+  *Small, and it is one window and two sentences.*
+  ***Built, and the battery found a redundant guard and a test that was not looking.*** *See the
+  entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -16139,3 +16152,71 @@ scheduled end for the header, and dating a reconstructed row all die.
 
 **6,405 tests over 379 files.** First load 134.42KB against a 135.4KB budget. Both read back from a
 browser across all seven block shapes, and in both themes at 430px and 1280px.
+
+## M254 — a part-week against a whole one
+
+`/review` is the weekly note: fifty-two readings a year against the year page's one, and nothing had
+ever driven it. Eight week shapes — nothing logged, one session, a full week, no rest and no drills,
+no warmups, a load spike, an injury on the books, and a first V7.
+
+### The comparison
+
+```ts
+const week  = all.filter((s) => s.date >= from && s.date <= to);       // what has happened
+const prior = all.filter((s) => s.date >= priorFrom && s.date < from); // all seven days
+```
+
+On a Thursday, `week` holds four days and `prior` holds seven. So a climber who trained Sunday,
+Tuesday and Wednesday of both weeks — identically — was told **"-50% on last week"**, and one who
+had not trained yet was told **"-100%"** on a Monday morning.
+
+This is the failure `yearReview.ts` was built around, and its module comment is unambiguous about
+it:
+
+> *A year-in-review that compares a part-finished year against a full one tells every climber they
+> are having a worse year until roughly December. On 9 September, "142 sessions vs 198 last year" is
+> not a fact about your training, it is a fact about the calendar.*
+
+`blockCompare.ts` guards the same thing from the other end, withholding its comparison until the log
+covers the whole earlier window, *"which would report the act of installing as a training
+improvement"*. **Two engines in this repository are careful about part-periods. The one a climber
+reads every week was not.**
+
+The fix is the rule `yearReview` states: the same slice. Sunday-to-Thursday of this week against
+Sunday-to-Thursday of last. Measured in a browser, with seven days logged last week and five so far
+this week: *"level with last week. Last week was 53."* It read −28% before.
+
+A finished week takes the whole of the one before it, unchanged — and it does so through the clamp
+rather than a branch. The first draft guarded that case separately; the battery removed the guard and
+nothing failed, because once today is past the week's end the offset already exceeds six. One rule,
+said once. That is the second milestone running where the battery found a dead guard in the fix.
+
+### The tense
+
+```
+Sep 13 – Sep 19 · still running
+1 of 4 sessions
+A short week is not a failure — it is one week. The streak counts weeks you
+hit the target, so next week starts clean.
+```
+
+Delivered on a Wednesday, with three days left to do the other three sessions. The page knows: it
+prints *still running* in its own subtitle, from `review.inProgress`, a field that has been on
+`WeekReview` since it was written and that **nothing else has ever read**.
+
+The two notes that write a week off now say so in the present tense while it is running — *"1 of 4
+sessions so far · Still time"*, and a blank week in progress is *"a note rather than a verdict"*. A
+week that is over keeps every word it had.
+
+### The test that was not looking
+
+The battery cut the prior slice to four days and **survived**: the finished-week test asserted
+`sessions`, which is *this* week's count, so a change to the prior slice was invisible to it. It
+asserts `sessionsPrior` now, on a fixture with sessions on the last days of the week before — the
+days a short slice drops.
+
+**7 mutants caught, sanity no-op survived.**
+
+**6,411 tests over 379 files.** First load 134.42KB against a 135.4KB budget. Read back from a
+browser across all eight week shapes, and in both themes at 430px and 1280px on a week matched day
+for day against the one before it.

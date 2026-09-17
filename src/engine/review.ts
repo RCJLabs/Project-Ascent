@@ -16,7 +16,7 @@ import type { Program } from '@/content/types';
 import type { Session } from '@/db/sessions';
 import type { Project } from '@/db/projects';
 import type { Challenge } from './challenges';
-import { addDays, startOfWeek, today as todayKey } from './dates';
+import { addDays, daysBetween, startOfWeek, today as todayKey } from './dates';
 import { buildLoadIndex, deriveClimberState, loadOrZero, loadStateAt, type AcwrZone } from './derive';
 import { sessionHeight } from './altimeter';
 import { dayLoad, type DayLoad } from './bodyLoad';
@@ -131,7 +131,29 @@ export function buildReview(input: ReviewInput): WeekReview {
 
   const all = input.sessions.filter((s) => s.completed);
   const week = all.filter((s) => s.date >= from && s.date <= to);
-  const prior = all.filter((s) => s.date >= priorFrom && s.date < from);
+  /**
+   * The same slice of last week, not the whole of it (PLAN.md M254).
+   *
+   * `week` holds what has happened; on a Thursday that is four days. `prior`
+   * held seven, so "-50% on last week" was a fact about the calendar rather
+   * than about the training — which is the exact failure `yearReview.ts` was
+   * written around, in its own words: *"A year-in-review that compares a
+   * part-finished year against a full one tells every climber they are
+   * having a worse year until roughly December."* `blockCompare.ts` guards
+   * the same thing from the other side, withholding the comparison until the
+   * log covers the whole earlier window. Two engines here are careful about
+   * this and the weekly note, which a climber sees fifty-two times a year,
+   * was not.
+   *
+   * A finished week takes the whole of the one before it, exactly as before.
+   */
+  // Clamped rather than branched on whether the week has ended: once today
+  // is past it, the offset is more than six and the clamp takes the whole
+  // week, which is the same rule said once. A first draft guarded that case
+  // separately and the battery showed the guard could not change an answer.
+  const throughDay = Math.max(0, Math.min(6, daysBetween(from, today)));
+  const priorTo = addDays(priorFrom, throughDay);
+  const prior = all.filter((s) => s.date >= priorFrom && s.date <= priorTo);
 
   const training = week.filter((s) => !isRestSession(s));
   const load = week.reduce((sum, s) => sum + loadOrZero(s), 0);
@@ -339,17 +361,28 @@ function coachNote(
     return {
       id: 'blank',
       tone: 'neutral',
-      headline: 'Nothing logged this week',
-      body: 'No verdict on a blank week. If you climbed and did not log it, backfilling takes a minute and keeps every number honest.',
+      headline: review.inProgress ? 'Nothing logged yet this week' : 'Nothing logged this week',
+      body: review.inProgress
+        ? 'The week is still running, so this is a note rather than a verdict. If you climbed and did not log it, backfilling takes a minute and keeps every number honest.'
+        : 'No verdict on a blank week. If you climbed and did not log it, backfilling takes a minute and keeps every number honest.',
     };
   }
 
   if (review.adherence < 0.6) {
+    // Not in the past tense while the week is still running (PLAN.md M254).
+    // "A short week is not a failure — next week starts clean" was written
+    // for a week that is over, and it was being delivered on a Thursday with
+    // three days left in it. `inProgress` was on the shape all along and only
+    // the page subtitle read it.
     return {
       id: 'short',
       tone: 'neutral',
-      headline: `${review.sessions} of ${review.target} sessions`,
-      body: 'A short week is not a failure — it is one week. The streak counts weeks you hit the target, so next week starts clean.',
+      headline: review.inProgress
+        ? `${review.sessions} of ${review.target} sessions so far`
+        : `${review.sessions} of ${review.target} sessions`,
+      body: review.inProgress
+        ? 'Still time — the week has days left in it, and the streak counts weeks that hit the target.'
+        : 'A short week is not a failure — it is one week. The streak counts weeks you hit the target, so next week starts clean.',
     };
   }
 

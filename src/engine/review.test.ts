@@ -243,3 +243,100 @@ describe('next week', () => {
     expect(r.nextWeek.filter((s) => s.isRest).length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * A part-week is not compared against a whole one (PLAN.md M254).
+ *
+ * `yearReview.ts` opens with an essay about this: *"A year-in-review that
+ * compares a part-finished year against a full one tells every climber they
+ * are having a worse year until roughly December."* `blockCompare.ts` guards
+ * it from the other side. The weekly note — fifty-two readings a year against
+ * the year page's one — took the whole of last week and divided by however
+ * much of this one had happened.
+ */
+describe('comparing a week that is still running', () => {
+  /** TODAY is a Wednesday, so this week holds Sunday to Wednesday. */
+  const lastWeek = (days: number[]) =>
+    days.map((d) => session(addDays(addDays(THIS_WEEK, -7), d), { rpe: 7, durationMin: 90 }));
+  const thisWeek = (days: number[]) =>
+    days.map((d) => session(addDays(THIS_WEEK, d), { rpe: 7, durationMin: 90 }));
+
+  it('takes the same days out of last week', () => {
+    // Three sessions each, in the same first four days. The rest of last
+    // week — Thursday, Friday, Saturday — is not this week's to be measured
+    // against yet.
+    const r = review([...lastWeek([0, 2, 3, 4, 5, 6]), ...thisWeek([0, 2, 3])]);
+    expect(r.inProgress).toBe(true);
+    expect(r.sessionsPrior, 'Sunday to Wednesday of last week, not all of it').toBe(3);
+    expect(r.load).toBe(r.loadPrior);
+    expect(r.loadDelta).toBe(0);
+  });
+
+  it('called a matched week a collapse before', () => {
+    // The same fixture, measured the old way: six sessions against three.
+    const r = review([...lastWeek([0, 2, 3, 4, 5, 6]), ...thisWeek([0, 2, 3])]);
+    const wholeOfLastWeek = 6 * (7 * 1.5);
+    expect(wholeOfLastWeek).toBeGreaterThan(r.loadPrior);
+    expect(r.loadDelta, 'would have read -50%').not.toBeCloseTo(-0.5);
+  });
+
+  /**
+   * A finished week still takes the whole of the one before it — every day
+   * of it. The first version of this test read only `sessions`, which is
+   * this week's count, so clamping the *prior* slice changed nothing it
+   * looked at and the battery walked straight through.
+   */
+  it('leaves a finished week exactly as it was', () => {
+    const lastSaturday = addDays(THIS_WEEK, -1);
+    // Sessions on the last day of the week before the one under review: the
+    // days a short slice would drop.
+    const twoWeeksBack = addDays(THIS_WEEK, -14);
+    const r = review(
+      [
+        ...lastWeek([0, 2, 3, 4, 5, 6]),
+        ...[0, 5, 6].map((d) => session(addDays(twoWeeksBack, d), { rpe: 7, durationMin: 90 })),
+      ],
+      { date: lastSaturday },
+    );
+    expect(r.inProgress).toBe(false);
+    expect(r.sessions).toBe(6);
+    // All three, including the ones on the last days of that week.
+    expect(r.sessionsPrior).toBe(3);
+  });
+});
+
+describe('the note on a week that has not finished', () => {
+  const note = (sessions: Session[], extra: Partial<ReviewInput> = {}) =>
+    review(sessions, { program: getProgram('iron_grip'), ...extra }).note;
+
+  /**
+   * "A short week is not a failure — next week starts clean" was written for
+   * a week that is over, and was delivered on a Wednesday with three days
+   * left in it. `inProgress` has been on the shape all along; only the page
+   * subtitle ever read it.
+   */
+  it('does not write off a week with days left in it', () => {
+    const n = note([...baseline(), session(addDays(THIS_WEEK, 1), { warmup: true })]);
+    expect(n.id).toBe('short');
+    expect(n.headline).toMatch(/so far/);
+    expect(n.body, 'the week has not ended').not.toMatch(/next week starts clean/);
+    expect(n.body).toMatch(/Still time/);
+  });
+
+  it('still writes off a week that is over', () => {
+    const lastSaturday = addDays(THIS_WEEK, -1);
+    const n = note([...baseline(), session(addDays(THIS_WEEK, -7), { warmup: true })], {
+      date: lastSaturday,
+    });
+    expect(n.id).toBe('short');
+    expect(n.headline).not.toMatch(/so far/);
+    expect(n.body).toMatch(/next week starts clean/);
+  });
+
+  it('calls a blank week in progress a note rather than a verdict', () => {
+    const n = note(baseline());
+    expect(n.id).toBe('blank');
+    expect(n.headline).toBe('Nothing logged yet this week');
+    expect(n.body).toMatch(/still running, so this is a note rather than a verdict/);
+  });
+});
