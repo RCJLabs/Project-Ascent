@@ -19,6 +19,7 @@ export function Meter({
   size = 'md',
   tone = 'accent',
   color,
+  track = 'sunken',
   className = '',
 }: {
   /** 0..1. Clamped, because a derived fraction can exceed 1 on a completed goal. */
@@ -32,6 +33,17 @@ export function Meter({
   /** An explicit fill colour, for the one case where the colour is data —
    *  vitality, whose state has its own colour on the same scale as the bar. */
   color?: string;
+  /**
+   * What the empty part of the bar sits on (PLAN.md M257).
+   *
+   * A prop rather than a `className`, for the reason `ui.test.ts` spends a
+   * describe block on: both land in the same class attribute and Tailwind's
+   * emit order decides the winner, not the order they are written. The
+   * skills page is the one caller that needs it — its rows are already
+   * `bg-sunken`, so the default track is a bar you cannot see, and an empty
+   * one is nothing at all.
+   */
+  track?: 'sunken' | 'surface';
   className?: string;
 }) {
   const fraction = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
@@ -47,7 +59,7 @@ export function Meter({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuetext={valueText ?? `${percent}%`}
-      className={`${height} rounded-full bg-sunken overflow-hidden ${className}`}
+      className={`${height} rounded-full ${track === 'surface' ? 'bg-surface' : 'bg-sunken'} overflow-hidden ${className}`}
     >
       <div
         className={`h-full rounded-full ${color === undefined ? fill : ''}`}

@@ -148,10 +148,28 @@ describe('feature files use the primitives', () => {
     expect(findAll(FEATURE_FILES, (l) => l.includes('border-accent bg-accent/10'))).toEqual([]);
   });
 
+  /**
+   * By shape, not by one background token (PLAN.md M257).
+   *
+   * This read `rounded-full bg-sunken overflow-hidden` — `Meter`'s own
+   * class string, copied verbatim. The skills page wrote the same bar with
+   * `bg-surface`, because its rows are already sunken, and the probe passed
+   * over it for as long as both existed. A probe that cannot find a
+   * known-present instance is not a probe (PLAN.md M195), so this one is
+   * proved against the string it used to miss.
+   */
+  const BAR = /rounded-full bg-(sunken|surface) overflow-hidden/;
+
   it('does not hand-roll a progress bar', () => {
-    expect(
-      findAll(FEATURE_FILES, (l) => /rounded-full bg-sunken overflow-hidden/.test(l)),
-    ).toEqual([]);
+    expect(findAll(FEATURE_FILES, (l) => BAR.test(l))).toEqual([]);
+  });
+
+  it('would catch the one it missed', () => {
+    expect(BAR.test('<div className="h-1 rounded-full bg-surface overflow-hidden mt-2">')).toBe(true);
+    expect(BAR.test('<div className="h-1.5 rounded-full bg-sunken overflow-hidden">')).toBe(true);
+    // And is still a bar rather than any rounded box: a thumbnail is
+    // `rounded-xl overflow-hidden bg-sunken` and must go on passing.
+    expect(BAR.test('className="aspect-square rounded-xl overflow-hidden bg-sunken"')).toBe(false);
   });
 });
 

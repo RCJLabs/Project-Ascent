@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { newSession, type Session } from '@/db/sessions';
+import { addDays as addDaysKey, startOfWeek as startOfWeekKey } from './dates';
 import { V_GRADES } from './grades';
 import { deriveClimberState } from './derive';
 import type { SkillInput } from './skills';
@@ -272,5 +273,77 @@ describe('trainableByProgram', () => {
     expect(trainableByProgram({ kind: 'sends', scale: 'V', grade: 'V6', count: 10 })).toBe(true);
     expect(trainableByProgram({ kind: 'hours', hours: 80 })).toBe(true);
     expect(trainableByProgram({ kind: 'drills', category: 'technique', count: 10 })).toBe(true);
+  });
+});
+
+/**
+ * Readiness, from where the climber stands (PLAN.md M257).
+ *
+ * `suggestedRequirements` puts a `streak-weeks` on every new objective, and
+ * that is the one kind whose `current` is a record rather than a position.
+ * Reading it as progress inflated the headline percentage and could hide
+ * the requirement furthest away behind one that merely used to be close.
+ */
+describe('a streak that broke', () => {
+  /** Eight weeks of three sessions, two months off, one week back. */
+  function brokenStreak(): Session[] {
+    const sessions: Session[] = [];
+    let id = 0;
+    const put = (date: string) => {
+      sessions.push(newSession(date, id++, { completed: true, rpe: 7, durationMin: 60 }));
+    };
+    // Sundays of 2025-11-02 back through the eight weeks before TODAY - 60d.
+    for (let w = 20; w >= 13; w--) {
+      for (const d of [0, 2, 4]) put(addDaysKey(startOfWeekKey(TODAY), -7 * w + d));
+    }
+    for (const d of [0, 2, 4]) put(addDaysKey(startOfWeekKey(TODAY), d));
+    return sessions;
+  }
+
+  const input = inputFor(brokenStreak());
+
+  it('is a fixture where the record is ahead of the run', () => {
+    // A probe that cannot find the thing it is looking for is not a probe.
+    expect(input.state.longestStreakWeeks).toBeGreaterThan(input.state.streakWeeks);
+  });
+
+  it('does not count a record as most of the way to a new one', () => {
+    const p = objectiveProgress(
+      objective({ requirements: [req({ kind: 'streak-weeks', weeks: 16 })] }),
+      input,
+      TODAY,
+    );
+    const only = p.measured[0]!;
+    expect(only.measurement.met).toBe(false);
+    // The record would have read as half done; the run is barely started.
+    expect(only.fraction).toBeLessThan(only.measurement.current / only.measurement.target);
+    expect(only.fraction * 16).toBeCloseTo(input.state.streakWeeks, 5);
+  });
+
+  it('keeps the headline honest about it', () => {
+    const p = objectiveProgress(
+      objective({ requirements: [req({ kind: 'streak-weeks', weeks: 16 })] }),
+      input,
+      TODAY,
+    );
+    expect(describeProgress(p)).toMatch(/^\d+% of the way there, 0 of 1 met/);
+    expect(p.readiness).toBeLessThan(0.2);
+  });
+
+  it('names it the furthest away when it is', () => {
+    // Against a requirement genuinely half done, the broken streak is the
+    // one the climber has the most left on — and `weakest` is the app's
+    // answer to "what now?".
+    const p = objectiveProgress(
+      objective({
+        requirements: [
+          req({ kind: 'streak-weeks', weeks: 16 }),
+          req({ kind: 'sessions', count: 54 }),
+        ],
+      }),
+      input,
+      TODAY,
+    );
+    expect(p.weakest?.requirement.kind).toBe('streak-weeks');
   });
 });

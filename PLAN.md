@@ -14210,6 +14210,17 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and the battery caught the fix reading `<= 0` where it meant `< 0`.*** *See the entry at
   the end of this document.*
 
+- **M257 — the streak you are on, and the streak you once had.** `/skills` is the thinnest-covered
+  page in the app: two tests reach it, one that checks it mounts and one that reads its layout
+  classes, and neither looks at a row. `measure()` returns a `current` that unlocks the node and a
+  `short` that says what is left, and on `streak-weeks` the two are counted from **different
+  streaks** — the longest ever run, and the one being run now. Every fraction a climber reads was
+  drawn from the first: *8 / 16* over *15 more weeks in a row*, on the skills page and on the
+  objective detail page, whose readiness percentage is a mean of exactly those fractions.
+  *Small, and it is one field on `Measurement` and the places that draw a bar from it.*
+  ***Built, and the battery found the bar and its track untested on both sides.*** *See the entry at
+  the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -16358,3 +16369,114 @@ because a fix built on a language rule should fail loudly if the rule ever chang
 
 **6,447 tests over 380 files.** First load 134.43KB against a 135.4KB budget. Read back from a
 browser across all ten shapes, in both themes at 430px and 1280px.
+
+## M257 — the streak you are on, and the streak you once had
+
+Two tests reached `/skills` before this: `mounts.test.tsx`, which checks it renders, and
+`layout.test.ts`, which reads its class strings. Neither looked at a row. Driven with a log of eight
+weeks on target, two months off, and one week back, the Consistency branch read:
+
+```
+Two Months   ✓
+A Season     8 / 16    Hit your weekly target 16 weeks running
+                       15 more weeks in a row
+Unbroken     8 / 30    Hit your weekly target 30 weeks running
+                       29 more weeks in a row
+```
+
+8 + 15 is 23. 8 + 30 is not 30 either. The numerator and the gap are counted from different things.
+
+### One measurement, two streaks
+
+```ts
+case 'streak-weeks':
+  return done(
+    s.longestStreakWeeks,   // current — what unlocks the node
+    requirement.weeks,
+    ...,
+    s.streakWeeks,          // shortFrom — what the gap is counted from
+  );
+```
+
+Both are right on their own. A streak you ran does not un-run itself, so the record is what unlocks
+the rung. And the gap has to come from the run in progress — the comment above it says so, at
+length:
+
+> *Counted from the streak you are on, not from your best one. A broken streak starts over, so
+> telling a climber whose record is behind them that they are “two weeks away” would be false —
+> their best is two weeks away, and they are sixteen.*
+
+What nobody did was follow that to the bar. `Measurement` exposed only `current`, so the three
+surfaces that draw a fraction had one number to draw it from, and it was the wrong one.
+`nextUnlock.test.ts` has the whole finding in a comment, beside the assertion that proves it:
+
+> *// The gap is what is left from here, which is more than the bar implies.*
+
+That is the **fifth** milestone this session where the correct sentence was already written down in
+the repository — this time in the test file for the same rule — and the number a climber reads
+said something else.
+
+### Where it actually cost something
+
+`suggestedRequirements` puts a `streak-weeks` on **every new objective**, so this is not a corner of
+the game half. The same fixture, on `/objectives/o1` with a 16-week streak and 60 sessions:
+
+```
+48%                                    →  26%
+FURTHEST AWAY                          →  FURTHEST AWAY
+  Log 60 sessions                           Hit your weekly target 16 weeks running
+  27 of 60 so far.                          1 of 16 so far.
+  Find a program that trains this →
+```
+
+Two things wrong, not one. The headline was twenty-two points high. And **“Furthest away” named the
+wrong requirement**: the broken streak scored 50% against sessions at 45%, so the app's answer to
+*what now?* was *log more sessions* when the real gap was fifteen weeks of consistency — and it
+offered to find a program for it, which `trainableByProgram` exists to say a streak is not.
+
+### The fix
+
+`Measurement` gains `standing`: where `short` is counted from. On thirteen of the fourteen kinds it
+is `current`, so nothing else moves; on `streak-weeks` it is the run in progress. The invariant is
+one line and it is the whole milestone — **`standing + short === target`** on any requirement not
+yet met — and it is asserted across all fourteen kinds, so a fifteenth cannot be added without
+deciding where its fraction is measured from.
+
+`metric-under` lost a comment while it was there. It promised *“a bar that fills as the measurement
+drops”* directly above code that returns 0 or 1, and had done since it was written. The reduction is
+right — nobody recorded where a climber started, so the share of the gap closed is not knowable —
+and the comment now says that instead of the opposite.
+
+### The bar that the rule against bars could not see
+
+```ts
+// ui.test.ts
+expect(findAll(FEATURE_FILES, (l) => /rounded-full bg-sunken overflow-hidden/.test(l))).toEqual([]);
+```
+
+That is `Meter`'s own class string, copied verbatim into the probe. The skills page wrote the same
+bar with `bg-surface`, because its rows are already sunken — so the one hand-rolled progress bar in
+the features tree sat a token outside a rule written to forbid it, with no value, no label and no
+text form. **A probe that cannot find a known-present instance is not a probe (M195)**, so the
+pattern takes either token now and is proved against the string it used to miss.
+
+The bar is a `Meter`, which needed a `track` prop: its default track is `bg-sunken`, and a sunken
+bar on a sunken row is not a bar. A prop rather than a `className`, for the reason `ui.test.ts`
+spends a describe block on — both land in the same class attribute and Tailwind's emit order picks
+the winner.
+
+And the fill lost its floor. The old bar drew `Math.max(2, pct)`, so a rung nobody had started still
+showed a sliver of accent: progress the log does not have, on the page whose opening line is that
+nothing here is granted.
+
+### What the battery found
+
+**10 mutants caught, sanity no-op survived.** Eight died on the first run. Two survived, and both
+were the same hole: `Meter` had never been rendered by a test. `ui.test.ts` reads its *source* for
+four ARIA attributes, which proves they are written and not that either thing a bar is — a width
+and a track — comes out right. Putting the 2% floor back and ignoring `track` altogether both
+passed a suite of six thousand. `meter.test.tsx` renders it now.
+
+**6,474 tests over 383 files**, from 6,447 over 380. First load 134.43KB against a 135.4KB budget,
+unmoved. Read back from a browser on both pages, in both themes at 430px and 1280px, against the
+same fixture before and after the change.

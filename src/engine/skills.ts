@@ -108,6 +108,24 @@ export interface Measurement {
    * having rather than deriving.
    */
   short: number;
+  /**
+   * Where `short` is counted from — where the climber stands *now*
+   * (PLAN.md M257).
+   *
+   * `current` is what unlocks the node, and for `streak-weeks` that is the
+   * longest streak ever run: a record already earned does not un-earn
+   * itself when a streak breaks. But the gap is counted from the streak
+   * they are **on**, and the two are different numbers. A page that drew
+   * its fraction from `current` and its gap from `short` printed *16 / 30*
+   * above *29 more weeks in a row* — two numbers that cannot both be
+   * about the same thing, and a bar filled to 53% of a run that started
+   * over last week.
+   *
+   * So the fraction a climber reads comes from here. For every other kind
+   * this is `current`, and `standing + short === target` holds on any
+   * requirement not yet met.
+   */
+  standing: number;
   /** `short` in the requirement's own words, or '' once it is met. */
   remaining: string;
 }
@@ -151,7 +169,15 @@ export function measure(requirement: SkillRequirement, input: SkillInput): Measu
   ): Measurement => {
     const met = current >= target;
     const short = met ? 0 : Math.max(0, target - shortFrom);
-    return { current, target, met, detail, short, remaining: short > 0 ? gap(short) : '' };
+    return {
+      current,
+      target,
+      met,
+      detail,
+      short,
+      standing: shortFrom,
+      remaining: short > 0 ? gap(short) : '',
+    };
   };
 
   switch (requirement.kind) {
@@ -267,8 +293,12 @@ export function measure(requirement: SkillRequirement, input: SkillInput): Measu
     }
     case 'metric-under': {
       const current = metricValue(input, requirement.metricId);
-      // Lower is better, so progress is the distance closed rather than the
-      // raw number — a bar that fills as the measurement drops.
+      // Lower is better, and there is no honest fraction in that: a climber
+      // at 18mm reaching for 12 has closed some unknown share of a gap
+      // whose start nobody recorded. So this one is met-or-not, and the
+      // comment that used to sit here promised "a bar that fills as the
+      // measurement drops" — which is not what the code below does and
+      // never was (PLAN.md M257).
       const met = current !== null && current <= requirement.atMost;
       const detail = `Get ${metricLabel(requirement.metricId)} to ${requirement.atMost} or under`;
       return {
@@ -277,6 +307,7 @@ export function measure(requirement: SkillRequirement, input: SkillInput): Measu
         met,
         detail,
         short: met ? 0 : 1,
+        standing: met ? 1 : 0,
         // Reduced to met-or-not above, so there is no gap left to quote and
         // the target is the whole of what can honestly be said.
         remaining: met ? '' : detail,

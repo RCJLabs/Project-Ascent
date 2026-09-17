@@ -209,7 +209,8 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
               <div className="min-w-0">
                 <p className="font-semibold text-sm">{progress.weakest.measurement.detail}</p>
                 <p className="text-sm text-ink-soft mt-0.5">
-                  {progress.weakest.measurement.current} of {progress.weakest.measurement.target} so far.
+                  {/* Where they stand, not their record (PLAN.md M257). */}
+                  {progress.weakest.measurement.standing} of {progress.weakest.measurement.target} so far.
                   {progress.weakest.why ? ` ${progress.weakest.why}` : ''}
                 </p>
               </div>
@@ -244,14 +245,14 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
                       {m.measurement.detail}
                     </div>
                     <div className="text-xs text-ink-soft tabular-nums">
-                      {m.measurement.current} / {m.measurement.target}
+                      {m.measurement.standing} / {m.measurement.target}
                     </div>
                     {!m.measurement.met && (
                       <Meter
                         value={m.fraction}
                         size="sm"
                         label={m.measurement.detail}
-                        valueText={`${m.measurement.current} of ${m.measurement.target}`}
+                        valueText={`${m.measurement.standing} of ${m.measurement.target}`}
                         className="mt-1.5"
                       />
                     )}

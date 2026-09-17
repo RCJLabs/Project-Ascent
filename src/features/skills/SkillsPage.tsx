@@ -144,7 +144,19 @@ function TreeCard({
 
 function NodeRow({ entry }: { entry: SkillProgress }) {
   const { node, unlocked, measurement, blocked } = entry;
-  const pct = Math.min(100, Math.round((measurement.current / Math.max(1, measurement.target)) * 100));
+  /**
+   * Where the climber stands, not what unlocks the node (PLAN.md M257).
+   *
+   * They are the same number on thirteen of the fourteen requirement kinds.
+   * On `streak-weeks` `current` is the longest streak ever run and
+   * `standing` is the one being run now, and this row drew its fraction
+   * from the first while printing the gap under it from the second: *16 /
+   * 30* over *29 more weeks in a row*, with the bar at 53% of a run that
+   * started over last week. `nextUnlock.test.ts` had the sentence — *"the
+   * gap is what is left from here, which is more than the bar implies"* —
+   * next to the assertion that proves it.
+   */
+  const standing = measurement.standing;
 
   return (
     <div className={`bg-sunken rounded-xl px-3 py-2.5 ${unlocked ? '' : 'opacity-95'}`}>
@@ -159,7 +171,7 @@ function NodeRow({ entry }: { entry: SkillProgress }) {
         </span>
         {!unlocked && (
           <span className="text-xs text-ink-soft ml-auto tabular-nums shrink-0">
-            {measurement.current.toLocaleString()} / {measurement.target.toLocaleString()}
+            {standing.toLocaleString()} / {measurement.target.toLocaleString()}
           </span>
         )}
       </div>
@@ -173,14 +185,30 @@ function NodeRow({ entry }: { entry: SkillProgress }) {
           Only once there is something on it: at zero the gap is the target
           said twice, and a branch of five untouched rungs read as five pairs
           of near-identical lines. */}
-      {!unlocked && measurement.current > 0 && measurement.remaining !== '' && (
+      {!unlocked && standing > 0 && measurement.remaining !== '' && (
         <p className="text-xs font-semibold mt-0.5">{cap(measurement.remaining)}</p>
       )}
 
+      {/* `Meter`, not a hand-rolled bar. `ui.test.ts` has forbidden those in
+          feature files since M13 and this one sat here through every pass,
+          because the probe was spelled for one background token and this
+          bar used the other (PLAN.md M257). It also had no value, no label
+          and no text form — exactly the half-a-control the primitive
+          exists to prevent.
+
+          And no floor under the fill. The old bar drew `Math.max(2, pct)`,
+          so a rung nobody had started still showed a sliver of accent:
+          progress the log does not have, on the page whose whole claim is
+          that nothing here is granted. */}
       {!unlocked && (
-        <div className="h-1 rounded-full bg-surface overflow-hidden mt-2">
-          <div className="h-full bg-accent rounded-full" style={{ width: `${Math.max(2, pct)}%` }} />
-        </div>
+        <Meter
+          value={standing / Math.max(1, measurement.target)}
+          label={node.name}
+          valueText={`${standing.toLocaleString()} of ${measurement.target.toLocaleString()}`}
+          size="sm"
+          track="surface"
+          className="mt-2"
+        />
       )}
 
       {blocked && (

@@ -6,7 +6,13 @@ import { newSession, type Session } from '@/db/sessions';
 import { addDays, startOfWeek } from './dates';
 import { deriveClimberState } from './derive';
 import { deriveStats } from './stats';
-import { describeEffect, evaluateSkills, measure, type SkillInput } from './skills';
+import {
+  describeEffect,
+  evaluateSkills,
+  measure,
+  type SkillInput,
+  type SkillRequirement,
+} from './skills';
 
 const TODAY = '2026-09-09';
 let counter = 0;
@@ -213,5 +219,118 @@ describe('evaluation', () => {
     const grit = state.trees.find((t) => t.id === 'grit')!;
     expect(grit.unlocked).toBeGreaterThan(0);
     expect(state.unlocked).toBe(state.trees.reduce((sum, t) => sum + t.unlocked, 0));
+  });
+});
+
+/**
+ * Where the climber stands, beside what unlocks the node (PLAN.md M257).
+ *
+ * `current` is the number the node unlocks on and `standing` is where the
+ * climber is now. They are the same on thirteen of the fourteen kinds; on
+ * `streak-weeks` the first is the longest run ever and the second is the
+ * run in progress, and every fraction a climber reads is drawn from the
+ * second — because the gap under it always was.
+ */
+describe('where the climber stands', () => {
+  const SAMPLES: SkillRequirement[] = [
+    { kind: 'sessions', count: 10 },
+    { kind: 'hours', hours: 20 },
+    { kind: 'sends', scale: 'V', grade: 'V5', count: 3 },
+    { kind: 'style-sends', style: 'flash', count: 4 },
+    { kind: 'grade-variety', count: 4 },
+    { kind: 'drills', category: 'technique', count: 2 },
+    { kind: 'streak-weeks', weeks: 8 },
+    { kind: 'outdoor-days', count: 15 },
+    { kind: 'projects-sent', count: 1 },
+    { kind: 'rest-days', count: 6 },
+    { kind: 'height', feet: 5000 },
+    { kind: 'metric', metricId: 'max_hang_20mm_7s', atLeast: 45 },
+    { kind: 'metric-under', metricId: 'min_edge', atMost: 10 },
+    { kind: 'stat', stat: 'STR', atLeast: 70 },
+  ];
+
+  /** Ten weeks of hitting target, two months off, then one week back. */
+  function brokenStreak(): Session[] {
+    const sessions: Session[] = [];
+    for (let w = 20; w >= 11; w--) {
+      const start = addDays(startOfWeek(TODAY), -7 * w);
+      for (const d of [0, 2, 4]) sessions.push(session(addDays(start, d)));
+    }
+    const thisWeek = startOfWeek(TODAY);
+    for (const d of [0, 2, 4]) sessions.push(session(addDays(thisWeek, d)));
+    return sessions;
+  }
+
+  it('leaves the gap and the fraction agreeing on every kind', () => {
+    // The whole point of the field, stated as arithmetic: a climber told
+    // they are `standing` of `target` and `short` from done is being told
+    // two halves of one number, and they have to add up.
+    const input = inputOf(brokenStreak());
+    for (const requirement of SAMPLES) {
+      const m = measure(requirement, input);
+      if (m.met) continue;
+      expect(m.standing + m.short, requirement.kind).toBe(m.target);
+    }
+    // And the sample covers the vocabulary, so a fifteenth kind cannot be
+    // added without deciding where its fraction is measured from.
+    expect(new Set(SAMPLES.map((r) => r.kind)).size).toBe(SAMPLES.length);
+  });
+
+  it('is the same as what unlocks the node on every kind but one', () => {
+    const input = inputOf(brokenStreak());
+    const apart = SAMPLES.filter((r) => {
+      const m = measure(r, input);
+      return m.standing !== m.current;
+    });
+    expect(apart.map((r) => r.kind)).toEqual(['streak-weeks']);
+  });
+
+  it('counts the streak being run, not the record behind it', () => {
+    const input = inputOf(brokenStreak());
+    expect(input.state.longestStreakWeeks).toBeGreaterThan(input.state.streakWeeks);
+
+    const m = measure({ kind: 'streak-weeks', weeks: 16 }, input);
+    // The record still unlocks the node — a streak you ran does not
+    // un-run itself — and it is not what the bar is drawn from.
+    expect(m.current).toBe(input.state.longestStreakWeeks);
+    expect(m.standing).toBe(input.state.streakWeeks);
+    expect(m.standing).toBeLessThan(m.current);
+  });
+
+  it('draws a fraction well under the one the record implied', () => {
+    // The shape of the bug, in the numbers a climber saw: 16/30 filled to
+    // half, over "29 more weeks in a row".
+    const input = inputOf(brokenStreak());
+    const m = measure({ kind: 'streak-weeks', weeks: 30 }, input);
+    const was = m.current / m.target;
+    const now = m.standing / m.target;
+    // Not a threshold picked to pass: the two fractions are several times
+    // apart, which is the whole complaint. The record filled a third of
+    // the bar for a run that restarted this month.
+    expect(was).toBeGreaterThan(now * 4);
+    expect(m.remaining).toBe(`${m.target - input.state.streakWeeks} more weeks in a row`);
+    // And the gap does not agree with the bar the record drew.
+    expect(m.short).toBeGreaterThan(m.target - m.current);
+  });
+
+  it('keeps them together for a climber who never broke one', () => {
+    const sessions: Session[] = [];
+    for (let w = 9; w >= 0; w--) {
+      const start = addDays(startOfWeek(TODAY), -7 * w);
+      for (const d of [0, 2, 4]) sessions.push(session(addDays(start, d)));
+    }
+    const input = inputOf(sessions);
+    const m = measure({ kind: 'streak-weeks', weeks: 30 }, input);
+    expect(m.standing).toBe(m.current);
+    expect(m.standing).toBeGreaterThan(0);
+  });
+
+  it('reads a benchmark that is under rather than over as met or not', () => {
+    // No fraction is invented for `metric-under`: nobody recorded where the
+    // climber started, so the share of the gap closed is not knowable.
+    const m = measure({ kind: 'metric-under', metricId: 'min_edge', atMost: 10 }, inputOf([]));
+    expect(m.standing).toBe(0);
+    expect(m.target).toBe(1);
+    expect(m.standing + m.short).toBe(m.target);
   });
 });

@@ -168,10 +168,22 @@ export function objectiveProgress(objective: Objective, input: SkillInput, today
   };
 }
 
+/**
+ * How far along one requirement is, from where the climber stands now.
+ *
+ * `standing` rather than `current` (PLAN.md M257). They are the same number
+ * on thirteen of the fourteen kinds; on `streak-weeks` `current` is the
+ * longest streak ever run and `standing` is the one being run now, and
+ * `suggestedRequirements` puts a streak on **every** new objective. A
+ * climber whose nine-week run broke last month read 5/8 of the way through
+ * a requirement they were seven weeks from — and that fraction is a term
+ * in `readiness`, which is the headline percentage, and in `weakest`, which
+ * is the app's answer to "what now?".
+ */
 function fractionOf(measurement: Measurement): number {
   if (measurement.met) return 1;
   if (measurement.target <= 0) return measurement.met ? 1 : 0;
-  return Math.max(0, Math.min(1, measurement.current / measurement.target));
+  return Math.max(0, Math.min(1, measurement.standing / measurement.target));
 }
 
 /**

@@ -141,8 +141,21 @@ describe('the order', () => {
 
     // Two assessments half closed cost the same, whatever they are measured
     // in: half of 45 kilos and half of 1,000 anything are the same half.
-    const half = { ...nothing, current: nothing.target / 2, short: nothing.target / 2 };
-    const big = { current: 500, target: 1000, met: false, detail: '', short: 500, remaining: 'x' };
+    const half = {
+      ...nothing,
+      current: nothing.target / 2,
+      standing: nothing.target / 2,
+      short: nothing.target / 2,
+    };
+    const big = {
+      current: 500,
+      target: 1000,
+      met: false,
+      detail: '',
+      short: 500,
+      standing: 500,
+      remaining: 'x',
+    };
     expect(effortFor(node, half)).toBeCloseTo(EFFORT.metric / 2, 5);
     expect(effortFor(node, big)).toBeCloseTo(effortFor(node, half), 5);
   });
