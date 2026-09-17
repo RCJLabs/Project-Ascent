@@ -5,7 +5,7 @@ import { screen } from '@testing-library/react';
 import { resetDbForTests } from '@/db/db';
 import { newSession, putSession } from '@/db/sessions';
 import { loadPrograms } from '@/content/programs';
-import { addDays, today } from '@/engine/dates';
+import { addDays, startOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { CoachPage } from '@/features/coach/CoachPage';
@@ -20,8 +20,21 @@ import { FinishPage } from '@/features/finish/FinishPage';
  */
 
 const TODAY = today();
-/** A Sunday far enough back that the block has run eight weeks. */
-const START = addDays(TODAY, -56);
+/**
+ * A Sunday far enough back that the block has run eight weeks.
+ *
+ * **Snapped to one, since M235.** This was `addDays(TODAY, -56)`, which is a
+ * Sunday one day in seven — and the block report below only assembles when
+ * `START` lands Sunday to Wednesday. So that test had been **red three days
+ * in seven** since it was written, and every suite run that caught it
+ * happened to fall on the other four. Measured by walking the offset back a
+ * day at a time: Thursday, Friday and Saturday fail; Sunday to Wednesday
+ * pass.
+ *
+ * `startOfWeek` snaps back, so the anchor is never less than eight weeks ago
+ * and the comment above is true on every day of the year.
+ */
+const START = startOfWeek(addDays(TODAY, -56));
 
 beforeEach(async () => {
   globalThis.indexedDB = new IDBFactory();

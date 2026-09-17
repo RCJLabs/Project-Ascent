@@ -13944,6 +13944,10 @@ which is the right shape.*
   the app's whole premise — but a stated reference band per metric, sourced and dated in the
   content the way the guides are, is the difference between a number and a reading.
   *Medium, and most of it is content rather than code.*
+  ***Built as the catalogue's own floors rather than as a sourced band, and the reason is M234.***
+  *The one reference with real literature behind it is finger strength as a percentage of
+  bodyweight — which the app decided, deliberately, not to be able to compute. See the entry at
+  the end of this document.*
 
 - **M236 — equipment is a capability, never a thing you own.** `Equipment` is six strings —
   `'none' | 'wall' | 'hangboard' | 'campus' | 'gym' | 'weight'` — answering *what can you train
@@ -14659,3 +14663,87 @@ appears with its evidence, the tap writes the chip and the offer goes away. The 
 confirmed at the engine level — all five programs, verbatim — rather than by driving its wizard.
 
 **6,178 tests over 356 files.**
+
+
+## M235 — what a reading qualifies you for
+
+The premise holds exactly: thirty-seven metrics, a prose description each, and **no reference value
+of any kind**. `changeOf` compares a reading to the one before it and to nothing else, so a first
+dead hang has nothing to be placed against. (One slip in the item: `dueReason` is not an export —
+the four are `seriesFor`, `changeOf`, `testWeeks` and `assessmentStatus`.)
+
+### Why not the sourced band the item asked for
+
+- **The one band with real literature behind it needs a bodyweight.** Finger strength as a
+  percentage of bodyweight against grade is the best-attested reference in the sport, and `siege.ts`
+  quotes the prototype's own *"Max Hang 20mm 7s at BW+30%"*. M234 refused to store one, a day ago,
+  on purpose. A band in absolute pounds is a band for a single bodyweight that misleads everyone
+  else — the exact error M234 took out of the percentage.
+- **A band is a population comparison** however it is dressed, and *"not a leaderboard"* does not
+  change that. Nothing in this app compares one climber to another; M234's refusal partly rested on
+  it, and it is not a premise to change in a footnote.
+- **The sources mostly do not exist.** For `toe_touch`, `wall_angel`, `flexibility` — scored out of
+  ten, by the climber — and `box_jump_height` there is no literature to cite. A band invented for
+  those would be the app manufacturing authority.
+
+### What it is instead, and it was already in the catalogue
+
+`prerequisites.metrics` is `{ metricId, atLeast }[]`, authored per program. **Eight of the thirteen
+programs carry them**, across seven metrics, and they form a ladder:
+
+```
+dead_hang          30s Base Camp, The Cruiser · 45s Gravity Defied, The Long Game · 60s Iron Grip
+max_pushups          5 Base Camp             ·  10 Gravity Defied              ·  15 Iron Grip
+core_plank          60s Base Camp             ·  90s Gravity Defied
+max_boulder_grade   V3 Lockdown               ·  V5 Iron Grip                  ·  V8 Peak Performance
+```
+
+The finder has read those numbers since M38 — **to block a program, and only to block one**. A
+52-second dead hang is past the floor Gravity Defied and The Long Game set and eight short of Iron
+Grip's, and the app has known that all along without ever saying it to the climber.
+
+Sourced by construction, dated by the catalogue, needs no bodyweight and no literature, and compares
+a climber to **the training in front of them** rather than to other people. It speaks for seven
+metrics and stays silent about the other thirty, which is the honest amount.
+
+### A rung is a number, not a program
+
+The first version carried one program per row, so which of Gravity Defied and The Long Game the
+sentence named for the 45-second floor was decided by their order in `PROGRAMS` — the same
+arbitrariness M233 took out of the shop ladder. A test caught it on the first run. A rung is a
+number with programs standing on it now, and two of the three dead-hang rungs carry two.
+
+### Two equivalent mutants, recorded rather than papered over
+
+Removing the sort survives, because `Map` keeps insertion order and the catalogue authors its
+programs easiest-first. Removing the `higherIsBetter` guard survives, because no program sets a floor
+on a metric that gets better by going down. Both guards stay — `atLeast` would mean the opposite on
+an inverted metric, and a program authored out of order would scramble the ladder — and the guards
+went on the facts the equivalences rest on. Planting a 75-second floor on The Cruiser fires the
+first one.
+
+### And a test that had been red three days in seven
+
+`planChecked.test.tsx` anchored on `addDays(today(), -56)` with the comment *"A Sunday far enough
+back"* — which is a Sunday **one day in seven**. Walking the offset back a day at a time: the block
+report assembles when the anchor lands Sunday to Wednesday and fails on Thursday, Friday and
+Saturday. It went unnoticed because every suite run that would have caught it happened to fall on
+the other four; this one ran on a Thursday. `startOfWeek` snaps it now, and it is green on all seven
+weekdays — checked by simulating each.
+
+Nothing to do with M235. Found because the date rolled over mid-milestone.
+
+### Measured
+
+**12 of 12 mutants caught, sanity no-op survived**, plus the two equivalents above. The ladder read
+from a second copy, rungs not merging, the sort gone, a floor exactly met not counting, the lowest
+cleared kept instead of the highest, a rung invented above the top, the plural frozen singular, the
+page not asking, the page showing a raw ordinal instead of a grade, and the Sunday anchor drifting
+back.
+
+**135.72KB against a 136.9 ceiling.** Browser-verified in both themes at 430px and 1280px across
+every state — nothing recorded, mid-ladder, past the top, a grade in V and the same grade in Font
+(*"Past 6A, which Lockdown asks for. Iron Grip asks for 6C."*), and silence on a metric with no
+floor.
+
+**6,203 tests over 358 files.**

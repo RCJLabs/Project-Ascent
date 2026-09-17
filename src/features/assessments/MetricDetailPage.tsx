@@ -7,6 +7,7 @@ import { Trash2 } from 'lucide-react';
 import { getMetric } from '@/content/metrics';
 import type { MetricId } from '@/content/types';
 import { changeOf, formatEntry, isChartable, seriesFor } from '@/engine/assessments';
+import { describePlacing, place } from '@/engine/standards';
 import { shortLabel } from '@/engine/dates';
 import { useMetrics } from '@/store/metrics';
 import { useSettings } from '@/store/settings';
@@ -51,6 +52,16 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
   const change = changeOf(metric, series);
   const first = series[0];
   const latest = series.at(-1);
+  /**
+   * What the catalogue asks for, against the latest reading (PLAN.md M235).
+   *
+   * With no reading at all it still says something — the floor a climber is
+   * working toward is worth knowing before the first test, not after it.
+   */
+  const standing = describePlacing(
+    place(metric, latest?.value ?? Number.NEGATIVE_INFINITY),
+    (value) => formatEntry(metric, { metricId: metric.id, date: '', value }, display, units),
+  );
   const overall = first && latest && first !== latest ? latest.value - first.value : null;
   const points = series.map((e) => ({
     at: e.date,
@@ -71,9 +82,25 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
       </header>
 
       <div className="grid grid-cols-1 gap-3">
-        {metric.description && (
+        {(metric.description || standing !== null) && (
           <Card>
-            <p className="text-sm leading-relaxed">{metric.description}</p>
+            {metric.description && <p className="text-sm leading-relaxed">{metric.description}</p>}
+            {/* Where the latest reading sits on the catalogue's own ladder
+                (PLAN.md M235). Eight of the thirteen programs author a floor
+                per metric and the finder has always read them — to block, and
+                only to block. This is the same numbers said to the climber.
+
+                Under the description rather than beside the number, because
+                it is a fact about the programs rather than about the reading:
+                *"Iron Grip asks for 60 sec"* is true whether or not anyone
+                has tested. */}
+            {standing !== null && (
+              <p
+                className={`text-sm leading-relaxed ${metric.description ? 'mt-2 text-ink-soft' : ''}`}
+              >
+                {standing}
+              </p>
+            )}
           </Card>
         )}
 
