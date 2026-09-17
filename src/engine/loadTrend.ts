@@ -1,5 +1,5 @@
 import type { Session } from '@/db/sessions';
-import { addDays } from './dates';
+import { addDays, daysBetween } from './dates';
 import {
   ACWR_BOUNDS,
   RATIO_NEEDS,
@@ -30,6 +30,16 @@ export interface LoadTrend {
   to: string;
   /** The most recent computable ratio, or null. */
   latest: number | null;
+  /**
+   * The day `latest` was read on (PLAN.md M247).
+   *
+   * Not always the last day in the window, which is the whole reason it is
+   * here: `describeTrend` took the number from the last *known* point and
+   * the zone word from the last point full stop, so a climber who stopped
+   * training four weeks ago read **"Now 0.00 — not enough history."** — a
+   * month-old reading introduced by the word *now*, and then denied.
+   */
+  latestOn: string | null;
   /** The one before a week ago, for "up from" / "down from". */
   weekAgo: number | null;
   /** Highest and lowest computable ratios in the window. */
@@ -79,6 +89,7 @@ export function loadTrend(input: TrendInput): LoadTrend {
     from,
     to: input.to,
     latest: known.length === 0 ? null : known[known.length - 1]!.acwr,
+    latestOn: known.length === 0 ? null : known[known.length - 1]!.date,
     weekAgo: points[points.length - 8]?.acwr ?? null,
     peak: values.length === 0 ? null : Math.max(...values),
     trough: values.length === 0 ? null : Math.min(...values),
@@ -100,6 +111,13 @@ export function trendCeiling(trend: LoadTrend): number {
   return Math.max(floor, Math.ceil((peak + 0.2) * 5) / 5);
 }
 
+/** "on 20 August" is a date to decode; "three weeks ago" is a length of time. */
+function ago(days: number): string {
+  const weeks = Math.round(days / 7);
+  if (weeks < 1) return `${days} day${days === 1 ? '' : 's'} ago`;
+  return `${weeks} week${weeks === 1 ? '' : 's'} ago`;
+}
+
 const ZONE_WORD: Record<AcwrZone, string> = {
   unknown: 'not enough history',
   detraining: 'detraining',
@@ -119,8 +137,18 @@ export function describeTrend(trend: LoadTrend): string {
   if (trend.latest === null) {
     return RATIO_NEEDS;
   }
+  // The zone of the point the number came from, not of whatever happens to
+  // sit last in the window (PLAN.md M247). When the window ends on days with
+  // no ratio, there is no "now" to report — so it is not reported, and the
+  // reading there *is* gets its own date instead of being passed off as
+  // current.
+  const last = trend.points[trend.points.length - 1]!;
+  if (last.unknown) {
+    const since = daysBetween(trend.latestOn!, trend.to);
+    return `No current reading — ${RATIO_NEEDS} The last was ${trend.latest.toFixed(2)}, ${ago(since)}.`;
+  }
   const now = trend.latest.toFixed(2);
-  const zone = ZONE_WORD[trend.points[trend.points.length - 1]!.zone];
+  const zone = ZONE_WORD[last.zone];
   if (trend.weekAgo === null) return `Now ${now} — ${zone}.`;
 
   const change = trend.latest - trend.weekAgo;

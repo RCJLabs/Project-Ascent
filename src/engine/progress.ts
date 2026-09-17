@@ -150,6 +150,40 @@ export function projectGrade(
   const cov = known.reduce((s, p) => s + (p.x - meanX) * (p.y - meanY), 0);
   const slope = varX === 0 ? 0 : cov / varX;
 
+  /**
+   * A trend cannot speak for weeks it has no data for (PLAN.md M247).
+   *
+   * `known` drops the empty weeks rather than zeroing them — which is right,
+   * a week without a send is not a week you sent V0 — so the fit is flat over
+   * the weeks a climber *did* climb wherever those sit in the window, and the
+   * sentence came out in the present tense regardless. Measured: seven weeks
+   * of V4 followed by five weeks of nothing read **"Holding steady at your
+   * current grade."**
+   *
+   * The tolerance is the climber's own rhythm rather than a number picked
+   * here. One session a week makes `spacing` 1, so two empty weeks are a
+   * stop; sending every third week makes it 3, and two empty weeks are a
+   * Tuesday. One quiet week is never a stop for anybody.
+   */
+  const lastKnownX = known.at(-1)!.x;
+  const spacing = n > 1 ? (lastKnownX - known[0]!.x) / (n - 1) : 1;
+  const trailing = points.length - 1 - lastKnownX;
+  if (trailing > spacing) {
+    return {
+      slope,
+      nextGrade: null,
+      weeksToNext: null,
+      summary: `Nothing sent in the last ${trailing} weeks. Over the weeks before that, ${
+        slope < -0.02
+          ? 'your hardest grades were easing off'
+          : slope > 0.02
+            ? 'they were still going up'
+            : 'your grades held steady'
+      }.`,
+      confident: false,
+    };
+  }
+
   const currentOrdinal = Math.max(...known.map((p) => p.y));
   const nextOrdinal = currentOrdinal + 1;
   const nextGrade = ladder[nextOrdinal] ?? null;

@@ -197,8 +197,12 @@ export function LoadTrendLine({ trend, plan }: { trend: LoadTrend; plan?: PeakPl
           </>
         )}
 
-        {/* Where the climber stands today, ringed in the surface colour so
-            it separates from the line and the band behind it. */}
+        {/* The last day there was a ratio to read — **not** necessarily today,
+            which is why it is placed at that point's index rather than at the
+            right edge (PLAN.md M247). The sentence under this chart used to
+            make exactly that mistake in words: it took the number from here
+            and the zone word from the end of the window. Ringed in the
+            surface colour so it separates from the line and the band. */}
         {lastKnown?.acwr != null && (
           <circle
             cx={x(trend.points.indexOf(lastKnown))}

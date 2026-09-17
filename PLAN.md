@@ -14085,6 +14085,20 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   backup" — so the fix is a second number rather than a redefinition of the first. See the entry at
   the end of this document.*
 
+- **M247 — "now", and the windows that are not now.** The same six shapes of log that found M246
+  found three more cards speaking in the present tense about a period that has ended. A climber who
+  trained for two months and stopped five weeks ago is told **"Now 0.00 — not enough history."** —
+  the number read off a point three weeks old, the zone word read off today, and the two stitched
+  together by the word *now* — and, on the card below it, **"Holding steady at your current
+  grade."** A climber with one session logged two days ago is told **"1 day logged over 53 weeks ·
+  0.0 a week"**, which is a rate over a year they were not there for. In each case the correct rule
+  is already written down a few lines away: the gap count in the same function measures from the
+  first logged day *because* "the empty months before a climber installed the app are not a lapse".
+  *Small, and it is three sentences and one new field each.*
+  ***Built, and the grade trend's tolerance is the climber's own rhythm.*** *A fixed number of quiet
+  weeks would be wrong for both a weekly sender and someone who sends every third week, so the pause
+  is measured against the spacing of their own sends. See the entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -15573,3 +15587,82 @@ source, both halves of the evidence condition, the `continue`, the rest-day tall
 comparison row, and the month-bar split all die.
 
 **6,350 tests over 375 files.** First load 134.43KB against a 135.4KB budget.
+
+## M247 — "now", and the windows that are not now
+
+Three cards, three engines, one habit: reading a value off an old point and introducing it with a
+word that means today.
+
+### A ratio from three weeks ago, called now
+
+```
+Now 0.00 — not enough history.
+```
+
+`describeTrend` took the number from `trend.latest`, which is the last point with a **computable**
+ratio, and the zone word from `trend.points[length - 1]`, which is the last point **full stop**. For
+a climber still training those are the same point and the sentence is fine. For one who stopped,
+they are weeks apart — so the reading was three weeks old, the zone belonged to today, and the
+sentence asserted a number and then denied it in the same breath.
+
+`latestOn` says which day `latest` came from, so the two can be checked against each other, and the
+zone now comes off the point the number came from. When the window ends on days with no ratio there
+is no *now* to report, so it is not reported:
+
+```
+No current reading — Needs 21 days of logging and at least 6 scored training days
+inside the last 28. The last was 0.00, 3 weeks ago.
+```
+
+The chart beside it was already right — the dot is drawn at `points.indexOf(lastKnown)`, not at the
+right edge — but its comment said *"where the climber stands today"*, which is the same mistake in
+prose. Fixed, because that comment is what the next reader would have trusted.
+
+### A trend that stopped, in the present tense
+
+`projectGrade` fits a line over the weeks that have a send and drops the empty ones — which is
+right, a week without a send is not a week you sent V0. But dropping them means the fit is flat over
+the weeks the climber *did* climb, wherever those sit in the window, and the summary was written as
+though the fit reached the present. Seven weeks of V4 followed by five weeks of nothing read
+**"Holding steady at your current grade."** The dangerous version of the same bug is the rising
+trend: a climber who was moving up and then stopped could be told a grade "looks within reach now".
+
+**The tolerance is the climber's rhythm, not a number picked here.** `spacing` is the mean gap
+between weeks with a send, and the trend has stopped when the trailing gap exceeds it. Someone
+sending weekly has a spacing of 1, so three quiet weeks is a stop. Someone sending every third week
+has a spacing of 3, and the same three weeks is a Tuesday. One quiet week is never a stop for
+anybody, which is the property that made a fixed constant unworkable.
+
+```
+Nothing sent in the last 5 weeks. Over the weeks before that, your grades held steady.
+```
+
+### A rate over a year you were not there for
+
+`elapsedDays` was documented as *"days in the window up to the end day, so a rate can be honest"*,
+and it was the thing making the rate dishonest: 53 weeks of grid whether the climber arrived last
+year or on Tuesday. The gap count twenty lines below has always measured from the first logged day,
+with a comment explaining exactly why — so the rule was in the file, applied to one number and not
+the other.
+
+`loggingDays` is the span from the first logged day, and `elapsedDays` keeps its own meaning, the
+same split M246 made between `completedSessions` and `trainingSessions`. Below a week there is no
+rate at all: one day in three is no more 2.3 a week than it was 0.0.
+
+```
+1 day logged in your first week · longest gap 2 days.
+```
+
+### The one mutant that cannot die
+
+Reading the zone from `trend.points[length - 1]` instead of from `last` survives the battery, and
+should: the stale branch returns before it, so by the time the zone is read those two expressions
+name the same object. It is an equivalent mutant, not a hole. What is pinned instead is the fact the
+equivalence rests on — that a climber still training has `latestOn === to`.
+
+**10 mutants caught, sanity no-op survived, one recorded as equivalent.** Two survived the first
+run and were real holes: a fixed `spacing` of 4 gave identical answers on every fixture until a
+weekly sender with a three-week pause was added, and printing the rate below a week went unnoticed
+because the test only checked that the *wrong* rate was absent.
+
+**6,361 tests over 376 files.** First load 134.44KB against a 135.4KB budget.

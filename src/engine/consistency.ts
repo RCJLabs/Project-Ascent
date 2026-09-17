@@ -1,7 +1,7 @@
 import type { Session } from '@/db/sessions';
 import { isRestSession } from './rest';
 import { coverage, describeCoverage } from './thinLog';
-import { addDays, fromKey, startOfWeek, today as todayKey } from './dates';
+import { addDays, daysBetween, fromKey, startOfWeek, today as todayKey } from './dates';
 import { sessionLoad } from './derive';
 
 /**
@@ -74,8 +74,19 @@ export interface HeatGrid {
    * `checkIns` states before any of its own numbers.
    */
   bareDays: number;
-  /** Days in the window up to the end day, so a rate can be honest. */
+  /** Days in the window up to the end day. */
   elapsedDays: number;
+  /**
+   * Days from the first logged one to the end day (PLAN.md M247).
+   *
+   * The rate is per week of *logging*, not per week of calendar. The gap
+   * count a few lines below has always been careful about this — "the empty
+   * months before a climber installed the app are not a lapse, and colouring
+   * them as one would make the number meaningless" — and the sentence beside
+   * it divided by the whole window anyway. Measured on one session logged
+   * two days ago: **"1 day logged over 53 weeks · 0.0 a week"**.
+   */
+  loggingDays: number;
   /** Longest run with nothing logged, counted from the first logged day. */
   longestGap: number;
   longestStreak: number;
@@ -234,6 +245,8 @@ export function buildHeatGrid(input: HeatInput): HeatGrid {
     to,
     thresholds,
     loggedDays,
+    // From the first logged day, the same rule the gap count follows.
+    loggingDays: firstLogged === null ? 0 : daysBetween(firstLogged, to) + 1,
     // Counted from the sessions rather than from the grid: a day is bare only
     // when everything on it is, which the per-day totals cannot say.
     bareDays: coverage(input.sessions, from, to).bare,
@@ -252,12 +265,19 @@ export function buildHeatGrid(input: HeatInput): HeatGrid {
  */
 export function describeConsistency(grid: HeatGrid): string {
   if (grid.loggedDays === 0) return 'Nothing logged in this window yet.';
-  const weeks = Math.round(grid.elapsedDays / 7);
-  const rate = grid.loggedDays / Math.max(1, grid.elapsedDays / 7);
+  // Since the first logged day, not since the window opened (PLAN.md M247).
+  const weeks = Math.round(grid.loggingDays / 7);
   const parts = [
-    `${grid.loggedDays} day${grid.loggedDays === 1 ? '' : 's'} logged over ${weeks} weeks`,
-    `${rate.toFixed(1)} a week`,
+    weeks < 1
+      ? `${grid.loggedDays} day${grid.loggedDays === 1 ? '' : 's'} logged in your first week`
+      : `${grid.loggedDays} day${grid.loggedDays === 1 ? '' : 's'} logged over ${weeks} week${weeks === 1 ? '' : 's'}`,
   ];
+  // A rate per week needs a week. Below that the division extrapolates in
+  // whichever direction the first few days happen to point — one day out of
+  // two is not 3.5 a week any more than it is 0.0.
+  if (grid.loggingDays >= 7) {
+    parts.push(`${(grid.loggedDays / (grid.loggingDays / 7)).toFixed(1)} a week`);
+  }
   if (grid.longestStreak > 1) parts.push(`longest run ${grid.longestStreak} days`);
   if (grid.longestGap > 0) {
     parts.push(`longest gap ${grid.longestGap} day${grid.longestGap === 1 ? '' : 's'}`);
