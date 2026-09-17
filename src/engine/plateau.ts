@@ -152,7 +152,13 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
   }
 
   // ── 2. Not enough to say anything honest ───────────────────────────────
-  if (state.completedSessions < RULES.minSessions || state.load.daysOfHistory < RULES.minDaysOfHistory) {
+  //
+  // `trainingSessions`, not `completedSessions` (PLAN.md M246). Eight rest
+  // days are not eight sessions of training to read a state from, and the
+  // number here is the one the climber is shown as the reason.
+  const shortOnSessions = state.trainingSessions < RULES.minSessions;
+  const shortOnHistory = state.load.daysOfHistory < RULES.minDaysOfHistory;
+  if (shortOnSessions || shortOnHistory) {
     return {
       verdict: 'insufficient-data',
       reasons: [],
@@ -160,12 +166,23 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
       explanation: `A training state needs ${RULES.minSessions} sessions across ${Math.round(
         RULES.minDaysOfHistory / 7,
       )} weeks before it means anything. Keep logging — the read gets sharper on its own.`,
+      // Only what is actually missing. The gate is an *or*, and printing
+      // both counters meant a requirement that was met was shown as the
+      // reason it was not: measured on twenty rest days and two sessions,
+      // the card read "Sessions logged | 22 of 8" — a number with nothing
+      // a climber can do about it.
       evidence: [
-        { label: 'Sessions logged', value: `${state.completedSessions} of ${RULES.minSessions}` },
-        {
-          label: 'History',
-          value: `${state.load.daysOfHistory} of ${RULES.minDaysOfHistory} days`,
-        },
+        ...(shortOnSessions
+          ? [{ label: 'Sessions logged', value: `${state.trainingSessions} of ${RULES.minSessions}` }]
+          : []),
+        ...(shortOnHistory
+          ? [
+              {
+                label: 'History',
+                value: `${state.load.daysOfHistory} of ${RULES.minDaysOfHistory} days`,
+              },
+            ]
+          : []),
       ],
     };
   }

@@ -134,11 +134,23 @@ export function totalsFor(sessions: Session[], from: string, to: string): Totals
   for (const session of sessions) {
     if (!session.completed) continue;
     if (session.date < from || session.date > to) continue;
+    // A drill is a drill wherever it was done — M120 put one on the rest
+    // day deliberately — so it is counted before the split.
+    if (session.drillDone === true) totals.drills += 1;
+    // A rest day is counted as a rest day and as nothing else (PLAN.md
+    // M246). It used to land in `sessions` as well, so the four-week
+    // comparison could read **Sessions 11 · Hours 2h · Sends 6** in one
+    // table: nine of those eleven had no hours and no sends, because nine
+    // of them were rest days. The card's own question is "am I training
+    // more than I was", and rest days answer a different one — which the
+    // row below now asks on its own.
+    if (isRest(session)) {
+      totals.restDays += 1;
+      continue;
+    }
     totals.sessions += 1;
     totals.hours += (session.durationMin ?? 0) / 60;
     totals.feet += sessionHeight(session);
-    if (isRest(session)) totals.restDays += 1;
-    if (session.drillDone === true) totals.drills += 1;
     if (session.mode === 'outdoor') outdoor.add(session.date);
     for (const climb of session.climbs) {
       if (climb.result !== 'send') continue;
@@ -162,6 +174,10 @@ export function reviewRange(input: ReviewInput, from: string, to: string): Revie
   const months = new Map<string, MonthBar>();
   const weeks = new Map<string, number>();
   for (const session of sorted) {
+    // The same split as `totalsFor` (PLAN.md M246), and for the same reason:
+    // the month bars are read as how much you climbed, and `bestWeek` is
+    // printed as your best week of the year. Seven rest days is not one.
+    if (isRest(session)) continue;
     const key = session.date.slice(0, 7);
     const bar = months.get(key) ?? { month: key, sessions: 0, feet: 0 };
     bar.sessions += 1;
@@ -309,6 +325,9 @@ export interface Change {
  */
 export const CHANGE_ROWS: [string, keyof Totals, string][] = [
   ['Sessions', 'sessions', ''],
+  // Its own row since M246 took it out of the session count. Rest is
+  // training too, and a block with more of it is not a block that did less.
+  ['Rest days', 'restDays', ''],
   ['Hours', 'hours', 'h'],
   ['Sends', 'sends', ''],
   ['Days on rock', 'outdoorDays', ''],

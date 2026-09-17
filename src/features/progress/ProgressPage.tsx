@@ -582,7 +582,7 @@ export function ProgressPage() {
         <Wide>
           <Card>
             <div className="flex gap-5 flex-wrap">
-              <Stat label="Sessions" value={String(state.completedSessions)} sub={`${state.recentSessions} in 30 days`} />
+              <Stat label="Sessions" value={String(state.trainingSessions)} sub={`${state.recentSessions} in 30 days`} />
               <Stat label="Streak" value={`${state.streakWeeks}w`} sub={`${weeklyTarget}+ per week`} />
               <Stat label="Sends" value={String(state.boulder.totalSends + state.sport.totalSends)} />
               <Stat label="Hours" value={String(Math.round(state.totalMinutes / 60))} />

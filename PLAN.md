@@ -14070,6 +14070,21 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   actually worth — 2.3 at four days, 0.5 at twenty — which warns and supports without a threshold to
   argue about. See the entry at the end of this document.*
 
+- **M246 — a rest day is not a session.** Found by driving `/progress` against six shapes of log
+  rather than one. A climber with twenty rest days and two sessions is shown a training-state card
+  reading **"Sessions logged | 22 of 8"** — a requirement that is met, printed as the reason it is
+  not — and a four-week comparison reading **Sessions 11 · Hours 2h · Sends 6** in one column,
+  because nine of those eleven were rest days with no hours and no sends in them. `isRestSession`
+  has been the single definition since M112e and `derive.ts` calls it on the first line of its loop;
+  it counts `nonRest` and then **throws it away at the return**, so anything asking how much
+  training there is had to ask `completedSessions` and got rest days in the answer. The whole suite
+  passed without one test pinning any of it.
+  *Small, and it is one exposed field and two `continue`s.*
+  ***Built, and `completedSessions` was left exactly as it was.*** *Twenty-four callers read it and
+  most of them want every record — "has this climber used the app", "is it time to mention a
+  backup" — so the fix is a second number rather than a redefinition of the first. See the entry at
+  the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -15481,3 +15496,80 @@ direction words, the caveat condition, the fixed phrase restored, the level-gap 
 the bound's value, the line that reports it, and the ordering all die.
 
 **6,342 tests over 374 files.** First load 134.42KB against a 135.4KB budget.
+
+## M246 — a rest day is not a session
+
+Six shapes of log, driven through `/progress` and read card by card: three sessions, a climber who
+stopped five weeks ago, one whose grades collapsed, one session ever, twenty attempts and no sends,
+and twenty rest days with two sessions in among them. The last one produced two numbers a climber
+cannot read as anything but a bug.
+
+```
+TRAINING STATE — Too early to tell
+A training state needs 8 sessions across 4 weeks before it means anything.
+    Sessions logged   22 of 8
+    History           11 of 28 days
+```
+
+```
+AGAINST THE FOUR WEEKS BEFORE
+    Sessions   11      Hours   2h      Sends   6
+```
+
+Nine of those eleven sessions were rest days. They had no hours in them and no sends, and they said
+so in the two rows underneath.
+
+### The number that was counted and thrown away
+
+`isRestSession` has been the one definition since M112e — it replaced thirteen hand-written copies —
+and `deriveClimberState` calls it on the first line of its loop:
+
+```ts
+const isRest = isRestSession(session);
+if (isRest) restSessions++;
+else nonRest++;
+```
+
+`nonRest` then goes nowhere except `warmupRate`. The return exposes `completedSessions:
+completed.length` and `restSessions`, and not the count sitting between them — so every reader
+asking *how much training is there* had to ask for the total and take the rest days with it.
+
+**`completedSessions` is left exactly as it was**, because it is not wrong. Twenty-four callers read
+it: "has this climber logged anything at all", "are there enough records to score against", "is it
+time to mention a backup". A rest day is a use of the app and belongs in every one of those. What
+was missing was the other number, so `trainingSessions` is that number and nothing changes meaning
+underneath anyone.
+
+`recentSessions` is a different case and was simply wrong. Both its readers ask about training —
+`plateau.ts` decides *plateaued* against *undertrained* on it, printing "10 sessions in the last
+month and no new grade", and the career stat shows it under a session count. A month of rest days is
+the opposite of the volume that sentence claims, so it now excludes them.
+
+### The gate that named the wrong requirement
+
+The insufficient-data branch is an **or**: too few sessions *or* too little history. The evidence
+printed both counters unconditionally, so the half that was satisfied was displayed beside the half
+that was not, in the same "N of M" shape, and the satisfied one came out backwards. It names only
+what is actually short now — and with the count fixed, the resting climber reads `Sessions logged |
+2 of 8`, which is a thing they can do something about.
+
+### Rest days in the totals, and a row of their own
+
+`totalsFor` incremented `sessions` for every completed record and `restDays` alongside it, so the
+rest days were in the count twice and in the hours once — an hour of mobility on a rest day is time,
+but it is not training time, and the card's own question is *am I training more than I was*. A rest
+day is now counted as a rest day and nothing else, and `CHANGE_ROWS` carries `Rest days` as its own
+row so it is still visible in both the four-week and the year comparison. **Rest is training too, and
+a block with more of it is not a block that did less** — which the table can now say, because the
+two numbers are no longer added together.
+
+The same split applies to `reviewRange`'s month bars and `bestWeek`, which are read as how much you
+climbed. Seven rest days is not your best week of the year.
+
+A drill is counted before the split. M120 put a drill on the rest day deliberately.
+
+**9 mutants caught, sanity no-op survived.** The exposed field, the thirty-day guard, the gate's
+source, both halves of the evidence condition, the `continue`, the rest-day tally itself, the
+comparison row, and the month-bar split all die.
+
+**6,350 tests over 375 files.** First load 134.43KB against a 135.4KB budget.

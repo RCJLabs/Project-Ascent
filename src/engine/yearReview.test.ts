@@ -226,6 +226,8 @@ describe('reviewYear comparison', () => {
     const review = reviewYear({ sessions, records: NO_RECORDS, today: '2027-01-01' }, 2026);
     expect(changes(review).map((c) => c.label)).toEqual([
       'Sessions',
+      // Its own row since M246 took rest days out of the session count.
+      'Rest days',
       'Hours',
       'Sends',
       'Days on rock',

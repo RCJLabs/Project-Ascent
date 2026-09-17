@@ -175,9 +175,27 @@ export interface PersonalRecord {
 }
 
 export interface ClimberState {
+  /**
+   * Every completed record, rest days included.
+   *
+   * Twenty-four callers read this and most of them want exactly that —
+   * "has this climber used the app", "how many records are there to back a
+   * score", "is it time to remind them about a backup". A rest day is a use
+   * of the app and belongs in all of those.
+   */
   completedSessions: number;
   restSessions: number;
-  /** Completed sessions in the last 30 days. */
+  /**
+   * Of those, the ones that were training (PLAN.md M246).
+   *
+   * `nonRest` was counted here all along and thrown away at the return, so
+   * anything asking *how much training is there* had to ask
+   * `completedSessions` and got rest days in the answer. Measured on twenty
+   * rest days and two sessions, the training-state card read **"Sessions
+   * logged | 22 of 8"**.
+   */
+  trainingSessions: number;
+  /** Training sessions in the last 30 days; rest days are not training. */
   recentSessions: number;
   sessionsByType: Record<string, number>;
   boulder: GradeTally;
@@ -340,7 +358,12 @@ function deriveClimberStateUncached(sessions: Session[], options: DeriveOptions)
     if (isRest && daysAgo >= 0 && daysAgo <= 1) restedWithin24h = true;
     if (!isRest && !session.warmup && daysAgo >= 0 && daysAgo <= 7) recentSkippedWarmups++;
     totalMinutes += session.durationMin ?? 0;
-    if (daysBetween(session.date, today) <= 30 && daysBetween(session.date, today) >= 0) {
+    // `!isRest`, because both readers of this number ask about training
+    // (PLAN.md M246): `plateau.ts` decides *plateaued* against *undertrained*
+    // on it — "10 sessions in the last month and no new grade" — and the
+    // career stat prints it under a session count. A month of rest days is
+    // the opposite of the volume that sentence claims.
+    if (!isRest && daysBetween(session.date, today) <= 30 && daysBetween(session.date, today) >= 0) {
       recentSessions++;
     }
 
@@ -422,6 +445,7 @@ function deriveClimberStateUncached(sessions: Session[], options: DeriveOptions)
   return {
     completedSessions: completed.length,
     restSessions,
+    trainingSessions: nonRest,
     recentSessions,
     sessionsByType,
     boulder,
