@@ -14009,6 +14009,16 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   measured, against 0.27KB for two engines and a chart primitive that went behind a lazy boundary.
   See the entry at the end of this document.*
 
+- **M240 — the front door does not grow.** M239 put the numbers and the button first and left both
+  running the full width of the content column, which is `max-w-5xl` — 1024px — while the cards
+  under them split into two at `lg`. So the top of the page is sparse and the bottom is dense, three
+  stat tiles come out 330px wide holding a 24px number apiece, and the altimeter's two labels sit at
+  opposite ends of a bar a metre apart and stop reading as a pair.
+  *Small, and it is a layout rather than a feature.*
+  ***Built as two columns at `lg`, and it found a second bug of its own.*** *`PageGrid` splits at the
+  same breakpoint, so nesting one inside the new rail gave a paragraph a 180px column — the safety
+  note came out one word per line. See the entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -15050,3 +15060,60 @@ nudge card, nor a rest day's session card with four buttons on it. Above the fol
 before.
 
 **6,293 tests over 368 files.**
+
+## M240 — Home, side by side
+
+M239's order is right on a phone and wasteful on a laptop. The numbers and the session card ran the
+full 1024px of the content column while the coach, the week and the task split into two beneath
+them, so the page was sparse at the top and dense at the bottom, the three stat tiles came out about
+330px wide around a 24px number, and *Devils Tower* and *Half Dome · 365 ft to go* sat at opposite
+ends of a bar with a thousand pixels between them, reading as two unrelated facts.
+
+At `lg` the page is now `[1.55fr 1fr]`: the numbers and the session on the left, the coach, the week,
+the task and the first-run cards in a rail on the right. Below `lg` the grid is off and the two
+groups stack, which is M239's order unchanged — the button is still the second thing on a phone and
+still at 595px.
+
+### Two things I had wrong before measuring
+
+The item this came from said Home was **one column at any width**. It is not, and never was: the
+shell has carried a sidebar and `max-w-2xl mx-auto lg:max-w-5xl` for a long time, and `PageGrid`
+has split at `lg` since it was written. What was one column was the part M239 added.
+
+And the stretched sparklines were called misleading. They are not. The y-scale is normalised to each
+series' own min and max, so a line uses its full height at any width — amplitude is honest and only
+the slope *angle* flattens, which is not a quantity a sparkline is read for. Worth writing down
+because the fix that followed from the wrong diagnosis would have been to cap the tiles, and the
+right fix was to use the space.
+
+### The bug the rail found
+
+`PageGrid` splits at `lg`, and there are two of them on Home. Inside a 380px rail that is two 180px
+columns, and the safety note — four sentences of prose — came out roughly one word per line. jsdom
+has no layout, so nothing failed; a browser at 1280px showed it immediately.
+
+The fix is a **prop**, not a class. `lg:grid-cols-1` in `className` and the grid's own
+`lg:grid-cols-2` both land in the same attribute, and which wins is decided by Tailwind's ordering of
+the stylesheet rather than by the order they are written — the trap `SelectableCard`'s `padded` prop
+is documented for, and the one that cost the photo grid a quarter of every thumbnail. `single`
+declares one rule or the other and there is nothing for the stylesheet to arbitrate. A test renders
+`<PageGrid single className="lg:grid-cols-2">` and holds that the grid declares the split exactly
+once, so a future caller cannot reopen it by accident.
+
+A source rule holds the rest: **every `PageGrid` on Home passes `single`**, because both of them are
+inside a column now.
+
+### Measured
+
+**8 mutants, all caught, sanity no-op survived** — `single` ignored, inverted and removed; the split
+taken off Home; the numbers moved into the rail; the button moved into the rail; and each of the two
+nested grids allowed to split again.
+
+jsdom has no media queries, so what the tests assert is the **grouping** — which cards share a
+column with the button and which are in the rail, and that the two halves do not overlap. The widths
+were checked in a browser at 430, 1024 and 1280, in both themes.
+
+**134.17KB against a 135.4 ceiling.** The phone is byte-for-byte the page M239 shipped: same order,
+same button at 595px.
+
+**6,297 tests over 369 files.**

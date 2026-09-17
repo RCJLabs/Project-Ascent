@@ -122,13 +122,26 @@ export function HomePage() {
       <DayHeading date={date} />
       {/* How high and how hard, then the button, then the training around
           it. The order is the milestone: before M239 the first screen was
-          four cards of commentary and the button was under all of them. */}
-      <Suspense fallback={<NumbersSkeleton />}>
-        <HomeStatsCard />
-      </Suspense>
-      <TodayCard date={date} />
-      <AroundTheSession />
-      <FirstRunCards />
+          four cards of commentary and the button was under all of them.
+
+          On a wide screen those two groups are side by side (PLAN.md M240).
+          M239 left the numbers and the session running the full 1024px while
+          the cards under them split into two columns, so the top of the page
+          was sparse and the bottom was dense — and the altimeter's two
+          labels sat at opposite ends of a bar a metre apart. Stacked below
+          `lg`, which is where the order above still reads top to bottom. */}
+      <div className="lg:grid lg:grid-cols-[1.55fr_1fr] lg:gap-6 lg:items-start">
+        <div>
+          <Suspense fallback={<NumbersSkeleton />}>
+            <HomeStatsCard />
+          </Suspense>
+          <TodayCard date={date} />
+        </div>
+        <div>
+          <AroundTheSession />
+          <FirstRunCards />
+        </div>
+      </div>
     </>
   );
 }
@@ -169,7 +182,7 @@ function NumbersSkeleton() {
 function AroundTheSession() {
   const { program } = usePlannedDay(today());
   return (
-    <PageGrid className="mt-3">
+    <PageGrid className="mt-3 lg:mt-0" single>
       <Suspense
         fallback={
           // Announced the way `PageSkeleton` announces its own: a reader
@@ -369,7 +382,10 @@ function FirstRunCards() {
   );
   const gone = (id: string) => dismissed.includes(id);
   return (
-    <PageGrid className="mt-3">
+    // `single`, because this grid is inside Home's rail since M240 and a
+    // second split there gives a paragraph a column about 280px wide — the
+    // safety note came out one word per line, found in the browser.
+    <PageGrid className="mt-3" single>
       {!gone(`safety:${fingerPhase}`) && (
         <FirstRunCard icon={<ShieldAlert size={15} className="text-warn" />} title="Before you train">
           <p className="text-sm leading-relaxed">

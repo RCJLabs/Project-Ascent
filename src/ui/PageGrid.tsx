@@ -15,9 +15,31 @@ import { CardBoundary } from './ErrorBoundary';
  * default, and a short card stretched to match a long one beside it looks
  * like a rendering fault.
  */
-export function PageGrid({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function PageGrid({
+  children,
+  className = '',
+  single = false,
+}: {
+  children: ReactNode;
+  className?: string;
+  /**
+   * Stay one column however wide the screen is (PLAN.md M240).
+   *
+   * A prop rather than an `lg:grid-cols-1` in `className`: both land in the
+   * same class attribute and which one wins is decided by Tailwind's own
+   * ordering of the stylesheet, not by the order they are written in. That
+   * is the trap `SelectableCard`'s `padded` prop is documented for, and the
+   * photo grid already lost a quarter of every thumbnail to it.
+   *
+   * For a grid that is already inside a column — Home's rail — where a
+   * second split would make cards a third of the window wide.
+   */
+  single?: boolean;
+}) {
   return (
-    <div className={`grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-start ${className}`}>
+    <div
+      className={`grid grid-cols-1 gap-3 lg:items-start ${single ? '' : 'lg:grid-cols-2'} ${className}`}
+    >
       {/* Every card gets its own boundary, which is M20's "done when": one
           record of the wrong shape costs the card that reads it, not the
           page. Doing it here rather than at ~100 call sites also means a new
