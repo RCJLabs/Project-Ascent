@@ -14189,6 +14189,17 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and the battery found a redundant guard and a test that was not looking.*** *See the
   entry at the end of this document.*
 
+- **M255 — every achievement, proved earnable.** The first pass at the game half, and the first
+  proposal this session to come back **empty**. `achievements.ts` defines twenty-six and
+  `achievements.test.ts` holds eighty-seven tests about how individual shapes are read; not one asks
+  whether a given achievement has any log that earns it at all. An unearnable one is invisible — it
+  sits in the list, named, with its condition under it, indistinguishable from one the climber has
+  not reached, which is exactly the shape M250 found five times over in a corpus of cards.
+  *Small, and it adds no runtime code.*
+  ***Built, and all twenty-six are reachable.*** *No defect. What is left behind is a
+  `Record<AchievementId, …>` of logs that earn them, so the twenty-seventh cannot be added without
+  one — and a note about the question it cannot answer. See the entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -16220,3 +16231,57 @@ days a short slice drops.
 **6,411 tests over 379 files.** First load 134.42KB against a 135.4KB budget. Read back from a
 browser across all eight week shapes, and in both themes at 430px and 1280px on a week matched day
 for day against the one before it.
+
+## M255 — every achievement, proved earnable
+
+The first pass at the game half, and the first proposal this session to find nothing. That is worth
+writing down as plainly as a finding would be.
+
+### The question nobody had asked
+
+`achievements.ts` defines twenty-six, each a shape in the log rather than a running total — the
+module opens with a rule about that. `achievements.test.ts` holds eighty-seven tests, and one of
+them checks the list has `ACHIEVEMENT_COUNT` entries in it. None asks: **is there a log that earns
+this one at all?**
+
+An achievement nobody can earn is invisible. It renders in the list, named, with its condition
+printed underneath, and it looks exactly like one the climber has not got to yet. That is the shape
+M250 found five times in one corpus, where cards had been wired in and never once produced a
+sentence: *a silent card looks exactly like a card that is fine.*
+
+### All twenty-six are reachable
+
+A log per achievement, minimal on purpose — a fixture that trains for a year earns half the list by
+accident and proves nothing about the one it is named for. Every one of them earns its own, and an
+empty log earns none, which is what makes the fixtures load-bearing rather than incidental.
+
+The overlaps are all supersets and all intended: four days on rock is also a weekend on rock, an
+outdoor on-sight at your limit is also *Hard Outside* and *Straight Up*, a boulder and a route in one
+session is also both scales. Nothing is a duplicate of anything.
+
+### What is left behind
+
+The map is typed `Record<AchievementId, () => AchievementInput>`, so **the twenty-seventh
+achievement cannot be added without a log that earns it** — leaving one out is a compile error, not
+a gap. That is the whole deliverable, and it is a regression net for a class of bug the app has
+already had once, on another surface.
+
+### What it cannot answer, said rather than implied
+
+It proves each achievement has *a* log that earns it. It cannot say whether a person could: raising
+`LONG_SESSION_MIN` to a sixty-nine-day session leaves it perfectly reachable, and the battery
+confirms that mutant survives. Policing that needs a model of a plausible climber the app does not
+have, and inventing one here would be the assert-rather-than-compute the last ten milestones have
+been about.
+
+What it *can* hold are the thresholds against limits the app sets itself: a ladder has a length, a
+week has seven days, a year has twelve months, and `effort.ts` calls RPE a fixed one-to-ten scale. A
+threshold outside one of those is not a hard achievement, it is an unearnable one — and every bound
+there is the app's own, not a number chosen in a test.
+
+**6 mutants caught, sanity no-op survived, three recorded as out of scope or unkillable while the
+set is clean.** Making one achievement's `find` return null dies; a week of eight days, a spread
+wider than any ladder, thirteen months in a year and an effort of 99 all die.
+
+**6,442 tests over 380 files.** No runtime code changed, so there is nothing to verify in a browser
+and the budget is where M254 left it.
