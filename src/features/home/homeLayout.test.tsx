@@ -3,19 +3,24 @@ import { describe, expect, it } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { getProgram } from '@/content/programs';
 import { newSession, putSession } from '@/db/sessions';
-import { dayOfWeek, today } from '@/engine/dates';
+import { addDays, dayOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { HomePage } from './HomePage';
 
 /**
- * What Home is, in order (PLAN.md M124).
+ * What Home is, in order (PLAN.md M124, reordered by M239).
  *
  * From M117 to M123 Home was the logger: the editor rendered in place, and
  * the coach, the week and the block sat under a card that grew with the
- * session. Now the app's reading comes first, the day's card and its two
- * buttons come under it, and the editor is a page again.
+ * session. M124 put the app's reading first and the day's card under it.
+ *
+ * **M239 turned the middle of that around, and M124 was half right.** The
+ * reading did belong above the button; four cards of it did not. Measured on
+ * a 430×932 phone, the whole of Home above the button was commentary and the
+ * button itself sat at the bottom edge of the viewport. Now: the numbers,
+ * the button, and *then* what the app has to say.
  *
  * The order is the feature, so it is asserted as an order — by document
  * position, not by whether the pieces exist.
@@ -37,6 +42,28 @@ async function running(): Promise<void> {
   });
 }
 
+/** The same, with a log behind it: the numbers card draws nothing without one. */
+async function trained(): Promise<void> {
+  await reset();
+  for (let d = 1; d <= 20; d += 2) {
+    const date = addDays(TODAY, -d);
+    await putSession({
+      ...newSession(date, 0, { completed: true }),
+      rpe: 7,
+      durationMin: 75,
+      climbs: [{ id: `c${d}`, grade: 'V4', scale: 'V', count: 3, result: 'send' }],
+    } as never);
+  }
+  await hydrate();
+  useProfile.setState({
+    activeProgramId: PROGRAM,
+    startDates: { [PROGRAM]: TODAY },
+    plans: { [PROGRAM]: { [DOW]: 'tech' } },
+    weekOverrides: {},
+    adaptations: {},
+  });
+}
+
 const before = (a: Element, b: Element) =>
   Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 
@@ -44,17 +71,49 @@ const logButton = () =>
   screen.findByRole('button', { name: /Start session|Log a session|Log rest day/ });
 
 describe('the order of the front door', () => {
-  it('puts the coach, the week and the block above the log buttons', async () => {
-    await running();
+  /**
+   * The milestone, as an order. The numbers are what the screen opens on,
+   * the button is the second thing, and everything the app has to *say*
+   * comes after both — because a climber opening the app at the gym is
+   * there to log, not to read.
+   */
+  it('puts the numbers, then the button, then what the app has to say', async () => {
+    await trained();
     renderAt('/', <HomePage />);
     const start = await logButton();
-    // Awaited, not queried: the card crosses a lazy boundary since M183.
+    // Awaited, not queried: both cards cross a lazy boundary.
+    const numbers = await screen.findByText('Climbed so far');
     const coach = await screen.findByText("Coach's Corner");
-    const review = screen.getByText(/Nothing logged this week|logged this week/);
     const program = screen.getByRole('heading', { name: 'Your week', level: 2 });
-    expect(before(coach, start), 'the coach is under the buttons').toBe(true);
-    expect(before(review, start), 'the review is under the buttons').toBe(true);
-    expect(before(program, start), 'the program is under the buttons').toBe(true);
+    expect(before(numbers, start), 'the numbers are under the button').toBe(true);
+    expect(before(start, coach), 'the coach is above the button').toBe(true);
+    expect(before(start, program), 'the week is above the button').toBe(true);
+  });
+
+  /**
+   * And the one that was taken off it. The week note's own headline and the
+   * line beneath it can be the same sentence — *"2 of 4 sessions"* over
+   * *"2 of 4 sessions · 8 sends this week"* — with *Your week* under that
+   * saying it a third time. It reads from Progress now.
+   */
+  it('does not carry the week note as well as the week', async () => {
+    await trained();
+    renderAt('/', <HomePage />);
+    await logButton();
+    expect(screen.queryAllByRole('link').filter((a) => a.getAttribute('href') === '#/review')).toEqual([]);
+  });
+
+  /**
+   * A climber who has logged nothing has no numbers, and three zeroes under
+   * a zero would be the app's first impression of them. The cards asking
+   * them to log something are still there.
+   */
+  it('shows no numbers at all until there is something to count', async () => {
+    await running();
+    renderAt('/', <HomePage />);
+    await logButton();
+    expect(screen.queryByText('Climbed so far')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Before you train', level: 2 })).toBeTruthy();
   });
 
   it('keeps the first-run cards under the log buttons', async () => {

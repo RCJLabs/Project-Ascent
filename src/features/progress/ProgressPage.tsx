@@ -115,6 +115,12 @@ function SaidCard() {
   return (
     <Card title="What the app makes of it">
       <div className="grid grid-cols-1 gap-3">
+        {/* A link, not the note itself (PLAN.md M239). Rendering the card
+            here was tried and reverted: `buildReview` derives its own
+            climber state, keyed on the week under review rather than on
+            today, so the card cost this page a second walk of the whole log
+            — which is precisely what M157 put `oneDerivation.test.tsx`
+            there to catch, and it caught it. */}
         <Link href="/review" className="flex items-center gap-3">
           <CalendarRange size={18} className="text-accent shrink-0" />
           <div className="flex-1 min-w-0">

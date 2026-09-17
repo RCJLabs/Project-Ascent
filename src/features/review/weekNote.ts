@@ -1,5 +1,25 @@
 /**
- * The week's note, and the hook that builds it (PLAN.md M184).
+ * The week's note, and the hook that builds it (PLAN.md M184, M239).
+ *
+ * **The card itself is gone (PLAN.md M239).** It was Home's, and it had the
+ * defect it was measuring: `note.headline` and the line under it can be the
+ * same sentence — *"2 of 4 sessions"* over *"2 of 4 sessions · 8 sends this
+ * week"* — with *Your week* beneath it saying it a third time. M239 took it
+ * off the front door, which also took `engine/review.ts` out of the entry
+ * chunk: **2.09KB**, measured, and the only eager importer it had.
+ *
+ * Rendering it on Progress instead was tried and reverted. `buildReview`
+ * derives its own `ClimberState`, keyed on the week under review rather than
+ * on today, so the card cost that page a second walk of the whole log — the
+ * exact thing M157's `oneDerivation.test.tsx` exists to catch, and it caught
+ * it on the first run. The note lives at `/review`, which M152 already gave
+ * a way in from Progress.
+ *
+ * What stays here is what the page needs, in the file the page has imported
+ * since M184 — renamed from `ReviewCard.tsx`, because a file named after a
+ * component it no longer holds is a lie the next reader has to unpick.
+ *
+ * ── the original note ──
  *
  * **Its own module, and not `ReviewPage.tsx`, because `HomePage` reads it.**
  * That is M104's sentence about `useTips`, word for word, and the same
@@ -20,9 +40,8 @@
  */
 
 import { useMemo } from 'react';
-import { ChevronRight, Info, Sparkles, TrendingDown } from 'lucide-react';
+import { Info, Sparkles, TrendingDown } from 'lucide-react';
 import { getProgram } from '@/content/programs';
-import { startOfWeek, today as todayKey } from '@/engine/dates';
 import { buildReview, type NoteTone, type WeekReview } from '@/engine/review';
 import type { Challenge } from '@/engine/challenges';
 import { useXp } from '@/store/game';
@@ -73,22 +92,3 @@ export const TONE: Record<NoteTone, { color: string; Icon: typeof Info }> = {
   caution: { color: 'var(--viz-serious)', Icon: TrendingDown },
   neutral: { color: 'var(--c-ink-soft)', Icon: Info },
 };
-
-
-/** Home entry: leads with the note, which is the part worth reading. */
-export function ReviewCard() {
-  const review = useReview(startOfWeek(todayKey()));
-  const { color, Icon } = TONE[review.note.tone];
-  return (
-    <div className="flex items-center gap-3">
-      <Icon size={18} style={{ color }} className="shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold truncate">{review.note.headline}</p>
-        <p className="text-xs text-ink-soft mt-0.5">
-          {review.sessions} of {review.target} sessions · {review.sends} sends this week
-        </p>
-      </div>
-      <ChevronRight size={18} className="text-ink-soft shrink-0" />
-    </div>
-  );
-}

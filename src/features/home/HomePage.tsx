@@ -8,7 +8,6 @@ import { gymSummary } from '@/engine/gym';
 import { DayHeading } from '@/features/log/DayHeading';
 import { DayNudges, PreSessionCard } from '@/features/log/PreSession';
 import { usePlannedDay } from '@/features/log/usePlannedDay';
-import { ReviewCard } from '@/features/review/ReviewCard';
 import { useWeekOutline } from '@/features/week/useWeekOutline';
 import { describeWeekDays, nextLimitDay } from '@/engine/week';
 import { fromKey } from '@/engine/dates';
@@ -97,6 +96,20 @@ const HomeCoachCard = lazyRoute(
  * cost at 2.12KB when it arrived by a different door, and `perf.test.ts`
  * holds it out.
  */
+/**
+ * The numbers, lazily (PLAN.md M239).
+ *
+ * Same rule as the two above it and the same reason: this card reaches
+ * `altimeter.ts`, `loadTrend.ts` and `derive.ts`, and Home is the one eager
+ * route in the app. What paid for it was `ReviewCard`, which used to sit in
+ * the grid below and was the only eager importer of `engine/review.ts` —
+ * taking it off Home measured 2.09KB back out of the first load.
+ */
+const HomeStatsCard = lazyRoute(
+  () => import('@/features/home/HomeStatsCard'),
+  (m) => m.HomeStatsCard,
+);
+
 const DailyTaskCard = lazyRoute(
   () => import('@/features/challenges/DailyTaskCard'),
   (m) => m.DailyTaskCard,
@@ -107,10 +120,48 @@ export function HomePage() {
   return (
     <>
       <DayHeading date={date} />
-      <AroundTheSession />
+      {/* How high and how hard, then the button, then the training around
+          it. The order is the milestone: before M239 the first screen was
+          four cards of commentary and the button was under all of them. */}
+      <Suspense fallback={<NumbersSkeleton />}>
+        <HomeStatsCard />
+      </Suspense>
       <TodayCard date={date} />
+      <AroundTheSession />
       <FirstRunCards />
     </>
+  );
+}
+
+/**
+ * The space the numbers will take, held still while the chunk arrives.
+ *
+ * Card-shaped rather than `null`, which is M183's measured finding one card
+ * along: an empty fallback lets everything below draw first and then jump
+ * down a frame later, and that was the app's only cumulative layout shift.
+ * Sized to the real thing — a figure, a bar, a row of three tiles — rather
+ * than to a generic three-line card, because a placeholder of the wrong
+ * height is a shift with extra steps.
+ */
+function NumbersSkeleton() {
+  return (
+    <div aria-busy="true" aria-live="polite" aria-label="Loading your numbers" className="mb-3">
+      <div className="px-0.5 pt-1">
+        <div className="h-11 w-44 rounded-lg bg-sunken" aria-hidden />
+        <div className="h-2.5 w-24 rounded bg-sunken mt-3" aria-hidden />
+        <div className="h-2 w-full rounded-full bg-sunken mt-4" aria-hidden />
+        <div className="h-2.5 w-full rounded bg-sunken mt-3" aria-hidden />
+      </div>
+      <div className="flex gap-2 mt-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex-1 bg-surface border border-line rounded-2xl p-3">
+            <div className="h-2 w-12 rounded bg-sunken" aria-hidden />
+            <div className="h-6 w-14 rounded-lg bg-sunken mt-1.5" aria-hidden />
+            <div className="h-5 w-full rounded bg-sunken mt-2.5" aria-hidden />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -118,7 +169,7 @@ export function HomePage() {
 function AroundTheSession() {
   const { program } = usePlannedDay(today());
   return (
-    <PageGrid>
+    <PageGrid className="mt-3">
       <Suspense
         fallback={
           // Announced the way `PageSkeleton` announces its own: a reader
@@ -130,9 +181,6 @@ function AroundTheSession() {
       >
         <HomeCoachCard />
       </Suspense>
-      <Link href="/review" className="block bg-surface border border-line rounded-2xl p-4">
-        <ReviewCard />
-      </Link>
       {program && <YourWeekCard program={program} />}
       {/* Last, so on a phone it is the card directly above today's session —
           a quality rung for a session not done yet, read on the way to the

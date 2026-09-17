@@ -915,10 +915,28 @@ describe('nothing is on the first-paint path that does not have to be', () => {
    */
   it('keeps them out through a lazy boundary on Home', () => {
     const home = readFileSync('src/features/home/HomePage.tsx', 'utf8');
-    expect(home, 'the card is imported eagerly again').not.toMatch(
-      /^import .*HomeCoachCard/m,
-    );
-    expect(home).toMatch(/lazyRoute\(\s*\(\) => import\('@\/features\/coach\/HomeCoachCard'\)/);
+    /**
+     * Every card on Home that reaches an engine, not just the first one.
+     *
+     * This named only the coach card, and a battery caught what that costs:
+     * M239's numbers card reaches `altimeter.ts`, `loadTrend.ts` and
+     * `derive.ts`, and importing it eagerly survived the whole suite. The
+     * built-bundle probe in `perf.test.ts` would have caught it, but only
+     * after a build — this is the one that fires on the file.
+     */
+    for (const card of [
+      '@/features/coach/HomeCoachCard',
+      '@/features/challenges/DailyTaskCard',
+      '@/features/home/HomeStatsCard',
+    ]) {
+      const name = card.split('/').at(-1)!;
+      expect(home, `${name} is imported eagerly again`).not.toMatch(
+        new RegExp(`^import .*\\b${name}\\b`, 'm'),
+      );
+      expect(home, `${name} is not behind a lazy boundary`).toMatch(
+        new RegExp(`lazyRoute\\(\\s*\\(\\) => import\\('${card.replace(/[/@]/g, (c) => '\\' + c)}'\\)`),
+      );
+    }
     /**
      * Every boundary on the page, not the first one that matches.
      *
@@ -930,11 +948,34 @@ describe('nothing is on the first-paint path that does not have to be', () => {
      */
     const boundaries = home.split('<Suspense').slice(1);
     expect(boundaries.length, 'no lazy boundary on Home at all').toBeGreaterThan(0);
+
+    /**
+     * `SkeletonCard`, or a skeleton this file defines itself (PLAN.md M239).
+     *
+     * The rule was `<SkeletonCard` exactly, which was the same thing while
+     * every boundary held a card. M239's numbers are a figure, a bar and a
+     * row of three tiles, and a three-line card placeholder in that slot
+     * reserves the wrong height — which is the shift this rule exists to
+     * prevent, with extra steps.
+     *
+     * So the shape is the caller's and the *reserving* is the rule: the
+     * fallback names a skeleton, and a bespoke one has to be defined here
+     * and has to draw something, or the name is a placeholder for a
+     * placeholder.
+     */
+    const bespoke = new Set<string>();
     for (const boundary of boundaries) {
-      expect(
-        boundary.slice(0, 500),
-        'a boundary with nothing card-shaped behind it — PLAN.md M183',
-      ).toMatch(/fallback=\{[\s\S]{0,400}?<SkeletonCard/);
+      const head = boundary.slice(0, 500);
+      const named = /fallback=\{[\s\S]{0,400}?<(\w*Skeleton\w*)/.exec(head);
+      expect(named?.[1], 'a boundary with nothing skeleton-shaped behind it — PLAN.md M183').toBeTruthy();
+      if (named![1] !== 'SkeletonCard') bespoke.add(named![1]!);
+    }
+    for (const name of bespoke) {
+      expect(home, `${name} is named as a fallback but not defined on Home`).toMatch(
+        new RegExp(`function ${name}\\(`),
+      );
+      const body = home.slice(home.indexOf(`function ${name}(`));
+      expect(body.slice(0, 1400), `${name} reserves no height — PLAN.md M183`).toMatch(/bg-sunken/);
     }
     expect(home, 'a null fallback collapses the slot — PLAN.md M183').not.toMatch(
       /fallback=\{null\}/,

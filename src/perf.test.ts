@@ -496,7 +496,7 @@ describe('the bundle stays small', () => {
    * with one exception recorded below — the history is in the comment inside
    * the first test.
    */
-  const BUDGET = 136.9;
+  const BUDGET = 135.4;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -1433,16 +1433,19 @@ describe('the bundle stays small', () => {
     ]) {
       expect(entry.includes(marker), `${marker} is in the entry chunk`).toBe(false);
     }
-    // The control: the review card itself is still on the boot path — Home
-    // renders it eagerly — so a sweep finding nothing at all would mean it
-    // was reading the wrong file rather than passing.
+    // The control: something that IS on the boot path, so a sweep finding
+    // nothing at all would mean it was reading the wrong file rather than
+    // passing. M195's rule — a control that cannot find a known-present
+    // instance is not a control.
     //
-    // `sends this week` rather than `sessions this week`, which is what the
-    // first version looked for and is never in the bundle: the card writes
-    // `{n} of {m} sessions · {k} sends this week`, and JSX compiles that
-    // into separate fragments. A control that cannot find a known-present
-    // instance is not a control, which is the whole of M195's rule.
-    expect(entry.includes('sends this week'), 'the review card is in the entry').toBe(true);
+    // It used to be the review card's `sends this week`. M239 took that card
+    // off Home, which is where 2.09KB of this budget came from, so the
+    // control is the button instead: the one thing on this screen that is
+    // eager on purpose and would be a defect to defer.
+    expect(entry.includes('Quick log'), 'the log button is in the entry').toBe(true);
+    // And the other half of M239, proved the same way: the numbers reach
+    // `altimeter.ts` and `loadTrend.ts`, and they are behind a boundary.
+    expect(entry.includes('Climbed so far'), 'the numbers card is in the entry').toBe(false);
   });
 
   it.runIf(built)('keeps the wall palettes out of the entry chunk', () => {

@@ -9,8 +9,7 @@ import { putSession, type Session } from '@/db/sessions';
 import { addDays, today } from '@/engine/dates';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { useProfile } from '@/store/profile';
-import { HomePage } from '@/features/home/HomePage';
-import { TONE } from './ReviewCard';
+import { TONE } from './weekNote';
 import { ReviewPage } from './ReviewPage';
 
 /**
@@ -26,6 +25,13 @@ import { ReviewPage } from './ReviewPage';
  * be reachable from `main.tsx` — and it is the guard that lasts, because it
  * asks the question of all forty-one routes rather than this one. What is
  * left for here is that the split did not change what a climber reads.
+ *
+ * **The card reads from Progress now, not Home (PLAN.md M239).** It had the
+ * defect it was measuring: `note.headline` and the line under it can be the
+ * same sentence — *"2 of 4 sessions"* over *"2 of 4 sessions · 8 sends this
+ * week"* — with the week card below saying it a third time. Progress is the
+ * way in M152 built for exactly this page, and the link there described the
+ * note in the abstract where it can simply be it.
  */
 
 const DAY = today();
@@ -65,45 +71,31 @@ async function aWeekOfTraining(): Promise<void> {
   });
 }
 
-const cardNote = (): string => {
-  const link = screen.getAllByRole('link').find((a) => a.getAttribute('href') === '#/review');
-  expect(link, 'the review card is not on Home').toBeTruthy();
-  return link!.textContent ?? '';
-};
-
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
 });
 
 describe('the week note, split out of its page', () => {
-  it('still reaches the front door', async () => {
+  it('still reaches a screen, and it is its own page', async () => {
     await aWeekOfTraining();
-    renderAt('/', <HomePage />);
+    renderAt('/review', <ReviewPage />);
     await screen.findByRole('heading', { level: 1 });
-    expect(cardNote(), 'the card says nothing about the week').toMatch(
-      /\d+ of \d+ sessions · \d+ sends this week/,
-    );
+    const body = document.body.textContent ?? '';
+    expect(body, 'the page says nothing about the week').toMatch(/\d+\s*Sessions/);
+    expect(body).toMatch(/\d+\s*Sends/);
   });
 
   /**
-   * And says what the page says. Both read one `useReview` and one `TONE`
-   * since the split; before it they were one file, and the risk of moving a
-   * component out is that the two copies drift — which is the shape M169
-   * named and this app keeps finding.
+   * One hook, one tone table, one file — which is what is left of M184 now
+   * that the card is gone. The page builds the note from `useReview` here
+   * rather than from a copy, so there is nothing for the two to drift about.
    */
-  it('says what the page says, from one hook and one tone table', async () => {
-    await aWeekOfTraining();
-    renderAt('/', <HomePage />);
-    await screen.findByRole('heading', { level: 1 });
-    const link = screen.getAllByRole('link').find((a) => a.getAttribute('href') === '#/review');
-    const headline = link!.querySelector('p')?.textContent?.trim() ?? '';
-    expect(headline.length, 'no headline to compare').toBeGreaterThan(3);
-
-    renderAt('/review', <ReviewPage />);
-    await screen.findByRole('heading', { level: 1 });
-    expect(document.body.textContent ?? '', `the page does not say "${headline}"`).toContain(
-      headline,
+  it('builds the page\u2019s note from the shared hook', () => {
+    const page = readFileSync('src/features/review/ReviewPage.tsx', 'utf8');
+    expect(page, 'the page stopped reading the shared hook').toMatch(
+      /import \{[^}]*useReview[^}]*\} from '\.\/weekNote'/,
     );
+    expect(page, 'the page kept its own copy of the hook').not.toMatch(/function useReview/);
   });
 
   /**
@@ -123,13 +115,13 @@ describe('the week note, split out of its page', () => {
    * is a convenience import away.
    */
   it('does not import the page back', () => {
-    const card = readFileSync('src/features/review/ReviewCard.tsx', 'utf8');
+    const card = readFileSync('src/features/review/weekNote.ts', 'utf8');
     expect(card).not.toMatch(/from '\.\/ReviewPage'/);
     const page = readFileSync('src/features/review/ReviewPage.tsx', 'utf8');
     expect(page, 'the page kept its own copy of the hook').not.toMatch(/function useReview/);
     expect(page, 'and the page re-exports the card, which is the leak again').not.toMatch(
       /export \{[^}]*ReviewCard/,
     );
-    expect(page).toMatch(/import \{ TONE, useReview \} from '\.\/ReviewCard'/);
+    expect(page).toMatch(/import \{ TONE, useReview \} from '\.\/weekNote'/);
   });
 });

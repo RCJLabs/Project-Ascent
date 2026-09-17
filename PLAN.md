@@ -13991,6 +13991,24 @@ which is the right shape.*
   all about the quality of a set — held to the last rep, felt solid. So the missing input was built
   and the suggestion was not. See the entry at the end of this document.*
 
+## A second audit
+
+The first list ran M195 to M238 and is closed. This one opens on the screen the app is opened on.
+
+- **M239 — Home is a column of sentences.** Six cards of identical weight — same surface, same
+  border, same radius, same padding — so nothing on the screen is more important than anything
+  else. Measured on a 430×932 phone: **the button a climber opens the app to press is at the
+  bottom edge of the viewport**, under four cards of commentary about a session they have not done
+  yet. The app derives a training load, an acute-to-chronic ratio, a send count, a week outline and
+  an altimeter on every pass, and renders every one of them as prose — while `index.css` says the
+  design is *"light-first, one glacier accent, big numbers, generous whitespace"*. Nothing on Home
+  is a big number. Nothing on Home is a number at all.
+  *Medium, and most of it is deletion.*
+  ***Built as the numbers, then the button, then the reading — and it made the app smaller.*** *The
+  duplicate that came off the front door was the only eager importer of `engine/review.ts`: 2.09KB,
+  measured, against 0.27KB for two engines and a chart primitive that went behind a lazy boundary.
+  See the entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -14926,3 +14944,109 @@ itself, which reads as a mistake rather than a choice. Equal thirds under a cap 
 width. jsdom has no layout and reported all three present either way.
 
 **135.85KB against a 136.9 ceiling. 6,263 tests over 365 files.**
+
+## M239 — the numbers, the button, and then the reading
+
+Home was eight cards and the one thing a climber opens the app to do was under four of them. On a
+430×932 phone the *Log session* button sat at **the bottom edge of the viewport**, below the
+coach's corner, the week note, the week card and the daily task — every one of them commentary on a
+session that had not happened yet.
+
+### What the screen was not saying
+
+`review.ts` derives a week's load, an acute-to-chronic ratio and a send count on every pass.
+`loadTrend.ts` derives ninety days of that ratio, and wrote down why: *"a single 0.99 is a figure
+nobody trusts, because a ratio has no meaning without knowing whether it arrived from 1.6 or from
+0.6"*. `altimeter.ts` derives a lifetime height and the next summit above it. **Home rendered all of
+it as sentences** — *"2 of 4 sessions · 8 sends this week"* — on an app whose own token file
+opens *"light-first, one glacier accent, big numbers, generous whitespace"*.
+
+Ten directions were drawn against the real tokens and the real data before any of this was written.
+The one built is the numbers at full size above the button, with the week's reading below it.
+
+### It paid for itself, and the duplicate is why
+
+`ReviewCard` rendered above the week card, and its own headline and its own second line can be the
+same sentence — *"2 of 4 sessions"* over *"2 of 4 sessions · 8 sends this week"* — with
+*Your week* underneath saying it a third time. It was also **the only eager importer of
+`engine/review.ts`**, a cost M184 recorded and accepted because *"Home shows the note"*.
+
+Home does not show the note now. Measured, entry chunk, gzipped:
+
+```
+before M239                       135.85 KB
+ReviewCard off Home               133.76 KB   -2.09
+the numbers card added (lazy)     134.03 KB   +0.27
+```
+
+Two engines, a chart primitive and a new card, and the front door is **1.82KB lighter than it was**.
+The ceiling comes down 136.9 → 135.4 with it. `perf.test.ts` proves both halves against the built
+bundle: the log button is in the entry chunk, and *"Climbed so far"* is not.
+
+### Nothing here computes anything
+
+A second definition of a send is how two screens start disagreeing, so `engine/homeStats.ts` reads
+the load from `sessionLoad`, the sends through `gymSummary` — the rule `OpenSessionCard` already
+follows — and the ratio straight off `loadTrend`, sampled to one point a week so the three tiles
+are three lines of the same length. The height is `deriveAltimeter`'s, and the bar under it is
+`Meter` at the same `fraction` the altimeter page draws.
+
+A week the ratio cannot be computed for is left out rather than sent in as a zero, which is what
+`loadTrend` does with the same fact for the same reason. And a climber with nothing logged gets no
+card at all: three zeroes under a zero is not an app's first impression to make.
+
+### A sentence, not three hidden tables
+
+M140's rule is that a chart hands a screen reader a table instead of the SVG. Three of those on the
+front door would be three tables of eight rows on the one screen the app opens on, and the number
+beside each is already text. So `Sparkline` is `role="img"` with a sentence — *"Week load over 8
+weeks: 1,240, up from 820"* — and the charts that do carry tables stay on Progress, where a
+climber went to look at the numbers.
+
+### Two rules widened, both made stricter
+
+**The Home fallback rule** required `<SkeletonCard` exactly, which was the same thing while every
+boundary held a card. The numbers are a figure, a bar and a row of three tiles, and a three-line
+card placeholder there reserves the wrong height — the shift the rule exists to prevent, with
+extra steps. It now takes any skeleton the page defines itself, and checks that it *is* defined and
+that it draws something.
+
+**The lazy-boundary rule** named the coach card alone. A battery mutant importing the numbers card
+eagerly survived the entire suite; only the built-bundle probe would have caught it, and only after
+a build. It now names all three of Home's engine-reading cards.
+
+### What was tried and taken back out
+
+The week note was going to move to Progress rather than disappear, and `oneDerivation.test.tsx`
+refused it on the first run: `buildReview` derives its own `ClimberState` keyed on the week under
+review rather than on today, so the card cost that page **a second walk of the whole log** —
+exactly what M157 wrote that test for. The note stays on `/review`, which M152 already gave a way in
+from Progress. `ReviewCard.tsx` is `weekNote.ts` now, holding the hook and the tone table the page
+still needs, because a file named after a component it no longer holds is a lie the next reader
+unpicks.
+
+### One equivalent mutant, recorded
+
+Dropping the `age < 0` guard in the weekly bucketing survives: a session dated in the future floors
+to a negative bucket and the output loop only ever reads 0..7. It stays, because it is what keeps
+that true — a bucketing that ever reached for `Math.abs` would fold tomorrow into this week, and
+silently. The fact is written where the guard is.
+
+### Measured
+
+**26 mutants, all caught, sanity no-op survived** — after nine survivors in the first round, and
+they were one hole rather than nine: `Sparkline` and `HomeStatsCard` had no direct tests at all.
+The line drawn upside down, a flat run on the floor, the run described backwards, the meter pinned
+full, all three tiles coloured as judgements, and the numbers card imported eagerly all shipped
+green against the engine tests alone.
+
+**Layout shift 0.0000**, twice, at a quarter of this machine's CPU — the measurement M183 made
+this fallback's whole job.
+
+**134.03KB against a 135.4 ceiling**, down from 135.85 against 136.9. Browser-verified in both
+themes at 430px and 1280px. The button moved from the bottom edge of the viewport to **595px** —
+not the 340px the mockup implied, because the mockup drew neither the day heading, nor the week's
+nudge card, nor a rest day's session card with four buttons on it. Above the fold, which it was not
+before.
+
+**6,293 tests over 368 files.**

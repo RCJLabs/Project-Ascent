@@ -25,7 +25,7 @@ import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
 import { weekHref } from '@/ui/routes';
-import { TONE, useReview } from './ReviewCard';
+import { TONE, useReview } from './weekNote';
 import { useGradeLabel } from '@/ui/useGrade';
 
 
