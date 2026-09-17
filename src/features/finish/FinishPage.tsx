@@ -421,7 +421,23 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
     const found = nextInSeason(plan, end.program.id, status.to);
     return found ? { objective, found } : null;
   })();
-  const when = fromKey(status.to).toLocaleDateString(undefined, {
+  /**
+   * The day it actually ran to (PLAN.md M253).
+   *
+   * `status.to` is `startDate + weeks`, derived from the program and nothing
+   * else — so a block left in week seven was headed **"Ran to Sep 12, 2026"**,
+   * five weeks after the climber stopped and a date it never reached, above a
+   * sentence reading *"You left Iron Grip after 7 of its 12 weeks."* The
+   * header and the line under it disagreed, and the record had the answer:
+   * `endedAt` is what `outcomeOf` reads to call the block `left` in the first
+   * place.
+   *
+   * Only for `left`. A reconstructed row also carries an `endedAt`, but it is
+   * the migration's guess and the page says so out loud two lines down — a
+   * date there would assert what the sentence has just disclaimed.
+   */
+  const ranTo = end.outcome === 'left' && end.record ? end.record.endedAt ?? status.to : status.to;
+  const when = fromKey(ranTo).toLocaleDateString(undefined, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',

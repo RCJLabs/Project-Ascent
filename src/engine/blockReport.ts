@@ -234,14 +234,33 @@ export function describeBlock(report: BlockReport): string {
   const compared = total - report.untested;
 
   if (compared === 0) {
-    const never = report.results.filter((r) => r.gap === 'never-tested').length;
     const once = report.results.filter((r) => r.gap === 'once-only').length;
     if (once > 0) {
       return `Nothing to compare yet: ${count(once)} of the ${total} ${report.program.name} assessments have a baseline and no retest. The block's test weeks are the ones to take them in.`;
     }
-    return never === total
+    /**
+     * `never === total` was the wrong test (PLAN.md M253).
+     *
+     * `gap: 'not-a-number'` is decided by the metric's **kind**, before
+     * anything looks at whether a reading exists — so a battery holding one
+     * text assessment can never have `never === total`, and its climber fell
+     * to the sentence about *"the assessments taken so far"* having taken
+     * none. Measured across the catalogue: Iron Grip is the one program of
+     * thirteen with a mixed battery, nine assessments and one of them text,
+     * and it is the app's flagship finger block.
+     *
+     * The question this branch answers is whether anything comparable was
+     * taken, so it counts the comparable ones. A battery with no numbers in
+     * it at all is a different fact and gets its own sentence.
+     */
+    const words = report.results.filter((r) => r.gap === 'not-a-number').length;
+    const numeric = total - words;
+    if (numeric === 0) {
+      return `Nothing measurable to compare: none of the ${total} ${report.program.name} ${total === 1 ? 'assessment is a number' : 'assessments is a number'} this can put on a scale.`;
+    }
+    return words === 0
       ? `None of the ${total} ${report.program.name} assessments has been taken this block, so there is no before to put an after beside.`
-      : `Nothing measurable to compare: the assessments taken so far are not numbers this can put on a scale.`;
+      : `None of the ${numeric} ${report.program.name} assessments that carry a number has been taken this block, so there is no before to put an after beside.`;
   }
 
   const parts: string[] = [];

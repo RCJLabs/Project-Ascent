@@ -7,7 +7,7 @@ import { putMetricEntry } from '@/db/metrics';
 import { newSession, putSession } from '@/db/sessions';
 import { loadPrograms } from '@/content/programs';
 import { IRON_GRIP } from '@/content/programs/catalogue';
-import { addDays, daysBetween, startOfWeek, today } from '@/engine/dates';
+import { addDays, daysBetween, fromKey, startOfWeek, today } from '@/engine/dates';
 import { blockWindow } from '@/engine/plan';
 import { planFromLayout } from '@/engine/scheduler';
 import { useProfile } from '@/store/profile';
@@ -490,5 +490,68 @@ describe('what you were lifting', () => {
     const card = screen.getByText('What you were lifting').closest('section')!;
     expect(card.textContent).toMatch(/load \+35 lbs → \+20 lbs/);
     expect(card.textContent).not.toMatch(/better|worse|dropped|improved/i);
+  });
+});
+
+/**
+ * The date in the header is the date it ran to (PLAN.md M253).
+ *
+ * `status.to` is `startDate + weeks`, derived from the program and nothing
+ * else. A block left in week seven was headed with the day it *would* have
+ * finished — five weeks after the climber stopped — directly above a sentence
+ * reading "You left Iron Grip after 7 of its 12 weeks."
+ */
+describe('what the header says a block ran to', () => {
+  const START = '2026-01-04';
+  const scheduled = blockWindow(IRON_GRIP, START).to;
+  const left = '2026-02-21';
+
+  const shown = async (record: Partial<BlockRecord>) => {
+    await hydrate();
+    useProfile.setState({
+      activeProgramId: null,
+      startDates: {},
+      plans: {},
+      blocks: [
+        {
+          id: `iron_grip#${START}`,
+          programId: 'iron_grip',
+          name: 'Iron Grip',
+          startDate: START,
+          weeks: 12,
+          endedAt: scheduled,
+          ...record,
+        } as BlockRecord,
+      ],
+    });
+    renderAt('/finish', <FinishPage />);
+    await screen.findByRole('heading', { level: 1 });
+    return document.body.textContent ?? '';
+  };
+
+  const asDate = (key: string) =>
+    fromKey(key).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+  it('names the day the climber stopped, not the day the program would have', async () => {
+    const text = await shown({ endedAt: left, reason: 'stopped' });
+    expect(text).toContain(`Ran to ${asDate(left)}`);
+    expect(text, 'a date it never reached').not.toContain(asDate(scheduled));
+  });
+
+  it('leaves a block that ran its course exactly as it was', async () => {
+    const text = await shown({ endedAt: scheduled });
+    expect(text).toContain(`Ran to ${asDate(scheduled)}`);
+  });
+
+  /**
+   * And says nothing new about a reconstructed row. Its `endedAt` is the
+   * migration's guess, and the sentence two lines down has just said the app
+   * has no record of how the block ended.
+   */
+  it('does not date a block it has already said it cannot date', async () => {
+    const text = await shown({ endedAt: left, reconstructed: true });
+    expect(text).toMatch(/no record of how it ended/);
+    expect(text).toContain(`Ran to ${asDate(scheduled)}`);
+    expect(text).not.toContain(asDate(left));
   });
 });

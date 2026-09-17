@@ -369,3 +369,54 @@ describe('what it says out loud', () => {
     expect(text).not.toContain('numbers improved');
   });
 });
+
+/**
+ * A battery with a word in it (PLAN.md M253).
+ *
+ * `gap: 'not-a-number'` is set from the metric's kind, before anything looks
+ * at whether a reading exists. So `never === total` — the test that chose
+ * between "none of them has been taken" and "the ones taken are not numbers"
+ * — could never be true for a program carrying one text assessment, and its
+ * climber was told about assessments they had not taken. Measured across the
+ * catalogue, Iron Grip is the one program of thirteen shaped like that, and
+ * it is the flagship finger block.
+ */
+describe('nothing taken, and one of them is a word', () => {
+  const mixed = program({ name: 'Mixed', assessments: ['dead_hang', 'max_pullups', 'core_lever'] });
+  const allWords = program({ name: 'Wordy', assessments: ['core_lever'] });
+  const allNumbers = program({ name: 'Numeric', assessments: ['dead_hang', 'max_pullups'] });
+
+  it('says nothing was taken, and counts only what could be', () => {
+    const said = describeBlock(report(mixed, [])!);
+    expect(said).toBe(
+      'None of the 2 Mixed assessments that carry a number has been taken this block, so there is no before to put an after beside.',
+    );
+    expect(said, 'they took none of them').not.toMatch(/taken so far/);
+  });
+
+  /** The all-numeric battery keeps the sentence it always had. */
+  it('leaves a battery of numbers exactly as it was', () => {
+    expect(describeBlock(report(allNumbers, [])!)).toBe(
+      'None of the 2 Numeric assessments has been taken this block, so there is no before to put an after beside.',
+    );
+  });
+
+  /** And a battery with no numbers in it is a different fact again. */
+  it('says so when there is nothing in the battery to measure', () => {
+    const said = describeBlock(report(allWords, [])!);
+    expect(said).toMatch(/Nothing measurable to compare/);
+    expect(said).toMatch(/none of the 1 Wordy assessment is a number/);
+  });
+
+  /** The word never blocks a real comparison from being reported. */
+  it('reports the numbers that did move, word and all', () => {
+    const said = describeBlock(
+      report(mixed, [
+        entry('dead_hang', '2026-01-06', 30),
+        entry('dead_hang', '2026-02-24', 40),
+      ])!,
+    );
+    expect(said).toMatch(/one of the 1 retested number improved/);
+    expect(said).toMatch(/of the 3 have no comparison this block/);
+  });
+});

@@ -14161,6 +14161,21 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   where they sat, and the singular case — one missed week — stopped needing a plural rule at all.
   See the entry at the end of this document.*
 
+- **M253 — the block review, driven for the first time.** `/finish` is what a climber reads after
+  twelve weeks, and neither audit had touched it: its three describers need a program *and* a block
+  record, which the M248 corpus cannot build. Seven block shapes later — ran out, barely trained,
+  nothing at all, stopped in week six, switched away, a reconstructed row, and one where everything
+  got worse — two of them are wrong. A block left in week seven is headed **"Ran to Sep 12, 2026"**,
+  five weeks after the climber stopped and a date it never reached, directly above *"You left Iron
+  Grip after 7 of its 12 weeks."* And a climber who took no assessment at all is told **"the
+  assessments taken so far are not numbers this can put on a scale"** — because `never === total`
+  cannot be true for a battery holding one text metric, and Iron Grip is the one program of thirteen
+  shaped that way.
+  *Small, and it is one date and one count.*
+  ***Built, and the right sentence already existed.*** *The Cruiser, whose battery is all numbers,
+  gets "None of the 7 … has been taken this block" on identical data. See the entry at the end of
+  this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -16054,3 +16069,73 @@ the count all die.
 
 **6,398 tests over 379 files.** First load 134.42KB against a 135.4KB budget. Both branches read
 back from a browser in each theme at 430px and 1280px: a four-week gap and a one-week one.
+
+## M253 — the block review, driven for the first time
+
+`/finish` is the highest-stakes prose in the app: what a climber reads at the end of twelve weeks,
+when they are deciding whether the block worked and what to run next. Neither audit had reached it.
+The M248 corpus cannot — `describeBlockEnd`, `describeAdherence` and `describeBlock` need a program
+and a `BlockRecord`, which is a second fixture axis the harness does not have — and the browser
+sweeps had all been driven off session logs.
+
+Seven block shapes: ran out having trained throughout, ran out having barely trained, ran out having
+logged nothing at all, stopped in week six, switched away mid-block, a row reconstructed by the
+migration, and one where the grades and the hang loads both fell through the block.
+
+### A header naming a day the block never reached
+
+```
+Iron Grip
+Ran to Sep 12, 2026
+
+You left Iron Grip after 7 of its 12 weeks.
+```
+
+`status.to` is `blockWindow(program, startDate).to` — start plus weeks, derived from the program and
+nothing else. It has no idea the climber stopped. So the subtitle gave the day the block *would*
+have finished, five weeks after they left, immediately above the sentence saying they left.
+
+The record has the answer and the app was already using it: `outcomeOf` reads `endedAt` to decide the
+outcome is `left`, and the history list two cards down renders that as *"11 of 12 weeks · left
+early"*. The header now takes the same date. It reads `Ran to Aug 6, 2026`.
+
+**Only for `left`.** A reconstructed row also carries an `endedAt`, but that one is the migration's
+guess, and the sentence directly below it says *"the app has no record of how it ended"* — dating it
+would assert exactly what the page has just disclaimed.
+
+### A sentence about assessments that were never taken
+
+```
+Nothing measurable to compare: the assessments taken so far are not numbers
+this can put on a scale.
+```
+
+Shown to a climber whose nine assessments all read **not taken**.
+
+`gap: 'not-a-number'` is set from the metric's *kind*, before anything looks at whether a reading
+exists:
+
+```ts
+if (metric.kind === 'text') return { ...empty, gap: 'not-a-number' };
+if (baseline === null)      return { ...empty, gap: 'never-tested' };
+```
+
+So `never === total` — the test choosing between *"none of them has been taken"* and *"the ones
+taken are not numbers"* — is unreachable for any battery holding a single text metric. Measured
+across the catalogue: **one program of thirteen is shaped that way, and it is Iron Grip**, nine
+assessments with Core Lever among them, the app's flagship finger block. The Cruiser, seven
+assessments and all of them numeric, gets the correct sentence on identical data.
+
+The right sentence already existed. The branch just could not be reached.
+
+It counts what could have been compared rather than the whole battery, which is also more honest
+than the sentence it replaces: *"None of the 8 Iron Grip assessments that carry a number has been
+taken this block."* Eight, not nine — the ninth was never going to be comparable. A battery with no
+numbers in it at all is a third fact and says so on its own.
+
+**6 mutants caught, sanity no-op survived.** Counting the whole battery again, treating a word as a
+number, reading every battery as wordless, letting a battery of words claim a comparison, taking the
+scheduled end for the header, and dating a reconstructed row all die.
+
+**6,405 tests over 379 files.** First load 134.42KB against a 135.4KB budget. Both read back from a
+browser across all seven block shapes, and in both themes at 430px and 1280px.
