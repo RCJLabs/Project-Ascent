@@ -101,7 +101,7 @@ export const APP: Guide = {
         {
           kind: 'list',
           items: [
-            '**Home opens on your numbers and the button.** How high you have climbed and how far to the next summit, then the week’s load, your acute-to-chronic ratio and your sends — each with the eight weeks behind it — and then today’s session. What the coach and the week have to say sits under all of that, because the app is for logging first and reading second.',
+            '**Home opens on the day, the week and the button.** The date, then seven marks for the seven days — done, today, planned, and the limit day flagged — each a link straight to that day’s log. Then how high you have climbed and how far to the next summit, the week’s load, your acute-to-chronic ratio and your sends with the eight weeks behind each, and then today’s session. What the coach has to say sits under all of that, because the app is for logging first and reading second.',
             '**Open a day** — today is a button on Home; any other day is on the calendar. Both open the same screen.',
             '**Say what it was** — a program session, or free climbing. Indoors or outdoors.',
             '**Pick how much of it you want** — *Quick log* is the climbs, the effort and the button that finishes; *Log session* is all of it, warmup to cooldown. The same session either way, and you can swap while it is open.',

@@ -343,33 +343,38 @@ describe('moving a session', () => {
 });
 
 describe('the doors', () => {
-  it('is the card on Home, with where the week stands', async () => {
+  /**
+   * The heading on Home since M241, not a card under it. The door is the
+   * same two links; what changed is that they are beside the date rather
+   * than in a card repeating what the date already said.
+   */
+  it('is the heading on Home, with where the week stands', async () => {
     await putSession(newSession(TODAY, 0, { completed: true }));
     await running({ [DOW]: 'fp', [(DOW + 1) % 7]: 'perf' } as WeekPlan, 6);
     renderAt('/', <HomePage />);
-    const heading = await screen.findByRole('heading', { name: 'Your week', level: 2 });
-    const card = heading.closest('section')!;
-    expect(card.textContent).toContain('Week 6 of 12');
-    expect(card.textContent).toContain('1 of 2 training days done');
-    expect(card.querySelector('a[href="#/week"]')).toBeTruthy();
-    expect(card.querySelector('a[href="#/calendar"]')).toBeTruthy();
+    const h1 = await screen.findByRole('heading', { level: 1 });
+    const header = h1.closest('header')!;
+    expect(header.textContent).toContain('Week 6 of 12');
+    expect(header.textContent).toContain('1 of 2 training days done');
+    expect(header.querySelector('a[href="#/week"]')).toBeTruthy();
+    expect(header.querySelector('a[href="#/calendar"]')).toBeTruthy();
   });
 
   it('names the limit day still to come on Home', async () => {
     // Today, so the day is still to come whatever weekday this runs on.
     await running({ [DOW]: 'perf' } as WeekPlan, 2, 'peak_performance');
     renderAt('/', <HomePage />);
-    await screen.findByRole('heading', { name: 'Your week', level: 2 });
+    await screen.findByRole('heading', { level: 1 });
     const name = new Date(2026, 0, 4 + DOW).toLocaleDateString(undefined, { weekday: 'long' });
-    expect(TEXT()).toContain(`Limit day ${name}`);
+    expect(TEXT()).toContain(`limit day ${name}`);
   });
 
   it('stops naming the limit day once it has been logged', async () => {
     await putSession(newSession(TODAY, 0, { completed: true }));
     await running({ [DOW]: 'perf' } as WeekPlan, 2, 'peak_performance');
     renderAt('/', <HomePage />);
-    await screen.findByRole('heading', { name: 'Your week', level: 2 });
-    expect(TEXT()).not.toContain('Limit day');
+    await screen.findByRole('heading', { level: 1 });
+    expect(TEXT().toLowerCase()).not.toContain('limit day');
   });
 
   it('is a link on the calendar, which no longer moves sessions itself', async () => {

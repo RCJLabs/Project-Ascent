@@ -26,6 +26,32 @@ describe('the shell', () => {
     expect(shell).not.toContain('grid-cols-6');
   });
 
+  /**
+   * And the bar is actually **drawn**, with all five in it (PLAN.md M241).
+   *
+   * The check above reads `AppShell.tsx`, which is the right way to catch a
+   * sixth tab and the wrong way to catch a bar that stopped rendering: the
+   * source would still list five. The only other test that renders the nav
+   * checks the *order* of its children, so a tab row with no tabs in it
+   * would pass everything. Nothing here had ever put the five links on a
+   * screen and looked.
+   */
+  it('renders all five, inside the main nav, pointing where they say', async () => {
+    await reset();
+    await hydrate();
+    renderAt('/train', <AppShell><p>page</p></AppShell>);
+    const nav = document.querySelector('nav[aria-label="Main"]');
+    expect(nav, 'there is no main nav on the page at all').toBeTruthy();
+    const hrefs = [...nav!.querySelectorAll('a')]
+      .map((a) => a.getAttribute('href') ?? '')
+      .filter((h) => /^#\/(|train|calendar|progress|game)$/.test(h));
+    expect([...new Set(hrefs)]).toEqual(['#/', '#/train', '#/calendar', '#/progress', '#/game']);
+    // Named, not just present: an icon-only link reads as "link" and nothing.
+    for (const label of ['Home', 'Train', 'Calendar', 'Progress', 'Game']) {
+      expect(nav!.textContent, `${label} is not named in the nav`).toContain(label);
+    }
+  });
+
   it('offers search and settings from the shell on both shapes', async () => {
     await reset();
     await hydrate();

@@ -1,22 +1,19 @@
 import { Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { CalendarDays, ClipboardList, Compass, ShieldAlert, Sparkles, Zap } from 'lucide-react';
+import { ClipboardList, Compass, ShieldAlert, Sparkles, Zap } from 'lucide-react';
 import type { Session } from '@/db/sessions';
 import { today } from '@/engine/dates';
 import { loadsFingersDirectly } from '@/engine/fingerGap';
 import { gymSummary } from '@/engine/gym';
-import { DayHeading } from '@/features/log/DayHeading';
 import { DayNudges, PreSessionCard } from '@/features/log/PreSession';
 import { usePlannedDay } from '@/features/log/usePlannedDay';
 import { useWeekOutline } from '@/features/week/useWeekOutline';
-import { describeWeekDays, nextLimitDay } from '@/engine/week';
-import { fromKey } from '@/engine/dates';
-import type { Program } from '@/content/types';
 import { useProfile } from '@/store/profile';
 import { allSessions, useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { HomeHeading } from './HomeHeading';
 import { PageGrid } from '@/ui/PageGrid';
 import { SkeletonCard } from '@/ui/Skeleton';
 import { lazyRoute } from '@/ui/lazyRoute';
@@ -119,7 +116,7 @@ export function HomePage() {
   const date = today();
   return (
     <>
-      <DayHeading date={date} />
+      <HomeHeadingForToday date={date} />
       {/* How high and how hard, then the button, then the training around
           it. The order is the milestone: before M239 the first screen was
           four cards of commentary and the button was under all of them.
@@ -178,9 +175,22 @@ function NumbersSkeleton() {
   );
 }
 
+/**
+ * The heading, with the week it sits in (PLAN.md M241).
+ *
+ * The outline is read here rather than inside `HomeHeading` so the heading
+ * stays a component that draws what it is given — the same shape
+ * `DayHeading` had, and what lets the strip be rendered in a test without a
+ * profile store behind it.
+ */
+function HomeHeadingForToday({ date }: { date: string }) {
+  const outline = useWeekOutline(date);
+  const { program } = usePlannedDay(date);
+  return <HomeHeading date={date} outline={outline} program={program} />;
+}
+
 /** The training around today: what the coach has to say, the week, the block. */
 function AroundTheSession() {
-  const { program } = usePlannedDay(today());
   return (
     <PageGrid className="mt-3 lg:mt-0" single>
       <Suspense
@@ -194,7 +204,6 @@ function AroundTheSession() {
       >
         <HomeCoachCard />
       </Suspense>
-      {program && <YourWeekCard program={program} />}
       {/* Last, so on a phone it is the card directly above today's session —
           a quality rung for a session not done yet, read on the way to the
           gym rather than on the way home (PLAN.md M231). */}
@@ -208,49 +217,6 @@ function AroundTheSession() {
         <DailyTaskCard />
       </Suspense>
     </PageGrid>
-  );
-}
-
-/**
- * The week the block is in, and the way into it (PLAN.md M135).
- *
- * This was *Your program* — the name, the subtitle, and an icon to the
- * month — which said the one thing a climber running a block already knows.
- * What they open the app on a Sunday to find out is where the week stands:
- * which week, which phase, what is done, and which day is the hard one.
- * The month is still a tap away, on the same icon.
- */
-function YourWeekCard({ program }: { program: Program }) {
-  const now = today();
-  const outline = useWeekOutline(now);
-  const count = describeWeekDays(outline, now);
-  const limit = nextLimitDay(outline);
-  const where =
-    outline.week !== null
-      ? `Week ${outline.week} of ${program.weeks}${outline.phase ? ` · ${outline.phase.name}` : ''}${outline.isDeload ? ' · Deload' : ''}`
-      : outline.over
-        ? 'Has run its course'
-        : 'Not started yet';
-  const line = [
-    count,
-    limit ? `Limit day ${fromKey(limit.date).toLocaleDateString(undefined, { weekday: 'long' })}` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-  return (
-    <Card title="Your week">
-      <div className="flex items-center justify-between gap-3">
-        <Link href="/week" className="focus-ring flex-1 min-w-0 rounded-lg">
-          <div className="font-bold">
-            {program.name} · {where}
-          </div>
-          <p className="text-sm text-ink-soft">{line || program.subtitle}</p>
-        </Link>
-        <Link href="/calendar" className="text-accent shrink-0" aria-label="Open calendar">
-          <CalendarDays size={20} />
-        </Link>
-      </div>
-    </Card>
   );
 }
 

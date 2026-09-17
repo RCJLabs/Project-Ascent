@@ -84,10 +84,13 @@ describe('the order of the front door', () => {
     // Awaited, not queried: both cards cross a lazy boundary.
     const numbers = await screen.findByText('Climbed so far');
     const coach = await screen.findByText("Coach's Corner");
-    const program = screen.getByRole('heading', { name: 'Your week', level: 2 });
+    const task = screen.getByRole('heading', { name: 'Today\u2019s task', level: 2 });
     expect(before(numbers, start), 'the numbers are under the button').toBe(true);
     expect(before(start, coach), 'the coach is above the button').toBe(true);
-    expect(before(start, program), 'the week is above the button').toBe(true);
+    expect(before(start, task), 'the daily task is above the button').toBe(true);
+    // The week is in the heading since M241, above everything.
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(before(heading, numbers), 'the date is under the numbers').toBe(true);
   });
 
   /**

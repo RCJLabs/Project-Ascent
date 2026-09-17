@@ -14019,6 +14019,18 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   same breakpoint, so nesting one inside the new rail gave a paragraph a 180px column — the safety
   note came out one word per line. See the entry at the end of this document.*
 
+- **M241 — the front door borrows the logger's heading.** `DayHeading` is shared by `HomePage` and
+  `/log/<date>`, where it is exactly right: the logger *is* a day, and paging to the day either side
+  is the job. On Home all three of its parts are wrong. **Both arrows navigate off Home**, to
+  `/log/<yesterday>` and `/log/<tomorrow>` — the only controls on the screen whose whole function is
+  to leave it, on a screen that is always today. Its subtitle, *"Week 5 · The Hammer"*, is said
+  again by a *Your week* card a few hundred pixels below. And it costs about 150px — a fifth of a
+  phone's content height — to say the date.
+  *Small, and it is one component and one deletion.*
+  ***Built, with the week strip in place of the subtitle, and it cost 63px rather than saving
+  them.*** *The strip marks today from the date, because `statusOf` returns `'rest'` before it ever
+  asks — which drew a grey dot on Thursday. See the entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -15117,3 +15129,79 @@ were checked in a browser at 430, 1024 and 1280, in both themes.
 same button at 595px.
 
 **6,297 tests over 369 files.**
+
+## M241 — the day, and the week it sits in
+
+`DayHeading` is the **logger's** heading, and on `/log/<date>` every part of it is right: that page
+is one day, and the arrows reach the day either side. Home borrowed it, and on the front door the
+same three parts were each wrong.
+
+- **Both arrows navigated off Home**, to `/log/<yesterday>` and `/log/<tomorrow>`. They were the only
+  controls on the screen whose whole function was to leave it — on a screen that is always today.
+- **Its subtitle was said again below.** *"Week 5 · The Hammer"* over a *Your week* card reading
+  *"Iron Grip · Week 5 of 12 · The Hammer (Max Hangs)"*.
+- **It cost about 150px** to say the date.
+
+Home has its own now: the date, seven marks for the seven days, and one line for the block. *Your
+week* is gone, folded into it — it was the same fact in a card of its own, and its two doors
+(`/week`, `/calendar`) came with it.
+
+### Seven links, not two arrows
+
+The arrows could reach yesterday and tomorrow. Every day of the week is a link now, so the session a
+climber forgot to log on Tuesday is one tap instead of two — and the strip says which day that is
+before they go looking. Each carries its state in its accessible name, because a ring and a filled
+circle say nothing to a reader, and seven letters would read *"S, M, T, W, T, F, S"* and stop.
+
+### Today is read from the date, not from the plan
+
+`statusOf` asks its questions in this order:
+
+```
+if (sessions.some(completed))  return 'done';
+if (sessions.length > 0)       return 'started';
+if (!planned)                  return 'rest';      // <- before today is considered
+if (date < today)              return 'missed';
+return date === today ? 'today' : 'planned';
+```
+
+So `'today'` is only ever returned for a day the plan places a session on. That is right for the week
+page, where a rest day is a rest day whatever day it is — and wrong for a strip whose whole job is
+saying where you are now. Drawn from the status it put a grey dot on Thursday and a ring on nothing.
+Found in a browser, on the first render.
+
+### What it cost, which is not what was predicted
+
+The proposal said the button would move from 595px to about 505px. It moved to **658px**. Two things
+were wrong with that guess: *Your week* sat **below** the button, so deleting it saved nothing above
+the fold, and the strip is taller than the subtitle it replaced. Net **+63px** above the button, for
+the week's shape and seven day links.
+
+Worth saying plainly because it is the second time on this screen that a predicted number came out
+the wrong way, and both times the prediction was made from a mockup rather than from the page.
+
+### Measured
+
+**12 mutants, all caught, sanity no-op survived** — today read from the status again, nothing ever
+today, everything today, the days not links, the strip always drawn, never drawn, the labels reduced
+to a weekday, the week line gone, each of the two doors sent elsewhere, the `h1` demoted, and Home
+borrowing `DayHeading` back.
+
+`a11y.test.ts` counts a page's heading by naming the components that carry an `h1`; `HomeHeading`
+joined that list, and the companion test that each of them **actually renders one** joined with it —
+the half that makes the first sound.
+
+**134.38KB against a 135.4 ceiling.** Browser-verified in both themes at 390, 430, 1024 and 1280.
+
+**6,306 tests over 370 files.**
+
+### And a nav that was never rendered in a test
+
+Reported missing, and not reproducible: the bar draws with all five tabs on **all thirty routes at
+both shapes**, checked in a browser, and none of M237–M240 touches `AppShell.tsx`.
+
+What the report did find is that nothing had ever **rendered** it and looked. `shell.test.tsx`'s
+five-tab test reads `AppShell.tsx` as text — right for catching a sixth tab, useless against a bar
+that stopped rendering, since the source would still list five — and the only test that renders the
+nav checks the *order of its children*. A tab row with no tabs in it passed everything. There is now
+a test that puts the five links on a screen and reads their hrefs and their names.

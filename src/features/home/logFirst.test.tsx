@@ -182,7 +182,10 @@ describe('the cards know when they no longer apply', () => {
       plans: { iron_grip: {} },
     });
     renderAt('/', <HomePage />);
-    await screen.findByRole('heading', { name: 'Your week', level: 2 });
+    // Settled on the button rather than the week: since M241 the week reads
+    // in the heading, and a block with no days placed and nothing logged has
+    // no week to draw yet.
+    await screen.findByRole('button', { name: /Log a session|Log rest day|Start session/ });
     expect(card('Pick a program')).toBeNull();
     // The note was only ever on the welcome screen, which a climber who
     // restored a backup never saw. A running block is not "Got it".

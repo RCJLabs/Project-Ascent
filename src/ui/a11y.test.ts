@@ -248,7 +248,7 @@ describe('headings', () => {
       // by a real page that simply forgot its heading (PLAN.md M115).
       if (rendersNothing(file.source)) continue;
       const ownH1 = (file.source.match(/<h1[\s>]/g) ?? []).length;
-      const headers = (file.source.match(/<(?:PageHeader|DayHeading)\b/g) ?? []).length;
+      const headers = (file.source.match(/<(?:PageHeader|DayHeading|HomeHeading)\b/g) ?? []).length;
       const total = ownH1 + headers;
       if (total === 0) offences.push(`${path}: no h1 and no PageHeader`);
     }
@@ -256,11 +256,16 @@ describe('headings', () => {
   });
 
   it('accepts the two heading components only because each renders an h1', () => {
-    // `PageHeader` and `DayHeading` count as a page's heading above. That
-    // is only sound while each of them actually renders one — a `DayHeading`
-    // that lost its h1 would leave Home and every log day heading-less
-    // while this file kept passing.
-    for (const path of ['src/ui/PageHeader.tsx', 'src/features/log/DayHeading.tsx']) {
+    // `PageHeader`, `DayHeading` and `HomeHeading` count as a page's heading
+    // above. That is only sound while each of them actually renders one — a
+    // `DayHeading` that lost its h1 would leave every log day heading-less
+    // while this file kept passing. `HomeHeading` joined the list at M241,
+    // when Home stopped borrowing the logger's.
+    for (const path of [
+      'src/ui/PageHeader.tsx',
+      'src/features/log/DayHeading.tsx',
+      'src/features/home/HomeHeading.tsx',
+    ]) {
       expect(read(path), `${path} has no h1`).toMatch(/<h1[\s>]/);
     }
   });

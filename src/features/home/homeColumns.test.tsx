@@ -68,7 +68,7 @@ describe('the two columns', () => {
     expect(main!.textContent, 'the numbers left the button').toContain('Climbed so far');
     expect(main!.textContent).toMatch(/Start session|Log a session|Log rest day/);
     expect(rail!.textContent, 'the coach is not in the rail').toContain("Coach's Corner");
-    expect(rail!.textContent).toContain('Your week');
+    expect(rail!.textContent).toContain('Today\u2019s task');
     // And the halves do not overlap, which is what makes it two columns
     // rather than one list with a class on it.
     expect(main!.textContent).not.toContain("Coach's Corner");
