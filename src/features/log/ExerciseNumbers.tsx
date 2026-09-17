@@ -3,7 +3,14 @@ import { RotateCcw } from 'lucide-react';
 
 import type { Exercise } from '@/content/types';
 import type { LoggedExercise } from '@/db/sessions';
-import { describeEntry, hasNumbers, type Dimension } from '@/engine/exerciseLog';
+import {
+  OUTCOME_MEANING,
+  OUTCOME_WORD,
+  SET_OUTCOMES,
+  describeEntry,
+  hasNumbers,
+  type Dimension,
+} from '@/engine/exerciseLog';
 import { fromInput, toDisplay, unitLabel, type UnitSystem } from '@/engine/units';
 import { shortLabel } from '@/engine/dates';
 import { Chip } from '@/ui/Chip';
@@ -158,6 +165,55 @@ export function ExerciseNumbers({ exercise, entry, units, last, onChange }: Exer
         )}
       </div>
 
+      {/* How it went (PLAN.md M238). Only once there are numbers on the
+          entry: there is nothing to qualify about a bare tick, and three
+          chips on every line of a circuit is how a logger becomes unusable
+          — the same rule that decides which number boxes appear at all.
+
+          The climber's own account of their own set. Nothing infers it: a
+          logged `5` says five sets happened and cannot say whether the last
+          rep was there, which is the gap this milestone exists for. */}
+      {hasNumbers(entry) && (
+        <div className="mt-2">
+          <span className="block text-2xs font-bold uppercase tracking-wide text-ink-soft mb-1">
+            How it went
+          </span>
+          {/* A three-column grid rather than a wrapping row. This column
+              shares its line with the Timer button, so at 430px it is about
+              190px wide and three auto-width chips do not fit — "Failed"
+              dropped onto a second line on its own, which reads as a
+              mistake rather than as a choice. Equal thirds are one row at
+              any width, and the cap stops them stretching across a desktop.
+              Found in a browser; jsdom has no layout. */}
+          <div className="grid grid-cols-3 gap-1.5 max-w-60">
+            {SET_OUTCOMES.map((outcome) => (
+              <Chip
+                key={outcome}
+                active={entry.outcome === outcome}
+                // Tapping the one that is on takes it back off, because a
+                // mis-tap must be undoable and an unanswered field has to
+                // stay reachable — absent means nobody said, and that is a
+                // different thing from any of the three.
+                onClick={() => {
+                  const { outcome: _drop, ...rest } = entry;
+                  onChange(entry.outcome === outcome ? rest : { ...rest, outcome });
+                }}
+                className="text-xs font-bold px-2"
+              >
+                {/* Centred through a child rather than a `text-center` on
+                    the button: `Chip` sets `text-left`, and which of two
+                    utilities in the same layer wins is decided by the
+                    stylesheet's order, not by the class attribute's. */}
+                <span className="block text-center">{OUTCOME_WORD[outcome]}</span>
+              </Chip>
+            ))}
+          </div>
+          {entry.outcome !== undefined && (
+            <p className="text-2xs text-ink-soft mt-1">{OUTCOME_MEANING[entry.outcome]}</p>
+          )}
+        </div>
+      )}
+
       {lastLine && (
         // Wrapping rather than truncating: at 430px the chip took the row and
         // left "Sep 4: 5 × …", which is the one line on the card whose whole
@@ -166,10 +222,20 @@ export function ExerciseNumbers({ exercise, entry, units, last, onChange }: Exer
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 mt-2">
           <p className="text-xs text-ink-soft">
             {shortLabel(last!.date)}: {lastLine}
+            {/* And how it went, which is the input every conditional step in
+                the catalogue is written against — the sentence asking for it
+                is rendered directly above this card. */}
+            {last!.entry.outcome !== undefined && ` · ${OUTCOME_WORD[last!.entry.outcome]}`}
           </p>
           <Chip
             active={false}
-            onClick={() => onChange({ ...last!.entry, name: entry.name })}
+            // The numbers, not the verdict. *Same again* repeats what you
+            // did; how today went is not something last week can answer, and
+            // a copied `solid` would be a claim the climber never made.
+            onClick={() => {
+              const { outcome: _drop, ...numbers } = last!.entry;
+              onChange({ ...numbers, name: entry.name });
+            }}
             className="shrink-0 text-xs font-bold uppercase tracking-wide"
           >
             <RotateCcw size={12} />

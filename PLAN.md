@@ -13985,6 +13985,11 @@ which is the right shape.*
   the catalogue's own prose asks for is readable. What is missing is the last step: a **suggested**
   next number beside the authored one.
   *Medium, and it stays a suggestion, for exactly the reason M129 gives.*
+  ***Half built, and the half that was refused is the half the item asked for.*** *"Every input the
+  catalogue's own prose asks for is readable" is false: `againstPrescription` compares logged sets
+  against prescribed sets and nothing else, and the four conditional steps the catalogue ships are
+  all about the quality of a set — held to the last rep, felt solid. So the missing input was built
+  and the suggestion was not. See the entry at the end of this document.*
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -14827,3 +14832,97 @@ empty card with suggestions, a name typed, two names added and read back out of 
 reload, the year tally, and a second year with a different partner in it.
 
 **6,243 tests over 363 files.**
+
+## M238 — the app has now met the climber the content never could, in one field
+
+The item's centre does not hold. It says *"Every input the catalogue's own prose asks for is
+readable"*, and that is the sentence the whole proposal rests on. It is false.
+
+### What was readable, measured
+
+`againstPrescription(entry, prescribedSets)` compares logged **sets** against prescribed sets and
+nothing else — not reps, not hold, not load. It returns `met` for three sets of a three-set block
+whether every rep went to the last one or every set stopped halfway. Beside it the log carried one
+**session** RPE, covering a session that usually included the climbing, and a check-in answered that
+morning before any of it started.
+
+### What the catalogue asks for
+
+There are **nine** `WeekStep`s in the whole catalogue, across **two** programs — Iron Grip six, The
+Siege three — and three of the nine are deload weeks that already carry a `dose`. So the pattern the
+item generalises about covers six weeks of two of thirteen programs. Four of the six are conditional:
+
+```
+Add one increment if every set held to the last rep last week, and take one off
+  if you failed early.                                                  Iron Grip
+Add one increment if all five hangs held the full ten seconds in half crimp
+  last week.                                                            Iron Grip
+Go up only if last week's final set felt solid. Felt hard is not the same as
+  felt solid, and repeating a week is not a lost week.                  The Siege
+Go up again on the same rule. If the load has not moved in two weeks, hold it. The Siege
+```
+
+Every one of those conditions is about the **quality of a set** — held to the last rep, held the
+full ten seconds, felt solid. None of them was a field. A number achieved cannot say whether the
+last rep was there, and that is not a gap a suggestion engine could have papered over: it is the
+input missing.
+
+### So the input, and not the suggestion
+
+One tap under the numbers, in the catalogue's own vocabulary. Three states, because three is what
+those two programs between them distinguish:
+
+- **Solid** — every set with something left. Satisfies Iron Grip's *"held to the last rep"* and The
+  Siege's *"felt solid"* at once.
+- **Hard** — finished, at the limit. Held to the last rep; not solid. The Siege says in as many
+  words that these are not the same thing, and it is the state a two-way field would have had to
+  round one way or the other.
+- **Failed** — a set did not finish. The catalogue's own word, and the trigger for *"take one off"*.
+
+**Absent stays a state.** Tapping the one that is on takes it back off, because nobody said is
+different from any of the three and a mis-tap that could not be undone would push a climber into
+answering something. Every entry logged before this milestone is absent, and nothing infers a value
+for them.
+
+**Asked only where there is something to qualify** — once numbers are on the entry, which is the
+same rule that decides which number boxes appear at all. Three chips on every line of a circuit is
+how a logger becomes unusable.
+
+**Not a reading.** `hasNumbers` is unchanged, so an entry carrying a verdict and no numbers stays
+off the series and out of *Same again*; `describeEntry` keeps its emptiness contract, so a bare tick
+still reads as nothing. Both are pinned.
+
+**And *Same again* copies the numbers, not the verdict.** How today went is not something last week
+can answer, and a copied `solid` would be a claim the climber never made — the line `templates.ts`
+already draws refusing to carry climbs forward. A mutant putting it back is caught.
+
+### Where it is read back
+
+Last week's answer sits beside this week's boxes — *"Sep 10: 5 × 10s at +20 lbs · Solid"* — on the
+same card as the `step` sentence asking about it, which has rendered above the dose since M127. That
+is the whole payoff of step one: the rule and its input are now in the same glance, and the climber
+applies it. It also gets a **How it went** column on `exercises.csv`, the one column on that sheet
+that is not a number and the one nothing derives.
+
+### What it deliberately is not
+
+A suggested number. That is the half the item actually asked for, and it stays unbuilt until there
+is a log with this field in it — M129's precedent is *propose, never write, and only where there is
+something to propose*, and a suggestion computed from a field nobody has filled yet would be neither.
+The increment is a second open question: *"one increment"* is undefined without knowing the plates
+on a climber's board.
+
+### Measured
+
+**20 mutants, all caught, sanity no-op survived** — after two survivors, both real gaps in the
+tests rather than equivalences. Drawing every chip unpressed passed every store assertion, so a
+climber would tap, have it recorded, and see no sign of it. And explaining a state nobody chose
+reads as the answer, which is how an unanswered field becomes an answered one with nobody tapping
+anything. Both now have their own test.
+
+**What the browser found.** Three auto-width chips did not fit the column, which shares its line
+with the Timer button and is about 190px at 430px wide — *Failed* dropped onto a second row by
+itself, which reads as a mistake rather than a choice. Equal thirds under a cap are one row at any
+width. jsdom has no layout and reported all three present either way.
+
+**135.85KB against a 136.9 ceiling. 6,263 tests over 365 files.**

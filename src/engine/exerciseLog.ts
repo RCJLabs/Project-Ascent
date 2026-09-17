@@ -37,7 +37,7 @@
  * Pure: sessions in, readings out.
  */
 
-import type { LoggedExercise, Session } from '@/db/sessions';
+import type { LoggedExercise, Session, SetOutcome } from '@/db/sessions';
 import { toDisplay, unitLabel, type UnitSystem } from './units';
 
 /** One exercise on one day. */
@@ -61,6 +61,38 @@ export type Dimension = (typeof DIMENSIONS)[number];
 export function hasNumbers(entry: LoggedExercise): boolean {
   return DIMENSIONS.some((d) => entry[d] !== undefined);
 }
+
+/**
+ * The three ways a set of sets can go, hardest-held first (PLAN.md M238).
+ *
+ * Ordered the way the chips read, which is also the order the catalogue's
+ * rules step down: `solid` earns the increment, `hard` repeats the week,
+ * `failed` takes one off. See `SetOutcome` in db/sessions.ts for why there
+ * are three.
+ */
+export const SET_OUTCOMES = ['solid', 'hard', 'failed'] as const;
+
+/**
+ * The word on the chip, and the word in the sheet.
+ *
+ * The catalogue's own — *"failed early"* is Iron Grip's phrase, not a
+ * verdict this app invented. It is also the technical word for the thing
+ * that happened, and softening it to something kinder would make the one
+ * state that triggers *"take one off"* ambiguous. Falling short is a fact
+ * the climber typed, and this module does not call it a fault anywhere.
+ */
+export const OUTCOME_WORD: Record<SetOutcome, string> = {
+  solid: 'Solid',
+  hard: 'Hard',
+  failed: 'Failed',
+};
+
+/** What each one claims, for the line that explains the three. */
+export const OUTCOME_MEANING: Record<SetOutcome, string> = {
+  solid: 'every set with something left',
+  hard: 'finished, at the limit',
+  failed: 'a set did not finish',
+};
 
 /** Case- and space-insensitive, so "Max Hangs" and "max hangs" are one line. */
 export function exerciseKey(name: string): string {

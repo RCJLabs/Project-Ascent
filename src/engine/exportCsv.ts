@@ -41,6 +41,7 @@ import { getField } from '@/content/fields';
 import type { FieldId } from '@/content/types';
 import { METRICS } from '@/content/metrics';
 import { toCsv } from './csv';
+import { OUTCOME_WORD } from './exerciseLog';
 import { isRestSession } from './rest';
 
 /** What `importCsv` reads, in the order its header guesser expects. */
@@ -111,6 +112,11 @@ export const EXERCISE_HEADER = [
   'Reps',
   'Hold (s)',
   'Load (lb)',
+  // How the sets went (PLAN.md M238). The only quality column on this sheet,
+  // and the only one nothing derived: every other cell is a number the
+  // climber typed, and this is the climber's own account of whether those
+  // numbers came easily.
+  'How it went',
   'Note',
 ] as const;
 
@@ -257,6 +263,7 @@ export function exercisesCsv(sessions: readonly Session[]): string {
         num(exercise.reps),
         num(exercise.hold),
         num(exercise.load),
+        cell(exercise.outcome === undefined ? '' : OUTCOME_WORD[exercise.outcome]),
         cell(exercise.note),
       ]);
     }

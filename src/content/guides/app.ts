@@ -110,6 +110,7 @@ export const APP: Guide = {
             '**Notes** — anything. They all end up in the journal, searchable.',
             '**Who you climbed with** — optional, a name or two per session, with everyone the log already knows offered as a chip so it is one tap after the first time. The year page counts the sessions each person is on, and says how many named nobody, because an empty field is one you did not fill and not a session climbed alone.',
             '**The numbers you type are kept and read back.** Log the sets, load or hold on a prescribed line and the app says how it compares with what the day asked, then charts the whole run of it on the block screen. Nothing is inferred: every number there is one you typed.',
+            '**And how the sets went** — solid, hard or failed, one tap under the numbers. Programs progress on that and not on the number alone: Iron Grip says to add an increment *if every set held to the last rep*, and The Siege that *felt hard is not the same as felt solid*. A logged 5 says five sets happened and cannot say whether the last rep was there, so the app asks rather than guessing, and shows last week’s answer beside this week’s boxes.',
           ],
         },
         {

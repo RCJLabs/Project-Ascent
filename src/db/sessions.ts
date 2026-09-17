@@ -115,6 +115,47 @@ export interface RestChecklist {
  * a different control and a much longer logger, and the dimension the
  * programs actually ask to progress — the load — is the same on every set.
  */
+/**
+ * How the sets went, in the catalogue's own vocabulary (PLAN.md M238).
+ *
+ * `content/types.ts` explains why a dose does not move on its own: *"add
+ * 2.5kg if last week's top set felt solid" depends on a climber the content
+ * has never met* — so the rule lives in `WeekStep.step` as a sentence. Nine
+ * such sentences ship, across Iron Grip and The Siege, and four of them are
+ * conditional:
+ *
+ * - *"Add one increment if every set held to the last rep last week, and
+ *   take one off if you failed early."*
+ * - *"Add one increment if all five hangs held the full ten seconds in half
+ *   crimp last week."*
+ * - *"Go up only if last week's final set felt solid. Felt hard is not the
+ *   same as felt solid."*
+ * - *"Go up again on the same rule. If the load has not moved in two weeks,
+ *   hold it."*
+ *
+ * **Every one of those conditions was unrecordable.** `againstPrescription`
+ * compares logged *sets* against prescribed sets and nothing else; the only
+ * quality signal in the log was one RPE for a whole session that usually
+ * included climbing, and a check-in answered that morning before it started.
+ * A number achieved says nothing about whether the last rep was there.
+ *
+ * Three states rather than two or five, because three is what those two
+ * programs between them distinguish:
+ *
+ * - `solid` — every set finished with something in reserve. Satisfies Iron
+ *   Grip's *"held to the last rep"* **and** The Siege's *"felt solid"*.
+ * - `hard` — finished, at the limit. Held to the last rep; not solid. The
+ *   Siege says in as many words that this is not the same thing, and it is
+ *   the state a two-way field would have had to round one way or the other.
+ * - `failed` — a set did not finish. The catalogue's own word, and the
+ *   trigger for *"take one off"*.
+ *
+ * Absent means nobody said, which is every entry logged before this. It is
+ * the climber's own account of their own set — the app never infers it from
+ * a number, which is the whole point of asking.
+ */
+export type SetOutcome = 'solid' | 'hard' | 'failed';
+
 export interface LoggedExercise {
   name: string;
   /** Sets completed. */
@@ -133,6 +174,15 @@ export interface LoggedExercise {
   load?: number;
   /** Hold, in seconds. */
   hold?: number;
+  /**
+   * How the sets went (PLAN.md M238). See `SetOutcome`.
+   *
+   * Asked only once numbers are on the entry, because there is nothing to
+   * qualify otherwise, and never copied forward by *Same again* — that
+   * button repeats what you did, and how it went is not something last week
+   * can answer for today.
+   */
+  outcome?: SetOutcome;
   note?: string;
 }
 

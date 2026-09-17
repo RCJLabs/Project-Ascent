@@ -339,15 +339,25 @@ describe('what the session itself said', () => {
 describe('every exercise, one per row', () => {
   const lifted = day('2026-01-09', {
     exercises: [
-      { name: 'Max Hangs', sets: 5, hold: 10, load: 20 },
+      { name: 'Max Hangs', sets: 5, hold: 10, load: 20, outcome: 'hard' },
       { name: 'Pull-ups', sets: 3, reps: 8, note: 'slow' },
     ],
   } as never);
 
   it('writes a header a person can read', () => {
     expect(rows(exercisesCsv([lifted]))[0]).toEqual([
-      'Date', 'Session', 'Exercise', 'Sets', 'Reps', 'Hold (s)', 'Load (lb)', 'Note',
+      'Date', 'Session', 'Exercise', 'Sets', 'Reps', 'Hold (s)', 'Load (lb)',
+      // How the sets went (M238) — the one column on this sheet that is not
+      // a number, and the one nothing derives.
+      'How it went', 'Note',
     ]);
+  });
+
+  it('carries how the sets went, in the word the chip used', () => {
+    const out = rows(exercisesCsv([lifted]));
+    expect(out[1]![7]).toBe('Hard');
+    // Unanswered stays empty rather than guessing at one of the three.
+    expect(out[2]![7]).toBe('');
   });
 
   it('writes one row per exercise', () => {
