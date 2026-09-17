@@ -14099,6 +14099,17 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   weeks would be wrong for both a weekly sender and someone who sends every third week, so the pause
   is measured against the spacing of their own sends. See the entry at the end of this document.*
 
+- **M248 — the sentences, held to the numbers beside them.** M244, M245, M246 and M247 were one
+  defect in four coats: a describer producing prose that disagrees with its own input. Every one
+  shipped with the whole suite green, because the engine tests under each card prove the *maths* and
+  nothing proved the *sentence*. Fourteen cards on Progress, eleven shapes of log, and a set of
+  properties every sentence has to have whatever it says.
+  *Small, and it adds no runtime code at all.*
+  ***Built, and it catches three of the four — which is the number, not a round-up.*** *The two
+  semantic defects are not reachable this way and saying otherwise would be the same overclaim the
+  four were about. One rule was attempted and abandoned rather than fudged green. See the entry at
+  the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -15666,3 +15677,82 @@ weekly sender with a three-week pause was added, and printing the rate below a w
 because the test only checked that the *wrong* rate was absent.
 
 **6,361 tests over 376 files.** First load 134.44KB against a 135.4KB budget.
+
+## M248 — the sentences, held to the numbers beside them
+
+Four milestones in a row found the same thing: a `describe*` function producing prose that
+contradicts the data it was handed. A count that had become `NaN`. A requirement met and printed as
+the reason it was not. A rate of zero beside a climber who trained on Tuesday. A ratio three weeks
+old introduced by the word *now*.
+
+All four shipped with the suite green. The engine tests under each card prove the arithmetic; none
+of them read the sentence.
+
+### The corpus
+
+Fourteen cards' worth of prose — every `describe*` the Progress page calls, plus the training
+state's explanation and each of its evidence rows, plus the year-review lines — against eleven
+shapes of log: empty, one session, a first week, the ordinary climber, one who stopped, one who
+mostly rests, one who never sends, one who logs no effort or duration, two sessions on one date, a
+sparse year, and a restored backup carrying answers this version has never had. Roughly a hundred
+and forty sentences, rebuilt on every run.
+
+The shapes are named rather than generated. A random walk spends most of its runs on the ordinary
+climber every card was written for; these are the edges the four defects were actually found at.
+
+### Properties, each one proving it still fires
+
+Five checks on the string — no value that failed to become a number, no count past the requirement
+it is counted against, no rate of zero beside a non-zero tally, agreement about one of anything, and
+a finished sentence — plus two on the structure behind it.
+
+**Every check carries a sentence it must reject, and is asked to reject it before it is trusted to
+say the corpus is clean.** M247 fixed the zero-rate defect, so nothing in the corpus trips that rule
+any more; without the example the assertion would sit inside an empty loop, passing forever. That is
+M195's rule, and the first run of this file hit exactly that — vitest reported *"this test asserted
+nothing and so cannot fail"*.
+
+### The structural half, which is where M244 actually lived
+
+The prose checks alone do **not** catch M244, and the reason is worth writing down. An
+out-of-vocabulary answer made `fingers[feel] += 1` into `NaN` — but it landed under a *new key*,
+`sleep.poor`, and every key `describeCheckIns` reads stayed correct. The sentence was clean and the
+card was wrong. My own account of this milestone said a prose harness would have caught it; measured
+against a faithful revert, it did not.
+
+So the derived structures are walked as well as read: every number inside `checkInHistory`, the heat
+grid, the load trend, the block compare, the tissue load, the rest habits, the conversion trend, the
+climber state and the year review must be finite, at every depth, for every shape. And the two
+tallies whose keys are a closed set are held to it — a log that grows a column has been let through
+unread.
+
+### What it catches, measured rather than claimed
+
+Each of the four defects was put back and this one file run against it alone:
+
+| | |
+|---|---|
+| M244 — the unreadable check-in | **caught** (a `NaN` in the tally) |
+| M246 — both counters printed, "22 of 8" | **caught** (a count past its requirement) |
+| M247 — the rate over the whole grid | **caught** (a zero rate beside a logged day) |
+| M245 — the caveat that is always printed | not caught, and not catchable here |
+| M247 — the grade trend that stopped | not caught, and not catchable here |
+| M246 — the gate's source alone | not caught: it changes the verdict, not the sentence |
+
+Three of four. The last two produce sentences that are perfectly well-formed and simply untrue, and
+only a test that knows what the card *means* can say so — which is what `effortGap.test.ts` and
+`staleReadings.test.ts` are. Claiming this file covers them would be the same overclaim the four
+milestones were about.
+
+### The rule that was dropped
+
+*An empty log has nothing to count, so any figure in the sentence is invented.* It cannot be
+stated. "Needs 21 days of logging and at least 6 scored training days inside the last 28" is a
+requirement, not a count, and telling the two apart mechanically needs a list of the sentences
+allowed to carry numbers — asserting the answer instead of computing it. It is left out, and said
+so in the file, rather than allow-listed green.
+
+**No runtime code changed**, so there is nothing to verify in a browser and the budget is where
+M247 left it.
+
+**6,377 tests over 377 files.** First load 134.43KB against a 135.4KB budget.
