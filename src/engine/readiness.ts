@@ -263,6 +263,53 @@ export interface ReadinessContext {
 }
 
 /**
+ * A stored check-in, if this version of the app can still read it
+ * (PLAN.md M244).
+ *
+ * `FingerFeel` is three words and `SleepFeel` is three more, and a stored
+ * record is whatever a backup put there: `importAll` checks that the file is
+ * a Project Ascent backup and that each store is an array, then writes every
+ * record verbatim. That is the app's own explanation, in its own error text,
+ * for the defect M20 and M44 were written about — and it applies to a
+ * session's check-in as much as to a project.
+ *
+ * **An answer outside the vocabulary is not a bad day. It is a day this
+ * version cannot read**, and the three readers of one each failed
+ * differently on it and none of them said so:
+ *
+ * - `readinessFor` spread `SLEEP[feel]` — `undefined` — into a
+ *   contribution with no `cost`, so the total went `NaN` and the call came
+ *   out *adjusted* on a comparison nothing can win. Measured, that is
+ *   `{ call: 'adjusted', headline: 'Train, with changes.', because:
+ *   'Nothing flagged.', flagBecause: null, cap: 7, lighten: 1 }` — so the
+ *   logger printed **"Nothing flagged. — the check-in suggested 7 or
+ *   below."** and took a set off every block. Not a missing reason: a card
+ *   arguing with itself. M129's whole contract is that the note names the
+ *   answers that produced it, and here there were none to name.
+ * - `checkInHistory` did `fingers[feel] += 1`, so a count a climber reads
+ *   became `NaN` and the record grew a column for a word the app has never
+ *   had.
+ * - `CheckInStrip` called `.toLowerCase()` on the missing chip and took the
+ *   whole card down — a hundred readable days lost to one unreadable one,
+ *   which is the opposite of what M20's boundary is for.
+ *
+ * `parts` is filtered rather than rejected, because it is sparse by design:
+ * an unreadable elbow should not cost a readable shoulder.
+ */
+export function readCheckIn(raw: CheckIn | undefined | null): CheckIn | null {
+  if (raw === undefined || raw === null || typeof raw !== 'object') return null;
+  if (!FINGER_ANSWERS.includes(raw.fingers)) return null;
+  if (!SLEEP_ANSWERS.includes(raw.sleep)) return null;
+
+  const parts = Object.entries(raw.parts ?? {}).filter(([, feel]) =>
+    TISSUE_ANSWERS.includes(feel as TissueFeel),
+  );
+  return parts.length === Object.keys(raw.parts ?? {}).length
+    ? raw
+    : { ...raw, parts: Object.fromEntries(parts) as CheckIn['parts'] };
+}
+
+/**
  * What an injured part's answer costs today (PLAN.md M103).
  *
  * The same shape as the fingers table and deliberately gentler in its

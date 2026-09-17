@@ -36,7 +36,7 @@
 import type { Session } from '@/db/sessions';
 import type { BodyPart } from '@/content/bodyParts';
 import type { Injury } from '@/store/profile';
-import type { TissueFeel } from './readiness';
+import { TISSUE_ANSWERS, type TissueFeel } from './readiness';
 import { addDays, daysBetween } from './dates';
 import { isRestSession } from './rest';
 
@@ -100,9 +100,16 @@ export function injuryHistory(input: InjuryHistoryInput): InjuryHistory {
   for (const [date, onDay] of byDate) {
     // The newest answer of the day: two sessions can each carry a check-in,
     // and the later one is the later word on the same part.
+    // `TISSUE_ANSWERS` and not just `!== undefined`: a restored backup can
+    // carry a word this version has never had, and the strip below renders
+    // `FEEL_TONE[feel]` and `FEEL_WORD[feel]` straight into a chip — an
+    // unknown one came out as a blank chip with `undefined` for a class
+    // (PLAN.md M244). A day whose only answer cannot be read counts as a day
+    // that was not answered, which the coverage line already reports against
+    // `elapsed`; it is never silently redrawn as one of the three.
     const answers = onDay
       .map((s) => s.checkIn?.parts?.[input.part])
-      .filter((f): f is TissueFeel => f !== undefined);
+      .filter((f): f is TissueFeel => f !== undefined && TISSUE_ANSWERS.includes(f));
     const feel = answers.at(-1);
     if (feel === undefined) continue;
     days.push({ date, feel });

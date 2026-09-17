@@ -761,6 +761,18 @@ export function ProgressPage() {
             <CheckInStrip history={checkIns} />
             <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeCheckIns(checkIns)}</p>
             <OverCapList history={checkIns} />
+            {/* Said rather than quietly dropped (PLAN.md M244). The journal
+                already tells a climber their list is short when a record is
+                the wrong shape; a strip that silently showed five days of
+                six would be the repairing-in-silence that rule forbids. */}
+            {checkIns.unreadable > 0 && (
+              <p className="text-xs text-warn mt-3 leading-relaxed">
+                {checkIns.unreadable === 1
+                  ? 'One day is left out: its answers are not ones this version knows.'
+                  : `${checkIns.unreadable} days are left out: their answers are not ones this version knows.`}{' '}
+                A backup restored from another version can carry them.
+              </p>
+            )}
             <p className="text-xs text-ink-soft mt-3 leading-relaxed">
               The ceiling is a suggestion the check-in made before the session; the RPE is what you
               logged after. Nothing records which you entered first, so a check-in answered at the

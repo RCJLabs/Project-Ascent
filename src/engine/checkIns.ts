@@ -31,6 +31,7 @@
 import type { Session } from '@/db/sessions';
 import { addDays } from './dates';
 import {
+  readCheckIn,
   readinessFor,
   type CheckIn,
   type FingerFeel,
@@ -80,6 +81,14 @@ export interface CheckInHistory {
   asked: number;
   /** Of those, the ones that answered. */
   answered: number;
+  /**
+   * Answered days whose answers this version cannot read (PLAN.md M244).
+   *
+   * Left out of `days` and out of the counts rather than repaired in
+   * silence, which is the rule the journal already follows for a project of
+   * the wrong shape: tell the climber the list is short.
+   */
+  unreadable: number;
   /** The answered days, oldest first. */
   days: CheckInDay[];
   fingers: Record<FingerFeel, number>;
@@ -116,9 +125,18 @@ export function checkInHistory(input: CheckInInput): CheckInHistory {
   );
 
   const answered: CheckInDay[] = [];
+  let unreadable = 0;
   for (const session of inWindow) {
-    const checkIn = session.checkIn;
-    if (checkIn === undefined) continue;
+    if (session.checkIn === undefined) continue;
+    // A day whose answers are not in the vocabulary is a day this version
+    // cannot read, not a day that went badly (PLAN.md M244). Counting it
+    // made `fingers[feel] += 1` into `NaN` and grew a column for a word the
+    // record has never had.
+    const checkIn = readCheckIn(session.checkIn);
+    if (checkIn === null) {
+      unreadable += 1;
+      continue;
+    }
     const { call, cap } = readinessFor(checkIn);
     const rpe = session.rpe ?? null;
     answered.push({
@@ -147,6 +165,7 @@ export function checkInHistory(input: CheckInInput): CheckInHistory {
     to: input.to,
     asked: inWindow.length,
     answered: answered.length,
+    unreadable,
     days: answered,
     fingers,
     sleep,

@@ -245,3 +245,48 @@ describe('the rest card on the progress page', () => {
     expect(screen.getByText(/Sleep is the one you skip most often/)).toBeTruthy();
   });
 });
+
+/**
+ * A day the record cannot read, said rather than dropped (PLAN.md M244).
+ *
+ * `checkInHistory` now leaves an out-of-vocabulary answer out of `days` and
+ * out of every count — which without a line on the page is exactly the
+ * repairing-in-silence M20 and M44 forbid. A strip showing five days of six
+ * is a wrong picture presented as a right one.
+ */
+describe('a check-in this version cannot read', () => {
+  const unreadable = { fingers: 'good', sleep: 'poor' } as unknown as CheckIn;
+
+  it('says a day is missing from the strip', async () => {
+    await log(1, { checkIn: rough, rpe: 9 });
+    await log(2, { checkIn: unreadable, rpe: 7 });
+    for (let i = 3; i <= 5; i += 1) await log(i);
+    await hydrate();
+    renderAt('/progress', <ProgressPage />);
+    await screen.findByText('How you were feeling');
+    expect(screen.getByText(/One day is left out/)).toBeTruthy();
+    // And the coverage counts it as unanswered, not as a feeling.
+    expect(screen.getByText(/Answered on 1 of 5 sessions/)).toBeTruthy();
+  });
+
+  it('counts them when there is more than one, and agrees with itself', async () => {
+    await log(1, { checkIn: rough, rpe: 9 });
+    await log(2, { checkIn: unreadable, rpe: 7 });
+    await log(3, { checkIn: unreadable, rpe: 7 });
+    for (let i = 4; i <= 5; i += 1) await log(i);
+    await hydrate();
+    renderAt('/progress', <ProgressPage />);
+    await screen.findByText('How you were feeling');
+    expect(screen.getByText(/2 days are left out/)).toBeTruthy();
+  });
+
+  /** And stays quiet when every answer is one it knows. */
+  it('says nothing when there is nothing to say', async () => {
+    await log(1, { checkIn: rough, rpe: 9 });
+    for (let i = 2; i <= 5; i += 1) await log(i);
+    await hydrate();
+    renderAt('/progress', <ProgressPage />);
+    await screen.findByText('How you were feeling');
+    expect(screen.queryByText(/is left out|are left out/)).toBeNull();
+  });
+});

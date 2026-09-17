@@ -14042,6 +14042,19 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   blocks run "three or four phases" when no program has four. See the entry at the end of this
   document.*
 
+- **M244 — a check-in the app cannot read.** Found by opening `/progress` against a seeded log and
+  watching a `CardBoundary` catch `Cannot read properties of undefined (reading 'toLowerCase')`.
+  `FingerFeel` is three words and `SleepFeel` is three more, and a stored record is whatever a
+  backup put there — `importAll` checks the file is a Project Ascent backup and that each store is
+  an array, then writes every record verbatim, which is the app's own explanation, in its own error
+  text, for the defect M20 and M44 were written about. One out-of-vocabulary word reached four
+  readers and broke each of them differently, and **the loudest of the four is the least harmful**.
+  *Small, and it is one function plus four call sites.*
+  ***Built, and the quiet failure was the bad one.*** *`readinessFor` turned the missing answer into
+  a `NaN` cost, which loses every comparison, so the logger printed "Nothing flagged. — the
+  check-in suggested 7 or below." and eased a set off every block. See the entry at the end of this
+  document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -15313,3 +15326,82 @@ removed, the check moved after the setter, and the flag never cleared all die.
 **3 mutants caught, sanity no-op survived, one recorded as unkillable in this environment.**
 
 **6,315 tests over 371 files.**
+
+## M244 — a check-in the app cannot read
+
+Driving `/progress` against a seeded log, a `CardBoundary` caught this:
+
+```
+TypeError: Cannot read properties of undefined (reading 'toLowerCase')
+ ❯ CheckInStrip.tsx:100
+```
+
+The seed carried `sleep: 'poor'`. `SleepFeel` is `'good' | 'short' | 'none'`, so `SLEEP_CHIP[feel]`
+was `undefined` and the strip's summary line called `.toLowerCase()` on it. A fixture bug — and the
+path it walked is real. `importAll` checks that the file is a Project Ascent backup and that each
+store is an array, then **writes every record verbatim**; that sentence is the app's own, in the
+error text M20 and M44 were written about. A backup exported by another version of this app, or by
+this app before a vocabulary changed, carries whatever words it had.
+
+### Four readers, four different ways to be wrong
+
+**The logger, silently, and this is the one that matters.** `readinessFor` spreads `SLEEP[feel]`
+into the contribution list. `undefined` has no `cost`, so the total goes `NaN`, and `NaN` loses
+every comparison the call is decided by. Measured:
+
+```
+{ call: 'adjusted', headline: 'Train, with changes.', because: 'Nothing flagged.',
+  flagBecause: null, cap: 7, lighten: 1 }
+```
+
+Rendered, that is **"Nothing flagged. — the check-in suggested 7 or below."** over a set taken off
+every block. Not a missing reason: a card contradicting itself in consecutive clauses, on the screen
+M129 built specifically so the ceiling would always name the answer that caused it.
+
+**Progress, wrongly.** `fingers[day.checkIn.fingers] += 1` on a word the record has never had is
+`undefined + 1`. The count a climber reads becomes `NaN`, and the record grows a column for a word
+the app does not have.
+
+**The strip, loudly** — the crash above, which costs the whole card. Ninety readable days lost to
+one unreadable one is the opposite of what M20's boundary is for.
+
+**The injury page, invisibly.** `injuryHistory` reads `checkIn.parts[part]` and the page renders it
+as `FEEL_TONE[feel]` and `FEEL_WORD[feel]`. An unknown word came out as a chip with no word in it
+and the literal string `undefined` where its classes should have been. Found by grepping for the
+other readers rather than by waiting for it.
+
+### One reader, and the rule it follows
+
+`readCheckIn` is the whole fix: a stored check-in comes back as itself, or as `null`. Both answers
+are checked against their vocabularies; `parts` is *filtered* rather than rejected, because it is
+sparse by design and an unreadable elbow should not cost a readable shoulder. A readable record is
+returned by identity, not copied, so the callers that compare against `session.checkIn` still hit.
+
+**An unreadable answer is not a bad day. It is a day this version cannot read** — so it is treated
+as unanswered everywhere, and said rather than repaired. `checkInHistory` leaves it out of `days`
+and out of every count and reports `unreadable`; the card on Progress prints a line naming how many
+days are missing and why, because a strip that silently showed five days of six would be exactly the
+repairing-in-silence M20 and M44 forbid. The coverage sentence already counts the day as one that
+was asked and not answered, which is what it is.
+
+### The trap under the fix
+
+Guarding the readiness computation is half of it. `CheckInCard` was still handed `session.checkIn`
+raw for its draft, so the unreadable word sat in state: answering the *other* question made both
+fields truthy and **wrote it straight back**. A climber could tap a finger chip, watch it save, and
+still be carrying a check-in nothing could read. The card gets the read record too, so an unreadable
+one asks both questions again.
+
+### What is not guarded, deliberately
+
+`exportCsv` writes `session.checkIn?.fingers` into a cell verbatim, and should: an export is a copy
+of the record, not a reading of it. Sanitising there would lose the only evidence of what the file
+actually held. `CheckInStrip` is also left unguarded, because `CheckInDay.checkIn` is typed `CheckIn`
+and `checkInHistory` is its only producer — a second check there would be a second place for the
+rule to drift.
+
+**12 mutants caught, sanity no-op survived.** The membership checks, the parts filter, the identity
+return, the skip, the count, the count reaching the page, both logger guards, the plural, the note's
+condition, and the injury filter all die.
+
+**6,332 tests over 373 files.** First load 134.42KB against a 135.4KB budget.

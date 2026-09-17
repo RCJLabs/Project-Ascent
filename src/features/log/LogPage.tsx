@@ -115,6 +115,7 @@ import {
   SLEEP_CHIP,
   TISSUE_ANSWERS,
   TISSUE_CHIP,
+  readCheckIn,
   readinessFor,
   type CheckIn,
   type ReadinessCall,
@@ -795,8 +796,15 @@ function SessionEditor({
   const loads = type
     ? [...new Set(blocks.flatMap((b) => b.entry.exercises).flatMap(exerciseLoads))]
     : undefined;
-  const readiness = session.checkIn
-    ? readinessFor(session.checkIn, { ...(loads ? { loads } : {}), test: day?.test !== undefined })
+  // Through `readCheckIn`, so a stored answer this version cannot read is
+  // treated as no answer rather than as a bad one (PLAN.md M244). Spread
+  // straight into `readinessFor` it made the cost `NaN`, which reads as
+  // *adjusted*: the card printed "Nothing flagged. — the check-in suggested
+  // 7 or below." and eased a set off every block. A ceiling contradicted by
+  // its own reason is the one thing M129 built this card not to do.
+  const checkIn = readCheckIn(session.checkIn);
+  const readiness = checkIn
+    ? readinessFor(checkIn, { ...(loads ? { loads } : {}), test: day?.test !== undefined })
     : null;
   // Only where the answers ask for less and some block has a notch to give.
   // The rule is in the engine, where it can be tested against a session that
@@ -929,7 +937,12 @@ function SessionEditor({
         <>
           {full && (
             <CheckInCard
-              checkIn={session.checkIn}
+              // Also the read one (PLAN.md M244). Given the record verbatim,
+              // the card's draft starts holding the word it cannot read, so
+              // answering the *other* question wrote it straight back — the
+              // climber could never clear it without noticing they had to
+              // re-answer both. Unreadable is unanswered, here as everywhere.
+              checkIn={checkIn ?? undefined}
               readiness={readiness}
               injured={askablePartsOf(editorInjuries)}
               onAnswer={(checkIn) => patch({ checkIn })}
