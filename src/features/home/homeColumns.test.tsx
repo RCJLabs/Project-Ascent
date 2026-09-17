@@ -62,6 +62,12 @@ describe('the two columns', () => {
     await screen.findByRole('button', { name: /Start session|Log a session|Log rest day/ });
     await screen.findByText('Climbed so far');
     await screen.findByText("Coach's Corner");
+    // Awaited, not assumed. Both rail cards cross a lazy boundary, and
+    // reading the DOM the moment the coach lands caught the daily task
+    // mid-flight on CI while passing five times out of five here.
+    // `DailyTaskCard` never returns null — `polish.test.ts` holds that —
+    // so this settles rather than hangs.
+    await screen.findByText('Today\u2019s task');
 
     const [main, rail] = columns();
     expect(columns()).toHaveLength(2);

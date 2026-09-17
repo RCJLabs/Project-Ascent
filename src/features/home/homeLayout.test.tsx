@@ -84,7 +84,10 @@ describe('the order of the front door', () => {
     // Awaited, not queried: both cards cross a lazy boundary.
     const numbers = await screen.findByText('Climbed so far');
     const coach = await screen.findByText("Coach's Corner");
-    const task = screen.getByRole('heading', { name: 'Today\u2019s task', level: 2 });
+    // Awaited for the same reason the coach is: it is behind a lazy
+    // boundary, and a synchronous read of it is a CI flake waiting to
+    // happen — one did.
+    const task = await screen.findByRole('heading', { name: 'Today\u2019s task', level: 2 });
     expect(before(numbers, start), 'the numbers are under the button').toBe(true);
     expect(before(start, coach), 'the coach is above the button').toBe(true);
     expect(before(start, task), 'the daily task is above the button').toBe(true);
