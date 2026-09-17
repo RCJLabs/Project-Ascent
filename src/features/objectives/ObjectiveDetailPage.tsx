@@ -180,11 +180,14 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
               {progress.met} of {progress.total} met
             </span>
           </div>
+          {/* The percentage above it, and nothing else (PLAN.md M258). The
+              meter used to read out “0 of 2 requirements met” while
+              standing at 26%, which is the met-count rather than the
+              readiness — a different measure, already printed beside it. */}
           <Meter
             value={progress.readiness}
             size="lg"
             label="Readiness"
-            valueText={`${progress.met} of ${progress.total} requirements met`}
             className="mb-2"
           />
           <p className="text-sm text-ink-soft leading-relaxed">{describeProgress(progress)}</p>

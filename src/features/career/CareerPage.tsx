@@ -1,7 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { ArrowRight, ChevronRight, Mountain, Trophy } from 'lucide-react';
-import { CATEGORY_LABEL, byYear, deriveCareer, type CareerCategory } from '@/engine/career';
+import {
+  CATEGORY_LABEL,
+  byYear,
+  deriveCareer,
+  type CareerCategory,
+  type NextMilestone,
+} from '@/engine/career';
 import { fromKey } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { describeVenues } from '@/engine/venues';
@@ -29,6 +35,29 @@ const DOT: Record<CareerCategory, string> = {
   // The game's rows read as the game's: the quietest dot there is.
   ascent: 'bg-line',
 };
+
+/**
+ * How far there is left, said once (PLAN.md M258).
+ *
+ * The column beside the label and the bar's own text form are the same
+ * string now, because they were not. `fraction` is the share of the gap
+ * between the **last** milestone and this one — the ladder runs
+ * 1 · 2.5 · 5 per decade, so 300 sessions is a fifth of the way from 250
+ * to 500 — and the meter was told to read out *“300 of 500”*, which is a
+ * journey that started at zero. A bar filled to 20% and an accessible name
+ * saying 60%, on one control, across every counter row.
+ *
+ * `HomeStatsCard` pairs the same kind of fraction with *“400 ft to go”*
+ * and says why in a comment: through the primitive, the two *“cannot
+ * disagree … about what a screen reader is told it says”*. `LevelBar` does
+ * the other honest version, quoting the span the fraction is over rather
+ * than the absolute total. This is the first.
+ */
+function toGo(next: NextMilestone): string {
+  return next.category === 'years'
+    ? `${next.toGo} ${next.toGo === 1 ? 'day' : 'days'} to go`
+    : `${next.toGo.toLocaleString()} to go`;
+}
 
 /**
  * The career timeline: every milestone the log has crossed, with the date it
@@ -78,7 +107,12 @@ export function CareerPage() {
         subtitle={
           career.first === null
             ? 'Every milestone, with the day it happened.'
-            : `${career.achieved.length} milestones since ${fromKey(career.first).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}`
+            : // A climber with ten sessions and no sends has exactly one, and
+              // is the climber most likely to be reading this line
+              // (PLAN.md M258).
+              `${career.achieved.length} ${
+                career.achieved.length === 1 ? 'milestone' : 'milestones'
+              } since ${fromKey(career.first).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}`
         }
       />
 
@@ -91,20 +125,14 @@ export function CareerPage() {
                   <div className="flex items-baseline gap-2 mb-1.5">
                     <span className="text-sm font-semibold flex-1 min-w-0 truncate">{next.label}</span>
                     <span className="text-xs text-ink-soft tabular-nums shrink-0">
-                      {next.category === 'years'
-                        ? `${next.toGo} ${next.toGo === 1 ? 'day' : 'days'}`
-                        : `${next.toGo.toLocaleString()} to go`}
+                      {toGo(next)}
                     </span>
                   </div>
                   <Meter
                     value={next.fraction}
                     size="sm"
                     label={next.label}
-                    valueText={
-                      next.category === 'years'
-                        ? `${next.toGo} days to go`
-                        : `${next.current.toLocaleString()} of ${next.target.toLocaleString()}`
-                    }
+                    valueText={toGo(next)}
                   />
                 </li>
               ))}

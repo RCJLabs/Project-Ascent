@@ -113,10 +113,16 @@ export function ObjectivesPage() {
                 {objective.grade && <span className="text-xs font-semibold text-accent">{objective.grade}</span>}
                 <ArrowRight size={15} className="text-ink-soft shrink-0" />
               </div>
+              {/* No `valueText`, so the meter reads out the percentage it
+                  is actually filled to (PLAN.md M258). It used to say
+                  “0 of 2 requirements met” against a bar at 26%, which is
+                  a different measure — `readiness` is the mean of each
+                  requirement's own fraction, and five requirements each
+                  80% done are a climber nearly there whose met-count is
+                  nought. Both facts are already in the line below. */}
               <Meter
                 value={progress.readiness}
                 label={`${objective.name} readiness`}
-                valueText={`${progress.met} of ${progress.total} requirements met`}
                 className="mb-1.5"
               />
               <p className="text-xs text-ink-soft">

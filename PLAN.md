@@ -14221,6 +14221,17 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and the battery found the bar and its track untested on both sides.*** *See the entry at
   the end of this document.*
 
+- **M258 — the bar and what it says it says.** `/career` had no test file of its own. Its
+  “Coming up” meters draw `fraction`, which is the share of the gap between the **last** milestone
+  and the next — the ladder runs 1 · 2.5 · 5 per decade — and every one of them was told to read
+  out an absolute *“300 of 500”*. A bar at 20% with an accessible name saying 60%, on the same
+  control, on every counter row. A sweep of all fourteen `Meter` call sites found two more, both
+  reading out the met-count while drawing readiness. And a climber with ten sessions and no sends
+  read *“1 milestones since September 2026”*.
+  *Small, and it is three call sites and a helper.*
+  ***Built, and the battery found the list page's copy of the bar untested.*** *See the entry at the
+  end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -16480,3 +16491,90 @@ passed a suite of six thousand. `meter.test.tsx` renders it now.
 **6,474 tests over 383 files**, from 6,447 over 380. First load 134.43KB against a 135.4KB budget,
 unmoved. Read back from a browser on both pages, in both themes at 430px and 1280px, against the
 same fixture before and after the change.
+
+## M258 — the bar and what it says it says
+
+`/career` and `/year` have no test files of their own. Driving the first with three hundred
+sessions:
+
+```
+500 sessions                    200 to go
+████░░░░░░░░░░░░░░░░░░░░    ← 20%
+   aria-valuetext: “300 of 500”  ← 60%
+```
+
+Both numbers are true and they are not about the same journey. `fraction` is the share of the gap
+between the **last** milestone and the next one, because the ladder is 1 · 2.5 · 5 per decade and
+the rung before 500 is 250 — a design the module doc defends at length, so that *“a milestone
+[stays] about as rare at 5,000 sessions as at 50”*. “300 of 500” is that same climber measured
+from zero.
+
+Every counter row disagreed, by ten to forty points:
+
+| row | bar | read out | implies |
+| --- | --- | --- | --- |
+| 500 sessions | 20% | 300 of 500 | 60% |
+| 250 sessions | 13% | 120 of 250 | 48% |
+| 500 sends | 44% | 360 of 500 | 72% |
+| 50 hours | 80% | 45 of 50 | 90% |
+
+The visible column — *“200 to go”* — agreed with the bar the whole time. Only the half a sighted
+reader never sees was wrong, which is exactly why it lasted.
+
+### The rule was two files away, twice
+
+`HomeStatsCard` draws the same kind of fraction and pairs it with *“400 ft to go”*, and says why:
+
+> *`Meter`, not a hand-rolled bar: the same `fraction` the altimeter page draws, through the same
+> primitive, so the two cannot disagree about how far along the segment is **or about what a screen
+> reader is told it says**.*
+
+`LevelBar` does the other honest version — `into` of `width`, the span the fraction is over rather
+than the lifetime total. Two correct patterns, in the repository, for the case this page had.
+
+The fix takes the first: the column and the meter's text form are now **one expression**, so they
+cannot drift, and the test asserts that by identity rather than by recomputing either.
+
+### A sweep, because one instance is a guess
+
+All fourteen `Meter` call sites, checked against the number each draws. Eleven were right: vitality
+is `current / max` and says so, the board and the daily task quote their own target, the altimeter's
+Everest bar is absolute and its text is absolute, `LevelBar` and `HomeStatsCard` as above.
+
+Three were not. Beyond `/career`, both **readiness** bars — the objectives list and the objective
+detail — drew `readiness` and read out *“0 of 2 requirements met”*. Not a contradiction like the
+career rows; a substitution. `readiness` is the mean of each requirement's own fraction, and the
+comment on the field is explicit that this matters: *“five requirements each 80% done is a climber
+nearly there, and reporting that as 0% would be a lie the whole feature could not survive”*. The
+bar stood at 26% and told a screen reader nought. Both now read out their own percentage; the
+met-count is still beside them and still in the sentence underneath.
+
+### And one milestone, not one milestones
+
+```
+1 milestones since September 2026
+```
+
+Ten logged sessions and no sends is exactly one milestone — and that climber is the likeliest
+person to be reading this line. Fixed inline rather than with a shared helper: there are
+ninety-eight of these ternaries in the features tree and a ninety-ninth style is worse than a
+ninety-ninth copy. A `plural` belongs in `phrase.ts` next to `article` and `joinList`, with the two
+private copies in `skills.ts` and `objectives.ts` folded in. That is its own milestone, not a rider
+on this one.
+
+### What the battery found
+
+**8 mutants caught, sanity no-op survived.** Two lived at first. One was a test reading
+`/^\d+ days? to go$/`, which matches *“1 days”* as happily as *“1 day”* — and no fixture had ever
+put the next anniversary exactly one day out. It does now, found by asking the calendar for a first
+logged day whose anniversary is tomorrow, over four candidate year-offsets because a 29 February
+does not survive `setFullYear` there and back.
+
+The other was the readiness bar on the **objectives list**. Two pages draw it, the detail page's
+test killed its mutant, and the list kept the old text form through the whole battery. Two copies,
+one test, and the battery is the only reason that is not still true.
+
+**6,484 tests over 384 files**, from 6,474 over 383. First load 134.43KB against a 135.4KB budget,
+unmoved for the third milestone running. Read back from a browser with an empty log and with three
+hundred sessions, in both themes at 430px and 1280px — the longer column, *“13 days to go”* where
+it read *“13 days”*, still fits the row at 430 with nothing overflowing.

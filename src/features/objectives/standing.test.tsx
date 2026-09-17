@@ -9,6 +9,7 @@ import { deriveClimberState } from '@/engine/derive';
 import { useObjectives } from '@/store/objectives';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { ObjectiveDetailPage } from './ObjectiveDetailPage';
+import { ObjectivesPage } from './ObjectivesPage';
 
 /**
  * What an objective says you have done (PLAN.md M257).
@@ -110,5 +111,73 @@ describe('a requirement measured on a streak', () => {
     const line = await screen.findByText(/% of the way there/);
     const percent = Number(/(\d+)%/.exec(line.textContent ?? '')![1]);
     expect(percent).toBeLessThan(25);
+  });
+});
+
+/**
+ * What the readiness bar says it says (PLAN.md M258).
+ *
+ * `readiness` is the mean of each requirement's own fraction; `met` is how
+ * many are finished. Five requirements each 80% done are a climber nearly
+ * there whose met-count is nought — so a bar drawn from the first and read
+ * out as the second tells a screen reader a different thing from the one it
+ * draws, and the thing it tells them is always the more pessimistic.
+ */
+describe('the readiness bar', () => {
+  it('reads out the percentage it is filled to', async () => {
+    await brokenStreak();
+    await objective([
+      { id: 'r1', requirement: { kind: 'streak-weeks', weeks: 16 } },
+      { id: 'r2', requirement: { kind: 'sessions', count: 60 } },
+    ]);
+    await hydrate();
+    renderAt('/objectives/o1', <ObjectiveDetailPage params={{ id: 'o1' }} />);
+
+    const bar = (await screen.findAllByRole('progressbar')).find(
+      (el) => el.getAttribute('aria-label') === 'Readiness',
+    )!;
+    expect(bar).toBeTruthy();
+    const now = bar.getAttribute('aria-valuenow')!;
+    // Not "0 of 2 requirements met", which is what it used to say while
+    // standing somewhere in the twenties.
+    expect(bar.getAttribute('aria-valuetext')).toBe(`${now}%`);
+    expect(Number(now)).toBeGreaterThan(0);
+  });
+
+  it('reads out its percentage on the list too', async () => {
+    // Two pages draw this bar and both read `readiness`; only one of them
+    // had a test, which is how the list kept the old text form through a
+    // battery that killed the detail page's.
+    await brokenStreak();
+    await objective([
+      { id: 'r1', requirement: { kind: 'streak-weeks', weeks: 16 } },
+      { id: 'r2', requirement: { kind: 'sessions', count: 60 } },
+    ]);
+    await hydrate();
+    renderAt('/objectives', <ObjectivesPage />);
+
+    const bar = (await screen.findAllByRole('progressbar')).find(
+      (el) => el.getAttribute('aria-label') === 'A first V8 readiness',
+    )!;
+    expect(bar, 'no readiness bar on the list').toBeTruthy();
+    const now = bar.getAttribute('aria-valuenow')!;
+    expect(bar.getAttribute('aria-valuetext')).toBe(`${now}%`);
+    expect(Number(now)).toBeGreaterThan(0);
+  });
+
+  it('keeps the met-count where a reader still meets it', async () => {
+    // Dropping the text form must not drop the fact: it is beside the
+    // percentage and in the sentence under the bar, both of which a screen
+    // reader walks through on its way past.
+    await brokenStreak();
+    await objective([
+      { id: 'r1', requirement: { kind: 'streak-weeks', weeks: 16 } },
+      { id: 'r2', requirement: { kind: 'sessions', count: 60 } },
+    ]);
+    await hydrate();
+    renderAt('/objectives/o1', <ObjectiveDetailPage params={{ id: 'o1' }} />);
+
+    await screen.findByText(/% of the way there/);
+    expect(document.body.textContent).toContain('0 of 2 met');
   });
 });
