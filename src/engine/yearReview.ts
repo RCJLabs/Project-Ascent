@@ -377,7 +377,13 @@ export function describeYear(review: YearReview): string[] {
   }
 
   out.push(
-    `${totals.sessions} ${totals.sessions === 1 ? 'session' : 'sessions'}, ${round(totals.hours)} hours, ${totals.feet.toLocaleString()} feet climbed.`,
+    // Every count in this function branches on its plural, and this one did
+    // not: a first year with a single hour in it read *“1 session, 1
+    // hours”* (PLAN.md M260). Feet needs none — one foot is not a climb
+    // anybody logs, and the altimeter never returns it.
+    `${totals.sessions} ${totals.sessions === 1 ? 'session' : 'sessions'}, ${round(totals.hours)} ${
+      totals.hours === 1 ? 'hour' : 'hours'
+    }, ${totals.feet.toLocaleString()} feet climbed.`,
   );
 
   if (totals.outdoorDays > 0) {
@@ -404,8 +410,12 @@ export function describeYear(review: YearReview): string[] {
     // history list: a year reads forwards — you did this, then that.
     const unique = [...new Set([...review.blocks].reverse().map((b) => b.name))];
     out.push(
+      // “Run” is the present tense of something already over, and “all” of
+      // one block is a strange way to say *it* (PLAN.md M260). A year read
+      // back in December said *“One block started: Iron Grip. All run to
+      // the end.”*
       `${review.blocks.length === 1 ? 'One block' : `${review.blocks.length} blocks`} started: ${joinCapped(unique, 3)}${
-        done > 0 ? `. ${done === review.blocks.length ? 'All' : done} run to the end.` : '.'
+        done > 0 ? `. ${ranToTheEnd(done, review.blocks.length)}` : '.'
       }`,
     );
   }
@@ -419,6 +429,17 @@ export function describeYear(review: YearReview): string[] {
   }
 
   return out;
+}
+
+/**
+ * How many of the year's blocks were finished, in words (PLAN.md M260).
+ *
+ * Small numbers spelled, which is the house rule everywhere a sentence
+ * counts something — *One block started* two lines up says it first.
+ */
+function ranToTheEnd(done: number, total: number): string {
+  if (done === total) return total === 1 ? 'It ran to the end.' : 'All ran to the end.';
+  return `${done === 1 ? 'One' : done} ran to the end.`;
 }
 
 function round(n: number): string {

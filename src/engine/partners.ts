@@ -39,6 +39,7 @@
  */
 
 import type { Session } from '@/db/sessions';
+import { isRestSession } from './rest';
 
 /** Longest a stored name may be, so a field cannot become a note. */
 export const NAME_LIMIT = 40;
@@ -101,6 +102,25 @@ export interface PartnerCount {
 }
 
 /**
+ * A session this reading is about — one that was climbed (PLAN.md M260).
+ *
+ * The same split `totalsFor` makes, and for the reason M246 made it: a rest
+ * day is counted as a rest day and as nothing else. Both readings below
+ * skipped it, and the year page divides one by the other against the year's
+ * **session** count, which has excluded rest since M246. Forty training
+ * sessions and twenty rest days read *“Named on −10 of 40 sessions”* — a
+ * negative, printed directly under a line whose whole job is to say how much
+ * of the log this card can actually see.
+ *
+ * This module's own question settles which way to split it: *“how much of
+ * your roped climbing happens with anyone at all”*. A rest day is not
+ * climbing, and a card headed *Who you climbed with* should not count one.
+ */
+function climbed(session: Session): boolean {
+  return session.completed && !isRestSession(session);
+}
+
+/**
  * How many sessions each person is on, most first.
  *
  * A count and a date, and nothing else. Grades climbed with each person would
@@ -110,7 +130,7 @@ export interface PartnerCount {
 export function partnerTally(sessions: readonly Session[]): PartnerCount[] {
   const counts = new Map<string, PartnerCount>();
   for (const session of sessions) {
-    if (!session.completed) continue;
+    if (!climbed(session)) continue;
     for (const name of session.partners ?? []) {
       const key = name.toLowerCase();
       const row = counts.get(key);
@@ -128,13 +148,16 @@ export function partnerTally(sessions: readonly Session[]): PartnerCount[] {
 }
 
 /**
- * Completed sessions that named nobody.
+ * Sessions that were climbed and named nobody.
  *
  * Not "sessions climbed alone" — an unfilled field is a field nobody filled,
  * and most sessions in every log will be exactly that. The distinction is the
  * same one `ropeStyle.ts` makes about an absent rope style, and it is why the
  * reading states coverage before it states anything else.
+ *
+ * Counted over the same set as `partnerTally`, so that *named* and *not
+ * named* add up to the number the page divides them by (PLAN.md M260).
  */
 export function unsaid(sessions: readonly Session[]): number {
-  return sessions.filter((s) => s.completed && (s.partners ?? []).length === 0).length;
+  return sessions.filter((s) => climbed(s) && (s.partners ?? []).length === 0).length;
 }

@@ -14242,6 +14242,17 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and the battery found a dead guard in the fix.*** *See the entry at the end of this
   document.*
 
+- **M260 — named on minus ten of forty sessions.** `/year` had no test file of its own and had
+  never been driven. Six shapes turned up three. The one that matters is a **negative count**:
+  `totals.sessions` has excluded rest days since M246 and `unsaid` still counted them, so a log with
+  forty sessions and twenty rest days read *“Named on −10 of 40 sessions”* — printed directly
+  under a line whose whole job is to say how much of the log the card can see. The other two are
+  the opening sentence saying *“1 session, 1 hours”*, and a finished block reading *“All run to
+  the end”* — “all” of one, in the present tense of something already over.
+  *Small, and it is one predicate and two sentences.*
+  ***Built, and the test that pinned the block sentence was named after the property it broke.***
+  *See the entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -16713,3 +16724,85 @@ fixes this session.
 Read back from a browser on the exact reported state — Peak Performance, Thursday the 17th,
 Sunday/Tuesday/Wednesday/Friday, one session logged that evening — on Home, the calendar and the
 week screen, in both themes at 430px and 1280px.
+
+## M260 — named on minus ten of forty sessions
+
+`/year` is the page a climber opens once a year and reads every word of, and it had no test file of
+its own. Driven across six shapes — an empty log, one session, a rest-heavy year with partners, a
+full previous year to compare against, a single month, and an outdoor trip — it came back with
+three findings.
+
+### A count that went below zero
+
+```
+WHO YOU CLIMBED WITH
+Sam                                    10 sessions · Aug 8
+Named on −10 of 40 sessions. An empty field is one nobody filled…
+```
+
+`totals.sessions` has excluded rest days since **M246**, which split them out precisely so that
+*“Sessions 11 · Hours 2h · Sends 6”* could stop happening. `unsaid` did not get the memo: it
+counted every completed session with an empty partner field, rest days included. Forty training
+sessions, twenty rest days, ten of the forty named — 40 − 50 = −10.
+
+The comment above the line says what it is for:
+
+> *Coverage before anything else, because the number above is only ever a count of what was written
+> down.*
+
+A negative is a poor way to say that. And the module's own framing settles which way to split it:
+*“how much of your roped climbing happens with anyone at all”*. A rest day is not climbing, and a
+card headed **Who you climbed with** should not count one.
+
+So both readings take the same predicate — completed, and not a rest day — written once, next to
+the reason. `partnerTally` follows it too, which also means a partner named on a rest day no longer
+appears on a list of people you climbed with, and nobody can be on more sessions than the year had.
+The invariant is pinnable and pinned: **named plus unnamed equals the number the page divides them
+by**.
+
+### One hours
+
+```
+1 session, 1 hours, 0 feet climbed.
+```
+
+Every count in `describeYear` branches on its plural — sessions, days on real rock, *One block* and
+*N blocks* — and hours did not. A first year with a single logged hour in it opens with that
+sentence. Feet needs none: one foot is not a climb anybody logs.
+
+### All run to the end
+
+```
+One block started: Iron Grip. All run to the end.
+```
+
+“All” of one, in the present tense of something already over. Two blocks with one finished read
+*“1 run to the end”*. The sentence is now *It ran*, *All ran*, or *One ran* — past tense, and small
+numbers spelled, which is what the line two clauses earlier already does with *One block started*.
+
+`yearReview.test.ts` had pinned the old wording in a test called **`agrees with itself about one`**
+— named after the property the sentence broke. That is the second time this session a test has
+carried the finding in its own text and nobody followed it to the screen.
+
+### What the battery found
+
+**8 mutants caught, sanity no-op survived.** Dropping the rest-day split from either reading dies,
+as does scoping only one of the two — the asymmetry was the bug, so both halves are held. Each
+plural dies in both directions: forcing *hour* everywhere fails as surely as forcing *hours*, and
+so do *It ran* for many and *All ran* for one.
+
+**6,513 tests over 385 files**, from 6,501 over 385. First load 134.59KB against a 135.4KB budget.
+Read back from a browser across all six shapes, in both themes at 430px and 1280px.
+
+### Checked and left alone
+
+Two things looked wrong and are not. The **leading gap** — a climber whose first session is in May
+being told about a 129-day quiet stretch from January — is deliberate, and `longestGap` says why:
+*“a climber who logged nothing until October has had a nine-month gap, and starting the measurement
+at their first session would hide exactly the thing worth seeing”*. It is under-specified for a
+first year rather than wrong, and changing it is a decision rather than a fix.
+
+And the **change rows** survive the negative-zero trap M256 was about: `delta` is rounded in the
+engine, so a difference of −0.04 hours becomes `-0`, and `-0 === 0` puts it in the *same* branch
+rather than through a sign test. Symmetric with `+0.04`, and correct. Checked rather than assumed,
+because the same shape cost a milestone four entries ago.

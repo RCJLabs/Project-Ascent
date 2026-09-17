@@ -375,19 +375,35 @@ describe('the blocks a year held (PLAN.md M87)', () => {
     // Chronological: the year reads forwards, though the history list is
     // newest-first.
     expect(said).toContain('2 blocks started: Iron Grip and Peak Performance');
-    expect(said).toContain('1 run to the end');
+    // Spelled and past tense (PLAN.md M260). It read "1 run to the end".
+    expect(said).toContain('One ran to the end');
   });
 
   it('agrees with itself about one', () => {
+    // The test's own name, finally true of the sentence. A single block
+    // read “All run to the end” — “all” of one, in the present tense of
+    // something already over (PLAN.md M260).
     const said = describeYear(year([block({})])).join(' ');
     expect(said).toContain('One block started: Iron Grip');
-    expect(said).toContain('All run to the end');
+    expect(said).toContain('It ran to the end');
+    expect(said).not.toContain('All');
+  });
+
+  it('says all of them only when there is more than one', () => {
+    const said = describeYear(
+      year([
+        block({}),
+        block({ id: 'b#2026-05-03', name: 'Peak Performance', startDate: '2026-05-03', endedAt: '2026-07-26' }),
+      ]),
+    ).join(' ');
+    expect(said).toContain('2 blocks started');
+    expect(said).toContain('All ran to the end');
   });
 
   it('does not count a reconstructed block as finished', () => {
     const said = describeYear(year([block({ reconstructed: true })])).join(' ');
     expect(said).toContain('One block started');
-    expect(said).not.toContain('run to the end');
+    expect(said).not.toContain('ran to the end');
   });
 
   it('names the same program once when it was run twice', () => {
@@ -395,5 +411,43 @@ describe('the blocks a year held (PLAN.md M87)', () => {
       year([block({}), block({ id: 'a#2026-06-07', startDate: '2026-06-07', endedAt: '2026-08-29' })]),
     ).join(' ');
     expect(said).toContain('2 blocks started: Iron Grip.');
+  });
+});
+
+/**
+ * The counts in the opening sentence (PLAN.md M260).
+ *
+ * Every one of them branches on its plural — sessions, days on rock, blocks
+ * — and hours did not, so a first year with a single hour in it opened with
+ * "1 session, 1 hours".
+ */
+describe('the sentence that counts the year', () => {
+  const said = (patch: Partial<Session>[], today = '2026-12-31') =>
+    describeYear(
+      reviewYear(
+        {
+          sessions: patch.map((p, i) => session(`2026-03-${String(i + 1).padStart(2, '0')}`, p)),
+          records: NO_RECORDS,
+          today,
+        },
+        2026,
+      ),
+    )[0]!;
+
+  it('says one hour, not one hours', () => {
+    expect(said([{ durationMin: 60 }])).toContain('1 session, 1 hour,');
+    expect(said([{ durationMin: 60 }])).not.toContain('1 hours');
+  });
+
+  it('pluralises every other number of them', () => {
+    expect(said([{ durationMin: 120 }])).toContain('2 hours');
+    expect(said([{ durationMin: 90 }])).toContain('1.5 hours');
+    // Nought is plural too, which is the English and not a special case.
+    expect(said([{ durationMin: 0 }])).toContain('0 hours');
+  });
+
+  it('keeps the sessions it already agreed about', () => {
+    expect(said([{ durationMin: 60 }])).toMatch(/^1 session, /);
+    expect(said([{ durationMin: 60 }, { durationMin: 60 }])).toMatch(/^2 sessions, /);
   });
 });

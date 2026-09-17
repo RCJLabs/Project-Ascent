@@ -102,3 +102,74 @@ describe('the year’s partners', () => {
     expect(screen.getByText('Sessions').parentElement!.textContent).toBe('Sessions2');
   });
 });
+
+/**
+ * The coverage line, against the number it divides by (PLAN.md M260).
+ *
+ * `totals.sessions` has excluded rest days since M246; `unsaid` counted
+ * them. Forty sessions and twenty rest days read **"Named on −10 of 40
+ * sessions"** — a negative, directly under a line whose whole job is to say
+ * how much of the log this card can see.
+ */
+describe('a year with rest days in it', () => {
+  async function withRest(): Promise<void> {
+    await reset();
+    let n = 0;
+    for (let i = 0; i < 6; i += 1) {
+      const date = `${YEAR}-03-${String(i + 1).padStart(2, '0')}`;
+      await putSession({
+        ...newSession(date, n++, { completed: true }),
+        ...(i < 2 ? { partners: ['Sam'] } : {}),
+        climbs: [{ id: `c${i}`, grade: 'V3', scale: 'V', count: 1, result: 'send' }],
+      } as never);
+    }
+    for (let i = 0; i < 9; i += 1) {
+      const date = `${YEAR}-04-${String(i + 1).padStart(2, '0')}`;
+      await putSession({
+        ...newSession(date, n++, { completed: true }),
+        restChecklist: {},
+      } as never);
+    }
+    await hydrate();
+    renderAt(`/year/${YEAR}`, <YearPage params={{ year: String(YEAR) }} />);
+    await screen.findByRole('heading', { level: 1, name: String(YEAR) });
+  }
+
+  it('is a fixture with more rest days than named sessions', async () => {
+    // Without that, the count cannot go negative and nothing here bites.
+    await withRest();
+    expect(card().textContent).toContain('of 6 sessions');
+  });
+
+  it('counts named and unnamed out of the sessions it says', async () => {
+    await withRest();
+    // Six climbed, two of them named. Nine rest days belong to neither.
+    expect(card().textContent).toContain('Named on 2 of 6 sessions');
+    cleanup();
+  });
+
+  it('never prints a negative', async () => {
+    await withRest();
+    expect(card().textContent).not.toMatch(/Named on -/);
+    cleanup();
+  });
+
+  it('leaves a rest day off the list of people you climbed with', async () => {
+    await reset();
+    await putSession({
+      ...newSession(`${YEAR}-03-01`, 0, { completed: true }),
+      partners: ['Alex'],
+      climbs: [{ id: 'c0', grade: 'V3', scale: 'V', count: 1, result: 'send' }],
+    } as never);
+    await putSession({
+      ...newSession(`${YEAR}-03-02`, 1, { completed: true }),
+      partners: ['Sam'],
+      restChecklist: {},
+    } as never);
+    await hydrate();
+    renderAt(`/year/${YEAR}`, <YearPage params={{ year: String(YEAR) }} />);
+    await screen.findByRole('heading', { level: 1, name: String(YEAR) });
+    expect(card().textContent).toContain('Alex');
+    expect(card().textContent).not.toContain('Sam');
+  });
+});

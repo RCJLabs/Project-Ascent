@@ -174,3 +174,47 @@ describe('what an empty field means', () => {
     expect(unsaid([day('2026-03-02', undefined, false)])).toBe(0);
   });
 });
+
+/**
+ * A rest day is not a session you climbed with anyone (PLAN.md M260).
+ *
+ * The year page divides these two readings against `totals.sessions`, which
+ * has excluded rest since M246. Counting rest here and not there made the
+ * card's coverage line print a negative.
+ */
+describe('a rest day', () => {
+  const rest = (date: string, partners?: string[]): Session =>
+    ({ ...day(date, partners), restChecklist: {} }) as Session;
+
+  it('is a fixture the readings can tell from a session', () => {
+    // Without that, both halves below pass on a log with no rest in it.
+    expect(unsaid([rest('2026-03-02')])).not.toBe(1);
+  });
+
+  it('is not counted as a session that named nobody', () => {
+    const log = [day('2026-03-02'), rest('2026-03-03'), rest('2026-03-04')];
+    expect(unsaid(log)).toBe(1);
+  });
+
+  it('does not put anyone on the list you climbed with', () => {
+    expect(partnerTally([rest('2026-03-02', ['Sam'])])).toEqual([]);
+  });
+
+  it('leaves named and unnamed adding up to the sessions they came from', () => {
+    // The invariant the page depends on, and the one the bug broke: with
+    // forty sessions and twenty rest days it read "Named on -10 of 40".
+    const log: Session[] = [];
+    for (let i = 0; i < 40; i += 1) {
+      const date = `2026-03-${String((i % 28) + 1).padStart(2, '0')}`;
+      log.push(i < 10 ? day(date, ['Sam']) : day(date));
+    }
+    for (let i = 0; i < 20; i += 1) log.push(rest(`2026-04-${String(i + 1).padStart(2, '0')}`));
+
+    const climbed = log.filter((s) => s.completed && s.restChecklist === undefined).length;
+    expect(climbed).toBe(40);
+    expect(unsaid(log)).toBeLessThanOrEqual(climbed);
+    expect(climbed - unsaid(log)).toBe(10);
+    // And nobody can be on more sessions than there were.
+    for (const row of partnerTally(log)) expect(row.sessions).toBeLessThanOrEqual(climbed);
+  });
+});
