@@ -20,7 +20,7 @@ import { DEFAULT_DISPLAY, displayRange, gradeOrdinal, type GradeDisplay, type Gr
 import { PROGRAMS } from '@/content/programs';
 import { getMetric } from '@/content/metrics';
 import { MIN_ADAPTED_WEEKS } from './adapt';
-import { KIT_NAMES } from './kit';
+import { KIT_NAMES, kitList, missingKit } from './kit';
 import { describeWork, programSessionLengths, type WorkEstimate } from './sessionLength';
 import type { Discipline, Equipment, MetricId, Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
@@ -436,10 +436,13 @@ export function recommend(input: FinderInput): Recommendation[] {
     // turning the climber away — which is what seven of nine used to do for
     // between one and eight prescriptions out of thirty to a hundred and
     // thirty (PLAN.md M36).
+    // `missingKit` rather than a second copy of the filter (PLAN.md M251):
+    // the program page needs the same answer, and two spellings of one rule
+    // is how the app ended up with thirteen definitions of a rest day.
     const have = new Set(input.equipment);
-    const missing = program.equipment.filter((e) => e !== 'none' && !have.has(e));
+    const missing = missingKit(program.equipment, input.equipment);
     if (missing.length > 0) {
-      blockers.push(`Needs ${missing.map(equipmentWord).join(' and ')} you do not have access to`);
+      blockers.push(`Needs ${kitList(missing)} you do not have access to`);
     } else if (program.equipment.some((e) => e !== 'none')) {
       score += 5;
     }

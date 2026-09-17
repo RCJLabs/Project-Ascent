@@ -24,6 +24,8 @@ import { DELOAD_STEP, deloadLightens } from '@/engine/plan';
 import { today } from '@/engine/dates';
 import { usePlannedDay } from '@/features/log/usePlannedDay';
 import { useSettings } from '@/store/settings';
+import { useProfile } from '@/store/profile';
+import { kitList, missingKit } from '@/engine/kit';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -262,6 +264,44 @@ function SessionTypeCard({
  * Three states: this is the block you are on, another block is open, or
  * nothing is running. Only the last one is the plain button it used to be.
  */
+/**
+ * The half of "what you need" that was missing (PLAN.md M251).
+ *
+ * The comment above that block has said since it was written that the finder
+ * already refuses a program on kit and the page did not — and the page went on
+ * printing the requirement without ever comparing it to the climber's answer.
+ * A climber with the default `['wall', 'gym']` could open Iron Grip, read
+ * *"Climbing wall · Hangboard"*, tap Start, and meet the gap at the first
+ * fingerboard session, while the finder two taps away called the same program
+ * blocked.
+ *
+ * **It says and does not decide.** That is `kit.ts`'s own rule about this
+ * field — the climber may be at a friend's board, may have bought one this
+ * morning, and M236 reads *running a program* as evidence of owning its kit.
+ * So the button is untouched and the sentence is a warning, in the finder's
+ * words, from the finder's rule.
+ */
+function MissingKit({ program }: { program: Program }): React.ReactElement | null {
+  const equipment = useProfile((s) => s.equipment);
+  const missing = missingKit(program.equipment, equipment);
+  // Helpful kit never blocks in the finder either: "if the program runs
+  // without it, it runs." The ternary below is what keeps a program from
+  // saying both — a second guard here read as belt and braces and was dead
+  // code, which the battery pointed out by removing it to no effect.
+  const helpful = missingKit(program.helpfulEquipment ?? [], equipment);
+  if (missing.length === 0 && helpful.length === 0) return null;
+  return (
+    <p className={`text-xs mb-2 flex items-start gap-1.5 ${missing.length > 0 ? 'text-warn' : 'text-ink-soft'}`}>
+      <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+      <span>
+        {missing.length > 0
+          ? `This needs ${kitList(missing)}, which your kit does not list. You can still run it — Settings is where the answer lives if it has changed.`
+          : `Runs without ${kitList(helpful, 'or')}, which your kit does not list — some of the loading work needs improvising.`}
+      </span>
+    </p>
+  );
+}
+
 function StartOrOpen({ programId, kind }: { programId: string; kind: string }) {
   const { program: runningProgram, day } = usePlannedDay(today());
   if (kind !== 'program') return null;
@@ -434,6 +474,7 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
             </p>
           </div>
 
+          <MissingKit program={program} />
           <StartOrOpen programId={program.id} kind={program.kind} />
         </Card>
 

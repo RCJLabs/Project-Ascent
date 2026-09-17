@@ -169,6 +169,34 @@ export const KIT_NAMES: Record<Equipment, { chip: string | null; word: string }>
 export const KIT_CHIPS: readonly Equipment[] = ['wall', 'hangboard', 'campus', 'gym', 'weight'];
 
 /**
+ * What a program asks for that this climber has not got (PLAN.md M251).
+ *
+ * The rule was written inline in `finder.ts`, where it turns a program away.
+ * `ProgramDetailPage` — the screen a climber is on when they actually decide
+ * — listed the kit a program needs and never once compared it to theirs, and
+ * the comment on those very lines says the fix out loud: *"The finder already
+ * refuses a program on this; the page said nothing, so a climber arriving
+ * from the catalogue found out at the first fingerboard session."* Half of it
+ * was done. One rule now, so the second reader cannot drift from the first.
+ *
+ * `none` is not kit, so it never counts as missing.
+ */
+export function missingKit(
+  needs: readonly Equipment[],
+  have: readonly Equipment[],
+): Equipment[] {
+  const owned = new Set(have);
+  return needs.filter((kit) => kit !== 'none' && !owned.has(kit));
+}
+
+/** "a hangboard and a campus board", for a sentence about what is missing. */
+export function kitList(kit: readonly Equipment[], join = 'and'): string {
+  const names = kit.map((e) => KIT_NAMES[e].word);
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} ${join} ${names[names.length - 1]}`;
+}
+
+/**
  * The offer, as one sentence. Null when the log has nothing to add.
  *
  * Written as a question rather than a correction: the app noticed something

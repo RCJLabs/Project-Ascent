@@ -14137,6 +14137,27 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   given; `describeAngles` named two arbitrary angles as a pair of ends when the whole point was that
   there are none. See the entry at the end of this document.*
 
+- **M251 — the kit the page knew about and never mentioned.** Driving `/train` and `/train/<id>`
+  across profile shapes rather than log shapes, because Train's prose is about plans and the
+  M248 harness cannot reach it. A climber whose kit is the onboarding default, `['wall', 'gym']`,
+  opens Iron Grip, reads **"What you need · Climbing wall · Hangboard"**, and is offered *Start this
+  program* with no word that they have said they own no board. `finder.ts` blocks the same program
+  on the same fact and says so in a sentence. And the comment sitting on those very lines already
+  states the fix: *"The finder already refuses a program on this; the page said nothing, so a
+  climber arriving from the catalogue found out at the first fingerboard session."* Half of it had
+  been done — the requirement was printed, and never once compared.
+  *Small, and it is one extracted rule and one line on a page.*
+  ***Built, and the battery found a dead guard in the fix itself.*** *See the entry at the end of
+  this document.*
+
+- **M252 — a gap counted one way and read another.** `describeInterruption` prints *"Nothing is
+  logged for 4 weeks of this block ... today is week 11, and the last week you trained was 6."*
+  The engine is right — `missedWeeks = nowWeek - lastTrainedWeek - 1`, with a comment explaining
+  that neither the week you last trained in nor the one in progress is missed — but a reader does
+  11 − 6 and gets 5. Naming the weeks instead of counting them (*"Nothing is logged for weeks 7 to
+  10"*) removes the arithmetic and is strictly more informative.
+  *Small, and it is one sentence.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -15915,3 +15936,75 @@ Two were fixed and one is recorded:
 **6,383 tests over 377 files.** First load 134.43KB against a 135.4KB budget. Both sentences read
 back from a browser in each theme at 430px and 1280px: the Trips card with one trip and with two, and
 the angle sentence on four angles at one grade.
+
+## M251 — the kit the page knew about and never mentioned
+
+Train could not be audited the way Progress was. Its prose is about **plans**, not history, so the
+M248 corpus — fourteen describers driven by a session log — reaches almost none of it. The technique
+that works here is the browser one: drive `/train` and `/train/<id>` across shapes of *profile*
+instead. Fresh, mid-block, just started, past the end, five weeks away, three objectives and three
+projects; then the program page not running, running, running with nothing logged, and running with
+no equipment at all.
+
+That last one is the finding.
+
+### What a climber with the default kit is shown
+
+```
+WHAT YOU NEED
+Climbing wall · Hangboard
+
+           [ Start this program ]
+```
+
+The onboarding default is `['wall', 'gym']`. Five of the thirteen programs require a hangboard —
+Gravity Defied, Lockdown, Iron Grip, Peak Performance and The Siege, which is most of the serious
+finger work the app ships. The page prints the requirement and never compares it to the answer the
+climber gave.
+
+Two taps away, the finder refuses the same program on the same fact, in a full sentence: *"Needs a
+hangboard you do not have access to."* And `kit.ts`, written at M236, documents the whole gap in its
+own module comment — *"nothing stops a climber running one: `startProgram` has no kit check at all.
+The app will schedule Iron Grip, log its hangboard sessions, chart the max hangs — and go on telling
+them in the finder that they have no hangboard."* M236 then fixed the **other** direction: inferring
+kit from what the climber did.
+
+The sharpest part is the comment already sitting on the lines that print the requirement:
+
+> *What you need. The finder already refuses a program on this; the page said nothing, so a climber
+> arriving from the catalogue found out at the first fingerboard session.*
+
+The milestone that wrote that added the list and not the comparison. The comment describes a fix
+that is half done, on the code that does the half.
+
+### It says, and does not decide
+
+The button is untouched, and that is the rule rather than caution. `kit.ts` states it: *"The
+climber's answer is the climber's. They may have moved gym, sold the board, or be logging sessions
+done at a friend's."* M236 goes further and reads *running a program* as evidence the climber has its
+kit. So a missing requirement is a warning in the finder's words, and a pointer to the one place the
+answer can be changed.
+
+Required kit missing is `text-warn`. Helpful kit missing is a quieter line, and never both, because
+that is the finder's own split: *"if the program runs without it, it runs."*
+
+### One rule, not a second copy
+
+`missingKit(needs, have)` and `kitList(kit, join)` live in `kit.ts`, beside `KIT_NAMES`, and
+`finder.ts` now calls them instead of spelling the filter out inline. Two readers of one rule, which
+is M112e's lesson — thirteen hand-written definitions of a rest day — applied before it happens
+rather than after.
+
+### The dead guard in the fix
+
+The first draft computed `helpful` as `missing.length > 0 ? [] : missingKit(…)`, so a program could
+never say both. The battery removed the guard and **nothing failed**: the ternary in the JSX already
+decides which line renders, and the guard only changed a value that was never read. Belt and braces,
+where the braces were the rule and the belt was untestable. It is gone, and the comment now points at
+the ternary that actually enforces it.
+
+**8 mutants caught, sanity no-op survived.**
+
+**6,397 tests over 379 files.** First load 134.42KB against a 135.4KB budget. Read back from a
+browser in both themes at 430px and 1280px, in all three states: the requirement missing, only the
+helpful kit missing, and nothing missing at all — with the Start button present in every one.
