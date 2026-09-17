@@ -15269,3 +15269,47 @@ there; the prose scan reading nothing; and the phrase check checking nothing.
 the name.
 
 **6,314 tests over 371 files.**
+
+## M243 — the write that outlived the page
+
+CI failed with **every one of 6,314 tests passing**. The error came after the run:
+
+```
+ReferenceError: window is not defined
+ ❯ resolveUpdatePriority  react-dom-client
+ ❯ dispatchSetState
+ ❯ src/features/ascent/AscentPage.tsx:384
+This error was caught after test environment was torn down.
+```
+
+`AscentPage` ends a run with `recordRun(…).then((paid) => { setPayout(paid); setRunAchievement(…) })`.
+If the page is gone by the time that write resolves, both setters run against a tree that no longer
+exists, and React's scheduler reads `window` on its way in. In a browser that is harmless. In a
+jsdom that has been torn down it throws, and vitest fails the run.
+
+It is a real bug and not only a test artefact: a climber who tops out and taps away leaves exactly
+that write in flight. The run itself is already recorded — what is dropped is only what the page
+would have *shown* about it.
+
+### Two halves, because they fix different things
+
+**The guard.** `alive` is a ref, cleared by an effect on unmount, checked before either setter.
+`StorageWarning` does this with a `cancelled` flag closed over by its effect, which is the right
+shape when the async work *is* the effect; here the write starts from a callback and has to be
+checked from one.
+
+**The test owning its own work.** `fit.test.tsx` played a run to its end and returned while the
+write was still in flight, leaving it to land after the whole file had torn down. It now waits for
+the day record before letting go.
+
+### The mutant that cannot be killed here
+
+Removing that wait survives the battery locally, and will keep surviving: the write resolves before
+teardown on this machine, so the difference is invisible. That is not a gap in the tests — it is
+the original bug, stated precisely. The failure needs a runner slow enough to tear down first, which
+is why it reached CI rather than being caught on the way. What *is* held is the guard: the check
+removed, the check moved after the setter, and the flag never cleared all die.
+
+**3 mutants caught, sanity no-op survived, one recorded as unkillable in this environment.**
+
+**6,315 tests over 371 files.**

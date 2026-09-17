@@ -381,6 +381,16 @@ function WallRow({
         endedBy: run.endedBy,
         ...(tape ? { tape } : {}),
       }).then((paid) => {
+        // The write outlives the page (PLAN.md M243). A climber who tops out
+        // and taps away leaves `recordRun` in flight, and these two setters
+        // would then run against a tree that is gone. React's scheduler
+        // reads `window` on the way in, which is harmless in a browser and
+        // fatal in a torn-down jsdom — where CI found it, with all 6,314
+        // tests passing and the run failing on an unhandled ReferenceError.
+        //
+        // The run itself is already recorded: only what this page would have
+        // *shown* about it is dropped.
+        if (!alive.current) return;
         setPayout(paid);
         // After the write, because the achievement is a question asked of
         // the day records and this run is not in them until `recordRun`
@@ -389,6 +399,22 @@ function WallRow({
       });
     },
     [recordRun, derived.restedToday, seed, units],
+  );
+
+  /**
+   * Whether this page is still on screen, for work that outlives it.
+   *
+   * `StorageWarning` does this with a `cancelled` flag closed over by its
+   * effect, which is the right shape when the async work *is* the effect.
+   * Here the write is started from a callback and has to be checked from
+   * one, so the flag is a ref and the effect only clears it.
+   */
+  const alive = useRef(true);
+  useEffect(
+    () => () => {
+      alive.current = false;
+    },
+    [],
   );
 
   /**
