@@ -14124,6 +14124,19 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   entirely left every check passing over what was left — a total is not a probe. See the entry at the
   end of this document.*
 
+- **M250 — the cards that were in the corpus and never spoke.** Adding five more log-driven
+  describers to M248's harness — venues, trips, vitality history, the injury part-history and the
+  thin-log coverage clause — turned up something about the harness itself first: **five of its cards
+  had never produced a sentence for any shape of log, and three of them had been wired in since
+  M248.** Angles needs a climb tagged with one, rope styles needs a route with a style, the pyramid
+  finding needs a lopsided ladder, and nothing in the corpus carried any of it. They were listed,
+  counted, and checked over an empty set.
+  *Small, and most of it is fixtures.*
+  ***Built, and reading the newly-audible ones turned up two.*** *`describeTrips` called a set of
+  one "the longest" and repeated a day count to deliver a place name the list above had already
+  given; `describeAngles` named two arbitrary angles as a pair of ends when the whole point was that
+  there are none. See the entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -15836,3 +15849,69 @@ no-program body naming a program, the hook's coercion, and the corpus silently s
 **6,380 tests over 377 files.** First load 134.43KB against a 135.4KB budget. Both sentences read
 back from a browser, in both themes at 430px and 1280px, with the fixture carrying rest days so the
 drill observation is not crowded off the board by the rest one.
+
+## M250 — the cards that were in the corpus and never spoke
+
+Five more log-driven describers into M248's harness: `describeVenues`, `describeTrips`,
+`describeVitalityHistory`, `describeInjuryHistory` and `describeCoverage`. Four more shapes of log
+to feed them — a climber with two trips on rock, one with an elbow answered on every session, one
+who tags an angle and a rope style on everything, and a fortnight of days marked from the calendar
+and never opened.
+
+Then a check I had not thought to write: **does every card in the corpus ever say anything?**
+
+### Five did not
+
+| | |
+|---|---|
+| Angles | no climb in any shape carried an `angle` |
+| Rope styles | no route carried a `ropeStyle` |
+| Grade pyramid | every fixture sent one grade, so the shape finding never fired |
+| Vitality history | no shape ever dropped into a low band |
+| Thin log | no shape held a bare day |
+
+The first three have been in the corpus since M248 and have never once been checked. They were
+listed in it, counted by it, and every property below them ran over an empty set. M248's entry says
+"fourteen cards"; nine of them ever spoke.
+
+**A card wired in and silent looks exactly like a card that is fine.** That is the whole finding,
+and the reason the rule now exists: it is not that these five were broken, it is that nobody could
+have told.
+
+### Reading the newly audible ones
+
+**A superlative over a set of one.** `describeTrips` produced *"One trip, 4 days out. The longest
+was 4 days at Stanage."* — "the longest" of one thing, and the day count twice to deliver a place
+name. It sits directly under a list whose single row already reads `Stanage · 4 days · 20 Aug`. Every
+word of it was on the screen a line above, so for one trip it now says nothing at all. With several
+the sentence earns its place: it totals the days and picks the longest, which a list of rows does not
+show at a glance. The dead singular guard on `days` went with it — `realTrips` keeps only what is two
+days or longer, so with one trip that branch could never fire.
+
+**A pair of ends that do not exist.** `describeAngles` reported *"V6 slab, V6 roof — level across the
+angles you have tagged"* — two arbitrary picks from four angles all at the same grade, presented in
+the shape the sentence uses for a best and a worst, implying the other two were something else. If
+`best` and `worst` share a grade then every side between them does, so the grade is said once and the
+angles are counted: *"V5 on all 4 of the angles you have tagged — level across them."*
+
+### Three holes in my own test, found by the battery
+
+Two were fixed and one is recorded:
+
+- **A silent card could go unnoticed.** The rule was a loop inside the assertion, so it could only be
+  proved by the corpus being dirty. It is a function now, and a test points it at a builder carrying
+  a deliberately silent card and checks it is named. Breaking the rule's logic — dropping the
+  `typeof row.text === 'string'` test — dies.
+- **A describer could be removed.** The corpus test counted more than twelve cards, and removing one
+  still left more than twelve. It names all eighteen now. Adding a card to the corpus costs a line
+  here, which is the point.
+- **Weakening that silent-card assertion survives, and will while the corpus is clean.** Nothing is
+  silent, so an assertion that nothing is silent has nothing to fail on. That is not a hole to fill;
+  it is what a regression guard for a condition that does not currently occur looks like, the same
+  as M243's. The rule underneath it is held by the two mutants above.
+
+**7 mutants caught, sanity no-op survived, one recorded as unkillable while the corpus is clean.**
+
+**6,383 tests over 377 files.** First load 134.43KB against a 135.4KB budget. Both sentences read
+back from a browser in each theme at 430px and 1280px: the Trips card with one trip and with two, and
+the angle sentence on four angles at one grade.

@@ -162,16 +162,27 @@ export function realTrips(list: readonly Trip[]): Trip[] {
   return list.filter((t) => t.days >= 2);
 }
 
-/** "Three trips, 11 days out. The longest was five days at Stanage." */
+/**
+ * "Three trips, 11 days out. The longest was 5 days at Stanage."
+ *
+ * **Nothing at all for one trip** (PLAN.md M250). It used to read *"One
+ * trip, 4 days out. The longest was 4 days at Stanage."* — a superlative
+ * over a set of one, and the day count twice — under a list whose single row
+ * already said `Stanage · 4 days · 20 Aug`. Every word of it was on the
+ * screen a line above.
+ *
+ * With several the sentence earns its place: it totals days across trips and
+ * picks the longest, neither of which a list of rows shows at a glance.
+ *
+ * `realTrips` keeps only what is two days or longer, so the singular guard
+ * that used to sit on `days` here could never fire either: with one trip
+ * `days` is that trip's length, and a one-day trip is not a trip.
+ */
 export function describeTrips(list: readonly Trip[]): string | null {
   const real = realTrips(list);
-  if (real.length === 0) return null;
+  if (real.length < 2) return null;
 
   const days = real.reduce((n, t) => n + t.days, 0);
   const longest = real.reduce((best, t) => (t.days > best.days ? t : best), real[0]!);
-  const lead =
-    real.length === 1
-      ? `One trip, ${days === 1 ? '1 day' : `${days} days`} out.`
-      : `${real.length} trips, ${days} days out.`;
-  return `${lead} The longest was ${longest.days} days at ${tripName(longest)}.`;
+  return `${real.length} trips, ${days} days out. The longest was ${longest.days} days at ${tripName(longest)}.`;
 }

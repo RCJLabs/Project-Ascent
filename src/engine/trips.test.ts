@@ -225,9 +225,12 @@ describe('said out loud', () => {
     ).toMatch(/^2 trips, 5 days out\. The longest was 3 days at Fontainebleau\.$/);
   });
 
-  it('agrees with itself about one trip', () => {
-    expect(say([out('2026-06-05', { at: 'Stanage' }), out('2026-06-06', { at: 'Stanage' })])).toMatch(
-      /^One trip, 2 days out\. The longest was 2 days at Stanage\.$/,
-    );
+  /**
+   * Nothing at all for one trip (PLAN.md M250). The card this sits under
+   * lists every trip with its name and length, so a summary of one row
+   * repeated the row — and called it "the longest" of a set of one.
+   */
+  it('says nothing about a single trip the list already shows', () => {
+    expect(say([out('2026-06-05', { at: 'Stanage' }), out('2026-06-06', { at: 'Stanage' })])).toBeNull();
   });
 });

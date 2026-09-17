@@ -240,7 +240,9 @@ describe('the year in trips', () => {
     renderAt(`/year/${YEAR}`, <YearPage params={{ year: String(YEAR) }} />);
     expect(await screen.findByText('Trips')).toBeTruthy();
     expect(screen.getByText('Stanage')).toBeTruthy();
-    expect(screen.getByText(/One trip, 3 days out\./)).toBeTruthy();
+    expect(screen.getByText(/3 days ·/)).toBeTruthy();
+    // And no sentence under it repeating that row back (PLAN.md M250).
+    expect(screen.queryByText(/One trip/)).toBeNull();
   });
 
   // One outdoor day is a day out, not a trip.

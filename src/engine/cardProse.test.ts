@@ -4,6 +4,11 @@ import { angles, describeAngles } from './angles';
 import { compareBlocks, describeBlocks } from './blockCompare';
 import { checkInHistory, describeCheckIns } from './checkIns';
 import { buildTips } from './coach';
+import { describeInjuryHistory, injuryHistory } from './injuryLog';
+import { coverage, describeCoverage } from './thinLog';
+import { describeTrips, trips } from './trips';
+import { describeVenues, venues } from './venues';
+import { describeVitalityHistory, vitalityHistory } from './vitalityHistory';
 import { buildHeatGrid, describeConsistency } from './consistency';
 import { conversionTrend, describeConversion } from './conversion';
 import { addDays } from './dates';
@@ -103,10 +108,85 @@ const SHAPES: Record<string, Session[]> = {
   ),
   'same day twice': [at(2), at(2, { id: 'dup' }), at(4)],
   'one long year': Array.from({ length: 40 }, (_, i) => at(2 + i * 9)),
+  // Two runs of consecutive days on rock, which is what a trip is, and the
+  // only shape `describeTrips` and `describeVenues` have anything to say
+  // about. Two rather than one because the summary sentence is for a set:
+  // with a single trip the list above it has already said everything.
+  trips: [
+    ...Array.from({ length: 4 }, (_, i) =>
+      at(20 + i, { mode: 'outdoor', fields: { location: 'Stanage' } }),
+    ),
+    ...Array.from({ length: 3 }, (_, i) =>
+      at(60 + i, { mode: 'outdoor', fields: { location: 'Fontainebleau' } }),
+    ),
+    ...Array.from({ length: 10 }, (_, i) => at(2 + i * 4, { fields: { location: 'The Works' } })),
+  ],
+  // An elbow answered on most sessions, for the part history and the
+  // recurrence line.
+  injured: Array.from({ length: 20 }, (_, i) =>
+    at(2 + i * 3, {
+      checkIn: {
+        fingers: 'good',
+        sleep: 'good',
+        parts: { elbow: i % 3 === 0 ? 'sore' : 'tender' },
+      } as Session['checkIn'],
+    }),
+  ),
+  /**
+   * The fields a climber fills in when they fill everything in: an angle on
+   * every boulder, a style on every rope climb, and grades spread wide
+   * enough to be a shape. Three cards had been wired into this corpus since
+   * M248 and never once spoken, because nothing here carried the field they
+   * are about (PLAN.md M250).
+   */
+  detailed: Array.from({ length: 24 }, (_, i) =>
+    at(2 + i * 3, {
+      climbs: [
+        {
+          id: `b${i}`,
+          // Sends at V6 and V3 and nothing at V5: the pyramid the other way up.
+          grade: i % 3 === 0 ? 'V6' : 'V3',
+          scale: 'V',
+          count: 2,
+          result: 'send',
+          angle: (['slab', 'vertical', 'overhang', 'roof'] as const)[i % 4],
+        },
+        {
+          id: `r${i}`,
+          grade: '5.11a',
+          scale: 'YDS',
+          count: 1,
+          result: i % 4 === 0 ? 'attempt' : 'send',
+          ropeStyle: i % 2 === 0 ? 'lead' : 'toprope',
+        },
+      ],
+    } as Partial<Session>),
+  ),
+  /**
+   * Days marked from the calendar and never opened: a record that says only
+   * that you turned up. `describeCoverage` exists for exactly this and had
+   * nothing to read.
+   */
+  'bare days': [
+    ...Array.from({ length: 12 }, (_, i) => ({
+      id: `bare${i}`,
+      date: addDays(TO, -(2 + i * 3)),
+      planned: false,
+      completed: true,
+      rewarded: true,
+      mode: 'indoor',
+      climbs: [],
+      createdAt: `${addDays(TO, -(2 + i * 3))}T18:00:00.000Z`,
+      updatedAt: `${addDays(TO, -(2 + i * 3))}T18:00:00.000Z`,
+    })) as Session[],
+    ...Array.from({ length: 4 }, (_, i) => at(1 + i * 9)),
+  ],
+  /** Eight days on the trot at RPE 9, which is what the vitality band is for. */
+  hammered: Array.from({ length: 10 }, (_, i) => at(1 + i, { rpe: 9, durationMin: 150 })),
 };
 
 /** Every sentence a card on Progress can print, for one log. */
-function proseFor(sessions: Session[]): { card: string; text: string }[] {
+function proseFor(sessions: Session[]): { card: string; text: string | null }[] {
   const state = deriveClimberState(sessions, { today: TO });
   const rows = pyramid(state.boulder, 'V');
   const out: { card: string; text: string | null }[] = [
@@ -121,6 +201,19 @@ function proseFor(sessions: Session[]): { card: string; text: string }[] {
     { card: 'Rope styles', text: describeRopeSplit(ropeSplit(sessions)) },
     { card: 'Ladders', text: describeLadders(ladders(sessions, 'V')) },
     { card: 'Grade pyramid', text: describePyramid(readPyramid(rows, state.boulder.totalSends), (g) => g) },
+    { card: 'Venues', text: describeVenues(venues({ sessions })) },
+    { card: 'Trips', text: describeTrips(trips({ sessions })) },
+    {
+      card: 'Vitality history',
+      text: describeVitalityHistory(vitalityHistory({ sessions, endurance: 40, to: TO })),
+    },
+    { card: 'Thin log', text: describeCoverage(coverage(sessions, addDays(TO, -89), TO)) },
+    {
+      card: 'Injury history',
+      text: describeInjuryHistory(
+        injuryHistory({ part: 'elbow', since: addDays(TO, -89), sessions, to: TO }),
+      ),
+    },
     { card: 'Grade progression', text: projectGrade(weeklyProgression(sessions, 'V', 12, TO), 'V').summary },
     { card: 'Training state', text: diagnose({ state, sessions, today: TO }).explanation },
     ...diagnose({ state, sessions, today: TO }).evidence.map((e) => ({
@@ -132,7 +225,30 @@ function proseFor(sessions: Session[]): { card: string; text: string }[] {
       text: line,
     })),
   ];
-  return out.filter((row): row is { card: string; text: string } => typeof row.text === 'string');
+  return out;
+}
+
+/** The same, with the cards that had nothing to say dropped. */
+const said = (rows: { card: string; text: string | null }[]) =>
+  rows.filter((row): row is { card: string; text: string } => typeof row.text === 'string');
+
+/**
+ * Cards a builder offers and never fills, for any shape in `SHAPES`.
+ *
+ * Taken as a function so the check can be pointed at a builder with a known
+ * silent card and shown to find it. Left as a loop over the real one it was
+ * a rule with nothing to catch, and the battery said so.
+ */
+function silentIn(build: (sessions: Session[]) => { card: string; text: string | null }[]): string[] {
+  const spoke = new Set<string>();
+  const offered = new Set<string>();
+  for (const sessions of Object.values(SHAPES)) {
+    for (const row of build(sessions)) {
+      offered.add(row.card);
+      if (typeof row.text === 'string') spoke.add(row.card);
+    }
+  }
+  return [...offered].filter((card) => !spoke.has(card));
 }
 
 /**
@@ -152,7 +268,7 @@ function voiceFor(sessions: Session[]): { card: string; text: string }[] {
 }
 
 const EVERY = Object.entries(SHAPES).flatMap(([shape, sessions]) =>
-  [...proseFor(sessions), ...voiceFor(sessions)].map((row) => ({ shape, ...row })),
+  [...said(proseFor(sessions)), ...voiceFor(sessions)].map((row) => ({ shape, ...row })),
 );
 
 /**
@@ -293,6 +409,14 @@ describe('the checks themselves', () => {
     expect(found.filter(([, n]) => !Number.isFinite(n))).toHaveLength(1);
   });
 
+  it('the silent-card rule finds a card that never speaks', () => {
+    const withAQuietOne = (sessions: Session[]) => [
+      ...proseFor(sessions),
+      { card: 'Never speaks', text: null },
+    ];
+    expect(silentIn(withAQuietOne)).toEqual(['Never speaks']);
+  });
+
   it('a grown tally is not the set it declares', () => {
     const grown = { good: 1, tender: 0, sore: 0, poor: NaN };
     expect(Object.keys(grown).sort()).not.toEqual(['good', 'sore', 'tender']);
@@ -310,7 +434,31 @@ describe('every sentence on Progress, against every shape of log', () => {
     expect(new Set(EVERY.map((r) => r.shape)).size).toBe(Object.keys(SHAPES).length);
 
     const cards = new Set(EVERY.filter((r) => !r.card.startsWith('coach ')).map((r) => r.card));
-    expect(cards.size, 'cards on Progress').toBeGreaterThan(12);
+    // Named, not counted (PLAN.md M250). A threshold of twelve was still met
+    // with a describer quietly removed, which the battery found by removing
+    // one. Adding a card here is the price of adding it above.
+    for (const card of [
+      'Consistency',
+      'Where the ratio has been',
+      'Against the four weeks before',
+      'How you were feeling',
+      'What you have been loading',
+      'How you rest',
+      'Sends per try',
+      'Angles',
+      'Rope styles',
+      'Ladders',
+      'Grade pyramid',
+      'Venues',
+      'Trips',
+      'Vitality history',
+      'Thin log',
+      'Injury history',
+      'Grade progression',
+      'Training state',
+    ]) {
+      expect(cards.has(card), `${card} is not in the corpus`).toBe(true);
+    }
 
     const tips = new Set(
       EVERY.filter((r) => r.card.startsWith('coach ')).map((r) => r.card.split(' · ')[0]),
@@ -360,6 +508,17 @@ describe('every sentence on Progress, against every shape of log', () => {
         expect(Object.keys(tally).sort(), `${name} — ${shape}`).toEqual(KEYS[name]);
       }
     }
+  });
+
+  /**
+   * A card wired into the corpus and silent for every shape is a card the
+   * checks below never see — and it looks exactly like a card that is fine
+   * (PLAN.md M250). `describeTrips` and `describeVenues` returned null for
+   * all eleven shapes until one of them grew four days on rock at a named
+   * crag; nothing failed, and nothing was being checked either.
+   */
+  it('gives every card in it something to say, at least once', () => {
+    expect(silentIn(proseFor), 'never speaks for any shape of log').toEqual([]);
   });
 
   /** Nothing here may read the clock or a random number. */

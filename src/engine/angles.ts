@@ -122,6 +122,15 @@ export function describeAngles(a: Angles, display: GradeDisplay = DEFAULT_DISPLA
   const show = (s: AngleSide) => displayGrade(a.scale, s.tally.best!, display);
   const gap = gradeOrdinal(a.scale, pair.best.tally.best!) - gradeOrdinal(a.scale, pair.worst.tally.best!);
   const both = `${show(pair.best)} ${ANGLE_LABEL[pair.best.angle].toLowerCase()}, ${show(pair.worst)} ${ANGLE_LABEL[pair.worst.angle].toLowerCase()}`;
-  if (gap === 0) return `${coverage}. ${both} — level across the angles you have tagged.`;
+  // Level means there are no ends, so naming two of them is a pair the log
+  // does not have (PLAN.md M250). With four angles all at V6 it read
+  // **"V6 slab, V6 roof — level across the angles you have tagged"**, which
+  // implies the other two were something else. If `best` and `worst` share a
+  // grade then every side between them does, so the grade is said once and
+  // the angles are counted.
+  if (gap === 0) {
+    const tagged = a.sides.filter((side) => side.tally.best !== null).length;
+    return `${coverage}. ${show(pair.best)} on ${tagged === 2 ? 'both' : `all ${tagged}`} of the angles you have tagged — level across them.`;
+  }
   return `${coverage}. ${both} — ${gap} ${gap === 1 ? 'rung' : 'rungs'} between them. Whether that matters is yours to judge: the log knows what you tagged, and nothing about which angles your wall actually has.`;
 }

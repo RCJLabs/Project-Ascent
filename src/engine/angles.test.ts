@@ -119,10 +119,34 @@ describe('what it says', () => {
     expect(say([many('V6', 'roof', 6), many('V5', 'slab', 6)])).toMatch(/1 rung between them/);
   });
 
+  /**
+   * And names no pair of ends when there are none (PLAN.md M250). It read
+   * "V5 roof, V5 slab — level across the angles you have tagged", which on
+   * four tagged angles all at the same grade implies the other two were
+   * something else.
+   */
   it('says level rather than nought rungs', () => {
     const out = say([many('V5', 'roof', 6), many('V5', 'slab', 6)])!;
-    expect(out).toMatch(/level across the angles you have tagged/);
+    expect(out).toMatch(/level across them/);
+    expect(out).toMatch(/V5 on both of the angles you have tagged/);
     expect(out).not.toMatch(/0 rungs/);
+    // The grade is said once, not once per end.
+    expect(out.match(/V5/g)).toHaveLength(1);
+  });
+
+  /**
+   * And counts the angles it can read a grade from, not every angle with a
+   * climb tagged on it. An angle carrying only attempts is tagged and has no
+   * best, so `sides.length` would say three where the sentence means two.
+   */
+  it('counts the angles it has a grade for, not the ones with a tag', () => {
+    const out = say([
+      many('V5', 'roof', 6),
+      many('V5', 'slab', 6),
+      climb('V7', 'overhang', 6, { result: 'attempt' }),
+    ])!;
+    expect(out).toMatch(/V5 on both of the angles you have tagged/);
+    expect(out).not.toMatch(/all 3/);
   });
 
   /**
