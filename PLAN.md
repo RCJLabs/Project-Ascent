@@ -14110,6 +14110,20 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   four were about. One rule was attempted and abandoned rather than fudged green. See the entry at
   the end of this document.*
 
+- **M249 — the coach's voice, in the corpus.** M248 gave Progress's fourteen cards a corpus and a
+  set of properties. `buildTips` — thirty-odd rules, a headline and a body each, the app's voice on
+  Home and the whole of Coach's Corner — had none. Adding it did not fail a check; it printed the
+  observations for eleven shapes of log side by side, and **two of them were wrong in the way the
+  last five milestones have been**. A climber logging once a week is told *"The load ratio needs more
+  training weeks than yours have"* above a body that opens *"You have the history for it"*. A
+  climber with no program is told *"Your program does not prescribe drills"*, because M132's fix
+  folded three states into two and `Boolean(program?.…)` turned *no program* into *a program that
+  prescribes nothing*.
+  *Small, and it is one headline, one branch and one coercion.*
+  ***Built, and the corpus test had to be taught to name its sources.*** *Dropping the coach from it
+  entirely left every check passing over what was left — a total is not a probe. See the entry at the
+  end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -15756,3 +15770,69 @@ so in the file, rather than allow-listed green.
 M247 left it.
 
 **6,377 tests over 377 files.** First load 134.43KB against a 135.4KB budget.
+
+## M249 — the coach's voice, in the corpus
+
+M248 put Progress's fourteen cards under a set of properties every sentence has to have. The coach
+was not in it, and the coach is the larger surface: thirty-odd rules, a headline and a body apiece,
+read off the same log, shown on Home and filling Coach's Corner.
+
+Adding it broke none of the checks. What it did was print every observation for eleven shapes of log
+in one place — and two of them were wrong in exactly the way M244 to M247 were wrong.
+
+### A headline arguing with the body under it
+
+```
+Enough weeks logged, not enough training days in them        ← now
+The load ratio needs more training weeks than yours have     ← was
+
+You have the history for it — what it also needs is 6 days of scored training
+inside any four-week window, and at your current rate there are 4.
+```
+
+The headline blamed the weeks. The body opens by saying the weeks are fine. The comment directly
+above the branch says the same thing the body does — *"Span is there and density is not, which is a
+fact about the schedule rather than about how long they have been at it"* — and the test file for
+this rule measures it: *"one session a week is four scored days in it — for ever"*. Three places in
+the repository knew, and the one sentence a climber reads said the opposite.
+
+It is the M245 shape again: a card contradicting itself in consecutive clauses, and the correct
+statement already written down a few lines away.
+
+### Three states, folded into two
+
+M132 fixed the drill tip asserting *"your program prescribes a drill each week"* to the six programs
+that prescribe none. Its note says the fix was "to say the true thing to each of them". It said the
+true thing to two of them:
+
+```ts
+input.prescribesDrills === true ? 'Your program prescribes…' : 'Your program does not prescribe…'
+```
+
+There is a third state. `useTips` computed the flag as `Boolean(program?.sessionTypes.some(…))`, so
+**no program at all** arrived as `false` and a climber running nothing was told what their program
+does. This tip opens at eight sessions with no drill logged, which is precisely where a climber who
+has not started a program tends to be — so the branch naming one was reaching the readers least
+able to make sense of it.
+
+`undefined` now means what it says. The hook passes it when there is no program, the tip has a third
+sentence, and both halves are tested: the engine for the three bodies, and `useTips` from the screen
+for the wiring, because the engine can be right about all three while the hook hands it the wrong
+fact forever.
+
+### The corpus test that could not tell it had shrunk
+
+The battery put a mutant in the test file itself — drop `voiceFor` from the corpus — and it
+**survived**. Every check went on passing over the Progress cards that were left, and
+`EVERY.length > 80` was already satisfied without a single coach sentence in it.
+
+A total is not a probe. The corpus test now counts its sources separately: more than twelve distinct
+Progress cards, more than five distinct coach observations, and a body for every headline. Dropping
+either half fails it by name.
+
+**5 mutants caught, sanity no-op survived.** The headline restored, the third state folded back, the
+no-program body naming a program, the hook's coercion, and the corpus silently shrinking all die.
+
+**6,380 tests over 377 files.** First load 134.43KB against a 135.4KB budget. Both sentences read
+back from a browser, in both themes at 430px and 1280px, with the fixture carrying rest days so the
+drill observation is not crowded off the board by the rest one.

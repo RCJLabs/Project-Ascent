@@ -213,10 +213,10 @@ describe('the coach stops promising a drill nobody prescribes', () => {
       newSession(`2026-0${(i % 8) + 1}-0${(i % 8) + 1}`, 0, { completed: true }),
     );
 
-  const drillTip = (prescribesDrills: boolean) => {
+  const drillTip = (prescribesDrills: boolean | undefined) => {
     const sessions = eight();
     const state = deriveClimberState(sessions);
-    const tips = buildTips({ state, sessions, prescribesDrills });
+    const tips = buildTips({ state, sessions, ...(prescribesDrills === undefined ? {} : { prescribesDrills }) });
     return tips.find((t) => t.id === 'domain:drills') ?? null;
   };
 
@@ -239,6 +239,27 @@ describe('the coach stops promising a drill nobody prescribes', () => {
     expect(drillTip(false)?.action?.href).toBe('/drills');
   });
 
+  /**
+   * And the third state, which M132 folded into the second (PLAN.md M249).
+   *
+   * No program at all is not a program that prescribes nothing. This tip
+   * opens at eight sessions with no drill logged, which is exactly where a
+   * climber who has not started a program tends to be — so the branch
+   * naming one was reaching the climbers least able to make sense of it.
+   */
+  it('names no program to a climber who is not running one', () => {
+    const tip = drillTip(undefined);
+    expect(tip?.body).toMatch(/not running a program/);
+    expect(tip?.body, 'nothing about what "your program" does').not.toMatch(/[Yy]our program/);
+    expect(tip?.action?.href).toBe('/drills');
+  });
+
+  it('says a different thing in each of the three states', () => {
+    const said = [drillTip(true), drillTip(false), drillTip(undefined)].map((t) => t?.body);
+    expect(said.every((b) => typeof b === 'string')).toBe(true);
+    expect(new Set(said).size, said.join('\n\n')).toBe(3);
+  });
+
   it('says nothing at all to a climber who has done one', () => {
     const sessions = [
       ...eight(),
@@ -258,14 +279,14 @@ describe('the coach stops promising a drill nobody prescribes', () => {
    * forever.
    */
   describe('reading the running program', () => {
-    async function coach(programId: string): Promise<void> {
+    async function coach(programId: string | null): Promise<void> {
       for (const [i, session] of eight().entries()) {
         await putSession({ ...session, id: `s${i}`, date: `2026-01-0${i + 1}` } as never);
       }
       await hydrate();
       useProfile.setState({
         activeProgramId: programId,
-        startDates: { [programId]: '2026-01-01' },
+        startDates: programId === null ? {} : { [programId]: '2026-01-01' },
         plans: {},
         weekOverrides: {},
         adaptations: {},
@@ -285,6 +306,18 @@ describe('the coach stops promising a drill nobody prescribes', () => {
       // The Cruiser has four session types and not one `drillsByWeek` entry.
       await coach('the_cruiser');
       expect(screen.getByText(/does not prescribe drills/)).toBeTruthy();
+    });
+
+    /**
+     * And the wiring for the third state. `Boolean(program?.…)` turned "no
+     * program" into "a program prescribing nothing" before the hook ever
+     * reached the engine, so the engine could be right about all three and
+     * the screen still say the wrong one (PLAN.md M249).
+     */
+    it('tells a climber running nothing that they are running nothing', async () => {
+      await coach(null);
+      expect(screen.getByText(/not running a program/)).toBeTruthy();
+      expect(screen.queryByText(/does not prescribe drills/)).toBeNull();
     });
   });
 });

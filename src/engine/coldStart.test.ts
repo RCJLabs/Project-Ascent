@@ -235,9 +235,18 @@ describe('the climber the ratio will never fit', () => {
     }
   });
 
+  /**
+   * The headline names density, because density is what is short
+   * (PLAN.md M249). It used to read "needs more training weeks than yours
+   * have" — directly against the body under it, *"You have the history for
+   * it"*, and against the comment above the branch, and against the
+   * measurement in the test above this one: a year of once-a-week has all
+   * the weeks the ratio wants and never enough days inside them.
+   */
   it('is told that, rather than counted down at', () => {
     const tip = cold(log(365, ONCE_A_WEEK))!;
-    expect(tip.headline).toBe('The load ratio needs more training weeks than yours have');
+    expect(tip.headline).toBe('Enough weeks logged, not enough training days in them');
+    expect(tip.headline, 'the weeks are not the problem').not.toMatch(/more .*weeks/);
     expect(tip.body).not.toMatch(/more days/);
     expect(tip.body).toContain(`there are ${4}`);
     expect(tip.action?.href).toBe('/progress');

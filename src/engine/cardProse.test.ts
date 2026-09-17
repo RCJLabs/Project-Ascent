@@ -3,6 +3,7 @@ import type { RestChecklist, Session } from '@/db/sessions';
 import { angles, describeAngles } from './angles';
 import { compareBlocks, describeBlocks } from './blockCompare';
 import { checkInHistory, describeCheckIns } from './checkIns';
+import { buildTips } from './coach';
 import { buildHeatGrid, describeConsistency } from './consistency';
 import { conversionTrend, describeConversion } from './conversion';
 import { addDays } from './dates';
@@ -134,8 +135,24 @@ function proseFor(sessions: Session[]): { card: string; text: string }[] {
   return out.filter((row): row is { card: string; text: string } => typeof row.text === 'string');
 }
 
+/**
+ * The coach, which is the same prose problem with a wider mouth
+ * (PLAN.md M249).
+ *
+ * `buildTips` is the app's voice on Home — a headline and a body per
+ * observation, chosen from thirty-odd rules against the same log every card
+ * on Progress reads. It had no corpus at all.
+ */
+function voiceFor(sessions: Session[]): { card: string; text: string }[] {
+  const state = deriveClimberState(sessions, { today: TO });
+  return buildTips({ state, sessions }).flatMap((tip) => [
+    { card: `coach ${tip.id} · headline`, text: tip.headline },
+    { card: `coach ${tip.id} · body`, text: tip.body },
+  ]);
+}
+
 const EVERY = Object.entries(SHAPES).flatMap(([shape, sessions]) =>
-  proseFor(sessions).map((row) => ({ shape, ...row })),
+  [...proseFor(sessions), ...voiceFor(sessions)].map((row) => ({ shape, ...row })),
 );
 
 /**
@@ -283,10 +300,26 @@ describe('the checks themselves', () => {
 });
 
 describe('every sentence on Progress, against every shape of log', () => {
-  it('has a corpus to check', () => {
-    expect(EVERY.length).toBeGreaterThan(80);
+  /**
+   * Named by source, because a total is not a probe (PLAN.md M195). A count
+   * over eighty was already satisfied by the Progress cards alone, so the
+   * coach could be dropped from the corpus and every check below would go
+   * on passing over what was left — which is what the battery found.
+   */
+  it('has a corpus to check, from every source it claims', () => {
     expect(new Set(EVERY.map((r) => r.shape)).size).toBe(Object.keys(SHAPES).length);
-    expect(new Set(EVERY.map((r) => r.card)).size).toBeGreaterThan(12);
+
+    const cards = new Set(EVERY.filter((r) => !r.card.startsWith('coach ')).map((r) => r.card));
+    expect(cards.size, 'cards on Progress').toBeGreaterThan(12);
+
+    const tips = new Set(
+      EVERY.filter((r) => r.card.startsWith('coach ')).map((r) => r.card.split(' · ')[0]),
+    );
+    expect(tips.size, `coach observations: ${[...tips].join(', ')}`).toBeGreaterThan(5);
+    // Both halves of every tip, not just its headline.
+    expect(EVERY.filter((r) => r.card.endsWith('· body')).length).toBe(
+      EVERY.filter((r) => r.card.endsWith('· headline')).length,
+    );
   });
 
   for (const check of CHECKS) {

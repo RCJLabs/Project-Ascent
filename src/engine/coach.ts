@@ -319,7 +319,12 @@ function coldStart({ state }: CoachInput): Tip | null {
     signature: `rate:${scoredDays}`,
     tone: 'neutral',
     weight: 55,
-    headline: 'The load ratio needs more training weeks than yours have',
+    // Not "more weeks than yours have" (PLAN.md M249). The comment above
+    // this branch has always said what it is — *span is there and density
+    // is not* — and the body says it too: "You have the history for it."
+    // The headline said the opposite of both, on the card directly above
+    // the sentence contradicting it.
+    headline: 'Enough weeks logged, not enough training days in them',
     body: `You have the history for it — what it also needs is ${MIN_CHRONIC_DAYS} days of scored training inside any four-week window, and at your current rate there are ${scoredDays}. That is not a fault and it is not a reason to train more than suits you; it is a number that simply does not apply at this frequency. The grade pyramid, the benchmarks and the consistency grid all read your log as it is.`,
     action: { label: 'See what does read it', href: '/progress' },
   };
@@ -1014,10 +1019,18 @@ const DOMAINS: Domain[] = [
     // every week; the fix is to say the true thing to each of them, and
     // to point the second sort at the library, which is now somewhere a
     // drill can actually be chosen from.
+    // Three states, where M132 left two (PLAN.md M249). Its own note says
+    // the fix was "to say the true thing to each of them", and `undefined`
+    // — no program at all — fell into the branch naming one. A climber
+    // eight sessions in with no program was told *"Your program does not
+    // prescribe drills"* about a program they have never had, which is the
+    // state this tip is most likely to find them in.
     body: (input) =>
-      input.prescribesDrills === true
-        ? 'Technique is the only stat that will not move for you on volume alone. Your program prescribes a drill each week and it takes ten minutes of a session you are already having.'
-        : 'Technique is the only stat that will not move for you on volume alone. Your program does not prescribe drills, so this one is on you: the library has a hundred and fifty-odd, twelve of which need no wall at all, and any of them can go on today.',
+      input.prescribesDrills === undefined
+        ? 'Technique is the only stat that will not move for you on volume alone. You are not running a program, so nothing is going to put one in your week for you: the library has a hundred and fifty-odd, twelve of which need no wall at all, and any of them can go on today.'
+        : input.prescribesDrills
+          ? 'Technique is the only stat that will not move for you on volume alone. Your program prescribes a drill each week and it takes ten minutes of a session you are already having.'
+          : 'Technique is the only stat that will not move for you on volume alone. Your program does not prescribe drills, so this one is on you: the library has a hundred and fifty-odd, twelve of which need no wall at all, and any of them can go on today.',
     action: (input) =>
       input.prescribesDrills === true
         ? { label: 'See this week', href: '/train' }

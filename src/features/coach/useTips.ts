@@ -95,9 +95,14 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
       // Whether this climber's program ever puts a drill in a week, so the
       // drill tip stops asserting one for the six programs that do not
       // (PLAN.md M132).
-      prescribesDrills: Boolean(
-        program?.sessionTypes.some((t) => Object.keys(t.drillsByWeek ?? {}).length > 0),
-      ),
+      // `undefined` when there is no program, which is a third thing and not
+      // a program that happens to prescribe nothing (PLAN.md M249). `Boolean`
+      // collapsed the two, so a climber running nothing was told what their
+      // program does.
+      prescribesDrills:
+        program === undefined
+          ? undefined
+          : program.sessionTypes.some((t) => Object.keys(t.drillsByWeek ?? {}).length > 0),
       diagnosis: diagnose({
         display,
         state,
