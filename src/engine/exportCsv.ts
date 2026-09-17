@@ -86,6 +86,11 @@ export const SESSION_HEADER = [
   'Fingers',
   'Sleep',
   'Answers',
+  // Who you climbed with (PLAN.md M237). Here because this sheet's promise
+  // is the same history back out, and a name the climber wrote down is part
+  // of it. `backup.json` carries it on the raw record and is what a restore
+  // reads; this is the spreadsheet view of the same fact.
+  'With',
   'Notes',
 ] as const;
 
@@ -219,6 +224,10 @@ export function sessionsCsv(input: SessionCsvInput): string {
       // because `hardestGradeAttempted=V7` in a spreadsheet is a column
       // name leaking into a value.
       answersOf(session),
+      // Semicolons rather than commas: a comma inside a cell is a quoting
+      // problem every spreadsheet solves differently, and two names is the
+      // common case.
+      cell((session.partners ?? []).join('; ')),
       cell(session.notes),
     ]);
   }

@@ -194,6 +194,25 @@ export interface Session {
   restChecklist?: RestChecklist;
   notes?: string;
   /**
+   * Who you climbed with (PLAN.md M237).
+   *
+   * Roped climbing has a second person in it by definition, and nothing in
+   * this model has ever held one. Free text, optional, per session — you
+   * climb a session with someone, and a field per climb would be twenty
+   * boxes on a bouldering night that nobody fills.
+   *
+   * **A name here is personal data about somebody who never installed this
+   * app.** It rides the backup and the CSV, which are the climber's own data
+   * going to their own disk — a backup that dropped it would silently lose
+   * history. It never rides a **share card**, which is a picture made to be
+   * posted, and `sharedNames.test.ts` is the rule that says so.
+   *
+   * Absent means nobody wrote one down, which is not the same as climbing
+   * alone — the same distinction `ropeStyle` makes about an unanswered rope
+   * style, and the reason `engine/partners.ts` states coverage first.
+   */
+  partners?: string[];
+  /**
    * A planned deload week.
    *
    * **Included** in training-load maths, deliberately: a lighter week is

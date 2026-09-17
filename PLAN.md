@@ -13969,6 +13969,11 @@ which is the right shape.*
   a second person in it by definition — `ropeStyle.ts` already reasons about *"a partner who does
   not lead"* as a constraint it cannot see.
   *Small, and it is one optional field plus whatever chooses to read it.*
+  ***Built, and the premise held exactly — which is rare in this list.*** *One optional field per
+  session, and the whole design is the privacy of it: a name is personal data about somebody who
+  never installed this app. It rides the backup and the spreadsheet, because those are the
+  climber's own data going to their own disk; it never rides a share card, which is checked against
+  the rendered SVG and against the source. See the entry at the end of this document.*
 
 - **M238 — the app has now met the climber the content never could.** `content/types.ts` explains
   why a dose does not move on its own: *"add 2.5kg if last week's top set felt solid" depends on a
@@ -14747,3 +14752,78 @@ every state — nothing recorded, mid-ladder, past the top, a grade in V and the
 floor.
 
 **6,203 tests over 358 files.**
+
+## M237 — who you climbed with
+
+The premise held exactly, which is rarer in this list than it should be. A `Climb` holds grade,
+scale, count, result, style, angle, rope style and a name; a `Session` holds mode, RPE, duration,
+drill, exercises, field answers, a check-in, project attempts, a rest checklist and notes.
+**Neither has ever held a person.** Every occurrence of "partner" in `src/` was prose in the
+glossary or a guide, and `ropeStyle.ts` had already been reasoning about one it could not see —
+*"there are real reasons a log is all top-rope: an autobelay gym, a partner who does not lead, a
+shoulder"* — and then saying nothing, because it had no way to know.
+
+### The whole design is the privacy of it
+
+A partner's name is the one thing a training log can hold that is **personal data about somebody
+who never installed the app and was never asked**. That is a different kind of field from every
+other one here, and it decided the shape:
+
+- **It rides the backup and the spreadsheet.** Those are the climber's own data going to their own
+  disk, and a backup that quietly dropped a field would be a backup that loses history. `With` is a
+  column on `sessions.csv`, semicolon-separated because a comma inside a cell is a quoting problem
+  every spreadsheet solves differently and two names is the common case.
+- **It never rides a share card.** A card is a picture made to be posted. That is the one hard rule
+  of the milestone and it is checked two ways — against the rendered SVG of both cards that read
+  the log, and against `shareCard.ts` itself, because a card type added next year would pass the
+  first check by not existing yet.
+- **It is one free-text field and not a contact.** No address book, no identifier, no account. A
+  first name or a nickname is what a climber writes in a paper logbook, and the app knows no more
+  than that.
+- **It reports and never scores.** A row is a name, a count and a date, and a test pins that those
+  are the only three keys. How often you climb with someone is a fact about your log; who you climb
+  *best* with is a judgement about a person who is not here to answer it.
+
+Per session rather than per climb: per-climb would be twenty fields on a bouldering session, nobody
+would fill one, and the question worth asking is about sessions anyway.
+
+### Two spellings are one person
+
+"Sam" and "sam" are the same partner, so adding, removing and tallying are all case-insensitive —
+and the spelling **already there** wins. Re-casing somebody's name because of how it was typed the
+second time is the app correcting a climber about their own friend.
+
+The suggestions are ordered by recency, not frequency: the person you climbed with on Tuesday is
+the likeliest answer on Thursday, and a list sorted by lifetime count would bury a new partner
+under an old one for months.
+
+### An empty field is not a session climbed alone
+
+`unsaid` counts the completed sessions that named nobody, and the year page says the coverage
+before it says anything else — *"Named on 8 of 11 sessions."* Every session logged before this
+milestone is unsaid, and a tally that let a climber read the silence as solo climbing would be
+worse than no tally. It is the same distinction `ropeStyle.ts` makes about an absent rope style.
+
+The reading lives on the year page beside the trips, which is also the page with the share button
+on it — so the screen that shows the names is the screen whose card provably carries none.
+
+### What the battery found
+
+**31 mutants, all caught, sanity no-op survived**, but only after one real survivor. Deleting the
+line that advances a partner's most-recent date changed nothing, because every fixture happened to
+list each person's newest session first. The order a log arrives in is not this module's to rely on
+— `useAllSessions` yields whatever the store holds and the year page hands that slice over unsorted
+— so the fix was a test that the tally reads the same forwards and reversed, not a fixture tweak.
+
+### What the browser found
+
+The X on a chip wrapped under a two-word name and doubled the chip's height. jsdom has no layout,
+so nothing in 6,243 tests could have seen it.
+
+### Measured
+
+**135.74KB against a 136.9 ceiling.** Browser-verified in both themes at 430px and 1280px: the
+empty card with suggestions, a name typed, two names added and read back out of IndexedDB after a
+reload, the year tally, and a second year with a different partner in it.
+
+**6,243 tests over 363 files.**

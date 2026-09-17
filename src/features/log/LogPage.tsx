@@ -74,6 +74,13 @@ import { useSkillEffects } from '@/store/skills';
 import { useProfile, type Injury } from '@/store/profile';
 import type { BodyPart } from '@/content/bodyParts';
 import { useSessions, allSessions } from '@/store/sessions';
+import {
+  NAME_LIMIT,
+  cleanName,
+  knownPartners,
+  withPartner,
+  withoutPartner,
+} from '@/engine/partners';
 import { againstPrescription, lastLogged } from '@/engine/exerciseLog';
 import { circuitPlan } from '@/engine/circuit';
 import { circuitSubject, protocolSubject, type TimerSubject } from '@/engine/timer';
@@ -1290,6 +1297,8 @@ function SessionEditor({
         </>
       )}
 
+      {full && <PartnersCard session={session} patch={patch} />}
+
       {full && (
       <Card title="Notes">
         <TextArea
@@ -2421,6 +2430,107 @@ function CorrectionCard({
         recorded. The duration you trained for is kept.
       </p>
       {message && <p className="text-sm text-positive mt-2">{message}</p>}
+    </Card>
+  );
+}
+
+/**
+ * Who you climbed with (PLAN.md M237).
+ *
+ * Chips of everyone already in the log, most recent first, plus a box. So
+ * recording a partner is one tap after the first time and a stranger is two
+ * seconds — which is the difference between a field that gets used and a
+ * field that sits empty for a year.
+ *
+ * Behind the *More* fold with the notes and the photos, because it is the
+ * same kind of thing: the part of a session worth writing down and never the
+ * part that has to be. Nothing in the app asks for it, nothing counts a
+ * session as incomplete without it, and an empty field means nobody wrote one
+ * down rather than that anyone climbed alone.
+ */
+function PartnersCard({
+  session,
+  patch,
+}: {
+  session: Session;
+  patch: (fields: Partial<Session>) => void;
+}) {
+  const byDate = useSessions((s) => s.byDate);
+  const [typed, setTyped] = useState('');
+  const on = session.partners ?? [];
+
+  // Everyone in the log minus everyone already on this session: a chip that
+  // toggles off is the row below, and offering it twice is two controls for
+  // one fact.
+  const suggestions = useMemo(
+    () =>
+      knownPartners(allSessions(byDate)).filter(
+        (name: string) => !on.some((p) => p.toLowerCase() === name.toLowerCase()),
+      ),
+    [byDate, on],
+  );
+
+  const add = (raw: string) => {
+    const next = withPartner(on, raw);
+    if (next.length !== on.length) patch({ partners: next });
+    setTyped('');
+  };
+
+  return (
+    <Card title="Who you climbed with">
+      {on.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {on.map((name) => (
+            <Chip
+              key={name}
+              active
+              // Inline-flex, or the X wraps under a two-word name and the
+              // chip doubles in height. Caught in the browser, not in jsdom,
+              // which has no layout to wrap.
+              className="inline-flex items-center gap-1.5"
+              onClick={() => patch({ partners: withoutPartner(on, name) })}
+            >
+              {name}
+              <X size={13} className="-mr-0.5 shrink-0" />
+            </Chip>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <Input
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              add(typed);
+            }
+          }}
+          maxLength={NAME_LIMIT}
+          placeholder="A name"
+          aria-label="Who you climbed with"
+          className="flex-1"
+        />
+        <Button variant="outline" onClick={() => add(typed)} disabled={cleanName(typed) === null}>
+          <Plus size={15} /> Add
+        </Button>
+      </div>
+
+      {suggestions.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {suggestions.slice(0, 8).map((name: string) => (
+            <Chip key={name} active={false} onClick={() => add(name)}>
+              {name}
+            </Chip>
+          ))}
+        </div>
+      )}
+
+      <p className="text-xs text-ink-soft mt-2 leading-relaxed">
+        Stays on your phone. It rides your backup and your CSV, and never a
+        share card.
+      </p>
     </Card>
   );
 }

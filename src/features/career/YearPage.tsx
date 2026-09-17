@@ -27,6 +27,7 @@ import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
 import { pickPhotos } from '@/engine/photos';
 import { describeTrips, realTrips, tripName, trips } from '@/engine/trips';
+import { partnerTally, unsaid } from '@/engine/partners';
 import { PhotoTile, useMediaOwners } from '@/features/media/Thumbnails';
 
 /**
@@ -98,6 +99,16 @@ function YearReview({ year: requested }: { year?: string }) {
     () => pickPhotos({ owners, sessions, projects, from: review.from, to: review.to, limit: 12 }),
     [owners, sessions, projects, review.from, review.to],
   );
+
+  // Who the year was climbed with (PLAN.md M237). Scoped to the year the way
+  // the trips are, because a partner list spanning every year a log has ever
+  // held is not a review of this one.
+  const inYear = useMemo(
+    () => sessions.filter((s) => s.date >= review.from && s.date <= review.to),
+    [sessions, review.from, review.to],
+  );
+  const partners = useMemo(() => partnerTally(inYear), [inYear]);
+  const nameless = useMemo(() => unsaid(inYear), [inYear]);
 
   return (
     <>
@@ -221,6 +232,33 @@ function YearReview({ year: requested }: { year?: string }) {
                     session — &ldquo;day of the trip&rdquo; — says where one starts instead.
                   </p>
                 )}
+              </Card>
+            )}
+
+            {partners.length > 0 && (
+              <Card title="Who you climbed with">
+                <ul className="grid grid-cols-1 gap-2.5">
+                  {partners.map((partner) => (
+                    <li key={partner.name} className="flex items-baseline gap-2 text-sm">
+                      <span className="flex-1 min-w-0 truncate font-semibold">{partner.name}</span>
+                      <span className="shrink-0 text-ink-soft tabular-nums">
+                        {partner.sessions} {partner.sessions === 1 ? 'session' : 'sessions'} &middot;{' '}
+                        {fromKey(partner.last).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {/* Coverage before anything else, because the number above is
+                    only ever a count of what was written down. */}
+                <p className="text-xs text-ink-soft mt-3 leading-relaxed">
+                  Named on {review.totals.sessions - nameless} of {review.totals.sessions}{' '}
+                  {review.totals.sessions === 1 ? 'session' : 'sessions'}. An empty field is one
+                  nobody filled, not a session climbed alone &mdash; and a name never leaves on a
+                  share card.
+                </p>
               </Card>
             )}
 
