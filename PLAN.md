@@ -14157,6 +14157,9 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   11 − 6 and gets 5. Naming the weeks instead of counting them (*"Nothing is logged for weeks 7 to
   10"*) removes the arithmetic and is strictly more informative.
   *Small, and it is one sentence.*
+  ***Built, and it says more than the count did.*** *A named span carries the same four weeks plus
+  where they sat, and the singular case — one missed week — stopped needing a plural rule at all.
+  See the entry at the end of this document.*
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -16008,3 +16011,46 @@ the ternary that actually enforces it.
 **6,397 tests over 379 files.** First load 134.42KB against a 135.4KB budget. Read back from a
 browser in both themes at 430px and 1280px, in all three states: the requirement missing, only the
 helpful kit missing, and nothing missing at all — with the Start button present in every one.
+
+## M252 — a gap counted one way and read another
+
+The other thing the Train audit turned up, left standing while M251 shipped so each milestone stayed
+one idea.
+
+```
+Nothing is logged for 4 weeks of this block, so it has moved on without you:
+today is week 11, and the last week you trained was 6.
+```
+
+The engine is right. `missedWeeks = nowWeek - lastTrainedWeek - 1`, and the comment where it is
+computed explains itself: *"Whole weeks with nothing in them: the week the last session fell in is
+not missed, and neither is the one in progress."* Week 6 has training in it and week 11 is still
+running, so four weeks are missed and the arithmetic is sound.
+
+It is the **sentence** that is wrong, because it hands the reader two numbers and a third that does
+not follow from them. Anyone who checks subtracts 6 from 11, gets 5, and finds the app saying 4.
+The convention that reconciles them is written in the engine and nowhere a climber can see it.
+
+### Naming beats counting
+
+```
+Nothing is logged for weeks 7 to 10 of this block, so it has moved on without you:
+today is week 11, and the last week you trained was 6.
+```
+
+Every number now reconciles against every other: 7 is after 6, 10 is before 11, and the span is four
+weeks for anyone who wants to count them. Nothing has to be taken on trust, and the sentence says
+**more** than it did — the count never said *which* weeks were empty, which is the thing the two
+offers underneath are about.
+
+The singular falls out rather than needing a rule: one missed week is `week 10`, not `weeks 10 to
+10`, and `weeksWord` is no longer involved in this sentence at all. It stays for the rewind option,
+where "it costs 2 weeks you have already done" sits beside the two week numbers it was derived from
+and does reconcile.
+
+**5 mutants caught, sanity no-op survived.** Starting the span on the week they trained, running it
+through the week in progress, spelling a single week as a range, swapping the ends, and restoring
+the count all die.
+
+**6,398 tests over 379 files.** First load 134.42KB against a 135.4KB budget. Both branches read
+back from a browser in each theme at 430px and 1280px: a four-week gap and a one-week one.

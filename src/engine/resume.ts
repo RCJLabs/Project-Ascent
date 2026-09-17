@@ -116,6 +116,26 @@ function weeksWord(n: number): string {
 }
 
 /**
+ * The missed weeks named rather than counted (PLAN.md M252).
+ *
+ * `missedWeeks` is `nowWeek - lastTrainedWeek - 1`, and the comment where it
+ * is computed says why: neither the week the last session fell in nor the one
+ * in progress is missed. That is right, and it is not a convention a climber
+ * holds — the sentence used to print **"Nothing is logged for 4 weeks of this
+ * block ... today is week 11, and the last week you trained was 6"**, and any
+ * reader who checks subtracts 6 from 11 and gets 5.
+ *
+ * Naming the weeks removes the arithmetic and says more than the count did:
+ * `weeks 7 to 10` is four weeks, is after 6, and is before 11, all without
+ * anyone having to work out which end is inclusive.
+ */
+function missedSpan(found: Pick<Interruption, 'nowWeek' | 'lastTrainedWeek'>): string {
+  const first = found.lastTrainedWeek + 1;
+  const last = found.nowWeek - 1;
+  return first === last ? `week ${first}` : `weeks ${first} to ${last}`;
+}
+
+/**
  * What the block would look like resumed, and what it would look like
  * re-entered a phase earlier.
  *
@@ -228,7 +248,6 @@ export function shiftedStart(startDate: string, option: ResumeOption): string {
 
 /** What the gap itself says, before any choice is made. */
 export function describeInterruption(found: Interruption, reason?: AwayReason): string {
-  const missed = weeksWord(found.missedWeeks);
   const because =
     reason === 'hurt'
       ? ' Coming back from something that hurt, the week you stopped on is the last one to re-enter at.'
@@ -237,5 +256,5 @@ export function describeInterruption(found: Interruption, reason?: AwayReason): 
         : reason === 'away'
           ? ' A fortnight off costs very little that a week of normal training will not give back.'
           : '';
-  return `Nothing is logged for ${missed} of this block, so it has moved on without you: today is week ${found.nowWeek}, and the last week you trained was ${found.lastTrainedWeek}.${because}`;
+  return `Nothing is logged for ${missedSpan(found)} of this block, so it has moved on without you: today is week ${found.nowWeek}, and the last week you trained was ${found.lastTrainedWeek}.${because}`;
 }

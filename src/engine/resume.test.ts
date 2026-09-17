@@ -201,11 +201,25 @@ describe('why you were away', () => {
     expect(describeInterruption(found(6, 9, 'away')!, 'away')).toMatch(/fortnight off/);
   });
 
+  /**
+   * And every number in it reconciles (PLAN.md M252). It used to print the
+   * count — "2 weeks" — beside the two weeks it was counted from, so a reader
+   * who subtracted 6 from 9 got 3 and the sentence said 2. The weeks are
+   * named now: 7 and 8 are after 6, before 9, and two of them.
+   */
   it('says the plain facts before anyone has answered', () => {
     const said = describeInterruption(found(6, 9)!);
-    expect(said).toMatch(/2 weeks/);
+    expect(said).toMatch(/weeks 7 to 8/);
     expect(said).toMatch(/today is week 9/);
     expect(said).toMatch(/last week you trained was 6/);
+    expect(said, 'a count the reader has to check').not.toMatch(/\b\d+ weeks of this block/);
+  });
+
+  /** One missed week is a week, not a range of one. */
+  it('names a single missed week in the singular', () => {
+    const said = describeInterruption(found(6, 8)!);
+    expect(said).toMatch(/for week 7 of this block/);
+    expect(said).not.toMatch(/weeks 7 to 7/);
   });
 });
 
