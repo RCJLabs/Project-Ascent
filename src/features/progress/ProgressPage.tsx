@@ -66,13 +66,24 @@ import { UNKNOWN_NOTE, ZONE } from '@/ui/loadZone';
  * can sit a pixel apart — so this is where a day is reachable at full size.
  * Only the sessions that went over are listed: a list of every check-in
  * would bury the four that are worth opening under thirty that are not.
+ *
+ * **And only the most recent `SHOWN` of those** (PLAN.md M245). The filter
+ * bounds nothing: a climber who trains through what the check-in says gets
+ * one row per occurrence over ninety days, and ten measured on a
+ * thirty-session log is already a card that scrolls. `InjuryPage` settled
+ * this shape first — the last fourteen answers, and a line saying so. The
+ * line is the point; a list quietly cut to eight is the repairing-in-silence
+ * M20, M44 and M244 all forbid.
  */
+const SHOWN = 8;
+
 function OverCapList({ history }: { history: CheckInHistory }) {
   const over = history.days.filter((d) => d.over !== null && d.over > 0);
   if (over.length === 0) return null;
   return (
+    <>
     <ul className="grid grid-cols-1 gap-1 mt-3 border-t border-line pt-3">
-      {[...over].reverse().map((day) => (
+      {[...over].reverse().slice(0, SHOWN).map((day) => (
         <li key={day.sessionId}>
           <Link
             href={`/log/${day.date}`}
@@ -92,6 +103,12 @@ function OverCapList({ history }: { history: CheckInHistory }) {
         </li>
       ))}
     </ul>
+    {over.length > SHOWN && (
+      <p className="text-xs text-ink-soft mt-1.5">
+        The {SHOWN} most recent of {over.length}.
+      </p>
+    )}
+    </>
   );
 }
 

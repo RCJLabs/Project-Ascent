@@ -48,10 +48,41 @@ export const CHECKIN_DAYS = 90;
  *
  * The effort comparison divides the window in two and reports a mean from
  * each half, and a mean of two numbers is a pair of numbers with a line
- * through it. Four is still thin — the copy says so — but below four the
- * sentence would swing on a single hard session.
+ * through it. Four is still thin — the copy says so when it is — but below
+ * four the sentence would swing on a single hard session.
  */
 export const ENOUGH_TO_COMPARE = 4;
+
+/**
+ * The widest one session can be wrong by (PLAN.md M245).
+ *
+ * RPE is "an absolute self-rating on a fixed 1-10 scale" — `effort.ts` says
+ * so, and its tiers floor at 1 — so the furthest a single logged session can
+ * be from where it should have been is nine points, and the furthest it can
+ * drag a mean of `n` is `9 / n`.
+ */
+export const RPE_SWING = 9;
+
+/**
+ * How much one session is worth, against a gap between two means.
+ *
+ * The card used to append *"which is few enough that one hard session moves
+ * it"* to **every** difference it printed, on no arithmetic at all. Measured
+ * on ten flagged days against twenty clear ones with a three-point gap,
+ * closing it would need a single session to move a mean of ten by 3.0 — an
+ * RPE thirty points out, on a scale nine points wide. The app was telling a
+ * climber to discount the one finding on the card that could not be a fluke.
+ *
+ * So the number is computed instead of asserted, and it is the same number
+ * either way round: one session moves a mean of `n` by at most `9 / n`, and
+ * it moves the **smaller** group's mean furthest, which is the side that
+ * decides. Stated rather than ruled on — at four days a side it comes out
+ * 2.3, which is a thin comparison however large the gap; at twenty it is
+ * 0.5, which is a finding.
+ */
+export function oneSessionIsWorth(flaggedDays: number, clearDays: number): number {
+  return RPE_SWING / Math.min(flaggedDays, clearDays);
+}
 
 export interface CheckInDay {
   date: string;
@@ -262,11 +293,26 @@ export function describeCheckIns(history: CheckInHistory): string {
   if (history.effort !== null) {
     const { flagged, clear, flaggedDays, clearDays } = history.effort;
     const gap = flagged - clear;
-    parts.push(
-      Math.abs(gap) < 0.5
-        ? `Effort came out about the same either way — ${flagged.toFixed(1)} on the ${flaggedDays} days something was flagged, ${clear.toFixed(1)} on the ${clearDays} that were clear.`
-        : `Sessions after a flagged answer were logged at RPE ${flagged.toFixed(1)} on average against ${clear.toFixed(1)} on the clear days — ${flaggedDays} against ${clearDays}, which is few enough that one hard session moves it.`,
-    );
+    if (Math.abs(gap) < 0.5) {
+      parts.push(
+        `Effort came out about the same either way — ${flagged.toFixed(1)} on the ${flaggedDays} days something was flagged, ${clear.toFixed(1)} on the ${clearDays} that were clear.`,
+      );
+    } else {
+      // The direction, said (PLAN.md M245). "RPE 9.0 against 6.0" and
+      // "6.6 against 8.0" are opposite answers to the question this card
+      // exists to ask, and they used to be handed over in the same sentence
+      // for the reader to sort out. Which way the numbers went is stated;
+      // *why* they went that way is not, because nothing here can know —
+      // `effortSplit` says so and the note under the list says so again.
+      const worth = oneSessionIsWorth(flaggedDays, clearDays);
+      const caveat =
+        worth >= Math.abs(gap)
+          ? ' Few enough days on one side that a single session could close that gap.'
+          : ` One session either side moves that by at most ${worth.toFixed(1)}.`;
+      parts.push(
+        `Sessions after a flagged answer came out ${Math.abs(gap).toFixed(1)} ${gap > 0 ? 'harder' : 'easier'} than the clear ones — RPE ${flagged.toFixed(1)} against ${clear.toFixed(1)}, over ${flaggedDays} days and ${clearDays}.${caveat}`,
+      );
+    }
   }
 
   return parts.join(' ');

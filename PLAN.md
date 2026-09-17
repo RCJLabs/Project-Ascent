@@ -14055,6 +14055,21 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   check-in suggested 7 or below." and eased a set off every block. See the entry at the end of this
   document.*
 
+- **M245 — the card that will not commit.** *"How you were feeling"* computes the one number that
+  answers its own question — flagged-day effort against clear-day effort — and then refuses to say
+  what it means. It prints both means and **never says which way they run**: measured, a climber who
+  logged RPE 9.0 on flagged days against 6.0 on clear ones and one who logged 6.6 against 8.0 get
+  the same sentence with the numbers swapped, and those are opposite answers. Then it appends *"which
+  is few enough that one hard session moves it"* to **every** difference it ever prints, on no
+  arithmetic at all — on ten flagged days against twenty clear with a three-point gap, closing that
+  would take a single session thirty RPE points out on a scale nine points wide. And the list of
+  days that went over the ceiling is unbounded: ten rows measured on a thirty-session log.
+  *Small, and it is one sentence, one constant and a `slice`.*
+  ***Built, and the honest caveat had to be computed rather than dropped.*** *Suppressing the fixed
+  phrase would have lost a real warning at four days a side, so the card states what one session is
+  actually worth — 2.3 at four days, 0.5 at twenty — which warns and supports without a threshold to
+  argue about. See the entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -15405,3 +15420,64 @@ return, the skip, the count, the count reaching the page, both logger guards, th
 condition, and the injury filter all die.
 
 **6,332 tests over 373 files.** First load 134.42KB against a 135.4KB budget.
+
+## M245 — the card that will not commit
+
+*"How you were feeling"* exists to answer one question: **does the check-in change what you do?**
+The answer is the sign and size of the gap between the flagged-day effort mean and the clear-day
+one, and the card computed that gap, printed both numbers, and then declined to say anything about
+it.
+
+### Three ways of not saying it
+
+**The direction was left to the reader.** Measured on two seeded climbers:
+
+```
+RPE 9.0 on average against 6.0 on the clear days — 10 against 20
+RPE 6.6 on average against 8.0 on the clear days — 12 against 18
+```
+
+The first trained harder on every day something was flagged. The second trained lighter on them.
+Those are opposite answers to the card's own question, handed over in the same sentence with the
+numbers moved, for the reader to sort out — on the screen whose whole job is the sorting out.
+
+**The caveat was a fixed phrase pretending to be a judgement.** Every difference the card printed
+ended *"which is few enough that one hard session moves it"*, with no dependence on how many days
+there were or how large the gap was. On the first climber above that is not merely unwarranted, it
+is arithmetically impossible: moving a mean of ten by 3.0 takes one session thirty RPE points out,
+and `effort.ts` says the scale is nine points wide. The app was telling a climber to discount the
+one finding on the card that could not be a fluke.
+
+**The list of days that went over had no bound.** Ten rows on a thirty-session log, one per
+occurrence, inside a card that already carries a strip, four sentences and two notes. A climber who
+trains through what the check-in says gets one per occurrence across ninety days.
+
+### Computing the caveat rather than deleting it
+
+Suppressing the phrase where it is false is half a fix, because at four days a side — the floor
+`ENOUGH_TO_COMPARE` allows — the comparison really is thin, whatever the gap. Two caveats with two
+thresholds would have been two more numbers to argue about.
+
+So the card states the leverage, which is one number, always true, and never needs a threshold:
+**one session moves a mean of `n` by at most `9 / n`**, taken from the *smaller* side because that
+is where one session counts for most. At four days a side it reads *"One session either side moves
+that by at most 2.3"* — a warning. At twenty it reads *0.5* — a finding. And where that bound is at
+least the gap itself, it says plainly that one session could close it.
+
+`oneSessionIsWorth` is exported so the arithmetic is testable on its own, and the test does not
+restate the formula: it moves one session to every RPE on the scale and checks the gap never closes.
+That is the fact the old copy was wrong about, pinned as a fact rather than as a rearrangement of
+the same expression.
+
+### The list, cut and said so
+
+Eight most recent, and a line reading *"The 8 most recent of 10."* — `InjuryPage` settled this shape
+first, with fourteen chips and a line saying so. The line is the point. A list quietly cut to eight
+is the repairing-in-silence that M20, M44 and M244 all forbid, and this is the third milestone in
+four to land on the same rule: **tell the climber the list is short.**
+
+**11 mutants caught, sanity no-op survived.** The scale constant, the smaller-side bound, the
+direction words, the caveat condition, the fixed phrase restored, the level-gap branch, the slice,
+the bound's value, the line that reports it, and the ordering all die.
+
+**6,342 tests over 374 files.** First load 134.42KB against a 135.4KB budget.

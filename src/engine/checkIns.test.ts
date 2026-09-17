@@ -258,12 +258,17 @@ describe('what it says out loud', () => {
     expect(said([session('2026-09-09', { checkIn: rough, rpe: 5 })])).toContain('stayed under it every time');
   });
 
-  it('warns that the comparison is thin when it prints one', () => {
+  /**
+   * Still warns that the comparison is thin — but with the arithmetic rather
+   * than a fixed phrase (PLAN.md M245). Four days a side means one session
+   * is worth 2.3 RPE of whatever gap was just printed, which is the warning.
+   */
+  it('says what one session is worth when the comparison is thin', () => {
     const text = said([
       ...run(ENOUGH_TO_COMPARE, 1, { checkIn: rough, rpe: 9 }),
       ...run(ENOUGH_TO_COMPARE, 40, { checkIn: fine, rpe: 5 }),
     ]);
-    expect(text).toContain('one hard session moves it');
+    expect(text).toContain('One session either side moves that by at most 2.3.');
   });
 
   it('does not claim a difference that is not there', () => {

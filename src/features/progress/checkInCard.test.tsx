@@ -290,3 +290,45 @@ describe('a check-in this version cannot read', () => {
     expect(screen.queryByText(/is left out|are left out/)).toBeNull();
   });
 });
+
+/**
+ * The list of days that went past the ceiling, bounded (PLAN.md M245).
+ *
+ * It was every one of them. A climber who trains through what the check-in
+ * says gets a row per occurrence across ninety days — ten measured on a
+ * thirty-session log, inside a card that already carries a strip, four
+ * sentences and two notes.
+ */
+describe('the over-the-ceiling list', () => {
+  const over = async (n: number) => {
+    for (let i = 1; i <= n; i += 1) await log(i, { checkIn: rough, rpe: 9 });
+    await hydrate();
+    renderAt('/progress', <ProgressPage />);
+    await screen.findByText('How you were feeling');
+  };
+
+  const rows = () =>
+    screen.getAllByRole('link').filter((a) => /against a ceiling of/.test(a.textContent ?? ''));
+
+  it('shows them all while there are few', async () => {
+    await over(5);
+    expect(rows()).toHaveLength(5);
+    expect(screen.queryByText(/most recent of/)).toBeNull();
+  });
+
+  it('stops at eight and says how many there are', async () => {
+    await over(12);
+    expect(rows()).toHaveLength(8);
+    expect(screen.getByText(/The 8 most recent of 12\./)).toBeTruthy();
+  });
+
+  /** Newest first, so the eight kept are the eight that just happened. */
+  it('keeps the most recent eight, not the first eight', async () => {
+    await over(12);
+    const shown = rows().map((a) => a.getAttribute('href'));
+    const newest = addDays(today(), -1);
+    const ninth = addDays(today(), -9);
+    expect(shown[0]).toBe(`#/log/${newest}`);
+    expect(shown).not.toContain(`#/log/${ninth}`);
+  });
+});
