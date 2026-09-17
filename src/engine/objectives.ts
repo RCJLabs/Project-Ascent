@@ -128,6 +128,8 @@ export interface ObjectiveProgress {
   weakest: MeasuredRequirement | null;
   /** Whole weeks until the target date; negative once it has passed. */
   weeksLeft: number | null;
+  /** The same gap in days, which keeps its sign. */
+  daysLeft: number | null;
 }
 
 export function objectiveProgress(objective: Objective, input: SkillInput, today = todayKey()): ObjectiveProgress {
@@ -150,6 +152,19 @@ export function objectiveProgress(objective: Objective, input: SkillInput, today
     weeksLeft: objective.targetDate === undefined
       ? null
       : Math.round(daysBetween(today, objective.targetDate) / 7),
+    /**
+     * The same gap in days, which is the one that keeps its sign
+     * (PLAN.md M256).
+     *
+     * `Math.round(-2 / 7)` is **negative zero**, and `-0 < 0` is `false` —
+     * so a target that went two days ago tested as neither past nor future
+     * and fell into the "this week" branch, directly above a runway card
+     * reading *"That date has been and gone."* `peakPlan` gets it right by
+     * asking the days, which is what this field is for.
+     */
+    daysLeft: objective.targetDate === undefined
+      ? null
+      : daysBetween(today, objective.targetDate),
   };
 }
 
@@ -171,11 +186,18 @@ export function describeProgress(progress: ObjectiveProgress): string {
   if (progress.total === 0) return 'Nothing to work toward yet — add what has to be true first.';
   const percent = Math.round(progress.readiness * 100);
   const weeks = progress.weeksLeft;
+  const days = progress.daysLeft;
+  // The days decide past from future, because the weeks cannot: rounding
+  // two days into the past gives `-0`, which is not less than zero
+  // (PLAN.md M256). Once it is known to be past, the weeks say how far —
+  // except inside the first one, where days are what a climber has.
   const when =
-    weeks === null
+    weeks === null || days === null
       ? ''
-      : weeks < 0
-        ? ` · target was ${Math.abs(weeks)} ${plural(Math.abs(weeks), 'week')} ago`
+      : days < 0
+        ? Math.abs(days) < 7
+          ? ` · target was ${Math.abs(days)} ${plural(Math.abs(days), 'day')} ago`
+          : ` · target was ${Math.abs(weeks)} ${plural(Math.abs(weeks), 'week')} ago`
         : weeks === 0
           ? ' · this week'
           : ` · ${weeks} ${plural(weeks, 'week')} out`;

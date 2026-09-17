@@ -122,10 +122,56 @@ describe('the target date', () => {
     expect(describeProgress(p)).toMatch(/target was 4 weeks ago/);
   });
 
+  /**
+   * The three days after a target passes (PLAN.md M256).
+   *
+   * `Math.round(-2 / 7)` is negative zero, and `-0 < 0` is `false`, so a
+   * target that went two days ago tested as neither past nor future and fell
+   * into the "this week" branch — directly above a runway card reading
+   * "That date has been and gone." `peakPlan` asks the days and gets it
+   * right; this asked the rounded weeks.
+   */
+  it('knows a target three days gone from one three days off', () => {
+    const past = objective({ targetDate: '2026-03-02', requirements: [req({ kind: 'sessions', count: 5 })] });
+    const ahead = objective({ targetDate: '2026-03-06', requirements: [req({ kind: 'sessions', count: 5 })] });
+    expect(describeProgress(objectiveProgress(past, input, TODAY))).toMatch(/target was 2 days ago/);
+    expect(describeProgress(objectiveProgress(ahead, input, TODAY))).toMatch(/· this week/);
+  });
+
+  /** The fact the fix rests on, pinned rather than reasoned about. */
+  it('rounds two days past to a zero that is not less than zero', () => {
+    expect(Object.is(Math.round(-2 / 7), -0)).toBe(true);
+    expect(Math.round(-2 / 7) < 0).toBe(false);
+    // Which is why the days are kept, and they do carry the sign.
+    const past = objective({ targetDate: '2026-03-02', requirements: [req({ kind: 'sessions', count: 5 })] });
+    expect(objectiveProgress(past, input, TODAY).daysLeft).toBe(-2);
+  });
+
+  /** One day gone is a day, not days. */
+  it('agrees with itself about one day', () => {
+    const yesterday = objective({ targetDate: '2026-03-03', requirements: [req({ kind: 'sessions', count: 5 })] });
+    expect(describeProgress(objectiveProgress(yesterday, input, TODAY))).toMatch(/target was 1 day ago/);
+  });
+
+  /** The day itself is not "0 days ago". */
+  it('calls the target day this week, not nought days gone', () => {
+    const o = objective({ targetDate: TODAY, requirements: [req({ kind: 'sessions', count: 5 })] });
+    const said = describeProgress(objectiveProgress(o, input, TODAY));
+    expect(said).toMatch(/· this week/);
+    expect(said).not.toMatch(/0 days ago/);
+  });
+
+  /** Past a week, it goes back to counting weeks. */
+  it('counts weeks once there is more than one', () => {
+    const o = objective({ targetDate: '2026-02-18', requirements: [req({ kind: 'sessions', count: 5 })] });
+    expect(describeProgress(objectiveProgress(o, input, TODAY))).toMatch(/target was 2 weeks ago/);
+  });
+
   it('says nothing about time when no date was set', () => {
     const p = objectiveProgress(objective({ requirements: [req({ kind: 'sessions', count: 5 })] }), input, TODAY);
     expect(p.weeksLeft).toBeNull();
-    expect(describeProgress(p)).not.toMatch(/week/);
+    expect(p.daysLeft).toBeNull();
+    expect(describeProgress(p)).not.toMatch(/week|day/);
   });
 
   // The app can measure what happened. It cannot say whether three more

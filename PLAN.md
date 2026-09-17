@@ -14200,6 +14200,16 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   `Record<AchievementId, …>` of logs that earn them, so the twenty-seventh cannot be added without
   one — and a note about the question it cannot answer. See the entry at the end of this document.*
 
+- **M256 — a target that has gone, called “this week”.** `/objectives` and `/projects` are the
+  long-arc half of the app and neither had ever been driven. Ten shapes turned up one defect and it
+  is a sign bug: `weeksLeft` is `Math.round(days / 7)`, and for a target two days past that is
+  **negative zero**, which is not less than zero. So `describeProgress` fell past its own
+  “past” branch into `weeks === 0` and printed *· this week* — directly above the runway card,
+  which asks the days instead and reads *“That date has been and gone.”*
+  *Small, and it is one field and one ternary.*
+  ***Built, and the battery caught the fix reading `<= 0` where it meant `< 0`.*** *See the entry at
+  the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -16285,3 +16295,66 @@ wider than any ladder, thirteen months in a year and an effort of 99 all die.
 
 **6,442 tests over 380 files.** No runtime code changed, so there is nothing to verify in a browser
 and the budget is where M254 left it.
+
+## M256 — a target that has gone, called “this week”
+
+`/objectives` and `/projects` are the half of the app that outlives a block — the named climb, the
+season, the burns on it — and nothing had ever driven either. Ten shapes: no objectives, an
+objective with no requirements, none met, all met, a target passed, a target due this week, a target
+two days gone, no projects, a project with no attempts, many burns, and a send.
+
+Nine came back right. The tenth read this:
+
+```
+V8 · for September 15
+0% of the way there, 0 of 1 met · this week
+THE RUNWAY
+That date has been and gone.
+```
+
+### Negative zero
+
+```ts
+weeksLeft: Math.round(daysBetween(today, objective.targetDate) / 7)
+```
+
+`Math.round(-2 / 7)` is `-0`. And `-0 < 0` is `false`, while `-0 === 0` is `true`. So a target two
+days in the past is neither past nor future to `describeProgress`: it falls through the `weeks < 0`
+branch and lands in `weeks === 0`, which says *· this week*. Every target from one to three days
+gone reads that way — the whole window in which a climber is most likely to be looking at the page.
+
+The card beneath it was right the whole time, because `peakPlan` asks a different question:
+
+```ts
+const days = daysBetween(from, request.target);
+if (days < 0) return empty(0, 'past');
+```
+
+Exact days, sign intact, no rounding to fall through. That is the third milestone this session where
+**the correct rule was already written down in a sibling file** and the sentence a climber reads said
+something else.
+
+### The fix
+
+`ObjectiveProgress` gains `daysLeft`, and the days decide past from future because the weeks cannot.
+Once it is known to be past, the weeks say how far — except inside the first one, where days are
+what a climber has left to think about:
+
+```
+0% of the way there, 0 of 1 met · target was 2 days ago
+```
+
+`weeksLeft` keeps its meaning and its callers. Nothing rounds away a sign any more.
+
+### The fix that read `<=` where it meant `<`
+
+The battery changed `days < 0` to `days <= 0` and **survived**: a target *today* is zero days out,
+and zero is not less than zero, so nothing caught *“target was 0 days ago”* on the day of the
+climb. There is a test for the target day now, asserting it says *this week* and never *0 days*.
+A second test pins the fact the whole milestone rests on — `Object.is(Math.round(-2 / 7), -0)` —
+because a fix built on a language rule should fail loudly if the rule ever changes under it.
+
+**6 mutants caught, sanity no-op survived.**
+
+**6,447 tests over 380 files.** First load 134.43KB against a 135.4KB budget. Read back from a
+browser across all ten shapes, in both themes at 430px and 1280px.
