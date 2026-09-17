@@ -14031,6 +14031,17 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   them.*** *The strip marks today from the date, because `statusOf` returns `'rest'` before it ever
   asks — which drew a grey dot on Thursday. See the entry at the end of this document.*
 
+- **M242 — the app's description of itself is the one guide nothing checks.** `accuracy.test.ts`
+  has held the **program** guides to the catalogue since M33 — every dose, every week count, every
+  deload week, measured. `guides/app.ts` never got one, and it is the document a climber opens to
+  find out what the app *is*: how many programs, how many tabs, what the coach can say, how far a
+  send is worth. It is also the file hand-edited on the way past in M238, M239 and M241.
+  *Small, and it is a test plus whatever it turns up.*
+  ***Built, and it turned up two.*** *The guide named five training-state verdicts and there are
+  six — the missing one is what a climber who has stopped training is shown — and it claimed
+  blocks run "three or four phases" when no program has four. See the entry at the end of this
+  document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -15205,3 +15216,56 @@ five-tab test reads `AppShell.tsx` as text — right for catching a sixth tab, u
 that stopped rendering, since the source would still list five — and the only test that renders the
 nav checks the *order of its children*. A tab row with no tabs in it passed everything. There is now
 a test that puts the five links on a screen and reads their hrefs and their names.
+
+## M242 — the guide that describes the app, held to the app
+
+`accuracy.test.ts` has checked the **program** guides against the catalogue since M33: every printed
+dose against the prescription, every week count, every deload. `guides/app.ts` — the document a
+climber opens to find out what the app is — had nothing. It is also the file this session
+hand-edited three times on the way past, in M238, M239 and M241, which is exactly when prose drifts.
+
+### Two claims were already wrong
+
+**Five verdicts, and there are six.** `plateau.ts` ends on
+`headline: training ? 'Building' : 'Ticking over'`, and the guide named *Building* and stopped. So
+the one verdict a climber who has **stopped training** is shown was the one the guide did not
+mention — and that climber is the likeliest of all of them to go looking for what the app means.
+
+**"Three or four phases", and no program has four.** Measured across the catalogue: eleven blocks at
+three phases, Trip Prep at two. Nothing has ever had four.
+
+Everything else held. Thirteen programs; eleven blocks and two log-only modes; five tabs; five
+stats; five trees by name; 15 feet a boulder, 50 a route, a quarter more outdoors; and exactly
+thirteen eight-thousanders above Everest on the ladder.
+
+### A mode is a program with one phase
+
+The guide's *"eleven structured blocks … plus two log-only modes"* needed a test that could tell
+them apart without a list of ids to go stale. `phases.length > 1` does it: a block runs phases, a
+mode is one open-ended stretch, and General Training and Outdoor Climbing are the two at 52 weeks
+and one phase. A twelfth block or a third mode moves the count on its own.
+
+### Both ends, or it is a test of the code with extra steps
+
+Every claim is checked **twice**: the guide still makes it, and the code still agrees. Without the
+first half a reworded guide passes in silence — the sentence goes, the assertion about
+`PROGRAMS.length` keeps passing, and nothing has been checked at all. That is M195's rule applied to
+prose: a probe that cannot find the claim is not a probe.
+
+A battery had to point out that the rule needed its own guard. Gutting the phrase check left *every
+other assertion in the file still passing*, because each test also checks the code — so the guide
+could have been reworded to say anything and this file would have stayed green, which is the failure
+mode it exists to prevent. `claims` is now asked to reject a sentence the guide has never contained,
+the same shape as `a11y.test.ts`'s *"would still catch a page that simply forgot its heading"*.
+
+### Measured
+
+**14 mutants, all caught, sanity no-op survived** — the guide miscounting programs, blocks, modes,
+tabs, stats and eight-thousanders; renaming a tree; mispricing a boulder; claiming a fourth phase
+again; dropping the sixth verdict again; a seventh verdict appearing in `plateau.ts`; one renamed
+there; the prose scan reading nothing; and the phrase check checking nothing.
+
+**134.39KB against a 135.4 ceiling** — a test file and two corrected sentences, so no change worth
+the name.
+
+**6,314 tests over 371 files.**

@@ -135,7 +135,7 @@ export const APP: Guide = {
       content: [
         {
           kind: 'p',
-          text: 'Thirteen of them: eleven structured blocks, most twelve weeks across three or four phases, plus two log-only modes for when you are not running a block. Each block has a guide in this list explaining why it is built the way it is.',
+          text: 'Thirteen of them: eleven structured blocks, most twelve weeks across two or three phases, plus two log-only modes for when you are not running a block. Each block has a guide in this list explaining why it is built the way it is.',
         },
         { kind: 'h', text: 'Finding one' },
         {
@@ -377,7 +377,7 @@ export const APP: Guide = {
           kind: 'table',
           head: ['Where', 'What it says'],
           rows: [
-            ['Training state', 'One of five verdicts about right now — Recovery first, Too early to tell, Breaking through, Plateaued, or Building — decided by rules in that order, because a climber who is hurt or buried in load does not need to hear about their plateau first. Each shows the evidence it used.'],
+            ['Training state', 'One of six verdicts about right now — Recovery first, Too early to tell, Breaking through, Plateaued, Building, or Ticking over when you are not training — decided by rules in that order, because a climber who is hurt or buried in load does not need to hear about their plateau first. Each shows the evidence it used.'],
             ["Coach's Corner", 'Standing observations about your training as a whole. Dismissible, and a dismissed tip stays gone until the situation actually changes.'],
             ['The weekly review', 'One reading of the week just gone: load against last week, what you sent, how the board went, whether you turned up as often as the program asked, and the week ahead.'],
             ['The year in review', 'The long view, compared like for like against the same stretch of last year.'],
