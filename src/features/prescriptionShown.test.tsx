@@ -33,7 +33,7 @@ async function logging(programId: string, typeId: string): Promise<void> {
   await hydrate();
   useProfile.setState({
     activeProgramId: program.id,
-    startDates: { [program.id]: DATE },
+    startDates: { [program.id]: startOfWeek(DATE) },
     plans: { [program.id]: { [dayOfWeek(DATE)]: typeId } },
     weekOverrides: {},
     adaptations: {},

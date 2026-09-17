@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newSession } from '@/db/sessions';
 import {
   addDays,
+  blockStart,
   dayOfWeek,
   daysBetween,
   isThisMonth,
@@ -47,16 +48,72 @@ describe('date keys', () => {
   });
 });
 
+/**
+ * Where a block begins when Start is pressed mid-week (PLAN.md M259).
+ *
+ * Reported from a phone: a program begun on Thursday the 17th drew planned
+ * sessions onto the 13th, the 15th and the 16th, and the month gutter
+ * graded that week *0/4*. Three of those four sessions were on days the
+ * climber had not started.
+ */
+describe('blockStart', () => {
+  // 2026-03-08 is a Sunday; 03-09 Monday through 03-14 Saturday follow it.
+  const SUNDAY = '2026-03-08';
+
+  it('is the day itself when Start is pressed on a Sunday', () => {
+    expect(blockStart(SUNDAY)).toBe(SUNDAY);
+    expect(dayOfWeek(SUNDAY)).toBe(0);
+  });
+
+  it('is the following Sunday every other day of the week', () => {
+    const next = '2026-03-15';
+    for (let i = 1; i <= 6; i += 1) {
+      const pressed = addDays(SUNDAY, i);
+      expect(blockStart(pressed), pressed).toBe(next);
+      // Forward, never back: the days before it are days nobody trained.
+      expect(blockStart(pressed) > pressed, pressed).toBe(true);
+    }
+  });
+
+  it('never lands on anything but a Sunday', () => {
+    for (let i = 0; i < 40; i += 1) {
+      const pressed = addDays(SUNDAY, i);
+      expect(dayOfWeek(blockStart(pressed)), pressed).toBe(0);
+    }
+  });
+
+  it('is idempotent, so a resolved start resolves to itself', () => {
+    for (let i = 0; i < 14; i += 1) {
+      const once = blockStart(addDays(SUNDAY, i));
+      expect(blockStart(once)).toBe(once);
+    }
+  });
+});
+
 describe('programWeek', () => {
-  it('counts Sunday-aligned weeks from the start date', () => {
-    // Program starts Wednesday; that whole week is week 1.
-    expect(programWeek('2026-03-11', '2026-03-11', 12)).toBe(1);
-    expect(programWeek('2026-03-11', '2026-03-14', 12)).toBe(1);
-    expect(programWeek('2026-03-11', '2026-03-15', 12)).toBe(2);
+  it('counts Sunday-aligned weeks from the first whole one', () => {
+    // Pressed Wednesday the 11th; week 1 is the week beginning the 15th.
+    expect(programWeek('2026-03-11', '2026-03-15', 12)).toBe(1);
+    expect(programWeek('2026-03-11', '2026-03-21', 12)).toBe(1);
+    expect(programWeek('2026-03-11', '2026-03-22', 12)).toBe(2);
+  });
+
+  it('counts from the day itself when that day is a Sunday', () => {
+    expect(programWeek('2026-03-08', '2026-03-08', 12)).toBe(1);
+    expect(programWeek('2026-03-08', '2026-03-14', 12)).toBe(1);
+    expect(programWeek('2026-03-08', '2026-03-15', 12)).toBe(2);
   });
 
   it('returns null before the program began', () => {
     expect(programWeek('2026-03-11', '2026-03-07', 12)).toBeNull();
+  });
+
+  it('returns null for the days between pressing Start and the first week', () => {
+    // The days this milestone is about. Wednesday the 11th through Saturday
+    // the 14th are after Start and before week one, and belong to no week.
+    for (const date of ['2026-03-11', '2026-03-12', '2026-03-13', '2026-03-14']) {
+      expect(programWeek('2026-03-11', date, 12), date).toBeNull();
+    }
   });
 
   it('clamps at the final week', () => {

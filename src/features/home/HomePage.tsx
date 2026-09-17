@@ -2,7 +2,7 @@ import { Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ClipboardList, Compass, ShieldAlert, Sparkles, Zap } from 'lucide-react';
 import type { Session } from '@/db/sessions';
-import { today } from '@/engine/dates';
+import { shortLabel, today } from '@/engine/dates';
 import { loadsFingersDirectly } from '@/engine/fingerGap';
 import { gymSummary } from '@/engine/gym';
 import { DayNudges, PreSessionCard } from '@/features/log/PreSession';
@@ -267,6 +267,16 @@ function OpenSessionCard({ date, sessions }: { date: string; sessions: Session[]
   const setLogView = useSettings((s) => s.setLogView);
   const [, navigate] = useLocation();
   const done = sessions.every((s) => s.completed);
+  /**
+   * The block that has not begun yet (PLAN.md M259).
+   *
+   * `PreSessionCard` says this on the days between pressing Start and the
+   * first whole week — but it is gone the moment a session exists, and a
+   * climber who presses Start on a Thursday and trains that evening is
+   * exactly the one who wants to know where the session went. It counts;
+   * it is not week one.
+   */
+  const { program, day } = usePlannedDay(date);
   // Through `gymSummary` rather than counted here, so "sent" means on Home
   // exactly what it means everywhere else — an attempt is not a send, and
   // one row of eight boulders is eight.
@@ -281,6 +291,11 @@ function OpenSessionCard({ date, sessions }: { date: string; sessions: Session[]
           : ` · ${summary.total} climb${summary.total === 1 ? '' : 's'}, ${summary.sends} sent`}
         {sessions.length > 1 ? ` · ${sessions.length} sessions today` : ''}.
       </p>
+      {day?.startsOn !== undefined && program !== undefined && (
+        <p className="text-sm text-ink-soft mb-3">
+          {program.name} starts {shortLabel(day.startsOn)}, so this one is logged outside the block.
+        </p>
+      )}
       <Button
         className="w-full"
         onClick={() => {

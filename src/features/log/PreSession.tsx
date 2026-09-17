@@ -4,7 +4,7 @@ import { AlertTriangle, ChevronRight, Clock, Flag, Plus, Ruler, Zap } from 'luci
 import { INTENSITY_LABEL, type Drill, type Program, type SessionType } from '@/content/types';
 import { TEST_REASON_LABEL } from '@/engine/assessments';
 import { dayLoad, describeDayLoad } from '@/engine/bodyLoad';
-import { today } from '@/engine/dates';
+import { shortLabel, today } from '@/engine/dates';
 import { concerning, injuryPolicy } from '@/engine/injury';
 import { type PlannedDay } from '@/engine/plan';
 import { restDayDrill } from '@/engine/restDrill';
@@ -129,6 +129,12 @@ export function useStartSession(date: string): DayPlan {
    * `isRest` too, and a block that ran out three weeks ago is not a rest day,
    * it is no plan at all. `hurt` is the same reading the load note uses, so a
    * drill and a warning about the same body part cannot appear together.
+   *
+   * No twin guard for `day.startsOn` (PLAN.md M259). The first draft had
+   * one and the battery removed it to no effect: the card's own branch for
+   * the gap carries no drill link, so the only thing left reading this is
+   * `startRest`, and a drill attached to a rest day the climber *chose* is
+   * a suggestion rather than a prescription. One rule, not two.
    */
   const restDrill = useMemo(
     () => (day !== undefined && day.isRest && day.over !== true ? restDayDrill(date, hurt) : null),
@@ -151,7 +157,7 @@ export function useStartSession(date: string): DayPlan {
    * block that ended three weeks ago.
    */
   const primary =
-    day === undefined || day.over
+    day === undefined || day.over || day.startsOn !== undefined
       ? undefined
       : (day.sessionType ?? program?.sessionTypes.find((t) => t.isRest === true));
   const label =
@@ -284,6 +290,27 @@ export function PreSessionCard({ date, onOpen }: { date: string; onOpen?: () => 
         <p className="text-sm text-ink-soft mb-3">
           {program!.name} has run its course. Nothing is planned until you pick what is next.
         </p>
+      ) : day?.startsOn !== undefined ? (
+        /* The other end of the block, and above the rest-day branch for
+           the same reason `over` is: `startsOn` sets `isRest`, so these
+           days read as *“Rest day. Recovery is training — log it to bank
+           it”* — rest the program never prescribed, on days it does not
+           cover (PLAN.md M259). Reachable since starts snap forward: press
+           Start on a Thursday and this is Thursday, Friday and Saturday.
+
+           It says what to do rather than only what is happening. Three
+           days of nothing after pressing Start is the cost of a whole
+           first week, and a climber who wants to train today still can —
+           the button beside this reads *Log a session*. */
+        <>
+          <p className="text-sm text-ink-soft mb-1">
+            {program!.name} starts {shortLabel(day.startsOn)}, so its first week is a whole one.
+          </p>
+          <p className="text-sm text-ink-soft mb-3">
+            Nothing is planned until then. Anything you climb before it counts — it is logged
+            outside the block.
+          </p>
+        </>
       ) : day ? (
         <>
           <p className="text-sm text-ink-soft mb-2">

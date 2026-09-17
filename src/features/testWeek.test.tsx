@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import { getProgram } from '@/content/programs';
 import { testWeeks } from '@/engine/assessments';
-import { addDays, today } from '@/engine/dates';
+import { addDays, startOfWeek, today } from '@/engine/dates';
 import { putSession, newSession } from '@/db/sessions';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
@@ -25,7 +25,7 @@ const PROGRAM = 'gravity_defied';
  * program the calendar is not showing.
  */
 async function runningInWeek(week: number): Promise<string> {
-  const start = addDays(today(), -(week - 1) * 7);
+  const start = startOfWeek(addDays(today(), -(week - 1) * 7));
   await running(start);
   return start;
 }

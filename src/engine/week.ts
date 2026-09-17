@@ -156,7 +156,10 @@ export function weekOutline(input: WeekInput): WeekOutline {
   const first = days[0]!.day;
   const week = first?.week ?? null;
   const over = first?.over === true;
-  const before = planning && week === null && !over;
+  // The named fact rather than the absence of two others (PLAN.md M259).
+  // `planning` is implied: a day is only derived when there is a program, a
+  // start date and a plan to derive it from.
+  const before = first?.startsOn !== undefined;
 
   const trainingDays = days.filter((d) => d.training);
   // Through the shared rule, so the month grid's gutter and this screen

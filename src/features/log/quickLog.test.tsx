@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { Session } from '@/db/sessions';
 import { getSession, newSession, putSession } from '@/db/sessions';
-import { today } from '@/engine/dates';
+import { startOfWeek, today } from '@/engine/dates';
 import { REST_PRESETS, restLabel } from '@/engine/gym';
 import { loadRest } from '@/lib/timerState';
 import { useProfile } from '@/store/profile';
@@ -112,7 +112,7 @@ describe('the fold', () => {
     await hydrate();
     useProfile.setState({
       activeProgramId: program.id,
-      startDates: { [program.id]: DATE },
+      startDates: { [program.id]: startOfWeek(DATE) },
       plans: { [program.id]: {} },
       weekOverrides: {},
       adaptations: {},

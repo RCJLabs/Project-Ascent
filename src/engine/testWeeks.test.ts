@@ -96,7 +96,7 @@ describe('which weeks are test weeks', () => {
 describe('the day a climber is standing on', () => {
   const program = getProgram('gravity_defied')!;
   const plan = { 1: 'tech', 3: 'eng', 5: 'perf' } as const;
-  const day = (date: string) => plannedDay(program, '2026-01-05', plan, date);
+  const day = (date: string) => plannedDay(program, '2026-01-04', plan, date);
 
   it('knows it is a test week, and why', () => {
     expect(day('2026-01-05').test).toBe('baseline');
@@ -119,7 +119,7 @@ describe('what the test week is for', () => {
   // says so rather than looking finished.
   it('lines up with the assessments the program asks for', () => {
     const program = getProgram('iron_grip')!;
-    const battery = assessmentBattery([], { program, startDate: '2026-01-05' });
+    const battery = assessmentBattery([], { program, startDate: '2026-01-04' });
     const due = battery.filter((b) => b.due === 'baseline').map((b) => b.metric.id);
     for (const id of program.assessments) expect(due, id).toContain(id);
   });

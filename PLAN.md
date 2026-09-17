@@ -14232,6 +14232,16 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and the battery found the list page's copy of the bar untested.*** *See the entry at the
   end of this document.*
 
+- **M259 — the block that began before you did.** Reported from a phone, not found by an audit. A
+  twelve-week block started on Thursday the 17th drew planned sessions onto the 13th, the 15th and
+  the 16th, and the month gutter graded that week **0/4** — three of those four sessions were on
+  days the climber had no program at all. `blockWindow` snapped back to `startOfWeek(startDate)`,
+  and `programWeek` returned null only before that **Sunday**, not before the start. Starts snap
+  forward now: week one is the first whole week, so a twelve-week block is twelve whole weeks.
+  *Not small — it moves a rule nine engines and six screens read.*
+  ***Built, and the battery found a dead guard in the fix.*** *See the entry at the end of this
+  document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -16578,3 +16588,128 @@ one test, and the battery is the only reason that is not still true.
 unmoved for the third milestone running. Read back from a browser with an empty log and with three
 hundred sessions, in both themes at 430px and 1280px — the longer column, *“13 days to go”* where
 it read *“13 days”*, still fits the row at 430 with nothing overflowing.
+
+## M259 — the block that began before you did
+
+The first defect this session reported from a phone rather than found by an audit. Peak Performance
+started on Thursday 17 September, climbing days Sunday, Tuesday, Wednesday and Friday:
+
+```
+ 13⚡  14  15🎯  16🧱  17✅  18✋  19        0/4
+LIMIT      LIMIT
+```
+
+Three of those four sessions are on days before the climber pressed Start. The fourth is the only
+one they could have done. And the gutter grades the week **0/4** — the app marking them down for
+missing training it had not yet been asked to plan.
+
+### One Sunday out
+
+```ts
+export function blockWindow(program, startDate) {
+  const from = startOfWeek(startDate);   // the Sunday *behind* the start
+  ...
+}
+export function programWeek(startDate, date, totalWeeks) {
+  const from = startOfWeek(startDate);
+  if (daysBetween(from, date) < 0) return null;   // null before that Sunday
+  ...
+}
+```
+
+Both snap **backwards**. The stored date was right all along — `startDates` held `2026-09-17` — and
+every reading of it put week one four days before the climber existed in the block.
+
+`plannedDay` has the correct sentence for this, one level up:
+
+> *Nor before the first week: the plan is a weekly shape, and reading it for a date the block has
+> not reached drew next Monday's sessions onto this week's calendar. Found by the week screen
+> (PLAN.md M135), which counted them as days to train.*
+
+A day inside week one but before the start date is also *a date the block has not reached*. The
+guard stopped at the week boundary.
+
+### Forward, not back, and why that was a decision
+
+Sunday alignment itself stays: the streak, the week screen, `weekTally` and the month gutter are all
+built on Sunday-to-Saturday weeks, and unpicking that is a rewrite rather than a fix. So the
+question was only what a Thursday start should mean, and the two answers are not equivalent:
+
+- **A short first week.** Keep the window, plan nothing before the start date. Honest about what
+  happened — and it quietly spends three quarters of week one of a periodised block, so a
+  twelve-week program delivers eleven and a bit.
+- **Begin on the next Sunday.** Twelve weeks are twelve weeks. The cost is that pressing Start does
+  not start anything for up to six days.
+
+Evan chose the second, and it is the one that keeps the program. `blockStart` is the rule:
+
+```ts
+export function blockStart(startDate: string): string {
+  const sunday = startOfWeek(startDate);
+  return sunday === startDate ? sunday : addDays(sunday, 7);
+}
+```
+
+`blockWindow` and `programWeek` both read it, and nothing else had to change — nine engines and six
+screens reach the block through those two.
+
+### Saying so in the gap
+
+Option two only works if the days between Start and that Sunday read as something. `week === null`
+sets `isRest`, so they read as *“Rest day. Recovery is training — log it to bank it”* — rest the
+program never prescribed. That is the failure `over` already has a branch for, at the other end of
+the block, and its comment says exactly why it sits above the rest branch.
+
+So `PlannedDay` gains `startsOn`: the day the block begins, present only on the days before it. The
+date rather than a flag, because every screen with something to say about the gap has to name its
+end, and a flag with the date beside it is two fields to keep in step. `week.ts` reads it instead of
+inferring the same fact from `week === null && !over`.
+
+The front door now says, on those days:
+
+> **Peak Performance starts Sep 20, so its first week is a whole one.**
+> Nothing is planned until then. Anything you climb before it counts — it is logged outside the
+> block.
+
+with *Log a session* on the button rather than *Log rest day*. And on a day already logged — where
+`PreSessionCard` is gone, which is precisely the climber who pressed Start on Thursday and trained
+that evening — *“Peak Performance starts Sep 20, so this one is logged outside the block.”* The
+week screen already had its sentence and now reads right without changing: *“Peak Performance has
+not started yet. Its first week begins Sep 20.”*
+
+### 116 tests, and what they were pinning
+
+The change broke **116 tests across 19 files** on the first run, and every one was a fixture that
+started a program mid-week and expected that week to be week one. `dates.test.ts` said so in a
+comment: *“Program starts Wednesday; that whole week is week 1.”*
+
+They are meaning-preserving to migrate, because of an identity: **`startOfWeek(x)` under the new
+rule gives exactly the window `x` gave under the old one.** So an engine fixture's `START` moves to
+the Sunday of its own week and every expectation downstream holds unchanged; a feature fixture's
+`today()` gets wrapped. Two tests owned the old rule outright and were rewritten to the new one
+rather than patched.
+
+One of them, in `calendar.test.ts`, was `if (day) expect(...)` — a conditional assertion that ran on
+no days at all once `START` moved to a Sunday the plan leaves empty. It asserts unconditionally now,
+on a day the plan covers.
+
+The bulk fixtures are all Sunday starts now, which is the one input where the new rule is a no-op —
+so `startsMidWeek.test.tsx` owns the snap, driven on this week's Thursday whatever day the suite
+runs on, and asserts the reported calendar end to end.
+
+### What the battery found
+
+**10 mutants caught, sanity no-op survived.** Snapping back, skipping a week on a Sunday start,
+reading the raw Sunday in either function, dropping `startsOn`, putting it on an `over` day, and
+each of the four screens going quiet all die.
+
+One survived: a `day.startsOn === undefined` guard on the rest-day drill, in my own fix. The card's
+branch for the gap carries no drill link, so the only thing left reading it is `startRest`, and a
+drill attached to a rest day the climber *chose* is a suggestion rather than a prescription. Removed
+rather than propped up with a test — the fourth dead guard the battery has taken out of one of these
+fixes this session.
+
+**6,501 tests over 385 files**, from 6,484 over 384. First load 134.60KB against a 135.4KB budget.
+Read back from a browser on the exact reported state — Peak Performance, Thursday the 17th,
+Sunday/Tuesday/Wednesday/Friday, one session logged that evening — on Home, the calendar and the
+week screen, in both themes at 430px and 1280px.

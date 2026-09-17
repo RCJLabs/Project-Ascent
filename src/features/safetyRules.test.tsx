@@ -8,7 +8,7 @@ import { loadPrograms } from '@/content/programs';
 import { DRILLS } from '@/content/drills';
 import { PROTOCOLS } from '@/content/protocols';
 import { partsNamedIn } from '@/engine/bodyLoad';
-import { addDays, dayOfWeek, today } from '@/engine/dates';
+import { addDays, dayOfWeek, startOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { DayBody } from '@/features/log/LogPage';
@@ -56,7 +56,7 @@ const HURT_ELBOW = [{ part: 'elbow', since: TODAY, severity: 'niggle' }];
  * catalogue and they sit behind two conditions.
  */
 async function logger(injuries: unknown[] = []) {
-  const start = addDays(TODAY, -56);
+  const start = startOfWeek(addDays(TODAY, -56));
   await putSession({
     ...newSession(TODAY, 0, { completed: false }),
     programId: 'iron_grip',

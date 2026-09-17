@@ -6,7 +6,7 @@ import { addDays } from './dates';
 
 const IG_PLAN = planFromLayout(IRON_GRIP.recommendedLayout!);
 // 2026-03-08 is a Sunday.
-const START = '2026-03-09'; // Monday of week 1
+const START = '2026-03-08'; // the Sunday week 1 runs from
 
 /**
  * One notch, as deep as asked for (PLAN.md M129).

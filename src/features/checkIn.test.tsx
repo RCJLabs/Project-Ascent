@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { getProgram } from '@/content/programs';
 import { getSession, newSession, putSession } from '@/db/sessions';
-import { dayOfWeek, today } from '@/engine/dates';
+import { dayOfWeek, startOfWeek, today } from '@/engine/dates';
 import { FINGER_CHIP, FINGER_LABEL, SLEEP_CHIP, SLEEP_LABEL } from '@/engine/readiness';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
@@ -46,7 +46,9 @@ async function logging(typeId: string, options: Options = {}): Promise<void> {
   await hydrate();
   useProfile.setState({
     activeProgramId: program.id,
-    startDates: { [program.id]: DATE },
+    // The block's own Sunday, which is the window a bare `DATE` used to
+    // produce before starts snapped forward (PLAN.md M259).
+    startDates: { [program.id]: startOfWeek(DATE) },
     // The plan has to place the session type on today, or the day has no
     // phase and there is no prescription to mark.
     plans: { [program.id]: { [dayOfWeek(DATE)]: typeId } },

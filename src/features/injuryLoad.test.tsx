@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { getProgram } from '@/content/programs';
 import type { BodyPart } from '@/content/bodyParts';
 import { newSession, putSession } from '@/db/sessions';
-import { dayOfWeek, today } from '@/engine/dates';
+import { dayOfWeek, startOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { HomePage } from '@/features/home/HomePage';
@@ -37,7 +37,7 @@ async function open({ program, typeId, injured, logged = false }: Setup): Promis
   await hydrate();
   useProfile.setState({
     activeProgramId: found.id,
-    startDates: { [found.id]: DATE },
+    startDates: { [found.id]: startOfWeek(DATE) },
     plans: { [found.id]: { [dayOfWeek(DATE)]: typeId } },
     weekOverrides: {},
     adaptations: {},

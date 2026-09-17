@@ -33,7 +33,7 @@ async function running(plan: Record<number, string>): Promise<void> {
   await hydrate();
   useProfile.setState({
     activeProgramId: PROGRAM,
-    startDates: { [PROGRAM]: TODAY },
+    startDates: { [PROGRAM]: startOfWeek(TODAY) },
     plans: { [PROGRAM]: plan },
     weekOverrides: {},
     adaptations: {},

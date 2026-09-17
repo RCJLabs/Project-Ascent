@@ -17,7 +17,7 @@ import type { BlockRecord } from './blocks';
  * programs, actually arrive.
  */
 
-const START = '2026-03-09';
+const START = '2026-03-08';
 const { to: LAST } = blockWindow(IRON_GRIP, START);
 
 let seq = 0;
@@ -148,9 +148,9 @@ describe('describing a past block (PLAN.md M87)', () => {
   });
 
   it('does not tell a climber who walked away that it ran out on them', () => {
-    const text = describeBlockEnd(forRow(row({ endedAt: addDays(START, 20) })));
-    // Twenty days past a Monday start is day 21 of the block's week, which
-    // is the start of week four.
+    const text = describeBlockEnd(forRow(row({ endedAt: addDays(START, 21) })));
+    // Twenty-one days past the block's first Sunday is day 22, which is the
+    // start of week four.
     expect(text).toContain('You left Iron Grip after 4 of its 12 weeks');
     expect(text).toContain('not a verdict');
     expect(text).not.toContain('ran out');

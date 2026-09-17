@@ -15,7 +15,7 @@ import { planVsLog, authoredSteps, type Finding, type FindingKind } from './plan
  */
 
 // 2026-03-08 is a Sunday, so the block's own window opens there.
-const START = '2026-03-09';
+const START = '2026-03-08';
 const FROM = '2026-03-08';
 
 /** Week `w`, day `d` (0 = Sunday) of the block. */

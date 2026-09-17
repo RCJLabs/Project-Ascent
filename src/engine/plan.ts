@@ -19,7 +19,7 @@ import {
   type SessionType,
 } from '@/content/types';
 import { testWeeks, type TestReason } from './assessments';
-import { addDays, dayOfWeek, daysBetween, programWeek, startOfWeek } from './dates';
+import { addDays, blockStart, dayOfWeek, daysBetween, programWeek } from './dates';
 import { effectivePlan, type WeekOverrides } from './reschedule';
 import type { WeekPlan } from './scheduler';
 
@@ -49,6 +49,22 @@ export interface PlannedDay {
    * to tell those apart reads this.
    */
   over?: boolean;
+  /**
+   * The block has not begun, and this is the day it does (PLAN.md M259).
+   *
+   * `over`'s mirror, and here for the reason `over` is: `week` is null on
+   * both sides of a block and both set `isRest`, so without a name for
+   * this one the days between pressing Start and the first Sunday read as
+   * *“Rest day. Recovery is training — log it to bank it.”* That was
+   * unreachable while a start snapped backwards — the week you pressed
+   * Start in was always week one — and starting on a Thursday now puts a
+   * climber here for three days.
+   *
+   * The date rather than a flag, because every screen that has something
+   * to say about the gap has to name its end, and a flag without the date
+   * beside it is a second field to keep in step.
+   */
+  startsOn?: string;
 }
 
 /**
@@ -56,12 +72,13 @@ export interface PlannedDay {
  *
  * One place, because three modules were each doing this arithmetic —
  * `calendar.lastDayOf` (which exists precisely because `programWeek`
- * clamps), `blockReport`, and this file. The Sunday matters: `programWeek`
- * snaps to the week, so a Wednesday start means the block's week one began
- * on the Sunday before it.
+ * clamps), `blockReport`, and this file. The Sunday matters, and which
+ * Sunday matters more: `blockStart` is the first **whole** week, so a
+ * Thursday start means week one begins on the Sunday *after* it and the
+ * days between belong to no week at all (PLAN.md M259).
  */
 export function blockWindow(program: Program, startDate: string): { from: string; to: string } {
-  const from = startOfWeek(startDate);
+  const from = blockStart(startDate);
   return { from, to: addDays(from, program.weeks * 7 - 1) };
 }
 
@@ -105,7 +122,7 @@ export function plannedDay(
   // prescribe. Without this `programWeek` clamps and every caller is handed
   // week twelve of a block that finished months ago, with its sessions and
   // its final-test banner (PLAN.md M85).
-  const { to } = blockWindow(program, startDate);
+  const { from, to } = blockWindow(program, startDate);
   if (date > to) return { date, week: null, isDeload: false, isRest: true, over: true };
 
   const week = programWeek(startDate, date, program.weeks);
@@ -113,7 +130,7 @@ export function plannedDay(
   // for a date the block has not reached drew next Monday's sessions onto
   // this week's calendar. Found by the week screen (PLAN.md M135), which
   // counted them as days to train.
-  if (week === null) return { date, week: null, isDeload: false, isRest: true };
+  if (week === null) return { date, week: null, isDeload: false, isRest: true, startsOn: from };
   const phase = phaseForWeek(program, week);
   const forWeek = effectivePlan(plan, overrides, date);
   const typeId = forWeek[dayOfWeek(date) as 0 | 1 | 2 | 3 | 4 | 5 | 6];

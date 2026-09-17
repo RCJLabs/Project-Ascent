@@ -46,15 +46,18 @@ describe('the block window', () => {
     expect(r.to).toBe(addDays(r.from, WEEKS * 7 - 1));
   });
 
-  it('starts on the Sunday of the week the climber began, not on the day', () => {
+  it('starts on the first whole week, not on the day the climber began', () => {
     // The fixture start is itself a Sunday, so this was invisible until a
-    // mid-week one was used — and it matters: `programWeek` snaps to the
-    // week too, so a Wednesday start would otherwise put the report window
-    // three days out of step with the week numbers it is reporting on.
+    // mid-week one was used — and it matters: `programWeek` reads the same
+    // rule, so a Wednesday start would otherwise put the report window out
+    // of step with the week numbers it is reporting on.
+    //
+    // Forward, not back (PLAN.md M259). The week containing the Wednesday
+    // is not week one: three of its days are behind the climber.
     const wednesday = '2026-01-07';
     const r = blockReport({ program: program(), startDate: wednesday, entries: [], today: '2026-03-01' })!;
-    expect(r.from).toBe('2026-01-04');
-    expect(r.tests[0]!.from).toBe('2026-01-04');
+    expect(r.from).toBe('2026-01-11');
+    expect(r.tests[0]!.from).toBe('2026-01-11');
   });
 
   it('stops at today while the block is still running', () => {

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { getProgram } from '@/content/programs';
 import { getSession, newSession, putSession } from '@/db/sessions';
-import { addDays, today } from '@/engine/dates';
+import { addDays, startOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';
 import { hydrate, renderAt, reset } from '@/test/render';
@@ -21,7 +21,7 @@ import { DayBody } from '@/features/log/LogPage';
 
 const DATE = today();
 /** Four weeks in, which is the Hammer phase (weeks 5-8). */
-const START = addDays(DATE, -28);
+const START = startOfWeek(addDays(DATE, -28));
 const HANG = 'Max Hangs';
 
 function hangDay() {

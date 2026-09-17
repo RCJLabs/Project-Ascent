@@ -9,7 +9,7 @@ import { blockAdherence, describeAdherence, type AdherenceInput } from './adhere
  */
 
 // 2026-03-08 is a Sunday, so the block window starts there.
-const START = '2026-03-09';
+const START = '2026-03-08';
 const FROM = '2026-03-08';
 // Monday Finger Protocol, Wednesday Performance, Friday Finger Protocol:
 // two `fp` and one `perf` a week, for twelve weeks.

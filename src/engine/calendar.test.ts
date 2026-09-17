@@ -23,7 +23,7 @@ import {
  */
 
 const PROGRAM = getProgram('iron_grip')!;
-const START = '2026-06-01';
+const START = '2026-05-31';
 /** Every weekday carries a session, so the plan is not the variable. */
 const PLAN = Object.fromEntries(
   PROGRAM.sessionTypes.filter((t) => !t.isRest).slice(0, 5).map((t, i) => [i + 1, t.id]),
@@ -204,11 +204,16 @@ describe('exporting twice', () => {
   it('keeps the id when the plan moves the session', () => {
     // The same date of the same program is the same event whatever is on it,
     // so changing the plan rewrites the day rather than adding a second one.
-    const moved = { ...PLAN, [dayOfWeek(START)]: PROGRAM.sessionTypes[1]!.id };
+    // A day the plan actually covers. `PLAN` runs Monday to Friday and
+    // `START` is the block's Sunday, so asking about `START` itself found
+    // nothing and the guarded assertion below ran on no days at all.
+    const on = addDays(START, 1);
+    const moved = { ...PLAN, [dayOfWeek(on)]: PROGRAM.sessionTypes[1]!.id };
     const before = scheduleEvents({ program: PROGRAM, startDate: START, plan: PLAN, from: START, usual });
     const after = scheduleEvents({ program: PROGRAM, startDate: START, plan: moved, from: START, usual });
-    const day = before.find((e) => e.date === START);
-    if (day) expect(after.find((e) => e.date === START)?.uid).toBe(day.uid);
+    const day = before.find((e) => e.date === on);
+    expect(day, 'no event on the day the plan covers').toBeTruthy();
+    expect(after.find((e) => e.date === on)?.uid).toBe(day!.uid);
   });
 });
 
