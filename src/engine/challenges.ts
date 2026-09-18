@@ -497,3 +497,40 @@ function resolve(
 export function daysLeft(challenge: Challenge, today: string): number {
   return Math.max(0, daysBetween(today, challenge.to));
 }
+
+/**
+ * How long is left, in the words the board says it in (PLAN.md M263).
+ *
+ * Here rather than inline in the row, for the reason `nextUp` is: a
+ * sentence built where it is rendered can only be tested on the day the
+ * suite runs. This one had *“1 days left”* in it — a weekly's window ends
+ * on Saturday, so every Friday all three of them said it at once — and the
+ * page test that should have caught it could not, because on a Friday the
+ * only number it ever saw was the one.
+ *
+ * Null for a bounty, which is the whole of that rule: a bounty is the one
+ * thing on the board the climber chose to take on, and it does not expire.
+ */
+export function describeDeadline(challenge: Challenge, today: string): string | null {
+  if (challenge.kind === 'bounty') return null;
+  const left = daysLeft(challenge, today);
+  if (left === 0) return 'today';
+  return `${left} ${left === 1 ? 'day' : 'days'} left`;
+}
+
+/**
+ * The next thing on the board still to do, in the order a climber meets it
+ * (PLAN.md M263).
+ *
+ * Here rather than inline in the card, because it has to walk **every** list
+ * the card counts. It did not: the compact entry on the game page read the
+ * daily and the weeklies and stopped, so a climber holding an unfinished
+ * bounty with the rest done saw *“4 of 5 done”* above *“Board clear”* —
+ * one line counting three lists and the next reading two of them.
+ *
+ * A bounty is last because it is the one the climber chose to take on and
+ * the only one without a deadline; the daily expires tonight.
+ */
+export function nextUp(board: Board): Challenge | null {
+  return [board.daily, ...board.weekly, ...board.bounties].find((c) => !c.done) ?? null;
+}

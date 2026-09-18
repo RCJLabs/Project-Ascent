@@ -14272,6 +14272,16 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and it found a live one; and the battery that proved it was itself lying.*** *See the
   entry at the end of this document.*
 
+- **M263 — one days left.** `/board` was rendered by exactly one test — `mounts.test.tsx`, which
+  checks it does not crash — and it is the densest page in the app for counts, targets and
+  deadlines. A weekly's window ends on Saturday, so **every Friday all three of them read “1 days
+  left” at once**, on the page's three most prominent rows. And the compact entry on the game page
+  counted three lists and then named what was left from two of them, so an unfinished bounty read
+  *“4 of 5 done”* above *“Board clear”*.
+  *Small, and it is two sentences moved into the engine.*
+  ***Built, and the battery showed a page test cannot judge a sentence about today.*** *See the
+  entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -17002,3 +17012,77 @@ The corpus is the Progress page's describers. The career subtitle's *“1 milest
 page's block sentence were found by hand and fixed by hand, and they are still not in it — page
 prose needs rendering, which this harness does not do. The vocabulary is now right; the set of
 sentences it is pointed at is still a subset of the app.
+
+## M263 — one days left
+
+Picking this surface took three goes, and the first two were wrong in a way worth recording: I
+recommended the builder as *“the largest unaudited surface”* and it has **127 tests across seven
+files**; I then counted tests per feature directory, which misses every surface whose tests live
+one level up — `/calendar` scored zero and has about a hundred and thirteen. The only count that
+meant anything was *how many test files render this page*, and by that measure `/board` is rendered
+by one: `mounts.test.tsx`, which asserts it does not crash.
+
+Driven across four shapes — an empty log, a quiet week, a full week, a long history — it came back
+with two.
+
+### Every Friday, three times
+
+```
+4 sends at V0 or harder      0 / 4 sends       +80 XP · 1 days left
+3 sessions this week         2 / 3 sessions    +80 XP · 1 days left
+Mix it up                    0 / 2 types       +80 XP · 1 days left
+```
+
+A weekly resolves over the calendar week, so its window ends on Saturday. On Friday `daysLeft` is
+1 and the row read *“1 days left”* — one day in seven, on all three weeklies at once, which makes
+it the most-seen defect found in this run of milestones. Today happens to be a Friday, so it came
+off the live page rather than out of a fixture.
+
+### Two lines about one board, disagreeing
+
+`BoardCard` on the game page:
+
+```tsx
+<p>{ready > 0 ? `${ready} ready to claim` : `${done} of ${all.length} done`}</p>
+<p>{board.daily.done ? board.weekly.find((c) => !c.done)?.title ?? 'Board clear' : …}</p>
+```
+
+`all` is the daily, the weeklies **and the bounties**. The line under it read the daily and the
+weeklies and stopped. So a climber holding an unfinished bounty with everything else done and
+claimed read *“4 of 5 done”* directly above *“Board clear”* — the count knowing about a list the
+sentence did not.
+
+### Both sentences moved into the engine, and why that is the fix
+
+`nextUp(board)` and `describeDeadline(challenge, today)` are engine functions now, and that is not
+tidying. It is what makes them provable:
+
+- The deadline sentence was built where it was rendered, so it could only ever be tested **on the
+  day the suite runs**. My first page test asserted no row said *“1 days left”* and passed — and the
+  battery then forced every row to say *“day”* regardless of the number, and that **survived**,
+  because on a Friday the only number the test ever saw was the one. The engine version is read on
+  all seven days in one test, and returns null for a bounty, which does not expire.
+- The next-up rule was a `find` inside a paragraph. Named and in the engine, it is held to walking
+  the same three lists the count above it walks.
+
+### What the battery found
+
+**8 mutants caught, sanity no-op survived.** Both directions of the plural die, so does dropping
+*today*, so does giving a bounty a deadline, and so does the card reading two of its three lists or
+naming something already done.
+
+One survived twice over before it died, and it is the lesson: replacing the page's call with a
+hard-coded `'today'` passed, because a page test that reads the real clock cannot tell a correct
+sentence from a constant on six days in seven. It holds the clock at a Friday now — the technique
+M261 arrived at two milestones ago, for the same reason.
+
+**6,528 tests over 386 files**, from 6,518 over 385, in the first test file `/board` has ever had.
+First load 134.59KB against a 135.4KB budget. Read back from a browser across all four shapes.
+
+### Checked and clean
+
+A challenge's count cannot run past its own target, which is the fault `cardProse.test.ts` calls
+*“no count past the requirement it is counted against”*. Two sessions in a day against a daily
+asking for one reads `1 / 1`; six sessions against a weekly asking for three reads `3 / 3`; and the
+send target is derived from recent weeks including this one, so it stays ahead of the count by
+construction. Probed rather than assumed.

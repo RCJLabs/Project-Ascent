@@ -3,7 +3,8 @@ import { Check, ClipboardCheck, Plus, Sparkles, Target, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import {
   deriveBoard,
-  daysLeft,
+  describeDeadline,
+  nextUp,
   type BountySpec,
   type Challenge,
 } from '@/engine/challenges';
@@ -195,7 +196,7 @@ function ChallengeRow({
 }) {
   const claim = useGame((s) => s.claim);
   const pct = Math.round((challenge.progress / challenge.target) * 100);
-  const left = daysLeft(challenge, today());
+  const deadline = describeDeadline(challenge, today());
 
   return (
     <div>
@@ -236,7 +237,10 @@ function ChallengeRow({
         ) : (
           <span className="text-xs text-ink-soft">
             +{unitsToXp(challenge.reward)} XP
-            {challenge.kind !== 'bounty' && ` · ${left === 0 ? 'today' : `${left} days left`}`}
+            {/* The sentence comes from the engine, where it can be read on
+                any day of the week rather than only on this one
+                (PLAN.md M263). Null is a bounty, which does not expire. */}
+            {deadline !== null && ` · ${deadline}`}
           </span>
         )}
         {onAbandon && !challenge.done && (
@@ -263,8 +267,11 @@ export function BoardCard() {
         <p className="text-sm font-semibold">
           {ready > 0 ? `${ready} ready to claim` : `${done} of ${all.length} done`}
         </p>
+        {/* Every list the line above counts, not two of the three
+            (PLAN.md M263) — and through the engine, so the rule is one
+            thing with a name rather than a `find` inside a paragraph. */}
         <p className="text-xs text-ink-soft mt-0.5 truncate">
-          {board.daily.done ? board.weekly.find((c) => !c.done)?.title ?? 'Board clear' : board.daily.title}
+          {nextUp(board)?.title ?? 'Board clear'}
         </p>
       </div>
     </div>
