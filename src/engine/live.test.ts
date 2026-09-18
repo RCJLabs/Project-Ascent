@@ -8,6 +8,7 @@ import {
   durationFromSpan,
   elapsedMs,
   formatClock,
+  formatCountdown,
   isLive,
   isStale,
   runningSession,
@@ -53,6 +54,33 @@ describe('formatting', () => {
     expect(formatClock(59 * M + 59_000)).toBe('59:59');
     expect(formatClock(H)).toBe('1:00:00');
     expect(formatClock(2 * H + 3 * M + 4000)).toBe('2:03:04');
+  });
+
+  it('counts a countdown down, not up', () => {
+    // The opposite rounding from `formatClock`, and the reason there are two:
+    // a clock counting up must not claim a second that has not passed, and a
+    // clock counting down must not claim zero while time is left.
+    expect(formatCountdown(0)).toBe('0:00');
+    expect(formatCountdown(1)).toBe('0:01');
+    expect(formatCountdown(999)).toBe('0:01');
+    expect(formatCountdown(1000)).toBe('0:01');
+    expect(formatCountdown(1001)).toBe('0:02');
+    expect(formatCountdown(2500)).toBe('0:03');
+    expect(formatCountdown(3 * M)).toBe('3:00');
+    expect(formatCountdown(H)).toBe('1:00:00');
+  });
+
+  it('reads zero only when the time is actually gone', () => {
+    // A clock read a tick past the end is a zero, not a negative.
+    expect(formatCountdown(-1)).toBe('0:00');
+    expect(formatCountdown(-5000)).toBe('0:00');
+  });
+
+  it('disagrees with the elapsed clock by exactly the part second', () => {
+    for (const ms of [1, 250, 999, 1000, 1001, 59_999, 60_000]) {
+      const whole = ms % 1000 === 0;
+      expect(formatCountdown(ms) === formatClock(ms), `${ms}ms`).toBe(whole);
+    }
   });
 
   it('describes a span in words', () => {

@@ -123,6 +123,16 @@ export function segmentStartMs(plan: TimerPlan, index: number): number {
   return ms;
 }
 
+/**
+ * The ring's own clock: counting down, so it ceils, and bare seconds under a
+ * minute because the ring shows one big number.
+ *
+ * Not the same function as `engine/live.ts`'s `formatClock`, which shares the
+ * name and floors because it counts up. That collision is how M266 happened:
+ * the rest timer imported the elapsed one to show a countdown. Anything
+ * counting down outside this sheet wants `formatCountdown` from there, which
+ * keeps the `m:ss` shape.
+ */
 export function formatClock(ms: number): string {
   const total = Math.max(0, Math.ceil(ms / 1000));
   const m = Math.floor(total / 60);

@@ -34,14 +34,49 @@ export function elapsedMs(session: Session, now = Date.now()): number {
   return Math.max(0, end - Date.parse(session.startedAt));
 }
 
-/** h:mm:ss once past an hour, m:ss before it. */
-export function formatClock(ms: number): string {
-  const total = Math.floor(ms / 1000);
+/** h:mm:ss once past an hour, m:ss before it. The shape only; the two
+ *  exports below decide which second a part-second belongs to. */
+function clockOf(total: number): string {
   const s = total % 60;
   const m = Math.floor(total / 60) % 60;
   const h = Math.floor(total / 3600);
   const pad = (n: number) => String(n).padStart(2, '0');
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+/**
+ * A clock counting **up**: 0:01 once a second has passed, not before.
+ *
+ * Flooring is what makes that true, and it is only true of elapsed time.
+ * For anything counting **down** use `formatCountdown` below, which rounds
+ * the other way for the reason written there. `engine/timer.ts` exports a
+ * third function of this name for the timer sheet's ring — it counts down,
+ * so it ceils, and it drops the leading `0:` under a minute.
+ */
+export function formatClock(ms: number): string {
+  return clockOf(Math.floor(ms / 1000));
+}
+
+/**
+ * A clock counting **down**: 0:00 only when the time is actually gone
+ * (PLAN.md M266).
+ *
+ * The rest timer read `formatClock`, which floors. A page that re-renders
+ * once a second lands each reading on a fresh clock, so most of the ladder
+ * was right — but the last tick before the end is not. Whatever is left at
+ * that tick floors to nothing, so the card reads `0:00` for the tail of a
+ * rest that is still running: between zero and a full second of it,
+ * depending only on where the tap fell against the page's tick grid.
+ *
+ * Ceiling is the countdown convention and the rule the interval timer
+ * already follows — `engine/timer.ts` computes its own remaining seconds
+ * with `Math.ceil` for both the ring and the three-second cue. `0:01` then
+ * means *up to* one second, and `0:00` is reached only by arriving, which
+ * for the rest timer means the card is gone. The clamp is for a clock read
+ * past the end, which is a zero rather than a negative.
+ */
+export function formatCountdown(ms: number): string {
+  return clockOf(Math.max(0, Math.ceil(ms / 1000)));
 }
 
 /** The same span in the words a summary wants. */

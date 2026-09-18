@@ -14302,6 +14302,16 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and the battery showed the guard I could not kill was guarding something jsdom cannot
   see.*** *See the entry at the end of this document.*
 
+- **M266 — the rest between burns ended a second late.** The logger's rest timer had no test file.
+  It reads its clock from the page, which moves once a second on a grid set by when the logger
+  mounted — so the rest finished at the first tick *after* it was over, not when it was over.
+  Measured in a browser: the beep, the announcement and the presets all arrived **1020ms** after a
+  rest that had genuinely ended, and the card read `0:00` for that whole second because it drew a
+  countdown with the elapsed clock.
+  *Small, and it is one timeout and one formatter.*
+  ***Built, and the first fix was wrong in a way only the browser showed.*** *See the entry at the
+  end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -17267,3 +17277,94 @@ read that only fires on screen — and driving them needs fixtures this mileston
 Read rather than driven, they came back clean: `useStrip` sets its records in one go so the
 placeholder's all-or-nothing guard is right, `quantise` clamps a drag that leaves the photo, and
 `describeMarks` agrees with itself about one of anything.
+
+
+## M266 — the rest between burns ended a second late
+
+Eight files in `src/features` are rendered by no test at all. `RestTimer` is the smallest thing on
+that list that a climber touches every session: the engine underneath it is well covered —
+`restRemaining`, `restLabel` and `REST_PRESETS` all have tests in `engine/gym.test.ts`, and
+`lib/timerState.ts` and `lib/cues.ts` have their own — while the card that puts them together had
+none. That is the same split M264 found at the spreadsheet importer and M265 found at the mark pad,
+for the third time running.
+
+### Two `formatClock`s, and the countdown imported the wrong one
+
+`engine/live.ts` exports `formatClock`, which floors, for time counting **up**. `engine/timer.ts`
+exports `formatClock`, which ceils, for the interval sheet's ring counting **down**. Same name,
+opposite rounding, neither comment mentioning the other. `RestTimer` imported the elapsed one to
+draw a countdown.
+
+So `formatCountdown` sits beside `formatClock` in `engine/live.ts`, ceiling, sharing the `m:ss`
+shape, and each of the three now names the others and says which way it rounds.
+
+### The measurement that said my reasoning was wrong
+
+The comment I first wrote claimed flooring made every reading short — *"2.5 seconds of rest
+displayed as `0:02`"*. Driving the real app said otherwise. The page re-renders on its own tick and
+`now` is **fresh** at that moment, so every band but the last is right. Ceiling the same numbers
+moved the whole ladder up by one:
+
+| real remaining | shipped | first fix |
+| --- | --- | --- |
+| 1971..1071ms | `0:02` | `0:03` |
+| 971..71ms | `0:01` | `0:02` |
+| −29..−929ms (over) | `0:00` | `0:01` |
+
+The first fix was not obviously better than what it replaced, and I would have shipped it on an
+argument from convention if the browser had not been asked.
+
+### What the browser did find
+
+Look at the last row of either column: the card was still on screen after the rest was over. The
+presets came back at real remaining **−1020ms**. The beep and the announcement came with them. The
+rest timer was ending up to a second late, every rest, in both versions — because the end was
+noticed by the page's clock rather than by the rest's own end time, and those two have nothing to
+do with each other. For an app where the rest interval *is* the training variable, that is worth
+more than which digit is showing.
+
+So there is a `setTimeout` for the exact remainder now. Measured after: the card ends at real
+remaining **−21ms**, and the `0:00` band is gone.
+
+With the end on time, ceiling is unambiguously right rather than a matter of taste: `0:01` means
+*up to* a second, and zero is reached by arriving.
+
+### What the battery had to teach me, three times
+
+**25 mutants caught, sanity no-op survived.** Three survived first, and each was a real defect or a
+real fragility rather than a missing assertion.
+
+`if (fired.current) return;` — the once-guard on the finish cue — could not be killed because
+`left` is a dependency and stops moving at zero, so React will not re-run the effect anyway. It was
+a second guard on a rule already enforced, which is the third one found in this one file: a
+`clearRest()` on the same path was deleted for the same reason in an earlier milestone, and an
+`if (ms <= 0)` branch went the same way in this one. Worse, the one case that could reach it — a
+phone's clock stepping backwards, which puts time back on a finished rest — is a case where the
+beep *should* sound again.
+
+Replacing that ref with a `boolean` reintroduced the bug it had been covering: the render that
+hands the component a new rest still carries the old flag, so starting a second rest beeped "rest
+over" instantly. The state holds the **end time** now, not a flag, because an end that belongs to a
+rest that is gone cannot match the one that is here.
+
+And `setReached(rest.endsAt)` → `setReached(Date.now())` survived, because jsdom fires a timer
+exactly on its due time and the two are then the same number. A browser is late by a few
+milliseconds and a throttled tab by much more, so that mutant is a real regression that the test
+environment is structurally unable to see: it would read as "not over yet" forever and fall back
+to the tick this milestone exists to replace. The comparison is `>=` so that both spellings are
+correct.
+
+### What this does not cover
+
+The tick grid is still the page's, so the final displayed second is only as long as the gap between
+the tap and the page's clock — `0:01` showed for 79ms in the run above. Fixing that means the card
+keeping its own clock rather than reading the logger's, which is a second clock on the same screen
+and did not look worth it for the last second of a rest.
+
+`AppearanceCard`, `PickItUp`, `SeasonCard`, `CalendarExportCard`, `SafetyNote`, `TallyRow` and
+`FieldSeriesChart` are still rendered by no test, as are `PhotoStrip`, `PhotoTile` and
+`useMediaOwners` from M265.
+
+**6,578 tests over 389 files**, from 6,553. First load 134.62KB against a 135.4KB budget. Read back
+from a browser by seeding a live session, tapping a preset and sampling the card every 100ms
+through to the end, against both the shipped build and this one.

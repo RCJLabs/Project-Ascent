@@ -177,7 +177,13 @@ describe('the rest timer', () => {
     expect(await screen.findByRole('timer')).toBeTruthy();
     expect(screen.getByRole('timer').textContent).toBe('1:00');
     await vi.advanceTimersByTimeAsync(11_000);
-    expect(screen.getByRole('timer').textContent).toBe('0:49');
+    // Two frames are admissible and which one shows is not this test's to
+    // decide: the page samples its clock once a second, the tap lands
+    // somewhere between two of those ticks, and the reading rounds up
+    // (M266) so that offset is visible where flooring hid it. What matters
+    // here is that the page drives the thing; `restTimer.test.tsx` pins the
+    // rounding exactly, by handing the component a `now` of its choosing.
+    expect(screen.getByRole('timer').textContent).toMatch(/^0:(49|50)$/);
   });
 
   it('stores an end time, not a count, so a sleeping phone does not pause it', async () => {
