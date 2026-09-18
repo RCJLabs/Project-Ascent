@@ -14262,6 +14262,16 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and the fixture is proved on all seven days rather than argued about.*** *See the entry
   at the end of this document.*
 
+- **M262 — the vocabulary that decided what the rule could see.** M248 built a prose harness with a
+  plural check, and M258 and M260 then found four plural defects **by hand** — *1 milestones*,
+  *1 hours*, *1 day*, *All run to the end*. `describeYear` is in that corpus and the check runs on
+  it. It could not see any of them, because the nouns it may look at were a hand-written list of
+  twenty-four words and not one of the four was on it. The vocabulary is read off the app now, and
+  a counted word nothing can judge is a failure rather than a silence.
+  *Not small — it changes what every check in the harness can see.*
+  ***Built, and it found a live one; and the battery that proved it was itself lying.*** *See the
+  entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -16877,3 +16887,118 @@ eventually, at 23:58.
 
 **6,514 tests over 385 files.** No runtime code changed, so there is nothing to verify in a browser
 and the budget is where M260 left it.
+
+## M262 — the vocabulary that decided what the rule could see
+
+M248 built a harness that reads every sentence on Progress against every shape of log, and gave it
+a check called **agreement about one of anything**. M258 and M260 then found four plural defects by
+hand. `describeYear` is *in* that corpus. The check *runs* on it. It caught none of them:
+
+```ts
+const NOUNS =
+  'sessions|session|days|day|weeks|week|months|month|years|year|climbs|climb|sends|send|attempts|attempt|tries|try|entries|entry|times|time';
+```
+
+Twenty-four words, written by hand. No `hours`. No `milestones`, `blocks`, `grades`, `drills`,
+`projects`, `routes`, `places`, `feet`. So *“1 session, 1 hours, 0 feet climbed”* went through a
+corpus built to catch exactly that sentence, and cost nothing on the way: a noun the loop does not
+know is a noun the loop does not visit. **What the list took away was not correctness. It was the
+ability to fail.**
+
+That is the hand-written legend beside a derived grid (PLAN.md M145), one level down — and the
+harness's own comment two lines above it says *“a probe that cannot find a known-present instance
+is not a probe (PLAN.md M195). Every check here proves it still fires before it is trusted.”* Every
+check does. The vocabulary underneath them proved nothing.
+
+### Read off the app instead
+
+This app spells a plural three ways, and all three are now read out of `src/`:
+
+```ts
+n === 1 ? 'day' : 'days'            // and the phrase form, 'route says' : 'routes say'
+`session${n === 1 ? '' : 's'}`      // the commonest by far
+plural(n, 'week')                   // skills.ts and objectives.ts
+```
+
+Twenty-four hand-kept words become **76 derived ones**, and the four nouns four hand-audits found
+defects in are all in there without anybody adding them. What derivation cannot see is small and
+explicit: `try/tries`, `entry/entries`, `attempt/attempts` and `foot/feet`, each listed with why.
+
+### And the other half: a counted word nothing can judge now fails
+
+Deriving the list makes it bigger. It does not stop the next noun from being missing. So a second
+check walks the same sentences for **any** `\d+ word` pair and fails on a word that is neither in
+the vocabulary nor in an explicit `NOT_COUNTED` — comparatives, prepositions, participles, and the
+first word of a two-word noun like *rest days*, each with its reason. The silence is loud now: the
+next noun the app starts counting has to be judged or declared.
+
+Running it turned up **a live one**:
+
+```
+1 of your 1 routes say whether they were led or top-roped.
+```
+
+`describeRopeSplit` guards only `said === 0`, so a climber with a single tagged route reads that —
+while the rung count at the foot of the same function has agreed with itself since it was written.
+Both the noun and its verb now: *“1 of your 1 route says”*.
+
+### Two sentences that are right by accident, registered rather than patched
+
+`places` and `trips` are counted and pluralised nowhere. The first draft of this milestone gave
+each a ternary — and both are **dead code**: `describeVenues` answers a single place with a
+different sentence entirely, and `describeTrips` returns null below two trips (PLAN.md M250). That
+is the dead guard the battery has removed from four fixes this session, this time written on
+purpose.
+
+So they are listed instead, in the vocabulary, with a note naming the guard each one leans on. The
+plural check judges them now, which means the day one of those guards is removed, *“1 trips”* fails
+here rather than shipping.
+
+### A shape with one of anything in it
+
+The check can only fire on a **one**, and every shape in the corpus was many-of-everything: it
+reached `describeRopeSplit` with twenty-four routes on every run and never with one. `one of
+everything` is a single session with a single tagged route at a single named venue — a climber's
+first logged evening — and a test asserts it actually produces `1 of your 1 route says`, because a
+shape nothing reads is the same nothing as a card that never speaks.
+
+### The battery was lying, twice
+
+Worth writing down in full, because both faults made it report confident nonsense.
+
+**It read the word “failed” out of a test's name.** The runner was `'failed' not in stdout`, and
+this very file holds a test called *“holds no number that failed to be a number”*, which vitest
+prints on every run as a slow test. Every passing run read as a failing one — so **every mutant
+reported “killed” whether it died or not**, including the run that first said this milestone was
+clean. It reads vitest's exit status now.
+
+**It lost a restore and nothing noticed.** A mutant that replaced the derived vocabulary with four
+hand-written words stayed in the file across the next twenty minutes — through a full 6,517-test
+suite run, which passed, because a weakened check is a check that finds less. The vocabulary was
+sixteen words when it should have been eighty-eight, and the only reason it surfaced is that a
+later mutation happened to make a *different* test fail loudly enough to investigate. The runner
+now records the working tree before it starts and compares after **every single mutant**, and
+aborts on any drift.
+
+A battery that cannot fail is the same fault as a probe that cannot find. This one had both.
+
+### What the battery found once it worked
+
+**11 mutants caught, sanity no-op survived.** Reverting the vocabulary to a hand-kept list dies.
+Blinding any one of the three spellings dies. Letting an unjudged noun pass dies. Reading `feet` by
+shape instead of by membership dies. Both directions of the rope sentence die.
+
+One survived at first: deleting the `plural()` reader changed nothing, because every noun it finds
+is spelled another way somewhere too. Not dead — it is the only reader that would see a noun
+counted in `skills.ts` alone — so the three readers are separate now and each is proved to read
+something, by name.
+
+**6,518 tests over 385 files**, from 6,514 over 385. First load 134.61KB against a 135.4KB budget.
+The rope sentence read back from a browser at one route and at six.
+
+### What this does not reach
+
+The corpus is the Progress page's describers. The career subtitle's *“1 milestones”* and the year
+page's block sentence were found by hand and fixed by hand, and they are still not in it — page
+prose needs rendering, which this harness does not do. The vocabulary is now right; the set of
+sentences it is pointed at is still a subset of the app.

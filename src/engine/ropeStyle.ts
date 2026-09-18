@@ -107,7 +107,13 @@ export function describeRopeSplit(
   display: GradeDisplay = DEFAULT_DISPLAY,
 ): string | null {
   if (split.said === 0) return null;
-  const coverage = `${split.said} of your ${split.total} routes say whether they were led or top-roped`;
+  // The noun and the verb that follows it, both (PLAN.md M262). `said === 0`
+  // is the only guard here, so a climber with a single tagged route read
+  // *“1 of your 1 routes say whether…”*. The rung count at the foot of this
+  // function has agreed with itself since it was written.
+  const coverage = `${split.said} of your ${split.total} ${
+    split.total === 1 ? 'route says' : 'routes say'
+  } whether they were led or top-roped`;
   if (split.thin) {
     return `${coverage}. Not enough yet to read a split from — tag a few more and this will say something.`;
   }

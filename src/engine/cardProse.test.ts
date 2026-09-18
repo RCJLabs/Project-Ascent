@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { RestChecklist, Session } from '@/db/sessions';
 import { angles, describeAngles } from './angles';
@@ -183,6 +185,35 @@ const SHAPES: Record<string, Session[]> = {
   ],
   /** Eight days on the trot at RPE 9, which is what the vitality band is for. */
   hammered: Array.from({ length: 10 }, (_, i) => at(1 + i, { rpe: 9, durationMin: 150 })),
+  /**
+   * One of everything a sentence counts (PLAN.md M262).
+   *
+   * The plural check can only fire on a **one**, and the shapes above are
+   * all many-of-everything: the corpus reached `describeRopeSplit` with
+   * twenty-four routes on every run and never with one, so *“1 of your 1
+   * routes say”* was a sentence no shape could produce. `one` above is one
+   * session, which is not the same thing — it carries three boulders, no
+   * rope style and no place.
+   *
+   * A single session with a single tagged route at a single named venue,
+   * which is what a climber's first logged evening actually looks like.
+   */
+  'one of everything': [
+    at(2, {
+      durationMin: 60,
+      fields: { location: 'The Works' },
+      climbs: [
+        {
+          id: 'only',
+          grade: '5.10a',
+          scale: 'YDS',
+          count: 1,
+          result: 'send',
+          ropeStyle: 'lead',
+        },
+      ],
+    } as Partial<Session>),
+  ],
 };
 
 /** Every sentence a card on Progress can print, for one log. */
@@ -327,8 +358,162 @@ interface Check {
   example: string;
 }
 
-const NOUNS =
-  'sessions|session|days|day|weeks|week|months|month|years|year|climbs|climb|sends|send|attempts|attempt|tries|try|entries|entry|times|time';
+/**
+ * Every noun this app knows how to count, read off the app (PLAN.md M262).
+ *
+ * This was twenty-four words, written by hand, and the checks below can only
+ * judge a number whose noun is on the list. So the rule was right, its
+ * self-proof was right, and the **vocabulary** silently decided what the
+ * rule could see: `/year` shipped *“1 session, 1 hours”* through a corpus
+ * that drives `describeYear`, past a check written for exactly that fault,
+ * because `hours` was not one of the twenty-four. Three more of the same
+ * kind were found by hand in M258 and M260 — *1 milestones*, *1 day*,
+ * *All run to the end* — and not one of their nouns was on the list either.
+ *
+ * A hand-kept list of the words a rule may look at is the same mistake as a
+ * hand-written legend beside a grid (PLAN.md M145): it drifts, and it drifts
+ * silently, because what it loses is the *ability to fail*.
+ *
+ * So it is derived. Anywhere the app pluralises a word — a ternary, a
+ * trailing `s`, or `plural()` — both spellings enter the vocabulary, and
+ * every sentence in the corpus is then judged against the whole of it.
+ */
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((entry) => {
+    const path = join(dir, entry);
+    if (statSync(path).isDirectory()) return sourceFiles(path);
+    return /\.tsx?$/.test(path) && !/\.test\./.test(path) ? [path] : [];
+  });
+}
+
+/**
+ * The three ways this app spells a plural, read separately.
+ *
+ * Separately because the battery found the third one unkillable: every noun
+ * `plural()` contributes today is also spelled one of the other two ways
+ * somewhere, so deleting that reader changed nothing and no test noticed. A
+ * reader that cannot be shown to read is the same nothing as a card that
+ * never speaks (PLAN.md M250), and the fix is not to delete it — it is the
+ * only reader for a noun counted in `skills.ts` alone — but to prove each
+ * of the three finds something.
+ */
+function derivedBySpelling(): Record<'ternary' | 'suffix' | 'helper', Set<string>> {
+  const ternary = new Set<string>();
+  const suffix = new Set<string>();
+  const helper = new Set<string>();
+  const add = (into: Set<string>, one: string, many: string) => {
+    into.add(one.toLowerCase());
+    into.add(many.toLowerCase());
+  };
+  for (const path of sourceFiles('src')) {
+    const source = readFileSync(path, 'utf8');
+    // `n === 1 ? 'day' : 'days'`, and the phrase form that carries the
+    // verb with it — `'route says' : 'routes say'`. The noun is the first
+    // word of each side, which is where the number lands.
+    for (const [, left, right] of source.matchAll(/\? '([a-z][a-z ]*)' : '([a-z][a-z ]*)'/g)) {
+      const one = left!.split(' ')[0]!;
+      const many = right!.split(' ')[0]!;
+      if (many === `${one}s` || many === `${one}es`) add(ternary, one, many);
+    }
+    // `` `session${n === 1 ? '' : 's'}` ``, the commonest spelling by far.
+    for (const [, one] of source.matchAll(/(?:^|[^A-Za-z])([A-Za-z]{3,})\$\{[^}]*\? '' : 's'\}/g)) {
+      add(suffix, one!, `${one}s`);
+    }
+    // `plural(n, 'week')`, and its irregular second form.
+    for (const [, one, many] of source.matchAll(/plural\([^,)]+, '([a-z]+)'(?:, '([a-z]+)')?/g)) {
+      add(helper, one!, many ?? `${one}s`);
+    }
+  }
+  return { ternary, suffix, helper };
+}
+
+function derivedNouns(): Set<string> {
+  const by = derivedBySpelling();
+  return new Set([...by.ternary, ...by.suffix, ...by.helper]);
+}
+
+/**
+ * Nouns the derivation cannot see, and why each one is here.
+ *
+ * Kept short on purpose: a word belongs here only when the app counts it in
+ * prose and pluralises it nowhere, so there is nothing to read it off.
+ */
+const IRREGULAR: Record<string, string> = {
+  // `-y` to `-ies`, which the three spellings above do not produce.
+  try: 'tries',
+  entry: 'entries',
+  // Counted in the project and pyramid cards, spelled out rather than built.
+  attempt: 'attempts',
+  // English, not a rule: one foot, two feet.
+  foot: 'feet',
+};
+
+/**
+ * Which spelling is the plural one.
+ *
+ * By membership rather than by shape, because the shape test gets every
+ * irregular backwards: `feet` does not end in a consonant plus `s` and
+ * `tries` does not look like `try` — and reading *“45 feet”* as a singular
+ * is the same fault as reading *“1 hours”* as a plural (PLAN.md M262).
+ */
+const SINGULAR = new Set(Object.keys(IRREGULAR));
+const PLURAL = new Set(Object.values(IRREGULAR));
+const isPlural = (noun: string): boolean =>
+  PLURAL.has(noun) ? true : SINGULAR.has(noun) ? false : /s$/.test(noun);
+
+/**
+ * Nouns the app counts in prose and pluralises **nowhere**, because their
+ * singular is prevented by a guard rather than spelled.
+ *
+ * The first draft of this milestone gave each of them a ternary, which is
+ * dead code: `describeVenues` answers a single place with a different
+ * sentence entirely, and `describeTrips` answers a single trip with no
+ * sentence at all. Writing `length === 1 ? 'trip' : 'trips'` under a
+ * `length < 2` early return is the dead guard the battery has taken out of
+ * four fixes this session, added on purpose.
+ *
+ * They belong in the vocabulary all the same, and that is the point of
+ * listing them: the plural check judges them now, so the day one of those
+ * guards is removed, *“1 trips”* fails here instead of shipping. The note
+ * beside each is what the sentence is currently relying on.
+ */
+const GUARDED: Record<string, string> = {
+  // `describeVenues` answers one place with “Every session you have named a
+  // place for was at X”, so the counted form never sees a one.
+  place: 'places',
+  // `describeTrips` returns null below two trips (PLAN.md M250): a
+  // superlative over a set of one was every word already in the list above.
+  trip: 'trips',
+};
+
+const VOCABULARY = new Set([
+  ...derivedNouns(),
+  ...Object.keys(IRREGULAR),
+  ...Object.values(IRREGULAR),
+  ...Object.keys(GUARDED),
+  ...Object.values(GUARDED),
+]);
+const NOUNS = [...VOCABULARY].sort((a, b) => b.length - a.length).join('|');
+
+/**
+ * Words that follow a number and are not things being counted.
+ *
+ * The other half of making the vocabulary loud: a counted word that is
+ * neither in the vocabulary nor named here fails the corpus, so the next
+ * noun the app starts counting cannot slip past unjudged the way `hours`
+ * did. Every entry is a word the corpus actually produces after a number.
+ */
+const NOT_COUNTED = new Set([
+  // Comparatives and adverbs: “8 more”, “1 fewer”, “7 worse”.
+  'more', 'fewer', 'worse', 'better', 'now', 'then', 'ago',
+  // Prepositions and articles: “3 of 5”, “0.0 a week”, “6 from”.
+  'a', 'of', 'from', 'to', 'in', 'on', 'at', 'and', 'or', 'across', 'over', 'under',
+  // Participles that read as verbs here: “6 scored”, “0 sent”, “10 training”.
+  'scored', 'sent', 'logged', 'training', 'niggly',
+  // The first word of a two-word noun, which the matcher cuts in half:
+  // “20 rest days” is rest *days*, and the plural is on the second word.
+  'rest', 'outdoor', 'indoor', 'gym', 'real',
+]);
 
 const CHECKS: Check[] = [
   {
@@ -366,9 +551,30 @@ const CHECKS: Check[] = [
     name: 'agreement about one of anything',
     example: 'You went over it 1 times, across 2 session.',
     fault: (text) => {
-      const plural = (noun: string) => /s$/.test(noun) || noun === 'tries' || noun === 'entries';
       for (const [whole, n, noun] of text.matchAll(new RegExp(String.raw`\b(\d+) (${NOUNS})\b`, 'g'))) {
-        if ((Number(n) === 1) === plural(noun!)) return `"${whole}"`;
+        if ((Number(n) === 1) === isPlural(noun!)) return `"${whole}"`;
+      }
+      return null;
+    },
+  },
+  {
+    /**
+     * The vocabulary, held to the corpus rather than the other way round
+     * (PLAN.md M262).
+     *
+     * Every check above can only judge a number whose noun it knows, and a
+     * noun it does not know costs it nothing — the loop simply finds less.
+     * That is how *“1 session, 1 hours”* went out through a corpus that
+     * drives the very sentence it is in. So a counted word that is neither
+     * in the vocabulary nor named as not-a-noun is a **failure**, and the
+     * next noun the app starts counting has to be judged or declared.
+     */
+    name: 'no word counted that nothing can judge',
+    example: 'Fingers came back sore on 3 mornings of the 29.',
+    fault: (text) => {
+      for (const [whole, , noun] of text.matchAll(/\b(\d+) ([a-z]{2,})\b/g)) {
+        if (VOCABULARY.has(noun!) || NOT_COUNTED.has(noun!)) continue;
+        return `"${whole}" — add ${noun} to what the app pluralises, or to NOT_COUNTED`;
       }
       return null;
     },
@@ -519,6 +725,42 @@ describe('every sentence on Progress, against every shape of log', () => {
    */
   it('gives every card in it something to say, at least once', () => {
     expect(silentIn(proseFor), 'never speaks for any shape of log').toEqual([]);
+  });
+
+  /**
+   * The shape that exists to carry a one, carrying one (PLAN.md M262).
+   *
+   * A shape nothing reads is the same nothing as a card that never speaks.
+   * `one of everything` was added so the plural check would have a `1` to
+   * judge in the sentences that count routes and places, and it earns its
+   * place only if those sentences actually come out of it holding one.
+   */
+  it('reads all three of the ways this app spells a plural', () => {
+    // The battery found the `plural()` reader unkillable: every noun it
+    // contributes is spelled another way somewhere too, so deleting it
+    // changed nothing (PLAN.md M262). A reader nothing proves is a reader
+    // that can rot — and it is the only one that would see a noun counted
+    // in `skills.ts` and nowhere else.
+    const by = derivedBySpelling();
+    for (const [spelling, found] of Object.entries(by)) {
+      expect(found.size, `${spelling} found nothing`).toBeGreaterThan(3);
+    }
+    // And each one reads the form it is for, named rather than counted.
+    expect([...by.ternary]).toContain('hours');
+    expect([...by.suffix]).toContain('sessions');
+    expect([...by.helper]).toContain('weeks');
+  });
+
+  it('has a shape that puts a one in front of the nouns that never saw one', () => {
+    const rows = proseFor(SHAPES['one of everything']!).filter(
+      (row): row is { card: string; text: string } => typeof row.text === 'string',
+    );
+    expect(rows.length, 'nothing spoke for one of everything').toBeGreaterThan(3);
+    const ones = rows.filter((row) => /\b1 [a-z]/.test(row.text));
+    expect(ones.length, rows.map((r) => `${r.card}: ${r.text}`).join('\n')).toBeGreaterThan(0);
+    // The sentence this shape was written for, said in the singular.
+    const rope = rows.find((row) => row.card === 'Rope styles');
+    expect(rope?.text, rows.map((r) => r.card).join(', ')).toContain('1 of your 1 route says');
   });
 
   /** Nothing here may read the clock or a random number. */
