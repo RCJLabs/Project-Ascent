@@ -494,9 +494,24 @@ describe('the bundle stays small', () => {
    *
    * Every milestone that moves this moves it to just above what it measured,
    * with one exception recorded below — the history is in the comment inside
-   * the first test.
+   * the first test, which stops at M193; since then each move is recorded in
+   * that milestone's PLAN entry instead.
+   *
+   * **135.4 → 135.7 at M273, raised rather than spent**, and asked for
+   * rather than needed: the line had 0.72KB left and the next feature of any
+   * size would have had to move it in its own commit. 1.02KB of slack, which
+   * is the 1.00 target every raise here has used and deliberately short of
+   * the 1.5 the guard allows.
+   *
+   * Bounded both ways before it was committed, against 134.68 measured:
+   * 134.6 fails the budget, 136.18 is exactly 1.50 of slack and fails the
+   * guard, 136.17 passes. Worth saying plainly — a raise costs something in
+   * the other direction. The guard reads the gap, so lifting the ceiling
+   * lifts the floor with it: at 135.7 a rebuild measuring under 134.2 fails
+   * for being *too small*, which is the price of headroom in a ratchet and
+   * the reason this is 1.02 rather than the 1.49 that would just fit.
    */
-  const BUDGET = 135.4;
+  const BUDGET = 135.7;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {

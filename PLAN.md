@@ -14369,6 +14369,15 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and it found nothing — which is the honest result and is written down as one.***
   *See the entry at the end of this document.*
 
+- **M273 — the Sunday the block begins, walked; and one milestone of headroom.** M259 was shipped
+  from a report and its arithmetic was tested, but nothing had ever stepped a running app across the
+  boundary. Two days before the block starts, it was worth walking: Thursday to Sunday to the
+  following Sunday, with the real setup. It holds. And the budget had 0.72KB left, which is less
+  than a feature.
+  *Small, and it is one number.*
+  ***Verified, nothing to fix, and the raise costs something in the other direction.***
+  *See the entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -17916,3 +17925,58 @@ than a fix for something broken. That is worth one milestone and not two; the fi
 the signal that the audit has run its useful length in this area.
 
 **6,620 tests over 392 files**, from 6,610. First load 134.68KB against a 135.4KB budget.
+
+
+## M273 — the Sunday the block begins, walked; and one milestone of headroom
+
+### Walking the boundary rather than the arithmetic
+
+M259 moved where a block begins: press Start on a Thursday and week 1 opens on the following Sunday,
+because a first week that is four days long is not a first week. It was shipped from a report, and
+`startsMidWeek.test.tsx` holds the rule — but every one of those tests checks a *function*. Nothing
+had put a running app on the Saturday, moved the clock, and read what the climber is told on the
+Sunday.
+
+With the block starting Sunday the 20th and the check run on the Friday, it was worth doing. The
+real setup: Peak Performance, started Thursday the 17th, climbing Sunday, Tuesday, Wednesday and
+Friday.
+
+| day | what Home says |
+| --- | --- |
+| Thu 17 – Sat 19 | *"Peak Performance starts Sep 20, so its first week is a whole one. Nothing is planned until then."* |
+| **Sun 20** | **Week 1 of 12 · Build**, Max Intensity Bouldering, limit day |
+| Mon 21 | Week 1, rest day, *"3 to come"* |
+| Tue 22 | Week 1, Fingerboard & Armor |
+| Sun 27 | **Week 2 of 12** |
+
+The week view agrees on both sides — *"Peak Performance has not started yet. Its first week begins
+Sep 20"* on the Saturday, `Sep 20 – Sep 26` on the Sunday, a whole week wide. And a session logged
+on the Saturday leaves the Sunday reading *"0 of 4 training days done"*, which is the promise the
+gap made — *"anything you climb before it counts — it is logged outside the block"* — kept.
+
+**Nothing to fix, and nothing to add.** The hand-walk found no defect, and every property it
+observed is already held by a test in `startsMidWeek.test.tsx`. Recorded because a verification that
+finds nothing is still a result, and because the alternative was finding out on Sunday.
+
+### The budget, raised rather than spent
+
+0.72KB of room left, which is less than one feature. The raise is the eighth entry in this app's
+history to record no feature at all, and the first that was simply **asked for** rather than reached.
+
+`135.4 → 135.7`, measured 134.68, **1.02KB of slack** — the 1.00 target every raise here has used
+and deliberately short of the 1.5 the guard allows.
+
+The part worth saying plainly: **a raise costs something in the other direction.** The guard reads
+`BUDGET − measured` and fails above 1.5, so lifting the ceiling lifts the floor with it. At 135.7 a
+rebuild measuring under 134.2 fails *for being too small* — which is why this is 1.02 and not the
+1.49 that would have just fit. A bigger raise would buy headroom by making the next size reduction
+break the build.
+
+Bounded both ways before committing, against 134.68: 134.6 fails the budget, 136.18 is exactly 1.50
+of slack and fails the guard, 136.17 passes.
+
+**3 mutants caught, sanity no-op survived** — the budget raised past the guard, raised to 300 where
+a regression could hide, and set below what the app measures. Both walls of the ratchet still stand
+at the new number, which is the only thing that makes the new number worth anything.
+
+**6,620 tests over 392 files.** First load 134.68KB against a 135.7KB budget.
