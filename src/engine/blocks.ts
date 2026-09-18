@@ -196,6 +196,25 @@ export function rowWindow(row: BlockRecord): { from: string; to: string } {
 export type BlockOutcome = 'running' | 'completed' | 'left' | 'unknown';
 
 /**
+ * What each outcome is called on screen (PLAN.md M284).
+ *
+ * Moved here from inside `FinishPage` when the share card needed the same
+ * words. Two copies of this would drift the moment one of them was reworded,
+ * and a card that said "abandoned" about a block the page beside it called
+ * "left early" is the shape M169 named.
+ *
+ * `BLOCK_` because `exerciseLog.ts` exports an `OUTCOME_WORD` of its own for
+ * a set, and the two are a genuine collision waiting for the file that
+ * imports both.
+ */
+export const BLOCK_OUTCOME_WORD: Record<BlockOutcome, string> = {
+  running: 'running',
+  completed: 'ran to the end',
+  left: 'left early',
+  unknown: 'no record of how it ended',
+};
+
+/**
  * What became of a block.
  *
  * `completed` means the climber was still on it when its last week ran out,

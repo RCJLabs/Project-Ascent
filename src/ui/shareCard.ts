@@ -14,6 +14,8 @@
 import type { Project } from '@/db/projects';
 import { DEFAULT_DISPLAY, displayGrade, type GradeDisplay } from '@/engine/grades';
 import type { AltimeterState } from '@/engine/altimeter';
+import { BLOCK_OUTCOME_WORD, type BlockOutcome } from '@/engine/blocks';
+import type { BlockReport } from '@/engine/blockReport';
 import type { AvatarConfig } from '@/engine/avatar';
 import { fromKey, shortLabel } from '@/engine/dates';
 import type { ProjectSummary } from '@/engine/projects';
@@ -280,6 +282,100 @@ export function yearCard(review: YearReview): CardContent {
           footnote: `Busiest month: ${fromKey(`${review.busiest.month}-01`).toLocaleDateString(undefined, { month: 'long' })}`,
         }
       : {}),
+  };
+}
+
+/**
+ * A block, on a card (PLAN.md M284).
+ *
+ * `blockReport.ts` computes the report and eight card builders sit in this
+ * file, for a record, a project, a week, a year, the altimeter, the day's
+ * wall, an achievement and a rank. **Twelve weeks end and there is nothing to
+ * show for it** — which is the same gap M68 named about the year, one unit
+ * down and for the artefact a climber is most likely to have worked hardest
+ * for.
+ *
+ * ## Not a highlight reel, which is the whole difficulty
+ *
+ * A share card is a highlight by nature, and `describeBlock` refuses to be
+ * one in as many words: *"it leads with the count rather than the winners: a
+ * report that names three improvements and stays quiet about four untested
+ * metrics is a highlight reel."* A card that showed `better` and left out
+ * `untested` would be exactly the thing that sentence was written against.
+ *
+ * So **untested is a stat, beside the three movements**. Four numbers that
+ * add up to the battery, rather than the one that flatters.
+ *
+ * ## And it says how the block ended
+ *
+ * `yearCard` states the rule: *"'412 sessions' in September is a different
+ * sentence from '412 sessions' in January, and a card that leaves that out is
+ * a card that overstates."* A block abandoned in week six and one run to its
+ * last day have identical windows — `blocks.ts` opens on that — so the
+ * eyebrow carries the weeks actually run and what became of them.
+ */
+/**
+ * The one line a card has for what was trained, or nothing.
+ *
+ * Three cases, because two of them are wrong as one. A plan comparison is
+ * worth printing when something matched it; when nothing did, the sessions
+ * are the honest number and the plan is noise; and with neither there is
+ * nothing to say, which `yearCard` already treats as a subhead to omit.
+ */
+function sessionLine(
+  adherence: { done: number; planned: number; unplanned: number } | null | undefined,
+): { subhead?: string } {
+  if (!adherence) return {};
+  const { done, planned, unplanned } = adherence;
+  if (done > 0 && planned > 0) return { subhead: `${done} of ${planned} sessions the plan placed` };
+  if (unplanned > 0) {
+    return { subhead: `${unplanned} ${unplanned === 1 ? 'session' : 'sessions'}, none against the plan` };
+  }
+  return {};
+}
+
+export function blockCard(input: {
+  report: BlockReport;
+  /** What became of it: `outcomeOf`'s reading, or 'running'. */
+  outcome: BlockOutcome;
+  /** Weeks actually run, which is not `program.weeks` on an abandoned block. */
+  weeksRun: number;
+  /**
+   * M91's planned-against-done, when there is a plan to compare.
+   *
+   * `unplanned` is not optional decoration. A climber whose sessions carry no
+   * session type scores **0 of 23** however hard they trained, and a card
+   * saying that about six weeks of training is the highlight-reel problem
+   * inverted — understating rather than overstating. Found in a browser, on
+   * the sample climber, whose sessions are logged against no type at all.
+   */
+  adherence?: { done: number; planned: number; unplanned: number } | null;
+}): CardContent {
+  const { report, weeksRun } = input;
+  const full = report.program.weeks;
+  const weeks = weeksRun >= full ? `${full} weeks` : `${weeksRun} of ${full} weeks`;
+  // The page's own words, which is why they moved to `blocks.ts`: a card
+  // saying "abandoned" beside a screen saying "left early" is two vocabularies
+  // for one fact.
+  const became = BLOCK_OUTCOME_WORD[input.outcome];
+
+  const compared = report.results.length - report.untested;
+  return {
+    eyebrow: `${weeks} · ${became}`,
+    headline: report.program.name,
+    ...sessionLine(input.adherence),
+    stats: [
+      { label: 'Improved', value: String(report.better) },
+      { label: 'Held', value: String(report.flat) },
+      { label: 'Down', value: String(report.worse) },
+      // The one that stops this being a highlight reel. Kept even at zero,
+      // because "0 untested" is a fact worth reading beside the other three.
+      { label: 'Untested', value: String(report.untested) },
+    ],
+    footnote:
+      compared === 0
+        ? `Nothing retested across ${report.results.length} ${report.results.length === 1 ? 'assessment' : 'assessments'}`
+        : `${compared} of ${report.results.length} retested`,
   };
 }
 

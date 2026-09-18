@@ -14402,8 +14402,8 @@ M50 for why it is not coming.
   **M283** below. *Shipped.*
 
 - **A finished block as a share card.** `blockReport.ts` computes the report and `ui/shareCard.ts`
-  renders cards, for the year only. Twelve weeks end and there is nothing to show for it. *Small to
-  medium.*
+  renders cards, for the year only. Twelve weeks end and there is nothing to show for it. **M284**
+  below. *Shipped.*
 
 - **An "away" marker: did not train, or did not log.** ~~Named as a blind spot in at least three
   engines — `coach.ts` (*"The app cannot tell 'did not train' from 'did not log'"*), `partners.ts`,
@@ -14477,6 +14477,10 @@ M50 for why it is not coming.
 - **M283 — two spellings, one place.** The app refused to guess and then never asked. A rename
   rather than a stored alias, because `venues.ts` opens by refusing exactly that store — and
   because the log would otherwise go on holding both spellings everywhere except the grouping.
+
+- **M284 — a block, on a card.** Eight card builders, none for the artefact a climber works
+  hardest for. The difficulty is that a share card is a highlight by nature and `describeBlock`
+  refuses to be one — so `untested` is a stat, beside the three movements.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -18989,3 +18993,76 @@ rewrite on the floor: a rewrite the caller ignores leaves the place it was meant
 standing. Both fixed, and both worth having.
 
 **6,772 tests over 398 files**, from 6,756. First load 135.32KB against a 135.7KB budget.
+
+## M284 — a block, on a card
+
+`ui/shareCard.ts` holds eight card builders — a record, a project, a week, a year, the altimeter,
+the day's wall, an achievement, a rank. `blockReport.ts` computes the report a block ends with. The
+two never met: **twelve weeks end and there is nothing to show for it.** Which is the gap M68 named
+about the year, one unit down, for the artefact a climber is most likely to have worked hardest for.
+
+### Not a highlight reel, which is the whole difficulty
+
+A share card is a highlight by nature. `describeBlock` refuses to be one in as many words:
+
+> it leads with the count rather than the winners: a report that names three improvements and stays
+> quiet about four untested metrics is a highlight reel.
+
+A card showing `better` and omitting `untested` would be precisely what that sentence was written
+against. So **untested is a stat**, beside improved, held and down — four numbers that add up to the
+battery rather than the one that flatters. The footnote carries the ratio: *"3 of 7 retested"*, or
+*"Nothing retested across 9 assessments"* when none were.
+
+And it says how the block ended, which is `yearCard`'s rule one unit down: *"a card that leaves that
+out is a card that overstates."* A block left in week six and one run to its last day have identical
+windows — `blocks.ts` opens on that — so the eyebrow carries the weeks actually run.
+
+### One vocabulary, moved to where the type lives
+
+`OUTCOME_WORD` was a private const inside `FinishPage`. The card needed the same four words, and a
+second copy would drift the moment one was reworded — a card saying "abandoned" beside a screen
+saying "left early" is the shape M169 named. It moved to `blocks.ts`, next to `BlockOutcome`, as
+`BLOCK_OUTCOME_WORD`: prefixed because `exerciseLog.ts` exports an `OUTCOME_WORD` of its own for a
+set, and the two are a real collision waiting for the file that imports both.
+
+### What the browser found that the tests could not
+
+The card rendered for the sample climber and read:
+
+```
+6 OF 12 WEEKS · RUNNING
+Iron Grip
+0 of 23 sessions the plan placed
+```
+
+True, and misleading. That climber trained eighteen times across those six weeks; their sessions
+carry no session type, so adherence scores nought however hard they worked. **A card saying "0 of
+23" about six weeks of training is the highlight-reel problem inverted** — understating rather than
+overstating, and just as wrong.
+
+The sessions line is now three cases, because two of them were wrong as one: a plan comparison when
+something matched it, the session count when nothing did, and nothing at all when there was neither.
+It reads *"18 sessions, none against the plan"*, which is what happened.
+
+Every unit test passed before this was found. It took rendering the card for a real climber.
+
+### Read back from a browser
+
+```
+6 OF 12 WEEKS · RUNNING
+Iron Grip
+18 sessions, none against the plan
+0 IMPROVED   0 HELD   0 DOWN   9 UNTESTED
+Nothing retested across 9 assessments
+```
+
+### What the battery found
+
+**10 mutants caught, sanity no-op survived.** Untested dropped from the card; only what improved
+shown; a block left early read as a full one; the outcome never said; the card's words drifting from
+the block list's; a retest claimed that never happened; the retested count wrong; and all three
+branches of the sessions line — a plan comparison printed over a climber who trained, the unmatched
+sessions never counted, and a line printed when there were no sessions either way.
+
+**6,789 tests over 399 files**, from 6,772. First load 135.35KB against a 135.7KB budget — 0.35KB of
+slack, and the ceiling needs raising before the next thing that touches the entry chunk.

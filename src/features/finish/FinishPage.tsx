@@ -4,6 +4,7 @@ import { ChevronRight, CircleStop, Ruler, Search } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { blockEnd, describeBlockEnd, programForRecord } from '@/engine/blockEnd';
 import {
+  BLOCK_OUTCOME_WORD,
   findBlock,
   outcomeOf,
   rowWindow,
@@ -39,6 +40,8 @@ import { nextInSeason, season, soonestSeason } from '@/engine/season';
 import { useObjectives } from '@/store/objectives';
 import { RecordNotFound } from '@/ui/RecordNotFound';
 import { BlockReportChart, BlockReportRest } from '@/ui/charts/BlockReportChart';
+import { blockCard } from '@/ui/shareCard';
+import { ShareButton } from '@/features/share/ShareSheet';
 
 /**
  * The end of a block (PLAN.md M85).
@@ -55,13 +58,6 @@ import { BlockReportChart, BlockReportRest } from '@/ui/charts/BlockReportChart'
  * and the app cannot tell them apart — `describeBlockEnd` says so in as
  * many words rather than guessing.
  */
-
-const OUTCOME_WORD: Record<ReturnType<typeof outcomeOf>, string> = {
-  running: 'running',
-  completed: 'ran to the end',
-  left: 'left early',
-  unknown: 'no record of how it ended',
-};
 
 /**
  * Every block the climber has run (PLAN.md M87).
@@ -97,7 +93,7 @@ function BlockHistory({ history, current }: { history: BlockRecord[]; current: B
                 <p className="text-xs text-ink-soft mt-0.5">
                   {outcome === 'running'
                     ? `Week ${weeksRun(row, today())} of ${row.weeks} · running`
-                    : `${weeksRun(row, today())} of ${row.weeks} weeks · ${OUTCOME_WORD[outcome]}`}
+                    : `${weeksRun(row, today())} of ${row.weeks} weeks · ${BLOCK_OUTCOME_WORD[outcome]}`}
                 </p>
               </Link>
             </li>
@@ -580,6 +576,38 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
             <BlockReportChart report={report} />
             <BlockReportRest report={report} />
             <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeBlock(report)}</p>
+            {/* Under the same guard as the card it sits in (PLAN.md M284):
+                a block with no battery has four zeroes to show, and a card of
+                those is worse than no card. */}
+            <ShareButton
+              className="mt-3 -ml-3"
+              content={blockCard({
+                report,
+                outcome: end.outcome,
+                /**
+                 * Weeks actually run, which is not `program.weeks` on a block
+                 * left early — `blocks.ts` opens on exactly that: *"a block
+                 * left in week six and one run to its last day look identical
+                 * from the dates alone."*
+                 *
+                 * `end.record` is absent for a block reconstructed from a
+                 * start date, and the window is all there is to count then.
+                 */
+                weeksRun: weeksRun(
+                  end.record ?? {
+                    id: '',
+                    programId: report.program.id,
+                    name: report.program.name,
+                    startDate: end.status.from,
+                    weeks: report.program.weeks,
+                    endedAt: report.finished ? report.to : null,
+                  },
+                  today(),
+                ),
+                ...(adherence ? { adherence: adherence.measured } : {}),
+              })}
+              filename={`ascent-block-${report.program.id}-${report.from}.png`}
+            />
           </Card>
         )}
 
