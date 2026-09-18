@@ -163,35 +163,38 @@ describe('one of everything', () => {
     expect(dayOfWeek(today())).toBe(5);
   });
 
-  it('never says a plural about one of something', async () => {
-    const wrong: string[] = [];
-    for (const [name, path, element] of pages()) {
-      await one();
-      renderAt(path, element);
-      // The pages settle asynchronously — stores, then derived cards.
-      await vi.advanceTimersByTimeAsync(150);
-      const text = said();
-      for (const match of text.matchAll(/\b1 ([a-z]{3,})s\b/g)) {
-        if (NOT_COUNTED.includes(match[1]!)) continue;
-        const at = match.index ?? 0;
-        wrong.push(`${name}: "1 ${match[1]}s" — …${text.slice(Math.max(0, at - 50), at + 50)}…`);
+  /**
+   * One pass, both questions.
+   *
+   * It was two tests and each rendered all seventeen pages, which took 4.4s
+   * locally — close enough to vitest's five-second default that a slower CI
+   * runner tipped it over and took a deploy down. Rendering seventeen pages
+   * is the work; doing it twice was not.
+   */
+  it(
+    'never says a plural about one of something, and does read the pages',
+    async () => {
+      const wrong: string[] = [];
+      const counted: string[] = [];
+      for (const [name, path, element] of pages()) {
+        await one();
+        renderAt(path, element);
+        // The pages settle asynchronously — stores, then derived cards.
+        await vi.advanceTimersByTimeAsync(150);
+        const text = said();
+        for (const match of text.matchAll(/\b1 ([a-z]{3,})s\b/g)) {
+          if (NOT_COUNTED.includes(match[1]!)) continue;
+          const at = match.index ?? 0;
+          wrong.push(`${name}: "1 ${match[1]}s" — …${text.slice(Math.max(0, at - 50), at + 50)}…`);
+        }
+        for (const match of text.matchAll(/\b1 ([a-z]{3,})\b/g)) counted.push(`${name}: 1 ${match[1]}`);
       }
-    }
-    expect([...new Set(wrong)]).toEqual([]);
-  });
-
-  it('reads the pages rather than an empty document', async () => {
-    // A probe that cannot find a known-present instance is not a probe: the
-    // check above is only worth anything if these pages really do count out
-    // loud, and say "1 session" rather than "1 sessions".
-    const counted: string[] = [];
-    for (const [name, path, element] of pages()) {
-      await one();
-      renderAt(path, element);
-      await vi.advanceTimersByTimeAsync(150);
-      const text = said();
-      for (const match of text.matchAll(/\b1 ([a-z]{3,})\b/g)) counted.push(`${name}: 1 ${match[1]}`);
-    }
-    expect(counted.length, 'no page counted anything').toBeGreaterThan(0);
-  });
+      expect([...new Set(wrong)]).toEqual([]);
+      // A probe that cannot find a known-present instance is not a probe:
+      // the check above is only worth anything if these pages really do
+      // count out loud, and say "1 session" rather than "1 sessions".
+      expect(counted.length, 'no page counted anything').toBeGreaterThan(0);
+    },
+    60_000,
+  );
 });

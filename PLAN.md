@@ -17652,4 +17652,15 @@ was not 128px tall, so something else was stacked with it — an update prompt, 
 live-session bar, or one of them wrapping to several lines at that text size. The fix does not
 depend on knowing: the tab row is no longer displaceable by anything the banner box can contain.
 
-**6,609 tests over 391 files**, from 6,606. First load 134.68KB against a 135.4KB budget.
+**6,608 tests over 391 files**. First load 134.68KB against a 135.4KB budget.
+
+### The deploy this took down first
+
+M268's sweep renders seventeen pages and took **4.4 seconds** — close enough to vitest's
+five-second default that it passed here and on its own deploy, and timed out on the slower runner
+that built this one. Main went red on a test of mine that had never been given a timeout.
+
+It was two tests, each rendering all seventeen pages to answer a different question about the same
+text. One pass answers both, and it carries an explicit 60s timeout rather than sitting under a
+default it was always going to outgrow. Verified still to kill the defect it was written for by
+putting *"1 sessions logged"* back.
