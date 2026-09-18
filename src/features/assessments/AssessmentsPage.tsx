@@ -342,14 +342,29 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
           max={today()}
           onChange={(e) => setDate(e.target.value)}
           aria-label="Date tested"
-          className="bg-surface" size="compact"
+          /**
+           * A firm width, because `Input` carries `w-full` (PLAN.md M280).
+           *
+           * In a flex row a `w-full` item with the default `flex: 0 1 auto`
+           * resolves its basis to 100% of the row and claims all of it —
+           * measured at 1280px, this date field took **912 of 942px** and left
+           * the note beside it **22px wide**. `flex-basis` beats `width` for a
+           * flex item, so a basis is the fix rather than another width.
+           *
+           * Invisible to the suite for the usual reason: jsdom reports every
+           * box as zero. `scripts/layout.mjs` found it on the first run after
+           * it could reach this page at all.
+           */
+          className="bg-surface basis-40 shrink-0" size="compact"
         />
         <Input
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Note (optional)"
           aria-label="Result note"
-          className="flex-1 bg-surface" size="compact"
+          // `min-w-0`, so the note can actually take the remainder: a flex
+          // item's `min-width: auto` floors it at its content otherwise.
+          className="flex-1 min-w-0 bg-surface" size="compact"
         />
       </div>
       {error && <p className="text-sm text-danger mt-2">{error}</p>}

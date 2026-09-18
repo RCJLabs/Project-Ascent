@@ -14461,6 +14461,11 @@ M50 for why it is not coming.
   `adherence.ts`'s own header. Not planned-zero, not dropping the week: **per day**, which is what
   that file already does for a week that has not finished.
 
+- **M280 — the routes the layout harness could not reach.** Six parameterised routes sat under
+  *"no record to point at"* since M270, unchecked at any size and with no reason given. Two
+  mechanisms reach three of them, and the first run of the widened harness found a text input
+  **22px wide** on a page nothing had ever measured.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -18635,3 +18640,107 @@ nothing distinguished a completed session from an abandoned one on a marked day.
 M277 gave the sample climber something for the roped half of the app to read, M278 gave the away
 marker its text equivalents, and this gives it the reading that mattered most — the one where
 silence was scored as failure rather than merely drawn as it.
+
+## M280 — the routes the layout harness could not reach
+
+`scripts/layout.mjs` has ended every run since M270 with a line listing routes it could not open:
+
+```
+no record to point at: /finish/:id /train/:id/start /build/:id
+                       /build/:id/session/:typeId /assessments/:id /guides/:id/:section
+```
+
+Six routes never measured at any size, in the one harness that can see layout at all — and a line
+that did not say **why**, so it read as one problem when it was three.
+
+### Why each one was out of reach, measured rather than assumed
+
+- **`/train/:id/start`** is linked from `ProgramDetailPage`, not from the program list. `listingFor`
+  climbed past every parameterised parent, so it looked for a Start link on `/train` and never found
+  one — while `/train/:id` had already been discovered and was the page to look on.
+- **`/assessments/:id`** is a History link that renders only inside an expanded row and only when
+  the benchmark has results.
+- **`/guides/:id/:section`** is linked from **nowhere** but the search sheet. A guide page links
+  back to the index and no further.
+- **`/build/:id`, `/build/:id/session/:typeId`, `/finish/:id`** need records the sample climber does
+  not have: a custom program, and a block that has finished.
+
+### Two mechanisms, both general
+
+**Stop at a discovered ancestor.** `listingFor` now returns the address a parameterised parent was
+*found at* rather than climbing past it. That is where a detail page's links live.
+
+**Fall back to the search sheet**, which is the app's own index of everything — `SearchBody` emits
+`/guides/:id/:section`, `/assessments/:id`, `/build/:id` and six other shapes. Rather than teach the
+script where every fold and disclosure is, it asks the screen whose whole job is to list what the
+app contains, and still reads a **real link** off it. The rule that ids belong to the sample climber
+and are nobody's business to invent is kept intact.
+
+Discovery now runs shortest path first, because an ancestor has to be in hand before its child asks
+for it — and the registry's order is the router's, longest first, which is the exact opposite.
+
+**42 routes checked → 45.** The three that remain are named with their reason rather than listed:
+they need a record the sample climber has not got. That is a `demoClimber.ts` job, not a harness one.
+
+### What the first widened run found
+
+**A text input 22 pixels wide**, on `/assessments/:id` — a page nothing had ever measured.
+
+`Input` carries `w-full`. In a flex row an item with the default `flex: 0 1 auto` resolves its basis
+to that 100% and claims the whole row, so the date field took **912 of 942px** at 1280px and the
+note beside it got 22. `flex-basis` beats `width` for a flex item, so the fix is a basis —
+`basis-40 shrink-0` on the date, `min-w-0` beside `flex-1` on the note so it can take the remainder.
+
+It has been there since M99b and is structurally invisible to all 6,747 tests, because jsdom reports
+every box as zero. This is the second time the browser harness has paid for itself on its first run
+at a new surface — M270 found a live regression of M225 the same way.
+
+### And a third instance of the probe measuring its own noise
+
+The four `Term` buttons on every guide section came back as failures at every size. `Term` renders a
+glossary word **inside a sentence** with a dotted underline — exactly the *"target in a block of
+text"* that WCAG exempts, and exactly what this file's own comment already says about links before
+checking `button` anyway. The exemption is about the shape, not the element.
+
+Getting the rule right took three attempts, and the wrong two are worth keeping:
+
+1. Any parent with text beside it — which exempted every button in a card that held a paragraph.
+2. A bare **text node** sibling — which missed the case it was written for, because `Box Jumps` sits
+   beside a `<span>`, not beside a text node.
+3. Inline-level, in a text-flow parent (`p`, `li`, `span`…), with ≥12 characters of prose left once
+   the other controls are removed from the clone. Removing them is what stops a row of buttons
+   counting each other's labels as the sentence they sit in.
+
+Checked in both directions against the shipped `readPage`, per M195's rule that a probe which cannot
+find a known-present instance is not a probe: two 10×10 buttons in a bare row are still reported, and
+a 10×10 button inside a sentence is not.
+
+### Read back
+
+```
+45 routes × 3 sizes, plus the banner squeeze.
+not checked:
+  /build/:id — nothing on /build, nor in search
+  /finish/:id — nothing on /finish, nor in search
+  /build/:id/session/:typeId — nothing on /build, nor in search
+
+layout OK
+```
+
+### What the battery found
+
+**4 mutants caught, sanity no-op survived** — the date put back on the whole row, the date allowed
+to shrink instead of holding its basis, the note floored at its content again, and the note stopped
+from growing at all.
+
+The test asserts classes rather than sizes, and says so: jsdom cannot measure, so the real check is
+the harness. It reads them off the **rendered** element rather than out of the source, for the
+reason M270 and M271 found four times over.
+
+**6,747 tests over 397 files**, from 6,744. First load 135.23KB against a 135.7KB budget.
+
+### Still standing
+
+The three unreachable routes need the sample climber to own a custom program and a finished block.
+M277 showed how to add to `demoClimber.ts` without moving what is already there — its own stream,
+its own day — so this is a known shape rather than an open question.
