@@ -57,6 +57,7 @@ import { LoadTrendLine } from '@/ui/charts/LoadTrendLine';
 import { TissueBars, TissueNote } from '@/ui/charts/TissueBars';
 import { BlockCompareTable } from '@/ui/charts/BlockCompare';
 import { UNKNOWN_NOTE, ZONE } from '@/ui/loadZone';
+import { counted } from '@/engine/phrase';
 
 
 /**
@@ -576,7 +577,7 @@ export function ProgressPage() {
 
   return (
     <>
-      <PageHeader title="Progress" subtitle={`${state.completedSessions} sessions logged`} />
+      <PageHeader title="Progress" subtitle={`${counted(state.completedSessions, 'session')} logged`} />
 
       <PageGrid>
         <Wide>

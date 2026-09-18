@@ -14293,7 +14293,8 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   document.*
 
 - **M265 — a tap target measured in the wrong pixels.** Of the seven things `features/media`
-  exports, four were rendered by no test at all. `ERASE_WITHIN = 48` is documented as *“generous —
+  exports, four were named by no test at all (a weaker claim than the one this bullet made before
+  M268 corrected it). `ERASE_WITHIN = 48` is documented as *“generous —
   this is a finger on a phone”* and counted in **image** pixels, while `prepareImage` stores a photo
   at up to 1600 on its long edge: measured in a browser, that is **11.9 screen pixels** on a phone,
   on a stroke eight pixels wide, against the 44px target the rest of the app is built to. The two
@@ -14321,6 +14322,15 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   *Small, and it is one function and two call sites.*
   ***Built, and the battery found a line that has not done anything since M153.*** *See the entry at
   the end of this document.*
+
+- **M268 — "1 sessions logged", and a probe that could not see it.** The surface-picking metric this
+  audit had been running counted test files *naming* an export, and this codebase names its tests
+  after the behaviour — so four milestones reported a zero-coverage list that was mostly false. The
+  measure it was replaced with reads the rendered page instead: seed one of everything, render the
+  pages that count, and check what they say. The Progress tab's header read *"1 sessions logged"*.
+  *Small, and it is one shared helper and three call sites.*
+  ***Built, and the battery caught the new probe lying before the probe caught anything.***
+  *See the entry at the end of this document.*
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -17221,7 +17231,8 @@ side: a probe spelled from memory finds what memory contains, not what the tree 
 ## M265 — a tap target measured in the wrong pixels
 
 `features/media` exports seven things. `AttachPage` and `MediaCard` are rendered by five test files
-between them; `PhotoMarks`, `MarkPad`, `PhotoStrip`, `PhotoTile` and `useMediaOwners` by none. The
+between them; `PhotoMarks` and `MarkPad` by none. (`PhotoStrip`, `PhotoTile` and `useMediaOwners`
+were listed here too and should not have been — see M268.) The
 libraries underneath are well covered — `db/media` 21, `engine/photos` 16, `engine/attach` 23,
 `lib/marks` its own file — which is the same split M264 found at the spreadsheet importer, and the
 same place the defect was.
@@ -17281,9 +17292,11 @@ from a browser by seeding a real 1600×900 photo with a mark on it and measuring
 
 ### What this does not cover
 
-`PhotoStrip`, `PhotoTile` and `useMediaOwners` are still rendered by no test. They are the
-blob-loading half — object URLs, an `IntersectionObserver` that jsdom does not have, and a lazy
-read that only fires on screen — and driving them needs fixtures this milestone did not build.
+~~`PhotoStrip`, `PhotoTile` and `useMediaOwners` are still rendered by no test.~~ **Wrong, and
+corrected in M268.** `photosInRetrospect.test.tsx` drives all three through the journal and the
+year grid, including a `describe('waiting until it is on screen')` that supplies an
+`IntersectionObserver` and asserts on the strip. The claim came from a probe that counted test
+files *naming* an export, and this codebase names its test files after the behaviour.
 Read rather than driven, they came back clean: `useStrip` sets its records in one go so the
 placeholder's all-or-nothing guard is right, `quantise` clamps a drag that leaves the photo, and
 `describeMarks` agrees with itself about one of anything.
@@ -17291,8 +17304,9 @@ placeholder's all-or-nothing guard is right, `quantise` clamps a drag that leave
 
 ## M266 — the rest between burns ended a second late
 
-Eight files in `src/features` are rendered by no test at all. `RestTimer` is the smallest thing on
-that list that a climber touches every session: the engine underneath it is well covered —
+Eight files in `src/features` are named by no test. (That list was mostly an artefact of how the
+probe worked — see M268 — but `RestTimer` really was undriven.) It is the smallest thing on it
+that a climber touches every session: the engine underneath it is well covered —
 `restRemaining`, `restLabel` and `REST_PRESETS` all have tests in `engine/gym.test.ts`, and
 `lib/timerState.ts` and `lib/cues.ts` have their own — while the card that puts them together had
 none. That is the same split M264 found at the spreadsheet importer and M265 found at the mark pad,
@@ -17371,9 +17385,11 @@ the tap and the page's clock — `0:01` showed for 79ms in the run above. Fixing
 keeping its own clock rather than reading the logger's, which is a second clock on the same screen
 and did not look worth it for the last second of a rest.
 
-`AppearanceCard`, `PickItUp`, `SeasonCard`, `CalendarExportCard`, `SafetyNote`, `TallyRow` and
+~~`AppearanceCard`, `PickItUp`, `SeasonCard`, `CalendarExportCard`, `SafetyNote`, `TallyRow` and
 `FieldSeriesChart` are still rendered by no test, as are `PhotoStrip`, `PhotoTile` and
-`useMediaOwners` from M265.
+`useMediaOwners` from M265.~~ **Wrong, and corrected in M268** — every one of them is driven by a
+test named after the behaviour rather than the component. `SafetyNote` was the exception, and M267
+found a real defect there, which is how the list came to be trusted for as long as it was.
 
 **6,578 tests over 389 files**, from 6,553. First load 134.62KB against a 135.4KB budget. Read back
 from a browser by seeding a live session, tapping a preset and sampling the card every 100ms
@@ -17454,8 +17470,97 @@ The three campus lines this milestone's comments quote are `track: 'board'`, so 
 to choose a track for the climber to drive them; the case driven here is Peak Performance's Max
 Hangs, found by reading the catalogue rather than named in the test.
 
-`AppearanceCard`, `PickItUp`, `SeasonCard`, `CalendarExportCard`, `TallyRow` and `FieldSeriesChart`
-are still rendered by no test, as are `PhotoStrip`, `PhotoTile` and `useMediaOwners`.
+~~`AppearanceCard`, `PickItUp`, `SeasonCard`, `CalendarExportCard`, `TallyRow` and
+`FieldSeriesChart` are still rendered by no test, as are `PhotoStrip`, `PhotoTile` and
+`useMediaOwners`.~~ **Wrong, and corrected in M268.** All of them are driven; `SeasonCard` alone has
+twelve tests through `ObjectiveDetailPage`.
 
 **6,598 tests over 390 files**, from 6,578. First load 134.65KB against a 135.4KB budget. Read back
 from a browser on all three injury combinations, against this build and the shipped one.
+
+
+## M268 — "1 sessions logged", and a probe that could not see it
+
+### The measure was wrong, and four milestones said so out loud
+
+Picking the next surface has been done by counting, for each component, the test files that mention
+its exported name. That probe under-counts and over-counts at once, and both bit:
+
+- **Under-counts.** This codebase names its test files after the behaviour, not the component.
+  `appearance.test.tsx` exercises `AppearanceCard` without ever writing the word; `fieldSeries`,
+  `pickItUp`, `calendarExport` and `photosInRetrospect` do the same. Every component on the
+  "rendered by no test" list was in fact driven.
+- **Over-counts.** `Thumbnails.tsx` scored a hit because a doc comment *I wrote in M265* named
+  `PhotoStrip` inside a different test file.
+
+So the list reported in M265, M266 and M267 — and in three commit messages — was wrong. The entries
+above are struck through and corrected. `SafetyNote` was the one genuine miss on it, which is why
+M267 found a real defect there and why the list went unquestioned for as long as it did.
+
+Two replacements were tried and both discarded. Import-reachability from the test files marks
+everything reachable and finds only `App.tsx`, which is too weak to mean anything. Dependency-free
+V8 coverage (`NODE_V8_COVERAGE`) records node internals only, because vitest evaluates project
+source through its own transform pipeline; real coverage needs a provider this repo does not carry.
+
+### So the measure became: read what the page says
+
+`cardProse.test.ts` reads plural spellings out of `src/` and checks the words a card *can* say. It
+cannot see a sentence that only exists once a page has rendered — and that is where both plural
+defects this run has found actually lived. M258's readiness column read *"1 objectives"*; M263's
+board row read *"1 days left"*. A person looking at a screen found each of them.
+
+`oneOfEverything.test.tsx` seeds exactly one of everything — one session, one boulder, one route,
+one venue, one project, one objective, one injury, one partner, one note — renders the seventeen
+pages that count, and reads them. One is the only interesting number: it is the single case where
+English disagrees with a template. The clock is held at a Friday, because M263's defect was visible
+one day in seven.
+
+### The battery caught the probe before the probe caught anything
+
+The first draft passed, cleanly, and was worthless. Putting M263's defect back changed nothing it
+could see. Three of four planted defects survived, and the reason was one line:
+
+```ts
+const text = document.body.textContent ?? '';
+```
+
+`textContent` runs adjacent text nodes together with no separator. The career page renders a grade
+beside a count, so it reads `"V4 · 5.10a1 day"` — where the `1` has no word boundary in front of it
+and `\b1` can never match. Walking the text nodes and joining them with a space fixed it, and the
+fixed sweep failed immediately, on a page nobody had looked at:
+
+> **Progress** — *1 sessions logged*
+
+### One sentence, spelled three times, and four private copies of the rule
+
+`ProgressPage` wrote the plural inline. So did `tissueLoad.ts` — *"1 sessions logged, none of them
+describing what they loaded"* — and `coach.ts`'s backup nudge. Meanwhile `skills.ts`,
+`objectives.ts`, `season.ts` and `injuryLog.ts` each carried a private `plural`, two of them
+returning the word and two the count with it.
+
+Five spellings of one rule and the defect in none of the four helpers, which is the M112e lesson
+arriving from the other side. `engine/phrase.ts` — which already holds `article` and `joinList` —
+now holds both shapes, `plural(n, one, many?)` and `counted(n, one, many?)`, with `many` a parameter
+because the skills tree counts **tries**, not trys. The four copies are gone and the three
+sentences use it.
+
+### What the battery found
+
+**10 mutants caught, sanity no-op survived.** The shipped header is one of them, and so are M263's
+and the career page's — the sweep now holds the ground those milestones won.
+
+One survived. `coach.ts`'s backup nudge returns null below ten sessions, so its headline can never
+say *"1 session logged and never exported"*: the call is correct and inert, exactly like the drill
+card M267 found. It keeps the shared helper for consistency and is recorded as a survivor rather
+than dressed up as a no-op.
+
+### What this does not cover
+
+The sweep reads each page in the state the fixture puts it in. The Progress page's rope sentence
+lives behind a grade-ladder toggle and is never reached; the career page's *"n to go"* column needs
+a milestone exactly one day out, which no simple fixture produces. Both were planted as mutants and
+both survived for that reason, and they are the shape of everything else it will miss: prose behind
+a control nobody clicked.
+
+**6,606 tests over 391 files**, from 6,598. First load 134.66KB against a 135.4KB budget. Read back
+from a browser on the Progress header, against this build and the shipped one.

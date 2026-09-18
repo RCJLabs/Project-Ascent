@@ -35,6 +35,7 @@ import { tripNow } from './trip';
 import { comedownNow, type Comedown } from './comedown';
 import { isRestSession } from './rest';
 import { isAddedWeight } from './units';
+import { counted } from './phrase';
 
 export type TipTone = 'good' | 'neutral' | 'caution';
 
@@ -1130,7 +1131,7 @@ function backupNudge({ state, lastExportAt }: CoachInput, today: string): Tip | 
     weight: 35,
     headline:
       days === null
-        ? `${state.completedSessions} sessions logged and never exported`
+        ? `${counted(state.completedSessions, 'session')} logged and never exported`
         : `${days} days since your last backup`,
     body: 'Everything lives on this device and nowhere else. A cleared browser, a lost phone or a reinstalled app takes the lot with it, and there is no account to restore from. The export is one tap and one file.',
     action: { label: 'Export now', href: '/settings' },

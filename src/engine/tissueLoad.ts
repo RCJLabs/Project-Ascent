@@ -3,6 +3,7 @@ import type { BodyPart } from '@/content/bodyParts';
 import { addDays, daysBetween } from './dates';
 import { partsInText } from './bodyLoad';
 import { loadOrZero } from './derive';
+import { counted } from './phrase';
 
 /**
  * Which tissue has been taking the work (PLAN.md M27).
@@ -213,7 +214,7 @@ export function describeTissue(load: TissueLoad): string {
   if (load.sessionCount === 0) return 'Nothing logged in the last four weeks.';
   const busiest = load.parts[0];
   if (!busiest || busiest.sessions === 0) {
-    return `${load.sessionCount} sessions logged, none of them describing what they loaded.`;
+    return `${counted(load.sessionCount, 'session')} logged, none of them describing what they loaded.`;
   }
   const quiet = quietestLoaded(load);
   const parts = [`Most of it through your ${busiest.part}`];

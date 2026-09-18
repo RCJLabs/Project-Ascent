@@ -39,6 +39,7 @@ import type { Injury } from '@/store/profile';
 import { TISSUE_ANSWERS, type TissueFeel } from './readiness';
 import { addDays, daysBetween } from './dates';
 import { isRestSession } from './rest';
+import { counted } from './phrase';
 
 /**
  * One day the climber said how the part felt.
@@ -237,8 +238,6 @@ export function ordinal(n: number): string {
   return `${n}${suffix}`;
 }
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
-
 /**
  * One sentence about how often this part has gone, or nothing.
  *
@@ -250,12 +249,12 @@ export function describeRecurrence(recurrence: Recurrence): string | null {
   const { past, total, clearDays, part } = recurrence;
   if (past.length === 0) return null;
   const runs = `${past.length === 1 ? 'The last one ran' : 'They ran'} ${past
-    .map((episode) => plural(episode.days, 'day'))
+    .map((episode) => counted(episode.days, 'day'))
     .join(', ')}.`;
   if (total === past.length) {
-    return `${past.length === 1 ? 'One episode' : `${plural(past.length, 'episode')}`} on this ${part} before, healed. ${runs}`;
+    return `${past.length === 1 ? 'One episode' : `${counted(past.length, 'episode')}`} on this ${part} before, healed. ${runs}`;
   }
-  const clear = clearDays === null ? '' : ` You were clear for ${plural(clearDays, 'day')} in between.`;
+  const clear = clearDays === null ? '' : ` You were clear for ${counted(clearDays, 'day')} in between.`;
   return `The ${ordinal(total)} time this ${part} has gone. ${runs}${clear}`;
 }
 

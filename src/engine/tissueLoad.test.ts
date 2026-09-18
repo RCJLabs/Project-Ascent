@@ -254,4 +254,11 @@ describe('the sentence', () => {
   it('admits when it read nothing at all', () => {
     expect(describeTissue(build([session(TO)]))).toMatch(/none of them describing/i);
   });
+
+  it('counts the one session it read as one', () => {
+    // The fixture above is a single session and this sentence said "1
+    // sessions logged" until M268. The assertion above passes either way,
+    // which is why it took a rendered-prose sweep to find it.
+    expect(describeTissue(build([session(TO)]))).toContain('1 session logged');
+  });
 });

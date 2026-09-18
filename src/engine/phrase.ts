@@ -30,6 +30,28 @@ export function article(word: string): string {
   return /^[aeiou]/i.test(word.trim()) ? 'an' : 'a';
 }
 
+/**
+ * The word, agreeing with the number in front of it (PLAN.md M268).
+ *
+ * The fifth copy of this, and the first one anybody can find: `skills.ts`,
+ * `objectives.ts`, `season.ts` and `injuryLog.ts` each had a private
+ * `plural`, two returning the word and two returning the count with it. A
+ * rule kept in four places is a rule three of them can drift from, and the
+ * defect that found this was in none of the four — the Progress header
+ * spelled it inline and read *"1 sessions logged"*.
+ *
+ * `many` is a parameter because English does not always add an `s`: the
+ * skills tree counts tries, not trys.
+ */
+export function plural(n: number, one: string, many = `${one}s`): string {
+  return n === 1 ? one : many;
+}
+
+/** The count and the word that agrees with it: `3 sessions`, `1 session`. */
+export function counted(n: number, one: string, many = `${one}s`): string {
+  return `${n} ${plural(n, one, many)}`;
+}
+
 export function joinList(parts: readonly string[]): string {
   if (parts.length <= 1) return parts[0] ?? '';
   return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]!}`;

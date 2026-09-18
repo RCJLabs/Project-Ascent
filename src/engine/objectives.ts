@@ -39,6 +39,7 @@ import type { MetricId, ProgramId } from '@/content/types';
 import type { GradeScale } from './grades';
 import { measure, type Measurement, type SkillInput, type SkillRequirement } from './skills';
 import { daysBetween, today as todayKey } from './dates';
+import { plural } from './phrase';
 
 /**
  * A benchmark requirement, pointed the way that benchmark improves.
@@ -214,10 +215,6 @@ export function describeProgress(progress: ObjectiveProgress): string {
           ? ' · this week'
           : ` · ${weeks} ${plural(weeks, 'week')} out`;
   return `${percent}% of the way there, ${progress.met} of ${progress.total} met${when}`;
-}
-
-function plural(n: number, word: string): string {
-  return n === 1 ? word : `${word}s`;
 }
 
 /**

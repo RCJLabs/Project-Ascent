@@ -54,6 +54,7 @@ import type { Program, ProgramId } from '@/content/types';
 import { adaptProgram } from './adapt';
 import { addDays, daysBetween, startOfWeek } from './dates';
 import { MAX_RUNWAY_WEEKS, runwayWeeks } from './peak';
+import { counted } from './phrase';
 
 /** Blocks in one season. More is a plan nobody keeps. */
 export const MAX_BLOCKS = 4;
@@ -148,8 +149,6 @@ export function season(input: SeasonInput): Season {
   };
 }
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
-
 /**
  * The season in a sentence, or nothing when there is no sequence.
  *
@@ -160,12 +159,12 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 export function describeSeason(s: Season): string | null {
   if (s.blocks.length === 0) return null;
   const names = s.blocks.map((b) => b.program.name).join(' → ');
-  const span = `${names} is ${plural(s.weeks, 'week')} against ${plural(s.runway, 'week')} to the day.`;
+  const span = `${names} is ${counted(s.weeks, 'week')} against ${counted(s.runway, 'week')} to the day.`;
   if (s.over > 0) {
-    return `${span} That is ${plural(s.over, 'week')} more than there is room for — it would have had to start ${plural(s.over, 'week')} ago. Drop a block, or run one of them shorter from its own page.`;
+    return `${span} That is ${counted(s.over, 'week')} more than there is room for — it would have had to start ${counted(s.over, 'week')} ago. Drop a block, or run one of them shorter from its own page.`;
   }
   if (s.slack > 0) {
-    return `${span} ${plural(s.slack, 'week')} spare before it starts, which is a fine place for a deload or for nothing in particular.`;
+    return `${span} ${counted(s.slack, 'week')} spare before it starts, which is a fine place for a deload or for nothing in particular.`;
   }
   return `${span} It starts this week.`;
 }

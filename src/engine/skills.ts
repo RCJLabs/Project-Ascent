@@ -20,6 +20,7 @@ import { seriesFor } from './assessments';
 import type { ClimberState } from './derive';
 import { DEFAULT_DISPLAY, displayGrade, gradeOrdinal, type GradeDisplay, type GradeScale } from './grades';
 import type { Stat, StatId } from './stats';
+import { plural } from './phrase';
 
 export type TreeId = 'power' | 'tension' | 'endurance' | 'technique' | 'grit';
 
@@ -137,10 +138,6 @@ function metricValue(input: SkillInput, id: MetricId): number | null {
 /** The registry's own label, so a requirement never says "max hang 20mm 7s". */
 function metricLabel(id: MetricId): string {
   return getMetric(id)?.label ?? id.replace(/_/g, ' ');
-}
-
-function plural(count: number, one: string, many = `${one}s`): string {
-  return count === 1 ? one : many;
 }
 
 function trim(value: number): string {
