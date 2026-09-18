@@ -94,12 +94,20 @@ describe('the climber it makes', () => {
   // goes up.
   it('plateaus before it climbs again', () => {
     const { sessions } = demoClimber(TODAY);
+    // V grades only. `slice(1)` reads "V4" as 4 and "5.10c" as NaN, which
+    // `Math.max` propagates — so once the sample climber started logging
+    // routes (PLAN.md M277) this compared NaN against NaN and passed nothing.
+    // The plateau it is about is the boulder ladder's.
     const best = (from: string, to: string) =>
       Math.max(
         0,
         ...sessions
           .filter((s) => s.date >= from && s.date <= to)
-          .flatMap((s) => s.climbs.filter((c) => c.result === 'send').map((c) => Number(c.grade.slice(1)))),
+          .flatMap((s) =>
+            s.climbs
+              .filter((c) => c.scale === 'V' && c.result === 'send')
+              .map((c) => Number(c.grade.slice(1))),
+          ),
       );
     const dates = sessions.map((s) => s.date).sort();
     const quarter = (n: number) => dates[Math.floor((dates.length * n) / 4)] ?? dates[dates.length - 1]!;

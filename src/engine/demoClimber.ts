@@ -120,6 +120,85 @@ const LADDER = ['V2', 'V3', 'V4', 'V5', 'V6', 'V7'];
 const ANGLES: WallAngle[] = ['slab', 'vertical', 'overhang', 'roof'];
 
 /**
+ * Routes, and the half of the app a boulderer never sees (PLAN.md M277).
+ *
+ * Measured before this was written: 174 sessions, 473 climbs, **every one of
+ * them V-scale**. Not one YDS route, not one `ropeStyle`, not one partner. So
+ * the sample climber — whose whole job this file states as *"M12 needs store
+ * screenshots of an app that looks lived in"* — left every roped reading in
+ * the app returning null:
+ *
+ * - `describeRopeSplit` (M133), so the **Led and top-roped** card never drew.
+ * - `describeRopeContext` (M276), the same card's second paragraph.
+ * - `partnerTally` and `unsaid` (M237), so **Who you climbed with** never drew.
+ * - `state.sport`, so the route ladder was empty on every screen that offers
+ *   the Routes chip beside Boulder.
+ *
+ * Which is this file's own charge against a flattering demo, one level up:
+ * *"every screen in the app exists to say something about those, and a sample
+ * climber who never has a bad month shows none of them working."* A climber
+ * who never ties in shows none of the roped ones working either.
+ *
+ * ## Their own stream, or every record after them moves
+ *
+ * The rule this file states at `prose`: every draw comes off one sequence, so
+ * inserting a single `chance()` re-rolls every session, burn and benchmark
+ * after it. The same applies here and harder — this adds a session per fortnight
+ * — so the roped climber comes off a third stream and lands on a day the
+ * bouldering loop does not use. Every V record is byte-identical to before.
+ */
+const ROUTES = ['5.9', '5.10a', '5.10c', '5.11a', '5.11c', '5.12a'];
+
+/**
+ * Who they climb with.
+ *
+ * One regular and two others, because that is the shape of a real log and it
+ * is what gives `partnerTally` something to sort. Invented names on an
+ * invented climber: `partners.ts` holds the rule that they never leave on a
+ * share card, and `sharedNames.test.ts` checks it.
+ */
+const BELAYERS = ['Priya', 'Priya', 'Priya', 'Tom', 'Marta'];
+
+/** The route ceiling, trailing the boulder one — they are different skills. */
+function routeCeilingAt(week: number): number {
+  return Math.min(ROUTES.length - 1, 1 + Math.floor(week / 14));
+}
+
+/**
+ * A session on the rope.
+ *
+ * **Warm up on a top-rope, lead the harder ones**, which is how a route
+ * session actually goes and is therefore what the sample log should show. It
+ * means most of these sessions carry both styles — so the rope card reads
+ * *"you have led and top-roped in the same session N times"*, which is the
+ * true sentence for this climber rather than the flattering one. Rigging the
+ * demo to fire a particular reading would be the brochure this file refuses.
+ *
+ * Some sessions are all top-rope: the evening where nobody wanted to lead.
+ */
+function routesFor(rng: Rng, week: number, id: string): Climb[] {
+  const top = routeCeilingAt(week);
+  const leads = !chance(rng, 0.25);
+  const out: Climb[] = [];
+  for (let i = Math.max(0, top - 2); i <= top; i += 1) {
+    // The warm-ups go on a top-rope and the hard ones get led, when anything
+    // is being led at all.
+    const style = leads && i > top - 2 ? 'lead' : 'toprope';
+    const sent = i < top || chance(rng, 0.4);
+    out.push({
+      id: `${id}-r${i}`,
+      grade: ROUTES[i]!,
+      scale: 'YDS',
+      count: i === top ? 1 : 2,
+      result: sent ? 'send' : 'attempt',
+      ropeStyle: style,
+      ...(sent && i === top && chance(rng, 0.3) ? { style: 'onsight' as const } : {}),
+    });
+  }
+  return out;
+}
+
+/**
  * The ceiling this week.
  *
  * Up for five months, flat for four — the plateau is the point, since
@@ -201,6 +280,15 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
    * own stream, so the climber underneath them is the same one as before.
    */
   const prose = createRng(seed ^ 0x5eed_0f5e);
+  /**
+   * A third, for the roped sessions (PLAN.md M277), on the same reasoning.
+   *
+   * These land on a Thursday, which the bouldering loop below never uses —
+   * it walks Monday, Wednesday, Friday and rests on Sunday. Off its own
+   * stream and onto its own day, so every V record this file produced before
+   * M277 is byte-identical after it.
+   */
+  const ropes = createRng(seed ^ 0x0f0f_b00b);
   const start = addDays(startOfWeek(today), -(DEMO_WEEKS - 1) * 7);
 
   const sessions: Session[] = [];
@@ -244,6 +332,49 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
           ...(chance(prose, 0.2) ? { notes: pick(prose, SESSION_NOTES) } : {}),
         }),
       );
+    }
+    /**
+     * A route session most fortnights, on the Thursday.
+     *
+     * Not every week, because this climber is a boulderer who also climbs
+     * routes — which is the common shape and the one that puts both ladders
+     * on the screen with a real difference between them.
+     */
+    if (week % 2 === 1 && chance(ropes, 0.85)) {
+      const date = addDays(monday, 3);
+      if (date <= today) {
+        const id = sessionId(date, 0);
+        sessions.push(
+          newSession(date, 0, {
+            ...stamps(date),
+            demo: true,
+            completed: true,
+            rewarded: true,
+            planned: false,
+            // Malham is the sport crag on the location list; the rest of the
+            // year's routes are indoors, which is where routes mostly happen.
+            mode: 'indoor',
+            rpe: 5 + Math.floor(next(ropes) * 4),
+            durationMin: 90 + Math.floor(next(ropes) * 3) * 15,
+            warmup: chance(ropes, 0.9),
+            climbs: routesFor(ropes, week, id),
+            // Roped climbing has a second person in it by definition, which
+            // is `partners.ts`'s own opening line — but the *field* is still
+            // one a climber forgets, so it is filled most times and not all.
+            ...(chance(ropes, 0.75) ? { partners: [pick(ropes, BELAYERS)] } : {}),
+            /**
+             * Off `ropes`, not `prose`.
+             *
+             * The first draft reused the prose stream here and the check
+             * caught it: two notes moved between bouldering sessions, because
+             * every draw after an inserted one comes up different. That is the
+             * exact failure this file's header documents at `prose`, and a
+             * roped session is an inserted draw.
+             */
+            ...(chance(ropes, 0.15) ? { notes: pick(ropes, SESSION_NOTES) } : {}),
+          }),
+        );
+      }
     }
     // A rest day most weeks, which is a logged thing in this app.
     if (chance(rng, 0.6)) {

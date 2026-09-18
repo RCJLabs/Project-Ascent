@@ -83,3 +83,106 @@ describe('the journal has something in it', () => {
     expect(other.sessions.map((s) => s.notes)).not.toEqual(made.sessions.map((s) => s.notes));
   });
 });
+
+/**
+ * The sample climber ties in (PLAN.md M277).
+ *
+ * Measured before this was written: 174 sessions, 473 climbs, **every one
+ * V-scale**. Not one YDS route, not one `ropeStyle`, not one partner — so
+ * every roped reading in the app returned null for the climber whose whole
+ * job is that *"every screen has something to show"*.
+ */
+describe('the sample climber climbs routes', () => {
+  const made = demoClimber(TODAY);
+  const climbs = made.sessions.flatMap((s) => s.climbs ?? []);
+
+  it('logs routes as well as boulders', () => {
+    // The trap M195 names: a probe that cannot find a known-present instance
+    // is not a probe. Both halves have to be there for the rest to mean
+    // anything.
+    expect(climbs.filter((c) => c.scale === 'V').length).toBeGreaterThan(100);
+    expect(climbs.filter((c) => c.scale === 'YDS').length).toBeGreaterThan(30);
+  });
+
+  it('says of every route whether it was led or top-roped', () => {
+    const routes = climbs.filter((c) => c.scale === 'YDS');
+    expect(routes.every((c) => c.ropeStyle !== undefined)).toBe(true);
+    // Both, or the split card has nothing to split.
+    expect(routes.some((c) => c.ropeStyle === 'lead')).toBe(true);
+    expect(routes.some((c) => c.ropeStyle === 'toprope')).toBe(true);
+  });
+
+  it('never puts a rope style on a boulder, which would be a typo', () => {
+    expect(climbs.filter((c) => c.scale === 'V').every((c) => c.ropeStyle === undefined)).toBe(true);
+  });
+
+  it('names who it climbed with, on some sessions and not all', () => {
+    const named = made.sessions.filter((s) => (s.partners ?? []).length > 0);
+    expect(named.length).toBeGreaterThan(5);
+    // More than one person, or the year page's list is a single row.
+    expect(new Set(named.flatMap((s) => s.partners ?? [])).size).toBeGreaterThan(1);
+  });
+
+  /**
+   * And leaves the field empty sometimes, which is the harder half.
+   *
+   * `named.length < sessions.length` was the first draft and is trivially
+   * true — no bouldering session names anybody. A mutant filling the field on
+   * every roped session survived it. The property is about the **roped**
+   * sessions: `partners.ts` holds that an empty field is a field nobody
+   * filled, and a demo that fills it every time never shows that state.
+   */
+  it('leaves the partner field empty on some roped sessions', () => {
+    const roped = made.sessions.filter((s) => (s.climbs ?? []).some((c) => c.scale === 'YDS'));
+    const named = roped.filter((s) => (s.partners ?? []).length > 0);
+    expect(named.length).toBeGreaterThan(0);
+    expect(named.length).toBeLessThan(roped.length);
+  });
+
+  /**
+   * The invariant that keeps the boulder half byte-identical.
+   *
+   * This file's header states the rule: every draw comes off one sequence, so
+   * an inserted `chance()` re-rolls every record after it. The roped sessions
+   * come off their own stream **and land on a day the bouldering loop never
+   * uses** — it walks Monday, Wednesday and Friday and rests on Sunday. Both
+   * halves are needed: a first draft drew the roped note off `prose` and moved
+   * two notes between bouldering sessions.
+   */
+  it('keeps routes and boulders on separate days', () => {
+    for (const session of made.sessions) {
+      const scales = new Set((session.climbs ?? []).map((c) => c.scale));
+      expect(scales.size, `${session.date} carries ${[...scales].join(' and ')}`).toBeLessThan(2);
+    }
+
+    /**
+     * Per **date**, not just per session — and this is the half that bites.
+     *
+     * The first draft checked only the loop above, and a mutant moving the
+     * roped session onto a Wednesday survived it: two sessions, one scale
+     * each, both passing. But the bouldering loop already uses Wednesday, and
+     * both call `newSession(date, 0)` — so they would collide on one id and
+     * the second would overwrite the first in the store.
+     */
+    const byDate = new Map<string, Set<string>>();
+    for (const session of made.sessions) {
+      const scales = byDate.get(session.date) ?? new Set<string>();
+      for (const climb of session.climbs ?? []) scales.add(climb.scale);
+      byDate.set(session.date, scales);
+    }
+    for (const [date, scales] of byDate) {
+      expect(scales.size, `${date} carries ${[...scales].join(' and ')}`).toBeLessThan(2);
+    }
+  });
+
+  /** Which the id would say too, if two records ever landed on one day. */
+  it('gives every session its own id', () => {
+    const ids = made.sessions.map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('is still the same climber on a second build', () => {
+    const again = demoClimber(TODAY);
+    expect(JSON.stringify(again.sessions)).toBe(JSON.stringify(made.sessions));
+  });
+});

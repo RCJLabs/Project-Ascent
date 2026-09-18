@@ -14446,6 +14446,11 @@ M50 for why it is not coming.
   rate per partner — is the scoring that file forbids, so this reports one property of the
   climber's own log and names nobody.
 
+- **M277 — the sample climber ties in.** Measured: 174 sessions, 473 climbs, **every one
+  V-scale**. No YDS route, no `ropeStyle`, no partner — so `describeRopeSplit` (M133),
+  `describeRopeContext` (M276), `partnerTally` (M237) and `state.sport` all returned null for the
+  climber whose stated job is that *"every screen has something to show"*.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -18346,3 +18351,116 @@ source reads `.partners` only through `.length` — a number, not a person — w
 one anywhere.
 
 **6,712 tests over 395 files**, from 6,690. First load 135.21KB against a 135.7KB budget.
+
+## M277 — the sample climber ties in
+
+This was a standing item from M276, phrased as a doubt about that milestone: *"it only fires for
+someone who tags rope styles and types partner names — two optional fields, and I didn't measure how
+rare the intersection is."* Measuring it found something bigger than M276.
+
+### What the sample climber was
+
+A probe over `demoClimber('2026-09-18')`:
+
+```
+sessions              174
+climbs                473
+  V-scale             473
+  YDS                   0
+  with a rope style     0
+sessions with partners  0
+state.sport.best      null
+describeRopeSplit     null
+describeRopeContext   null
+partnerTally           0 rows
+```
+
+**Every climb in the sample log is a boulder problem.** So the whole roped half of the app was dark
+for the climber whose job this file states as *"M12 needs store screenshots of an app that looks
+lived in"*: the **Led and top-roped** card never drew, its M276 paragraph never drew, **Who you
+climbed with** never drew, and the Routes chip beside Boulder opened an empty ladder.
+
+Which is this file's own charge against a flattering demo, one level up: *"every screen in the app
+exists to say something about those, and a sample climber who never has a bad month shows none of
+them working."* A climber who never ties in shows none of the roped ones working either.
+
+### Their own stream, and their own day
+
+`demoClimber.ts` states the constraint at `prose`: every draw comes off one sequence, so inserting a
+single `chance()` re-rolls every session, burn and benchmark after it. A session per fortnight is a
+large insertion, so the roped climber comes off a **third** stream and lands on a **Thursday**,
+which the bouldering loop never uses — it walks Monday, Wednesday and Friday and rests on Sunday.
+
+Both halves are load-bearing, and the first draft only had one. It drew the roped session's note off
+`prose`, and a dump-and-diff of the V half against `git HEAD` showed two notes had moved between
+bouldering sessions. Fixed, re-checked, and the boulder sessions, metrics, projects and objectives
+are now byte-identical to what the file produced before this milestone.
+
+### Plausible, not rigged
+
+Warm up on a top-rope, lead the harder ones — which is how a route session goes, and is therefore
+what the sample log shows. It means most roped sessions carry **both** styles, so the rope card
+reads *"you have led and top-roped in the same session 15 times"*. That is M276's mixed branch
+rather than its partner branch.
+
+Worth saying plainly: the partner join M276 built is **not** what the sample climber triggers, and
+choosing a separated split to make it fire would have been the brochure this file refuses. The
+milestone before last gets shown off less and the demo stays honest.
+
+The partner field is filled on about three roped sessions in four, because `partners.ts` holds that
+an empty field is one nobody filled — and a demo that fills it every time never shows that state.
+
+### Read back from a browser
+
+The sample climber loaded through the Settings button, not a fixture:
+
+```
+LED AND TOP-ROPED
+111 of your 111 routes say whether they were led or top-roped. 5.11c led, 5.11a top-roped,
+so the hardest thing you have done, you led.
+You have led and top-roped in the same session 15 times, so at least some of this split is
+a choice you make route by route…
+Lead      5.11c · 45 sent
+Top-rope  5.11a · 51 sent
+
+WHO YOU CLIMBED WITH
+Priya   5 sessions · Sep 3
+Tom     4 sessions · Sep 17
+Marta   3 sessions · Jul 9
+Named on 12 of 119 sessions.
+```
+
+Two cards that had never rendered for this climber. No console errors.
+
+### What the battery found
+
+**10 mutants caught, sanity no-op survived.** No roped sessions at all; the rope style left off;
+every route top-roped and every route led; nobody ever named; one name only; the routes logged on
+the V ladder; and the boulder plateau flattened — which nothing had been able to catch while a NaN
+was hiding it (see below).
+
+**Two survived the first run, and both were holes in my tests.**
+
+*"Names somebody every single time"* survived because the test asserted `named.length <
+sessions.length`, which is trivially true — no bouldering session names anybody. The property is
+about the **roped** sessions, and it is now tested there.
+
+*"Puts the routes on a bouldering day"* survived because the test checked scale-mixing per
+**session**, and two sessions on one date with one scale each pass that. But the bouldering loop
+already uses Wednesday, and both call `newSession(date, 0)` — so the two would collide on one id and
+one would overwrite the other in the store. Now checked per date, with a separate test that every
+session id is unique.
+
+### A test that had been passing on NaN
+
+`db/demo.test.ts`'s plateau check reads `Number(c.grade.slice(1))` — which is 4 for `V4` and **NaN**
+for `5.10c`. Once the sample climber logged a route, `Math.max` propagated the NaN and the assertion
+compared NaN against NaN. Narrowed to `scale === 'V'`, which is the ladder the plateau was always
+about.
+
+**6,720 tests over 395 files**, from 6,712. First load 135.23KB against a 135.7KB budget.
+
+### Still standing
+
+`adherence.ts` scoring a week away as a week of misses, and `describeConsistency` naming a gap it
+can now explain — both carried from M275, neither touched here.
