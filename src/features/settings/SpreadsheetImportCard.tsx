@@ -2,12 +2,12 @@ import { useMemo } from 'react';
 import { TriangleAlert } from 'lucide-react';
 import {
   COLUMNS,
+  ambiguousGrade,
   countOf,
   guessColumns,
   guessKind,
   importCsv,
   REQUIRED,
-  selfScaling,
   type ColumnKind,
   type CsvKind,
   type Discipline,
@@ -128,13 +128,15 @@ export function SpreadsheetImportCard({
   // only a tick list is offered a grade column at all, so a gym log's
   // `indexOf` is already -1 (PLAN.md M139).
   const gradeAt = pending.columns.indexOf('grade');
+  // And only where an answer would place the row (PLAN.md M264). This asked
+  // whenever a grade cell was not self-scaling, which is also true of every
+  // typo: a file with `projecting` in its grade column was offered the
+  // boulder-or-route question, under an explanation about Font and French
+  // grades, and answering it left the row refused either way.
   const ambiguous =
     gradeAt !== -1 &&
     !pending.columns.includes('discipline') &&
-    pending.rows.some((r) => {
-      const cell = r[gradeAt]?.trim() ?? '';
-      return cell !== '' && selfScaling(cell) === null;
-    });
+    pending.rows.some((r) => ambiguousGrade(r[gradeAt] ?? ''));
   const arriving = countOf(read, pending.kind);
   /**
    * What the button offers to import, which is not always a day.

@@ -14282,6 +14282,16 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and the battery showed a page test cannot judge a sentence about today.*** *See the
   entry at the end of this document.*
 
+- **M264 — a typo told it might be a boulder.** `importCsv` has 85 tests under it; the card that
+  decides what a climber sees, and what they are **asked**, had none. A spreadsheet whose grade
+  column said `projecting` was refused with *“could be a boulder or a route and the file does not
+  say which”* and then offered the boulder-or-route question, under an explanation about Font and
+  French grades — a question neither answer resolves. The right sentence was three lines below in
+  the same function, waiting on a ladder that row never gets.
+  *Small, and it is one predicate used twice.*
+  ***Built, and the battery found half the rule untested.*** *See the entry at the end of this
+  document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -17086,3 +17096,94 @@ A challenge's count cannot run past its own target, which is the fault `cardPros
 asking for one reads `1 / 1`; six sessions against a weekly asking for three reads `3 / 3`; and the
 send target is derived from recent weeks including this one, so it stays ahead of the count by
 construction. Probed rather than assumed.
+
+## M264 — a typo told it might be a boulder
+
+The spreadsheet importer is how five years of somebody else's log enters this app, and the split in
+its coverage was stark: `importCsv` 85 tests, `csv` 28, `importPreview` 14 — and
+`SpreadsheetImportCard`, which decides what a climber reads and what they are asked, **zero**. A
+well-tested engine under an untested surface is where six of this session's defects have lived.
+
+Ten shapes of file. A file with typos in its grade column came back with this:
+
+```
+8 rows cannot be read
+Line 2: "not a grade" could be a boulder or a route and the file does not say which.
+…
+Are these boulders or routes?
+  Font and French grades are written the same way — 7c is a V9 boulder and a 5.12c route…
+```
+
+Both halves are wrong about the same cell, and they are wrong in the same way.
+
+### One test doing two jobs
+
+```ts
+const scale = selfScaling(gradeText) ?? (named ? … : input.assume ? … : null);
+if (scale === null) {
+  refuse(`"${gradeText}" could be a boulder or a route and the file does not say which.`);
+  return;
+}
+const grade = parseGrade(scale, gradeText);
+if (grade === null) {
+  refuse(`"${gradeText}" is not a grade on the ${…} ladder.`);   // ← three lines below
+}
+```
+
+`selfScaling` answers *“does this cell say its own ladder”*, and `V4` and `5.11a` do. Everything
+else falls into the first refusal: `7c`, which genuinely is a V9 or a 5.12c; and `projecting`,
+which is not a grade at all. The sentence that fits the second is already written, three lines
+down, and it never runs — the scale check gets there first and the ladder it needs is the thing
+that is missing.
+
+The card asked its question off the same test, so it asked it about typos too. Answering changes
+nothing: pick *Boulders* and the row refuses again, now as *“not a grade on the V ladder”*.
+
+### The question, asked only where an answer would place the row
+
+```ts
+export function ambiguousGrade(text: string): boolean {
+  const raw = text.trim();
+  if (raw === '' || selfScaling(raw) !== null) return false;
+  return parseGrade('V', raw) !== null || parseGrade('YDS', raw) !== null;
+}
+```
+
+A cell that reads on **at least one** ladder is a cell an answer places. Both halves earn their
+keep, which the battery had to teach me: `6b+` reads only as a route, and `4`, `5` and `5+` read
+only as Font on the V ladder — so dropping either half leaves a real ambiguity unasked. The engine
+and the card now share it, which is the whole point: they were asking the same question and
+disagreeing about which rows it was for.
+
+```
+Line 2: "projecting" is not a grade on either ladder.        (and no question)
+Line 2: "7c" could be a boulder or a route…                  (and the question)
+```
+
+### What the battery found
+
+**8 mutants caught, sanity no-op survived.** Both refusal sentences die when swapped for each
+other. So does the card asking about every non-self-scaling cell, or asking nothing at all.
+
+Two survived first, and both were my tests rather than the code. Dropping `parseGrade('V', …)`
+from the rule survived, because every cell I had listed as ambiguous also reads as a route — the V
+half was never the deciding one, until a probe turned up `4`, `5` and `5+`. And removing the
+discipline-column guard survived, because no shape I drove had a grade column and a discipline
+column together.
+
+**6,544 tests over 387 files**, from 6,528 over 386, in the first test file this card has ever had.
+First load 134.59KB against a 135.4KB budget. Read back by dropping two real `.csv` files into the
+running app — one of typos, one of Font grades — and reading the preview each produced.
+
+### Picking the surface, and the three times I got it wrong
+
+Worth recording, because the same mistake happened three ways. I recommended the builder as the
+largest unaudited surface: it has **127 tests across seven files**. I then counted test files per
+feature directory, which misses every surface whose tests live one level up — `/calendar` scored
+zero and has about a hundred and thirteen. Then I counted references to component names I had
+guessed rather than read, and `DrillLibrary`, which does not exist, scored zero while `DrillsPage`
+and `DrillPage` have seven test files between them.
+
+The measure that finally worked reads the exported component out of every page file and counts the
+test files that mention it. That is the same lesson as M195 and M262, arrived at from the other
+side: a probe spelled from memory finds what memory contains, not what the tree does.

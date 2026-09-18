@@ -284,6 +284,25 @@ function pad(y: string, m: string, d: string): string | null {
  * and the other way about, so those come back null and the caller supplies
  * the discipline.
  */
+/**
+ * Whether the boulder-or-route question can do anything for this cell
+ * (PLAN.md M264).
+ *
+ * A cell that reads on **at least one** ladder is a cell an answer places:
+ * `7c` is V9 or 5.12c, `6b+` is only a route, and both are genuine
+ * ambiguities the file cannot settle. A cell that reads on neither is not
+ * ambiguous — it is unreadable, and no answer changes that.
+ *
+ * Exported because the import card asks the same question and had the same
+ * gap: it offered *“Are these boulders or routes?”* to a spreadsheet whose
+ * grade column said `projecting`.
+ */
+export function ambiguousGrade(text: string): boolean {
+  const raw = text.trim();
+  if (raw === '' || selfScaling(raw) !== null) return false;
+  return parseGrade('V', raw) !== null || parseGrade('YDS', raw) !== null;
+}
+
 export function selfScaling(text: string): GradeScale | null {
   const raw = text.trim();
   if (raw === '') return null;
@@ -574,7 +593,20 @@ export function importCsv(input: ImportCsvInput): ImportedCsv {
     const named = readDiscipline(at(row, 'discipline'));
     const scale = selfScaling(gradeText) ?? (named ? SCALE_OF[named] : input.assume ? SCALE_OF[input.assume] : null);
     if (scale === null) {
-      refuse(`"${gradeText}" could be a boulder or a route and the file does not say which.`);
+      // Two different rows end up here and they need two different
+      // sentences (PLAN.md M264). “7c” really is a boulder or a route and
+      // the file really does not say; “projecting” is neither, and telling
+      // a climber their typo *could be a boulder* sends them to answer a
+      // question that will not help — whichever way they answer it, the row
+      // refuses again.
+      //
+      // The right sentence for that row is already three lines below,
+      // waiting on a ladder this one never gets.
+      refuse(
+        ambiguousGrade(gradeText)
+          ? `"${gradeText}" could be a boulder or a route and the file does not say which.`
+          : `"${gradeText}" is not a grade on either ladder.`,
+      );
       return;
     }
 
