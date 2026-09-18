@@ -14482,6 +14482,9 @@ M50 for why it is not coming.
   hardest for. The difficulty is that a share card is a highlight by nature and `describeBlock`
   refuses to be one — so `untested` is a stat, beside the three movements.
 
+- **M285 — raise the budget.** Nine milestones took 135.7 from 1.02KB of slack to 0.35KB, which is
+  less than a feature. 136.4, measured 135.35, bounded both ways.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -19066,3 +19069,36 @@ sessions never counted, and a line printed when there were no sessions either wa
 
 **6,789 tests over 399 files**, from 6,772. First load 135.35KB against a 135.7KB budget — 0.35KB of
 slack, and the ceiling needs raising before the next thing that touches the entry chunk.
+
+## M285 — raise the budget
+
+Not a fix. The first-load ceiling had 0.35KB left, which is less than a feature, so the next
+milestone touching the entry chunk would have had to move the line in its own commit — the same
+point M273 raised it at, and the same reason.
+
+**135.7 → 136.4, measured 135.35.** 1.05KB of slack: the 1.00 target every raise here has used, and
+deliberately short of the 1.5 the guard allows.
+
+Nine milestones spent the last raise, none of them large: M275's away marker and its store, M276's
+rope context, M277's roped sample climber, M278's grid state, M279's adherence input, M280–M282's
+demo program and block, M283's venue rename, M284's block card.
+
+### Bounded both ways, again
+
+```
+135.30   fails the budget          (below what the app measures)
+136.40   passes                    (1.05KB of slack)
+136.85   passes                    (1.50 exactly, the last that fits)
+136.86   fails the guard           (1.51 of slack)
+```
+
+And the floor moves with the ceiling, which is worth restating every time: at 136.4 a rebuild
+measuring **under 134.9** now fails for being *too small*. A future size reduction of more than half
+a kilobyte has to move this line in its own commit. That is the ratchet working rather than a bug in
+it, and it is why this is 1.05 and not the 1.49 that would just fit.
+
+### What the battery found
+
+**3 mutants caught, sanity no-op survived** — raised past the guard, raised to 300 where a regression
+could hide, and set below what the app measures. Both walls of the ratchet still stand at the new
+number.

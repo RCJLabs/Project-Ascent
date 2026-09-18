@@ -510,8 +510,24 @@ describe('the bundle stays small', () => {
    * lifts the floor with it: at 135.7 a rebuild measuring under 134.2 fails
    * for being *too small*, which is the price of headroom in a ratchet and
    * the reason this is 1.02 rather than the 1.49 that would just fit.
+   *
+   * ## 135.7 → 136.4 at M285, measured 135.35
+   *
+   * Nine milestones spent it: M275's away marker and its store, M276's rope
+   * context, M277's roped sample climber, M278's grid state, M279's
+   * adherence input, M280–M282's demo program and block, M283's venue
+   * rename and M284's block card. None of them was large; together they took
+   * 135.7 from 1.02KB of slack to **0.35KB**, which is less than a feature —
+   * the same point M273 raised it at.
+   *
+   * 1.05KB of slack, the same 1.00 target. Bounded both ways again, against
+   * 135.35 measured: **135.3 fails the budget, 136.86 is 1.51 of slack and
+   * fails the guard, 136.85 passes.** And the floor moves with it — at 136.4
+   * a rebuild measuring under 134.9 now fails for being too small, so a
+   * future size *reduction* of more than half a kilobyte has to move this
+   * line in its own commit. That is the ratchet working, not a bug in it.
    */
-  const BUDGET = 135.7;
+  const BUDGET = 136.4;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
