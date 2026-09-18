@@ -426,6 +426,27 @@ describe('the nav can give way, and the tabs cannot', () => {
     expect(box).toContain('overflow-y-auto');
   });
 
+  it('makes `main` the containing block for what it scrolls', () => {
+    // `sr-only` is `position: absolute`. Without this, a screen-reader
+    // label near the foot of a long page resolves against the initial
+    // containing block, sits that far down the *document*, and makes the
+    // document scrollable — which scrolls the nav away with it (M270).
+    //
+    // Read off the class list, not the element's source: the first draft
+    // searched the whole `<main>` block and passed with the class deleted,
+    // because the comment above it explains the word. The battery caught
+    // it. That is M222's lesson for the second time in one milestone — a
+    // sweep has no business reading prose.
+    // From `id="main"`, because `<main>` is named in a doc comment further
+    // up and slicing from there read the shell's class list instead — the
+    // third time prose has stood in for code in this milestone.
+    const at = shell.indexOf('id="main"');
+    expect(at, 'main is still there').toBeGreaterThan(0);
+    const classes = (/className="([^"]+)"/.exec(shell.slice(at))?.[1] ?? '').split(/\s+/);
+    expect(classes, 'main establishes a containing block').toContain('relative');
+    expect(classes, 'main is the scroll container').toContain('overflow-y-auto');
+  });
+
   it('pins the tab row', () => {
     const tabs = nav.slice(nav.indexOf('grid grid-cols-5') - 80, nav.indexOf('grid grid-cols-5') + 40);
     expect(tabs).toContain('shrink-0');

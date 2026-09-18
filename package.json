@@ -14,6 +14,7 @@
     "themes:check": "vite-node scripts/theme-report.ts",
     "priority": "vite-node scripts/priority-report.ts",
     "shots": "node scripts/shots.mjs",
+    "layout": "node scripts/layout.mjs",
     "glossary": "node scripts/glossaryTerms.mjs"
   },
   "dependencies": {

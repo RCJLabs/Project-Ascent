@@ -274,7 +274,31 @@ export function AppShell({ children }: { children: ReactNode }) {
         id="main"
         ref={mainRef}
         tabIndex={-1}
-        className="flex-1 min-w-0 min-h-0 overflow-y-auto overscroll-y-contain px-4 pt-3 pb-8 outline-none lg:px-8 lg:pt-6 lg:pb-12"
+        // **`relative` (PLAN.md M270).** Tailwind's `sr-only` is
+        // `position: absolute`, and with no positioned ancestor it resolves
+        // against the *initial containing block* — so a screen-reader label
+        // near the foot of a long page sits that far down the **document**,
+        // and the document's scrollable height becomes exactly its bottom
+        // edge. An ancestor's `overflow: hidden` does not clip it, for the
+        // reason M225 already wrote down about `fixed`.
+        //
+        // Measured before this line, at 390×780 on /progress: the document
+        // scrolled to 1968px, a programmatic scroll to 600 moved it, and
+        // the nav went from 722–780 to 122–180 — "the bottom navigation
+        // buttons scroll with the page", which is the M225 report word for
+        // word. Six routes were doing it.
+        //
+        // (Written without naming the API `layout.test.ts` forbids: it
+        // greps the source, and the first draft of this comment failed it
+        // by quoting the call. That is M222's lesson again — a sweep has no
+        // business reading prose, and prose has none baiting it.)
+        //
+        // `relative` makes `main` the containing block for its own absolute
+        // descendants, so its `overflow-y-auto` clips them. Anything that
+        // meant to position against a card already sets `relative` on that
+        // card; the only things this catches are the ones that were
+        // escaping to the viewport, which is the defect.
+        className="relative flex-1 min-w-0 min-h-0 overflow-y-auto overscroll-y-contain px-4 pt-3 pb-8 outline-none lg:px-8 lg:pt-6 lg:pb-12"
       >
         {/* The content still has a maximum: a paragraph 1,200px wide is
             unreadable whatever the window is doing. Wide enough for two

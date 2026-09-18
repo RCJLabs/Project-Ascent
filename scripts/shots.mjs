@@ -44,7 +44,10 @@ const PAGES = [
   ['progress', '#/progress'],
   ['calendar', '#/calendar'],
   ['projects', '#/projects'],
-  ['climber', '#/climber'],
+  // `/climber` until M118, which split it into the training half and the
+  // game half and deleted the route; this had been photographing the
+  // Not-found page for the store listing ever since (PLAN.md M270).
+  ['game', '#/game'],
   ['coach', '#/coach'],
   ['career', '#/career'],
 ];

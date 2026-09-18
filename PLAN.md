@@ -14340,6 +14340,16 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   *Small, and it is three class names.*
   ***Fixed, and measured at the size where it breaks.*** *See the entry at the end of this document.*
 
+- **M270 — the layout checks, and the scroll they found on their first run.** jsdom has no layout
+  engine, so all 6,608 tests are blind to the class of defect that has hurt this app most: M225 and
+  M269 were both layout, both found by a person on a phone. `scripts/layout.mjs` is the throwaway
+  measurement harness kept — four invariants, every route, three widths, in a real browser. It
+  failed on six routes the first time it ran: the document scrolls, and scrolling takes the nav
+  with it.
+  *Small, and the cause is one word.*
+  ***Built, and prose stood in for code three times before it held.***
+  *See the entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -17664,3 +17674,90 @@ It was two tests, each rendering all seventeen pages to answer a different quest
 text. One pass answers both, and it carries an explicit 60s timeout rather than sitting under a
 default it was always going to outgrow. Verified still to kill the defect it was written for by
 putting *"1 sessions logged"* back.
+
+
+## M270 — the layout checks, and the scroll they found on their first run
+
+### Why this, and why now
+
+M269 was found by the climber using the app, from a phone. So was M225. Both were layout, and the
+suite could not have seen either: jsdom has no layout engine, so every box it reports is zero and a
+nav pushed off the bottom of the screen reads exactly like a nav sitting neatly above it. Six
+thousand tests, blind to the one class of defect that has actually cost this app anything.
+
+Meanwhile the same Playwright measurement harness had been hand-written and thrown away three times
+in a single session. `scripts/layout.mjs` is that harness kept, following the convention
+`shots.mjs` already set: Playwright is not a dependency, because it is a tool for the person
+publishing rather than part of the build.
+
+Four facts, on every route the registry lists, at 390×780, 360×640 and 1280×900:
+
+- every tab is on screen, and at least 44px tall on a phone
+- the document does not scroll — only `main` may (M225)
+- nothing scrolls sideways
+- the page throws nothing
+
+Plus the M269 squeeze: pad the banner box by 400 and 800 pixels and the tab row must still be
+there. The routes come out of `ui/routes.ts` rather than being listed, and the read asserts it
+found at least twenty — `shots.mjs` lists its own and has been photographing `#/climber` for the
+store since M118 deleted that route, which is a screenshot of the Not-found page. It is `#/game`
+now.
+
+### What the first run said
+
+```
+phone /progress: the document scrolls (M225: only `main` may)
+phone /week, /review, /body, /altimeter: the same
+small: the same five
+desktop /progress, /body: the same
+```
+
+Six routes, and not a false alarm. Measured directly on /progress at 390×780: the document's
+scrollable height was **1968px** against a 780px screen, a scroll to 600 moved it, and the nav went
+from 722–780 to **122–180**. At full scroll it sits at −466. *"The bottom navigation buttons scroll
+with the page"* is the M225 report word for word, and it was live again.
+
+### `sr-only`
+
+The cause is the app's screen-reader text. Tailwind's `sr-only` is `position: absolute`, and
+nothing between it and `<html>` establishes a containing block — so it resolves against the
+**initial containing block**, and its static position is wherever it would have sat in flow, which
+for a label near the foot of a long page is a thousand pixels down. The document's scrollable
+height came out at exactly the deepest `sr-only` element's bottom edge on every one of the six
+routes: 1968, 1408, 910, 1367, 999.
+
+`overflow: hidden` on the shell cannot clip it, for the reason M225 had already written down about
+`position: fixed` — an ancestor's overflow does not clip a descendant whose containing block sits
+outside it. M225 checked that for the search sheet and did not think to check it for a label.
+
+`main` is `relative` now, so it is the containing block for its own absolute descendants and its
+`overflow-y-auto` clips them. Anything that meant to position against a card already sets
+`relative` on that card; the only things this catches are the ones that were escaping. After:
+`scrollTo(0, 600)` leaves the page at 0, the nav stays at 722–780, and the document's scrollable
+height is 780 against a 780px screen. All thirty-five routes clean at all three widths.
+
+### Prose standing in for code, three times
+
+The fix took four attempts to hold, and every failure was a sweep reading English:
+
+1. `layout.test.ts` — M225's own guard — failed because the comment explaining this fix **quoted
+   the API it forbids**. The rule is right; the comment now describes the call without naming it.
+2. The new `ui.test.ts` assertion searched the `<main>` block for the word `relative` and passed
+   with the class deleted, because the comment above it explains the word. The battery caught that
+   one.
+3. Anchoring on `<main` then read the *shell's* class list, because `<main>` is named in a doc
+   comment further up the file.
+
+That is M222's lesson three more times in one milestone: a sweep has no business reading prose, and
+prose has none baiting it. The assertion reads the class list from `id="main"` now.
+
+**2 mutants caught, sanity no-op survived** — deleting `relative` and turning off the clip.
+
+### What this does not cover
+
+Thirteen routes need a record to point at — `/projects/:id`, `/drills/:id`, `/guides/:id/:section`
+and the rest — and are reported as skipped rather than guessed at. The check runs by hand
+(`npm run layout`), not in CI: it needs a browser, and a hundred megabytes on every deploy is not
+worth it for something that only needs running when the shell moves.
+
+**6,609 tests over 391 files**. First load 134.69KB against a 135.4KB budget.
