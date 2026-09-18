@@ -14253,6 +14253,15 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and the test that pinned the block sentence was named after the property it broke.***
   *See the entry at the end of this document.*
 
+- **M261 — the test that only worked on a Thursday.** Not proposed — CI reported it. The M260
+  deploy went red, and the failing test was one written two milestones earlier in M259:
+  `startsMidWeek.test.tsx` read `today()` at module load and seeded its session on that week's
+  Thursday, while `HomePage` reads `today()` when it renders. The run started at 23:58 UTC.
+  `partnersInReview.test.tsx` already names this trap as *“the bug M229 and M235 both shipped”*.
+  *Small, and it is two test files.*
+  ***Built, and the fixture is proved on all seven days rather than argued about.*** *See the entry
+  at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -16806,3 +16815,65 @@ And the **change rows** survive the negative-zero trap M256 was about: `delta` i
 engine, so a difference of −0.04 hours becomes `-0`, and `-0 === 0` puts it in the *same* branch
 rather than through a sign test. Symmetric with `+0.04`, and correct. Checked rather than assumed,
 because the same shape cost a milestone four entries ago.
+
+## M261 — the test that only worked on a Thursday
+
+The first red deploy in this run of milestones, and the failing test was not covering the milestone
+that broke it. Run 301 shipped M260; the test that failed was written in M259.
+
+```
+Error: This test asserted nothing and so cannot fail:
+  src/features/startsMidWeek.test.tsx > says it on a day already logged, where the card is gone
+```
+
+The run started at **23:58 UTC** and finished at **00:02**.
+
+### One clock, read twice
+
+```ts
+const TODAY = today();                       // at module load
+const THURSDAY = addDays(startOfWeek(TODAY), 4);
+…
+await putSession(newSession(THURSDAY, 0, { completed: true … }));
+renderAt('/', <HomePage />);                 // HomePage reads today() when it renders
+```
+
+On a Thursday those two readings agree and the test passes. The moment the clock rolled to Friday,
+Home was looking at a day with no session on it, `OpenSessionCard` — the card the whole test is
+about — never rendered, and the assertion was never reached. The harness caught the silence rather
+than the cause, which is `assertions.ts` doing exactly its job.
+
+**This trap is already written down in this repository.** `partnersInReview.test.tsx` opens with it:
+
+> *The last year that finished, so the page is a complete year whatever today happens to be: a
+> fixture dated inside the running year passes or fails depending on the date it is run, which is
+> the bug **M229 and M235 both shipped**.*
+
+Third time. And the second half of this one is that I read that sentence while working in the same
+directory two milestones ago.
+
+### The fix, and the proof
+
+The file reads the clock **once per test** rather than once per module, through a `week()` helper,
+so a rollover between two dates in one test is a millisecond rather than a day. The session it
+seeds goes on **today** — the day the page will actually read — rather than on a fixed weekday.
+`comingUp.test.tsx` had the same shape in its anniversary helper and takes the same fix.
+
+Then the part that makes it a milestone rather than a patch. Every test in that file rests on one
+claim — *today is after Start and before week one* — and that claim had only ever been checked on
+the day the file was written. It is now asserted on all seven days under a faked clock:
+
+```ts
+for (let i = 0; i < 7; i += 1) {
+  vi.setSystemTime(new Date(2026, 8, 13 + i, 12, 0, 0));   // Sunday, then the six after it
+  const w = week();
+  expect(w.today < w.nextSunday, w.today).toBe(true);
+  expect(blockWindow(program, w.thursday).from, w.today).toBe(w.nextSunday);
+}
+```
+
+A fixture that is only true on one day of the week is a fixture that will be wrong on six of them,
+eventually, at 23:58.
+
+**6,514 tests over 385 files.** No runtime code changed, so there is nothing to verify in a browser
+and the budget is where M260 left it.
