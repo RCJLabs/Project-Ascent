@@ -37,9 +37,23 @@ import {
  *  line anyone can follow. */
 const STROKE = 4;
 const HALO = 8;
-/** How near a tap has to land to erase something, in image pixels at the
- *  photo's stored size. Generous — this is a finger on a phone. */
-const ERASE_WITHIN = 48;
+/**
+ * How near a tap has to land to erase something, in **screen** pixels
+ * (PLAN.md M265).
+ *
+ * It was forty-eight *image* pixels, and `prepareImage` stores a photo at up
+ * to 1600 on its long edge — so on a phone showing that photo 390px wide,
+ * a tap had to land within **11.7 screen pixels** of a mark, on a stroke
+ * eight pixels wide. The same finger got 29 pixels on an old 640px snap:
+ * the tolerance moved with the file rather than with the hand.
+ *
+ * The two constants above already say this, about the neighbouring problem:
+ * they are held in screen pixels by `vectorEffect` because *“a hairline on
+ * a 1600px photo shown 350px wide is not a line anyone can follow”*. A tap
+ * target is the same sentence — twenty-four here is a forty-eight pixel
+ * circle, near enough the 44px the rest of the app is built to.
+ */
+const ERASE_WITHIN = 24;
 
 export function PhotoMarks({
   marks,
@@ -156,19 +170,43 @@ export function MarkPad({
   const [raw, setRaw] = useState<number[] | null>(null);
   const surface = useRef<HTMLDivElement>(null);
 
-  function at(event: { clientX: number; clientY: number }): [number, number] | null {
+  /**
+   * Where the pointer is, and what a screen pixel is worth in image pixels.
+   *
+   * Both from one read of the box, because the erase tolerance needs the
+   * second and asking twice is two reads that could disagree. The wrapper
+   * carries the image's aspect ratio, so the scale is the same on both
+   * axes by construction.
+   */
+  function measure(event: { clientX: number; clientY: number }): {
+    point: [number, number];
+    imagePixelsPerScreenPixel: number;
+  } | null {
     const box = surface.current?.getBoundingClientRect();
     if (!box || box.width === 0 || box.height === 0) return null;
-    return [(event.clientX - box.left) / box.width, (event.clientY - box.top) / box.height];
+    return {
+      point: [(event.clientX - box.left) / box.width, (event.clientY - box.top) / box.height],
+      imagePixelsPerScreenPixel: width / box.width,
+    };
   }
 
   function down(event: React.PointerEvent<HTMLDivElement>) {
     if (!tool) return;
-    const point = at(event);
-    if (!point) return;
+    const read = measure(event);
+    if (!read) return;
+    const { point } = read;
     event.currentTarget.setPointerCapture(event.pointerId);
     if (tool === 'erase') {
-      const hit = nearestMark(marks, point[0] * width, point[1] * height, width, height, ERASE_WITHIN);
+      // `nearestMark` measures in image pixels, so the tolerance is
+      // converted into that space here rather than stored in it.
+      const hit = nearestMark(
+        marks,
+        point[0] * width,
+        point[1] * height,
+        width,
+        height,
+        ERASE_WITHIN * read.imagePixelsPerScreenPixel,
+      );
       if (hit !== null) onErase(hit);
       return;
     }
@@ -177,8 +215,8 @@ export function MarkPad({
 
   function move(event: React.PointerEvent<HTMLDivElement>) {
     if (!raw) return;
-    const point = at(event);
-    if (point) setRaw(appendPoint(raw, point[0], point[1]));
+    const read = measure(event);
+    if (read) setRaw(appendPoint(raw, read.point[0], read.point[1]));
   }
 
   function up() {

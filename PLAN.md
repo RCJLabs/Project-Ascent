@@ -14292,6 +14292,16 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and the battery found half the rule untested.*** *See the entry at the end of this
   document.*
 
+- **M265 — a tap target measured in the wrong pixels.** Of the seven things `features/media`
+  exports, four were rendered by no test at all. `ERASE_WITHIN = 48` is documented as *“generous —
+  this is a finger on a phone”* and counted in **image** pixels, while `prepareImage` stores a photo
+  at up to 1600 on its long edge: measured in a browser, that is **11.9 screen pixels** on a phone,
+  on a stroke eight pixels wide, against the 44px target the rest of the app is built to. The two
+  constants directly above it are held in screen pixels on purpose, and say why.
+  *Small, and it is one constant and one conversion.*
+  ***Built, and the battery showed the guard I could not kill was guarding something jsdom cannot
+  see.*** *See the entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -17187,3 +17197,73 @@ and `DrillPage` have seven test files between them.
 The measure that finally worked reads the exported component out of every page file and counts the
 test files that mention it. That is the same lesson as M195 and M262, arrived at from the other
 side: a probe spelled from memory finds what memory contains, not what the tree does.
+
+## M265 — a tap target measured in the wrong pixels
+
+`features/media` exports seven things. `AttachPage` and `MediaCard` are rendered by five test files
+between them; `PhotoMarks`, `MarkPad`, `PhotoStrip`, `PhotoTile` and `useMediaOwners` by none. The
+libraries underneath are well covered — `db/media` 21, `engine/photos` 16, `engine/attach` 23,
+`lib/marks` its own file — which is the same split M264 found at the spreadsheet importer, and the
+same place the defect was.
+
+I also had the shape of this surface wrong going in. I deferred media three times as *“IO-heavy,
+expect fewer findings”*; `PhotoMarks` and `MarkPad` are geometry, and the geometry is where it was.
+
+### A finger, in the file's pixels
+
+```ts
+/** How near a tap has to land to erase something, in image pixels at the
+ *  photo's stored size. Generous — this is a finger on a phone. */
+const ERASE_WITHIN = 48;
+```
+
+`prepareImage` stores a photo at up to `MAX_EDGE = 1600` on its long edge. Measured in a browser on
+a real 1600×900 photo, the pad renders 398px wide — **4.02 image pixels per screen pixel**, so
+forty-eight image pixels is **11.9 screen pixels**. The mark being aimed at is eight pixels wide,
+and the rest of the app is built to a 44px tap target.
+
+It is not even consistently wrong. An old 640px snap shown at the same width gets 29 screen pixels:
+the same finger, two and a half times the reach, because the tolerance moved with the **file**
+rather than with the hand.
+
+And the two constants immediately above it already say so, about the neighbouring problem:
+
+> `STROKE` and `HALO` are *“Screen pixels, held constant by `vectorEffect` regardless of the
+> photo's size on screen: a hairline on a 1600px photo shown 350px wide is not a line anyone can
+> follow.”*
+
+A tap target is that sentence again. Three lines apart, one constant took the lesson and the next
+did not.
+
+### Measured where the finger is
+
+`ERASE_WITHIN` is twenty-four **screen** pixels — a forty-eight pixel circle, near enough the app's
+own target — converted into image space at the point of use. `MarkPad` already read the element's
+box to place the pointer; it now takes the scale from the same read, because asking twice is two
+reads that could disagree.
+
+### What the battery found
+
+**8 mutants caught, sanity no-op survived.** Reverting to image pixels dies, so does dropping the
+conversion, inverting the scale, and either direction of a wrong constant.
+
+One survived twice, and the reason is the interesting part. Deleting `if (!tool) return;` from the
+pointer-down handler changed nothing a test could see: the draft expression and `up()` both
+re-check the tool, so a stroke begun with no tool in hand draws nothing and commits nothing. The
+guard is not dead — what it stops is `setPointerCapture`, which takes the pointer off the browser
+and is how a photo stops scrolling under a finger that is only looking at it. jsdom has no such
+method, so the test has to supply one anyway; supplying one that **records** turns an invisible
+guard into an assertion. It is killed now, for the thing it actually protects.
+
+**6,553 tests over 387 files**, from 6,544. First load 134.61KB against a 135.4KB budget. Read back
+from a browser by seeding a real 1600×900 photo with a mark on it and measuring the rendered pad:
+398px wide, 4.02 image pixels to the screen pixel, the old reach 11.9.
+
+### What this does not cover
+
+`PhotoStrip`, `PhotoTile` and `useMediaOwners` are still rendered by no test. They are the
+blob-loading half — object URLs, an `IntersectionObserver` that jsdom does not have, and a lazy
+read that only fires on screen — and driving them needs fixtures this milestone did not build.
+Read rather than driven, they came back clean: `useStrip` sets its records in one go so the
+placeholder's all-or-nothing guard is right, `quantise` clamps a drag that leaves the photo, and
+`describeMarks` agrees with itself about one of anything.
