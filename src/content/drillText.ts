@@ -15,6 +15,7 @@
  * are in `drillCoaching.ts` for the same reason.
  */
 
+import { getDrill } from './drills';
 import type { DrillId } from './types';
 
 export const DRILL_TEXT: Readonly<Record<string, string>> = {
@@ -347,6 +348,13 @@ export const DRILL_TEXT: Readonly<Record<string, string>> = {
     'Write down three things from the last session: what actually limited you, one decision you would take back, and the single thing to do differently next time. Ten minutes, in the notes field or on paper. Most climbers repeat the same session for months because nothing ever gets named — and a named limiter is the difference between training and attendance.',
 };
 
+/**
+ * The paragraph, shipped or written (PLAN.md M286).
+ *
+ * A drill the climber wrote is not in the map above and never will be — that
+ * map is a build artefact of the library. It carries its own `text` instead,
+ * and this is the one place that has to know, so no caller does.
+ */
 export function drillText(id: DrillId): string | undefined {
-  return DRILL_TEXT[id];
+  return DRILL_TEXT[id] ?? getDrill(id)?.text;
 }

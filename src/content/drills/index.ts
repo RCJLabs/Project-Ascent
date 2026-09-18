@@ -49,6 +49,34 @@ export const DRILLS: Drill[] = [];
 
 const BY_ID = new Map<DrillId, Drill>();
 
+/**
+ * Drills the climber wrote, in the same lookup as the shipped ones
+ * (PLAN.md M286).
+ *
+ * `content/programs/index.ts` does this for written programs and states the
+ * reason: a written one *"has to behave like any other everywhere… a registry
+ * populated at hydration keeps those call sites untouched, including the one
+ * inside a pure engine, which could not read a React store anyway."* Six
+ * modules on the first-paint path call `getDrill`, and none of them should
+ * learn where a drill came from.
+ *
+ * Kept apart from `DRILLS` rather than spliced into it, because `loadDrills`
+ * replaces that array wholesale — a written drill spliced in would vanish the
+ * moment the library landed, and the order of those two events is a race
+ * nobody should have to reason about.
+ */
+const CUSTOM = new Map<DrillId, Drill>();
+
+export function registerCustomDrills(drills: readonly Drill[]): void {
+  CUSTOM.clear();
+  for (const drill of drills) CUSTOM.set(drill.id, drill);
+}
+
+/** Everything in the registry: shipped first, then written. */
+export function allDrills(): Drill[] {
+  return CUSTOM.size === 0 ? DRILLS : [...DRILLS, ...CUSTOM.values()];
+}
+
 let loading: Promise<void> | null = null;
 
 /**
@@ -86,11 +114,11 @@ export function offWallDrills(): Drill[] {
 }
 
 export function getDrill(id: DrillId): Drill | undefined {
-  return BY_ID.get(id);
+  return BY_ID.get(id) ?? CUSTOM.get(id);
 }
 
 export function drillsByCategory(category: DrillCategory): Drill[] {
-  return DRILLS.filter((d) => d.category === category);
+  return allDrills().filter((d) => d.category === category);
 }
 
 export interface DrillFilter {
@@ -111,7 +139,7 @@ export interface DrillFilter {
  *  `equipment` matches drills whose needs are all available. */
 export function filterDrills(filter: DrillFilter): Drill[] {
   const needle = filter.search?.trim().toLowerCase();
-  return DRILLS.filter((d) => {
+  return allDrills().filter((d) => {
     if (filter.category && d.category !== filter.category) return false;
     if (filter.discipline && d.discipline !== filter.discipline && d.discipline !== 'both') return false;
     if (filter.equipment) {
@@ -119,7 +147,9 @@ export function filterDrills(filter: DrillFilter): Drill[] {
       if (!d.equipment.every((e) => e === 'none' || have.has(e))) return false;
     }
     if (needle) {
-      const haystack = `${d.name} ${d.focus} ${filter.text?.[d.id] ?? ''}`.toLowerCase();
+      // A written drill carries its own text, so a search reads it without
+      // the map the page hands in for the shipped ones.
+      const haystack = `${d.name} ${d.focus} ${filter.text?.[d.id] ?? d.text ?? ''}`.toLowerCase();
       if (!haystack.includes(needle)) return false;
     }
     return true;

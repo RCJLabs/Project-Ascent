@@ -147,6 +147,21 @@ export interface Drill {
   /** Programs this drill came from — provenance, and a filter for the
    *  custom builder's suggestions. */
   sources: ProgramId[];
+  /**
+   * What the drill is, in a paragraph — **written drills only**
+   * (PLAN.md M286).
+   *
+   * The 156 shipped ones keep their prose in `DRILL_TEXT`, a lazily-fetched
+   * map keyed by id, because sixteen kilobytes of paragraphs in front of
+   * every cold start is what M137 went to trouble to remove. A drill the
+   * climber wrote cannot be in that map, so it carries its own, and
+   * `drillText` falls back to it.
+   *
+   * One optional field rather than a second lookup every reader has to know
+   * about — the same reasoning `customProgram.ts` gives for a written
+   * program being a `Program`.
+   */
+  text?: string;
 }
 
 // ── Exercises and blocks ──────────────────────────────────────────────────

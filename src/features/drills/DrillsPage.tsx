@@ -1,13 +1,16 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'wouter';
-import { ChevronRight, Search } from 'lucide-react';
+import { Link, useLocation } from 'wouter';
+import { ChevronRight, Plus, Search } from 'lucide-react';
 import { DRILL_CATEGORIES, DRILLS, filterDrills } from '@/content/drills';
 import { DRILL_TEXT } from '@/content/drillText';
 import type { DrillCategory } from '@/content/types';
+import { blankDrill } from '@/engine/customDrill';
 import { drillHistory } from '@/engine/drillHistory';
 import { today } from '@/engine/dates';
 import { useSessions, allSessions } from '@/store/sessions';
+import { useCustomDrills } from '@/store/drills';
 import { BackLink } from '@/ui/BackLink';
+import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
 import { Input } from '@/ui/Field';
@@ -45,6 +48,9 @@ import { PageSkeleton } from '@/ui/Skeleton';
  * and the scope is already narrow.
  */
 export function DrillsPage() {
+  const mine = useCustomDrills((s) => s.custom);
+  const saveDrill = useCustomDrills((s) => s.save);
+  const [, navigate] = useLocation();
   const byDate = useSessions((s) => s.byDate);
   const ready = useSessions((s) => s.hydrated);
   const [category, setCategory] = useState<DrillCategory | null>(null);
@@ -157,6 +163,26 @@ export function DrillsPage() {
             </Card>
           ))
         )}
+
+        {/* Writing one, on the page that lists them (PLAN.md M286). It makes
+            a blank and opens it: a drill exists from the moment it is
+            created, and the page that reads one is where it gets filled in. */}
+        <Card title="Your own">
+          <p className="text-sm text-ink-soft leading-relaxed mb-3">
+            {mine.length === 0
+              ? 'The 156 above are somebody else’s. If you coach, the drill you have been giving people for years belongs here too — it will sit in the library with the rest and can go on today the same way.'
+              : `${mine.length} of these ${mine.length === 1 ? 'is' : 'are'} yours, in the lists above with the rest.`}
+          </p>
+          <Button
+            size="sm"
+            onClick={() => {
+              const drill = blankDrill();
+              void saveDrill(drill).then(() => navigate(`/drills/${drill.id}`));
+            }}
+          >
+            <Plus size={15} /> Write a drill
+          </Button>
+        </Card>
 
         <Card>
           <p className="text-xs text-ink-soft leading-relaxed flex items-start gap-2">

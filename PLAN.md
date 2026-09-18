@@ -14415,7 +14415,7 @@ M50 for why it is not coming.
 
 - **Custom drills.** There are 156 and none of them can be the climber's own: programs and sessions
   are both authorable, drills are content only. For a coach that is backwards — the drill is the
-  thing they would most want to write. *Medium.*
+  thing they would most want to write. **M286** below. *Shipped.*
 
 - **A program as a readable handout.** `programFile.ts` is written so a coach can hand an athlete a
   block, and only to someone running this app. There is no human-readable version for the athlete
@@ -14484,6 +14484,11 @@ M50 for why it is not coming.
 
 - **M285 — raise the budget.** Nine milestones took 135.7 from 1.02KB of slack to 0.35KB, which is
   less than a feature. 136.4, measured 135.35, bounded both ways.
+
+- **M286 — write your own drill.** 156 shipped and not one can be the climber's own. A written drill
+  is a `Drill`: same registry, same filters, same page. Two bugs the browser found that jsdom
+  papered over, because a harness that forces a re-render around every event cannot see a missing
+  subscription.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -19102,3 +19107,91 @@ it, and it is why this is 1.05 and not the 1.49 that would just fit.
 **3 mutants caught, sanity no-op survived** — raised past the guard, raised to 300 where a regression
 could hide, and set below what the app measures. Both walls of the ratchet still stand at the new
 number.
+
+## M286 — write your own drill
+
+The library ships 156 and **not one of them can be the climber's own**. Programs have been
+authorable since M7 and session types with them; drills are content only. For a coach that is
+backwards — the drill is where their own coaching lives, and the one they have been giving athletes
+for ten years had nowhere to go.
+
+### A drill like any other
+
+`customProgram.ts` states the rule and it holds here: *"the moment a written program is a
+second-class shape, every consumer needs a branch, and the branches are where the prototype
+rotted."* A written drill is a `Drill`. It answers `getDrill`, appears in its category, is found by
+the same search, is filtered by the same kit, and can be put on today from the same page.
+
+**No new route and no builder screen.** The page that reads a drill already reads this one; what it
+gains is an edit mode. And no new object store: the drills sit under a key in `profile`, beside the
+objectives and the away markers, so a backup carries them without `exportImport` learning anything —
+M275 measured that. A new store would have been a schema version and a migration for a handful of
+rows.
+
+**Kept apart from `DRILLS`** rather than spliced into it, because `loadDrills` replaces that array
+wholesale: a written drill spliced in would vanish the moment the library landed, and the order of
+those two events is a race nobody should have to reason about.
+
+### Where its words live
+
+The 156 keep their prose in `DRILL_TEXT`, a lazily-fetched map keyed by id — sixteen kilobytes of
+paragraphs that M137 went to real trouble to get off the cold start. A written drill will never be in
+that map, so it carries its own `text` and `drillText` falls back to it. One optional field on the
+type, rather than a second lookup every reader has to know about.
+
+### It exists before it is finished
+
+No draft state and no Save button. The record is created the moment "Write a drill" is pressed and
+saved as it is typed — `customProgram.ts`'s shape, for its reason: *"it spends most of its life
+incomplete, and the app has to be able to say precisely what is still wrong without refusing to hold
+the half-finished thing."* Three fields are asked for — a name, what it trains, and the drill itself
+— and nothing else blocks, because a drill is read by people rather than walked by an engine.
+
+### Two bugs the browser found and jsdom could not
+
+Every unit test passed, twice, while the page was broken.
+
+**The page read `getDrill` and never subscribed to the store.** `store/programs.ts` states the
+division — *"the registry is what lets a written program work in the pure engines… the store is what
+makes React notice"* — and skipping the second half meant a drill written a moment ago could **never
+leave the editor**: the name typed into it was never the name the page read back.
+
+**Subscribing fixed that and broke the other end.** "Is it still nameless" was recomputed on every
+render, so with the page now re-rendering on every save, the first letter of the name closed the
+editor mid-word. Opening in the editor is a fact about *arriving* at a blank drill, not about the
+record's current state, so it is decided once at mount.
+
+Both survived the battery at first, and the reason is worth keeping: **a test harness that forces a
+re-render around every event cannot see a missing subscription.** The second was killable by leaving
+a drill unfinished — which separates "opened blank" from "is blank". The first needed the store and
+the registry to actually disagree: save a drill, then empty the registry, and the page must still
+read the climber's own copy. That is the division `store/programs.ts` describes, held as a test.
+
+(And the test for it passed under the mutant at first, because it cleared the registry *before*
+`hydrate()`, which re-registers everything.)
+
+### Read back from a browser
+
+```
+Write a drill  →  #/drills/own_mu7hmg8h-…  "Your drill"
+                  name, what it trains, the drill itself  →  nothing left to do
+Done           →  Three-point rule
+                  Foot precision under fatigue · Edit
+                  Put this on today · HOW TO RUN IT
+
+#/drills, searching "three-point"  →  Three-point rule · Foot precision under fatigue
+```
+
+Beside the 156, in the same list, found by the same search. No console errors.
+
+### What the battery found
+
+**15 mutants caught, sanity no-op survived.** `getDrill` blind to written drills; written drills
+missing from their category, from every filter, and from a search of their own words; the text
+fallback removed; written drills spliced into the array `loadDrills` replaces; the store never
+telling the registry; the store trusting whatever the database holds; a drill accepted with no name
+and with nothing said; the paragraph reflowed, losing the line breaks a coach typed; the editor
+keeping its edits to itself; no undo on a delete; and the two above.
+
+**6,824 tests over 402 files**, from 6,789. First load 135.95KB against the 136.4KB budget M285 just
+set — 0.45KB of slack, and the store and the editor's engine are on the entry path.

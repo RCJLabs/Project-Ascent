@@ -1,11 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
-import { CalendarPlus, Check } from 'lucide-react';
+import { CalendarPlus, Check, Pencil } from 'lucide-react';
 import { DRILL_CATEGORIES, getDrill } from '@/content/drills';
 import { drillCoaching } from '@/content/drillCoaching';
 import { drillText } from '@/content/drillText';
 import { PROTOCOLS } from '@/content/protocols';
 import { EQUIPMENT_LABELS } from '@/engine/customProgram';
+import { isCustomDrill } from '@/engine/customDrill';
+import { useCustomDrills } from '@/store/drills';
 import type { Drill, DrillId } from '@/content/types';
 import { today } from '@/engine/dates';
 import { describeRecord, drillHistory, prescribedBy } from '@/engine/drillHistory';
@@ -16,6 +18,7 @@ import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
 import { RecordNotFound } from '@/ui/RecordNotFound';
+import { DrillEditor } from './DrillEditor';
 import { PageSkeleton } from '@/ui/Skeleton';
 
 /**
@@ -117,7 +120,33 @@ function PutOnToday({ drill }: { drill: Drill }) {
 export function DrillPage({ params }: { params: { id: string } }) {
   const byDate = useSessions((s) => s.byDate);
   const ready = useSessions((s) => s.hydrated);
-  const drill = getDrill(params.id as DrillId);
+  /**
+   * The store for a written drill, the registry for a shipped one
+   * (PLAN.md M286).
+   *
+   * `store/programs.ts` states the division and this is what happens without
+   * it: *"the registry is what lets a written program work in the pure
+   * engines… the store is what makes React notice."* A first draft read
+   * `getDrill` alone, and a drill written a moment ago could **never leave
+   * the editor** — the page does not subscribe to the registry, so the name
+   * typed into it was never the name the page read back.
+   */
+  const written = useCustomDrills((s) => s.custom);
+  const drill =
+    written.find((d) => d.id === params.id) ?? getDrill(params.id as DrillId);
+
+  /**
+   * Open in the editor when the drill was blank **at mount**.
+   *
+   * Decided once, not derived. A first draft recomputed *"is it still
+   * nameless"* on every render, and because the page now re-renders on every
+   * save, typing the first letter of the name closed the editor. A drill made
+   * a moment ago has nothing to read, so it opens where it gets written; that
+   * is a fact about arriving, not about the record's current state.
+   */
+  const [editing, setEditing] = useState(
+    () => isCustomDrill(params.id) && (written.find((d) => d.id === params.id)?.name ?? '') === '',
+  );
 
   const record = useMemo(() => {
     if (!drill) return null;
@@ -144,10 +173,45 @@ export function DrillPage({ params }: { params: { id: string } }) {
   const cues = coaching?.cues ?? [];
   const faults = coaching?.faults ?? [];
 
+  /**
+   * A drill the climber wrote opens the same page (PLAN.md M286).
+   *
+   * No second route and no builder screen: a written drill *is* a `Drill`, so
+   * the page that reads one already reads it. What it gains is an edit mode —
+   * which is also why a half-written drill is worth holding, because this is
+   * where it gets finished.
+   */
+  const mine = isCustomDrill(drill.id);
+
+  if (mine && editing) {
+    return (
+      <>
+        <BackLink />
+        <PageHeader title={drill.name === '' ? 'Your drill' : drill.name} subtitle="Yours to change" />
+        <div className="grid grid-cols-1 gap-3">
+          <DrillEditor drill={drill} onDone={() => setEditing(false)} />
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <BackLink />
-      <PageHeader title={drill.name} subtitle={`${drill.focus} · ${drill.level}`} />
+      {/* A drill left nameless still has to have a heading. */}
+      <PageHeader
+        title={drill.name === '' ? 'Your drill' : drill.name}
+        subtitle={[drill.focus, drill.level].filter(Boolean).join(' · ')}
+        {...(mine
+          ? {
+              action: (
+                <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+                  <Pencil size={15} /> Edit
+                </Button>
+              ),
+            }
+          : {})}
+      />
 
       <div className="grid grid-cols-1 gap-3">
         <PutOnToday drill={drill} />

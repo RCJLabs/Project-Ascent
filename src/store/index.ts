@@ -3,6 +3,7 @@ import { useMetrics } from './metrics';
 import { hydrateProfile } from './profile';
 import { useObjectives } from './objectives';
 import { useAway } from './away';
+import { useCustomDrills } from './drills';
 import { useCustomPrograms } from './programs';
 import { useProjects } from './projects';
 import { useTemplates } from './templates';
@@ -57,6 +58,7 @@ export async function hydrateAll(): Promise<void> {
       useCustomPrograms.getState().load(),
       useObjectives.getState().load(),
       useAway.getState().load(),
+      useCustomDrills.getState().load(),
     ]);
   } finally {
     endHydration();
