@@ -14466,6 +14466,10 @@ M50 for why it is not coming.
   mechanisms reach three of them, and the first run of the widened harness found a text input
   **22px wide** on a page nothing had ever measured.
 
+- **M281 — the block the sample climber left behind.** Found while trying to give the demo a block
+  history for M280's three unreachable routes: clearing the sample data left a block the climber
+  never ran, and `finderHistory` answers *"what should I run next"* from exactly that row.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -18744,3 +18748,84 @@ reason M270 and M271 found four times over.
 The three unreachable routes need the sample climber to own a custom program and a finished block.
 M277 showed how to add to `demoClimber.ts` without moving what is already there — its own stream,
 its own day — so this is a known shape rather than an open question.
+
+## M281 — the block the sample climber left behind
+
+This began as M280's leftover: give the demo a custom program and a finished block so the last three
+routes become reachable. Reading how to do that found a bug instead, and the errand is still open.
+
+### What the wipe was not taking back
+
+`demo.ts` states its contract twice over: *"every record carries `demo: true`, so the wipe deletes
+what it wrote rather than clearing a store"*, and the screen says **"Anything you logged yourself is
+still here."** Measured in a browser:
+
+```
+after load   iron_grip#2026-08-09 ended=null
+after clear  iron_grip#2026-08-09 ended=2026-09-18 stopped
+```
+
+Loading the sample climber starts a program, and `startProgram` writes three things: a
+`startDates` entry, a week `plan`, and a `BlockRecord`. Clearing called `stopProgram`, which nulls
+`activeProgramId` and **closes** the block row — and undid none of the rest.
+
+### Why it is not cosmetic
+
+`finderHistory.lastBlockFor` reads the newest **ended** block and scores it against the log. The
+sessions were wiped and the block was not, so it scores nought of however many the plan placed —
+and that is the number *"what should I run next"* is answered from. A climber who looked at the
+sample data for five minutes gets program advice shaped by a block they never climbed.
+
+### The first fix was wrong, and the test said so
+
+Deleting the row is not enough. `startDates` still held the entry, and `reconstructBlocks` rebuilds
+a row from it on the next hydrate — the block came straight back, dated to its own last day rather
+than to the day of the clear. That `endedAt: 2026-10-31` in a red test is what pointed at the real
+cause.
+
+So the action is `forgetProgram(programId)`, which takes out the block rows **and** the four
+per-program maps — `startDates`, `plans`, `weekOverrides`, `tracks`. Keyed on the program id rather
+than the block id, which is also drift-proof: `BlockRecord.id` is `programId#startDate` and the
+start date moves with the day the sample climber was generated, so a climber who loaded it on Monday
+and cleared it on Tuesday would have had a recomputed id miss by a day.
+
+Safe to key on the program because `canLoadDemo` already refuses unless the database has nothing
+real in it — an Iron Grip block at clear time is the demo's, not a climber's own.
+
+### What the battery found
+
+**7 mutants caught, sanity no-op survived.** The clear not unpicking the program at all; the block
+row forgotten but the start date kept, and the reverse; the week plan kept; every program forgotten
+rather than the demo's; every block forgotten rather than the demo's; and the wrong program unpicked.
+
+**One survived the first run, and the fixture was why.** *"Forgets every block, not the demo one"*
+passed because the climber's own block in that test had a `startDates` entry, so
+`reconstructBlocks` put an identical-looking row back and the assertion could not tell them apart.
+A reconstructed row carries `reconstructed: true` and loses its `reason` — which is the whole point
+of that flag, and is now what the test checks.
+
+### And the undo invariant, tripped by prose
+
+`ui/safety.test.ts` names the enclosing function by looking eight lines back for `wipeDemo(`, and a
+four-line comment I added between it and the objectives loop pushed that line out of the window. The
+explanation already lived at `forgetProgram`'s definition, so the duplicate came out rather than the
+window being widened — weakening a safety invariant to fit a comment is the wrong trade. Same class
+as the four source-scan failures M270 and M271 found.
+
+### Read back from a browser
+
+```
+after load   iron_grip#2026-08-09 ended=null
+after clear  (nothing)
+after load2  iron_grip#2026-08-09 ended=null
+```
+
+**6,752 tests over 397 files**, from 6,747. First load 135.29KB against a 135.7KB budget.
+
+### Still standing, and unchanged
+
+The three routes M280 could not reach still cannot be reached: the sample climber has one block and
+no custom program, so `BlockHistory` needs a second row it has not got, and `/build` has nothing to
+list. Giving it a second block is now a smaller job than it was — `forgetProgram` is the unpicking
+half — but a custom program still means a record in the `programs` store, which the tag-based wipe
+cannot reach and which `Program` has no field to mark.

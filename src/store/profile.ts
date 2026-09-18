@@ -160,6 +160,26 @@ export interface ProfileState {
    * something similar.
    */
   restoreProgram: (snapshot: { activeProgramId: string | null; blocks: BlockRecord[] }) => void;
+  /**
+   * Unpick everything one program left on the profile (PLAN.md M281).
+   *
+   * One caller, and it is the reason this exists: clearing the sample
+   * climber. `stopProgram` sets `activeProgramId` to null and closes the
+   * block row, which is right for a block that was run and wrong for one
+   * that was never climbed — so a climber who cleared the sample data kept a
+   * block they had never done, and `finderHistory` answers "what next" from
+   * the newest ended block.
+   *
+   * **All four maps, not just the blocks.** Deleting the row alone does
+   * nothing: `startDates` still holds the entry and `reconstructBlocks`
+   * rebuilds a row from it on the next hydrate. Measured — the block came
+   * straight back, dated to its own last day.
+   *
+   * A delete rather than a flag, and deliberately narrow: this is not
+   * "abandon a block", which is `stopProgram`'s job and is a thing that
+   * happened. This is for state that should never have been written.
+   */
+  forgetProgram: (programId: string) => void;
   setEquipment: (equipment: Equipment[]) => void;
   /**
    * Log one. `details` carries what the add form asked for (PLAN.md M223).
@@ -457,6 +477,20 @@ export const useProfile = create<ProfileState>((set, get) => ({
 
   removeInjury: (id) => {
     set({ injuries: get().injuries.filter((i) => i.id !== id) });
+    enqueueWrite(() => save(snapshot(get())));
+  },
+
+  forgetProgram: (programId) => {
+    const without = <T,>(map: Record<string, T>) =>
+      Object.fromEntries(Object.entries(map).filter(([id]) => id !== programId));
+    const s = get();
+    set({
+      blocks: s.blocks.filter((b) => b.programId !== programId),
+      startDates: without(s.startDates),
+      plans: without(s.plans),
+      weekOverrides: without(s.weekOverrides),
+      tracks: without(s.tracks),
+    });
     enqueueWrite(() => save(snapshot(get())));
   },
 

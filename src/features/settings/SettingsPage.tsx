@@ -13,7 +13,7 @@ import {
   type CsvResult,
 } from './SpreadsheetImportCard';
 import { CsvError, parseCsv } from '@/engine/csv';
-import { canLoadDemo, demoInjuries, demoObjectives, loadDemo, wipeDemo } from '@/db/demo';
+import { canLoadDemo, demoInjuries, demoObjectives, demoProgramId, loadDemo, wipeDemo } from '@/db/demo';
 import { eraseEverything } from '@/db/erase';
 import { hasDemo } from '@/db/demoFlag';
 import { takeLaunchFile } from '@/lib/launchFile';
@@ -326,6 +326,8 @@ export function SettingsPage() {
       const gone = await wipeDemo();
       const profile = useProfile.getState();
       profile.stopProgram();
+      // And the rest of what the program left behind (PLAN.md M281).
+      profile.forgetProgram(demoProgramId());
       for (const injury of demoInjuries()) profile.removeInjury(injury.id);
       for (const objective of demoObjectives()) await useObjectives.getState().remove(objective.id);
       await hydrateAll();

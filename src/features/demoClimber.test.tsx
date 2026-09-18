@@ -6,6 +6,7 @@ import { canLoadDemo, demoObjectives, loadDemo } from '@/db/demo';
 import { daysBetween, today } from '@/engine/dates';
 import { getSession, newSession, putSession } from '@/db/sessions';
 import { deriveClimberState } from '@/engine/derive';
+import { lastBlockFor } from '@/engine/finderHistory';
 import { measure } from '@/engine/skills';
 import { allSessions } from '@/store/sessions';
 import { useObjectives } from '@/store/objectives';
@@ -270,5 +271,124 @@ describe('the banner', () => {
     // And the module it does read knows nothing but how to count.
     const flag = readFileSync('src/db/demoFlag.ts', 'utf8');
     expect(flag).not.toMatch(/demoClimber|createRng|newSession/);
+  });
+});
+
+/**
+ * The block row the wipe used to leave behind (PLAN.md M281).
+ *
+ * Loading the sample climber starts a program, and `startProgram` records a
+ * `BlockRecord` — that is its job. Clearing called `stopProgram`, which
+ * **closes** that row and keeps it, because a block you abandoned is a thing
+ * that happened. A block the sample climber ran is not.
+ *
+ * Measured in a browser before this was written:
+ *
+ * ```
+ * after load   iron_grip#2026-08-09 ended=null
+ * after clear  iron_grip#2026-08-09 ended=2026-09-18 stopped
+ * ```
+ *
+ * The consequence is not cosmetic. `finderHistory.lastBlockFor` reads the
+ * newest **ended** block and scores it against the log — and the log was
+ * wiped, so it scores nought of however many the plan placed. That is the
+ * number "what should I run next" is answered from.
+ *
+ * **And deleting the row is not the fix**, which the first attempt found:
+ * `startDates` still held the entry and `reconstructBlocks` rebuilt a row
+ * from it on the next hydrate. The test below went red with the block back
+ * and an `endedAt` of its own last day rather than the day of the clear,
+ * which is what pointed at the real cause.
+ */
+describe('the history after the sample climber has gone', () => {
+  async function loadThenClear(): Promise<void> {
+    await emptied();
+    await settings();
+    fireEvent.click(await screen.findByText('Load a sample climber'));
+    await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy());
+    fireEvent.click(await screen.findByText('Clear the sample data'));
+    await waitFor(() => expect(screen.getByText(/Sample data cleared/)).toBeTruthy());
+  }
+
+  it('records a block while the sample climber is loaded', async () => {
+    await emptied();
+    await settings();
+    fireEvent.click(await screen.findByText('Load a sample climber'));
+    await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy());
+    // The trap M195 names: a probe that cannot find a known-present instance
+    // is not a probe. If nothing is written there is nothing to leave behind.
+    expect(useProfile.getState().blocks).toHaveLength(1);
+    expect(useProfile.getState().blocks[0]?.programId).toBe('iron_grip');
+  });
+
+  it('keeps none of it', async () => {
+    await loadThenClear();
+    expect(useProfile.getState().blocks).toEqual([]);
+  });
+
+  /**
+   * And the reading it was feeding. A block that ended with nothing logged
+   * inside it is exactly the shape the finder treats as abandoned.
+   */
+  it('leaves the finder nothing to answer "what next" from', async () => {
+    await loadThenClear();
+    expect(lastBlockFor(useProfile.getState().blocks, allSessions(useSessions.getState().byDate), today())).toBeNull();
+  });
+
+  /**
+   * A block the climber started themselves is never the one removed. The id
+   * is noted at load and taken at clear, rather than recomputed — and a
+   * recomputed one would drift anyway, because `BlockRecord.id` is
+   * `programId#startDate` and the start date moves with the day the sample
+   * climber was generated.
+   */
+  /**
+   * The half the first fix missed: with the start date still there, the
+   * reconstruction migration rebuilds the row from it on the next hydrate.
+   */
+  it('keeps none of the program state the block was rebuilt from', async () => {
+    await loadThenClear();
+    const p = useProfile.getState();
+    expect(p.startDates).toEqual({});
+    expect(p.plans).toEqual({});
+  });
+
+  it('leaves a block the climber started themselves', async () => {
+    await emptied();
+    await settings();
+    fireEvent.click(await screen.findByText('Load a sample climber'));
+    await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy());
+
+    const mine = {
+      id: 'base_camp#2025-01-06',
+      programId: 'base_camp',
+      name: 'Base Camp',
+      startDate: '2025-01-06',
+      weeks: 12,
+      endedAt: '2025-03-31',
+      reason: 'ran-out' as const,
+    };
+    useProfile.setState((p) => ({
+      blocks: [mine, ...p.blocks],
+      startDates: { ...p.startDates, base_camp: mine.startDate },
+    }));
+
+    fireEvent.click(await screen.findByText('Clear the sample data'));
+    await waitFor(() => expect(screen.getByText(/Sample data cleared/)).toBeTruthy());
+    const kept = useProfile.getState().blocks;
+    expect(kept.map((b) => b.id)).toEqual([mine.id]);
+    expect(useProfile.getState().startDates).toEqual({ base_camp: mine.startDate });
+    /**
+     * The row they recorded, not a stand-in rebuilt from its start date.
+     *
+     * A mutant that forgot **every** block survived this test at first,
+     * because the `startDates` entry above let `reconstructBlocks` put a
+     * base_camp row back — same id, and the assertion could not tell them
+     * apart. A reconstructed row carries the flag and loses the reason,
+     * which is exactly the difference: the app knows when that block began
+     * and has no idea whether the climber saw it through.
+     */
+    expect(kept[0]?.reconstructed).toBeUndefined();
+    expect(kept[0]?.reason).toBe('ran-out');
   });
 });

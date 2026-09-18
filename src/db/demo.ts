@@ -19,12 +19,48 @@
  * data, likes the look of it, and logs a real session before wiping keeps
  * that session. Restoring a snapshot would have taken it with everything
  * else, which is why this does not use one.
+ *
+ * ## The block the wipe used to leave behind (PLAN.md M281)
+ *
+ * Loading the sample climber starts a program, which writes three things:
+ * `startDates[programId]`, a week `plan`, and a `BlockRecord`. Clearing it
+ * called `stopProgram`, which sets `activeProgramId` to null and **closes**
+ * the block row — and undid none of the rest. Measured in a browser:
+ *
+ * ```
+ * after load   iron_grip#2026-08-09 ended=null
+ * after clear  iron_grip#2026-08-09 ended=2026-09-18 stopped
+ * ```
+ *
+ * So a climber was told *"Anything you logged yourself is still here"* and
+ * kept a block they never ran, with its sessions gone because those *were*
+ * wiped. `finderHistory.lastBlockFor` reads the newest **ended** block and
+ * scores it against the log: nought of however many the plan placed. That is
+ * the number "what should I run next" is answered from.
+ *
+ * **And deleting the row is not enough**, which a first fix found the hard
+ * way: `startDates` still held the entry, and `reconstructBlocks` rebuilds a
+ * row from it on the next hydrate. The block came straight back, with an
+ * `endedAt` of the block's own last day rather than the day it was cleared.
+ * The per-program state is what has to go, and the row with it.
  */
 
 import { getDb, readOr } from './db';
 import { hasRealData } from './exportImport';
 import { demoClimber, DEMO_SEED } from '@/engine/demoClimber';
 import { today as todayKey } from '@/engine/dates';
+
+/**
+ * The program the sample climber runs, for the clear to unpick.
+ *
+ * Regenerated from the seed like the injuries and objectives below, and safe
+ * to key on for the same reason `canLoadDemo` exists: the sample climber only
+ * loads into a database with nothing real in it, so an Iron Grip block at
+ * clear time is the demo's and not a climber's own.
+ */
+export function demoProgramId(today = todayKey(), seed = DEMO_SEED): string {
+  return demoClimber(today, seed).programId;
+}
 
 /** Profile fields the demo sets, and the only ones the wipe clears. */
 export interface DemoProfile {
