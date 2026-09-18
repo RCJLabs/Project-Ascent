@@ -92,13 +92,50 @@ describe('building one', () => {
     await waitFor(() => expect(within(card()).getAllByRole('listitem')).toHaveLength(1));
   });
 
-  // Picking one twice makes two blocks of the same program back to back,
-  // which is not a season and cannot be undone from the row that shows it.
-  it('does not offer a program already in the season', async () => {
-    await page(objective({ targetDate: weeksOut(40), season: ['iron_grip'] as never }));
+  /**
+   * Base, power, base, peak (PLAN.md M274).
+   *
+   * Until M274 the chips hid anything already picked, which made the shape
+   * `season.ts` documents — *"A season may name the same program twice"* —
+   * unbuildable from the card that builds seasons. What the old rule was
+   * written against was two of the same **back to back**, and that is all
+   * that is refused now.
+   */
+  it('offers a program already in the season, so it can come round again', async () => {
+    await page(objective({ targetDate: weeksOut(40), season: ['iron_grip', 'base_camp'] as never }));
+    const chips = within(card()).getAllByRole('button').map((b) => b.textContent);
+    expect(chips).toContain('Iron Grip');
+  });
+
+  it('does not offer the one it would sit straight after', async () => {
+    await page(objective({ targetDate: weeksOut(40), season: ['base_camp', 'iron_grip'] as never }));
     const chips = within(card()).getAllByRole('button').map((b) => b.textContent);
     expect(chips.filter((t) => t === 'Iron Grip')).toHaveLength(0);
     expect(chips).toContain('Base Camp');
+  });
+
+  it('dates a repeat as two blocks and takes the right one back out', async () => {
+    await page(
+      objective({ targetDate: weeksOut(60), season: ['base_camp', 'iron_grip', 'base_camp'] as never }),
+    );
+    const rows = within(card()).getAllByRole('listitem');
+    expect(rows).toHaveLength(3);
+    expect(rows.map((r) => r.textContent)).toEqual([
+      expect.stringContaining('Base Camp'),
+      expect.stringContaining('Iron Grip'),
+      expect.stringContaining('Base Camp'),
+    ]);
+    // Two rows say Base Camp; the buttons have to be able to tell them
+    // apart, which is what removal by position is for.
+    const takeOut = within(card()).getAllByLabelText('Take Base Camp out of the season');
+    expect(takeOut).toHaveLength(2);
+    fireEvent.click(takeOut[0]!);
+    await waitFor(() => {
+      const left = within(card()).getAllByRole('listitem').map((r) => r.textContent);
+      expect(left).toHaveLength(2);
+      expect(left[0]).toContain('Iron Grip');
+      expect(left[1]).toContain('Base Camp');
+    });
   });
 
   it('stops offering more once the plan is a year long', async () => {

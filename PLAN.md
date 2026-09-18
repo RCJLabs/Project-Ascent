@@ -14378,6 +14378,58 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Verified, nothing to fix, and the raise costs something in the other direction.***
   *See the entry at the end of this document.*
 
+- **M274 — base, power, base, peak.** `season.ts` documents the shape and `nextInSeason` has handled
+  it since M112c; `SeasonCard` hid any program already picked, so it could not be built. Only
+  adjacency is refused now.
+  ***Built.*** *See the entry at the end of this document.*
+
+## Asked for, and waiting
+
+Nine features from a brainstorm run against the codebase rather than against imagination, in the
+order they seem worth doing. Each is grounded in something the code already says about itself; none
+needs a server or an account, because the privacy stance is load-bearing and partner names alone
+have three separate rules protecting them. Video is deliberately absent: `lib/image.ts` points at
+M50 for why it is not coming.
+
+- **Partner-aware rope reading.** `ropeStyle.ts` reasons about *"a partner who does not lead"* and
+  then says nothing, "because it has no way to know" — a comment written before M237 gave the log
+  partners. Both halves exist and nothing joins them. *Small.*
+
+- **Merge two spellings of a venue.** `venues.ts` refuses to guess, and says why: *"'The Works' and
+  'Works' may well be the same crag and the app cannot know it, and a grouping that guessed would
+  silently merge two real places."* Right — but there is no way for the climber to say so either.
+  *Small.*
+
+- **A finished block as a share card.** `blockReport.ts` computes the report and `ui/shareCard.ts`
+  renders cards, for the year only. Twelve weeks end and there is nothing to show for it. *Small to
+  medium.*
+
+- **An "away" marker: did not train, or did not log.** Named as a blind spot in at least three
+  engines — `coach.ts` (*"The app cannot tell 'did not train' from 'did not log'"*), `partners.ts`,
+  `adherence.ts`. Silence reads as failure, so a trip or a deliberate off-week draws as a gap in the
+  consistency grid and drags the coach's reading with it. One date range fixes all of them. *Medium.*
+
+- **Custom drills.** There are 156 and none of them can be the climber's own: programs and sessions
+  are both authorable, drills are content only. For a coach that is backwards — the drill is the
+  thing they would most want to write. *Medium.*
+
+- **A program as a readable handout.** `programFile.ts` is written so a coach can hand an athlete a
+  block, and only to someone running this app. There is no human-readable version for the athlete
+  who does not, which is the common case. *Medium.*
+
+- **Conditions on an outdoor session.** Nothing records temperature or how it felt underfoot, and
+  outdoors that is the largest confound in reading one's own log — *"I was weak"* against *"it was
+  28°C and greasy"*. One optional field gives `yearReview`, `venues` and `pyramidShape` a real
+  explanatory variable, with no network. *Medium.*
+
+- **A guided move to a new phone.** There is no account by design, so export → transfer → import
+  *is* the migration story, and it is three screens a climber has to know to string together. The
+  photos are the part people lose. *Medium.*
+
+- **Close the coach loop.** Programs travel coach → athlete as a file and nothing comes back. An
+  athlete's block report as a file that opens here would make the app usable for coaching, still
+  with no server and no accounts. *A direction rather than a milestone.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -17980,3 +18032,64 @@ a regression could hide, and set below what the app measures. Both walls of the 
 at the new number, which is the only thing that makes the new number worth anything.
 
 **6,620 tests over 392 files.** First load 134.68KB against a 135.7KB budget.
+
+
+## M274 — base, power, base, peak
+
+`engine/season.ts` has said this since M112c:
+
+> *A season may name the same program twice — base, power, base, peak is a real shape — so the
+> occurrence that just ended is the one whose window sits nearest the date it ended on, rather than
+> whichever comes first.*
+
+`nextInSeason` carries a whole nearest-window rule for it. And `SeasonCard` offered
+`PROGRAMS.filter((p) => !picked.includes(p.id))`, so the shape the engine was built around could
+not be reached from the card that builds seasons. The engine and the interface disagreed about what
+a season is.
+
+### The rule that was actually written down
+
+The exclusion had a reason beside it, and it is worth quoting because only half of it survives:
+
+> *Picking one twice makes two blocks of the same program back to back, which is not a season and
+> cannot be undone from the row that shows it.*
+
+The second half is false against the code as it stands: removal is `picked.filter((_, n) => n !== i)`
+keyed on position, and position is what tells two identical rows apart — so a repeat **is**
+undoable from its own row, and a test now presses the first of two *Take Base Camp out* buttons and
+checks the second survives.
+
+The first half is narrower than the filter it justified. Back to back is one longer block and
+belongs in `adaptations`, where a program's length is already the climber's own. Base, power, base,
+peak is not adjacent. So adjacency is all that is refused, and only when picking:
+`p.id !== picked.at(-1)`.
+
+Taking the middle out of `[A, B, A]` can still leave `[A, A]`. The engine dates it correctly, the
+climber can see it and undo it, and rewriting their list underneath them would be the worse answer.
+
+### Read back from a browser
+
+A trip target in June 2027, picked Base Camp, then Iron Grip, then Base Camp again — which the chips
+offered and would not have before:
+
+```
+Base Camp   Sep 27 – Dec 19 · 12 weeks
+Iron Grip   Dec 20 – Mar 13 · 12 weeks
+Base Camp   Mar 14 – Jun 5  · 12 weeks
+
+Base Camp → Iron Grip → Base Camp is 36 weeks against 37 weeks to the day.
+1 week spare before it starts, which is a fine place for a deload or for nothing in particular.
+```
+
+Three contiguous blocks dated backwards from the target, and Iron Grip absent from the chips at the
+moment it would have sat against itself.
+
+### What the battery found
+
+**6 mutants caught, sanity no-op survived.** The old filter put back; adjacency allowed; the guard
+pointed at the wrong end of the list; removal by id rather than by position, which takes the first
+of two identical rows instead of the one pressed; the engine deduplicating on the way in; and
+`nextInSeason` taking whichever occurrence comes first rather than the nearest — the rule that
+existed for this shape and had never been tested on it, because the shape could not be built.
+
+**6,626 tests over 392 files**, from 6,620. First load 134.68KB against a 135.7KB budget.

@@ -83,7 +83,26 @@ export function SeasonCard({
 
       {picked.length < MAX_BLOCKS ? (
         <div className="flex flex-wrap gap-1.5">
-          {PROGRAMS.filter((p) => !picked.includes(p.id)).map((program) => (
+          {/* Every program except the one it would sit against (PLAN.md
+              M274).
+ 
+              This used to hide anything already in the season, which made
+              the shape `season.ts` documents unbuildable: *"A season may
+              name the same program twice — base, power, base, peak is a
+              real shape."* The engine has handled it since M112c —
+              `nextInSeason` picks the occurrence whose window is nearest
+              the date a block ended, precisely so a repeat can be told from
+              its twin.
+ 
+              What the old rule was actually written against survives: two
+              blocks of the same program **back to back**, which is one
+              longer block and belongs in `adaptations`, where a program's
+              length is the climber's own. Only adjacency is refused, and
+              only at the moment of picking — taking a middle block out of
+              `[A, B, A]` can still leave `[A, A]`, which the engine dates
+              correctly and the climber can see and undo. Rewriting their
+              list underneath them would be the worse answer. */}
+          {PROGRAMS.filter((p) => p.id !== picked.at(-1)).map((program) => (
             <Chip key={program.id} active={false} onClick={() => onChange([...picked, program.id])}>
               {program.name}
             </Chip>

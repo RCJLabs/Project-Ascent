@@ -379,3 +379,52 @@ describe('what the climber said they would do next', () => {
     expect(found.position).toBe(1);
   });
 });
+
+/**
+ * Base, power, base, peak (PLAN.md M274).
+ *
+ * `nextInSeason`'s nearest-window rule exists for this shape and was
+ * written for it in M112c — and until M274 the card that builds a season
+ * hid any program already in it, so the shape could not be reached from
+ * the app at all. The engine's half was never tested on a repeat either.
+ */
+describe('a season that names the same program twice', () => {
+  const ids = ['base_camp', 'iron_grip', 'base_camp'];
+
+  it('dates it as two separate blocks, not one', () => {
+    const s = read(ids, inWeeks(60));
+    expect(s.blocks.map((b) => b.programId)).toEqual(ids);
+    const [first, , third] = s.blocks;
+    expect(first!.from).not.toBe(third!.from);
+    expect(first!.to < third!.from, 'the first is over before the second begins').toBe(true);
+    // The weeks add up to the same total either way round.
+    expect(s.weeks).toBe(s.blocks.reduce((n, b) => n + b.weeks, 0));
+  });
+
+  it('names it twice in the sentence, in order', () => {
+    const said = describeSeason(read(ids, inWeeks(60)))!;
+    const name = getProgram('base_camp')!.name;
+    expect(said.indexOf(name)).toBeGreaterThan(-1);
+    expect(said.indexOf(name)).not.toBe(said.lastIndexOf(name));
+  });
+
+  it('tells one occurrence from the other by which window the date is nearest', () => {
+    const s = read(ids, inWeeks(60));
+    const [first, , third] = s.blocks;
+    // Finishing the first Base Camp points at Iron Grip.
+    const afterFirst = nextInSeason(s, 'base_camp', first!.to)!;
+    expect(afterFirst.position).toBe(1);
+    expect(afterFirst.next?.programId).toBe('iron_grip');
+    // Finishing the second points at nothing, because it is the last.
+    const afterThird = nextInSeason(s, 'base_camp', third!.to)!;
+    expect(afterThird.position).toBe(3);
+    expect(afterThird.next).toBeNull();
+  });
+
+  it('finds the block a date sits in, whichever occurrence it is', () => {
+    const s = read(ids, inWeeks(60));
+    const [first, , third] = s.blocks;
+    expect(blockOn(s, first!.from)?.from).toBe(first!.from);
+    expect(blockOn(s, third!.from)?.from).toBe(third!.from);
+  });
+});
