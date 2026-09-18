@@ -51,15 +51,35 @@ import { demoClimber, DEMO_SEED } from '@/engine/demoClimber';
 import { today as todayKey } from '@/engine/dates';
 
 /**
- * The program the sample climber runs, for the clear to unpick.
+ * Every program the sample climber leaves state on, for the clear to unpick.
  *
- * Regenerated from the seed like the injuries and objectives below, and safe
- * to key on for the same reason `canLoadDemo` exists: the sample climber only
- * loads into a database with nothing real in it, so an Iron Grip block at
- * clear time is the demo's and not a climber's own.
+ * Two of them since M282: the catalogue program it runs, and the block it
+ * finished before that. Regenerated from the seed like the injuries and
+ * objectives below, and safe to key on for the same reason `canLoadDemo`
+ * exists — the sample climber only loads into a database with nothing real in
+ * it, so an Iron Grip block at clear time is the demo's and not a climber's.
  */
-export function demoProgramId(today = todayKey(), seed = DEMO_SEED): string {
-  return demoClimber(today, seed).programId;
+export function demoProgramIds(today = todayKey(), seed = DEMO_SEED): string[] {
+  const made = demoClimber(today, seed);
+  return [...new Set([made.programId, ...made.blocks.map((b) => b.programId)])];
+}
+
+/**
+ * The program the sample climber wrote (PLAN.md M282).
+ *
+ * Beside the injuries and objectives, and for their reason: it lives in a
+ * store the tag-per-record wipe cannot reach, so the store that owns it takes
+ * it out by id. Which is also why it needs no `demo` flag on `Program` — a
+ * fixed id is the marking, and `Program` stays the one shape everything
+ * downstream already reads.
+ */
+export function demoProgram(today = todayKey(), seed = DEMO_SEED) {
+  return demoClimber(today, seed).program;
+}
+
+/** The blocks it finished before the one it is running. */
+export function demoBlocks(today = todayKey(), seed = DEMO_SEED) {
+  return demoClimber(today, seed).blocks;
 }
 
 /** Profile fields the demo sets, and the only ones the wipe clears. */

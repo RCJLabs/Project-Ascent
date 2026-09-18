@@ -14470,6 +14470,10 @@ M50 for why it is not coming.
   history for M280's three unreachable routes: clearing the sample data left a block the climber
   never ran, and `finderHistory` answers *"what should I run next"* from exactly that row.
 
+- **M282 — a program of their own, and a block they finished.** The last three routes M280 could
+  not reach, and the two cards that were dark for the same reason. No `demo` flag on `Program` was
+  needed after all: a fixed id is the marking, which is what objectives have always done.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -18745,9 +18749,8 @@ reason M270 and M271 found four times over.
 
 ### Still standing
 
-The three unreachable routes need the sample climber to own a custom program and a finished block.
-M277 showed how to add to `demoClimber.ts` without moving what is already there — its own stream,
-its own day — so this is a known shape rather than an open question.
+~~The three unreachable routes need the sample climber to own a custom program and a finished
+block.~~ Done in **M282**: all 48 routes are now checked.
 
 ## M281 — the block the sample climber left behind
 
@@ -18829,3 +18832,80 @@ no custom program, so `BlockHistory` needs a second row it has not got, and `/bu
 list. Giving it a second block is now a smaller job than it was — `forgetProgram` is the unpicking
 half — but a custom program still means a record in the `programs` store, which the tag-based wipe
 cannot reach and which `Program` has no field to mark.
+
+## M282 — a program of their own, and a block they finished
+
+M280 left three routes unreachable and named the reason: the sample climber has never written a
+program and has only ever run one block. Two screens were dark with them — **Your programs** listed
+nothing, and **Blocks you have run** hides itself until there are two.
+
+### The recommendation this came from was wrong
+
+I had ranked this as *"mark demo records in the `programs` store"*, on the reasoning that M281's bug
+was latent there too. Reading the store first: `useCustomPrograms` has `save` and `remove` by id,
+which is the exact shape `startDemo`/`clearDemo` already use for objectives.
+
+**So there is nothing to mark.** A fixed id is the marking. `Program` keeps being the one shape
+everything downstream reads — which is that module's whole stated design, *"the moment a written
+program is a second-class shape, every consumer needs a branch"* — and a `demo` flag on it would
+have been a branch in a validated content type, bought for nothing.
+
+### Written out, not forked
+
+`forkProgram(getProgram('base_camp'))` was the first draft and is shorter. It also makes
+`demoClimber` depend on the catalogue being loaded, and that file's contract is *"Pure: a seed and a
+date in, records out"*. A small program written by hand is the price of keeping it: two session
+types, eight weeks, one phase. What a climber actually writes first is a stripped copy of something
+that worked, not a masterpiece.
+
+### The finished block is their own program, and a test said why
+
+The first draft finished a **Base Camp** block. A pre-existing test went red and was right to: the
+clear unpicks a program by id, so a climber with their own Base Camp block would have lost it to the
+demo's. The written program's id belongs to the sample climber and to nothing else.
+
+It also tells one story rather than two — they wrote a block, ran it to the end, and moved onto Iron
+Grip — and it puts a **custom program's** block through `programForRecord`, which nothing in the
+demo exercised before.
+
+Recorded rather than left to `reconstructBlocks`, because a reconstructed row carries no `reason`,
+and the reason is most of what that screen is for: *"a block left in week six and one run to its
+last day look identical from the dates alone."*
+
+### Read back from a browser
+
+```
+BLOCKS YOU HAVE RUN
+Iron Grip          Aug 2026    Week 6 of 12 · running
+My winter block    Jun 2026    8 of 8 weeks · ran to the end
+
+YOUR PROGRAMS
+My winter block    8 weeks · 2 session types
+
+#/finish/custom_demo-own%232026-06-14
+My winter block — Ran to Aug 8, 2026
+"My winter block ran out 6 weeks ago. Below is which of its sessions happened…"
+```
+
+And the harness, which is what this was for:
+
+```
+48 routes × 3 sizes, plus the banner squeeze.
+layout OK
+```
+
+**Every parameterised route in the registry is now layout-checked at three sizes**, and the "not
+checked" line is gone. That closes the standing item M270 opened.
+
+### What the battery found
+
+**9 mutants caught, sanity no-op survived.** No finished block; the finished block left running; its
+reason dropped; no written program; the written program left behind on a clear; a program with no
+session types; the block never recorded on the profile; the clear unpicking only the running
+program; and the clear over-reaching onto a climber's own.
+
+One of my own mutants was a no-op — spreading an empty array into `sessionTypes` changes nothing, so
+it "survived" by not being a mutation. Replaced with one that empties the array for real.
+
+**6,756 tests over 397 files**, from 6,752. First load 135.33KB against a 135.7KB budget — 0.37KB of
+slack, and the next milestone that adds to the entry chunk will need the ceiling raised.

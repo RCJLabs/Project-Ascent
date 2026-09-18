@@ -13,7 +13,16 @@ import {
   type CsvResult,
 } from './SpreadsheetImportCard';
 import { CsvError, parseCsv } from '@/engine/csv';
-import { canLoadDemo, demoInjuries, demoObjectives, demoProgramId, loadDemo, wipeDemo } from '@/db/demo';
+import {
+  canLoadDemo,
+  demoBlocks,
+  demoInjuries,
+  demoObjectives,
+  demoProgram,
+  demoProgramIds,
+  loadDemo,
+  wipeDemo,
+} from '@/db/demo';
 import { eraseEverything } from '@/db/erase';
 import { hasDemo } from '@/db/demoFlag';
 import { takeLaunchFile } from '@/lib/launchFile';
@@ -22,6 +31,7 @@ import { KIT_CHIPS, KIT_NAMES, kitOffer, unclaimedKit } from '@/engine/kit';
 import { layoutsFor, planFromLayout } from '@/engine/scheduler';
 import { useSessions, allSessions } from '@/store/sessions';
 import { useMetrics } from '@/store/metrics';
+import { useCustomPrograms } from '@/store/programs';
 import { mediaBytes } from '@/db/media';
 import type { Equipment } from '@/content/types';
 import { displayGrade } from '@/engine/grades';
@@ -305,6 +315,13 @@ export function SettingsPage() {
       // it from the catalogue gets offered first.
       const layout = program ? layoutsFor(program)[0] : undefined;
       profile.startProgram(made.programId, layout ? planFromLayout(layout) : {});
+      // The block it finished before this one, so **Blocks you have run**
+      // has the two rows it needs to draw (PLAN.md M282). Prepended, because
+      // `startProgram` above has already written the running one.
+      useProfile.setState((p) => ({ blocks: [...demoBlocks(), ...p.blocks] }));
+      // The program it wrote. Through the store, which keeps the content
+      // registry in step — `getProgram` reads that, not the table.
+      await useCustomPrograms.getState().save(demoProgram());
       for (const injury of demoInjuries()) profile.restoreInjury(injury);
       // Awaited, unlike the profile actions above: the objectives store
       // persists before it sets, so there is a promise to hold (M207, M220).
@@ -326,8 +343,9 @@ export function SettingsPage() {
       const gone = await wipeDemo();
       const profile = useProfile.getState();
       profile.stopProgram();
-      // And the rest of what the program left behind (PLAN.md M281).
-      profile.forgetProgram(demoProgramId());
+      // And the rest of what its programs left behind (PLAN.md M281, M282).
+      for (const id of demoProgramIds()) profile.forgetProgram(id);
+      await useCustomPrograms.getState().remove(demoProgram().id);
       for (const injury of demoInjuries()) profile.removeInjury(injury.id);
       for (const objective of demoObjectives()) await useObjectives.getState().remove(objective.id);
       await hydrateAll();

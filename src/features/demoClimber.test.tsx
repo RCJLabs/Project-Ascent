@@ -2,7 +2,9 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { canLoadDemo, demoObjectives, loadDemo } from '@/db/demo';
+import { canLoadDemo, demoObjectives, demoProgram, loadDemo } from '@/db/demo';
+import { DEMO_PROGRAM_ID } from '@/engine/demoClimber';
+import { useCustomPrograms } from '@/store/programs';
 import { daysBetween, today } from '@/engine/dates';
 import { getSession, newSession, putSession } from '@/db/sessions';
 import { deriveClimberState } from '@/engine/derive';
@@ -317,8 +319,9 @@ describe('the history after the sample climber has gone', () => {
     await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy());
     // The trap M195 names: a probe that cannot find a known-present instance
     // is not a probe. If nothing is written there is nothing to leave behind.
-    expect(useProfile.getState().blocks).toHaveLength(1);
-    expect(useProfile.getState().blocks[0]?.programId).toBe('iron_grip');
+    // Two since M282: the one it is running and the one it finished.
+    const running = useProfile.getState().blocks.filter((b) => b.endedAt === null);
+    expect(running.map((b) => b.programId)).toEqual(['iron_grip']);
   });
 
   it('keeps none of it', async () => {
@@ -351,6 +354,68 @@ describe('the history after the sample climber has gone', () => {
     const p = useProfile.getState();
     expect(p.startDates).toEqual({});
     expect(p.plans).toEqual({});
+  });
+
+  /**
+   * The block it finished before the one it is running (PLAN.md M282).
+   *
+   * `FinishPage` hides **Blocks you have run** until there are two, so a
+   * sample climber with one had a whole card dark — and `/finish/:id` was
+   * unreachable to `scripts/layout.mjs` for the same reason.
+   */
+  it('runs more than one block while it is loaded', async () => {
+    await emptied();
+    await settings();
+    fireEvent.click(await screen.findByText('Load a sample climber'));
+    await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy());
+    const blocks = useProfile.getState().blocks;
+    expect(blocks.length).toBeGreaterThan(1);
+    // One finished and one running, which is what the card is comparing.
+    expect(blocks.filter((b) => b.endedAt === null)).toHaveLength(1);
+    // Recorded, not rebuilt: a reconstructed row carries no reason, and the
+    // reason is most of what that screen is for.
+    const done = blocks.find((b) => b.endedAt !== null);
+    expect(done?.reason).toBe('ran-out');
+    expect(done?.reconstructed).toBeUndefined();
+  });
+
+  it('takes every one of them back out', async () => {
+    await loadThenClear();
+    expect(useProfile.getState().blocks).toEqual([]);
+  });
+
+  /**
+   * The program it wrote (PLAN.md M282).
+   *
+   * In the `programs` store, which the tag-per-record wipe cannot reach — so
+   * the store that owns it takes it out by id, exactly as it does for an
+   * objective. Which is why `Program` needs no `demo` field: the fixed id is
+   * the marking, and the type stays the one shape everything reads.
+   */
+  it('writes a program of its own, and takes that back too', async () => {
+    await emptied();
+    await settings();
+    fireEvent.click(await screen.findByText('Load a sample climber'));
+    await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy());
+    expect(useCustomPrograms.getState().custom.map((p) => p.id)).toEqual([DEMO_PROGRAM_ID]);
+    // Complete enough to open: the builder walks its session types.
+    expect(useCustomPrograms.getState().custom[0]?.sessionTypes.length).toBeGreaterThan(0);
+
+    fireEvent.click(await screen.findByText('Clear the sample data'));
+    await waitFor(() => expect(screen.getByText(/Sample data cleared/)).toBeTruthy());
+    expect(useCustomPrograms.getState().custom).toEqual([]);
+  });
+
+  it('leaves a program the climber wrote themselves', async () => {
+    await emptied();
+    await settings();
+    fireEvent.click(await screen.findByText('Load a sample climber'));
+    await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy());
+    await useCustomPrograms.getState().save({ ...demoProgram(), id: 'custom_mine' as never, name: 'Mine' });
+
+    fireEvent.click(await screen.findByText('Clear the sample data'));
+    await waitFor(() => expect(screen.getByText(/Sample data cleared/)).toBeTruthy());
+    expect(useCustomPrograms.getState().custom.map((p) => p.id)).toEqual(['custom_mine']);
   });
 
   it('leaves a block the climber started themselves', async () => {

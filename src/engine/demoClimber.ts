@@ -46,6 +46,9 @@ import type { Objective } from './objectives';
 import type { Climb, ProjectAttempt, Session, WallAngle } from '@/db/sessions';
 import { newSession, sessionId } from '@/db/sessions';
 import type { Injury } from '@/store/profile';
+import type { Program, ProgramId } from '@/content/types';
+import type { BlockRecord } from './blocks';
+import { CUSTOM_PREFIX } from './customProgram';
 import { createRng, next, type Rng } from './ascent/rng';
 import { addDays, startOfWeek } from './dates';
 
@@ -54,6 +57,105 @@ export const DEMO_SEED = 20_260_112;
 
 /** A year, which is what the career page and the year review need. */
 export const DEMO_WEEKS = 52;
+
+/**
+ * The program the sample climber wrote, and the block they finished
+ * (PLAN.md M282).
+ *
+ * `scripts/layout.mjs` could not reach `/build/:id`, `/build/:id/session/:typeId`
+ * or `/finish/:id` at any size, for one reason each time: the sample climber
+ * has never written a program and has only ever run one block. Two screens
+ * are dark with it — **Your programs** lists nothing, and **Blocks you have
+ * run** needs a second row before it draws at all.
+ *
+ * ## Written here rather than forked from the catalogue
+ *
+ * `forkProgram(getProgram('base_camp'))` was the first draft and would have
+ * been shorter. It also makes this generator depend on the catalogue being
+ * loaded — and this file's whole contract is *"Pure: a seed and a date in,
+ * records out"*. A small program written out is the cost of keeping that.
+ *
+ * It is deliberately a *plausible* one and not a showcase: two session types,
+ * eight weeks, one phase. What a climber actually writes first is a stripped
+ * copy of something that worked, not a masterpiece.
+ */
+export const DEMO_PROGRAM_ID = `${CUSTOM_PREFIX}demo-own` as ProgramId;
+
+function writtenProgram(): Program {
+  return {
+    id: DEMO_PROGRAM_ID,
+    name: 'My winter block',
+    subtitle: 'Written by me',
+    kind: 'program',
+    stage: 'style',
+    discipline: 'boulder',
+    gradeRange: { scale: 'V', min: 'V3', max: 'V7', label: 'V3–V7' },
+    weeks: 8,
+    equipment: ['wall', 'hangboard'],
+    intro: {
+      pitch: 'Two days on the wall and one on the board, for the months when nothing is dry.',
+      rhythm: [],
+      graduation: '',
+    },
+    phases: [
+      { id: 'winter', name: 'Winter', weekStart: 1, weekEnd: 8, description: '', goals: [] },
+    ],
+    sessionTypes: [
+      {
+        id: 'own_board',
+        name: 'Board night',
+        icon: 'grid',
+        description: 'Hard moves on the board, short and angry.',
+        duration: '60-75 min',
+      },
+      {
+        id: 'own_volume',
+        name: 'Volume day',
+        icon: 'repeat',
+        description: 'Everything two grades down, until the feet stop being tidy.',
+        duration: '90 min',
+      },
+    ],
+    constraints: [],
+    assessments: [],
+    nextPrograms: [],
+  };
+}
+
+/**
+ * The block before the one they are running — **their own program**.
+ *
+ * A climber a year into the app who has run exactly one block is not a
+ * climber anybody recognises, and `FinishPage` hides **Blocks you have run**
+ * until there are two. Recorded rather than left to `reconstructBlocks`,
+ * because a reconstructed row carries no `reason` — and the reason is most of
+ * what that screen is for: *"a block left in week six and one run to its last
+ * day look identical from the dates alone."*
+ *
+ * ## Why the written program and not a catalogue one
+ *
+ * A first draft finished a **Base Camp** block, and a test caught what that
+ * costs: the clear unpicks a program by id, so a climber who had their own
+ * Base Camp block would have lost it to the demo's. The written program's id
+ * belongs to the sample climber and to nothing else, so nothing of theirs can
+ * collide with it.
+ *
+ * It also tells one story instead of two — they wrote a block, ran it, and
+ * moved onto Iron Grip — and it puts a custom program's block through
+ * `programForRecord`, which nothing in the demo exercised before.
+ */
+function finishedBlock(ironGripStart: string, program: Program): BlockRecord {
+  const startDate = addDays(ironGripStart, -program.weeks * 7);
+  return {
+    id: `${program.id}#${startDate}`,
+    programId: program.id,
+    name: program.name,
+    startDate,
+    weeks: program.weeks,
+    endedAt: addDays(ironGripStart, -1),
+    reason: 'ran-out',
+  };
+}
 
 export interface DemoClimber {
   sessions: Session[];
@@ -74,6 +176,10 @@ export interface DemoClimber {
   /** The program the demo is mid-way through, and when it started. */
   programId: string;
   startDate: string;
+  /** One program the climber wrote, for the `programs` store to hold. */
+  program: Program;
+  /** Blocks finished before the running one, oldest first. */
+  blocks: BlockRecord[];
 }
 
 /**
@@ -290,6 +396,9 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
    */
   const ropes = createRng(seed ^ 0x0f0f_b00b);
   const start = addDays(startOfWeek(today), -(DEMO_WEEKS - 1) * 7);
+  /** Named once, because the finished block below is dated backwards off it. */
+  const ironGripStart = addDays(startOfWeek(today), -7 * 5);
+  const written = writtenProgram();
 
   const sessions: Session[] = [];
   const metrics: MetricEntry[] = [];
@@ -466,7 +575,9 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
     ],
     objectives: objectivesFor(today, start),
     programId: 'iron_grip',
-    startDate: addDays(startOfWeek(today), -7 * 5),
+    startDate: ironGripStart,
+    program: written,
+    blocks: [finishedBlock(ironGripStart, written)],
   };
 }
 
