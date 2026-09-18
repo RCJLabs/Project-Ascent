@@ -202,6 +202,23 @@ describe('the primitives are safe to use', () => {
     for (const h of heights) expect(h * 4).toBeGreaterThanOrEqual(24);
   });
 
+  it('keeps the checkbox at the 24px target floor', () => {
+    // Measured in a browser at 390×780 before this: 20×20 on the injury
+    // steps, and the logger's exercise rows pass an `sr-only` label, so
+    // there the box is the whole target (PLAN.md M271).
+    const field = readFileSync('src/ui/Field.tsx', 'utf8');
+    // The *next* className after the input, with no character budget: the
+    // comment explaining this fix pushed it past a 400-character window and
+    // the assertion read nothing at all. Fourth time in two milestones that
+    // prose has moved a source scan off its target.
+    const box = /type="checkbox"[\s\S]*?className="([^"]+)"/.exec(field)?.[1] ?? '';
+    const w = /\bw-(\d+)\b/.exec(box)?.[1];
+    const h = /\bh-(\d+)\b/.exec(box)?.[1];
+    expect(w, 'the checkbox has a width').toBeTruthy();
+    expect(Number(w) * 4).toBeGreaterThanOrEqual(24);
+    expect(Number(h) * 4).toBeGreaterThanOrEqual(24);
+  });
+
   it('requires an accessible name on an icon button', () => {
     const source = readFileSync('src/ui/IconButton.tsx', 'utf8');
     // `label: string`, not `label?: string` — a screen reader cannot infer

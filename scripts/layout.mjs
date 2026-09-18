@@ -41,17 +41,47 @@ const BASE = `http://localhost:${PORT}${SERVED_AT}`;
  * store screenshot of the Not-found page. A list that cannot drift is
  * worth the regex.
  */
-const ROUTES = [...readFileSync(new URL('../src/ui/routes.ts', import.meta.url), 'utf8')
-  .matchAll(/^\s*\{ path: '([^']+)'/gm)].map((m) => m[1]);
+const ENTRIES = [...readFileSync(new URL('../src/ui/routes.ts', import.meta.url), 'utf8')
+  .matchAll(/^\s*\{ path: '([^']+)'[^\n]*?parent: (?:'([^']+)'|null)/gm)]
+  .map((m) => ({ path: m[1], parent: m[2] ?? null }));
+const ROUTES = ENTRIES.map((e) => e.path);
 if (ROUTES.length < 20) throw new Error(`Only ${ROUTES.length} routes read from routes.ts — the regex has drifted`);
+const entryFor = (path) => ENTRIES.find((e) => e.path === path);
 
 const TODAY = new Date().toISOString().slice(0, 10);
 /** Parameterised routes need a value that exists. These are the ones a
  *  seeded climber really has; the rest are reported as skipped. */
 const FILLED = { ':date': TODAY, ':year': TODAY.slice(0, 4), ':start': TODAY };
 const fill = (path) => path.replace(/:[a-zA-Z]+/g, (p) => FILLED[p] ?? p);
-const checkable = ROUTES.filter((p) => !fill(p).includes(':'));
-const skipped = ROUTES.filter((p) => fill(p).includes(':'));
+const STATIC = ROUTES.filter((p) => !fill(p).includes(':'));
+const NEEDS_RECORD = ROUTES.filter((p) => fill(p).includes(':'));
+
+/**
+ * What a detail route's address looks like, as a pattern.
+ *
+ * `/projects/:id` becomes `^#/projects/[^/]+$`, which is what a link on the
+ * listing page will match.
+ */
+const patternOf = (path) => `^#${path.replace(/:[A-Za-z]+/g, '[^/]+').replace(/\//g, '\\/')}$`;
+
+/**
+ * The page that lists a detail route's records, walking up `parent` until
+ * one can actually be opened.
+ *
+ * The registry already carries the relationship — it is what draws the back
+ * link — so this asks it rather than chopping segments off a path and
+ * hoping. `/build/:id/session/:typeId` climbs two levels to `/build`.
+ */
+function listingFor(path) {
+  let at = entryFor(path)?.parent ?? null;
+  const seen = new Set();
+  while (at !== null && !seen.has(at)) {
+    seen.add(at);
+    if (!fill(at).includes(':')) return fill(at);
+    at = entryFor(at)?.parent ?? null;
+  }
+  return null;
+}
 
 const SIZES = [
   { name: 'phone', width: 390, height: 780 },
@@ -79,12 +109,89 @@ function readPage({ tabNames, target }) {
     const b = el.getBoundingClientRect();
     return { name, on: within(b), h: Math.round(b.height), w: Math.round(b.width) };
   });
+  /**
+   * Controls smaller than the floor the app already commits to.
+   *
+   * 24px, not 44: `ui.test.ts` holds `Button.tsx` to the WCAG 2.2 AA
+   * minimum and 44 is the aspiration `IconButton` meets, not the rule.
+   *
+   * Buttons and form controls only. A link is text, and WCAG exempts a
+   * target in a block of text from having a size of its own — the first
+   * draft of this checked links too and reported the skip link, every
+   * "Open the week →" and nothing anybody would act on, which is a probe
+   * measuring its own noise.
+   */
+  /**
+   * Clipped out of sight — `sr-only` and anything like it.
+   *
+   * Checked up the ancestry, not just on the element: the charts put their
+   * data table inside an `sr-only` wrapper, and the table itself lays out
+   * at its natural 372px while being clipped to a single pixel. The first
+   * draft reported those as content off the side of a 390px screen, which
+   * is a probe measuring something nobody can see.
+   */
+  const hidden = (el) => {
+    for (let at = el; at && at !== document.body; at = at.parentElement) {
+      const cs = getComputedStyle(at);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return true;
+      if (cs.clipPath !== 'none' || cs.clip !== 'auto') return true;
+    }
+    return false;
+  };
+
+  const SELECTOR = 'button, input, select, textarea, summary, [role="button"], [role="tab"]';
+  const small = [];
+  for (const el of document.querySelectorAll(SELECTOR)) {
+    const cs = getComputedStyle(el);
+    if (cs.display === 'inline') continue;
+    // A skip link is 1×1 until it is focused, and a screen-reader label is
+    // not a target at all.
+    if (hidden(el)) continue;
+    const b = el.getBoundingClientRect();
+    if (b.width === 0 || b.height === 0) continue;
+    const side = Math.min(b.width, b.height);
+    if (side + 0.5 >= 24) continue;
+    const name = (el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 28);
+    const kind = el.getAttribute('type') ?? el.getAttribute('role') ?? '';
+    const cls = (el.getAttribute('class') ?? '').slice(0, 30);
+    small.push(
+      `${el.tagName.toLowerCase()}${kind ? `[${kind}]` : ''}${name ? ` "${name}"` : ''}` +
+      `${cls ? ` .${cls}` : ''} ${Math.round(b.width)}×${Math.round(b.height)}`,
+    );
+  }
+
+  /**
+   * Content off the side of the page.
+   *
+   * Anything under a box that scrolls sideways on purpose is skipped — a
+   * wide table in its own scroller is a decision, not a defect.
+   */
+  const spill = [];
+  if (main) {
+    const edge = main.getBoundingClientRect().right;
+    const scrollers = [...main.querySelectorAll('*')].filter((el) => {
+      const ox = getComputedStyle(el).overflowX;
+      return ox === 'auto' || ox === 'scroll';
+    });
+    for (const el of main.querySelectorAll('*')) {
+      const b = el.getBoundingClientRect();
+      if (b.width === 0 || b.height === 0) continue;
+      if (b.right <= edge + 1) continue;
+      if (scrollers.some((sc) => sc !== el && sc.contains(el))) continue;
+      if (hidden(el)) continue;
+      const cls = (el.getAttribute('class') ?? '').slice(0, 40);
+      spill.push(`${el.tagName.toLowerCase()}.${cls} to ${Math.round(b.right)} (edge ${Math.round(edge)})`);
+    }
+  }
+
   return {
     tabsOff: tabs.filter((t) => t.missing || !t.on).map((t) => t.name),
     tooSmall: tabs.filter((t) => !t.missing && t.h + 0.5 < target).map((t) => `${t.name} ${t.h}px`),
     docScrolls: doc.scrollHeight > doc.clientHeight + 1,
     pageWide: doc.scrollWidth > doc.clientWidth + 1,
     mainWide: main ? main.scrollWidth > main.clientWidth + 1 : false,
+    small: [...new Set(small)].slice(0, 4),
+    spill: [...new Set(spill)].slice(0, 3),
   };
 }
 
@@ -93,6 +200,8 @@ const { chromium } = require(process.env.PLAYWRIGHT ?? 'playwright-core');
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM ?? undefined });
 
 const failures = [];
+/** Detail-route addresses, found once and reused at every size. */
+let discovered = null;
 const note = (where, what) => { failures.push(`${where}: ${what}`); };
 
 for (const size of SIZES) {
@@ -111,9 +220,34 @@ for (const size of SIZES) {
   const load = page.getByRole('button', { name: 'Load a sample climber' });
   if (await load.count()) { await load.click(); await page.waitForTimeout(2500); }
 
-  for (const path of checkable) {
+  // The detail routes, found by opening the page that lists them and
+  // reading a real link — the ids belong to the sample climber and are
+  // nobody's business to invent.
+  if (discovered === null) {
+    discovered = new Map();
+    for (const path of NEEDS_RECORD) {
+      const listing = listingFor(path);
+      if (listing === null) continue;
+      await page.evaluate((h) => { location.hash = `#${h}`; }, listing);
+      await page.waitForTimeout(700);
+      const href = await page.evaluate((src) => {
+        const re = new RegExp(src);
+        return [...document.querySelectorAll('a[href]')]
+          .map((a) => a.getAttribute('href'))
+          .find((h) => h !== null && re.test(h)) ?? null;
+      }, patternOf(path));
+      if (href !== null) discovered.set(path, href.replace(/^#/, ''));
+    }
+  }
+
+  const checking = [
+    ...STATIC.map((path) => [path, fill(path)]),
+    ...[...discovered].map(([path, href]) => [path, href]),
+  ];
+
+  for (const [path, href] of checking) {
     errors.length = 0;
-    await page.evaluate((h) => { location.hash = `#${h}`; }, fill(path));
+    await page.evaluate((h) => { location.hash = `#${h}`; }, href);
     await page.waitForTimeout(500);
     const r = await page.evaluate(readPage, {
       tabNames: TABS,
@@ -126,6 +260,8 @@ for (const size of SIZES) {
     if (r.docScrolls) note(at, 'the document scrolls (M225: only `main` may)');
     if (r.pageWide) note(at, 'the page scrolls sideways');
     if (r.mainWide) note(at, '`main` scrolls sideways');
+    if (r.small.length) note(at, `control under 24px: ${r.small.join('; ')}`);
+    if (r.spill.length) note(at, `off the side: ${r.spill.join('; ')}`);
     if (errors.length) note(at, `threw: ${errors[0]}`);
   }
 
@@ -160,8 +296,11 @@ for (const size of SIZES) {
 }
 await browser.close();
 
-console.log(`${checkable.length} routes × ${SIZES.length} sizes, plus the banner squeeze.`);
-if (skipped.length) console.log(`skipped (need a record to point at): ${skipped.join(' ')}`);
+const found = discovered ?? new Map();
+console.log(`${STATIC.length + found.size} routes × ${SIZES.length} sizes, plus the banner squeeze.`);
+if (found.size) console.log(`found a record for: ${[...found.keys()].join(' ')}`);
+const missing = NEEDS_RECORD.filter((p) => !found.has(p));
+if (missing.length) console.log(`no record to point at: ${missing.join(' ')}`);
 if (failures.length === 0) {
   console.log('\nlayout OK');
 } else {

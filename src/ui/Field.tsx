@@ -141,7 +141,15 @@ export function Checkbox({
         type="checkbox"
         checked={checked}
         onChange={onChange}
-        className="focus-ring appearance-none w-5 h-5 shrink-0 mt-0.5 rounded border border-line bg-sunken checked:bg-accent checked:border-accent relative after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-accent-ink after:text-xs after:leading-none checked:after:content-['✓']"
+        // 24px, not 20 (PLAN.md M271). WCAG 2.2 AA puts the floor at 24 and
+        // `ui.test.ts` already holds `Button.tsx` to it; this was `w-5`.
+        //
+        // Where the label is real text it is clickable through `htmlFor`,
+        // so the target was always the whole row and the box was only its
+        // marker. Where the label is `sr-only` the box *is* the target —
+        // which is the logger's exercise rows, ticked mid-session by the
+        // cold hand `TallyRow` sizes its buttons for.
+        className="focus-ring appearance-none w-6 h-6 shrink-0 rounded border border-line bg-sunken checked:bg-accent checked:border-accent relative after:absolute after:inset-0 after:flex after:items-center after:justify-center after:text-accent-ink after:text-xs after:leading-none checked:after:content-['✓']"
       />
       <label htmlFor={id} className={`flex-1 text-sm leading-relaxed ${checked ? 'opacity-60' : ''}`}>
         {label}

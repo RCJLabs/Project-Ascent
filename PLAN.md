@@ -14350,6 +14350,15 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and prose stood in for code three times before it held.***
   *See the entry at the end of this document.*
 
+- **M271 — the rest of the layout net, and a 20px checkbox.** M270's harness skipped thirteen
+  routes for want of a record to point at, and held four facts. It finds the detail pages by opening
+  the page that lists them and reading a real link now — seven more routes — and holds two more
+  facts: every control meets the 24px floor the app already commits to, and nothing sits off the
+  side. Two of its three first findings were the probe measuring its own noise. The third was real.
+  *Small, and it is one class name.*
+  ***Built, and prose moved a source scan off its target for the fourth time.***
+  *See the entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -17761,3 +17770,72 @@ and the rest — and are reported as skipped rather than guessed at. The check r
 worth it for something that only needs running when the shell moves.
 
 **6,609 tests over 391 files**. First load 134.69KB against a 135.4KB budget.
+
+
+## M271 — the rest of the layout net, and a 20px checkbox
+
+### Finding the pages that need a record
+
+M270 checked thirty-five routes and reported thirteen as skipped, which is every detail page in the
+app — the longest and densest screens there are. Guessing an id is not an option and inventing a
+fixture would drift from the app, so the harness asks the app: open the page that *lists* the
+records and read a real link off it.
+
+Which page that is comes out of `ui/routes.ts`, which already carries a `parent` on every route
+because that is what draws the back link. `/build/:id/session/:typeId` climbs two levels to
+`/build`. Seven more routes are checked now — `/train/:id`, `/objectives/:id`, `/projects/:id`,
+`/venues/:key`, `/injury/:id`, `/guides/:id`, `/drills/:id` — and the six still dark are reported by
+name rather than silently dropped: they need a record the sample climber does not have.
+
+### Two new facts, and two of them were noise
+
+**Every control meets 24px.** Not 44: `ui.test.ts` holds `Button.tsx` to the WCAG 2.2 AA minimum,
+and 44 is the aspiration `IconButton` meets rather than the rule. The first draft checked links too
+and reported the skip link at 1×1, every *"Open the week →"* at 20px tall, and nothing anybody would
+act on. A link is text and WCAG exempts a target in a block of text from having a size of its own,
+so it checks buttons and form controls.
+
+**Nothing sits off the side.** The first draft reported a table running to 404px on a 390px screen,
+on three routes. Its parent is `div.sr-only` — `clip-path: inset(50%)`, one pixel wide — and the
+chart's data table inside lays out at its natural width while being clipped out of sight entirely.
+Being clipped has to be checked up the ancestry, not on the element.
+
+Both were the probe measuring its own noise, and both were found by looking at what it reported
+rather than by trusting it. That is the same discipline the mutation battery exists for.
+
+### The one that was real
+
+```
+phone /injury/:id: control under 24px: input[checkbox] .focus-ring appearance-none w-5 20×20
+```
+
+`Field.tsx`'s checkbox was `w-5 h-5` — 20px. Where its label is real text the label is clickable
+through `htmlFor`, so the target was always the whole row and the box was only its marker. Where
+the label is `sr-only` the box **is** the target, and that is the logger's exercise rows:
+
+```tsx
+<Checkbox … label={<span className="sr-only">Mark {ex.name} done</span>} />
+```
+
+Ticked mid-session, by the cold hand `TallyRow` gives a 56px button to for exactly this reason. It
+is `w-6 h-6` now, 24×24 measured in both themes, and `mt-0.5` goes with it because a 24px box needs
+no nudge to sit against the first line.
+
+### Prose, again
+
+The guard written for this read nothing at all: the comment explaining the fix pushed `className`
+past the 400-character window the regex allowed. That is the fourth time in two milestones that
+English has moved a source scan off its target — after M225's rule tripping on a quoted API name,
+an assertion passing on a word in a comment, and a slice starting at `<main>` in a doc header. The
+match has no character budget now.
+
+**2 mutants caught, sanity no-op survived.** Both directions of putting the 20px box back.
+
+### What this does not cover
+
+Six routes still have no record to point at: `/finish/:id`, `/train/:id/start`, `/build/:id`,
+`/build/:id/session/:typeId`, `/assessments/:id` and `/guides/:id/:section`. Four of them need a
+custom program or a finished block, which the sample climber has no reason to carry.
+
+**6,610 tests over 391 files**, from 6,609. First load 134.69KB against a 135.4KB budget. Forty-two
+routes at three widths come back clean.
