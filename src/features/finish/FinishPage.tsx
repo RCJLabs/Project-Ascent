@@ -21,6 +21,7 @@ import { useProfile } from '@/store/profile';
 import { offerUndo } from '@/store/undo';
 import { useSessions, allSessions } from '@/store/sessions';
 import { blockAdherence, describeAdherence } from '@/engine/adherence';
+import { useAway } from '@/store/away';
 import { JOIN_WORD, planVsLog } from '@/engine/planVsLog';
 import { chooseNext } from '@/engine/nextBlock';
 import { useSettings } from '@/store/settings';
@@ -267,6 +268,7 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
    * layout there is — so the card says which it used rather than presenting
    * a guess as a measurement.
    */
+  const away = useAway((s) => s.periods);
   const adherence = useMemo(() => {
     const programId = chosen?.programId ?? activeProgramId;
     if (end === null || !programId) return null;
@@ -279,10 +281,14 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
       plan,
       overrides: weekOverrides[programId],
       sessions: allSessions(byDate),
+      // As on the coach board (PLAN.md M279): a block report that counted a
+      // marked fortnight as misses would be the one number a climber reads
+      // once and stops trusting.
+      away,
       today: today(),
     });
     return measured === null ? null : { measured, ownLayout: chosen?.plan !== undefined };
-  }, [end, chosen, activeProgramId, startDates, plans, weekOverrides, byDate]);
+  }, [end, chosen, activeProgramId, startDates, plans, weekOverrides, byDate, away]);
 
   /**
    * Where the block diverged from the program that wrote it (PLAN.md M148).

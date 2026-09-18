@@ -16,10 +16,24 @@
  * **A part-finished week counts only its elapsed days.** Otherwise every
  * climber is behind from Sunday to Saturday, which is a number that teaches
  * you to ignore the number.
+ *
+ * **And a day the climber was away is not one of its days either**
+ * (PLAN.md M279). M275 let them say so; this rule already knew what to do
+ * with the answer. A day marked away is the same category as a day that has
+ * not happened — the plan placed something and the climber was not there for
+ * it — so it leaves the denominator the same way, per day rather than per
+ * week. A fortnight in Font used to arrive home as six missed Finger
+ * Protocols, on a block the climber had otherwise kept.
+ *
+ * The exception is the day they trained anyway. A session logged inside a
+ * marker means the day happened after all, so its placement stands and the
+ * session counts as done rather than falling through to `extra` — which is
+ * where a blanket skip would have put it.
  */
 
 import type { Program } from '@/content/types';
 import type { Session } from '@/db/sessions';
+import { type AwayPeriod, awayOn } from './away';
 import { addDays, daysBetween } from './dates';
 import { blockWindow, plannedDay } from './plan';
 import type { WeekOverrides } from './reschedule';
@@ -49,6 +63,14 @@ export interface BlockAdherence {
   planned: number;
   done: number;
   /**
+   * Sessions the plan placed on days the climber marked away (PLAN.md M279).
+   *
+   * Counted out of `planned` rather than into `done`, and reported, because a
+   * denominator that quietly shrinks is the kind of number this file's header
+   * warns about. The sentence says how many and why.
+   */
+  away: number;
+  /**
    * Completed sessions inside the window that the plan did not place —
    * logged by hand, or a type the program does not have. Not a failure:
    * the number is there so "you did less than the plan asked" cannot be
@@ -63,6 +85,8 @@ export interface AdherenceInput {
   plan: WeekPlan;
   overrides?: WeekOverrides | undefined;
   sessions: readonly Session[];
+  /** Stretches the climber marked away, so their days leave the denominator. */
+  away?: readonly AwayPeriod[];
   today: string;
 }
 
@@ -98,6 +122,10 @@ export function blockAdherence(input: AdherenceInput): BlockAdherence | null {
     if (!type || type.isRest === true) unplanned++;
   }
 
+  /** Days with a completed session on them, so a marker cannot hide one. */
+  const trained = new Set(done.map((s) => s.date));
+
+  let away = 0;
   let weeks = 0;
   for (let start = from; start <= through; start = addDays(start, 7)) {
     weeks++;
@@ -107,6 +135,14 @@ export function blockAdherence(input: AdherenceInput): BlockAdherence | null {
     for (const date of daysIn(start, end)) {
       const day = plannedDay(input.program, input.startDate, input.plan, date, input.overrides);
       if (!day.sessionType || day.isRest) continue;
+      // A day the climber said they were away, and did not train on anyway.
+      // The `trained` half matters: without it a session logged from a trip
+      // loses its placement and reappears as `extra`, which reads as "the
+      // plan did not place this" about a session the plan placed.
+      if (!trained.has(date) && awayOn(input.away, date) !== null) {
+        away += 1;
+        continue;
+      }
       placed.set(day.sessionType.id, (placed.get(day.sessionType.id) ?? 0) + 1);
     }
 
@@ -143,6 +179,7 @@ export function blockAdherence(input: AdherenceInput): BlockAdherence | null {
     types,
     planned: types.reduce((sum, t) => sum + t.planned, 0),
     done: types.reduce((sum, t) => sum + t.done, 0),
+    away,
     unplanned,
   };
 }
@@ -168,13 +205,25 @@ export function describeAdherence(a: BlockAdherence): string | null {
       ? ''
       : ` You also logged ${a.unplanned} ${a.unplanned === 1 ? 'session' : 'sessions'} the plan did not place.`;
 
+  /**
+   * A denominator that shrank, saying so (PLAN.md M279).
+   *
+   * The days left out are the ones the climber marked away, and a number that
+   * dropped them silently would be the kind this file's header warns about —
+   * one that says more about a person's diary than about their training.
+   */
+  const missing =
+    a.away === 0
+      ? ''
+      : ` ${a.away} more ${a.away === 1 ? 'was' : 'were'} placed on days you marked away, and ${a.away === 1 ? 'is' : 'are'} not counted either way.`;
+
   const missed = a.types.filter((t) => t.done < t.planned).sort((x, y) => shortfall(y) - shortfall(x));
   if (missed.length === 0) {
-    return `You did every session the plan placed — all ${a.planned} of them.${extra}`;
+    return `You did every session the plan placed — all ${a.planned} of them.${missing}${extra}`;
   }
 
   const named = joinList(missed.slice(0, 2).map((t) => `${t.done} of ${t.planned} ${t.name}`));
   const rest =
     missed.length > 2 ? `, and ${missed.length - 2} other ${missed.length - 2 === 1 ? 'type' : 'types'} short` : '';
-  return `You did ${named}${rest}. That is ${a.done} of ${a.planned} sessions the plan placed.${extra}`;
+  return `You did ${named}${rest}. That is ${a.done} of ${a.planned} sessions the plan placed.${missing}${extra}`;
 }

@@ -29,12 +29,18 @@ const did = (date: string, sessionTypeId?: string, patch: Partial<Session> = {})
     ...patch,
   }) as Session;
 
-function run(sessions: Session[], today = '2026-05-30', plan: Record<number, string> = { ...PLAN }) {
+function run(
+  sessions: Session[],
+  today = '2026-05-30',
+  plan: Record<number, string> = { ...PLAN },
+  away?: AdherenceInput['away'],
+) {
   return blockAdherence({
     program: IRON_GRIP,
     startDate: START,
     plan: plan as AdherenceInput['plan'],
     sessions,
+    away,
     today,
   })!;
 }
@@ -187,5 +193,129 @@ describe('said out loud', () => {
 
   it('has nothing to say about a plan that placed nothing', () => {
     expect(describeAdherence(run([], friday(1), {}))).toBeNull();
+  });
+});
+
+/**
+ * A fortnight the climber was away (PLAN.md M279).
+ *
+ * This file's header already held the rule: *"A part-finished week counts
+ * only its elapsed days. Otherwise every climber is behind from Sunday to
+ * Saturday, which is a number that teaches you to ignore the number."* A day
+ * marked away is the same category — the plan placed something and the
+ * climber was not there for it — so it leaves the denominator the same way,
+ * per day rather than per week.
+ */
+describe('days the climber marked away', () => {
+  const marker = (from: string, to: string) => [
+    { id: 'a1', from, to, kind: 'trip' as const, note: "Font '26", updatedAt: `${START}T00:00:00.000Z` },
+  ];
+
+  it('takes their placements out of the denominator', () => {
+    const plain = run([]);
+    // Weeks two and three: six placed sessions on Mon, Wed and Fri.
+    const marked = run([], '2026-05-30', { ...PLAN }, marker(monday(2), friday(3)));
+    expect(marked.planned).toBe(plain.planned - 6);
+    expect(marked.away).toBe(6);
+  });
+
+  it('leaves the rest of the block exactly as it was', () => {
+    const log = [did(monday(1), 'fp'), did(wednesday(5), 'perf')];
+    const plain = run(log);
+    const marked = run(log, '2026-05-30', { ...PLAN }, marker(monday(2), friday(3)));
+    expect(marked.done).toBe(plain.done);
+    expect(marked.unplanned).toBe(plain.unplanned);
+  });
+
+  it('says nothing about them when there are none', () => {
+    expect(run([]).away).toBe(0);
+    expect(describeAdherence(run([]))).not.toContain('marked away');
+  });
+
+  /**
+   * The exception. A session logged inside a marker means the day happened
+   * after all, so its placement stands and the session counts as done — a
+   * blanket skip dropped the placement and the session reappeared as
+   * `unplanned`, which reads as "the plan did not place this" about a session
+   * the plan placed.
+   */
+  it('keeps the placement on a day they trained anyway', () => {
+    const trained = [did(monday(2), 'fp')];
+    const marked = run(trained, '2026-05-30', { ...PLAN }, marker(monday(2), friday(3)));
+    expect(marked.away).toBe(5);
+    expect(marked.done).toBe(1);
+    expect(marked.unplanned).toBe(0);
+  });
+
+  /**
+   * A denominator that shrank silently is the kind of number this file's
+   * header warns about — one that says more about a diary than about training.
+   */
+  it('says how many were left out, and why', () => {
+    const said = describeAdherence(run([], '2026-05-30', { ...PLAN }, marker(monday(2), friday(3))))!;
+    expect(said).toContain('6 more were placed on days you marked away');
+    expect(said).toContain('not counted either way');
+  });
+
+  it('agrees with itself in the singular', () => {
+    const said = describeAdherence(run([], '2026-05-30', { ...PLAN }, marker(monday(2), monday(2))))!;
+    expect(said).toContain('1 more was placed on days you marked away');
+    expect(said).toContain('is not counted either way');
+  });
+
+  /**
+   * The sentence a climber who kept their block actually gets — and the
+   * branch none of the cases above reached, which a mutant proved by
+   * surviving. It is the one this milestone is for: everything the plan
+   * placed on the days you were there, with a trip in the middle.
+   */
+  it('says it on a block that was kept in full', () => {
+    const kept = [1, 4, 5, 6].flatMap((w) => [
+      did(monday(w), 'fp'),
+      did(wednesday(w), 'perf'),
+      did(friday(w), 'fp'),
+    ]);
+    const said = describeAdherence(
+      run(kept, friday(6), { ...PLAN }, marker(monday(2), friday(3))),
+    )!;
+    expect(said).toContain('You did every session the plan placed');
+    expect(said).toContain('placed on days you marked away');
+  });
+
+  /**
+   * A day with a session that was started and not finished, or logged as
+   * rest, is not a day they trained. `done` already draws that line —
+   * completed, inside the window, not a rest day — and the exception above
+   * has to read the same set or it re-opens the placement for a day nothing
+   * happened on.
+   */
+  it('does not count an unfinished session as training through it', () => {
+    const started = [did(monday(2), 'fp', { completed: false })];
+    const marked = run(started, '2026-05-30', { ...PLAN }, marker(monday(2), friday(3)));
+    expect(marked.away).toBe(6);
+    expect(marked.done).toBe(0);
+  });
+
+  it('does not count a rest day as training through it', () => {
+    const rested = [
+      did(monday(2), undefined, { restChecklist: { hydration: true } } as Partial<Session>),
+    ];
+    const marked = run(rested, '2026-05-30', { ...PLAN }, marker(monday(2), friday(3)));
+    expect(marked.away).toBe(6);
+  });
+
+  /** The whole point: a kept block stops reading as a failed one. */
+  it('stops a trip arriving home as a fortnight of misses', () => {
+    const kept = [1, 4, 5, 6].flatMap((w) => [
+      did(monday(w), 'fp'),
+      did(wednesday(w), 'perf'),
+      did(friday(w), 'fp'),
+    ]);
+    const plain = describeAdherence(run(kept))!;
+    expect(plain).toContain('of 36 sessions the plan placed');
+
+    const marked = run(kept, '2026-05-30', { ...PLAN }, marker(monday(2), friday(3)));
+    expect(marked.planned).toBe(30);
+    expect(marked.done).toBe(12);
   });
 });

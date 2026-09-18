@@ -59,6 +59,9 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
             plan,
             overrides: activeProgramId ? weekOverrides[activeProgramId] : undefined,
             sessions,
+            // Days the climber marked away leave the denominator (M279), so a
+            // fortnight in Font stops arriving home as six missed sessions.
+            away,
             today: today(),
           })
         : null;

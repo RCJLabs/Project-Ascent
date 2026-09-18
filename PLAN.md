@@ -14456,6 +14456,11 @@ M50 for why it is not coming.
   the sentence never mentioned a marker. A fortnight in Font read to a screen reader exactly as a
   fortnight of nothing — the failure M275 existed to fix, reintroduced one layer down.
 
+- **M279 — a day you were away is not one of the week's days either.** The last of the three
+  carried from M275, and the design question I said needed a ruling turned out to be answered in
+  `adherence.ts`'s own header. Not planned-zero, not dropping the week: **per day**, which is what
+  that file already does for a week that has not finished.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -18561,3 +18566,72 @@ M167, M178 and M185 each found it before.
 `adherence.ts` scoring a week away as a week of misses — the last of the three carried from M275,
 and the one with an open design question: does a week away count as planned-zero, or drop out of the
 average?
+
+## M279 — a day you were away is not one of the week's days either
+
+The last of the three standing items from M275, and the one I had said needed a ruling: does a week
+away count as planned-zero, or drop out of the average? **Neither, and the file already said so.**
+
+`adherence.ts` has carried this since M91:
+
+> **A part-finished week counts only its elapsed days.** Otherwise every climber is behind from
+> Sunday to Saturday, which is a number that teaches you to ignore the number.
+
+A day marked away is the same category as a day that has not happened — the plan placed something
+and the climber was not there for it. So it leaves the denominator the same way: **per day**, not
+per week. Both options I had put up were the wrong shape, and asking would have been asking about a
+choice the module had already made.
+
+That is this session's recurring lesson for the fourth or fifth time: the correct statement was
+already written down nearby.
+
+### The exception, which is the whole of the difficulty
+
+A session logged *inside* a marker means the day happened after all. So its placement stands and the
+session counts as done. A blanket skip dropped the placement, and the session fell through to
+`unplanned` — which reads as *"the plan did not place this"* about a session the plan placed. The
+guard is `!trained.has(date) && awayOn(...)`, and `trained` is built from `done`: completed, inside
+the window, not a rest day. A day with a session started and abandoned is not a day they trained.
+
+### A denominator that shrank, saying so
+
+`BlockAdherence.away` counts the placements left out, and the sentence names them: *"6 more were
+placed on days you marked away, and are not counted either way."* A number that quietly shrank would
+be exactly the kind this file's header warns about — one that says more about a person's diary than
+about their training.
+
+### Read back from a browser
+
+A six-week Iron Grip block, trained on every placed day the climber was available for, with three
+weeks marked away in the middle. The coach board, before and after:
+
+```
+without the marker    6 of 12 Finger Protocol + Engine sessions
+with the marker       (nothing — the tip does not fire)
+```
+
+Before, a climber who kept every session on every day they were there is told they did half the
+plan. After, six of six, and no nag. No console errors.
+
+Verified through the coach's `skippedType` tip rather than the block report, which needs a finished
+block to render; both read the same engine, and the sentence itself is pinned by unit tests.
+
+### What the battery found
+
+**8 mutants caught, sanity no-op survived.** A marked day counted as a placement anyway; the
+trained-day exception dropped; the count never incremented; the sentence never mentioning what it
+left out, on each of its two branches separately; the singular; and `trained` built from every
+session rather than from the completed ones.
+
+**Two survived the first run.** *"Says nothing on a block that was otherwise kept"* survived because
+no test reached the `missed.length === 0` branch with a marker present — which is the case this
+milestone is *for*, and it had no test at all. *"Treats any logged day as trained"* survived because
+nothing distinguished a completed session from an abandoned one on a marked day. Both now tested.
+
+**6,744 tests over 396 files**, from 6,734. First load 135.23KB against a 135.7KB budget.
+
+### The three from M275 are now closed
+
+M277 gave the sample climber something for the roped half of the app to read, M278 gave the away
+marker its text equivalents, and this gives it the reading that mattered most — the one where
+silence was scored as failure rather than merely drawn as it.

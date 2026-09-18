@@ -450,6 +450,7 @@ const adherence = (types: TypeAdherence[]): BlockAdherence => ({
   from: back(56), to: TODAY, through: TODAY, weeks: 8, types,
   planned: types.reduce((n, t) => n + t.planned, 0),
   done: types.reduce((n, t) => n + t.done, 0),
+  away: 0,
   unplanned: 0,
 });
 
