@@ -14332,6 +14332,14 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and the battery caught the new probe lying before the probe caught anything.***
   *See the entry at the end of this document.*
 
+- **M269 — the bottom bar, gone after logging a rest day.** Reported from the installed app, with
+  the steps: quick log, delete it, log a rest day, and the nav is gone and stays gone. The banners
+  live *inside* the nav, and deleting a session is what puts an undo offer there — so the nav grows,
+  and with `shrink-0` it took that height whatever it cost. `main` shrank to nothing and then the
+  nav pushed its own tab row out of the bottom of an `overflow-hidden` shell.
+  *Small, and it is three class names.*
+  ***Fixed, and measured at the size where it breaks.*** *See the entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -17564,3 +17572,84 @@ a control nobody clicked.
 
 **6,606 tests over 391 files**, from 6,598. First load 134.66KB against a 135.4KB budget. Read back
 from a browser on the Progress header, against this build and the shipped one.
+
+
+## M269 — the bottom bar, gone after logging a rest day
+
+**Reported from the installed app, twice.** The first report had no steps and could not be
+reproduced; it sat on the open list for several milestones as "the unreproducible missing bottom
+nav". The second came with the sequence, and the sequence is the whole diagnosis:
+
+> quick log → delete it → log a rest day → the nav is gone
+
+### What the steps were actually saying
+
+Deleting a session calls `offerUndo`, and `UndoBar` renders **inside the `<nav>`** — the banners
+have lived there since M141, above the tabs on a phone and below them in the sidebar, so that one
+instance serves both widths. So the middle step is not incidental: it is the step that makes the
+nav taller.
+
+Measured at 390×780 through those exact taps, with a program active and today planned as rest:
+
+```
+home                    nav 722–780   height  58   banners  0
+after quick log         nav 722–780   height  58   banners  0
+after delete            nav 652–780   height 128   banners 70   ← the undo offer
+after the rest day      nav 652–780   height 128   banners 70
+```
+
+All five tabs visible at every step, which is why four viewport sizes and both rest-day paths had
+already failed to reproduce it. 128px of nav fits on any phone.
+
+### The failure is in what happens when it does not fit
+
+The nav was `shrink-0`, so it took its content height whatever that was. `main` is `flex-1
+min-h-0`, so it gives way first — and once it has given way to nothing, there is nowhere left for
+the nav to go but through the bottom of a shell that is `h-dvh overflow-hidden`. Padding the banner
+box at 360×640 walks straight into it:
+
+| banner box | nav top → bottom | screen | tabs on screen |
+| --- | --- | --- | --- |
+| real undo offer | 512 → 640 | 640 | 5 |
+| +400px | 104 → 640 | 640 | 5 |
+| **+600px** | 44 → **780** | 640 | **0** |
+
+At +600 the tab row sits at 723–780 on a 640px screen. Nothing scrolls — the shell clips it and the
+document does not scroll at all, which is M225's design working exactly as intended and against the
+climber. Gone entirely, and staying gone.
+
+### Three class names
+
+The nav is `min-h-0` rather than `shrink-0`, so it can give way instead of overflowing. The banner
+box is `min-h-0 overflow-y-auto`, so it is the part that gives. The tab row is `shrink-0`, because
+it is the way out of every screen in the app and a warning nobody can dismiss is worth less than
+the way off the page it is covering.
+
+`main` is `flex-1` from a zero basis, so it still takes whatever the nav does not want: the ordinary
+layout is unchanged — 722–780 on a phone, a 240px sidebar at 1280 — and only the squeeze behaves
+differently. Re-measured after, at the sizes above:
+
+| banner box | nav top → bottom | tabs on screen |
+| --- | --- | --- |
+| +600px | 44 → **640** | **5** |
+| +800px | 44 → **640** | **5** |
+
+`lg:shrink-0` keeps the sidebar's width at desktop, where the nav is a row item and shrinking is a
+different axis.
+
+### What holds it
+
+jsdom has no layout, so this cannot be driven — the M43 caveat exactly, and the reason a component
+test would have reported a clean nav all along. The behaviour was measured in a browser at 360×640,
+390×780 and 1280×900, through the reported sequence and with the banner box padded past breaking;
+what `ui.test.ts` holds is the three declarations the arrangement depends on. **5 mutants caught,
+sanity no-op survived** — including putting `shrink-0` back on the nav.
+
+### What this does not explain
+
+Which banner was tall enough on the reporter's phone. A single undo offer is 70px and the screen
+was not 128px tall, so something else was stacked with it — an update prompt, a storage warning, a
+live-session bar, or one of them wrapping to several lines at that text size. The fix does not
+depend on knowing: the tab row is no longer displaceable by anything the banner box can contain.
+
+**6,609 tests over 391 files**, from 6,606. First load 134.68KB against a 135.4KB budget.

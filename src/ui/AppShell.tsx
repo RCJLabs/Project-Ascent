@@ -159,8 +159,18 @@ export function AppShell({ children }: { children: ReactNode }) {
           // `flex flex-col` at both widths so the banners can be placed by
           // order rather than mounted twice (PLAN.md M141). The children
           // stack exactly as they did in block flow.
-          'order-last shrink-0 flex flex-col bg-surface border-t border-line ' +
-          'lg:order-first lg:w-60 lg:border-t-0 lg:border-r lg:overflow-y-auto'
+          // **`min-h-0`, not `shrink-0` (PLAN.md M269).** The banners live
+          // in here, and `shrink-0` meant the nav took its content height
+          // whatever that was: once the stack outgrew the room, `main`
+          // shrank to nothing and then the nav pushed its own tab row out
+          // of the bottom of an `overflow-hidden` shell. Measured at
+          // 360×640 with the banner box padded: at +600px the tabs sat at
+          // 723–780 on a 640px screen, which is the whole bar gone with no
+          // way to scroll to it. `main` is `flex-1` from a zero basis, so
+          // it still takes the room the nav does not want — the ordinary
+          // layout is unchanged and only the squeeze behaves differently.
+          'order-last min-h-0 flex flex-col bg-surface border-t border-line ' +
+          'lg:shrink-0 lg:order-first lg:w-60 lg:border-t-0 lg:border-r lg:overflow-y-auto'
         }
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
@@ -177,7 +187,11 @@ export function AppShell({ children }: { children: ReactNode }) {
          * intervals per offer and handed the announcer the same sentence
          * twice.
          */}
-        <div className="order-first lg:order-last w-full max-w-2xl mx-auto lg:max-w-none lg:mt-3 lg:[&>*:not(:empty)+*]:mt-2">
+        {/* The part that gives way. A warning nobody can dismiss is worth
+            less than the way out of the screen it is covering, so when
+            there is not room for both the banners scroll and the tabs
+            stay (PLAN.md M269). */}
+        <div className="order-first min-h-0 overflow-y-auto lg:overflow-visible w-full max-w-2xl mx-auto lg:order-last lg:max-w-none lg:mt-3 lg:[&>*:not(:empty)+*]:mt-2">
           {/* Its own box: LiveBar is a full-bleed bar with its own padding
               and a bottom border, and sharing a padded container with it
               would inset the bar. */}
@@ -199,7 +213,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="text-xs text-ink-soft mt-1">Train. Understand. Grow.</p>
         </div>
 
-        <div className="w-full max-w-2xl mx-auto grid grid-cols-5 lg:flex lg:flex-col lg:gap-0.5 lg:px-3 lg:max-w-none">
+        {/* `shrink-0`: the one row that must never give way. */}
+        <div className="shrink-0 w-full max-w-2xl mx-auto grid grid-cols-5 lg:flex lg:flex-col lg:gap-0.5 lg:px-3 lg:max-w-none">
           {TABS.map(({ href, label, icon: Icon }) => {
             const active = isActive(href, location);
             return (

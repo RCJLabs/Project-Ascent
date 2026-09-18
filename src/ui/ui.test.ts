@@ -385,3 +385,49 @@ describe('the focus ring decorates and nothing more', () => {
     expect(declared).toEqual([]);
   });
 });
+
+/**
+ * The tab row is the way out of every screen (PLAN.md M269).
+ *
+ * The banners live inside the nav, so anything that appears there — an undo
+ * offer, a storage warning, an update prompt — adds to its height. With the
+ * nav `shrink-0` that height was taken whatever it cost: `main` shrank to
+ * nothing and then the nav pushed its own tabs out of the bottom of an
+ * `overflow-hidden` shell. Reported from an installed app as the bottom bar
+ * disappearing after logging a rest day, which is the step that adds the
+ * undo offer.
+ *
+ * jsdom has no layout, so this cannot be driven — it is the M43 caveat
+ * exactly, and the behaviour was measured in a browser instead: at 360×640
+ * with the banner box padded by 600px the tabs sat at 723–780 on a 640px
+ * screen before, and at 583–640 after. What is left to hold is the three
+ * declarations that arrangement depends on.
+ */
+describe('the nav can give way, and the tabs cannot', () => {
+  const shell = readFileSync('src/ui/AppShell.tsx', 'utf8');
+  const nav = shell.slice(shell.indexOf('<nav'), shell.indexOf('</nav>'));
+
+  it('lets the nav shrink rather than overflow the shell', () => {
+    expect(nav).toContain('order-last min-h-0 flex flex-col');
+    // `shrink-0` on the nav itself is the defect: it is what made the tab
+    // row displaceable. It stays only at `lg`, where the nav is a
+    // fixed-width sidebar in a row and shrinking is a different axis.
+    expect(nav).not.toMatch(/'order-last[^']*\bshrink-0\b/);
+    expect(nav).toContain('lg:shrink-0');
+  });
+
+  it('gives way in the banners, which scroll', () => {
+    // The banner box is the one that moves to the foot of the sidebar at
+    // `lg`, which is what tells it apart from the nav's own class list.
+    const at = nav.indexOf('lg:order-last');
+    expect(at, 'the banner box is still there').toBeGreaterThan(0);
+    const box = nav.slice(nav.lastIndexOf('className', at), nav.indexOf('>', at));
+    expect(box).toContain('min-h-0');
+    expect(box).toContain('overflow-y-auto');
+  });
+
+  it('pins the tab row', () => {
+    const tabs = nav.slice(nav.indexOf('grid grid-cols-5') - 80, nav.indexOf('grid grid-cols-5') + 40);
+    expect(tabs).toContain('shrink-0');
+  });
+});
