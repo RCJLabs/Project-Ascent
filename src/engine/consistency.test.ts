@@ -365,3 +365,56 @@ describe('days the climber marked away', () => {
     expect(day?.away?.note).toBe("Font '26");
   });
 });
+
+/**
+ * The sentence, and the fourth state it had no words for (PLAN.md M278).
+ *
+ * `describeConsistency` exists *"for the people who will not read a picture"*,
+ * and M275 gave the picture a state it could not say. It is also the number
+ * that makes the gap beside it legible: `longestGap` skips marked days, so a
+ * climber reading "longest gap 6 days" over a fortnight in Font had no way to
+ * see why.
+ */
+describe('days the sentence says were marked', () => {
+  const marker = (from: string, to: string) => [
+    { id: 'a1', from, to, kind: 'trip' as const, note: "Font '26", updatedAt: `${TO}T00:00:00.000Z` },
+  ];
+
+  it('counts them, and says so', () => {
+    const log = [session('2026-07-01'), session('2026-08-20')];
+    const grid = buildHeatGrid({ sessions: log, to: TO, weeks: 53, away: marker('2026-07-05', '2026-07-18') });
+    expect(grid.awayDays).toBe(14);
+    expect(describeConsistency(grid)).toContain('14 days marked away');
+  });
+
+  it('says nothing about them when there are none', () => {
+    const grid = build([session('2026-07-01'), session('2026-08-20')]);
+    expect(grid.awayDays).toBe(0);
+    expect(describeConsistency(grid)).not.toContain('marked away');
+  });
+
+  it('agrees with itself in the singular', () => {
+    const log = [session('2026-07-01'), session('2026-08-20')];
+    const grid = buildHeatGrid({ sessions: log, to: TO, weeks: 53, away: marker('2026-07-05', '2026-07-05') });
+    expect(describeConsistency(grid)).toContain('1 day marked away');
+  });
+
+  /**
+   * The rule `longestGap` already follows: the empty months before a climber
+   * installed the app are not a lapse. A marker out there is not part of their
+   * log either, and a number that broke the rule would not add up against the
+   * ones beside it.
+   */
+  it('ignores a stretch marked before anything was ever logged', () => {
+    const log = [session('2026-08-20')];
+    const grid = buildHeatGrid({ sessions: log, to: TO, weeks: 53, away: marker('2026-03-01', '2026-03-14') });
+    expect(grid.awayDays).toBe(0);
+  });
+
+  /** A day inside a marker that also holds a session is a logged day. */
+  it('does not count a marked day that was trained', () => {
+    const log = [session('2026-07-01'), session('2026-07-06'), session('2026-08-20')];
+    const grid = buildHeatGrid({ sessions: log, to: TO, weeks: 53, away: marker('2026-07-05', '2026-07-07') });
+    expect(grid.awayDays).toBe(2);
+  });
+});

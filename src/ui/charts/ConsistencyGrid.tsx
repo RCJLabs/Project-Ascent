@@ -76,6 +76,76 @@ function title(day: HeatDay): string {
   return `${when}: ${bits.join(', ')}`;
 }
 
+/**
+ * What the table says, which since M275 is no longer just the logged days
+ * (PLAN.md M278).
+ *
+ * M275 gave the grid a fourth state — a day inside a marker, drawn with an
+ * outline — and left both non-visual paths blind to it: this table filtered on
+ * `sessions > 0`, and the sentence beside it said nothing. So a fortnight in
+ * Font read to a screen reader exactly as a fortnight of nothing, which is the
+ * failure that milestone existed to fix, reintroduced one layer down.
+ *
+ * ## A stretch is one row, not fourteen
+ *
+ * The comment this table has carried since M23 is the rule: 371 rows of
+ * "nothing logged" is *"a denial-of-service on a screen reader"*. A marked
+ * range is contiguous by construction, so it collapses to a single row naming
+ * its span — which is bounded by the number of markers rather than by their
+ * length, and is what a listener wants to hear anyway. Fourteen rows of
+ * "away — Font '26" would have been the same denial in a better mood.
+ *
+ * A marked day that also holds a session keeps its own row and does not join
+ * the stretch: the session is the stronger fact and `title` already names both.
+ */
+interface TableRow {
+  key: string;
+  when: string;
+  what: string;
+}
+
+function tableRows(grid: HeatGrid): TableRow[] {
+  /**
+   * No `future` filter, and the battery is why.
+   *
+   * A mutant removing one survived, which sent me to check: a future day
+   * cannot have `sessions > 0`, because `buildHeatGrid` only tallies sessions
+   * dated on or before the end day — and its `away` is already `future ? null
+   * : …` since M275. Both conditions below are therefore false for a future
+   * day, and a filter for it is a guard that cannot fire.
+   *
+   * The same shape M276 found one milestone ago, and M143, M158, M167, M178
+   * and M185 before it.
+   */
+  const days = grid.weeks.flat();
+  const rows: TableRow[] = days
+    .filter((d) => d.sessions > 0)
+    .map((day) => ({ key: day.date, when: day.date, what: title(day) }));
+
+  // One row per marker, spanning only the days of it this grid draws.
+  const spans = new Map<string, { from: string; to: string; what: string }>();
+  for (const day of days) {
+    if (day.away === null || day.sessions > 0) continue;
+    const span = spans.get(day.away.id);
+    if (span === undefined) {
+      spans.set(day.away.id, { from: day.date, to: day.date, what: awayName(day.away) });
+    } else if (day.date > span.to) {
+      span.to = day.date;
+    }
+  }
+  for (const [id, span] of spans) {
+    rows.push({
+      key: `away-${id}`,
+      when: span.from === span.to ? span.from : `${span.from} to ${span.to}`,
+      what: `Away — ${span.what}`,
+    });
+  }
+
+  // Most recent first, which the caption promises. Sorted on the start of a
+  // span rather than its end, so a stretch sits where it began.
+  return rows.sort((a, b) => (a.when < b.when ? 1 : a.when > b.when ? -1 : 0));
+}
+
 const CELL = 10;
 const GAP = 2;
 const PITCH = CELL + GAP;
@@ -129,11 +199,12 @@ export function ConsistencyGrid({ grid }: { grid: HeatGrid }) {
       </svg>
 
       {/* The same information, for anyone who cannot read the picture. Only
-          the logged days: 371 rows of "nothing logged" is not an
-          alternative, it is a denial-of-service on a screen reader. */}
+          the logged days and the marked stretches: 371 rows of "nothing
+          logged" is not an alternative, it is a denial-of-service on a
+          screen reader. */}
       <div className="sr-only">
         <table>
-          <caption>Days trained, most recent first</caption>
+          <caption>Days trained and stretches away, most recent first</caption>
           <thead>
             <tr>
               <th scope="col">Day</th>
@@ -141,16 +212,12 @@ export function ConsistencyGrid({ grid }: { grid: HeatGrid }) {
             </tr>
           </thead>
           <tbody>
-            {grid.weeks
-              .flat()
-              .filter((d) => d.sessions > 0)
-              .reverse()
-              .map((day) => (
-                <tr key={day.date}>
-                  <th scope="row">{day.date}</th>
-                  <td>{title(day)}</td>
-                </tr>
-              ))}
+            {tableRows(grid).map((row) => (
+              <tr key={row.key}>
+                <th scope="row">{row.when}</th>
+                <td>{row.what}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

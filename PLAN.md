@@ -14451,6 +14451,11 @@ M50 for why it is not coming.
   `describeRopeContext` (M276), `partnerTally` (M237) and `state.sport` all returned null for the
   climber whose stated job is that *"every screen has something to show"*.
 
+- **M278 — the same information, for anyone who cannot read the picture.** M275 gave the grid a
+  fourth state and left both non-visual paths blind to it: the table filters on `sessions > 0` and
+  the sentence never mentioned a marker. A fortnight in Font read to a screen reader exactly as a
+  fortnight of nothing — the failure M275 existed to fix, reintroduced one layer down.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -18464,3 +18469,95 @@ about.
 
 `adherence.ts` scoring a week away as a week of misses, and `describeConsistency` naming a gap it
 can now explain — both carried from M275, neither touched here.
+
+## M278 — the same information, for anyone who cannot read the picture
+
+A standing item from M275, and on reading it the finding was worse than the note. I had written that
+`describeConsistency` *"still says its gap without knowing whether that fortnight was an injury, a
+holiday or a newborn — it can know now."* True, but not the point.
+
+**M275 introduced an accessibility regression and I did not notice.** It gave the grid a fourth
+state — a day inside a marker, drawn with an outline — and gave it no text equivalent at all:
+
+- The sr-only table filters on `sessions > 0`. A marked day with nothing logged has no row.
+- `describeConsistency` never mentioned a marker.
+
+So the sentence and the table both read a fortnight in Font exactly as a fortnight of nothing, which
+is the failure M275 existed to fix, reintroduced one layer down. The table's own comment since M23 —
+*"the same information, for anyone who cannot read the picture"* — had quietly become false.
+
+### The sentence
+
+One more clause: `15 days marked away`, after the gap and before the coverage note. It is also the
+number that makes the gap beside it legible — `longestGap` skips marked days since M275, so a
+climber reading *"longest gap 6 days"* over a fortnight away had no way to see why.
+
+Counted from the first logged day, which is the rule `longestGap` already follows: *"the empty
+months before a climber installed the app are not a lapse."* A marker out there is not part of their
+log either, and a number that broke the rule would not add up against the ones beside it.
+
+### The table: a stretch is one row, not fourteen
+
+The rule this table has carried since M23 is that 371 rows of "nothing logged" is *"a
+denial-of-service on a screen reader"*. Fourteen rows of "away — Font '26" would be the same denial
+in a better mood. A marked range is contiguous by construction, so it collapses to one row naming
+its span — bounded by the number of markers rather than by their length, and what a listener wants
+to hear anyway.
+
+A marked day that also holds a session keeps its own row, and the stretch starts and ends on days
+that have none: `title` already names both facts on a trained day, and a span running over it would
+read the same day out twice.
+
+### Rendered, not scanned
+
+The test renders the component and reads its rows. Four times across M270 and M271 a source scan in
+this repo passed on prose in a comment, and a table's rows are a thing to read rather than a string
+to find. Cost: `cleanup` between cases, or `getByRole('table')` finds every table the file ever drew
+— which is how the first run failed.
+
+### Read back from a browser
+
+Six sessions either side of a fifteen-day marker:
+
+```
+6 days logged over 10 weeks · 0.6 a week · longest gap 30 days · 15 days marked away.
+
+Days trained and stretches away, most recent first
+2026-09-02              Wed, Sep 2: 1 session
+2026-08-31              Mon, Aug 31: 1 session
+2026-08-29              Sat, Aug 29: 1 session
+2026-07-20 to 2026-08-03  Away — Font '26
+2026-07-14              Tue, Jul 14: 1 session
+```
+
+Fifteen outlined squares in the picture, fifteen days in the sentence, one row in the table. No
+console errors.
+
+### What the battery found
+
+**10 mutants caught, sanity no-op survived.** The clause never said; no day counted; a marker from
+before the log began counted; stretches left out of the table entirely; a row per day instead of a
+span; a span that never extends past its first day; a single day read as a range; a future day
+marked; and the rows put oldest first.
+
+**Two survived the first run.**
+
+*"Swallows a trained day into the stretch"* survived because the fixture put the trained day in the
+**middle** of the marker, where it makes no difference to the span either way. On an end it is the
+difference between a stretch that double-counts a day and one that does not — now tested there.
+
+*"Lists days that have not happened"* survived because the filter it removed **cannot fire**. A
+future day has no sessions (`buildHeatGrid` only tallies dates on or before the end day) and its
+`away` is already `future ? null : …` from M275, so both conditions the row builder tests are
+already false. Removed, and the mutant repointed at the upstream guard that does the work.
+
+That is two milestones running: M276 found the same shape in `describeRopeContext`, and M143, M158,
+M167, M178 and M185 each found it before.
+
+**6,734 tests over 396 files**, from 6,720. First load 135.23KB against a 135.7KB budget.
+
+### Still standing
+
+`adherence.ts` scoring a week away as a week of misses — the last of the three carried from M275,
+and the one with an open design question: does a week away count as planned-zero, or drop out of the
+average?

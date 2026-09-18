@@ -92,6 +92,16 @@ export interface HeatGrid {
   /** Days in the window up to the end day. */
   elapsedDays: number;
   /**
+   * Days inside a marker, counted the same way the gap and streak are
+   * (PLAN.md M278).
+   *
+   * From the first logged day, so a stretch marked before the climber ever
+   * opened the app is not counted as part of their log — the rule
+   * `longestGap` already follows, and a number that broke it would not add up
+   * against the ones beside it.
+   */
+  awayDays: number;
+  /**
    * Days from the first logged one to the end day (PLAN.md M247).
    *
    * The rate is per week of *logging*, not per week of calendar. The gap
@@ -239,6 +249,7 @@ export function buildHeatGrid(input: HeatInput): HeatGrid {
   // as one would make the number meaningless.
   let longestGap = 0;
   let longestStreak = 0;
+  let awayDays = 0;
   let gap = 0;
   let streak = 0;
   if (firstLogged !== null) {
@@ -249,6 +260,7 @@ export function buildHeatGrid(input: HeatInput): HeatGrid {
         gap = 0;
         longestStreak = Math.max(longestStreak, streak);
       } else if (day.away !== null) {
+        awayDays += 1;
         /**
          * A marked day counts as neither, and the two halves have different
          * reasons (PLAN.md M275).
@@ -285,6 +297,7 @@ export function buildHeatGrid(input: HeatInput): HeatGrid {
     // when everything on it is, which the per-day totals cannot say.
     bareDays: coverage(input.sessions, from, to).bare,
     elapsedDays,
+    awayDays,
     longestGap,
     longestStreak,
   };
@@ -294,8 +307,11 @@ export function buildHeatGrid(input: HeatInput): HeatGrid {
  * One sentence about the grid, for the people who will not read a picture.
  *
  * Deliberately flat: it reports the longest gap without calling it a
- * failure, because the app does not know whether that fortnight was an
- * injury, a holiday or a newborn.
+ * failure, because the app ~~does not know~~ *mostly* does not know whether
+ * that fortnight was an injury, a holiday or a newborn. Since M275 it knows
+ * for the stretches the climber marked, and says how many days those were —
+ * but it still never grades the rest, because the unmarked gap is the one it
+ * has no business having an opinion about.
  */
 export function describeConsistency(grid: HeatGrid): string {
   if (grid.loggedDays === 0) return 'Nothing logged in this window yet.';
@@ -315,6 +331,22 @@ export function describeConsistency(grid: HeatGrid): string {
   if (grid.longestStreak > 1) parts.push(`longest run ${grid.longestStreak} days`);
   if (grid.longestGap > 0) {
     parts.push(`longest gap ${grid.longestGap} day${grid.longestGap === 1 ? '' : 's'}`);
+  }
+  /**
+   * The days the climber accounted for (PLAN.md M278).
+   *
+   * This sentence is *"for the people who will not read a picture"*, and M275
+   * gave the picture a fourth state it had no words for: a marked day is drawn
+   * with an outline and was named nowhere here. It is also the one number that
+   * makes the gap beside it legible — `longestGap` skips marked days since
+   * M275, so a climber reading "longest gap 6 days" over a fortnight in Font
+   * had no way to see why.
+   *
+   * Placed after the gap for that reason, and before the coverage note, which
+   * is about the quality of what was logged rather than about the calendar.
+   */
+  if (grid.awayDays > 0) {
+    parts.push(`${grid.awayDays} day${grid.awayDays === 1 ? '' : 's'} marked away`);
   }
   const thin = describeCoverage({ days: grid.loggedDays, bare: grid.bareDays });
   if (thin !== null) parts.push(thin);
