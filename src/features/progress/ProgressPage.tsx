@@ -36,7 +36,7 @@ import { deriveStats } from '@/engine/stats';
 import { deriveVitality } from '@/engine/vitality';
 import { useSkillEffects } from '@/store/skills';
 import { ANGLE_LABEL, angles, describeAngles } from '@/engine/angles';
-import { ROPE_LABEL, describeRopeSplit, ropeSplit } from '@/engine/ropeStyle';
+import { ROPE_LABEL, describeRopeContext, describeRopeSplit, ropeContext, ropeSplit } from '@/engine/ropeStyle';
 import { describeLadders, ladders } from '@/engine/ladders';
 import { projectGrade, pyramid, weeklyProgression } from '@/engine/progress';
 import { useMetrics } from '@/store/metrics';
@@ -551,6 +551,11 @@ export function ProgressPage() {
   // the chips on the YDS ladder alone.
   const byRope = useMemo(() => ropeSplit(sessions), [sessions]);
   const ropeSaid = scale === 'YDS' ? describeRopeSplit(byRope, display) : null;
+  // Whether the split is about leading or about the company (PLAN.md M276).
+  // A second paragraph rather than a longer first one: the split is a
+  // measurement and this is a reading of where it came from.
+  const ropeWhy = useMemo(() => ropeContext(sessions), [sessions]);
+  const ropeWhySaid = scale === 'YDS' ? describeRopeContext(byRope, ropeWhy) : null;
   const ladder = scale === 'V' ? V_GRADES : YDS_GRADES;
 
   if (state.completedSessions === 0) {
@@ -905,6 +910,9 @@ export function ProgressPage() {
         {on('grades') && ropeSaid !== null && (
           <Card title="Led and top-roped">
             <p className="text-sm leading-relaxed">{ropeSaid}</p>
+            {ropeWhySaid !== null && (
+              <p className="text-sm leading-relaxed text-ink-soft mt-2">{ropeWhySaid}</p>
+            )}
             {byRope.sides.length > 0 && (
               <ul className="grid grid-cols-1 gap-2 mt-3">
                 {byRope.sides.map((side) => (

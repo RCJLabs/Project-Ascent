@@ -5,6 +5,7 @@ import type { Session } from '@/db/sessions';
 import { buildReview } from '@/engine/review';
 import { reviewYear } from '@/engine/yearReview';
 import { partnerTally } from '@/engine/partners';
+import { describeRopeContext, ropeContext, ropeSplit } from '@/engine/ropeStyle';
 import { buildCardSvg, weekCard, yearCard } from './shareCard';
 
 /**
@@ -90,5 +91,83 @@ describe('a card built from a log full of names', () => {
     // Nor the notes, which are where a climber would have written a name
     // before this field existed — and still might.
     expect(source).not.toMatch(/\.notes\b/);
+  });
+});
+
+/**
+ * And a name never reaches a sentence either (PLAN.md M276).
+ *
+ * `ropeStyle.ts` now reads the partner field, which is the first engine
+ * outside `partners.ts` and the year page to do so. `partners.ts` sets the
+ * rule it is held to: *"It reports and never scores. How often you climb with
+ * someone is a fact about your log; who you climb **best** with is a
+ * judgement about a person who is not here to answer it."*
+ *
+ * The card rule above is about pictures leaving the device. This is the
+ * quieter half — a reading that quoted a name would put one on a screen the
+ * climber may well hand to somebody, and would be the app passing judgement
+ * on a person who was never asked.
+ */
+describe('a reading built from a log full of names', () => {
+  /** Six separated sessions on the YDS ladder, three of them named. */
+  function roped(): Session[] {
+    return Array.from({ length: 6 }, (_, i) => {
+      const date = new Date(Date.UTC(2026, 1, 1 + i * 2)).toISOString().slice(0, 10);
+      const lead = i < 3;
+      return {
+        id: `${date}#r`,
+        date,
+        planned: false,
+        completed: true,
+        rewarded: true,
+        mode: 'indoor',
+        rpe: 7,
+        durationMin: 60,
+        warmup: true,
+        ...(lead ? { partners: [NAME] } : {}),
+        climbs: [
+          {
+            id: `r${i}`,
+            grade: lead ? '5.11a' : '5.12a',
+            scale: 'YDS',
+            count: 3,
+            result: 'send',
+            style: 'redpoint',
+            ropeStyle: lead ? 'lead' : 'toprope',
+          },
+        ],
+      } as Session;
+    });
+  }
+
+  const sessions = roped();
+
+  it('has the name in the log, and a reading that fires', () => {
+    // The same trap as above: a reading that returned null would pass every
+    // check below by saying nothing at all.
+    expect(partnerTally(sessions)[0]).toMatchObject({ name: NAME, sessions: 3 });
+    expect(describeRopeContext(ropeSplit(sessions), ropeContext(sessions))).toContain(
+      'named somebody',
+    );
+  });
+
+  it('never carries it in the rope-context sentence', () => {
+    expect(describeRopeContext(ropeSplit(sessions), ropeContext(sessions))).not.toContain(NAME);
+  });
+
+  /**
+   * The source too, for the reason the card check gives: a clause added later
+   * that interpolated a name would ship green against the sentence above,
+   * which only exercises the branch this fixture happens to reach.
+   */
+  it('reads the field for a count and never for a name', () => {
+    const source = readFileSync('src/engine/ropeStyle.ts', 'utf8');
+    // `partners` appears, because the whole milestone is that it is read —
+    // but only ever through `.length`, which is a number and not a person.
+    const uses = source.match(/\.partners\b[^\n]*/g) ?? [];
+    expect(uses.length).toBeGreaterThan(0);
+    for (const use of uses) expect(use).toContain('.length');
+    // And nothing anywhere puts one into a string.
+    expect(source).not.toMatch(/\$\{[^}]*partner[^}]*\}/i);
   });
 });

@@ -14392,8 +14392,9 @@ have three separate rules protecting them. Video is deliberately absent: `lib/im
 M50 for why it is not coming.
 
 - **Partner-aware rope reading.** `ropeStyle.ts` reasons about *"a partner who does not lead"* and
-  then says nothing, "because it has no way to know" — a comment written before M237 gave the log
-  partners. Both halves exist and nothing joins them. *Small.*
+  then says nothing, ~~"because it has no way to know"~~ — that quote is `partners.ts:10`'s, not
+  `ropeStyle.ts`'s, and the entry also missed that `partners.ts` forbids the obvious build. **M276**
+  below. *Shipped.*
 
 - **Merge two spellings of a venue.** `venues.ts` refuses to guess, and says why: *"'The Works' and
   'Works' may well be the same crag and the app cannot know it, and a grouping that guessed would
@@ -14438,6 +14439,12 @@ M50 for why it is not coming.
   Font, climbed and not logged, comes home to *"N days since you were on rock. Plan the first day
   back two grades under your indoor number."* A stored date range, a kind and a line of text — the
   one fact the log cannot hold.
+
+- **M276 — led, top-roped, and who was there.** `describeRopeSplit` ends by refusing to say which
+  of three reasons a log is all top-rope, and `partners.ts:10` quotes that back: the app *"then
+  says nothing, because it has no way to know"*. M237 gave it the way. The obvious build — a lead
+  rate per partner — is the scoring that file forbids, so this reports one property of the
+  climber's own log and names nobody.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -18247,3 +18254,95 @@ at it inside this milestone would have been the wrong place to answer it.
 `describeConsistency` still says its gap *"without calling it a failure, because the app does not
 know whether that fortnight was an injury, a holiday or a newborn."* It can know now, for the
 climbers who say so, and that sentence could name it.
+
+## M276 — led, top-roped, and who was there
+
+`describeRopeSplit` has ended the same way since M133: *"What that is worth is yours to judge:
+leading has its own fear in it, and a log with no leads in it is as likely to be a gym with no lead
+wall."* The header names three reasons — an autobelay gym, **a partner who does not lead**, a
+shoulder — and refuses to pick.
+
+`partners.ts:10` quotes that line back and says why: *"`ropeStyle.ts` already reasons about one it
+cannot see… and then says nothing, because it has no way to know."* **M237 gave it the way to
+know**, and nothing joined the two. (The queue entry above attributed that quote to `ropeStyle.ts`;
+it is `partners.ts`'s. Struck through.)
+
+### The build the module forbids
+
+`partners.ts` sets a rule and it is load-bearing: *"It reports and never scores. How often you climb
+with someone is a fact about your log; who you climb **best** with is a judgement about a person who
+is not here to answer it."*
+
+A lead rate per partner — *with Alex you lead, with Sam you never do* — is exactly that judgement,
+about somebody who never installed this app and was never asked. It is the same stance that keeps
+names off share cards. So the obvious version of this feature is the one the codebase rules out, and
+the queue entry that called it *Small* had not noticed.
+
+**So this names nobody and counts nobody.** It reports one property of the climber's own log:
+whether the two sides of the split fall in the same sessions or different ones, and whether that
+lines up with the sessions they filled the partner field on. The climber can see who from their own
+data. The app does not say it.
+
+### Three readings, in the order the evidence allows
+
+**Both styles in one session.** You cannot have led and top-roped on the same afternoon at a gym
+with no lead wall, or with a partner who will not belay a lead. So a log that mixes them rules the
+circumstances out, and says so — the one reading here that needs no partner field at all.
+
+**Sessions that are all one style.** Stated on its own, because it is true whether or not anybody
+was named.
+
+**And the partner field, where it lines up.** Only where the line-up is **total** — every led route
+on a named session and no top-rope route on one, or the exact converse. A rate per side would be the
+correlation, and a correlation is the scoring the module refuses.
+
+### An empty field is an empty field
+
+`partners.ts`'s own rule, followed: a session naming nobody is *"a field nobody filled"*, not a
+session climbed alone, and most sessions in every log are exactly that. So the reading needs three
+named sessions before their absence elsewhere is a pattern, and the sentence says which fact it is
+built on rather than implying solitude.
+
+### Read back from a browser
+
+Three shapes, on the shipped build. Separated, with the field lining up:
+
+```
+Every session in your log is all lead or all top-rope — the two sides never appear together.
+And every route you led was on a session you named somebody on, and none of your top-rope
+routes were. That is the partner field and not a record of who was there — a session naming
+nobody is one where nothing was typed, not one climbed alone — but it does mean the split
+lines up with something other than the climbing.
+```
+
+Mixed: *"You have led and top-roped in the same session 6 times, so at least some of this split is a
+choice you make route by route rather than a matter of where you were or who you were with."*
+
+Separated with nothing named: the first sentence alone.
+
+The partner's name appears nowhere on the Progress page in any of the three.
+
+### What the battery found
+
+**12 mutants caught, sanity no-op survived.** The partner field never read, and read as always
+present; the mixed-session branch, both in the tally and at the sentence; the session floor; the
+one-style guard; the named floor, lowered and removed; a partial line-up claimed as total; a row of
+four counted as one; an unfinished session counted; and the clause that stops the sentence implying
+solitude.
+
+**And a guard that could not fire.** The partner half was gated on `named >= ENOUGH_NAMED && named <
+sessions` — the second clause meaning *both kinds of session present, so the field distinguishes
+something*. Two mutants survived, and tracing them showed why: if every session is named then
+`ledNamed === led` and `ropedNamed === roped`, so a total line-up needs one style to hold no routes,
+which `sides.length < 2` has already returned on. The clause was unreachable. Removed, with the
+reason written down — the shape M143, M158, M167, M178 and M185 each found.
+
+Two of the surviving mutants were also my fixtures' fault: both "stops at the separation" tests used
+a *partial* line-up, so the totality test stopped them before the floor ever ran. Rewritten to be
+total, so the floor is the only thing that can.
+
+`ui/sharedNames.test.ts` gains the privacy half: the rendered sentence never carries a name, and the
+source reads `.partners` only through `.length` — a number, not a person — with no interpolation of
+one anywhere.
+
+**6,712 tests over 395 files**, from 6,690. First load 135.21KB against a 135.7KB budget.
