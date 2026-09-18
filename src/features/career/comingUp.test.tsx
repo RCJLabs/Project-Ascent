@@ -125,7 +125,10 @@ describe('the bar and what it says it says', () => {
  * `setFullYear`, and a 29 February does not survive the round trip.
  */
 function anniversaryTomorrow(): string | null {
-  const wanted = addDays(TODAY, 1);
+  // From the clock now, not from module load (PLAN.md M261). The page reads
+  // `today()` when it renders, so a run that crosses midnight between the
+  // two is looking for an anniversary a day off the one this seeded.
+  const wanted = addDays(today(), 1);
   for (const years of [1, 2, 3, 4]) {
     const back = new Date(`${wanted}T00:00:00`);
     back.setFullYear(back.getFullYear() - years);
@@ -144,7 +147,7 @@ describe('one day to go', () => {
     expect(first).not.toBeNull();
 
     await putSession(newSession(first!, 0, { completed: true, rpe: 7, durationMin: 60 }));
-    await putSession(newSession(TODAY, 1, { completed: true, rpe: 7, durationMin: 60 }));
+    await putSession(newSession(today(), 1, { completed: true, rpe: 7, durationMin: 60 }));
     await hydrate();
     renderAt('/career', <CareerPage />);
     await screen.findByText('Coming up');
