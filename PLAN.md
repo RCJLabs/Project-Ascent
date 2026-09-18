@@ -14359,6 +14359,16 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and prose moved a source scan off its target for the fourth time.***
   *See the entry at the end of this document.*
 
+- **M272 — every field a backup carries, proved rather than assumed.** The round-trip test seeds a
+  session with three of its thirty fields and checks one of them with `toMatchObject`, which is a
+  subset match and cannot fail when a field is dropped — which is why `partnersSurvive.test.ts` had
+  to be written on its own. This seeds every field of every record, compares the whole row back, and
+  checks the fixture against the interface in the source so next year's field cannot ride along
+  untested.
+  *Small, and it is a test rather than a fix.*
+  ***Built, and it found nothing — which is the honest result and is written down as one.***
+  *See the entry at the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -17839,3 +17849,70 @@ custom program or a finished block, which the sample climber has no reason to ca
 
 **6,610 tests over 391 files**, from 6,609. First load 134.69KB against a 135.4KB budget. Forty-two
 routes at three widths come back clean.
+
+
+## M272 — every field a backup carries, proved rather than assumed
+
+### The guard that could not fail
+
+```ts
+await db.put('sessions', { id: '2026-09-09#0', date: '2026-09-09', rpe: 7 });
+…
+expect(await db2.get('sessions', '2026-09-09#0')).toMatchObject({ rpe: 7 });
+```
+
+`Session` has **thirty** fields. That seeds three and checks one, with a matcher that asks whether
+the row is a *superset* of what it was given — so a restore that dropped twenty-nine of them passes.
+`db/partnersSurvive.test.ts` exists (M237) because partners were dropped once and somebody noticed
+by hand; a whole file for one field is what gets written when the general test cannot see the class.
+
+The stakes are the app's own words, from the backup nudge: *"Everything lives on this device and
+nowhere else. A cleared browser, a lost phone or a reinstalled app takes the lot with it, and there
+is no account to restore from."*
+
+### What reading it actually said
+
+I expected to find a dropped field and did not, and the reason is worth writing down rather than
+burying: **the record path cannot lose one.** `exportAll` is `getAll` per store and `importAll` is
+`put` per row — whole rows, never rebuilt — so a field survives by construction whatever anyone
+forgets. The snapshot's photo hazard, which is the one place a restore could have deleted
+something, was fixed in M54 and carries `photos: 'keep'` for exactly that reason.
+
+There is one hand-written list, and it is photos: `exportArchive` builds a `MediaExport` field by
+field and `importAll` builds the record back the same way. Both cover all nine fields of
+`MediaRecord` today. Nothing was keeping them that way.
+
+### So the milestone is the guard, not a fix
+
+Every field of a session, a project, an assessment and a photo, each set to a value it can be told
+apart by, exported to a real archive, the device wiped, the archive imported, and the whole row
+compared with `toEqual`. The fixtures are checked against the interfaces **read out of the source**,
+so a field added to `Session` next year fails here naming itself until it is covered — the M262
+lesson, applied to data instead of prose.
+
+And both photo lists are checked against `MediaRecord`'s fields the same way, which is what keeps
+them in step when the tenth field arrives.
+
+### The one thing it did turn up
+
+A restore is deliberately **not** an identity. `importAll` puts every row back as it came except a
+session, which goes through `withDeclaredMode` — M180's rule, applied to rows this app did not
+build. That is right, and nothing said which field it was allowed to rewrite. It does now: a session
+stored claiming a mode its type contradicts comes back repaired, and every other one of its thirty
+fields comes back untouched.
+
+### What the battery had to prove
+
+**9 mutants caught, sanity no-op survived.** A test that passes the moment it is written has proved
+nothing, so each was a way a field really could go: the export forgetting a caption, the drawn beta
+or the height; the restore forgetting a caption, the beta, the width or the date; a whole store
+skipped on the way out. And the one that is the point of the exercise — **a tenth field added to
+`MediaRecord`** — fails until both lists carry it.
+
+### The honest result
+
+It found no defect. The code was already right, and this is a guard for a path that had none rather
+than a fix for something broken. That is worth one milestone and not two; the finding rate here is
+the signal that the audit has run its useful length in this area.
+
+**6,620 tests over 392 files**, from 6,610. First load 134.68KB against a 135.4KB budget.
