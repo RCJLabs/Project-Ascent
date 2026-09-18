@@ -84,7 +84,7 @@ import {
 import { againstPrescription, lastLogged } from '@/engine/exerciseLog';
 import { circuitPlan } from '@/engine/circuit';
 import { circuitSubject, protocolSubject, type TimerSubject } from '@/engine/timer';
-import { hasAuthoredWarning, protocolsIn, SafetyNote } from './SafetyNote';
+import { protocolsIn, SafetyNote } from './SafetyNote';
 import { ExerciseNumbers } from './ExerciseNumbers';
 import { RestTimer } from './RestTimer';
 import { TallyRow } from './TallyRow';
@@ -121,7 +121,7 @@ import {
   type ReadinessCall,
   type TissueFeel,
 } from '@/engine/readiness';
-import { describeParts, drillConflict, exerciseConflict, exerciseLoads } from '@/engine/bodyLoad';
+import { describeParts, drillConflict, exerciseConflict, exerciseLoads, unspokenFor } from '@/engine/bodyLoad';
 import { REST_ITEMS } from '@/engine/restHabits';
 import { startedAsRest } from '@/engine/rest';
 import { VENUE_LIST_ID, VenueOptions, useVenues } from '@/features/venues/useVenues';
@@ -392,7 +392,9 @@ function DrillCard({
   // The drill's own protocol, if it names one: eleven of the 144 do, and the
   // rules on them are the ones this screen was never showing (PLAN.md M153).
   const protocol = drill.protocolId ? getProtocol(drill.protocolId) : undefined;
-  const clash = hasAuthoredWarning(protocol, hurtParts) ? null : drillConflict(drill, hurtParts);
+  // Only about the injuries the drill's protocol has not already addressed
+  // in the author's own words — see `unspokenFor` (PLAN.md M267).
+  const clash = drillConflict(drill, unspokenFor(protocol, hurtParts));
   return (
     <Card title="Drill">
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -1159,11 +1161,12 @@ function SessionEditor({
                             {(() => {
                               // An authored rule about the same injury has
                               // already been said, in the words of the person
-                              // who wrote the program. The scan's guess under
-                              // it is noise (PLAN.md M153).
-                              if (hasAuthoredWarning(protocol, hurtParts)) return null;
+                              // who wrote the program, so the scan's guess
+                              // under it is noise (PLAN.md M153) — about
+                              // that part. It is asked about the rest,
+                              // which the rule never mentioned (M267).
                               // Advisory, never a refusal to show the program.
-                              const clash = exerciseConflict(ex, hurtParts);
+                              const clash = exerciseConflict(ex, unspokenFor(protocol, hurtParts));
                               if (clash) {
                                 return (
                                   <div className="text-warn text-xs mt-1 flex items-start gap-1.5">

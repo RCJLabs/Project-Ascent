@@ -79,19 +79,3 @@ export function protocolsIn(
   return [...seen.values()];
 }
 
-/**
- * Whether an authored rule already speaks to this climber's injury.
- *
- * The derived flag beside an exercise — *"Loads your elbow — one-arm work
- * doubles the load through a single side"* — is a keyword scan, and
- * `bodyLoad.ts` says so in its own header: advisory, over-flags, never
- * blocking. Where the program's author has written a rule about the same
- * injury, that rule is the stronger statement and the scan's guess is noise
- * under it.
- */
-export function hasAuthoredWarning(
-  protocol: Pick<Protocol, 'safety'> | undefined,
-  injured: readonly BodyPart[],
-): boolean {
-  return protocolSafety(protocol, injured).urgent.length > 0;
-}

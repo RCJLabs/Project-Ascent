@@ -13,6 +13,7 @@ import {
   partsInText,
   partsNamedIn,
   protocolSafety,
+  unspokenFor,
   drillFindings,
   drillLoads,
   scanText,
@@ -371,6 +372,65 @@ describe("a protocol's safety rules, split by whether they are about you", () =>
   it('does not raise a rule about a part that is not hurt', () => {
     expect(protocolSafety(oneArm, ['knee']).urgent).toEqual([]);
     expect(protocolSafety(oneArm, ['elbow']).urgent).toHaveLength(1);
+  });
+
+  describe('what the author has not spoken about', () => {
+    const maxHangs = PROTOCOLS['max_hangs_10s']!;
+
+    it('is nothing when the rule names the injury', () => {
+      expect(unspokenFor(campus, ['elbow'])).toEqual([]);
+      expect(unspokenFor(campus, ['fingers'])).toEqual([]);
+    });
+
+    it('is the injury the rule never mentioned', () => {
+      // The defect this exists for: one matching rule used to silence the
+      // scan about every other part as well.
+      expect(unspokenFor(campus, ['elbow', 'shoulder'])).toEqual(['shoulder']);
+      expect(unspokenFor(maxHangs, ['fingers', 'shoulder'])).toEqual(['shoulder']);
+      expect(unspokenFor(campus, ['fingers', 'knee', 'elbow'])).toEqual(['knee']);
+    });
+
+    it('is everything when there is no rule to speak', () => {
+      expect(unspokenFor(undefined, ['elbow', 'knee'])).toEqual(['elbow', 'knee']);
+      expect(unspokenFor(PROTOCOLS['front_lever'], ['elbow'])).toEqual(['elbow']);
+      expect(unspokenFor(campus, ['knee'])).toEqual(['knee']);
+    });
+
+    it('is nothing when nothing is hurt', () => {
+      expect(unspokenFor(campus, [])).toEqual([]);
+    });
+
+    it('keeps the order it was given and adds nothing', () => {
+      const injured = ['shoulder', 'elbow', 'knee'] as const;
+      expect(unspokenFor(campus, injured)).toEqual(['shoulder', 'knee']);
+      for (const protocol of Object.values(PROTOCOLS)) {
+        const left = unspokenFor(protocol, injured);
+        expect(left.every((p) => injured.includes(p as never))).toBe(true);
+        expect(new Set(left).size).toBe(left.length);
+      }
+    });
+
+    /**
+     * The two halves have to partition the injuries: a part is either
+     * spoken for by an authored rule or left to the scan, never both and
+     * never neither. Read off the catalogue rather than a fixture, so a
+     * protocol that gains a rule is checked by this too.
+     */
+    it('leaves exactly the parts no urgent rule names, across the catalogue', () => {
+      const parts = ['fingers', 'pulley', 'elbow', 'shoulder', 'knee', 'back'] as const;
+      let spokenSomewhere = 0;
+      for (const protocol of Object.values(PROTOCOLS)) {
+        const left = unspokenFor(protocol, parts);
+        const named = new Set(
+          protocolSafety(protocol, parts).urgent.flatMap((rule) => partsNamedIn(rule)),
+        );
+        expect(left).toEqual(parts.filter((p) => !named.has(p)));
+        spokenSomewhere += parts.length - left.length;
+      }
+      // A probe that can never find one is not a probe: some protocol in
+      // the catalogue does speak to one of these parts.
+      expect(spokenSomewhere).toBeGreaterThan(0);
+    });
   });
 
   /**

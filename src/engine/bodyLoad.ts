@@ -389,6 +389,37 @@ export function protocolSafety(
   return { urgent, standing };
 }
 
+/**
+ * The hurt parts the program's author has **not** already spoken about
+ * (PLAN.md M267).
+ *
+ * The logger silences its keyword scan on a line whose protocol carries an
+ * authored rule about the climber's injury, because the author's own words
+ * are the stronger statement and a guess repeated under them is noise. That
+ * is right about the part the rule names and wrong about every other part,
+ * and the two are not the same set: Max Hangs is authored *"Warm up
+ * thoroughly: never load near-max fingers cold"* and scans as fingers,
+ * pulley, elbow **and shoulder**. A climber carrying a finger injury and a
+ * shoulder injury was told to warm up and told nothing at all about the
+ * shoulder, because one matching rule silenced the whole line.
+ *
+ * Nine of the twenty-two exercises in the catalogue that carry a
+ * safety-bearing protocol name fewer parts than their own text loads;
+ * Campus Double Dynos silences a knee.
+ *
+ * So the scan is asked about what is left rather than skipped outright.
+ * Where the rules cover everything this returns nothing, `firstConflict`
+ * reads an empty list as no conflict, and the behaviour is exactly what it
+ * was.
+ */
+export function unspokenFor(
+  protocol: Pick<Protocol, 'safety'> | undefined,
+  injured: readonly BodyPart[],
+): BodyPart[] {
+  const spoken = new Set(protocolSafety(protocol, injured).urgent.flatMap((rule) => partsNamedIn(rule)));
+  return injured.filter((part) => !spoken.has(part));
+}
+
 /** "your elbow", "your left pulley and your elbow". */
 export function describeParts(parts: readonly BodyPart[]): string {
   if (parts.length === 0) return '';

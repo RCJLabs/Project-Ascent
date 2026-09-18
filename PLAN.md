@@ -14312,6 +14312,16 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   ***Built, and the first fix was wrong in a way only the browser showed.*** *See the entry at the
   end of this document.*
 
+- **M267 — a second injury made the app say less.** `SafetyNote` renders what the program's author
+  wrote about not getting hurt, and it had no test. Beside it sits the rule deciding when the app's
+  own keyword scan steps aside for an authored one — and that rule stepped aside for **every**
+  injury as soon as one was named. Max Hangs is authored *"Warm up thoroughly: never load near-max
+  fingers cold"* and loads the shoulder too: a climber carrying a shoulder injury was warned about
+  it, and adding a finger injury took the warning away.
+  *Small, and it is one function and two call sites.*
+  ***Built, and the battery found a line that has not done anything since M153.*** *See the entry at
+  the end of this document.*
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -17368,3 +17378,84 @@ and did not look worth it for the last second of a rest.
 **6,578 tests over 389 files**, from 6,553. First load 134.62KB against a 135.4KB budget. Read back
 from a browser by seeding a live session, tapping a preset and sampling the card every 100ms
 through to the end, against both the shipped build and this one.
+
+
+## M267 — a second injury made the app say less
+
+`protocolSafety` has eight assertions in `bodyLoad.test.ts`. The card that renders it had none, and
+neither did `protocolsIn` or `hasAuthoredWarning`, the two helpers beside it. Fourth milestone
+running where a covered library sat under an uncovered surface, and the fourth time the defect was
+in the surface.
+
+### Two kinds of warning, and one of them outranking too much
+
+The logger says two different things about an injury. `LOAD_RULES` is a keyword scan whose own
+header calls it advisory and admits it over-flags: *"Loads your elbow — one-arm work doubles the
+load through a single side."* `Protocol.safety` is the person who wrote the program: *"Skip
+entirely with any elbow symptom."* Where both speak to the same injury the authored one wins and
+the guess under it is noise, which is what M153 built and what `hasAuthoredWarning` decided.
+
+It decided it for the whole line:
+
+```ts
+if (hasAuthoredWarning(protocol, hurtParts)) return null;
+const clash = exerciseConflict(ex, hurtParts);
+```
+
+One rule naming one hurt part silenced the scan about every other hurt part as well — and the two
+sets are not the same. Its own doc comment says *"a rule about **the same injury**"*; the code
+never asked which injury.
+
+Nine of the twenty-two catalogue lines that carry a safety-bearing protocol load more than their
+rules name. Peak Performance's Max Hangs is authored about cold fingers and loads the shoulder.
+Campus Double Dynos is authored about fingers and elbows and loads a **knee**.
+
+### Measured in a browser, against the shipped build
+
+| injuries | shipped | now |
+| --- | --- | --- |
+| shoulder | *Loads your shoulder — it holds an open-handed position under load.* | unchanged |
+| fingers | nothing, and the authored rule above it | unchanged |
+| fingers **and** shoulder | **nothing** | *Loads your shoulder …* |
+
+Read the first and third rows together. The app warned about the shoulder until the climber told it
+about a second injury, and then it stopped — the one direction a safety warning must never move.
+
+`unspokenFor(protocol, injured)` answers the question the comment was already asking: which of these
+hurt parts has the author not spoken about. The scan is asked about those. Where the rules cover
+everything it returns nothing, `firstConflict` reads an empty list as no conflict, and the
+behaviour is exactly what it was — which is the second and third rows above.
+
+### What the battery found
+
+**14 mutants caught, sanity no-op survived.** The shipped behaviour is one of the fourteen: restoring
+"any rule silences every part" dies on the page test.
+
+One survived, and it is the more interesting half. The drill card runs the same rule:
+
+```ts
+const clash = drillConflict(drill, unspokenFor(protocol, hurtParts));
+```
+
+Replacing that with the unfiltered `hurtParts` changes nothing any test can see, because it changes
+nothing at all. Eleven of the 156 drills name a protocol; **all eleven name `arcing`**, whose single
+rule — *"If you pump out, you went too hard — drop a grade rather than pushing through"* — names no
+body part. So no drill's rules can ever be urgent, and the suppression on that card has never once
+fired since M153 shipped it.
+
+It stays, because it is correct and a drill pointing at a different protocol is a one-line content
+edit. What it gets instead is a test that pins the inertness: when a drill names a protocol whose
+rules name a part, that test fails and says the branch is live now. The mutant is still recorded as
+a survivor rather than dressed up as a no-op — it is only equivalent against today's content.
+
+### What this does not cover
+
+The three campus lines this milestone's comments quote are `track: 'board'`, so a fixture would have
+to choose a track for the climber to drive them; the case driven here is Peak Performance's Max
+Hangs, found by reading the catalogue rather than named in the test.
+
+`AppearanceCard`, `PickItUp`, `SeasonCard`, `CalendarExportCard`, `TallyRow` and `FieldSeriesChart`
+are still rendered by no test, as are `PhotoStrip`, `PhotoTile` and `useMediaOwners`.
+
+**6,598 tests over 390 files**, from 6,578. First load 134.65KB against a 135.4KB budget. Read back
+from a browser on all three injury combinations, against this build and the shipped one.
