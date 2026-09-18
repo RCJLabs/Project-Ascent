@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { loadPrograms } from '@/content/programs';
 import { resetDbForTests } from '@/db/db';
 import { putSession, type Session } from '@/db/sessions';
@@ -9,6 +9,9 @@ import { putProject, type Project } from '@/db/projects';
 import { venueKey } from '@/engine/venues';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { useObjectives } from '@/store/objectives';
+import { useProjects } from '@/store/projects';
+import { allSessions, useSessions } from '@/store/sessions';
+import { useUndo } from '@/store/undo';
 import { CareerPage } from '@/features/career/CareerPage';
 import { VenuePage } from './VenuePage';
 
@@ -228,5 +231,91 @@ describe('the way in', () => {
     await screen.findByText(/Where you climb/);
     const links = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
     expect(links, 'the venue rows still go nowhere').toContain(`#/venues/${encodeURIComponent(KEY)}`);
+  });
+});
+
+/**
+ * Saying two spellings are one place (PLAN.md M283).
+ *
+ * `venues.ts` refuses to guess — *"'The Works' and 'Works' may well be the
+ * same crag and the app cannot know it"* — and the climber had nowhere to
+ * answer. A rename rather than a stored alias, because the log would
+ * otherwise hold both spellings everywhere except the grouping.
+ */
+describe('renaming a place', () => {
+  async function open(): Promise<void> {
+    await climbedAtTheWorks();
+    await hydrate();
+    renderAt(`/venues/${KEY}`, <VenuePage params={{ key: KEY }} />);
+    await screen.findByRole('heading', { level: 1 });
+  }
+
+  it('offers it from the card that explains the limit', async () => {
+    await open();
+    expect(screen.getByText(/If two of your places are really one/)).toBeTruthy();
+    expect(screen.getByText('Rename this place')).toBeTruthy();
+    // And separately from the card that lists the spellings, which stays
+    // hidden when there is nothing to have merged.
+    expect(screen.getByText('Is this somewhere else?')).toBeTruthy();
+  });
+
+  /**
+   * The count is the only warning that this is more than the record in front
+   * of you. A climber who has been somewhere forty times should see forty
+   * before pressing.
+   */
+  it('says how many records it would rewrite, before it does', async () => {
+    await open();
+    fireEvent.click(screen.getByText('Rename this place'));
+    fireEvent.change(screen.getByLabelText('Call it'), { target: { value: 'The Foundry' } });
+    // Five sessions across three spellings, and one project.
+    expect(screen.getByText(/Rewrite 6 records/)).toBeTruthy();
+  });
+
+  it('will not rewrite nothing', async () => {
+    await open();
+    fireEvent.click(screen.getByText('Rename this place'));
+    fireEvent.change(screen.getByLabelText('Call it'), { target: { value: '   ' } });
+    expect(screen.getByText(/Rewrite 0 records/).closest('button')?.disabled).toBe(true);
+  });
+
+  it('rewrites every spelling, and leaves other places alone', async () => {
+    await open();
+    fireEvent.click(screen.getByText('Rename this place'));
+    fireEvent.change(screen.getByLabelText('Call it'), { target: { value: 'The Foundry' } });
+    fireEvent.click(screen.getByText(/Rewrite 6 records/));
+
+    await waitFor(() => {
+      const where = allSessions(useSessions.getState().byDate)
+        .map((s) => String(s.fields?.location ?? ''))
+        .filter(Boolean)
+        .sort();
+      expect(where).toEqual(['Stanage', 'The Foundry', 'The Foundry', 'The Foundry', 'The Foundry', 'The Foundry']);
+    });
+    expect(useProjects.getState().projects.find((p) => p.id === 'p2')?.location).toBe('Stanage');
+  });
+
+  /**
+   * The whole record goes back, not the one field. Putting a field back is
+   * not the same as putting the record back, and only one of those is
+   * obviously right a year from now.
+   */
+  it('can be taken back whole', async () => {
+    await open();
+    fireEvent.click(screen.getByText('Rename this place'));
+    fireEvent.change(screen.getByLabelText('Call it'), { target: { value: 'The Foundry' } });
+    fireEvent.click(screen.getByText(/Rewrite 6 records/));
+    await waitFor(() => expect(useUndo.getState().offer).not.toBeNull());
+
+    await useUndo.getState().offer!.run();
+    await waitFor(() => {
+      const where = allSessions(useSessions.getState().byDate)
+        .map((s) => String(s.fields?.location ?? ''))
+        .filter(Boolean)
+        .sort();
+      // Every original spelling back, including the ones that differed only
+      // in case and spacing.
+      expect(where).toEqual(['Stanage', 'The  Works', 'The Works', 'The Works', 'The Works', 'the works']);
+    });
   });
 });

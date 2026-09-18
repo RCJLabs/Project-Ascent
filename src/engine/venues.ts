@@ -218,3 +218,88 @@ export function describeVenues(list: readonly Venue[]): string | null {
 function days(n: number): string {
   return n === 1 ? '1 day' : `${n} days`;
 }
+
+/**
+ * Saying two spellings are one place (PLAN.md M283).
+ *
+ * `venueKey` above is deliberately timid, and says why: *"'The Works' and
+ * 'Works' may well be the same crag and the app cannot know it, and a
+ * grouping that guessed would silently merge two real places that happen to
+ * read alike."* Right — and until now there was no way for the climber to say
+ * so either. The app refused to guess and then never asked.
+ *
+ * ## A rename, not a mapping
+ *
+ * The obvious build is a stored alias table: `works → the works`. This module
+ * opens by refusing exactly that — *"no new store, no migration, no list to
+ * keep tidy"* — and the refusal is right for three more reasons than tidiness:
+ *
+ * - **The log would still hold both spellings.** A backup, the CSV export and
+ *   every reader of `fields.location` would go on seeing two places. Only the
+ *   grouping would agree, and only here.
+ * - **The climber is not declaring an equivalence, they are fixing a typo.**
+ *   "These are the same crag" almost always means "I typed it wrong once".
+ *   Correcting the text is the honest action; an alias records the mistake
+ *   forever and paints over it.
+ * - **It compounds.** The three inputs offer what has been typed before —
+ *   *"that is what turns 'the works', 'The Works' and 'the  works' into one
+ *   place, by never creating them"* — so removing a spelling stops it being
+ *   offered, and it stops coming back.
+ *
+ * The cost is that this **edits records**, which nothing else in this file
+ * does. That is what the undo on the calling screen is for.
+ *
+ * ## Merging is renaming
+ *
+ * There is no separate merge. Renaming "Works" to "The Works" merges them,
+ * because afterwards they share a key — which is the only thing being one
+ * place has ever meant here.
+ */
+export interface VenueRewrite {
+  /** Only the records that changed, so the caller writes what it has to. */
+  sessions: Session[];
+  projects: Project[];
+  objectives: Objective[];
+}
+
+/**
+ * Every record naming `key`, with the name replaced.
+ *
+ * Returns the changed records only — the shape `sessionMode.ts` uses for its
+ * repair, and for its reason: a caller that writes everything writes a
+ * thousand rows to change four.
+ *
+ * The comparison is on `venueKey`, not on the raw string, so renaming picks up
+ * every spelling the grouping had already folded together. Renaming a place to
+ * what it is already called is a no-op rather than a thousand identical
+ * writes — checked per record, because one of them may differ in case.
+ */
+export function renameVenue(input: VenueInput, key: string, to: string): VenueRewrite {
+  const name = to.trim().replace(/\s+/g, ' ');
+  const out: VenueRewrite = { sessions: [], projects: [], objectives: [] };
+  // An empty name would delete the place rather than rename it, which is a
+  // different thing and not one this offers.
+  if (name === '') return out;
+
+  for (const session of input.sessions ?? []) {
+    const at = String(session.fields?.location ?? '');
+    if (at === '' || venueKey(at) !== key || at === name) continue;
+    out.sessions.push({ ...session, fields: { ...session.fields, location: name } });
+  }
+  for (const project of input.projects ?? []) {
+    const at = project.location ?? '';
+    if (at === '' || venueKey(at) !== key || at === name) continue;
+    out.projects.push({ ...project, location: name });
+  }
+  for (const objective of input.objectives ?? []) {
+    const at = objective.location ?? '';
+    if (at === '' || venueKey(at) !== key || at === name) continue;
+    out.objectives.push({ ...objective, location: name });
+  }
+  return out;
+}
+
+/** How many records a rename would touch, for the screen to say so first. */
+export function rewriteSize(rewrite: VenueRewrite): number {
+  return rewrite.sessions.length + rewrite.projects.length + rewrite.objectives.length;
+}

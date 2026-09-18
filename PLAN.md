@@ -14399,7 +14399,7 @@ M50 for why it is not coming.
 - **Merge two spellings of a venue.** `venues.ts` refuses to guess, and says why: *"'The Works' and
   'Works' may well be the same crag and the app cannot know it, and a grouping that guessed would
   silently merge two real places."* Right — but there is no way for the climber to say so either.
-  *Small.*
+  **M283** below. *Shipped.*
 
 - **A finished block as a share card.** `blockReport.ts` computes the report and `ui/shareCard.ts`
   renders cards, for the year only. Twelve weeks end and there is nothing to show for it. *Small to
@@ -14473,6 +14473,10 @@ M50 for why it is not coming.
 - **M282 — a program of their own, and a block they finished.** The last three routes M280 could
   not reach, and the two cards that were dark for the same reason. No `demo` flag on `Program` was
   needed after all: a fixed id is the marking, which is what objectives have always done.
+
+- **M283 — two spellings, one place.** The app refused to guess and then never asked. A rename
+  rather than a stored alias, because `venues.ts` opens by refusing exactly that store — and
+  because the log would otherwise go on holding both spellings everywhere except the grouping.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -18909,3 +18913,79 @@ it "survived" by not being a mutation. Replaced with one that empties the array 
 
 **6,756 tests over 397 files**, from 6,752. First load 135.33KB against a 135.7KB budget — 0.37KB of
 slack, and the next milestone that adds to the entry chunk will need the ceiling raised.
+
+## M283 — two spellings, one place
+
+`venues.ts` states the limit and the reason for it: *"'The Works' and 'Works' may well be the same
+crag and the app cannot know it, and a grouping that guessed would silently merge two real places
+that happen to read alike."* That is the right call. What was missing is the other half — **the app
+refused to guess and then never asked.**
+
+### A rename, not a mapping
+
+The obvious build is a stored alias table, `works → the works`. This module opens by refusing that
+store — *"Derived, not a stored catalogue… no new store, no migration, no list to keep tidy"* — and
+the refusal holds for three reasons beyond tidiness:
+
+- **The log would still hold both spellings.** A backup, the CSV export and every reader of
+  `fields.location` would go on seeing two places. Only the grouping would agree, and only here.
+- **The climber is not declaring an equivalence, they are fixing a typo.** "These are the same crag"
+  almost always means "I typed it wrong once". Correcting the text is the honest action; an alias
+  records the mistake forever and paints over it.
+- **It compounds.** The three inputs already offer what has been typed before — *"that is what turns
+  'the works', 'The Works' and 'the works' into one place, by never creating them"* — so removing a
+  spelling stops it being offered, and it stops coming back.
+
+There is no separate merge operation. Renaming "Stanage Edge" to "Stanage" merges them, because
+afterwards they share a key, which is the only thing being one place has ever meant here.
+
+The cost is that this **edits records**, which nothing else in that file does — three types of them,
+since M88b's whole finding was that there are three unconnected location fields. `renameVenue`
+returns only what changed, the shape `sessionMode.ts`'s repair uses and for its reason.
+
+### Two cards, two jobs
+
+The first draft put the rename inside **Written as**, which lists the spellings that were folded
+together. A test caught it: that card is hidden when there is only one spelling, because *"a card
+explaining a merge that did not happen"* is noise, and `venuePage.test.tsx` has held that since
+M192. The rename is a different job and is always offered — a place written one way that should have
+been written another has exactly one spelling, so hiding it there would have hidden it from the case
+it is most for.
+
+### It says what it will do, and can be taken back whole
+
+The count is on the button, because the number is the only warning that this is more than the record
+in front of you: a climber who has been to a crag forty times should see "40" before pressing.
+
+The undo restores the **records**, captured before the write rather than reconstructed after it. The
+rewrite touches one field, but putting a field back is not the same as putting the record back, and
+only one of those is obviously right a year from now. `ui/safety.test.ts` holds the offer.
+
+### Read back from a browser
+
+```
+before   Malham, Stanage, Stanage, Stanage Edge, stanage edge
+         (two places: the app will not merge "Stanage" and "Stanage Edge")
+
+#/venues/stanage%20edge  →  "Rewrite 2 records"
+
+after    Malham, Stanage, Stanage, Stanage, Stanage
+now at   #/venues/stanage
+```
+
+Malham untouched, and the page follows the record to its new address.
+
+### What the battery found
+
+**9 mutants caught, sanity no-op survived.** Only the exact spelling rewritten rather than every one
+sharing the key; projects skipped; objectives skipped; a record rewritten that already said it; an
+empty name accepted, which would delete a place rather than rename it; the typed name left untidied;
+the count wrong; the undo restoring nothing; and no undo offered at all.
+
+**One survived the first run, and the fixture was why.** *"Never rewrites an objective"* passed
+because the only objective in the fixture sat at a **different key** — so nothing had ever exercised
+an objective being rewritten. Adding one then broke the merge test, which was dropping the objective
+rewrite on the floor: a rewrite the caller ignores leaves the place it was meant to merge still
+standing. Both fixed, and both worth having.
+
+**6,772 tests over 398 files**, from 6,756. First load 135.32KB against a 135.7KB budget.

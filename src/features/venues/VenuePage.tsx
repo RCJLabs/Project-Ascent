@@ -12,6 +12,7 @@ import { Card } from '@/ui/Card';
 import { PageGrid } from '@/ui/PageGrid';
 import { PageHeader } from '@/ui/PageHeader';
 import { RecordNotFound } from '@/ui/RecordNotFound';
+import { RenameVenue } from './RenameVenue';
 
 /**
  * A place, opened (PLAN.md M192).
@@ -153,12 +154,17 @@ export function VenuePage({ params }: { params: { key: string } }) {
         {place.spellings.length > 1 && (
           <Card title="Written as">
             <p className="text-sm text-ink-soft leading-relaxed">
-              {place.spellings.map((s) => `“${s}”`).join(', ')} — counted as one place because
-              capitals and spacing are ignored. Anything the app cannot prove is the same place it
-              leaves alone.
+              {place.spellings.map((s) => `“${s}”`).join(', ')} — counted as one place
+              because capitals and spacing are ignored. Anything the app cannot prove is the same
+              place it leaves alone.
             </p>
           </Card>
         )}
+
+        {/* Beside it, and always: the climber's answer to the limit the card
+            above explains (PLAN.md M283). A place written one way that should
+            have been written another has exactly one spelling. */}
+        <RenameVenue place={place} />
       </PageGrid>
     </>
   );
