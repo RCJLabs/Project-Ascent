@@ -19195,3 +19195,27 @@ keeping its edits to itself; no undo on a delete; and the two above.
 
 **6,824 tests over 402 files**, from 6,789. First load 135.95KB against the 136.4KB budget M285 just
 set — 0.45KB of slack, and the store and the editor's engine are on the entry path.
+
+## M286a — the assertion that did not retry
+
+**M286 took `main` red**, and the test that did it was mine.
+
+```
+FAIL  writeADrill.test.tsx > leaves the editor when you are done, and reads as a drill
+AssertionError: expected 'Your drill' to be 'Three-point rule'
+```
+
+The editor saves fire-and-forget, on purpose. So the editor **closing** and the page **reading back
+what was typed** are two events, not one — and a `waitFor` on the first says nothing about the
+second. The heading was still "Your drill" because the store had not landed yet.
+
+It passed locally, twice, and on the browser harness. It lost on a slower CI runner, which is
+exactly M268's shape and exactly M268's cause: a machine fast enough to hide the gap.
+
+Both assertions retry now, and the rule is written where the next person will hit it: **after an
+edit, every assertion about what the page shows has to retry**, because nothing about the save is
+synchronous by design.
+
+The mutants still die, which was worth checking rather than assuming — a `waitFor` that swallows a
+failure until it times out is a weaker assertion than the one it replaced, and the battery is what
+says whether it still bites.

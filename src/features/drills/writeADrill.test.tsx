@@ -149,10 +149,21 @@ describe('the drill page, for one of yours', () => {
     fireEvent.change(screen.getByLabelText('The drill'), { target: { value: 'Three points on.' } });
     fireEvent.click(screen.getByText('Done'));
 
+    /**
+     * Every assertion here retries, and the first draft's did not — which
+     * took `main` red on a slower CI runner while passing locally.
+     *
+     * The editor saves fire-and-forget by design, so the editor closing and
+     * the page reading back what was typed are **two** events, not one. A
+     * `waitFor` on the first tells you nothing about the second: the heading
+     * was still "Your drill" because the store had not landed yet. The same
+     * shape as M268's timeout, and the same cause — a local machine fast
+     * enough to hide the gap.
+     */
     await waitFor(() => expect(screen.queryByLabelText('Name')).toBeNull());
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Three-point rule');
-    // `findBy`, because the editor saves fire-and-forget on purpose — the
-    // paragraph reaches the registry a tick after the editor closes.
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Three-point rule'),
+    );
     expect(await screen.findByText('Three points on.')).toBeTruthy();
   });
 
@@ -167,7 +178,9 @@ describe('the drill page, for one of yours', () => {
     await openDrill(blankDrill());
     fireEvent.click(screen.getByText('Done'));
     await waitFor(() => expect(screen.queryByLabelText('Name')).toBeNull());
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Your drill');
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Your drill'),
+    );
     // Still there, and still unfinished — the record was never the problem.
     expect(useCustomDrills.getState().custom).toHaveLength(1);
   });
