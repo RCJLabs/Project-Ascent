@@ -1,4 +1,5 @@
 import type { Session } from '@/db/sessions';
+import { type AwayPeriod, awayOn } from './away';
 import { isRestSession } from './rest';
 import { coverage, describeCoverage } from './thinLog';
 import { addDays, daysBetween, fromKey, startOfWeek, today as todayKey } from './dates';
@@ -37,6 +38,20 @@ export interface HeatDay {
   rested: boolean;
   outdoor: boolean;
   deload: boolean;
+  /**
+   * The climber marked this day away (PLAN.md M275).
+   *
+   * A fourth state beside "logged", "rested" and "nothing at all". The grid's
+   * own rule since M162 is that *"'I rested on purpose' and 'I did not open
+   * the app' are opposite facts, and a grid that draws them the same colour
+   * tells the climber the first is a failure"* — and a fortnight in Font is a
+   * third fact again, which the grid had no way to draw at all.
+   *
+   * Kept as the marker rather than a boolean because the reasons differ on
+   * screen: a square that says "Font '26" is worth having and a square that
+   * says "away" is not much better than a hole.
+   */
+  away: AwayPeriod | null;
   /** After the end day: drawn as a hole, never as a miss. */
   future: boolean;
 }
@@ -94,6 +109,8 @@ export interface HeatGrid {
 
 export interface HeatInput {
   sessions: readonly Session[];
+  /** Stretches marked away, so silence inside one stops reading as a miss. */
+  away?: readonly AwayPeriod[];
   /** The last day the grid covers. Defaults to today. */
   to?: string;
   /** How many week columns. 53 covers a year including the partial week. */
@@ -203,6 +220,7 @@ export function buildHeatGrid(input: HeatInput): HeatGrid {
         rested: totals?.rested ?? false,
         outdoor: totals?.outdoor ?? false,
         deload: totals?.deload ?? false,
+        away: future ? null : awayOn(input.away, date),
         future,
       });
     }
@@ -230,6 +248,22 @@ export function buildHeatGrid(input: HeatInput): HeatGrid {
         streak += 1;
         gap = 0;
         longestStreak = Math.max(longestStreak, streak);
+      } else if (day.away !== null) {
+        /**
+         * A marked day counts as neither, and the two halves have different
+         * reasons (PLAN.md M275).
+         *
+         * **It does not extend the gap**, because the gap is the number that
+         * reads as failure and this one has an answer attached. Three quiet
+         * days either side of a fortnight in Font are six days of silence,
+         * not thirty-one.
+         *
+         * **It still ends a streak**, because a streak is a claim about
+         * training and six weeks with a broken wrist is not one. Skipping it
+         * in both directions was the first draft, and it let an injury lay-off
+         * read as an unbroken run straight through.
+         */
+        streak = 0;
       } else {
         gap += 1;
         streak = 0;

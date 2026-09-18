@@ -276,3 +276,92 @@ describe('the sentence under the grid', () => {
     expect(describeConsistency(build([session('2026-09-01')]))).toMatch(/a week/);
   });
 });
+
+/**
+ * A fourth state beside logged, rested and nothing at all (PLAN.md M275).
+ *
+ * The rule this file has followed since M162 is that *"'I rested on purpose'
+ * and 'I did not open the app' are opposite facts, and a grid that draws them
+ * the same colour tells the climber the first is a failure."* A fortnight in
+ * Font is a third fact again, and the grid had no way to hold it.
+ */
+describe('days the climber marked away', () => {
+  const marker = (from: string, to: string, over: Record<string, unknown> = {}) => [
+    { id: 'a1', from, to, kind: 'trip' as const, note: "Font '26", updatedAt: `${TO}T00:00:00.000Z`, ...over },
+  ];
+  const away = (sessions: Session[], periods: ReturnType<typeof marker>) =>
+    buildHeatGrid({ sessions, to: TO, weeks: 53, away: periods });
+
+  it('carries the marker on every day of the range, both ends included', () => {
+    const grid = away([session('2026-06-01')], marker('2026-08-01', '2026-08-14'));
+    expect(dayFor(grid, '2026-07-31')?.away).toBeNull();
+    expect(dayFor(grid, '2026-08-01')?.away?.note).toBe("Font '26");
+    expect(dayFor(grid, '2026-08-14')?.away?.note).toBe("Font '26");
+    expect(dayFor(grid, '2026-08-15')?.away).toBeNull();
+  });
+
+  /** A hole in the future is not an absence; nothing is marked past the end. */
+  it('never marks a future day', () => {
+    const grid = away([session('2026-06-01')], marker('2026-09-01', '2026-09-30'));
+    expect(dayFor(grid, '2026-09-10')?.away).not.toBeNull();
+    expect(dayFor(grid, '2026-09-11')?.future).toBe(true);
+    expect(dayFor(grid, '2026-09-11')?.away).toBeNull();
+  });
+
+  /**
+   * The number that reads as failure. Three quiet days either side of a
+   * marked fortnight are six days of silence, not thirty-one.
+   */
+  it('does not let a marked stretch become the longest gap', () => {
+    // Ending on the last logged day, so the only gap in the window is the one
+    // under test — a window running on past it carries its own trailing gap,
+    // which was the first draft of this test and measured that instead.
+    const log = [session('2026-07-01'), session('2026-08-20')];
+    const end = '2026-08-20';
+    expect(buildHeatGrid({ sessions: log, to: end, weeks: 53 }).longestGap).toBe(49);
+    const marked = buildHeatGrid({
+      sessions: log,
+      to: end,
+      weeks: 53,
+      away: marker('2026-07-05', '2026-08-15'),
+    });
+    // Three quiet days before the marker and four after it.
+    expect(marked.longestGap).toBe(7);
+  });
+
+  /**
+   * And the half that does not follow: a streak is a claim about training,
+   * and six weeks with a broken wrist is not one. Skipping the marker in both
+   * directions was the first draft, and it let a lay-off read as an unbroken
+   * run straight through.
+   */
+  it('still ends a streak', () => {
+    const log = [
+      session('2026-08-01'),
+      session('2026-08-02'),
+      session('2026-08-03'),
+      session('2026-09-01'),
+      session('2026-09-02'),
+      session('2026-09-03'),
+    ];
+    const grid = away(log, marker('2026-08-04', '2026-08-31', { kind: 'injured', note: 'wrist' }));
+    expect(grid.longestStreak).toBe(3);
+  });
+
+  it('leaves a grid with no markers exactly as it was', () => {
+    const log = [session('2026-07-01'), session('2026-08-20')];
+    const plain = build(log);
+    const empty = away(log, []);
+    expect(empty.longestGap).toBe(plain.longestGap);
+    expect(empty.longestStreak).toBe(plain.longestStreak);
+    expect(empty.weeks.flat().every((d) => d.away === null)).toBe(true);
+  });
+
+  /** A day that was both — one logged afternoon inside a fortnight in Font. */
+  it('keeps the session on a marked day that has one', () => {
+    const grid = away([session('2026-08-05')], marker('2026-08-01', '2026-08-14'));
+    const day = dayFor(grid, '2026-08-05');
+    expect(day?.sessions).toBe(1);
+    expect(day?.away?.note).toBe("Font '26");
+  });
+});

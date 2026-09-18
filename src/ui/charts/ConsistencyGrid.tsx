@@ -1,4 +1,5 @@
 import { Link } from 'wouter';
+import { awayName } from '@/engine/away';
 import type { HeatDay, HeatGrid } from '@/engine/consistency';
 import { fromKey } from '@/engine/dates';
 
@@ -26,12 +27,34 @@ import { fromKey } from '@/engine/dates';
  * carries the scale.
  */
 
-/** Cell colour. Level 0 splits into "rested" and "nothing at all". */
+/**
+ * Cell colour. Level 0 splits three ways: logged-but-unscored, marked away,
+ * and nothing at all.
+ *
+ * A marked day keeps whatever fill its log earns — a logged afternoon inside
+ * a fortnight in Font is still an afternoon — and takes an outline on top.
+ * Nothing logged inside a marker keeps the empty fill too, which is honest:
+ * the day really is empty. What the outline adds is that the emptiness has an
+ * answer. Giving it a heat colour instead would claim training that was never
+ * measured.
+ */
 function fill(day: HeatDay): string {
   if (day.future) return 'transparent';
   if (day.sessions === 0) return 'var(--c-sunken)';
   if (day.rested) return 'var(--heat-1)';
   return `var(--heat-${Math.min(5, day.level + 1)})`;
+}
+
+/**
+ * The outline that says "away".
+ *
+ * A stroke and not a fill, so the grid keeps one hue carrying one scale —
+ * the colour-blindness rule this file opens with. A second colour would have
+ * made lightness stop meaning load.
+ */
+function stroke(day: HeatDay): string | undefined {
+  if (day.future || day.away === null) return undefined;
+  return 'var(--c-ink-soft)';
 }
 
 function title(day: HeatDay): string {
@@ -41,11 +64,15 @@ function title(day: HeatDay): string {
     month: 'short',
   });
   if (day.future) return when;
-  if (day.sessions === 0) return `${when}: nothing logged`;
+  const marked = day.away === null ? null : awayName(day.away);
+  if (day.sessions === 0) {
+    return marked === null ? `${when}: nothing logged` : `${when}: away — ${marked}`;
+  }
   if (day.rested) return `${when}: rest day`;
   const bits = [`${day.sessions} session${day.sessions === 1 ? '' : 's'}`];
   if (day.outdoor) bits.push('outdoors');
   if (day.deload) bits.push('deload');
+  if (marked !== null) bits.push(marked);
   return `${when}: ${bits.join(', ')}`;
 }
 
@@ -92,6 +119,8 @@ export function ConsistencyGrid({ grid }: { grid: HeatGrid }) {
               height={CELL}
               rx={2}
               fill={fill(day)}
+              stroke={stroke(day)}
+              strokeWidth={stroke(day) === undefined ? undefined : 1}
             >
               <title>{title(day)}</title>
             </rect>

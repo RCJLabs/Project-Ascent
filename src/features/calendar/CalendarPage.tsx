@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { BookOpen, CalendarDays, CheckCheck, ChevronLeft, ChevronRight, Rows3 } from 'lucide-react';
+import { BookOpen, CalendarDays, CheckCheck, ChevronLeft, ChevronRight, Plane, Rows3 } from 'lucide-react';
+import { AwayCard } from './AwayCard';
 import { getProgram } from '@/content/programs';
 import {
   fromKey,
@@ -154,7 +155,16 @@ export function CalendarPage() {
    * for is the one who has been away from the app, and a program running or
    * not has nothing to do with whether they were climbing.
    */
-  const [marking, setMarking] = useState(false);
+  /**
+   * Which of the two answers is being given (PLAN.md M275).
+   *
+   * One picker, two meanings, because the question is one question: the days
+   * are quiet, and only the climber knows whether they trained through them
+   * or was away. `'trained'` writes M100's blank sessions; `'away'` writes a
+   * range. Kept as a mode rather than two pickers so a climber cannot be
+   * halfway through both at once with one set of tapped days.
+   */
+  const [marking, setMarking] = useState<'trained' | 'away' | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const create = useSessions((st) => st.create);
   const removeSession = useSessions((st) => st.remove);
@@ -172,7 +182,7 @@ export function CalendarPage() {
     const made: Session[] = [];
     for (const date of dates) made.push(await create(date, { completed: true }));
     setPicked(new Set());
-    setMarking(false);
+    setMarking(null);
     // Marking a fortnight in one tap is a lot of records to have made by
     // accident, which is exactly when undo earns its keep (PLAN.md M79).
     offerUndo(
@@ -356,7 +366,7 @@ export function CalendarPage() {
         // so a picked day rendered exactly like an unpicked one. A browser
         // showed that; jsdom has no cascade and the `aria-pressed` test
         // passed either way. `Field.tsx` records the same trap.
-        const chosen = marking && picked.has(date);
+        const chosen = marking !== null && picked.has(date);
         const edge = chosen
           ? 'border-accent'
           : isToday
@@ -453,15 +463,27 @@ export function CalendarPage() {
         // Marking turns the grid into a picker (PLAN.md M100). Only days
         // that are past and empty: you cannot have trained tomorrow, and a
         // day that is already logged is already answered.
-        if (marking) {
-          const selectable = date <= today() && logged.length === 0;
+        if (marking !== null) {
+          /**
+           * What each mode may pick.
+           *
+           * `trained` keeps M100's rule — past and empty, because you cannot
+           * have trained tomorrow and a logged day is already answered.
+           * `away` drops the empty half: a fortnight in Font with one day
+           * logged is still a fortnight in Font, and refusing the range
+           * because of that one day would make the marker unusable for
+           * exactly the climbers who are trying.
+           */
+          const selectable =
+            date <= today() && (marking === 'away' || logged.length === 0);
+          const verb = marking === 'away' ? 'away' : 'trained';
           return (
             <button
               key={date}
               className={shell}
               disabled={!selectable}
               aria-pressed={chosen}
-              aria-label={`${chosen ? 'Unmark' : 'Mark'} ${shortLabel(date)} as trained`}
+              aria-label={`${chosen ? 'Unmark' : 'Mark'} ${shortLabel(date)} as ${verb}`}
               onClick={() => togglePicked(date)}
             >
               {body}
@@ -511,7 +533,11 @@ export function CalendarPage() {
         </Card>
       )}
 
-      {marking && (
+      {marking === 'away' && (
+        <AwayCard picked={picked} onSaved={() => setPicked(new Set())} />
+      )}
+
+      {marking === 'trained' && (
         <Card className="mb-3">
           <h3 className="font-bold text-sm mb-1">Days you trained but did not log</h3>
           <p className="text-sm text-ink-soft leading-relaxed">
@@ -549,13 +575,23 @@ export function CalendarPage() {
         )}
         <Button
           size="sm"
-          variant={marking ? 'primary' : 'ghost'}
+          variant={marking === 'trained' ? 'primary' : 'ghost'}
           onClick={() => {
-            setMarking(!marking);
+            setMarking(marking === 'trained' ? null : 'trained');
             setPicked(new Set());
           }}
         >
-          <CheckCheck size={14} /> {marking ? 'Done' : 'Mark days'}
+          <CheckCheck size={14} /> {marking === 'trained' ? 'Done' : 'Mark days'}
+        </Button>
+        <Button
+          size="sm"
+          variant={marking === 'away' ? 'primary' : 'ghost'}
+          onClick={() => {
+            setMarking(marking === 'away' ? null : 'away');
+            setPicked(new Set());
+          }}
+        >
+          <Plane size={14} /> {marking === 'away' ? 'Done' : 'Away'}
         </Button>
         <Link
           href={weekHref(weekAnchor)}

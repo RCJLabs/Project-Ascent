@@ -285,3 +285,83 @@ describe('what a dismissal covers', () => {
     expect(byTrip.signature).not.toBe(byPeak.signature);
   });
 });
+
+/**
+ * The climber's own answer (PLAN.md M275).
+ *
+ * M188 gave this file two ways to explain a quiet stretch and both are
+ * inferences: a peak is read out of the log, and a trip objective is a date
+ * typed weeks in advance for a trip that may have been cancelled. An away
+ * marker is neither — it is the sentence those two are guessing at, said out
+ * loud, with real dates, after the fact.
+ */
+describe('a stretch the climber marked away', () => {
+  const marker = (from: number, to: number, over: Record<string, unknown> = {}) => [
+    {
+      id: 'a1',
+      from: addDays(DAY, -from),
+      to: addDays(DAY, -to),
+      kind: 'trip' as const,
+      note: 'Font',
+      updatedAt: `${DAY}T00:00:00.000Z`,
+      ...over,
+    },
+  ];
+
+  /** Nine quiet days, and the climber has said what they were. */
+  const quiet = train(steady(60, 10));
+
+  it('explains the quiet with no objective and no peak', () => {
+    expect(comedownNow(quiet, [], DAY)).toBeNull();
+    const reading = comedownNow(quiet, [], DAY, marker(9, 1));
+    expect(reading?.because).toBe('away');
+  });
+
+  it('carries the marker, so the tip can name it', () => {
+    const reading = comedownNow(quiet, [], DAY, marker(9, 1));
+    expect(reading?.because === 'away' && reading.period.note).toBe('Font');
+  });
+
+  /**
+   * A comedown is quiet *after load*, and flu is quiet after nothing. Naming
+   * it here would tell a climber three weeks off sick that their ratio
+   * falling is a taper; `coach.ts` names those in the layoff tip instead,
+   * where the advice underneath is the advice they need.
+   */
+  it('reads only a trip, and leaves the other kinds to the layoff rule', () => {
+    for (const kind of ['rest', 'injured', 'life'] as const) {
+      expect(comedownNow(quiet, [], DAY, marker(9, 1, { kind })), kind).toBeNull();
+    }
+  });
+
+  it('refuses a marker too small to be the reason', () => {
+    expect(comedownNow(quiet, [], DAY, marker(4, 3))).toBeNull();
+  });
+
+  /** Both a peak and a marker: the one that is not a guess wins. */
+  it('beats the peak reading it would otherwise get', () => {
+    const peaked = [...train(steady(60, 24)), ...train(TRIP_DAYS, { outdoor: true })];
+    expect(comedownNow(peaked, [], DAY)?.because).toBe('peak');
+    expect(comedownNow(peaked, [], DAY, marker(8, 1))?.because).toBe('away');
+  });
+
+  /** And the dated objective, for the same reason. */
+  it('beats the trip objective it would otherwise get', () => {
+    expect(comedownNow(quiet, trip(5), DAY)?.because).toBe('trip');
+    expect(comedownNow(quiet, trip(5), DAY, marker(9, 1))?.because).toBe('away');
+  });
+
+  /**
+   * The shape's whole contract is that its numbers are measured. An early
+   * return before the arithmetic put a fabricated `peak: 0, baseline: 0` into
+   * it, which was the first draft.
+   */
+  it('reports the same measured figures the other two readings do', () => {
+    const peaked = [...train(steady(60, 24)), ...train(TRIP_DAYS, { outdoor: true })];
+    const inferred = comedownNow(peaked, [], DAY);
+    const marked = comedownNow(peaked, [], DAY, marker(8, 1));
+    expect(marked?.peak).toBe(inferred?.peak);
+    expect(marked?.baseline).toBe(inferred?.baseline);
+    expect(marked?.peak).toBeGreaterThan(0);
+  });
+});

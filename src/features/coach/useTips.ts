@@ -20,6 +20,7 @@ import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
 import { useObjectives } from '@/store/objectives';
+import { useAway } from '@/store/away';
 import { useSessions, allSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 
@@ -38,6 +39,7 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
   const lastExportAt = useProfile((s) => s.lastExportAt);
   const dismissed = useProfile((s) => s.dismissedTips);
   const objectives = useObjectives((s) => s.objectives);
+  const away = useAway((s) => s.periods);
   const display = useSettings((s) => s.display);
 
   return useMemo(() => {
@@ -86,6 +88,10 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
       // Hydrated at boot in `store/index.ts` like every other store here,
       // so Home has it on the first render rather than a beat later.
       objectives,
+      // The stretches the climber said they were away for (PLAN.md M275).
+      // Two tips read it: the layoff rule, which had only a peak or a dated
+      // objective to go on, and the rock-rust rule, which had nothing at all.
+      away,
       // What the program asked to be measured (PLAN.md M174). The field has
       // carried its own reason since it was written — *"so staleness is
       // judged on what you were asked"* — and this hook never filled it, so
@@ -115,5 +121,5 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
     });
     const visible = visibleTips(all, dismissed);
     return { all, visible, hidden: all.length - visible.length };
-  }, [byDate, projects, metrics, injuries, equipment, activeProgramId, startDates, plans, weekOverrides, tracks, lastExportAt, dismissed, display, objectives]);
+  }, [byDate, projects, metrics, injuries, equipment, activeProgramId, startDates, plans, weekOverrides, tracks, lastExportAt, dismissed, display, objectives, away]);
 }

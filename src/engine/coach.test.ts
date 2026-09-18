@@ -145,6 +145,67 @@ describe('time away from rock', () => {
     const older = [...steady(), session(back(400), { mode: 'outdoor' })];
     expect(tips({ sessions: older }).find((t) => t.id === 'outdoor-reentry')?.signature).toBe('180');
   });
+
+  /**
+   * The defect M275 exists for.
+   *
+   * This rule read the log and nothing else, twenty lines above `detraining`,
+   * which has consulted `comedownNow` since M188. So a fortnight in Font,
+   * climbed and not logged — which is how a fortnight in Font goes — came
+   * home to advice to drop two grades.
+   */
+  describe('and a fortnight the climber marked away', () => {
+    const stale = [...steady(), session(back(40), { mode: 'outdoor' })];
+    const font = {
+      id: 'font',
+      // Twenty-four of the forty quiet days, which clears `EXPLAINS_FRACTION`
+      // with room to spare — the boundary itself is pinned in `away.test.ts`.
+      from: back(35),
+      to: back(12),
+      kind: 'trip' as const,
+      note: "Font '26",
+      updatedAt: `${TODAY}T00:00:00.000Z`,
+    };
+
+    it('stops telling someone fresh off rock to drop two grades', () => {
+      const tip = tips({ sessions: stale, away: [font] }).find((t) => t.id === 'outdoor-reentry');
+      expect(tip?.body).not.toContain('two grades under your indoor number');
+      expect(tip?.headline).toContain("Font '26");
+    });
+
+    /** M163's rule: it rewords, it does not vanish. The ladder gap is real. */
+    it('still fires, and still asks for the days', () => {
+      const tip = tips({ sessions: stale, away: [font] }).find((t) => t.id === 'outdoor-reentry');
+      expect(tip).toBeDefined();
+      expect(tip?.action?.href).toBe('/calendar');
+      expect(tip?.signature).toBe('after:21');
+    });
+
+    /** A separate signature, so waving one away does not wave away the other. */
+    it('is dismissed apart from the untouched reading', () => {
+      const plain = tips({ sessions: stale }).find((t) => t.id === 'outdoor-reentry');
+      const marked = tips({ sessions: stale, away: [font] }).find((t) => t.id === 'outdoor-reentry');
+      expect(plain?.signature).not.toBe(marked?.signature);
+    });
+
+    /**
+     * Three weeks off with a shoulder is three weeks off rock, and the
+     * original advice is exactly right for it.
+     */
+    it('reads only a trip as time on rock', () => {
+      const hurt = { ...font, kind: 'injured' as const, note: 'shoulder' };
+      const tip = tips({ sessions: stale, away: [hurt] }).find((t) => t.id === 'outdoor-reentry');
+      expect(tip?.headline).toContain('40 days since you were on rock');
+      expect(tip?.body).toContain('two grades under your indoor number');
+    });
+
+    /** A weekend inside a forty-day gap does not account for the forty days. */
+    it('refuses a marker too small to explain the gap', () => {
+      const weekend = { ...font, from: back(20), to: back(18) };
+      const tip = tips({ sessions: stale, away: [weekend] }).find((t) => t.id === 'outdoor-reentry');
+      expect(tip?.headline).toContain('40 days since you were on rock');
+    });
+  });
 });
 
 describe('load drifting down', () => {

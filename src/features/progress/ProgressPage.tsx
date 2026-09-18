@@ -21,6 +21,7 @@ import { assessmentBattery } from '@/engine/assessments';
 import { buildJournal } from '@/engine/journal';
 import { deriveCareer } from '@/engine/career';
 import { buildHeatGrid, describeConsistency } from '@/engine/consistency';
+import { useAway } from '@/store/away';
 import { describeTrend, loadTrend } from '@/engine/loadTrend';
 import { describeTissue, tissueLoad } from '@/engine/tissueLoad';
 import { compareBlocks, describeBlocks } from '@/engine/blockCompare';
@@ -485,7 +486,9 @@ export function ProgressPage() {
     [sessions, weeklyTarget],
   );
   const points = useMemo(() => weeklyProgression(sessions, scale, 12), [sessions, scale]);
-  const heat = useMemo(() => buildHeatGrid({ sessions }), [sessions]);
+  const away = useAway((s) => s.periods);
+  // So a marked fortnight stops drawing as a hole (PLAN.md M275).
+  const heat = useMemo(() => buildHeatGrid({ sessions, away }), [sessions, away]);
   const trend = useMemo(() => loadTrend({ sessions, to: today() }), [sessions]);
   const block = useMemo(() => compareBlocks({ sessions, to: today() }), [sessions]);
   const checkIns = useMemo(() => checkInHistory({ sessions, to: today() }), [sessions]);

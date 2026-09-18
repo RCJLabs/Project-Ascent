@@ -14404,10 +14404,13 @@ M50 for why it is not coming.
   renders cards, for the year only. Twelve weeks end and there is nothing to show for it. *Small to
   medium.*
 
-- **An "away" marker: did not train, or did not log.** Named as a blind spot in at least three
+- **An "away" marker: did not train, or did not log.** ~~Named as a blind spot in at least three
   engines — `coach.ts` (*"The app cannot tell 'did not train' from 'did not log'"*), `partners.ts`,
-  `adherence.ts`. Silence reads as failure, so a trip or a deliberate off-week draws as a gap in the
-  consistency grid and drags the coach's reading with it. One date range fixes all of them. *Medium.*
+  `adherence.ts`.~~ **Wrong on two of the three, checked before building.** `partners.ts` never
+  mentions it; `adherence.ts:6` names a different blind spot (a weekly *number* cannot tell four
+  climbing sessions from four skipped Finger Protocols). Only `coach.ts:489` says it. And the grid
+  is not blind either: M162 already splits "rested" from "nothing logged". What was actually
+  unclosed is in **M275** below. *Shipped.*
 
 - **Custom drills.** There are 156 and none of them can be the climber's own: programs and sessions
   are both authorable, drills are content only. For a coach that is backwards — the drill is the
@@ -14429,6 +14432,12 @@ M50 for why it is not coming.
 - **Close the coach loop.** Programs travel coach → athlete as a file and nothing comes back. An
   athlete's block report as a file that opens here would make the app usable for coaching, still
   with no server and no accounts. *A direction rather than a milestone.*
+
+- **M275 — I was away.** `coach.ts:489`: *"The app cannot tell 'did not train' from 'did not
+  log'"*. `outdoorReentry` twenty lines above it reads the log and nothing else, so a fortnight in
+  Font, climbed and not logged, comes home to *"N days since you were on rock. Plan the first day
+  back two grades under your indoor number."* A stored date range, a kind and a line of text — the
+  one fact the log cannot hold.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -18093,3 +18102,148 @@ of two identical rows instead of the one pressed; the engine deduplicating on th
 existed for this shape and had never been tested on it, because the shape could not be built.
 
 **6,626 tests over 392 files**, from 6,620. First load 134.68KB against a 135.7KB budget.
+
+## M275 — I was away
+
+`coach.ts:489` has carried the sentence since M100: *"The app cannot tell 'did not train' from 'did
+not log'"*. Every reading of a quiet fortnight is a guess between those two, and the climber is the
+only one who knows which. Nothing in the app has ever let them say.
+
+### What the premise got wrong, checked before building
+
+The queue entry above claimed three engines name this blind spot. **One does.** `partners.ts` never
+mentions it, and `adherence.ts:6` names a different one — a weekly *number* cannot tell four
+climbing sessions from four skipped Finger Protocols. That entry has been struck through.
+
+The grid was wrong too. M162 already splits *"I rested on purpose"* from *"I did not open the
+app"*, with the reason written down: *"a grid that draws them the same colour tells the climber the
+first is a failure"*. And M100 already lets a climber mark the days they trained. Neither is the
+hole.
+
+Three things cover part of this ground and each stops short, which is what the marker is for:
+
+- **M100's marking** writes a blank completed `Session` per picked day. Right gesture, wrong record:
+  a session is one day, so a fortnight is fourteen taps; it has no mode, so a fortnight on rock is
+  stored as fourteen indoor days; and it carries no score, so Céüse draws in the same lightest shade
+  as a fortnight of rest days.
+- **M163's trip objective** gives a trip a name and *one* date. `trip.ts` then guesses a fortnight
+  around it and says so: `TRIP_WINDOW_DAYS` is *"the one number in this module that nothing
+  measures"*. The guess exists because there is nowhere to write the dates.
+- **M188's comedown** rewords the layoff tip when a peak or a dated trip explains the quiet. It needs
+  one of those two, so a climber with flu and no objective still gets *"24 days since you logged
+  anything"*.
+
+### The defect, reproduced against the shipped build
+
+`outdoorReentry` reads the log and nothing else — twenty lines above `detraining`, which has
+consulted `comedownNow` since M188 for exactly this reason. Two hundred sessions, one outdoor day 25
+days ago, and a fortnight the climber spent on rock without opening the app:
+
+```
+25 days since you were on rock
+Skin and footwork go first, and neither shows up on a plastic grade. Plan the first day back
+two grades under your indoor number, bring more pads than you think, and treat it as a skills
+day rather than a send day.
+```
+
+Every word of that is wrong for them, and the advice is the part that matters: telling someone fresh
+off three weeks of granite to drop two grades is worse than saying nothing.
+
+### The record
+
+`engine/away.ts` — a date range, a kind and an optional note, under one key in the `profile` store
+beside the objectives. **Not a session**: it creates no load, counts as no training and scores
+nothing. It is a statement *about* a stretch of silence, and its whole job is to stop the app
+asserting things about that stretch it has no way to know.
+
+Four kinds, because four is what changes a reading, and `wasClimbing` is the only question any
+reader asks: a fortnight in Font and a fortnight with flu are both silence and opposite facts about
+fitness.
+
+`explainsGap` is what stops a marker being used as a blanket. Three days of flu inside a 24-day
+layoff is not the reason for the layoff, and a tip that named it would tell a climber three weeks off
+that they had had a cold. Half the gap, and measured over the **overlap** rather than the period —
+a marker running past either end would otherwise explain any gap at all.
+
+### It rewords and never suppresses
+
+M163's rule, kept: *"Suppressing the app's loudest warning at the highest-risk fortnight of a
+climber's year would be a regression wearing a fix's clothes."* A marker is a sentence the climber
+typed about days nobody checked — enough to change what a tip says, never enough to take it away.
+
+So `outdoor-reentry` still fires, at a lower weight and a different signature, because the gap in
+the *ladder* is real whatever happened: those days are missing from the outdoor grades, the venues
+and the year. And only a `trip` marker contradicts it — three weeks off with a shoulder is three
+weeks off rock, and the original advice is exactly right for it.
+
+`comedownNow` gains `because: 'away'` for the same narrow case, and `detraining` handles the other
+three kinds itself: a comedown is quiet *after load*, and flu is quiet after nothing. There the
+layoff is real, the return-to-volume advice is the advice that climber needs, and the only thing
+wrong with the old tip was the first line — it asked a question they had already answered. So the
+headline changes and the advice does not.
+
+### The grid
+
+A fourth state beside logged, rested and nothing at all. A marked day keeps whatever fill its log
+earns and takes an outline; nothing logged inside a marker keeps the empty fill, which is honest —
+the day really is empty, and what the outline adds is that the emptiness has an answer. A stroke
+rather than a colour, so lightness goes on carrying load alone, which is the colour-blindness rule
+the file opens with.
+
+`longestGap` skips a marked day and `longestStreak` does not, and the halves have different reasons.
+The gap is the number that reads as failure and this one has an answer attached — three quiet days
+either side of a fortnight in Font are six days of silence, not thirty-one. A streak is a claim
+about training, and six weeks with a broken wrist is not one. Skipping it in both directions was the
+first draft, and it let a lay-off read as an unbroken run straight through.
+
+### The screen
+
+It borrows the calendar's own gesture — the same tapped days M100 uses, read as a range rather than
+a list — because the two are the two answers to one question. First tap to last tap, everything
+between included, and the copy says so. `away` drops M100's empty-day rule: a fortnight in Font with
+one day logged is still a fortnight in Font, and refusing the range because of that one day would
+make the marker unusable for exactly the climbers who are trying.
+
+A backup carries the markers without `exportImport.ts` learning they exist, because the whole
+`profile` store is exported by key. Pinned by a test rather than assumed.
+
+### Read back from a browser
+
+The same climber, after marking Aug 30 – Sep 18 as "Font '26":
+
+```
+Font '26 is missing from your outdoor log
+
+Quiet since Font '26
+25 days quiet, and you said why: Font '26. Climbing that is not written down looks exactly
+like climbing that did not happen, and this is the app taking your word for it rather than
+the log's.
+```
+
+Twenty grid squares outlined, titled *"away — Font '26"*. No console errors.
+
+### What the battery found
+
+**14 mutants caught, sanity no-op survived.** Every kind reading as climbing; any overlap explaining
+the gap; **both clamps** on the overlap window, one of which survived the first run and took two new
+tests to kill — a long marker barely clipping either end of a gap would otherwise have explained it;
+an exclusive range end; the malformed-date guard; the backwards-range guard; the longest-wins
+tie-break; both coach readers ignoring the marker; the rock-rust tip reading an injury as time on
+rock; the grid flag; the streak half of the gap asymmetry; and the store trusting whatever IndexedDB
+hands back.
+
+`ui/safety.test.ts` caught the removal offering no undo, which is the rule every destructive call in
+the app follows. The period is captured before the delete, because `remove` takes an id and an id is
+all that would otherwise be left to put back.
+
+**6,690 tests over 395 files**, from 6,626. First load 135.23KB against a 135.7KB budget.
+
+### Left undone, on purpose
+
+`adherence.ts` still scores a week away as a week of misses. It is a scoring change with its own
+design question — does a week away count as planned-zero, or drop out of the average? — and guessing
+at it inside this milestone would have been the wrong place to answer it.
+
+`describeConsistency` still says its gap *"without calling it a failure, because the app does not
+know whether that fortnight was an injury, a holiday or a newborn."* It can know now, for the
+climbers who say so, and that sentence could name it.

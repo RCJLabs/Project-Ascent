@@ -23,7 +23,7 @@ import type { MetricEntry } from '@/db/metrics';
 import type { MetricId } from '@/content/types';
 import { METRICS } from '@/content/metrics';
 import { assessmentStatus } from './assessments';
-import { daysBetween, today as todayKey } from './dates';
+import { addDays, daysBetween, today as todayKey } from './dates';
 import { MIN_CHRONIC_DAYS, MIN_RATIO_DAYS, type ClimberState } from './derive';
 import { recoverySentence, type Diagnosis } from './plateau';
 import { activeProjects, attemptsFor, highPointOf } from './projects';
@@ -33,6 +33,7 @@ import { FINGER_GAP_HOURS, fingerGaps } from './fingerGap';
 import type { Objective } from './objectives';
 import { tripNow } from './trip';
 import { comedownNow, type Comedown } from './comedown';
+import { type AwayPeriod, awayName, explainsGap, wasClimbing } from './away';
 import { isRestSession } from './rest';
 import { isAddedWeight } from './units';
 import { counted } from './phrase';
@@ -108,6 +109,16 @@ export interface CoachInput {
    * it needs the objective and not a verdict about it.
    */
   objectives?: Objective[];
+  /**
+   * Stretches the climber told the app they were away for (PLAN.md M275).
+   *
+   * The one fact the log cannot hold, and the answer to the line this file
+   * has carried since M100: *"The app cannot tell 'did not train' from 'did
+   * not log'"*. Passed whole for the same reason `objectives` is — the
+   * reading is a filter over a short list, and two tips name the marker, so
+   * they need the record rather than a verdict about it.
+   */
+  away?: AwayPeriod[];
   today?: string;
 }
 
@@ -426,7 +437,25 @@ function projectBurns(input: CoachInput, today: string): Tip[] {
   return out.slice(0, 2).map((t) => ({ ...t, signature: `${t.signature}:${today.slice(0, 7)}` }));
 }
 
-function outdoorReentry({ state, sessions }: CoachInput, today: string): Tip | null {
+/**
+ * Coming back to rock, and the gap that was not one (PLAN.md M275).
+ *
+ * This rule read the log and nothing else, twenty lines above `detraining`,
+ * which has read `comedownNow` since M188 for exactly this reason. So a
+ * climber who spent a fortnight in Font and logged none of it — which is the
+ * normal way a fortnight in Font goes — came home to *"35 days since you were
+ * on rock. Plan the first day back two grades under your indoor number."*
+ *
+ * Every word of that is wrong for them, and the advice is the part that
+ * matters: telling someone fresh off three weeks of granite to drop two
+ * grades is worse than saying nothing.
+ *
+ * **It still fires**, which is M163's rule and holds here: the gap in the
+ * *ladder* is real whatever happened, and those days are missing from the
+ * outdoor grades, the venues and the year. Only the sentence changes, to the
+ * one the climber's own marker supports.
+ */
+function outdoorReentry({ state, sessions, away: marked }: CoachInput, today: string): Tip | null {
   if (state.outdoorDays === 0) return null;
   const last = sessions
     .filter((s) => s.completed && s.mode === 'outdoor')
@@ -438,6 +467,26 @@ function outdoorReentry({ state, sessions }: CoachInput, today: string): Tip | n
   if (away < OUTDOOR_GAP_DAYS) return null;
 
   const bucket = away >= 180 ? '180' : away >= 90 ? '90' : away >= 42 ? '42' : '21';
+
+  // Only a `trip` marker contradicts this tip. Three weeks off with a
+  // shoulder is three weeks off rock, and the advice below is exactly right
+  // for it — reading every kind alike would throw away the one thing the
+  // climber went to the trouble of saying.
+  const trip = explainsGap(marked, addDays(last, 1), today);
+  if (trip !== null && wasClimbing(trip.kind)) {
+    return {
+      id: 'outdoor-reentry',
+      // The marker is part of the fact, so waving this away for a logged
+      // trip does not also wave away the real layoff the same gap becomes.
+      signature: `after:${bucket}`,
+      tone: 'neutral',
+      weight: 48,
+      headline: `${awayName(trip)} is missing from your outdoor log`,
+      body: 'You marked those days away, so this is the app reading the log rather than doubting you — nothing here needs fixing for your fingers. It does mean the grades, the venues and the ladder all stop before that trip. Backfilling even the best day of it puts the outdoor side of every number back where it belongs.',
+      action: { label: 'Add the days', href: '/calendar' },
+    };
+  }
+
   return {
     id: 'outdoor-reentry',
     signature: bucket,
@@ -457,8 +506,25 @@ function outdoorReentry({ state, sessions }: CoachInput, today: string): Tip | n
  * would leave the climber with nothing at the point it starts being true.
  * Only the words change, and they change to the true ones.
  */
+/**
+ * What the quiet is "since".
+ *
+ * A function rather than `comedown.trip?.name`, which is what this was: the
+ * union grew a third member at M275 and `trip` is not a field on it. The
+ * optional chain would have compiled against a wider type and silently read
+ * `undefined` for every away marker, printing "Quiet since the last block" to
+ * a climber who had just typed the name of the trip.
+ */
+function comedownSince(comedown: Comedown): string {
+  if (comedown.because === 'away') return awayName(comedown.period);
+  return comedown.trip?.name ?? 'the last block';
+}
+
 function comedownBody(comedown: Comedown, tail: string): string {
   const days = `${comedown.quietDays} day${comedown.quietDays === 1 ? '' : 's'}`;
+  if (comedown.because === 'away') {
+    return `${days} quiet, and you said why: ${awayName(comedown.period)}. Climbing that is not written down looks exactly like climbing that did not happen, and this is the app taking your word for it rather than the log's. ${tail}`;
+  }
   if (comedown.because === 'trip') {
     return `${days} quiet, and ${comedown.trip.name} is the obvious reason — a trip that is climbed and not logged looks exactly like a trip that did not happen, and this is the app reading the log rather than doubting you. ${tail}`;
   }
@@ -466,13 +532,13 @@ function comedownBody(comedown: Comedown, tail: string): string {
   return `${days} quiet after ${named} ran at ${comedown.ratio.toFixed(1)}× your own baseline. That is a taper, not a loss: the ratio falls after a peak because the peak is what raised it. ${tail}`;
 }
 
-function detraining({ state, sessions, objectives }: CoachInput, today: string): Tip | null {
+function detraining({ state, sessions, objectives, away: marked }: CoachInput, today: string): Tip | null {
   const { acwr, inPlannedDeload, daysOfHistory } = state.load;
   if (inPlannedDeload || daysOfHistory < 28) return null;
 
   // Read before either branch, because both were saying the same wrong thing
   // for the same reason.
-  const comedown = comedownNow(sessions, objectives, today);
+  const comedown = comedownNow(sessions, objectives, today, marked);
 
   const last = sessions
     .filter((s) => s.completed && !isRestDay(s))
@@ -500,7 +566,7 @@ function detraining({ state, sessions, objectives }: CoachInput, today: string):
         signature: `after:${comedown.because}:${away >= 28 ? 'month' : 'fortnight'}`,
         tone: 'neutral',
         weight: 44,
-        headline: `Quiet since ${comedown.trip?.name ?? 'the last block'}`,
+        headline: `Quiet since ${comedownSince(comedown)}`,
         body: comedownBody(
           comedown,
           'Nothing to fix today. If you did climb through it, marking those days on the calendar puts the numbers back where they belong.',
@@ -508,6 +574,32 @@ function detraining({ state, sessions, objectives }: CoachInput, today: string):
         action: { label: 'Mark the days you trained', href: '/calendar' },
       };
     }
+    /**
+     * A marker that is not a trip (PLAN.md M275).
+     *
+     * `comedownNow` deliberately returns null for these: a comedown is quiet
+     * *after load*, and flu is quiet after nothing. So the layoff is real, the
+     * advice below is exactly the advice this climber needs, and the only
+     * thing wrong with the old tip was the first line — it asked a question
+     * they had already answered.
+     *
+     * Which is why this changes the headline and the opening clause and
+     * nothing else. Softening the rest would be the app congratulating
+     * someone on three weeks off sick.
+     */
+    const off = explainsGap(marked, last ? addDays(last, 1) : today, today);
+    if (off !== null) {
+      return {
+        id: 'detraining',
+        signature: `off:${away >= 60 ? 'long' : away >= 28 ? 'month' : 'fortnight'}`,
+        tone: 'caution',
+        weight: 58,
+        headline: `${away} days off — ${awayName(off)}`,
+        body: 'You told the app, so nothing here is a surprise and there is nothing to correct. Coming back is still the part worth planning: finger strength holds for a while and everything else does not, so come back at about two-thirds of the volume you left on and give it a fortnight before judging anything — the first sessions back always feel worse than the fitness actually is.',
+        action: { label: 'Plan the week', href: '/calendar' },
+      };
+    }
+
     return {
       id: 'detraining',
       signature: away >= 60 ? 'long' : away >= 28 ? 'month' : 'fortnight',
@@ -536,7 +628,7 @@ function detraining({ state, sessions, objectives }: CoachInput, today: string):
         signature: `after:${comedown.because}:${acwr < 0.5 ? 'deep' : 'shallow'}`,
         tone: 'neutral',
         weight: 44,
-        headline: `Coming down from ${comedown.trip?.name ?? 'the last block'}`,
+        headline: `Coming down from ${comedownSince(comedown)}`,
         body: comedownBody(
           comedown,
           `You are at ${figure} your baseline now, which is where a week off is meant to put you. A fortnight here is still recovery; if it is still this quiet in a month, that is the one worth acting on.`,

@@ -28,6 +28,17 @@
  * trips says as much. When nothing was logged there is no peak to find, and
  * the objective is the only evidence there is.
  *
+ * **And, since M275, the climber saying so.** An away marker of kind `trip`
+ * is the sentence both of the above are inferred from, said out loud and with
+ * real dates. It wins over both, because it is the only one of the three that
+ * is not a guess.
+ *
+ * The other three kinds deliberately produce nothing here. A comedown is
+ * *quiet after load*, and flu is quiet after nothing: naming it would tell a
+ * climber three weeks off sick that their ratio falling is a taper. `coach.ts`
+ * names those in the layoff tip instead, where the advice underneath is the
+ * advice they actually need.
+ *
  * Either way the tip still fires, which is M163's rule and worth keeping: a
  * comedown that runs long really does become a layoff, and suppressing the
  * sentence would leave the climber with nothing at the point it starts being
@@ -39,6 +50,7 @@ import type { Objective } from './objectives';
 import { sessionLoad } from './derive';
 import { addDays, daysBetween } from './dates';
 import { tripRecently } from './trip';
+import { type AwayPeriod, explainsGap, wasClimbing } from './away';
 
 /**
  * A gap shorter than this is a rest day or two and explains itself.
@@ -84,7 +96,8 @@ interface Quiet {
  */
 export type Comedown =
   | (Quiet & { because: 'peak'; ratio: number; trip: Objective | null })
-  | (Quiet & { because: 'trip'; ratio: number | null; trip: Objective });
+  | (Quiet & { because: 'trip'; ratio: number | null; trip: Objective })
+  | (Quiet & { because: 'away'; ratio: number | null; period: AwayPeriod });
 
 /**
  * Weekly-equivalent load for the sessions inside a window.
@@ -116,6 +129,7 @@ export function comedownNow(
   sessions: readonly Session[],
   objectives: readonly Objective[] | undefined,
   today: string,
+  away?: readonly AwayPeriod[],
 ): Comedown | null {
   const lastTrained = sessions
     .filter((session) => session.completed && (sessionLoad(session) ?? 0) > 0)
@@ -143,6 +157,24 @@ export function comedownNow(
   // has nothing this can be measured against, and a made-up denominator
   // would call every first fortnight a peak.
   const ratio = baseline > 0 ? peak / baseline : null;
+
+  /**
+   * The climber's own answer, asked before either inference (PLAN.md M275).
+   *
+   * Read over the gap itself — the day after the last session through today —
+   * rather than over the peak window: this asks what explains the *silence*,
+   * and the silence is exactly those days. `explainsGap` is what stops three
+   * days of flu accounting for a three-week layoff.
+   *
+   * After the arithmetic and before the branches, so the reading carries real
+   * `peak` and `baseline` figures like the other two. Returning zeroes from
+   * an early exit would have put a fabricated pair into a shape whose whole
+   * contract is that its numbers are measured.
+   */
+  const marked = explainsGap(away, addDays(lastTrained, 1), today);
+  if (marked !== null && wasClimbing(marked.kind)) {
+    return { quietDays, because: 'away', peak, baseline, ratio, period: marked };
+  }
 
   if (ratio !== null && ratio >= PEAK_RATIO) {
     return { quietDays, because: 'peak', peak, baseline, ratio, trip };
