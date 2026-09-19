@@ -27,7 +27,7 @@ import { SCALE_MAX, getField, type FieldSpec } from '@/content/fields';
 import type { Drill, FieldId, SessionType } from '@/content/types';
 import { fromKey, isDateKey, shortLabel, today } from '@/engine/dates';
 import { clearTimerState, loadTimerState, saveTimerState } from '@/lib/timerState';
-import { ClimbEntry, RepeatLast, type Outcome } from './ClimbEntry';
+import { ClimbEntry, RepeatLast, type EditedClimb, type Outcome } from './ClimbEntry';
 import { sessionOwner } from '@/db/media';
 import { MediaCard } from '@/features/media/MediaCard';
 import { offerUndo } from '@/store/undo';
@@ -65,6 +65,7 @@ import { DELOAD_STEP, easedDose, easesAnything, prescriptionFor, type PlannedDay
 import { prescriptionLine } from '@/engine/prescription';
 import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
 import type { CooldownPlan } from '@/engine/cooldown';
+import { mergeInto, replaceRow } from '@/engine/climbRows';
 import { V_GRADES, YDS_GRADES, displayGrade, type GradeScale } from '@/engine/grades';
 import type { Climb, LoggedExercise, ProjectAttempt, RopeStyle, Session, WallAngle } from '@/db/sessions';
 import type { AttemptOutcome } from '@/db/projects';
@@ -696,6 +697,8 @@ function SessionEditor({
   // Sticky for the session, like the grade: a climber on a spray wall is on
   // it for an hour, and nothing is selected until they say so (PLAN.md M108).
   const [angle, setAngle] = useState<WallAngle | null>(null);
+  /** The row being corrected, by id, or null (PLAN.md M298). */
+  const [editing, setEditing] = useState<string | null>(null);
   const [ropeStyle, setRopeStyle] = useState<RopeStyle | null>(null);
   const [climbName, setClimbName] = useState('');
   // `completes` is the exercise to tick when the clock runs out. A circuit
@@ -730,45 +733,59 @@ function SessionEditor({
   const patchExercise = (next: LoggedExercise) =>
     patch({ exercises: loggedExercises.map((e) => (e.name === next.name ? next : e)) });
 
-  function addClimb() {
-    const name = climbName.trim();
-    const result: Climb['result'] = outcome === 'attempt' ? 'attempt' : 'send';
-    const style = outcome === 'onsight' || outcome === 'flash' ? outcome : undefined;
+  /**
+   * A climb as the entry controls describe it (PLAN.md M298).
+   *
+   * Shared by *Add* and by the editor, because both have to build the same
+   * shape out of the same four chips — and the merge key they land on is
+   * `engine/climbRows.ts`, which used to be written out here and now has a
+   * second caller.
+   */
+  function climbFrom(
+    parts: { scale: GradeScale; grade: string; outcome: Outcome; angle: WallAngle | null; ropeStyle: RopeStyle | null },
+    name: string,
+    count: number,
+    id: string,
+  ): Climb {
+    const result: Climb['result'] = parts.outcome === 'attempt' ? 'attempt' : 'send';
+    const style = parts.outcome === 'onsight' || parts.outcome === 'flash' ? parts.outcome : undefined;
     // Only a rope has a lead (PLAN.md M108).
-    const rope = scale === 'YDS' && ropeStyle ? ropeStyle : undefined;
-    // A named climb never merges into an unnamed tally — the name is what
-    // makes project auto-suggest possible — and nor do two different styles.
-    // Angle and rope style join the key for the same reason: two V5s on
-    // different walls are two rows, or the angle they were logged with is
-    // whichever one happened to be tapped first.
-    const existing = session.climbs.find(
-      (c) =>
-        c.grade === grade &&
-        c.scale === scale &&
-        c.result === result &&
-        c.style === style &&
-        c.angle === (angle ?? undefined) &&
-        c.ropeStyle === rope &&
-        (c.name ?? '') === name,
-    );
-    const climbs = existing
-      ? session.climbs.map((c) => (c === existing ? { ...c, count: c.count + 1 } : c))
-      : [
-          ...session.climbs,
-          {
-            id: rid(),
-            grade,
-            scale,
-            count: 1,
-            result,
-            ...(style ? { style } : {}),
-            ...(angle ? { angle } : {}),
-            ...(rope ? { ropeStyle: rope } : {}),
-            ...(name ? { name } : {}),
-          } as Climb,
-        ];
-    patch({ climbs });
+    const rope = parts.scale === 'YDS' && parts.ropeStyle ? parts.ropeStyle : undefined;
+    return {
+      id,
+      grade: parts.grade,
+      scale: parts.scale,
+      count,
+      result,
+      ...(style ? { style } : {}),
+      ...(parts.angle ? { angle: parts.angle } : {}),
+      ...(rope ? { ropeStyle: rope } : {}),
+      ...(name ? { name } : {}),
+    } as Climb;
+  }
+
+  function addClimb() {
+    const climb = climbFrom({ scale, grade, outcome, angle, ropeStyle }, climbName.trim(), 1, rid());
+    patch({ climbs: mergeInto(session.climbs, climb) });
     setClimbName('');
+  }
+
+  /**
+   * A logged climb, corrected (PLAN.md M298).
+   *
+   * The count is carried rather than reset: a row tallied to four that was
+   * the wrong grade is four climbs at the right one, not one. And the edit
+   * goes through the same merge as an add, so correcting a V4 into a V5
+   * that is already on the list joins that row instead of sitting beside
+   * it as a second V5.
+   */
+  function saveClimb(id: string, parts: EditedClimb) {
+    const before = session.climbs;
+    const was = before.find((c) => c.id === id);
+    if (!was) return;
+    const edited = climbFrom(parts, parts.name.trim(), was.count, id);
+    patch({ climbs: replaceRow(before, id, edited) });
+    setEditing(null);
   }
 
   function bump(climb: Climb, by: number) {
@@ -973,6 +990,13 @@ function SessionEditor({
                 field reading as leftover. Named climbs are what feed
                 project suggestion and what the tally row already knows how
                 to show, so the ordering was quietly costing a feature. */}
+            {/* One set of these at a time (PLAN.md M298). A row being
+                corrected puts the same four chip rows inside the list, and
+                two grade pickers on one screen is a climber deciding which
+                one they are talking to. The editor is the answer while it
+                is open, and the row it replaces says what it is about. */}
+            {editing === null && (
+            <>
             <Input
               value={climbName}
               onChange={(e) => setClimbName(e.target.value)}
@@ -994,6 +1018,8 @@ function SessionEditor({
               onRopeStyle={setRopeStyle}
               onAdd={addClimb}
             />
+            </>
+            )}
 
             {session.climbs.length === 0 ? (
               <RepeatLast
@@ -1003,14 +1029,24 @@ function SessionEditor({
             ) : (
               <>
                 <ul className="grid grid-cols-1 gap-2">
-                  {session.climbs.map((c) => (
-                    <TallyRow
-                      key={c.id}
-                      climb={c}
-                      label={gradeLabel(c.scale, c.grade)}
-                      onBump={(by) => bump(c, by)}
-                    />
-                  ))}
+                  {session.climbs.map((c) =>
+                    editing === c.id ? (
+                      <EditClimbRow
+                        key={c.id}
+                        climb={c}
+                        onSave={(parts) => saveClimb(c.id, parts)}
+                        onCancel={() => setEditing(null)}
+                      />
+                    ) : (
+                      <TallyRow
+                        key={c.id}
+                        climb={c}
+                        label={gradeLabel(c.scale, c.grade)}
+                        onBump={(by) => bump(c, by)}
+                        onEdit={() => setEditing(c.id)}
+                      />
+                    ),
+                  )}
                 </ul>
                 <p className="text-sm text-ink-soft mt-3">{summaryLine}</p>
               </>
@@ -1516,6 +1552,66 @@ const CALL_TONE: Record<ReadinessCall, string> = {
  */
 function askablePartsOf(injuries: readonly Injury[]): BodyPart[] {
   return [...new Set(injuries.filter((i) => !ASKED_BY_FINGERS.includes(i.part)).map((i) => i.part))];
+}
+
+/**
+ * One row, being corrected (PLAN.md M298).
+ *
+ * The same controls as *Add* — `ClimbEntry` with a different verb on its
+ * button — because a climb is described by the same four chips whether it
+ * is arriving or being fixed. A second set of them would drift the first
+ * time one of those rows changed, which is what happened to the merge key
+ * this milestone also had to pull out.
+ *
+ * In place of the row rather than over it: a dialog needs focus management
+ * and a way out, and the row it replaces is already the thing being talked
+ * about. The count stays on the row's own plus and minus, which is M74's
+ * *"the only control that matters mid-session"* and has an undo behind it.
+ */
+function EditClimbRow({
+  climb,
+  onSave,
+  onCancel,
+}: {
+  climb: Climb;
+  onSave: (parts: EditedClimb) => void;
+  onCancel: () => void;
+}) {
+  const [scale, setScale] = useState<GradeScale>(climb.scale);
+  const [grade, setGrade] = useState(climb.grade);
+  const [outcome, setOutcome] = useState<Outcome>(
+    climb.result === 'attempt' ? 'attempt' : climb.style === 'onsight' || climb.style === 'flash' ? climb.style : 'send',
+  );
+  const [angle, setAngle] = useState<WallAngle | null>(climb.angle ?? null);
+  const [ropeStyle, setRopeStyle] = useState<RopeStyle | null>(climb.ropeStyle ?? null);
+  const [name, setName] = useState(climb.name ?? '');
+
+  return (
+    <li className="bg-sunken rounded-xl p-3">
+      <Input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Name it (optional) — named climbs can become projects"
+        className="mb-3"
+        aria-label="Climb name"
+      />
+      <ClimbEntry
+        scale={scale}
+        grade={grade}
+        outcome={outcome}
+        angle={angle}
+        ropeStyle={ropeStyle}
+        onScale={setScale}
+        onGrade={setGrade}
+        onOutcome={setOutcome}
+        onAngle={setAngle}
+        onRopeStyle={setRopeStyle}
+        addLabel="Save"
+        onCancel={onCancel}
+        onAdd={() => onSave({ scale, grade, outcome, angle, ropeStyle, name })}
+      />
+    </li>
+  );
 }
 
 function CheckInCard({

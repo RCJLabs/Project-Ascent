@@ -39,6 +39,16 @@ export const ROPE_STYLES: { value: RopeStyle; label: string }[] = [
  */
 export type RepeatableClimb = Omit<Climb, 'name'>;
 
+/** What the editor hands back for a row it corrected (PLAN.md M298). */
+export interface EditedClimb {
+  scale: GradeScale;
+  grade: string;
+  outcome: Outcome;
+  angle: WallAngle | null;
+  ropeStyle: RopeStyle | null;
+  name: string;
+}
+
 const OUTCOMES: { value: Outcome; label: string }[] = [
   { value: 'send', label: 'Sent' },
   { value: 'flash', label: 'Flash' },
@@ -76,6 +86,8 @@ export function ClimbEntry({
   onAngle,
   onRopeStyle,
   onAdd,
+  addLabel = 'Add',
+  onCancel,
 }: {
   scale: GradeScale;
   grade: string;
@@ -88,6 +100,15 @@ export function ClimbEntry({
   onAngle: (angle: WallAngle | null) => void;
   onRopeStyle: (style: RopeStyle | null) => void;
   onAdd: () => void;
+  /**
+   * What the action button says (PLAN.md M298). *Add* here, *Save* when
+   * these same controls are correcting a row that already exists — the
+   * controls are the same question either way, and a second copy of them
+   * would drift the first time a chip row changed.
+   */
+  addLabel?: string;
+  /** Offered beside it when there is something to go back to. */
+  onCancel?: () => void;
 }) {
   const gradeOptions = useGradeOptions();
   const grades = gradeOptions(scale, scale === 'V' ? V_GRADES : YDS_GRADES);
@@ -190,8 +211,18 @@ export function ClimbEntry({
             {o.label}
           </Chip>
         ))}
-        <Button size="sm" onClick={onAdd} className="ml-auto" aria-label="Add climb">
-          <Plus size={16} /> Add
+        {onCancel && (
+          <Button size="sm" variant="ghost" onClick={onCancel} className="ml-auto">
+            Cancel
+          </Button>
+        )}
+        <Button
+          size="sm"
+          onClick={onAdd}
+          className={onCancel ? '' : 'ml-auto'}
+          aria-label={`${addLabel} climb`}
+        >
+          {onCancel ? null : <Plus size={16} />} {addLabel}
         </Button>
       </div>
     </div>

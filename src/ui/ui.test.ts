@@ -71,6 +71,8 @@ const BESPOKE: Record<string, string> = {
     'the game canvas and its overlay controls are their own visual language',
   'src/features/log/ClimbEntry.tsx':
     'the grade strip is a dense scrolling value picker, not a filter — Chip’s tinted-border selection is unreadable at that size, so it fills solid instead',
+  'src/features/log/TallyRow.tsx':
+    'the grade and the words are the row itself, tappable to correct it — a Button inside a row that already carries a 56px plus and a 36px minus would be a third control competing with the two that matter mid-session (PLAN.md M298)',
   'src/features/assessments/HoldTimer.tsx':
     'one 80px transport control on a full-screen sheet, matching TimerSheet’s — a Button at that size would be a Button in name only',
 };

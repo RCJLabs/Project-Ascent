@@ -14424,7 +14424,7 @@ about. Quick shows: the climbs tally, today's prescription, effort (RPE, duratio
   else, and minus-to-zero deletes the row with an undo (`LogPage.tsx:759`, M79). Grade, style,
   angle and **name** are fixed at *Add*. The name is the sharp one: the input's own placeholder
   says *"named climbs can become projects"*, and a climber who taps Add before typing it has to
-  delete the row and re-enter the climb to get it back.
+  delete the row and re-enter the climb to get it back. **M298** below. *Shipped.*
 
 - **6. What is genuinely good, so it does not get 'improved'.** The tally row's 56px plus against a
   smaller minus (*"the correction, not the action"*), the undo on delete, the derived fields that
@@ -14617,6 +14617,10 @@ M50 for why it is not coming.
 - **M297 — the view a session opens in.** Home's two buttons wrote the stored preference, so
   tapping *Quick log* once made quick the view for every session opened afterwards. A choice made
   on the way in now lasts as long as the way in did.
+
+- **M298 — correcting a logged climb.** The row bumped its count and nothing else, so a grade typo
+  or a name typed a beat late cost the climb: minus to zero and back through the grade picker. Tap
+  the row now. The merge key that decides what is one row came out of `addClimb` on the way.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -20037,3 +20041,57 @@ Verified in the browser from a stored preference of `full`: **Quick log** opens 
 
 Battery: 5 killed, sanity survived. 6,927 tests over 410 files, from 6,919. Layout harness OK.
 First load 136.50KB against 137.3.
+
+
+## M298 — correcting a logged climb
+
+`TallyRow` bumped the count and nothing else. A grade typo, a flash logged as a send, a name typed
+a beat too late — all of them cost the row: minus to zero and back through the grade picker, the
+scale, the outcome, the angle. The name was the sharp one, because the input's own placeholder
+promises *"named climbs can become projects"* and there was no way to give one afterwards.
+
+Tapping the row opens it for correction now: the grade and the words are the target, which is what
+is wrong when something is wrong. Not a pencil in the corner — a row already carrying a 56px plus
+and a 36px minus has no room for a third control that is only occasionally wanted, and M74 calls
+those two *"the only control that matters mid-session"*.
+
+### What came out of `addClimb` on the way
+
+The merge key — what makes two tallies one row — was written out inside the add path and needed a
+second caller immediately, because a correction lands on it too: a V4 edited to a V5 the session
+already holds must **join** that row rather than sit beside it as a second V5. Two spellings of it
+would drift the first time a field joined, which has happened twice already (M108 for the angle,
+again for the rope style). It is `engine/climbRows.ts` now, with both callers on it.
+
+Three rules it carries, each with a reason older than this milestone:
+
+- a named climb never merges into an unnamed tally, because the name is what feeds project suggestion
+- a flash and a plain send are two things that happened
+- the merged row keeps the **first** row's place and id, because the list is deliberately unsorted
+  and a correction that moved a row to the bottom would read as the climb happening later than it did
+
+And the count is carried rather than reset: a row tallied to four that was the wrong grade is four
+climbs at the right one.
+
+### One set of controls at a time
+
+The editor puts the same four chip rows inside the list, and the *Add* form was still above it —
+two grade pickers on one screen, which is a climber deciding which one they are talking to. Found
+by the tests, which could not tell them apart either: *"Found multiple elements with the role button
+and name V6"*. The add form steps aside while a row is open.
+
+`ui.test.ts` also caught the bare `<button>` in the row and was right to — it is an exemption with
+a reason now, beside the calendar cell's and the week row's, and it still carries the focus ring.
+
+Verified in the browser: log a V5 flash, tap the row, name it *Brad Pit*, change it to V6, save.
+
+```
+grade pickers on screen while editing: 1
+WRITTEN: [{"grade":"V6","style":"flash","name":"Brad Pit","count":1}]
+```
+
+Battery: 9 killed, sanity survived. 6,946 tests over 412 files, from 6,927. Layout harness OK.
+First load 136.49KB against 137.3.
+
+That closes the logger audit: all five findings shipped, and the sixth was a list of what not to
+touch.

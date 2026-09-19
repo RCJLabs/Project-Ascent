@@ -15,18 +15,40 @@ export function TallyRow({
   climb,
   label,
   onBump,
+  onEdit,
 }: {
   climb: Climb;
   label: string;
   onBump: (by: number) => void;
+  /**
+   * Correcting the row rather than counting it (PLAN.md M298).
+   *
+   * The grade and the words are the target, not a pencil in the corner:
+   * they are what is wrong when something is wrong, and a row already
+   * carrying a 56px plus and a 36px minus has no room for a third control
+   * that is only occasionally wanted.
+   */
+  onEdit?: () => void;
 }) {
+  const said = `${climb.name ? `${climb.name} · ` : ''}${climbOutcome(climb)}`;
   return (
     <li className="flex items-center gap-2 bg-sunken rounded-xl pl-3 pr-2 py-2">
-      <span className="font-black text-lg w-16 tabular-nums">{label}</span>
-      <span className="text-xs text-ink-soft flex-1 truncate">
-        {climb.name ? `${climb.name} · ` : ''}
-        {climbOutcome(climb)}
-      </span>
+      {onEdit ? (
+        <button
+          type="button"
+          onClick={onEdit}
+          aria-label={`Correct ${label} ${climbOutcome(climb)}`}
+          className="focus-ring flex items-center gap-2 flex-1 min-w-0 text-left rounded-lg py-1"
+        >
+          <span className="font-black text-lg w-16 tabular-nums">{label}</span>
+          <span className="text-xs text-ink-soft flex-1 truncate">{said}</span>
+        </button>
+      ) : (
+        <>
+          <span className="font-black text-lg w-16 tabular-nums">{label}</span>
+          <span className="text-xs text-ink-soft flex-1 truncate">{said}</span>
+        </>
+      )}
       <IconButton
         inline={false}
         label={`One fewer ${label} ${climbOutcome(climb)}`}
