@@ -14383,6 +14383,64 @@ The first list ran M195 to M238 and is closed. This one opens on the screen the 
   adjacency is refused now.
   ***Built.*** *See the entry at the end of this document.*
 
+## The logger, audited (M294a)
+
+Six findings from reading `features/log/` rather than from using it, because the last four queue
+entries were written from impression and three of them were wrong on their specifics. Every line
+below names where it is true.
+
+**The default view is `quick`** — `store/settings.ts:156` — and the fold is what most of this is
+about. Quick shows: the climbs tally, today's prescription, effort (RPE, duration, warmup). Behind
+*More* sit ten cards.
+
+- **1. The fold's label lists five of the ten things behind it.** `LogPage.tsx:1384` reads *"More
+  — check-in, projects, warmup, notes, photos"*. Also behind it: **where you climbed**, **indoors
+  or out**, **conditions**, the drill, the cooldown, partners, save-as-template and correct-this-
+  session. A label that enumerates its contents and gets them wrong is the shape `fields.ts` warns
+  about one file over — *"a question the content asks and the app never renders is a promise the
+  content cannot keep"*. Cheapest fix in the list, and the one that makes the next two visible.
+
+- **2. Three fields built *because* they had no writer are unreachable by default.** `mode` (M170:
+  *"every one of them read a climber who had never been outside"*), `location` (M133, asked of
+  everyone) and `conditions` (M289, asked of every day on rock) all live in `FieldsCard`, and
+  `LogPage.tsx:1010` gates it on `full`. M170 named the exact case it was for — *"a climber on Iron
+  Grip who went to the crag on Saturday"* — and in the shipped default that climber has no way to
+  say so. M289 is nine milestones old and has been invisible out of the box for all of them.
+
+- **3. The app sets a daily task the default view hides.** `challenges.ts:155` asks the climber to
+  *"Leave a note on today's session"*; the Notes card is `{full && …}` at `LogPage.tsx:1318`. One
+  of the two is wrong and it is not the task.
+
+- **4. A per-session choice overwrites a stored preference.** Home's two buttons call
+  `setLogView('full')` and `setLogView('quick')` (`PreSession.tsx:264`), which writes to device
+  settings. So tapping *Quick log* once makes quick the view for every session opened afterwards,
+  including last Tuesday's from the calendar. The hazard was seen and solved in the other
+  direction: *"Inside the logger the fold is the climber's own choice, and a start button that
+  silently reset it would undo the setting every session."* The distinction drawn is Home versus
+  in-logger; the one that matters is this-session versus always.
+
+- **5. A logged climb cannot be corrected, only removed.** `TallyRow` bumps the count and nothing
+  else, and minus-to-zero deletes the row with an undo (`LogPage.tsx:759`, M79). Grade, style,
+  angle and **name** are fixed at *Add*. The name is the sharp one: the input's own placeholder
+  says *"named climbs can become projects"*, and a climber who taps Add before typing it has to
+  delete the row and re-enter the climb to get it back.
+
+- **6. What is genuinely good, so it does not get 'improved'.** The tally row's 56px plus against a
+  smaller minus (*"the correction, not the action"*), the undo on delete, the derived fields that
+  answer a question instead of asking it (M120), and the merge/move correction card. None of these
+  wants touching.
+
+### The shape of a fix
+
+Not "move everything into quick", which is the fold gone. The three fields in **2** are one compact
+row — indoors/out, where, conditions — and they are facts about the day rather than commentary on
+it, which is the line the fold should be drawn on. Notes is a fourth. Everything left behind it
+(check-in, projects, drill, cooldown, partners, templates, correction) is either a plan, a reading
+or an edit, and belongs there.
+
+That reframes the fold from *short versus long* to **what happened versus what to make of it** — a
+line the logger can state and a climber can predict, instead of a list of five that is missing five.
+
 ## Asked for, and waiting
 
 Nine features from a brainstorm run against the codebase rather than against imagination, in the
