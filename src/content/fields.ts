@@ -15,7 +15,7 @@
 
 import type { FieldId } from './types';
 
-export type FieldKind = 'text' | 'number' | 'grade' | 'scale';
+export type FieldKind = 'text' | 'number' | 'grade' | 'scale' | 'choice';
 
 export interface FieldSpec {
   id: FieldId;
@@ -28,6 +28,15 @@ export interface FieldSpec {
   placeholder?: string;
   /** For `scale`: the ends of it, so a 1-10 row can be labelled. */
   ends?: [string, string];
+  /**
+   * For `choice`: the answers, worst first.
+   *
+   * Ordered, so a reader can compare two of them without a second table,
+   * and stored as the word rather than as its index — `exportCsv` puts the
+   * answer straight into the climber's own spreadsheet, where a `1` under
+   * *Conditions* says nothing at all.
+   */
+  options?: readonly string[];
   /** Which ladder a grade field reads from. */
   scale?: 'boulder' | 'route';
   /**
@@ -59,6 +68,23 @@ export interface FieldSpec {
    * that no session type may name one, which `content/validate.ts` holds.
    */
   retired?: string;
+  /**
+   * Put by the logger to every session it applies to, rather than declared
+   * by a program (PLAN.md M289). The value is when, in a reader's words.
+   *
+   * The third thing a registry entry can be, beside asked and retired. M169
+   * made the case for the second: a field asked by nothing and marked as
+   * nothing is indistinguishable from one somebody forgot to wire up, and
+   * `authored.test.ts` sweeps for exactly that. A question the *app* asks
+   * rather than the content is the same problem one step over — real, on
+   * screen, and invisible to a sweep that only reads session types.
+   *
+   * It is not a way to quiet the sweep: `authored.test.ts` holds every
+   * field marked this way to being named in the logger's own source, so a
+   * marker on a field nothing renders fails in the same place a forgotten
+   * field does.
+   */
+  alwaysAsked?: string;
 }
 
 export const FIELDS: Record<FieldId, FieldSpec> = {
@@ -110,7 +136,22 @@ export const FIELDS: Record<FieldId, FieldSpec> = {
     retired: "the climb's own name, on every climb row since M130",
   },
   pumpLevel: { id: 'pumpLevel', label: 'Pump', kind: 'scale', ends: ['Fresh', 'Wrecked'] },
-  location: { id: 'location', label: 'Where', kind: 'text', placeholder: 'The gym, the crag, the boulder' },
+  /**
+   * Asked of everyone since M133, which the registry never said.
+   *
+   * Seven session types across three programs declare it, so the orphan
+   * sweep was always satisfied by the content — and the fact that the
+   * logger asks it of a climber on Iron Grip too lived only in a comment in
+   * `LogPage`. The marker puts it where a reader of the registry finds it,
+   * and holds the logger to it.
+   */
+  location: {
+    id: 'location',
+    label: 'Where',
+    kind: 'text',
+    placeholder: 'The gym, the crag, the boulder',
+    alwaysAsked: 'every session, whatever the program asked for',
+  },
   sessionNumber: { id: 'sessionNumber', label: 'Day of the trip', kind: 'number' },
   /**
    * @deprecated Retired at M108 and asked by no session type.
@@ -136,6 +177,34 @@ export const FIELDS: Record<FieldId, FieldSpec> = {
     kind: 'text',
     placeholder: 'Onsight, flash, redpoint, toprope',
     retired: "the climb's own style and rope style, which every climb row carries since M108",
+  },
+  /**
+   * How the rock was, on a day outdoors (PLAN.md M289).
+   *
+   * Three words, not a temperature. A number is the measurement a climber
+   * has least often and the one that means least on its own — 6°C on
+   * sandstone after rain is not 6°C on a north-facing granite boulder —
+   * and it would be asked in whichever unit the app is set to, which is a
+   * second reading of one fact. What a climber can answer honestly a week
+   * later is whether the rock was with them or against them.
+   *
+   * **One axis, and it conflates two things.** Greasy is humid and warm;
+   * feet you cannot feel is cold. Both are the rock being against you,
+   * which is the variable this exists for, and neither is distinguishable
+   * from the other in what it does to a grade. Said here rather than
+   * discovered later.
+   *
+   * Asked of every outdoor session and declared by no program, for the
+   * reason `location` is asked of everyone since M133: which kind of day it
+   * was is a fact about the day, not a question a program has any business
+   * owning.
+   */
+  conditions: {
+    id: 'conditions',
+    label: 'Conditions',
+    kind: 'choice',
+    options: ['Greasy', 'Okay', 'Good'],
+    alwaysAsked: 'every session logged as a day on rock',
   },
   waterDepth: { id: 'waterDepth', label: 'Water depth', kind: 'number', unit: 'ft' },
   gearNotes: { id: 'gearNotes', label: 'Gear', kind: 'text', placeholder: 'What the rack needed' },

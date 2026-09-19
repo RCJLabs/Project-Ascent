@@ -126,6 +126,56 @@ describe('project escalation', () => {
   });
 });
 
+describe('days on rock the rock was against you', () => {
+  const greasy = (n: number) =>
+    session(back(n), { mode: 'outdoor', fields: { conditions: 'Greasy' } });
+
+  it('says nothing when nobody answered the question', () => {
+    const log = [...steady(), session(back(3), { mode: 'outdoor' })];
+    expect(ids(tips({ sessions: log }))).not.toContain('poor-conditions');
+  });
+
+  it('puts the run on screen in the climber\u2019s own word', () => {
+    const tip = tips({ sessions: [...steady(), greasy(9), greasy(6), greasy(3)] })
+      .find((t) => t.id === 'poor-conditions');
+    expect(tip?.headline).toBe('Your last 3 days on rock were greasy');
+    expect(tip?.signature).toBe('3');
+  });
+
+  /**
+   * It is context and never a correction, which is the promise
+   * `conditions.ts` opens with — so it has nothing to do and no button.
+   */
+  it('offers no action, because there is nothing to fix', () => {
+    const tip = tips({ sessions: [...steady(), greasy(9), greasy(6), greasy(3)] })
+      .find((t) => t.id === 'poor-conditions');
+    expect(tip?.action).toBeUndefined();
+    expect(tip?.tone).toBe('neutral');
+  });
+
+  /**
+   * Found in the browser: three greasy days spread across a winter is a true
+   * sentence about grades nobody is reading, under a tip about the same gap.
+   */
+  it('says nothing once the last day on rock is old news', () => {
+    const old = [...steady(), greasy(60), greasy(40), greasy(OUTDOOR_GAP_DAYS)];
+    const said = ids(tips({ sessions: old }));
+    expect(said).not.toContain('poor-conditions');
+    expect(said, 'the rule that has the floor instead').toContain('outdoor-reentry');
+
+    const fresh = [...steady(), greasy(60), greasy(40), greasy(OUTDOOR_GAP_DAYS - 1)];
+    expect(ids(tips({ sessions: fresh }))).toContain('poor-conditions');
+  });
+
+  it('comes back when a fourth bad day lands on top of a dismissal', () => {
+    const three = tips({ sessions: [...steady(), greasy(9), greasy(6), greasy(3)] });
+    const four = tips({ sessions: [...steady(), greasy(12), greasy(9), greasy(6), greasy(3)] });
+    const dismissed = { 'poor-conditions': '3' };
+    expect(ids(visibleTips(three, dismissed))).not.toContain('poor-conditions');
+    expect(ids(visibleTips(four, dismissed))).toContain('poor-conditions');
+  });
+});
+
 describe('time away from rock', () => {
   it('says nothing to someone who has never been outdoors', () => {
     expect(ids(tips({ sessions: steady() }))).not.toContain('outdoor-reentry');

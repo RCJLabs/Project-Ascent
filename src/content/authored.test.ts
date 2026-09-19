@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { DRILLS } from '@/content/drills';
 import { FIELDS } from '@/content/fields';
@@ -68,11 +69,35 @@ const askedFields = () => {
  * weakening the sweep's copy survived.
  */
 export function orphanFields(
-  fields: Record<string, { retired?: string; derived?: string }>,
+  fields: Record<string, { retired?: string; derived?: string; alwaysAsked?: string }>,
   asked: Set<string>,
 ): string[] {
   return Object.entries(fields)
-    .filter(([id, spec]) => !asked.has(id) && spec.retired === undefined && spec.derived === undefined)
+    .filter(
+      ([id, spec]) =>
+        !asked.has(id) &&
+        spec.retired === undefined &&
+        spec.derived === undefined &&
+        spec.alwaysAsked === undefined,
+    )
+    .map(([id]) => id);
+}
+
+/**
+ * A field the logger claims to ask itself, that the logger never names.
+ *
+ * `alwaysAsked` exempts a field from the orphan sweep above, so without this
+ * the marker would be a way to silence it — which is the omission M169
+ * marked `clipStyle` to prevent, arriving by the other door. Read off the
+ * source because there is nowhere else to read it: which fields the logger
+ * adds to a session type's list is a decision inside one component.
+ */
+export function unrenderedAlways(
+  fields: Record<string, { alwaysAsked?: string }>,
+  loggerSource: string,
+): string[] {
+  return Object.entries(fields)
+    .filter(([id, spec]) => spec.alwaysAsked !== undefined && !loggerSource.includes(`'${id}'`))
     .map(([id]) => id);
 }
 
@@ -176,6 +201,26 @@ describe('every question the logger can ask', () => {
     expect(orphanFields(FIELDS, askedFields())).toEqual([]);
   });
 
+  /**
+   * The two the app asks rather than the content: where it happened, of
+   * everyone since M133, and how the rock was, of every day on rock since
+   * M289. Both are real questions on a real card and neither is declared by
+   * a session type, which is the case this marker exists for.
+   */
+  it('names the two the logger asks itself, and renders both', () => {
+    const always = Object.entries(FIELDS)
+      .filter(([, spec]) => spec.alwaysAsked !== undefined)
+      .map(([id]) => id)
+      .sort();
+    expect(always).toEqual(['conditions', 'location']);
+    for (const [id, spec] of Object.entries(FIELDS)) {
+      if (spec.alwaysAsked !== undefined) {
+        expect(spec.alwaysAsked.length, `${id} says it is always asked and not when`).toBeGreaterThan(20);
+      }
+    }
+    expect(unrenderedAlways(FIELDS, readFileSync('src/features/log/LogPage.tsx', 'utf8'))).toEqual([]);
+  });
+
   it('retires four, each with its replacement named', () => {
     const retired = Object.entries(FIELDS).filter(([, spec]) => spec.retired !== undefined);
     expect(retired.map(([id]) => id).sort()).toEqual([
@@ -213,6 +258,14 @@ describe('the sweeps themselves work', () => {
     const asked = askedFields();
     expect(orphanFields(FIELDS, asked)).toEqual([]);
     expect(orphanFields({ ...FIELDS, aForgottenQuestion: {} }, asked)).toEqual(['aForgottenQuestion']);
+  });
+
+  it('would notice a field marked always-asked that the logger never asks', () => {
+    const source = readFileSync('src/features/log/LogPage.tsx', 'utf8');
+    expect(unrenderedAlways(FIELDS, source)).toEqual([]);
+    expect(
+      unrenderedAlways({ aClaimedQuestion: { alwaysAsked: 'never, in fact' } }, source),
+    ).toEqual(['aClaimedQuestion']);
   });
 
   it('would notice a retired field that a session type still asks', () => {

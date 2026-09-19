@@ -305,7 +305,8 @@ export type FieldId =
   | 'clipStyle'
   | 'waterDepth'
   | 'gearNotes'
-  | 'sessionDuration';
+  | 'sessionDuration'
+  | 'conditions';
 
 /**
  * How hard a day is, as a property of the session rather than of the dose

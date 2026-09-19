@@ -395,6 +395,20 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
    * M277 is byte-identical after it.
    */
   const ropes = createRng(seed ^ 0x0f0f_b00b);
+  /**
+   * A fourth, for how the rock was (PLAN.md M289), on the same reasoning.
+   *
+   * Drawn only on the outdoor days, and off its own sequence, so every
+   * record this file produced before M289 — climbs, burns, benchmarks,
+   * notes — is byte-identical after it. Checked rather than assumed, which
+   * is what M277 had to do the hard way.
+   *
+   * Not rigged to fire the coach's run-of-bad-days tip. A sample climber
+   * whose log was arranged to trigger a rule is a demo of the rule and not
+   * of a climber; `coach.test.ts` holds the rule, and this holds a log that
+   * looks like somebody's.
+   */
+  const weather = createRng(seed ^ 0xc01d_d00d);
   const start = addDays(startOfWeek(today), -(DEMO_WEEKS - 1) * 7);
   /** Named once, because the finished block below is dated backwards off it. */
   const ironGripStart = addDays(startOfWeek(today), -7 * 5);
@@ -431,7 +445,14 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
           warmup: chance(rng, 0.85),
           climbs: climbsFor(rng, week, id),
           ...(outdoor ? { projectAttempts: burnsFor(rng, week, id) } : {}),
-          ...(outdoor ? { fields: { location: pick(rng, ['Stanage', 'The Roaches', 'Malham']) } } : {}),
+          ...(outdoor
+            ? {
+                fields: {
+                  location: pick(rng, ['Stanage', 'The Roaches', 'Malham']),
+                  conditions: pick(weather, ['Good', 'Okay', 'Okay', 'Greasy']),
+                },
+              }
+            : {}),
           ...(chance(rng, 0.3)
             ? { checkIn: { fingers: pick(rng, ['good', 'good', 'tender'] as const), sleep: pick(rng, ['good', 'good', 'short'] as const) } }
             : {}),

@@ -28,8 +28,12 @@ describe('the field registry', () => {
     for (const [id, spec] of Object.entries(FIELDS)) {
       expect(spec.id, id).toBe(id);
       expect(spec.label.trim(), id).not.toBe('');
-      expect(['text', 'number', 'grade', 'scale'], id).toContain(spec.kind);
+      expect(['text', 'number', 'grade', 'scale', 'choice'], id).toContain(spec.kind);
       if (spec.kind === 'scale') expect(spec.ends, id).toHaveLength(2);
+      // A choice with one answer is a label, and one with none cannot be
+      // rendered at all — the logger maps `options` and would draw nothing.
+      if (spec.kind === 'choice') expect(spec.options?.length ?? 0, id).toBeGreaterThan(1);
+      if (spec.options !== undefined) expect(spec.kind, id).toBe('choice');
       if (spec.kind === 'grade') expect(['boulder', 'route'], id).toContain(spec.scale);
       // A unit belongs to a number; a placeholder belongs to free text.
       if (spec.unit !== undefined) expect(spec.kind, id).toBe('number');

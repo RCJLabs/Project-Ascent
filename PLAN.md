@@ -14423,8 +14423,11 @@ M50 for why it is not coming.
 
 - **Conditions on an outdoor session.** Nothing records temperature or how it felt underfoot, and
   outdoors that is the largest confound in reading one's own log — *"I was weak"* against *"it was
-  28°C and greasy"*. One optional field gives `yearReview`, `venues` and `pyramidShape` a real
-  explanatory variable, with no network. *Medium.*
+  28°C and greasy"*. ~~One optional field gives `yearReview`, `venues` and `pyramidShape` a real
+  explanatory variable~~ — **wrong about the third, checked before building.** `readPyramid(rows,
+  totalSends)` takes no sessions and its rows are whole-log tallies per grade, so a per-day answer
+  cannot enter it without changing both the signature and what a pyramid row means. **M289** below.
+  *Shipped.*
 
 - **A guided move to a new phone.** There is no account by design, so export → transfer → import
   *is* the migration story, and it is three screens a climber has to know to string together. The
@@ -14499,6 +14502,10 @@ M50 for why it is not coming.
   JSON, to a reader who has the app. Markdown for the athlete who does not. Reading the first
   draft's own output found the bug the tests could not have: six campus exercises listed with
   nothing to say they are alternatives, which is a different program.
+
+- **M289 — the day it was greasy.** Nothing in the record could tell *"I was weak"* from *"it was
+  28°C and greasy"*. Three words on a day on rock, asked by the logger rather than by a program,
+  and a coach card that qualifies a bad stretch without adjusting a single grade.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -19368,3 +19375,81 @@ anchor had `\n` inside a Python heredoc, which is a literal backslash-n and matc
 time this session my escaping made the battery say something untrue.
 
 6,840 tests over 403 files, from 6,824. First load 135.95KB against the 136.4KB budget.
+
+
+## M289 — the day it was greasy
+
+The premise held and a third of it did not. Nothing in the app records conditions — a grep for
+temperature, humidity or friction outside content prose returns nothing at all. But the entry
+claimed one optional field would give `yearReview`, `venues` **and** `pyramidShape` an explanatory
+variable, and `readPyramid(rows, totalSends)` takes no sessions: its rows are whole-log tallies per
+grade, and a per-day answer cannot enter one without changing both the signature and what a pyramid
+row means. Two of three, and the same over-claim shape M275's entry had.
+
+### Three words, not a temperature
+
+A number is the measurement a climber has least often and the one that means least alone — 6°C on
+sandstone after rain is not 6°C on a north-facing granite boulder — and it would be asked in
+whichever unit the app is set to, which is one fact with two readings. What a climber can answer
+honestly a week later is whether the rock was with them or against them: **Greasy, Okay, Good**.
+
+One axis, and it conflates two things: greasy is humid and warm, feet you cannot feel is cold. Both
+are the rock being against you, which is the variable this exists for, and neither is
+distinguishable from the other in what it does to a grade. Written down in the registry rather than
+discovered later.
+
+### Asked by the app, which the registry had no word for
+
+`location` has been asked of every session since M133 on the grounds that where you climbed is *"a
+fact about the day, not a question a program has any business owning"*. Conditions is the same
+argument, narrowed by the one thing that makes it worth asking: indoors the answer never varies, and
+a question whose answer never varies teaches a climber to stop reading the form. `mode` is the
+writer — so turning a day to *On rock* puts the question there.
+
+That broke `authored.test.ts`, correctly. Its sweep holds every field to being asked by a session
+type or retired on purpose, because *"a field asked by nothing and marked as nothing is
+indistinguishable from one somebody forgot to wire up"*. A question the **app** asks rather than the
+content is that problem one door over: real, on screen, invisible to a sweep that reads session
+types. So `alwaysAsked` is the third thing a registry entry can be — and, because a marker that
+exempts a field from a sweep is a way to silence it, a second sweep holds every field marked that
+way to being named in the logger's own source. `location` carries it too now; that fact lived in a
+comment in `LogPage` and belonged in the registry.
+
+### It corrects nothing
+
+No grade moves, no ladder is adjusted, no session is re-priced. `altimeter.ts` opens by promising no
+game action adds a foot; this keeps the same promise from the other side, because a bad day is still
+the day you had. What it does is put a sentence where the wrong conclusion gets drawn:
+
+```
+Your last 3 days on rock were greasy
+You said so yourself, on every one of them since Sep 4. Grades from a stretch
+like that are a reading of the rock as much as of you — nothing here has been
+adjusted for it, and nothing should be …
+```
+
+### The rule's one real difficulty
+
+The question is optional and a climber answers it more readily on a day worth complaining about. A
+run counted over the **answers** would find three greasy days in a log with three greasy days spread
+across a season. So the run is consecutive among **days on rock**: walking back from the last one, an
+unanswered day ends it exactly as a good day does. That makes *your last three days on rock*
+literally true rather than true of the days it was told about.
+
+### What the browser asked for
+
+The sample climber's last three days on rock span twelve days, which is fine — and nothing stopped
+the same sentence being said about three days spread across a winter: true, stale, and sitting
+underneath `outdoorReentry` saying something stronger about the same gap. Bounded at
+`OUTDOOR_GAP_DAYS`, the constant that already defines "away from rock", so the two rules cannot both
+hold the floor.
+
+The sample climber answers it now, on all 31 of its outdoor days, off a **fourth RNG stream** — the
+third time this file has had to do that, and the reasoning is M207's. Checked rather than assumed:
+dumped both sides with the new field scrubbed and diffed, 158,758 bytes and byte-identical. Not
+rigged to fire the tip, because a log arranged to trigger a rule is a demo of the rule.
+
+Battery: 9 killed, sanity survived — including the marker sweep itself, since a guard that cannot
+fail is the thing this milestone added a guard to prevent.
+
+6,864 tests over 405 files, from 6,840. First load 135.94KB against the 136.4KB budget.

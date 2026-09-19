@@ -1609,7 +1609,21 @@ function FieldsCard({
    * reaches it.
    */
   const declared = type?.fields ?? [];
-  const asked: FieldId[] = declared.includes('location') ? declared : ['location', ...declared];
+  const everyone: FieldId[] = declared.includes('location') ? declared : ['location', ...declared];
+  /**
+   * And how the rock was, on a day outdoors (PLAN.md M289).
+   *
+   * The same argument as `location` above, narrowed by the one thing that
+   * makes it worth asking: indoors the answer is the same every time, and a
+   * question whose answer never varies is a question that trains a climber
+   * to stop reading the form. `mode` is the writer of that — set from the
+   * session type when the day starts and corrected by the chips above — so
+   * turning the day to *On rock* puts the question there.
+   */
+  const asked: FieldId[] =
+    session.mode === 'outdoor' && !everyone.includes('conditions')
+      ? [...everyone, 'conditions']
+      : everyone;
   const specs = asked.map(getField).filter((f): f is FieldSpec => f !== undefined);
   if (specs.length === 0) return null;
 
@@ -1741,6 +1755,25 @@ function FieldsCard({
                     <span>{spec.ends[1]}</span>
                   </div>
                 )}
+              </div>
+            );
+          }
+
+          if (spec.kind === 'choice') {
+            return (
+              <div key={spec.id}>
+                <span className="text-sm text-ink-soft block mb-1.5">{spec.label}</span>
+                <div className="flex flex-wrap gap-2">
+                  {(spec.options ?? []).map((option) => (
+                    <Chip
+                      key={option}
+                      active={value === option}
+                      onClick={() => set(spec.id, value === option ? undefined : option)}
+                    >
+                      {option}
+                    </Chip>
+                  ))}
+                </div>
               </div>
             );
           }

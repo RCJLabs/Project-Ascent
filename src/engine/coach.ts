@@ -23,7 +23,8 @@ import type { MetricEntry } from '@/db/metrics';
 import type { MetricId } from '@/content/types';
 import { METRICS } from '@/content/metrics';
 import { assessmentStatus } from './assessments';
-import { addDays, daysBetween, today as todayKey } from './dates';
+import { addDays, daysBetween, shortLabel, today as todayKey } from './dates';
+import { poorRun } from './conditions';
 import { MIN_CHRONIC_DAYS, MIN_RATIO_DAYS, type ClimberState } from './derive';
 import { recoverySentence, type Diagnosis } from './plateau';
 import { activeProjects, attemptsFor, highPointOf } from './projects';
@@ -203,6 +204,7 @@ export function buildTips(input: CoachInput): Tip[] {
     plateau(input, spike),
     ...projectBurns(input, today),
     outdoorReentry(input, today),
+    poorConditions(input, today),
     detraining(input, today),
     fingerGap(input, today),
     unscoredEffort(input),
@@ -435,6 +437,50 @@ function projectBurns(input: CoachInput, today: string): Tip[] {
   }
   // Quieten the noise: two loud projects at once is a to-do list, not advice.
   return out.slice(0, 2).map((t) => ({ ...t, signature: `${t.signature}:${today.slice(0, 7)}` }));
+}
+
+/**
+ * Three days on rock, all of them against you (PLAN.md M289).
+ *
+ * The app has always been able to see a flat stretch of outdoor grades and
+ * has never been able to see why. `pyramidShape.ts` states the general
+ * version — a reading of a log is a statement about the log at least as much
+ * as about the climber — and this is the one case where the climber can
+ * settle it themselves, because they were there.
+ *
+ * **It corrects nothing.** No grade moves, no ladder is adjusted, no session
+ * is re-priced; `conditions.ts` says why at length. What it does is put the
+ * sentence where the wrong conclusion gets drawn, which is the same job the
+ * M275 tip above does for a fortnight in Font.
+ *
+ * Low weight on purpose. It is context for a number the climber is reading,
+ * not a thing to do, and it carries no action for the same reason — there is
+ * nothing to fix and the next cold spell is not on a button.
+ *
+ * The browser is what asked for the bound below. The sample climber's last
+ * three days on rock spanned twelve days, which is fine, and nothing stopped
+ * the same sentence being said about three days spread across a winter —
+ * true, stale, and sitting under `outdoorReentry` saying something about the
+ * same gap.
+ */
+function poorConditions({ sessions }: CoachInput, today: string): Tip | null {
+  const run = poorRun(sessions);
+  if (run === null) return null;
+  // And not about a stretch that is already history. Past `OUTDOOR_GAP_DAYS`
+  // the rule below has the floor and says something stronger about the same
+  // days; two cards about one gap is the app talking over itself, and the
+  // grades this qualifies are not the ones being read any more.
+  if (daysBetween(run.to, today) >= OUTDOOR_GAP_DAYS) return null;
+  return {
+    id: 'poor-conditions',
+    // The length, so a fourth bad day brings it back after a dismissal and
+    // the third does not keep coming back once waved away.
+    signature: `${run.days}`,
+    tone: 'neutral',
+    weight: 30,
+    headline: `Your last ${run.days} days on rock were ${run.word}`,
+    body: `You said so yourself, on every one of them since ${shortLabel(run.from)}. Grades from a stretch like that are a reading of the rock as much as of you — nothing here has been adjusted for it, and nothing should be, but a flat few weeks outdoors with this behind it is not the same fact as a flat few weeks in good nick.`,
+  };
 }
 
 /**
