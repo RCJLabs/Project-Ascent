@@ -238,7 +238,49 @@ function readPage({ tabNames, target }) {
     }
   }
 
+  /**
+   * The one thing the app is opened to do, reachable without scrolling
+   * (PLAN.md M294).
+   *
+   * Home only, because Home is the only screen with a designated primary
+   * action — everywhere else "the main control" is a judgement and a check
+   * built on one is a check that argues with you.
+   *
+   * Measured against the nav rather than the viewport: the tab bar sits
+   * over the bottom of the page, so a button whose box is inside the window
+   * and behind the nav is not reachable and reads as fine to
+   * `getBoundingClientRect` alone. M239 moved this button up on a 430×932
+   * phone and nothing noticed that it stayed under the nav on a 360×640
+   * one, for fifty-four milestones.
+   */
+  const startNames = /^(Start session|Log a session|Quick log|Log rest day)$/;
+  const start = [...document.querySelectorAll('main button, main a')].find((el) =>
+    startNames.test((el.getAttribute('aria-label') ?? el.textContent ?? '').trim()),
+  );
+  /**
+   * The bottom of the usable screen, which is not always the nav.
+   *
+   * On a phone the tab bar is fixed over the foot of the page, so it is the
+   * fold. On desktop the same `nav` is at the top, and measuring against it
+   * reports every button on the page as unreachable — which is what the
+   * first version of this did, and the harness said so on its first run.
+   * Sitting in the lower half is what makes it a floor.
+   */
+  const navBox = nav.getBoundingClientRect();
+  const floor = navBox.top > window.innerHeight / 2 ? navBox.top : window.innerHeight;
+  const action = start
+    ? (() => {
+        const b = start.getBoundingClientRect();
+        const over = Math.round(b.bottom - floor);
+        return {
+          name: (start.textContent ?? '').trim().slice(0, 24),
+          below: over > 1 ? over : 0,
+        };
+      })()
+    : { missing: true };
+
   return {
+    action,
     tabsOff: tabs.filter((t) => t.missing || !t.on).map((t) => t.name),
     tooSmall: tabs.filter((t) => !t.missing && t.h + 0.5 < target).map((t) => `${t.name} ${t.h}px`),
     docScrolls: doc.scrollHeight > doc.clientHeight + 1,
@@ -359,6 +401,12 @@ for (const size of SIZES) {
     if (r.small.length) note(at, `control under 24px: ${r.small.join('; ')}`);
     if (r.spill.length) note(at, `off the side: ${r.spill.join('; ')}`);
     if (errors.length) note(at, `threw: ${errors[0]}`);
+    if (path === '/' && r.action) {
+      if (r.action.missing) note(at, 'no way to start or log a session');
+      else if (r.action.below) {
+        note(at, `the day's button is ${r.action.below}px under the nav (${r.action.name})`);
+      }
+    }
   }
 
   /**

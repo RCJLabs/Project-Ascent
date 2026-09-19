@@ -117,9 +117,21 @@ export function HomePage() {
   return (
     <>
       <HomeHeadingForToday date={date} />
-      {/* How high and how hard, then the button, then the training around
-          it. The order is the milestone: before M239 the first screen was
-          four cards of commentary and the button was under all of them.
+      {/* The button, then how high and how hard, then the training around
+          it (PLAN.md M294).
+
+          M239 put the numbers above the button and measured it on one
+          phone: *"On a 430×932 phone the Log session button sat at the
+          bottom edge of the viewport."* True there, and it stayed true at
+          390×844. At 360×640 — the smallest size the layout harness
+          checks — the button came out at 674px with the nav at 582, which
+          is 92px of scrolling to reach the one thing the app is opened to
+          do. M239 fixed the tall phone and never checked the short one.
+
+          So the order inverts and the reason M239 gave survives it: the
+          numbers are still at full size and still the first thing under the
+          fold. What changed is which of the two a climber has to scroll
+          for, and a reading should lose that to an action.
 
           On a wide screen those two groups are side by side (PLAN.md M240).
           M239 left the numbers and the session running the full 1024px while
@@ -129,10 +141,10 @@ export function HomePage() {
           `lg`, which is where the order above still reads top to bottom. */}
       <div className="lg:grid lg:grid-cols-[1.55fr_1fr] lg:gap-6 lg:items-start">
         <div>
+          <TodayCard date={date} />
           <Suspense fallback={<NumbersSkeleton />}>
             <HomeStatsCard />
           </Suspense>
-          <TodayCard date={date} />
         </div>
         <div>
           <AroundTheSession />

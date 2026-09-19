@@ -14542,6 +14542,11 @@ M50 for why it is not coming.
   seconds — so it gates the deploy. And the first thing it should have been watching, measured at
   last: the day's button is below the fold on a short phone.
 
+- **M294 — the button, then the numbers.** M239's order inverted on M239's own reasoning: a climber
+  opening the app is there to log rather than to read, and the numbers were the thing they had to
+  scroll past. 674px to 421px at 360×640. The harness gained the invariant, and it fails on the old
+  order.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -19742,6 +19747,11 @@ The last line is the harness's own `small` size. The stack at it:
  674px          Start session
 ```
 
+~~The numbers card is 533px.~~ **Wrong, corrected at M294.** That probe printed the depth-1
+children of `main`, and the 533 is the *column* holding the numbers card and the session card
+together. Measured directly, the numbers card is **241px** — 127 of altimeter and 102 of stat
+tiles. The gap between the button and the fold is real; the thing blamed for it was not that big.
+
 **M239 fixed the tall phone and never checked the short one.** Its entry is specific — *"On a
 430×932 phone the Log session button sat at the bottom edge of the viewport"* — and specific about
 the fix, the numbers at full size above the button. At 430×932 that is exactly what happened and it
@@ -19756,3 +19766,70 @@ catch it belongs with the fix**, because a gating check that fails on the curren
 at all.
 
 Battery: 3 killed, sanity survived. 6,912 tests over 408 files.
+
+
+## M294 — the button, then the numbers
+
+M293 measured the day's button below the fold on a short phone and stopped there, because the fix
+was a design decision. The decision came back: move the numbers under the button, and shorten them.
+The first half is this milestone. The second turned out to rest on a number of mine that was wrong.
+
+### The move
+
+```
+            before   after
+430×932      635  →   383
+390×844      655  →   402
+360×780      674  →   421
+375×667      655  →   402     was below the fold
+360×640      674  →   421     was 92px below it
+```
+
+**M239's reasoning is what reverses M239's order.** Its rule was that *"a climber opening the app at
+the gym is there to log, not to read"*, and on that basis it put the numbers above the button —
+measured on a 430×932 phone, where the button had been at the bottom edge. True there, and it
+stayed true at 390×844. At 360×640 the same layout put the one thing the app is opened to do 92px
+under the nav.
+
+So the numbers keep their size and lose the argument about which of the two a climber scrolls for.
+Everything the app has to *say* — the coach, the daily task — is still below both, which was
+M239's other half and is untouched.
+
+### The invariant, which fails on the old order
+
+`scripts/layout.mjs` gained one check: on Home, at every size, the day's button is above the nav.
+Proved by putting the old order back and running it:
+
+```
+1 problem:
+  small /: the day's button is 136px under the nav (Start session)
+```
+
+Measured against the **nav** rather than the viewport, because the tab bar is fixed over the foot
+of the page: a button inside the window and behind the nav is not reachable and reads as fine to
+`getBoundingClientRect` alone. The first version measured against the nav everywhere and reported
+every desktop button as unreachable — the harness said so on its first run, which is the harness
+doing its job to its own author.
+
+### The number I got wrong
+
+M293 said the numbers card was 533px. It is **241px** — 127 of altimeter, 102 of stat tiles. The
+533 was a wrapper holding the numbers card and the session card together, and I read it off a
+depth-1 probe as if it were the card. Corrected in M293's own section rather than quietly.
+
+It matters, because *shorten the numbers card* was decided against 533px. At 241px for six facts
+there is nothing to take that is not information:
+
+```
+the three sparklines    ~32px   loses "the eight weeks behind it", which is what makes a tile a trend
+the summit row           16px   loses where you are and what is next, which is the altimeter
+text-5xl → text-4xl      ~12px   costs "big numbers", which the token file opens with
+"Climbed so far"         14px   leaves a five-digit number meaning nothing
+```
+
+Roughly 70px, or 29% of a card that is now below the fold anyway, in exchange for four of the six
+things it says. **So the shortening is not done here and is not recommended** — raised rather than
+either silently skipped or silently done, because the decision was made against a figure that was
+more than twice the real one.
+
+Battery: 2 killed, sanity survived. 6,912 tests over 408 files. First load 136.43KB against 137.3.

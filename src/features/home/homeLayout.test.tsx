@@ -72,12 +72,24 @@ const logButton = () =>
 
 describe('the order of the front door', () => {
   /**
-   * The milestone, as an order. The numbers are what the screen opens on,
-   * the button is the second thing, and everything the app has to *say*
-   * comes after both — because a climber opening the app at the gym is
-   * there to log, not to read.
+   * The milestone, as an order — **inverted at M294, and the reason M239
+   * gave is why**.
+   *
+   * M239's rule was that a climber opening the app at the gym is there to
+   * log rather than to read, and it put the numbers first on the strength
+   * of one measurement: *"On a 430×932 phone the Log session button sat at
+   * the bottom edge of the viewport."* True there. At 360×640 the button
+   * came out **92px under the nav** — unreachable without scrolling, on the
+   * smallest size the layout harness checks, for fifty-four milestones.
+   *
+   * So the numbers move under the button and everything the app has to
+   * *say* still comes after both. The reading kept its size and lost the
+   * argument about which of the two you scroll for.
+   *
+   * `scripts/layout.mjs` holds the pixels and fails on exactly the old
+   * order; this holds the decision, which is all jsdom can see.
    */
-  it('puts the numbers, then the button, then what the app has to say', async () => {
+  it('puts the button, then the numbers, then what the app has to say', async () => {
     await trained();
     renderAt('/', <HomePage />);
     const start = await logButton();
@@ -88,12 +100,16 @@ describe('the order of the front door', () => {
     // boundary, and a synchronous read of it is a CI flake waiting to
     // happen — one did.
     const task = await screen.findByRole('heading', { name: 'Today\u2019s task', level: 2 });
-    expect(before(numbers, start), 'the numbers are under the button').toBe(true);
+    expect(before(start, numbers), 'the numbers are back above the button').toBe(true);
     expect(before(start, coach), 'the coach is above the button').toBe(true);
     expect(before(start, task), 'the daily task is above the button').toBe(true);
+    // And the reading still comes before the commentary: M239 moved the
+    // numbers on to Home over `ReviewCard`, and this is the half of that
+    // ordering the reversal does not touch.
+    expect(before(numbers, coach), 'the coach overtook the numbers').toBe(true);
     // The week is in the heading since M241, above everything.
     const heading = screen.getByRole('heading', { level: 1 });
-    expect(before(heading, numbers), 'the date is under the numbers').toBe(true);
+    expect(before(heading, start), 'the date is under the button').toBe(true);
   });
 
   /**
