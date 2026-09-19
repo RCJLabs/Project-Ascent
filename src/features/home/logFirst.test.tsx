@@ -115,9 +115,9 @@ describe('not now', () => {
     await fresh();
     renderAt('/', <HomePage />);
     await screen.findByRole('button', { name: /Log a session/ });
-    const notNow = screen.getAllByRole('button', { name: 'Not now' });
-    expect(notNow).toHaveLength(2);
-    fireEvent.click(notNow[0]!);
+    // By name rather than by position (PLAN.md M290): each Not now says
+    // which card it is on, and the one this test means is the setup's.
+    fireEvent.click(screen.getByRole('button', { name: 'Not now, set up your climber' }));
     expect(card('Set up your climber')).toBeNull();
     expect(card('Before you train')).toBeTruthy();
     expect(card('Pick a program')).toBeTruthy();
@@ -127,7 +127,7 @@ describe('not now', () => {
     await fresh();
     renderAt('/', <HomePage />);
     await screen.findByRole('button', { name: /Log a session/ });
-    fireEvent.click(screen.getAllByRole('button', { name: 'Not now' })[1]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Not now, pick a program' }));
     expect(card('Pick a program')).toBeNull();
     expect(card('Before you train')).toBeTruthy();
     expect(card('Set up your climber')).toBeTruthy();
@@ -138,7 +138,7 @@ describe('not now', () => {
     renderAt('/', <HomePage />);
     await screen.findByRole('button', { name: /Log a session/ });
     fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Not now' })[0]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Not now, set up your climber' }));
     // Reload from the database rather than trusting the store: the store
     // is what the click changed, the database is what survives the tab.
     await waitFor(async () => {

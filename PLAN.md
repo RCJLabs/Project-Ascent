@@ -14430,8 +14430,11 @@ M50 for why it is not coming.
   *Shipped.*
 
 - **A guided move to a new phone.** There is no account by design, so export → transfer → import
-  *is* the migration story, and it is three screens a climber has to know to string together. The
-  photos are the part people lose. *Medium.*
+  *is* the migration story. ~~It is three screens a climber has to know to string together. The
+  photos are the part people lose.~~ **Both wrong, checked before building.** Export and import are
+  two buttons in one card on one screen, and photos are opt-out rather than absent —
+  `exportArchive` says why: *"a backup that silently drops them is a backup that lies."* What is
+  actually missing is on the **other** phone. **M290** below. *Shipped.*
 
 - **Close the coach loop.** Programs travel coach → athlete as a file and nothing comes back. An
   athlete's block report as a file that opens here would make the app usable for coaching, still
@@ -14506,6 +14509,10 @@ M50 for why it is not coming.
 - **M289 — the day it was greasy.** Nothing in the record could tell *"I was weak"* from *"it was
   28°C and greasy"*. Three words on a day on rock, asked by the logger rather than by a program,
   and a coach card that qualifies a bad stretch without adjusting a single grade.
+
+- **M290 — the climber who already has a log.** Measured on a fresh install: Home offers five ways
+  to start from nothing and never once says the word *backup*. The backup was never the gap — the
+  gap is that nobody standing on the new phone is told the file can come in.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -19453,3 +19460,65 @@ Battery: 9 killed, sanity survived — including the marker sweep itself, since 
 fail is the thing this milestone added a guard to prevent.
 
 6,864 tests over 405 files, from 6,840. First load 135.94KB against the 136.4KB budget.
+
+
+## M290 — the climber who already has a log
+
+Both halves of the queue entry were wrong, and reading the code said so before a line was written.
+
+**"Three screens to string together."** Export and import are two buttons in one card — *Your
+data*, in Settings — side by side, with the spreadsheet import and the storage links beside them.
+There is no third screen.
+
+**"The photos are the part people lose."** They are not. `exportArchive` takes them by default and
+states the rule: *"Photos are opt-out rather than absent — a backup that silently drops them is a
+backup that lies."* The card says how many megabytes they add, the archive carries them as files at
+their own size rather than base64, and the import reports any listed in the backup and missing from
+the file. This is one of the better-built corners of the app.
+
+That is three queue entries in a row whose specifics did not survive contact with the code (M275,
+M289, this). The pattern is worth naming: they were written from what the app *feels* like rather
+than from what it does, and the feeling is a year out of date.
+
+### What is actually missing is on the other phone
+
+Measured on a genuinely fresh install, at 430×932:
+
+```
+Your first session. Log whatever you climb …        ← the page's own prose
+Log a session   Quick log   Or a different session   ← the buttons
+COACH'S CORNER  Nothing logged yet …                ← weight 95, the loudest tip there is
+BEFORE YOU TRAIN …                                  ← first-run card
+SET UP YOUR CLIMBER …                               ← first-run card
+PICK A PROGRAM …                                    ← first-run card
+```
+
+Five offers to start from nothing, and the word *backup* appears nowhere on the screen. An empty
+database usually means a new climber; it does not always, and this is the one state the app cannot
+read. A climber with four years in a `.zip` on the old phone is handed five ways to begin again.
+
+So: a fourth first-run card, against the log being empty rather than against a dismissal, because a
+restore fills the log and the card should go on its own. It names the file, says it carries the
+photos at full size, and names the card in Settings it lands beside — measured at 2.3 screens down
+on a phone, which is a scroll rather than a hunt, and a signpost beats a deep link that would need
+a `/settings/:section` route and reopen the harness's unreachable list closed at M282.
+
+It sits **after** the safety note and before the setup offer. The note about hurting yourself keeps
+the top, which M181 argued for and nothing here changes.
+
+### Three buttons saying "Not now"
+
+There were two; this made it three, which is what turned a smell into a defect. To anyone not
+looking at the screen, Home offered three identical choices that each did something different. Each
+dismissal now carries its own accessible name — *"Not now, moved from another phone"* — with the
+visible word unchanged, because the card above it is the context for everyone who can see it.
+
+`logFirst.test.tsx` was selecting those buttons **by position**, which is how it went red: my card
+became index 0 and the setup's test clicked mine. Selecting by name is what it should always have
+done, and the mutant that gives two of them the same name again now fails there.
+
+Battery: 7 killed, sanity survived. Layout harness: 48 routes × 3 sizes, OK.
+
+6,869 tests over 406 files, from 6,864. First load **136.27KB against 136.4** — 0.13KB of slack, so
+the ceiling has to be raised before the next thing that touches the entry chunk. That is M284's
+position again, one milestone earlier than expected: a new lucide icon is not free.

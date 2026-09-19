@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ClipboardList, Compass, ShieldAlert, Sparkles, Zap } from 'lucide-react';
+import { ArchiveRestore, ClipboardList, Compass, ShieldAlert, Sparkles, Zap } from 'lucide-react';
 import type { Session } from '@/db/sessions';
 import { shortLabel, today } from '@/engine/dates';
 import { loadsFingersDirectly } from '@/engine/fingerGap';
@@ -328,6 +328,10 @@ function OpenSessionCard({ date, sessions }: { date: string; sessions: Session[]
  *   So the dismissal names the fact: waved away before any finger-loading
  *   session is in the log, it comes back once there is one. Waved away after,
  *   it stays away — the warning has been read against the thing it is about.
+ * - **Moved from another phone?** — while the log is empty, because that is
+ *   the one state this app cannot read (PLAN.md M290). Every other card here
+ *   addresses a climber starting from nothing, which is what an empty
+ *   database usually means and is not what it always means.
  * - **Set up your climber** — the guided setup, until it has been
  *   finished (or skipped from inside it, which stamps `onboardedAt` the
  *   same way) or waved away here.
@@ -338,6 +342,13 @@ function OpenSessionCard({ date, sessions }: { date: string; sessions: Session[]
  *
  * Under the log buttons rather than above them (PLAN.md M124): these are
  * the first week of the app's life, and the button is every day of it.
+ *
+ * Each **Not now** says which card it is on, to a screen reader only
+ * (PLAN.md M290). Three buttons reading *"Not now"* on one screen, each
+ * doing something different, is a list of identical choices to anyone not
+ * looking at it — it was two and this milestone made it three, which is
+ * what turned a smell into a defect. The visible word is unchanged, because
+ * the card above it is the context for anyone who can see it.
  */
 function FirstRunCards() {
   const { program } = usePlannedDay(today());
@@ -381,6 +392,49 @@ function FirstRunCards() {
           </div>
         </FirstRunCard>
       )}
+      {/**
+        * The climber who already has a log, on the phone that does not
+        * (PLAN.md M290).
+        *
+        * Measured on a fresh install: Home offers five ways to start from
+        * nothing — the first-session card, the log buttons, the coach's
+        * *"Nothing logged yet"*, the setup and the finder — and the word
+        * *backup* appears nowhere on it. The backup itself was never the
+        * gap: it is one .zip carrying every store and the photos at their
+        * own size, and `exportArchive` refuses to drop them quietly. What
+        * was missing is that a climber standing on the new phone is never
+        * told the file can come in.
+        *
+        * Against the log being empty, because that is the fact it is about
+        * and the one the other cards misread. A restore fills it, so the
+        * card goes without needing to be waved away.
+        */}
+      {allSessions(byDate).length === 0 && !gone('restore') && (
+        <FirstRunCard
+          icon={<ArchiveRestore size={15} className="text-accent" />}
+          title="Moved from another phone?"
+        >
+          <p className="text-sm leading-relaxed">
+            There is no account to sign into, so the move is a file. Export a backup on the old
+            phone, send it to this one however you like, and bring it in from{' '}
+            <strong>Your data</strong> in Settings. It carries everything — sessions, projects,
+            benchmarks, programs and your photos at full size.
+          </p>
+          <div className="flex flex-wrap gap-2 mt-3">
+            <Link href="/settings" className={PRIMARY_LINK}>
+              <ArchiveRestore size={15} /> Restore a backup
+            </Link>
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label="Not now, moved from another phone"
+              onClick={() => dismissCard('restore')}
+            >
+              Not now
+            </Button>
+          </div>
+        </FirstRunCard>
+      )}
       {onboardedAt === null && !gone('setup') && (
         <FirstRunCard icon={<ClipboardList size={15} className="text-accent" />} title="Set up your climber">
           <p className="text-sm leading-relaxed">
@@ -392,7 +446,12 @@ function FirstRunCards() {
             <Link href="/welcome" className={PRIMARY_LINK}>
               <Sparkles size={15} /> Set up
             </Link>
-            <Button size="sm" variant="ghost" onClick={() => dismissCard('setup')}>
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label="Not now, set up your climber"
+              onClick={() => dismissCard('setup')}
+            >
               Not now
             </Button>
           </div>
@@ -412,7 +471,12 @@ function FirstRunCards() {
             <Link href="/train" className={OUTLINE_LINK}>
               Browse
             </Link>
-            <Button size="sm" variant="ghost" onClick={() => dismissCard('programs')}>
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label="Not now, pick a program"
+              onClick={() => dismissCard('programs')}
+            >
               Not now
             </Button>
           </div>
