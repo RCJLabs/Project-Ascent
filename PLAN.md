@@ -14436,9 +14436,24 @@ M50 for why it is not coming.
   `exportArchive` says why: *"a backup that silently drops them is a backup that lies."* What is
   actually missing is on the **other** phone. **M290** below. *Shipped.*
 
-- **Close the coach loop.** Programs travel coach → athlete as a file and nothing comes back. An
-  athlete's block report as a file that opens here would make the app usable for coaching, still
-  with no server and no accounts. *A direction rather than a milestone.*
+- **Close the coach loop.** Programs travel coach → athlete as a file — true, `programFile.ts`,
+  matched by `file_handlers` and placed by `openedKind`. ~~And nothing comes back.~~ **Partly
+  wrong, checked at M291.** Since M284 an athlete can send their block report back as a **picture**:
+  `blockCard` through `shareImage.ts`, `navigator.share` or a download. What cannot come back is
+  anything the app can *read*.
+
+  The obstacle the entry does not name is the one that matters: **every inbound path writes into
+  your own records.** `importAll` replaces or merges the database and `importCsv` adds sessions to
+  your log, so a coach opening an athlete's file would absorb the athlete's training as their own.
+  The app has no concept of somebody else's records — with exactly one exception, which is the
+  precedent to build on: M219's race tape is read from a stranger, replayed, and deliberately
+  recorded nowhere. *"The run counts for the race and for nothing else, and the card says so."*
+  `tapeFile.ts` also already states the privacy rule such a file needs — what is in it, what is
+  not, and what it leaks anyway.
+
+  So this is not a file-format milestone. It is a **read-only view of someone else's block**, with
+  a third format beside the program and the tape. *Still a direction rather than a milestone, and a
+  better-specified one.*
 
 - **M275 — I was away.** `coach.ts:489`: *"The app cannot tell 'did not train' from 'did not
   log'"*. `outdoorReentry` twenty lines above it reads the log and nothing else, so a fortnight in
@@ -14513,6 +14528,11 @@ M50 for why it is not coming.
 - **M290 — the climber who already has a log.** Measured on a fresh install: Home offers five ways
   to start from nothing and never once says the word *backup*. The backup was never the gap — the
   gap is that nobody standing on the new phone is told the file can come in.
+
+- **M291 — raise the budget.** 136.4 had 0.13KB left, which is under the hash churn M145 measured:
+  a rebuild that changed nothing could have failed it. 137.3, measured 136.25. Bounded by running
+  it rather than by arithmetic, which is what caught the cap sitting a hundredth higher than the
+  rounded figure predicts.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -19522,3 +19542,63 @@ Battery: 7 killed, sanity survived. Layout harness: 48 routes × 3 sizes, OK.
 6,869 tests over 406 files, from 6,864. First load **136.27KB against 136.4** — 0.13KB of slack, so
 the ceiling has to be raised before the next thing that touches the entry chunk. That is M284's
 position again, one milestone earlier than expected: a new lucide icon is not free.
+
+
+## M291 — raise the budget, and read the last queue entry
+
+Two things: a ceiling that was out of room, and the last item in the queue read against the code
+before anybody builds it.
+
+### 136.4 → 137.3, measured 136.25
+
+Not a fix. M285 bought 1.05KB and five milestones spent it — M286's drill editor and store, M288's
+handout button, M289's conditions field and engine, and M290's fourth first-run card. The last was
+**0.32KB on its own**, and the note worth keeping is what it was: a card of JSX and **one more
+lucide icon**. An icon reads as free and is not.
+
+M290 shipped at 0.13KB of slack, which is below the hash churn M145 measured — a rebuild that
+changed nothing could have failed it. That is the position M192 was in when the raise went in
+three commits late; this one is the commit straight after.
+
+**The bound was wrong until it was run.** The comment first said *"137.75 is exactly 1.50 of slack
+and fails the guard"*, which is what subtracting 136.25 gives. The measurement is 136.2509765625,
+so 137.75 reads 1.4990 and passes; 137.76 reads 1.51 and fails. Arithmetic on a rounded figure got
+the cap off by a hundredth, and running each candidate is what caught it — the method M285 used and
+the reason it uses it.
+
+```
+136.2   fails the budget       (below what the app measures)
+137.3   passes                 (1.05KB of slack)
+137.75  passes                 (1.4990 — the last that fits)
+137.76  fails the slack guard  (1.51)
+```
+
+And the floor rises with the ceiling: at 137.3 a rebuild measuring under 135.8 now fails for being
+too small.
+
+Battery: 3 killed, sanity survived.
+
+### The coach loop, read rather than assumed
+
+The queue's last entry says programs travel coach → athlete as a file and nothing comes back. The
+first half is right. The second is partly wrong, and the correction is above in the queue: since
+M284 an athlete **can** send the block report back, as a picture — `blockCard` through
+`shareImage.ts`. What cannot come back is anything machine-readable.
+
+What the entry misses is the actual obstacle. The app reads three foreign files today — a shared
+program, a backup, a race tape — and **two of the three write into your own records**: `importAll`
+replaces or merges the database, `importCsv` adds sessions to your log. A coach opening an
+athlete's block would absorb it as their own training, which is the wrong answer in every screen
+downstream: the ladders, the venues, the year, the load ratio.
+
+The third file is the precedent. M219's race tape is read from a stranger, replayed to recompute
+the height rather than trusting it, and recorded nowhere — *"the run counts for the race and for
+nothing else, and the card says so."* `tapeFile.ts` also already writes the privacy paragraph a
+coaching file needs: what is in it, what is not, and the one thing it leaks anyway.
+
+So the milestone that closes this is not a file format. It is a **read-only view of somebody
+else's block**, and the format is the easy half — which is exactly what `programFile.ts` says about
+the one it already has: *"the parser is the substance and the file format is the easy part."*
+
+That makes it the fourth queue entry in a row whose specifics needed correcting, and the third
+where the answer was already written down in a file next door.

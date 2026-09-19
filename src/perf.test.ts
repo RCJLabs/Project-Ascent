@@ -526,8 +526,33 @@ describe('the bundle stays small', () => {
    * a rebuild measuring under 134.9 now fails for being too small, so a
    * future size *reduction* of more than half a kilobyte has to move this
    * line in its own commit. That is the ratchet working, not a bug in it.
+   *
+   * ## 136.4 → 137.3 at M291, measured 136.25
+   *
+   * Five milestones, and the shortest gap between raises yet. M285 bought
+   * 1.05KB and M286–M290 spent it: the drill editor and its store, the
+   * program handout's share button, M289's conditions field and its engine,
+   * and M290's fourth first-run card. The last of those was **0.32KB on its
+   * own** — a card of JSX and one more lucide icon, which is the note worth
+   * keeping, because an icon reads as free and is not.
+   *
+   * M290 shipped at 0.13KB of slack, which is below the hash churn M145
+   * measured: a rebuild that changed nothing could have failed it. That is
+   * the position M192 was in when the raise went in late, and this one is
+   * the commit straight after rather than three later.
+   *
+   * 1.05KB of slack, the same 1.00 target. Bounded both ways by running it
+   * rather than by arithmetic, which is what M285 did and what caught this:
+   * **136.2 fails the budget, 137.76 reads 1.51 of slack and fails the
+   * guard, 137.75 passes.** The measurement is 136.2509765625, not the
+   * 136.25 quoted above, so the cap sits a hundredth higher than subtracting
+   * the rounded figure predicts — the kind of off-by-one that only shows up
+   * when the bound is measured.
+   *
+   * And the floor rises with it: at 137.3 a rebuild measuring under 135.8
+   * fails for being too small.
    */
-  const BUDGET = 136.4;
+  const BUDGET = 137.3;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
