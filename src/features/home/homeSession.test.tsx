@@ -5,6 +5,7 @@ import { getProgram } from '@/content/programs';
 import { dayOfWeek, startOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
+import { openedViewFor } from '@/lib/openedView';
 import { useSettings } from '@/store/settings';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { HomePage } from './HomePage';
@@ -64,17 +65,23 @@ describe('the one big button', () => {
   });
 
   it('opens the whole log, or the quick view, as the button says', async () => {
-    // The M120 fold, chosen before arriving rather than after.
+    // The M120 fold, chosen before arriving rather than after — and since
+    // M297 chosen for *this session*, which is what the button names.
+    // The stored preference is the fold's own business.
     await running({ [DOW]: 'tech' });
+    useSettings.setState({ logView: 'full' });
     renderAt('/', <HomePage />);
     fireEvent.click(await screen.findByRole('button', { name: /Quick log/ }));
     await waitFor(() => expect(window.location.hash).toBe(`#/log/${TODAY}`));
-    expect(useSettings.getState().logView).toBe('quick');
+    expect(openedViewFor(TODAY)).toBe('quick');
+    expect(useSettings.getState().logView, 'Quick log rewrote the preference').toBe('full');
 
     await running({ [DOW]: 'tech' });
+    useSettings.setState({ logView: 'quick' });
     renderAt('/', <HomePage />);
     fireEvent.click(await button());
-    await waitFor(() => expect(useSettings.getState().logView).toBe('full'));
+    await waitFor(() => expect(openedViewFor(TODAY)).toBe('full'));
+    expect(useSettings.getState().logView).toBe('quick');
   });
 
   it('logs the rest on a day the plan marks as rest', async () => {

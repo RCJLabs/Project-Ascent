@@ -14410,7 +14410,7 @@ about. Quick shows: the climbs tally, today's prescription, effort (RPE, duratio
 
 - **3. The app sets a daily task the default view hides.** `challenges.ts:155` asks the climber to
   *"Leave a note on today's session"*; the Notes card is `{full && …}` at `LogPage.tsx:1318`. One
-  of the two is wrong and it is not the task.
+  of the two is wrong and it is not the task. **M296** below. *Shipped.*
 
 - **4. A per-session choice overwrites a stored preference.** Home's two buttons call
   `setLogView('full')` and `setLogView('quick')` (`PreSession.tsx:264`), which writes to device
@@ -14418,7 +14418,7 @@ about. Quick shows: the climbs tally, today's prescription, effort (RPE, duratio
   including last Tuesday's from the calendar. The hazard was seen and solved in the other
   direction: *"Inside the logger the fold is the climber's own choice, and a start button that
   silently reset it would undo the setting every session."* The distinction drawn is Home versus
-  in-logger; the one that matters is this-session versus always.
+  in-logger; the one that matters is this-session versus always. **M297** below. *Shipped.*
 
 - **5. A logged climb cannot be corrected, only removed.** `TallyRow` bumps the count and nothing
   else, and minus-to-zero deletes the row with an undo (`LogPage.tsx:759`, M79). Grade, style,
@@ -14610,6 +14610,13 @@ M50 for why it is not coming.
   each built because the field had no writer, and all three sat behind a fold that defaults to
   closed. The split is read off `alwaysAsked` rather than listed in the component, and the label
   stopped naming five of the ten things behind it.
+
+- **M296 — the note the app asks for daily.** `challenges.ts` sets a task reading *"Leave a note on
+  today's session"* and the box to write it in was behind a fold that starts closed.
+
+- **M297 — the view a session opens in.** Home's two buttons wrote the stored preference, so
+  tapping *Quick log* once made quick the view for every session opened afterwards. A choice made
+  on the way in now lasts as long as the way in did.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -19963,3 +19970,70 @@ not matching its own name.
 
 Battery: 6 killed, sanity survived. 6,919 tests over 409 files, from 6,912. Layout harness OK.
 First load 136.42KB against 137.3.
+
+
+## M296 — the note the app asks for daily
+
+`challenges.ts:155` sets a daily task: *"Write it down — Leave a note on today's session, anything
+you noticed."* The box to write it in was `{full && …}`, behind a fold that defaults to closed.
+
+One of those two was wrong and it was not the task. The journal is built out of these notes, the
+app asks for one every day, and a note is *what happened* in prose — the line M295 drew. Photos
+stayed behind the fold: they are the other half of what the notes are for (M30) and they are not a
+daily thing.
+
+The quick view is now, read off the cards in a browser:
+
+```
+Climbing Session · Climbs · Rest · This session · Effort · Notes
+```
+
+Two tests asserted the old shape and both said so plainly rather than by accident —
+`quickLog.test.tsx` listing what should be folded, and `partners.test.tsx` using *Notes* as its
+witness for "not in the quick view". The second uses *Photos* now, which is the neighbour that
+stayed.
+
+## M297 — the view a session opens in
+
+Home offers two ways into the logger and they name two different views. Both called `setLogView`,
+which writes device settings — so tapping *Quick log* once made quick the view for **every** session
+opened afterwards, including last Tuesday's from the calendar.
+
+The hazard had been seen and solved in the other direction. `PreSession`'s own comment:
+
+> Only when the card is the one on Home. Inside the logger the fold is the climber's own choice,
+> and a start button that silently reset it would undo the setting every session.
+
+Right instinct, wrong line. It drew Home versus in-logger; the one that matters is **this session
+versus always**. The two buttons set `lib/openedView.ts` now — which view this date is being opened
+in, for this tab — and only the fold's own *More* and *Less* write the preference.
+
+### Keyed by date, not taken once
+
+`lib/launchFile.ts` clears its slot as it is read, which is right for a file that must not be
+imported twice and wrong here: the app runs under `StrictMode`, React double-invokes a `useState`
+initialiser in development, and a slot consumed in one would be empty by the second call. Reading
+by date is idempotent.
+
+### Two bugs my own tests found
+
+**A toggle that did nothing.** The first version computed the view on every render and let the
+settings store re-render it. That works until the preference already holds what the toggle is about
+to write: opened quick with *full* stored, *More* wrote `full` over `full`, zustand saw no change,
+nothing re-rendered, and the button was dead. It is `useState` now, decided once at mount, which is
+M286's lesson about a fact belonging to arriving rather than to the record.
+
+**A battery mutant nothing could kill.** Putting `setLogView` back into the start button survived,
+because every test drove `DayBody` directly and nothing in the suite had ever pressed one of Home's
+buttons — the two buttons this milestone is about. Two tests render `PreSessionCard` and click them
+now.
+
+And the harness gained a clear: `openedView` is module state, so it outlives a test the way the
+database does. `test/render.tsx` forgets it in `reset()`, beside the write-queue drain M220 put
+there for the same reason.
+
+Verified in the browser from a stored preference of `full`: **Quick log** opens the fold reading
+*"More about this session"* with Photos hidden, and the preference is still `full` afterwards.
+
+Battery: 5 killed, sanity survived. 6,927 tests over 410 files, from 6,919. Layout harness OK.
+First load 136.50KB against 137.3.

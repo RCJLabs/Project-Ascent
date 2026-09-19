@@ -4,6 +4,7 @@ import { Router } from 'wouter';
 import { useHashLocation } from 'wouter/use-hash-location';
 import { afterEach } from 'vitest';
 import type { ReactElement } from 'react';
+import { forgetOpenedView } from '@/lib/openedView';
 import { getDb } from '@/db/db';
 import { EXPORTABLE_STORES } from '@/db/schema';
 import { hydrateAll } from '@/store';
@@ -74,6 +75,16 @@ export async function reset(): Promise<void> {
    * dropped on the floor.
    */
   await writesSettled();
+  /**
+   * And the other module-level slot, for the same reason (PLAN.md M297).
+   *
+   * `openedView` holds which view a date's session was opened in, and in
+   * the app there is one of it per tab — which is the point. In a suite it
+   * outlives the test that set it, so a later test asking for the quick
+   * view got whatever an earlier one had chosen. Caught by a test looking
+   * for a *More* button on a page already showing *Less*.
+   */
+  forgetOpenedView();
   const db = await getDb();
   const tx = db.transaction(EXPORTABLE_STORES, 'readwrite');
   await Promise.all([...EXPORTABLE_STORES.map((store) => tx.objectStore(store).clear()), tx.done]);

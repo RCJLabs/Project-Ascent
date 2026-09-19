@@ -32,7 +32,8 @@ import { sessionOwner } from '@/db/media';
 import { MediaCard } from '@/features/media/MediaCard';
 import { offerUndo } from '@/store/undo';
 import { rankFor, rankLabel } from '@/engine/economy';
-import { useSettings } from '@/store/settings';
+import { openAt, openedViewFor } from '@/lib/openedView';
+import { useSettings, type LogView } from '@/store/settings';
 import type { SessionXp } from '@/engine/xp';
 import {
   announcementFor,
@@ -593,7 +594,21 @@ function SessionEditor({
    */
   const logView = useSettings((st) => st.logView);
   const setLogView = useSettings((st) => st.setLogView);
-  const full = logView === 'full';
+  /**
+   * The view this session was opened in beats the stored one (PLAN.md M297).
+   *
+   * **State, not a derived read.** The first version computed
+   * `openedViewFor(date) ?? logView` on every render and let the settings
+   * store do the re-rendering — which works until the preference already
+   * holds the value the toggle is about to write. Opened quick with *full*
+   * stored, *More* wrote `full` over `full`, zustand saw no change, nothing
+   * re-rendered, and the button did nothing at all. A test caught it.
+   *
+   * Decided once at mount, which is M286's lesson about a fact that
+   * belongs to arriving rather than to the record.
+   */
+  const [view, setView] = useState<LogView>(() => openedViewFor(session.date) ?? logView);
+  const full = view === 'full';
 
   // Everything worth marking: what load should stay off, plus what is being
   // loaded again on purpose and wants watching.
@@ -1320,7 +1335,19 @@ function SessionEditor({
 
       {full && <PartnersCard session={session} patch={patch} />}
 
-      {full && (
+      {/**
+        * In both views since M296, because the app asks for one every day.
+        *
+        * `challenges.ts` sets a daily task reading *"Leave a note on
+        * today's session — anything you noticed"*, and the box to write it
+        * in was behind a fold that defaults to closed. One of those two was
+        * wrong and it was not the task: the journal is built out of these,
+        * and a note is what happened rather than what to make of it, which
+        * is the line M295 drew.
+        *
+        * Photos stay behind the fold. They are the other half of what the
+        * notes are for (M30) and they are not a daily thing.
+        */}
       <Card title="Notes">
         <TextArea
           value={session.notes ?? ''}
@@ -1330,7 +1357,6 @@ function SessionEditor({
           className="resize-y"
         />
       </Card>
-      )}
 
       {/* After the notes, because a photo is the other half of what the
           notes are for (PLAN.md M30). Keyed on the session id, which the
@@ -1392,7 +1418,15 @@ function SessionEditor({
         variant="outline"
         className="w-full"
         aria-expanded={full}
-        onClick={() => setLogView(full ? 'quick' : 'full')}
+        onClick={() => {
+          const next = full ? 'quick' : 'full';
+          // All three: what this render shows, what this date shows if the
+          // climber comes back to it, and what they prefer from now on.
+          // The fold's own buttons are the only thing that writes the last.
+          setView(next);
+          openAt(session.date, next);
+          setLogView(next);
+        }}
       >
         {full ? (
           <>

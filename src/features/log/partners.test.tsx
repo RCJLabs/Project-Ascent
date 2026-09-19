@@ -107,7 +107,9 @@ describe('the partners card', () => {
   it('is not in the quick view', async () => {
     await open(undefined, 'quick');
     expect(screen.queryByText('Who you climbed with')).toBeNull();
-    expect(screen.queryByText('Notes')).toBeNull();
+    // Notes came forward at M296 and is no longer a witness for this.
+    // `Photos` is the neighbour that stayed behind the fold.
+    expect(screen.queryByText('Photos')).toBeNull();
   });
 
   /** Said on the card itself, because that is where the decision is made. */

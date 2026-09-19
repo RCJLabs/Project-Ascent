@@ -13,7 +13,8 @@ import { intensityOf } from '@/engine/scheduler';
 import { describeWork, sessionMinutes } from '@/engine/sessionLength';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
-import { useSettings, type LogView } from '@/store/settings';
+import { openAt } from '@/lib/openedView';
+import { type LogView } from '@/store/settings';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { usePlannedDay } from './usePlannedDay';
@@ -249,19 +250,20 @@ export function PreSessionCard({ date, onOpen }: { date: string; onOpen?: () => 
     useStartSession(date);
   const byDate = useSessions((s) => s.byDate);
   const hydrated = useSessions((s) => s.hydrated);
-  const setLogView = useSettings((s) => s.setLogView);
 
   async function goRest() {
-    if (onOpen) setLogView('full');
+    if (onOpen) openAt(date, 'full');
     await startRest();
     onOpen?.();
   }
 
   async function go(view: LogView, sessionTypeId?: string) {
-    // Only when the card is the one on Home. Inside the logger the fold is
-    // the climber's own choice, and a start button that silently reset it
-    // would undo the setting every session.
-    if (onOpen) setLogView(view);
+    // Only when the card is the one on Home, and only for this session
+    // (PLAN.md M297). The comment this replaces had the right instinct and
+    // the wrong line: it said "a start button that silently reset it would
+    // undo the setting every session" and then let Home's own buttons do
+    // exactly that, to every session opened afterwards.
+    if (onOpen) openAt(date, view);
     await start(sessionTypeId);
     onOpen?.();
   }

@@ -54,7 +54,12 @@ describe('the fold', () => {
     expect(t).toContain('Climbs');
     expect(t).toContain('Effort');
     expect(t).toContain('Rest');
-    for (const folded of ['Before you start', 'Notes', 'Photos', 'Warmup', 'Cooldown']) {
+    // And the day's own facts since M295, and the note the app asks for
+    // daily since M296. The fold is what to make of the session, not
+    // everything past the third card.
+    expect(t).toContain('This session');
+    expect(t).toContain('Notes');
+    for (const folded of ['Before you start', 'Photos', 'Warmup', 'Cooldown']) {
       expect(t, `${folded} should be folded`).not.toContain(folded);
     }
     expect(screen.getByRole('button', { name: /Mark complete/ })).toBeTruthy();

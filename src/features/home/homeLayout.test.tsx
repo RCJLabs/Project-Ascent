@@ -5,6 +5,7 @@ import { getProgram } from '@/content/programs';
 import { newSession, putSession } from '@/db/sessions';
 import { addDays, dayOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
+import { openedViewFor } from '@/lib/openedView';
 import { useSettings } from '@/store/settings';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { HomePage } from './HomePage';
@@ -179,7 +180,9 @@ describe('the two buttons', () => {
     renderAt('/', <HomePage />);
     fireEvent.click(await screen.findByRole('button', { name: /Quick log/ }));
     await waitFor(() => expect(window.location.hash).toBe(`#/log/${TODAY}`));
-    expect(useSettings.getState().logView).toBe('quick');
+    // For this session, and not by rewriting the setting (PLAN.md M297).
+    expect(openedViewFor(TODAY)).toBe('quick');
+    expect(useSettings.getState().logView, 'Quick log rewrote the preference').toBe('full');
   });
 });
 
