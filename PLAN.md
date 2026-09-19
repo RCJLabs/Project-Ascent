@@ -14419,7 +14419,7 @@ M50 for why it is not coming.
 
 - **A program as a readable handout.** `programFile.ts` is written so a coach can hand an athlete a
   block, and only to someone running this app. There is no human-readable version for the athlete
-  who does not, which is the common case. *Medium.*
+  who does not, which is the common case. **M288** below. *Shipped.*
 
 - **Conditions on an outdoor session.** Nothing records temperature or how it felt underfoot, and
   outdoors that is the largest confound in reading one's own log — *"I was weak"* against *"it was
@@ -14494,6 +14494,11 @@ M50 for why it is not coming.
   Capitan, 8.7 s in, and how far an unsteered run gets is a property of the date the suite runs on.
   Three dates in thirty-three earn it. 2026-09-19 was one, and `main` would have gone red on the
   next push for no reason but the calendar.
+
+- **M288 — a program, for someone who has not got the app.** `programFile.ts` hands over a block as
+  JSON, to a reader who has the app. Markdown for the athlete who does not. Reading the first
+  draft's own output found the bug the tests could not have: six campus exercises listed with
+  nothing to say they are alternatives, which is a different program.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -19301,3 +19306,65 @@ Battery: 4 killed, sanity survived. Two on the page — report an achievement th
 forget what was held before it — and two on the fixture itself, because a fixture that is not
 load-bearing is a fixture that proves nothing: a wall that can never end a run, and a qualifying run
 left to the real wall's timing.
+
+
+## M288 — a program, for someone who has not got the app
+
+`programFile.ts` exists so a coach can hand somebody a block, and the card offering it says who
+for: *"Anyone with the app can import it."* The athlete who has not got it is the common case, and
+for them there was nothing — a coach's alternative was to read the program off their own phone
+into a message.
+
+So: the same program as Markdown, saved from the same card. Title, subtitle, the facts a coach is
+asked first on one line (length, grades, kit), the pitch, then **The week**, **The blocks**, **Pick
+a track**, **The sessions** and **What gets tested**.
+
+### Reading the output is what found the bug
+
+Iron Grip's Spark phase carries six campus exercises, and the first draft listed all six as a
+plain list. They are **alternatives** — `Program.tracks` is the field the app uses to show one path
+at a time — so the handout was telling an athlete to do a campus session six ways. Not a
+simplification: a different program. Every line carries its track now, and *Pick a track* says once
+what a track is.
+
+The same class of thing, one field over: `prescription.selection` holds *"pick two of these"*, and
+a menu block written out as a list reads as a list of things to do. It is part of the dose, so it
+is on the block line.
+
+### Two copies of the dose would have drifted
+
+`dosageLine` was private to `ProgramDetailPage` — `5 sets × 10s · 85-90% max added weight · 3-5 min
+rest`. A second copy in the handout is two spellings of the same prescription waiting for one of
+them to grow a field, so it moved to `prescription.ts` beside the rest of the reading, and the page
+imports it. The screen and the handout cannot now say different things about a set.
+
+### What the browser found that sixteen tests did not
+
+The sample climber's own program has two named session types and no blocks at all, which is what a
+program written in the builder looks like until somebody fills it in. The handout gave the athlete
+a heading, a sentence of description, and a void:
+
+```
+### Board night — 60-75 min
+
+Hard moves on the board, short and angry.
+
+
+### Volume day — 90 min
+```
+
+`section` already refuses to leave an empty heading behind; this is the same rule one level down,
+and it now says *"Nothing written down for this one yet."* Every test used a shipped program, all
+of which are full — which is the recurring shape: a fixture that is only ever the good case.
+
+Offered where the JSON already is, and nowhere else, so a shipped program has no handout button.
+That matches the existing surface rather than widening it, and it is the obvious next thing to
+argue about: a coach is at least as likely to put an athlete on Iron Grip as on something they
+wrote.
+
+Battery: 11 killed, sanity survived. One survived the first run and was a real gap — nothing
+covered a block with a `selection` rule at all — and one reported a false skip because my own
+anchor had `\n` inside a Python heredoc, which is a literal backslash-n and matches nothing. Second
+time this session my escaping made the battery say something untrue.
+
+6,840 tests over 403 files, from 6,824. First load 135.95KB against the 136.4KB budget.

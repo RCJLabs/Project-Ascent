@@ -37,6 +37,27 @@ import type { Issue } from './customProgram';
 export const DOSE_FIELDS: readonly (keyof Dose)[] = ['sets', 'reps', 'hold', 'load', 'rest'];
 
 /** How many weeks a phase runs. */
+/**
+ * A dose as one line: *"3-5 sets × 6 hangs per set · 60-70% max · 3 min rest"*.
+ *
+ * Moved out of `ProgramDetailPage` when the handout needed the same sentence
+ * (PLAN.md M288). Two copies of this would drift the moment one grew a field,
+ * and a handout that wrote a prescription differently from the screen it came
+ * from is worse than no handout — the athlete and the coach would be reading
+ * two different documents.
+ *
+ * The same move M284 made with `BLOCK_OUTCOME_WORD`, for the same reason.
+ */
+export function dosageLine(ex: Pick<Exercise, 'sets' | 'reps' | 'hold' | 'load' | 'rest'>): string {
+  const parts: string[] = [];
+  if (ex.sets) parts.push(`${ex.sets} ${ex.sets === '1' ? 'set' : 'sets'}`);
+  if (ex.reps) parts.push(`\u00d7 ${ex.reps}`);
+  if (ex.hold) parts.push(`\u00d7 ${ex.hold}`);
+  if (ex.load) parts.push(`\u00b7 ${ex.load}`);
+  if (ex.rest) parts.push(`\u00b7 ${ex.rest} rest`);
+  return parts.join(' ');
+}
+
 export function phaseLength(phase: Pick<Phase, 'weekStart' | 'weekEnd'>): number {
   return phase.weekEnd - phase.weekStart + 1;
 }

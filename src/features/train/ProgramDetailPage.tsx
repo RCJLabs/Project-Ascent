@@ -8,6 +8,7 @@ import { getMetric } from '@/content/metrics';
 import { getProtocol } from '@/content/protocols';
 import { getProgram } from '@/content/programs';
 import { INTENSITY_LABEL, type Exercise, type Phase, type Program, type SessionType, type TrackId } from '@/content/types';
+import { dosageLine } from '@/engine/prescription';
 import { intensityOf } from '@/engine/scheduler';
 import { describeWork, sessionMinutes } from '@/engine/sessionLength';
 import { BackLink } from '@/ui/BackLink';
@@ -28,17 +29,6 @@ import { useProfile } from '@/store/profile';
 import { kitList, missingKit } from '@/engine/kit';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-/** Renders dosage as a compact line: "3-5 sets × 6 hangs per set · 60-70% max · 3 min rest" */
-function dosageLine(ex: Exercise): string {
-  const parts: string[] = [];
-  if (ex.sets) parts.push(`${ex.sets} ${ex.sets === '1' ? 'set' : 'sets'}`);
-  if (ex.reps) parts.push(`× ${ex.reps}`);
-  if (ex.hold) parts.push(`× ${ex.hold}`);
-  if (ex.load) parts.push(`· ${ex.load}`);
-  if (ex.rest) parts.push(`· ${ex.rest} rest`);
-  return parts.join(' ');
-}
 
 function ExerciseRow({ ex }: { ex: Exercise }) {
   const protocol = ex.protocolId ? getProtocol(ex.protocolId) : undefined;

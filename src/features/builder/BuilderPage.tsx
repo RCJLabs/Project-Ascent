@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ArrowRight, CircleCheck, Info, Plus, Share2, Trash2, TriangleAlert } from 'lucide-react';
+import { ArrowRight, CircleCheck, FileText, Info, Plus, Share2, Trash2, TriangleAlert } from 'lucide-react';
 import {
   INTENSITY_LABEL,
   INTENSITY_ORDER,
@@ -20,6 +20,8 @@ import { EQUIPMENT_LABELS, MAX_WEEKS, canRun, nextPhaseId, removeSessionType, re
 import { contentIssues, reconcileProgramPhases, trimDrills } from '@/engine/prescription';
 import { safetyIssues } from '@/engine/programSafety';
 import { buildProgramFile, fileName } from '@/engine/programFile';
+import { handoutName, programHandout } from '@/engine/programHandout';
+import { today } from '@/engine/dates';
 import { useCustomPrograms } from '@/store/programs';
 import { BackLink } from '@/ui/BackLink';
 import { PageSkeleton } from '@/ui/Skeleton';
@@ -338,6 +340,13 @@ export function BuilderPage({ params }: { params: { id: string } }) {
           <Button variant="outline" onClick={() => shareProgram(program)}>
             <Share2 size={15} /> Save as a file
           </Button>
+          <p className="text-sm text-ink-soft mt-4 mb-3 leading-relaxed">
+            Or write it out to read. One page of text an athlete can open anywhere — the week, the
+            blocks, every session and its doses. Nothing to install.
+          </p>
+          <Button variant="outline" onClick={() => shareHandout(program)}>
+            <FileText size={15} /> Save as a handout
+          </Button>
         </Card>
 
         <Card title="Danger zone">
@@ -386,16 +395,29 @@ export function BuilderPage({ params }: { params: { id: string } }) {
 }
 
 /** Hand the program over as a download. */
-function shareProgram(program: Program): void {
-  const blob = new Blob([JSON.stringify(buildProgramFile(program), null, 2)], {
-    type: 'application/json',
-  });
-  const url = URL.createObjectURL(blob);
+/** One download, whatever is being downloaded. */
+function save(text: string, name: string, type: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = fileName(program);
+  a.download = name;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function shareProgram(program: Program): void {
+  save(JSON.stringify(buildProgramFile(program), null, 2), fileName(program), 'application/json');
+}
+
+/**
+ * The same program, for somebody without the app (PLAN.md M288).
+ *
+ * The card above says who the file is for in its own words — *"Anyone with
+ * the app can import it"* — and the athlete who has not got it is the common
+ * case.
+ */
+function shareHandout(program: Program): void {
+  save(programHandout(program, today()), handoutName(program), 'text/markdown');
 }
 
 function replace<T>(list: T[], index: number, patch: Partial<T>): T[] {
