@@ -1007,7 +1007,12 @@ function SessionEditor({
               thumb is between them. */}
           {live && !stale && <RestTimer sessionId={session.id} now={now} />}
 
-          {full && <FieldsCard session={session} type={type} onChange={onChange} />}
+          {/* In both views since M295, with the quick one carrying the
+              three facts about the day and the fold keeping the program's
+              own questions. `mode`, `location` and `conditions` were each
+              built because the field had no writer, and all three sat
+              behind a fold that defaults to closed. */}
+          <FieldsCard session={session} type={type} onChange={onChange} compact={!full} />
 
           {full && <ProjectBurnsCard session={session} onChange={onChange} />}
 
@@ -1368,7 +1373,21 @@ function SessionEditor({
       {full && <CorrectionCard session={session} others={others} typeName={type?.name} onMoved={onMoved} />}
 
       {/* The fold itself. Above the button so the button stays last
-          whichever way the page is showing. */}
+          whichever way the page is showing.
+
+          **It stopped listing what is behind it at M295.** The list read
+          *"check-in, projects, warmup, notes, photos"* and there were ten
+          cards back there — the drill, the cooldown, partners, the
+          templates, the correction and, until this milestone, the three
+          fields the app asks of everyone. A list that names half its
+          contents is worse than no list, because it is read as the whole
+          of it.
+
+          The alternative was to name all ten, which wraps to three lines
+          on a 360px phone and goes stale the next time a card moves. What
+          is lost is a little discoverability, and what pays for it is the
+          three questions that used to be the reason to open this now being
+          in front of it. */}
       <Button
         variant="outline"
         className="w-full"
@@ -1382,7 +1401,7 @@ function SessionEditor({
         ) : (
           <>
             <ChevronDown size={16} />
-            {isRest ? 'More — notes, photos' : 'More — check-in, projects, warmup, notes, photos'}
+            {isRest ? 'More about this day' : 'More about this session'}
           </>
         )}
       </Button>
@@ -1577,10 +1596,27 @@ function FieldsCard({
   session,
   type,
   onChange,
+  compact = false,
 }: {
   session: Session;
   type?: SessionType;
   onChange: (session: Session) => void;
+  /**
+   * The quick view's half of this card (PLAN.md M295).
+   *
+   * Where it happened, which kind of place it was and how the rock was:
+   * three facts about **the day**, which is the line the fold is drawn on
+   * now. The questions a *program* asks — pitches, high point, day of the
+   * trip — stay behind it, because they are the plan's questions rather
+   * than the day's, and a climber who has not opened More has not asked to
+   * be asked them.
+   *
+   * The registry already knows which is which: `alwaysAsked` marks the
+   * fields the logger puts to everyone rather than the ones a session type
+   * declares. Read from there rather than listed here, so a fourth one
+   * arrives in the right half by saying so in `fields.ts`.
+   */
+  compact?: boolean;
 }) {
   const display = useSettings((s) => s.display);
   const gradeLabel = useGradeLabel();
@@ -1624,8 +1660,11 @@ function FieldsCard({
     session.mode === 'outdoor' && !everyone.includes('conditions')
       ? [...everyone, 'conditions']
       : everyone;
-  const specs = asked.map(getField).filter((f): f is FieldSpec => f !== undefined);
-  if (specs.length === 0) return null;
+  const all = asked.map(getField).filter((f): f is FieldSpec => f !== undefined);
+  // The quick half keeps only what the logger asks of everyone. `mode` is
+  // not a `FieldSpec` and is always here: it is the chip row that decides
+  // whether `conditions` is asked at all.
+  const specs = compact ? all.filter((f) => f.alwaysAsked !== undefined) : all;
 
   const set = (id: FieldId, value: string | number | undefined) => {
     const { [id]: _dropped, ...rest } = session.fields ?? {};
@@ -1639,7 +1678,7 @@ function FieldsCard({
   // Where a typed grade and the session's own climbs disagree (PLAN.md
   // M88). Reported here rather than on a progress page because this is the
   // one screen where either side can still be corrected.
-  const clashes = gradeDisagreements(session);
+  const clashes = compact ? [] : gradeDisagreements(session);
 
   return (
     <Card title="This session">

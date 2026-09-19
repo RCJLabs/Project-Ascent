@@ -14398,7 +14398,7 @@ about. Quick shows: the climbs tally, today's prescription, effort (RPE, duratio
   or out**, **conditions**, the drill, the cooldown, partners, save-as-template and correct-this-
   session. A label that enumerates its contents and gets them wrong is the shape `fields.ts` warns
   about one file over — *"a question the content asks and the app never renders is a promise the
-  content cannot keep"*. Cheapest fix in the list, and the one that makes the next two visible.
+  content cannot keep"*. **M295** below. *Shipped.*
 
 - **2. Three fields built *because* they had no writer are unreachable by default.** `mode` (M170:
   *"every one of them read a climber who had never been outside"*), `location` (M133, asked of
@@ -14406,6 +14406,7 @@ about. Quick shows: the climbs tally, today's prescription, effort (RPE, duratio
   `LogPage.tsx:1010` gates it on `full`. M170 named the exact case it was for — *"a climber on Iron
   Grip who went to the crag on Saturday"* — and in the shipped default that climber has no way to
   say so. M289 is nine milestones old and has been invisible out of the box for all of them.
+  **M295** below. *Shipped.*
 
 - **3. The app sets a daily task the default view hides.** `challenges.ts:155` asks the climber to
   *"Leave a note on today's session"*; the Notes card is `{full && …}` at `LogPage.tsx:1318`. One
@@ -14604,6 +14605,11 @@ M50 for why it is not coming.
   opening the app is there to log rather than to read, and the numbers were the thing they had to
   scroll past. 674px to 421px at 360×640. The harness gained the invariant, and it fails on the old
   order.
+
+- **M295 — the three questions, in front of the fold.** `mode`, `location` and `conditions` were
+  each built because the field had no writer, and all three sat behind a fold that defaults to
+  closed. The split is read off `alwaysAsked` rather than listed in the component, and the label
+  stopped naming five of the ten things behind it.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -19891,3 +19897,69 @@ either silently skipped or silently done, because the decision was made against 
 more than twice the real one.
 
 Battery: 2 killed, sanity survived. 6,912 tests over 408 files. First load 136.43KB against 137.3.
+
+
+## M295 — the three questions, in front of the fold
+
+Findings 1 and 2 of M294a's audit, which are one change: the fold was drawn in the wrong place and
+its label described a different fold again.
+
+### What the default view was missing
+
+`logView` defaults to `quick`. Behind *More* sat ten cards, and three of them were the fields the
+logger asks of **everyone** rather than the ones a program declares:
+
+- `mode` — M170 built it because *"every one of them read a climber who had never been outside"*,
+  and named the case it was for: *"a climber on Iron Grip who went to the crag on Saturday is the
+  case the session type cannot know about."* In the shipped default, that climber could not say so.
+- `location` — M133, asked of everyone since, invisible unless you opened the fold.
+- `conditions` — M289, nine milestones old and never once seen out of the box.
+
+Each of the three was built to fix *a field with readers and no writer*. All three then shipped
+with a writer nobody reaches, which is the same defect one door along.
+
+### The line the fold is drawn on now
+
+**What happened** in front, **what to make of it** behind. The day's facts — which kind of place,
+where, how the rock was — are in the quick view; the questions a *program* asks (pitches, high
+point, day of the trip) stay behind the fold, along with the check-in, projects, drill, warmup,
+cooldown, partners, notes, photos, templates and the correction card.
+
+The split is **read off the registry, not listed in the component**: `alwaysAsked` already marks
+the fields the logger puts to everyone, because M289 needed that distinction for a different
+reason. A fourth one lands in the right half by saying so in `fields.ts` and nowhere else.
+
+Verified in the browser, on the sample climber, entering the way a climber does — Home, *Quick
+log*:
+
+```
+Indoors or out     in the quick view
+Where              in the quick view
+Conditions         absent — the day is indoors, which is the point
+Before you start   behind the fold
+Notes              behind the fold
+Day of the trip    behind the fold
+```
+
+Then M170's own case, end to end and without opening anything: tap **On rock**, the conditions
+question arrives, tap **Greasy**, and the record reads
+`{"mode":"outdoor","fields":{"conditions":"Greasy"}}`.
+
+### The label
+
+It read *"More — check-in, projects, warmup, notes, photos"* and there were ten cards back there.
+A list that names half its contents is worse than none, because it is read as all of them. Naming
+all ten wraps to three lines on a 360px phone and goes stale the next time a card moves, so it
+names none: **"More about this session"**. What is lost is some discoverability, and what pays for
+it is that the three questions worth opening it for are now in front of it.
+
+### The fixture that was checking nothing
+
+The first draft of `quickFold.test.tsx` set the profile **before** its last `hydrate()`, which
+reads the profile back out of the database and dropped it. So every test ran against a climber
+running no program at all — `type` was `undefined`, `declared` was empty, and the half about a
+program's own questions asserted nothing. Found by a test failing for the right reason and then
+not matching its own name.
+
+Battery: 6 killed, sanity survived. 6,919 tests over 409 files, from 6,912. Layout harness OK.
+First load 136.42KB against 137.3.
