@@ -12,6 +12,7 @@ import {
   type Program,
   type SessionType,
 } from '@/content/types';
+import { downloadJson, downloadText } from '@/lib/download';
 import { PROGRAMS, getProgram } from '@/content/programs';
 import { allMetrics } from '@/engine/assessments';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
@@ -394,19 +395,16 @@ export function BuilderPage({ params }: { params: { id: string } }) {
   );
 }
 
-/** Hand the program over as a download. */
-/** One download, whatever is being downloaded. */
-function save(text: string, name: string, type: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
+/**
+ * Hand the program over as a download.
+ *
+ * Through `lib/download.ts` since M292. What was here was a private copy of
+ * it — written at M7, reused by M288's handout — with a detached anchor and
+ * a synchronous revoke, which is the pair of bugs that file's own header
+ * exists to warn about.
+ */
 function shareProgram(program: Program): void {
-  save(JSON.stringify(buildProgramFile(program), null, 2), fileName(program), 'application/json');
+  downloadJson(buildProgramFile(program), fileName(program));
 }
 
 /**
@@ -417,7 +415,7 @@ function shareProgram(program: Program): void {
  * case.
  */
 function shareHandout(program: Program): void {
-  save(programHandout(program, today()), handoutName(program), 'text/markdown');
+  downloadText(programHandout(program, today()), handoutName(program), 'text/markdown');
 }
 
 function replace<T>(list: T[], index: number, patch: Partial<T>): T[] {

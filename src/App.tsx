@@ -43,6 +43,10 @@ const BoardPage = lazyRoute(
   () => import('@/features/challenges/BoardPage'),
   (m) => m.BoardPage,
 );
+const SharedBlockPage = lazyRoute(
+  () => import('@/features/shared/SharedBlockPage'),
+  (m) => m.SharedBlockPage,
+);
 const BuilderList = lazyRoute(
   () => import('@/features/builder/BuilderList'),
   (m) => m.BuilderList,
@@ -379,6 +383,7 @@ function Shell() {
           <Route path="/finish" component={FinishPage} />
           <Route path="/build/:id/session/:typeId" component={SessionEditorPage} />
           <Route path="/build/:id" component={BuilderPage} />
+          <Route path="/shared" component={SharedBlockPage} />
           <Route path="/build" component={BuilderList} />
           <Route path="/train/:id/start" component={StartProgramPage} />
           <Route path="/train/:id" component={ProgramDetailPage} />

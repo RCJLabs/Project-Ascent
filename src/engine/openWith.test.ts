@@ -30,7 +30,7 @@ const backup = (extra: Record<string, unknown> = {}) =>
     ...extra,
   });
 
-describe('telling the app’s two files apart', () => {
+describe('telling the app’s three files apart', () => {
   it('reads a shared program as a program', () => {
     expect(openedKind(program())).toBe('program');
   });
@@ -45,6 +45,33 @@ describe('telling the app’s two files apart', () => {
     // shared program opens in the screen that offers to replace everything
     // the climber has.
     expect(openedKind(program())).not.toBe('backup');
+  });
+
+  it('reads a block coming back as a block', () => {
+    expect(openedKind(JSON.stringify({ app: 'project-ascent', kind: 'block', block: {} })))
+      .toBe('block');
+  });
+
+  /**
+   * The third file is the one with the most to lose by landing in the wrong
+   * screen (PLAN.md M292): a block read as a backup offers to replace the
+   * coach's whole database with it.
+   */
+  it('does not read a block as a backup, even carrying a schema version', () => {
+    const block = JSON.stringify({
+      app: 'project-ascent',
+      kind: 'block',
+      schemaVersion: 2,
+      block: {},
+    });
+    expect(openedKind(block)).toBe('block');
+  });
+
+  it('sends each of the three somewhere different', () => {
+    const where = Object.values(OPENS_AT);
+    expect(new Set(where).size, 'two kinds landing on one screen').toBe(where.length);
+    expect(OPENS_AT.block, 'the climber’s own blocks are not somebody else’s')
+      .not.toBe(OPENS_AT.program);
   });
 
   it('does not read a backup as a program', () => {

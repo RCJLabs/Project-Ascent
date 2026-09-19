@@ -1,11 +1,12 @@
 /**
  * What kind of file the app was just handed (PLAN.md M111).
  *
- * `file_handlers` matches on extension, and **both of the app's own files
- * are `.json`** — a shared program (`programFile.ts`, written so a coach
- * can hand an athlete a block) and a backup. The manifest cannot tell them
- * apart, so the app reads the first line of the thing before deciding which
- * screen it belongs to.
+ * `file_handlers` matches on extension, and **three of the app's own files
+ * are `.json`** — a shared program (`programFile.ts`, written so a coach can
+ * hand an athlete a block), a block coming back the other way
+ * (`blockFile.ts`, M292) and a backup. The manifest cannot tell them apart,
+ * so the app reads the first line of the thing before deciding which screen
+ * it belongs to.
  *
  * A backup archive is a `.zip` and is not a question: nothing else the app
  * writes is one.
@@ -15,7 +16,7 @@
  * fields, and hands the file to a parser that re-checks everything.
  */
 
-export type OpenedKind = 'program' | 'backup' | null;
+export type OpenedKind = 'program' | 'block' | 'backup' | null;
 
 /** Bytes that start a zip, which is what an archive backup is. */
 export function looksZipped(head: Uint8Array): boolean {
@@ -42,6 +43,7 @@ export function openedKind(text: string): OpenedKind {
   const record = raw as Record<string, unknown>;
   if (record['app'] !== 'project-ascent') return null;
   if (record['kind'] === 'program') return 'program';
+  if (record['kind'] === 'block') return 'block';
   // A backup names its schema. Anything else carrying the app's name is
   // still not something either importer knows how to read.
   return typeof record['schemaVersion'] === 'number' ? 'backup' : null;
@@ -65,5 +67,8 @@ export async function kindOfFile(file: File): Promise<OpenedKind> {
 /** Where a file of that kind is opened. */
 export const OPENS_AT: Record<Exclude<OpenedKind, null>, string> = {
   program: '/build',
+  // Its own screen, and not `/finish`, because that page is the climber's
+  // own blocks and this is somebody else's (PLAN.md M292).
+  block: '/shared',
   backup: '/settings',
 };

@@ -14452,8 +14452,7 @@ M50 for why it is not coming.
   not, and what it leaks anyway.
 
   So this is not a file-format milestone. It is a **read-only view of someone else's block**, with
-  a third format beside the program and the tape. *Still a direction rather than a milestone, and a
-  better-specified one.*
+  a third format beside the program and the tape. **M292** below. *Shipped.*
 
 - **M275 — I was away.** `coach.ts:489`: *"The app cannot tell 'did not train' from 'did not
   log'"*. `outdoorReentry` twenty lines above it reads the log and nothing else, so a fortnight in
@@ -14533,6 +14532,10 @@ M50 for why it is not coming.
   a rebuild that changed nothing could have failed it. 137.3, measured 136.25. Bounded by running
   it rather than by arithmetic, which is what caught the cap sitting a hundredth higher than the
   rounded figure predicts.
+
+- **M292 — the block coming back.** The coaching loop's return leg, built to M291's reading of it.
+  A third file beside the program and the race tape, and the only one of the three that is read and
+  **recorded nowhere** — which is the milestone, not the format.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -19602,3 +19605,76 @@ the one it already has: *"the parser is the substance and the file format is the
 
 That makes it the fourth queue entry in a row whose specifics needed correcting, and the third
 where the answer was already written down in a file next door.
+
+
+## M292 — the block coming back
+
+The last entry in the queue, built to the shape M291 read out of the code rather than the shape the
+entry described.
+
+### It is not a file-format milestone
+
+`programFile.ts` sends a block out. This reads one coming back, and the hard part is not the JSON:
+the app already reads three foreign files and **two of them write into your own records**.
+`importAll` replaces or merges the database; `importCsv` adds sessions to your log. A coach opening
+an athlete's block through either would absorb the athlete's training as their own — wrong in the
+ladders, the venues, the year and the load ratio, all at once.
+
+The third file is the precedent and this follows it exactly. M219's race tape is read from a
+stranger, replayed, and recorded nowhere: *"the run counts for the race and for nothing else, and
+the card says so."* Nothing on the new screen writes to a store, and the screen says so where a
+coach reads it rather than in a comment.
+
+Verified in the browser, across two profiles, which is the assertion the milestone is:
+
+```
+athlete  /finish → Save as a file → iron-grip-2026-09-19.ascent-block.json
+         9 results, and grep finds no sessionTypeId, no climbs, no location
+coach    /finish → Open a block they sent you → /shared → reads it
+         sessions 0 · metrics 0 · programs 0
+```
+
+### Facts, not records
+
+The file carries the report the athlete's app computed, not the log it was computed from — so no
+session dates, venues, partners, notes, photos, burns or game. What it does carry is said plainly,
+because `tapeFile.ts` sets that precedent: the program's name, the block's dates, the session
+counts and the assessment numbers. Those numbers are how hard somebody trains, which is the point
+of sending them and worth knowing you are sending.
+
+The summary sentence is **carried rather than recomputed**. `describeBlock` needs the whole
+`Program` to write one, which a file that deliberately does not ship the athlete's program cannot
+supply — and the sentence is theirs anyway. The card says whose words they are.
+
+### What the battery found
+
+Three survivors on the first run, all of them real:
+
+- **An `Infinity` that was never an `Infinity`.** The test built its fixture through
+  `JSON.stringify`, which turns `Infinity` into `null` — so the parser never saw one and the test
+  passed whatever the parser did. Written as text now, where `1e999` parses the way a hand-edited
+  file would deliver it.
+- **The preamble, not the promise.** It asserted *"Nothing on this screen is saved"* and a mutant
+  that dropped the clause naming what it does not touch survived. That clause is the half a coach
+  needs, since the app's other two importers touch exactly those things.
+- **No grade in the fixture.** Every row had `steps: null`, so nothing exercised the branch that
+  puts a grade in steps rather than in percent — which is `blockReport.ts`'s own rule, with four
+  reasons behind it.
+
+13 killed after the fixes, sanity survived.
+
+### One thing found on the way
+
+`BuilderPage` carried a private `save()` written at M7 and reused by M288's handout, and it was a
+worse copy of `lib/download.ts` — a detached anchor and a synchronous revoke, which are precisely
+the two bugs that file's header exists to warn about. That header already said *"six lines, written
+out in the settings page, and about to be written out a second time"*; it happened anyway, one
+feature over. Both callers go through it now, with `downloadText` and `downloadJson` on top so the
+next one reaches for a function rather than six lines.
+
+I also overwrote that file before reading it, which is how the copy was found. Not a method worth
+repeating.
+
+6,910 tests over 408 files, from 6,869. Layout harness: 49 routes × 3 sizes, OK. First load
+136.45KB against the 137.3 budget M291 set — 0.20KB for the route row and the lazy wrapper, with
+the page itself in its own chunk.

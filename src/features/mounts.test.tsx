@@ -13,6 +13,7 @@ import { AscentPage } from '@/features/ascent/AscentPage';
 import { AssessmentsPage } from '@/features/assessments/AssessmentsPage';
 import { BoardPage } from '@/features/challenges/BoardPage';
 import { BuilderList } from '@/features/builder/BuilderList';
+import { SharedBlockPage } from '@/features/shared/SharedBlockPage';
 import { BuilderPage } from '@/features/builder/BuilderPage';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { WeekPage } from '@/features/week/WeekPage';
@@ -81,6 +82,7 @@ const PAGES: [string, string, ReactElement][] = [
   ['train', '/train', <TrainPage />],
   ['finder', '/find', <FinderPage />],
   ['builder list', '/build', <BuilderList />],
+  ['a block somebody sent', '/shared', <SharedBlockPage />],
   ['career', '/career', <CareerPage />],
   ['a place', '/venues/the%20works', <VenuePage params={{ key: 'the works' }} />],
   ['year', '/year', <YearPage params={{}} />],

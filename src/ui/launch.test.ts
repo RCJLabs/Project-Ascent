@@ -201,7 +201,11 @@ describe('a file tapped in a file manager', () => {
   it('has exactly one screen waiting for each kind', () => {
     // Two claimants race for the same one-shot file and one of them loses
     // silently. The count is the invariant, not the identity of the files.
-    const takers = ['src/features/builder/BuilderList.tsx', 'src/features/settings/SettingsPage.tsx'];
+    const takers = [
+      'src/features/builder/BuilderList.tsx',
+      'src/features/settings/SettingsPage.tsx',
+      'src/features/shared/SharedBlockPage.tsx',
+    ];
     expect(takers.filter((path) => read(path).includes('takeLaunchFile('))).toEqual(takers);
     expect(takers.length).toBe(Object.keys(OPENS_AT).length);
   });

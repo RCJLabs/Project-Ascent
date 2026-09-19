@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { ChevronRight, CircleStop, Ruler, Search } from 'lucide-react';
+import { ChevronRight, CircleStop, FileText, Ruler, Search } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { blockEnd, describeBlockEnd, programForRecord } from '@/engine/blockEnd';
 import {
@@ -12,6 +12,8 @@ import {
   weeksRun,
   type BlockRecord,
 } from '@/engine/blocks';
+import { blockFileName, buildBlockFile } from '@/engine/blockFile';
+import { downloadJson } from '@/lib/download';
 import { describeBlock } from '@/engine/blockReport';
 import { describeChange, describeLoad, exerciseMovement, exerciseSeries, type LoggedPoint } from '@/engine/exerciseLog';
 import { formatEntry } from '@/engine/assessments';
@@ -28,6 +30,7 @@ import { chooseNext } from '@/engine/nextBlock';
 import { useSettings } from '@/store/settings';
 import type { UnitSystem } from '@/engine/units';
 import { BackLink } from '@/ui/BackLink';
+import { CHIP_LINK } from '@/ui/Chip';
 import { DisclosureButton } from '@/ui/Disclosure';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -58,6 +61,28 @@ import { ShareButton } from '@/features/share/ShareSheet';
  * and the app cannot tell them apart — `describeBlockEnd` says so in as
  * many words rather than guessing.
  */
+
+/**
+ * The way in to somebody else's block (PLAN.md M292).
+ *
+ * Here because this is the page about blocks ending, and a coach looking at
+ * their athlete's block is on the same errand one person over. Its own
+ * screen rather than this one, because everything else here is the
+ * climber's own history and that distinction is the whole milestone.
+ */
+function OpenTheirBlock() {
+  return (
+    <Card title="Coaching somebody?">
+      <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+        An athlete running this app can save their block review as a file. Opening it here shows
+        what their block moved, and puts none of it into your own log.
+      </p>
+      <Link href="/shared" className={CHIP_LINK}>
+        Open a block they sent you
+      </Link>
+    </Card>
+  );
+}
 
 /**
  * Every block the climber has run (PLAN.md M87).
@@ -382,6 +407,8 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
               : `${chosen.name} ran from ${chosen.startDate}, and the app no longer has the program itself — so there is nothing left to measure it against.`}
           </EmptyState>
           <BlockHistory history={history} current={chosen} />
+          <OpenTheirBlock />
+        <OpenTheirBlock />
         </PageGrid>
       </>
     );
@@ -608,6 +635,44 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
               })}
               filename={`ascent-block-${report.program.id}-${report.from}.png`}
             />
+            {/**
+              * And the same report as a file a coach can open (PLAN.md M292).
+              *
+              * Beside the picture rather than instead of it: the card is for
+              * anyone with a phone, and this is for somebody running this
+              * app, which is the same split `programFile.ts` and the handout
+              * make one screen over.
+              */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3 ml-2"
+              onClick={() => {
+                const file = buildBlockFile({
+                  report,
+                  outcome: end.outcome,
+                  weeksRun: weeksRun(
+                    end.record ?? {
+                      id: '',
+                      programId: report.program.id,
+                      name: report.program.name,
+                      startDate: end.status.from,
+                      weeks: report.program.weeks,
+                      endedAt: report.finished ? report.to : null,
+                    },
+                    today(),
+                  ),
+                  sessions: adherence
+                    ? adherence.measured.done + adherence.measured.unplanned
+                    : null,
+                  planned: adherence ? adherence.measured.planned : null,
+                  summary: describeBlock(report),
+                });
+                downloadJson(file, blockFileName(file.block));
+              }}
+            >
+              <FileText size={15} /> Save as a file
+            </Button>
           </Card>
         )}
 
@@ -723,6 +788,7 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
         )}
 
         <BlockHistory history={history} current={chosen} />
+        <OpenTheirBlock />
 
         <Card title="Or start from your own numbers">
           <p className="text-sm text-ink-soft mb-3 leading-relaxed">
