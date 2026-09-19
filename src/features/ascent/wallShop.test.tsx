@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { resetDbForTests } from '@/db/db';
@@ -20,9 +20,17 @@ import { AscentPage } from './AscentPage';
  * half of itself — which is the one that nearly shipped.
  */
 
+const builtWall = vi.hoisted(() => ({ deadly: false }));
+
+vi.mock('@/engine/ascent/config', async (importOriginal) => {
+  const { switchableWall } = await import('@/test/wall');
+  return switchableWall(await importOriginal<typeof import('@/engine/ascent/config')>(), builtWall);
+});
+
 const cheapest = shopWalls()[0]!;
 
 beforeEach(async () => {
+  builtWall.deadly = false;
   globalThis.indexedDB = new IDBFactory();
   resetDbForTests();
   await reset();
@@ -149,11 +157,12 @@ describe('the achievement a run can earn (PLAN.md M229)', () => {
    * reported where it happens instead, and compared before against after —
    * otherwise every run after the one that earned it claims it again.
    *
-   * **A run cannot earn it in jsdom**: it wants a pure run past El Capitan
-   * and the wall ends an unsteered run in seconds. So the qualifying day is
-   * put into the record *while the run is in the air* — `hadRef` was taken
-   * when it started, the reading after it lands differs, and that is exactly
-   * the transition. `runEarned` is tested directly for the decision itself.
+   * **The wall is built to order** (`src/test/wall.ts`), because how far an
+   * unsteered run gets is a property of the date the suite runs on and both
+   * tests below need it decided. The qualifying day goes into the record
+   * *while the run is in the air* — `hadRef` was taken when it started, the
+   * reading after it lands differs, and that is exactly the transition.
+   * `runEarned` is tested directly for the decision itself.
    */
   const PURE = {
     date: '2026-01-02',
@@ -163,13 +172,17 @@ describe('the achievement a run can earn (PLAN.md M229)', () => {
     pureMetres: 99_999,
   };
 
-  /** Let the run get airborne, then make the record qualify. */
+  /** Let the run get airborne, make the record qualify, then end the run. */
   async function qualifyMidRun(): Promise<void> {
     await new Promise((r) => setTimeout(r, 60));
     await act(async () => {
       const game = useGame.getState();
       useGame.setState({ ascent: { ...game.ascent, days: [PURE, ...game.ascent.days] } });
     });
+    // Only now is the wall allowed to end it. Waiting for the real wall to
+    // do it is the race this used to run: on a seed where the run outlasted
+    // the injection the card was asked before the record qualified.
+    builtWall.deadly = true;
   }
 
   it('reports it on the run that earned it, and not on the next one', async () => {
@@ -203,7 +216,20 @@ describe('the achievement a run can earn (PLAN.md M229)', () => {
     }
   }, 40_000);
 
+  /**
+   * The one the date used to decide. This asked the real wall for a run that
+   * earned nothing and got one on most days: `no-takes` wants El Capitan,
+   * 2,900 ft, which is 8.7 s in — and two of those seconds are the grace
+   * before the first row spawns. Over thirty-three dates three of them put an
+   * unsteered run past it, and 2026-09-19 put it 2,400 ft past.
+   *
+   * A deadly wall is not a seed: it lands at 1,040 ft on all thirty-three,
+   * past Devils Tower and a long way short of El Capitan. The premise is
+   * asserted rather than assumed, so a retune that broke it would fail on the
+   * fixture and not on the wiring.
+   */
   it('says nothing on a run that earned nothing', async () => {
+    builtWall.deadly = true;
     const stop = playableCanvas();
     try {
       await useGame.getState().load();
@@ -218,6 +244,8 @@ describe('the achievement a run can earn (PLAN.md M229)', () => {
       await act(async () => {
         await new Promise((r) => setTimeout(r, 0));
       });
+      const earned = gameAchievements(useGame.getState().ascent.days);
+      expect(earned.filter((a) => a.date !== null), 'the run was meant to end below El Capitan').toEqual([]);
       expect(screen.queryByText('Achievement')).toBeNull();
       expect(screen.queryByText('No Takes')).toBeNull();
     } finally {

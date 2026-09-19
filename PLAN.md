@@ -14490,6 +14490,11 @@ M50 for why it is not coming.
   papered over, because a harness that forces a re-render around every event cannot see a missing
   subscription.
 
+- **M287 — the wall that decided what a test was allowed to find.** `no-takes` wants a run past El
+  Capitan, 8.7 s in, and how far an unsteered run gets is a property of the date the suite runs on.
+  Three dates in thirty-three earn it. 2026-09-19 was one, and `main` would have gone red on the
+  next push for no reason but the calendar.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -19219,3 +19224,80 @@ synchronous by design.
 The mutants still die, which was worth checking rather than assuming — a `waitFor` that swallows a
 failure until it times out is a weaker assertion than the one it replaced, and the battery is what
 says whether it still bites.
+
+
+## M287 — the wall that decided what a test was allowed to find
+
+A test that nobody had touched started failing:
+
+```
+FAIL  wallShop.test.tsx > says nothing on a run that earned nothing
+expected <div …(1)></div> to be null
+```
+
+The run earned something. **5,305 ft, no power-up touched**, which is `no-takes` — and the card the
+test says should be absent was on the screen, correctly.
+
+The premise was written down in the file, which is the eighth time this session the wrong statement
+was the one already in the comment:
+
+> **A run cannot earn it in jsdom**: it wants a pure run past El Capitan and the wall ends an
+> unsteered run in seconds.
+
+Both halves are true and the conclusion does not follow. The wall does end an unsteered run in
+seconds — and El Capitan is **8.7 seconds in**, of which the first two are `SPAWN.grace`, before
+any row spawns at all. Seconds is plenty.
+
+### What it actually depends on is the date
+
+The wall is `buildWall(dailySeed(today()))`, so the run is deterministic given the day and nothing
+else: `playableCanvas` advances its own clock 16 ms a frame, so a slow runner and a fast one climb
+the identical wall. Measured across thirty-three dates, one run each:
+
+```
+  0 ft   3 dates      (a power-up picked up, so the run is not pure at all)
+1,371    1
+1,621    4       … 21 dates below 2,000 ft
+1,932    7
+2,244    3
+2,251    2
+2,562    1        2026-09-18 — the day the last nine milestones shipped green
+3,169    1   ✗
+3,481    1   ✗
+5,305    1   ✗    2026-09-19 — today
+```
+
+Three days in thirty-three. Yesterday cleared the threshold by 338 ft, which is why nothing had
+shown up in 330 deploys, and today did not.
+
+### The mechanism was one file over, built for the opposite failure
+
+`runMarks.test.tsx` hit the mirror image at M232 — a test that needs a run to *reach* a climb, on a
+wall that would not let it — and solved it by mocking `spawnWeightsAt`, the one function deciding
+what a row is made of. Nothing else in the tuning is touched, so a run still climbs at exactly the
+rate it would in a player's hands; all that changes is whether the wall can end it.
+
+That is now `src/test/wall.ts`, shared rather than copied, because `playableCanvas` was extracted at
+M226 for the same reason: a copy of it is a copy of every trap in it. The two traps are worth
+keeping in one place — three lanes of debris because the spawner guarantees one clear lane per row
+and a middle climber survives it two times in three, and `fallRate` 3 because an ordinary rock takes
+1.5 s to arrive and the name only holds for 1.6.
+
+With it, the run that is meant to earn nothing lands at **1,040 ft on all thirty-three dates** — the
+same number every time, because the day's seed no longer gets a say. And the qualifying run in the
+first test is no longer racing the wall either: the day is injected while the run is in the air, and
+only then is the wall allowed to end it.
+
+The premise is asserted now rather than assumed, in the engine's own terms:
+
+```ts
+expect(earned.filter((a) => a.date !== null), 'the run was meant to end below El Capitan').toEqual([]);
+```
+
+A retune that broke the fixture fails on that line, which says what happened, instead of on the
+wiring assertion three lines down, which does not.
+
+Battery: 4 killed, sanity survived. Two on the page — report an achievement the run did not earn,
+forget what was held before it — and two on the fixture itself, because a fixture that is not
+load-bearing is a fixture that proves nothing: a wall that can never end a run, and a qualifying run
+left to the real wall's timing.

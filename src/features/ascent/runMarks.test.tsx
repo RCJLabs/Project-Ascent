@@ -15,62 +15,16 @@ import { AscentPage } from './AscentPage';
  * the half neither can see — that the page is listening for the event at all,
  * and that the name goes up and comes back down.
  *
- * A run has to survive six seconds to reach Half Dome, and an unsteered run
- * on a real wall does not get close: the first draft of this file waited
- * fifteen seconds three times over and never saw a mark.
- *
- * So the wall is built to order. `spawnWeightsAt` is the one function that
- * decides what a row is made of, and nothing else in the tuning is touched —
- * the ramp, the gaps and the speeds are all the real ones, so a run climbs at
- * exactly the rate it would in a player's hands. All that changes is whether
- * the wall can end it, which is the part of the game these tests are not
- * about. The crossing on a real wall is `marks.test.ts`, which plays the
- * actual engine.
+ * A run has to survive six seconds to reach Half Dome, and whether an
+ * unsteered run gets there is a property of the date the suite runs on. So
+ * the wall is built to order: `src/test/wall.ts` says how, and why it is
+ * shared with `wallShop.test.tsx`, which wants the opposite end of it.
  */
 const wall = vi.hoisted(() => ({ deadly: false }));
 
 vi.mock('@/engine/ascent/config', async (importOriginal) => {
-  const real = await importOriginal<typeof import('@/engine/ascent/config')>();
-  return {
-    ...real,
-    spawnWeightsAt: () =>
-      wall.deadly
-        ? [
-            ['obstacle', 100],
-            ['coin', 0],
-            ['powerup', 0],
-          ]
-        : [
-            ['obstacle', 0],
-            ['coin', 100 - real.DIFFICULTY.powerupWeight],
-            ['powerup', real.DIFFICULTY.powerupWeight],
-          ],
-    /**
-     * And when it is deadly, it ends the run inside a third of a second.
-     *
-     * Two things had to go, and both were dice rolls rather than difficulty:
-     *
-     * **Where it lands.** The spawner guarantees one clear lane per row, so a
-     * climber left in the middle survives a row two times in three — on a
-     * seed that changes daily. Three lanes wide leaves no lane clear: the
-     * width is read at collision, while the guarantee counts the `lanes`
-     * field, which is still one.
-     *
-     * **When it arrives.** A row spawns a full screen above the climber, so
-     * an ordinary rock takes about 1.5 s to reach them — just past the 1.6 s
-     * the name is held for, which is the window the last test needs to land
-     * inside. Debris falls as the climber climbs, so at `fallRate` 3 it
-     * closes at four times the speed and arrives in a quarter of the time.
-     *
-     * Both are inert unless `deadly` is set, because nothing else spawns an
-     * obstacle at all. They are a stopwatch, not a wall.
-     */
-    SPAWN: { ...real.SPAWN, obstacles: [['debris', 100]] },
-    SIZES: {
-      ...real.SIZES,
-      debris: { ...real.SIZES.debris, width: real.LANE_WIDTH * 3, fallRate: 3 },
-    },
-  };
+  const { switchableWall } = await import('@/test/wall');
+  return switchableWall(await importOriginal<typeof import('@/engine/ascent/config')>(), wall);
 });
 
 let restore: (() => void) | null = null;
