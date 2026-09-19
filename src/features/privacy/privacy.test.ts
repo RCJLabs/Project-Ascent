@@ -263,6 +263,44 @@ describe('the workflow that ships it', () => {
     // green steps and a stale app.
     expect(readFileSync(WORKFLOW, 'utf8')).toMatch(/path:\s*dist/);
   });
+
+  /**
+   * And measures the layout of it, in a real browser (PLAN.md M293).
+   *
+   * The same argument as the order above, one net over: jsdom reports every
+   * box as zero, so a nav off the bottom of the screen reads as fine to the
+   * whole suite. `scripts/layout.mjs` is the only thing that can see it, and
+   * for twenty-three milestones it ran when somebody remembered to.
+   */
+  it('measures the built app in a browser before it ships it', () => {
+    const lines = readFileSync(WORKFLOW, 'utf8').split('\n').map((l) => l.trim());
+    const at = (needle: string) => lines.findIndex((l) => l.includes(needle));
+    const build = at('npm run build');
+    const layout = at('npm run layout');
+    const upload = at('upload-pages-artifact');
+    expect(layout, 'no layout step').toBeGreaterThanOrEqual(0);
+    expect(build, 'the harness serves dist/, so it has to exist').toBeLessThan(layout);
+    expect(layout, 'a layout failure after the upload stops nothing').toBeLessThan(upload);
+  });
+
+  /**
+   * And the browser it needs stays out of `package.json`.
+   *
+   * `scripts/layout.mjs` states the rule and the reason: *"Playwright is not
+   * a dependency of the app … it is a tool for the person publishing."* CI
+   * is the person publishing, which is an argument for installing it there
+   * and not for shipping it to everyone who clones the repo.
+   */
+  it('installs the browser without writing it into the manifest', () => {
+    const workflow = readFileSync(WORKFLOW, 'utf8');
+    expect(workflow).toMatch(/npm i --no-save playwright-core/);
+    const manifest = JSON.parse(readFileSync('package.json', 'utf8')) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const named = { ...manifest.dependencies, ...manifest.devDependencies };
+    expect(Object.keys(named).filter((n) => n.includes('playwright'))).toEqual([]);
+  });
 });
 
 /**

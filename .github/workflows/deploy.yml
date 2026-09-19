@@ -31,6 +31,33 @@ jobs:
       # testing first meant those suites had never once run in CI.
       - run: npm run build
       - run: npm test
+      # The layout net, in a real browser (PLAN.md M293).
+      #
+      # jsdom has no layout engine, so every box the suite measures reads
+      # zero and a nav pushed off the bottom of the screen looks perfectly
+      # fine to all 6,910 tests. `scripts/layout.mjs` is the only thing that
+      # can see it, and until now it ran when somebody remembered to run it.
+      #
+      # It gates the deploy because it is deterministic — three runs, three
+      # byte-identical outputs, 49 routes × 3 sizes in 105 seconds — and
+      # because the two worst bugs this app has shipped (M225, M269) were
+      # both in the class it checks and were both found by a person on a
+      # phone.
+      #
+      # `--no-save`, so `package.json` stays as `scripts/layout.mjs` says it
+      # should: *"Playwright is not a dependency of the app … it is a tool
+      # for the person publishing."* CI is the person publishing.
+      - run: npm i --no-save playwright-core
+      - run: npx playwright-core install --with-deps chromium
+      - name: Layout
+        run: |
+          npm run preview -- --port 4173 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:4173/ -o /dev/null && break
+            if [ "$i" = 60 ]; then echo "preview never came up"; exit 1; fi
+            sleep 1
+          done
+          npm run layout
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

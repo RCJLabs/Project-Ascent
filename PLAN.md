@@ -14537,6 +14537,11 @@ M50 for why it is not coming.
   A third file beside the program and the race tape, and the only one of the three that is read and
   **recorded nowhere** — which is the milestone, not the format.
 
+- **M293 — the layout net, in CI.** `scripts/layout.mjs` has found a real bug in five milestones and
+  ran when somebody remembered to run it. Measured deterministic — three runs, byte-identical, 105
+  seconds — so it gates the deploy. And the first thing it should have been watching, measured at
+  last: the day's button is below the fold on a short phone.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -19678,3 +19683,76 @@ repeating.
 6,910 tests over 408 files, from 6,869. Layout harness: 49 routes × 3 sizes, OK. First load
 136.45KB against the 137.3 budget M291 set — 0.20KB for the route row and the lazy wrapper, with
 the page itself in its own chunk.
+
+
+## M293 — the layout net, in CI
+
+`scripts/layout.mjs` opens by saying why it exists: *"jsdom has no layout engine: every box it
+reports is zero, so a nav pushed off the bottom of the screen and a nav sitting under the browser's
+chrome both read as perfectly fine. The two worst bugs this app has shipped were exactly those —
+M225 and M269 — and both were found by a person on a phone rather than by anything in `src`."*
+
+It then ran only when somebody remembered to run it, for twenty-three milestones. It has since
+found a 22px text input (M280), a card reading *"0 of 23 sessions"* (M284), two bugs jsdom could
+not see (M286), and the sizing on two new screens (M290, M292).
+
+### Why it can gate the deploy
+
+Because it is not flaky, measured rather than assumed:
+
+```
+run 1: 106s -> layout OK
+run 2: 104s -> layout OK
+run 3: 104s -> layout OK
+all three identical
+```
+
+49 routes × 3 sizes, byte-identical output. So it goes in the `build` job between `npm test` and
+the artefact upload — after the build because it serves `dist`, before the upload because a check
+that runs after the upload stops nothing. Both of those are held by `privacy.test.ts`, beside the
+build-before-test rule M224 put there for the same reason.
+
+Playwright is installed with `--no-save`, so `package.json` keeps the rule the harness states:
+*"Playwright is not a dependency of the app … it is a tool for the person publishing."* CI is the
+person publishing, which argues for installing it there and not for shipping it to everyone who
+clones the repo. A test holds that too.
+
+### What it was supposed to be watching, and is not
+
+The other open item was a number nobody had ruled on: M241 recorded the Home button landing at
+**658px** instead of the predicted 505px, wrote down that the prediction was made from a mockup
+rather than from the page, and left it there.
+
+Ruled on now, by measuring it. For a climber mid-program — which is the case, not the fresh
+install, where the button is at 229px:
+
+```
+430×932   button 635–679px   nav at 874   above the fold
+390×844   button 655–699px   nav at 786   above the fold
+360×780   button 674–718px   nav at 722   above, by 4px
+375×667   button 655–699px   nav at 609   BELOW THE FOLD
+360×640   button 674px       nav at 582   BELOW THE FOLD, by 92px
+```
+
+The last line is the harness's own `small` size. The stack at it:
+
+```
+ 151px  h=154   the day heading, the week strip, the block line
+ 316px  h=533   the numbers card
+ 674px          Start session
+```
+
+**M239 fixed the tall phone and never checked the short one.** Its entry is specific — *"On a
+430×932 phone the Log session button sat at the bottom edge of the viewport"* — and specific about
+the fix, the numbers at full size above the button. At 430×932 that is exactly what happened and it
+works. At 360×640 the numbers card is 533px tall and the button is 92px under the nav. Not the
+sample-data banner either: it is 75px of that stack, and 674 − 75 is still below 582.
+
+This milestone stops there, on purpose. The fix is a design decision with three real answers —
+shorten the numbers card on a short viewport, put it below the button and reverse M239, or accept
+that the smallest phones scroll to train — and picking one silently would be the third time a
+number on this screen was decided from something other than the page. **The invariant that would
+catch it belongs with the fix**, because a gating check that fails on the current main cannot ship
+at all.
+
+Battery: 3 killed, sanity survived. 6,912 tests over 408 files.
