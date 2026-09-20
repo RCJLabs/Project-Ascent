@@ -4,10 +4,9 @@ import { IDBFactory } from 'fake-indexeddb';
 import { fireEvent, screen } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { resetDbForTests } from '@/db/db';
-import { newSession, putSession, type Session } from '@/db/sessions';
-import { addDays, startOfWeek, today } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { hydrate, renderAt, reset } from '@/test/render';
+import { brokenStreak } from '@/test/streak';
 import { SkillsPage } from '@/features/skills/SkillsPage';
 
 /**
@@ -19,32 +18,6 @@ import { SkillsPage } from '@/features/skills/SkillsPage';
  * the line beneath it from the streak in progress, so *16 / 30* sat above
  * *29 more weeks in a row*.
  */
-
-const TODAY = today();
-const THIS_WEEK = startOfWeek(TODAY);
-
-let counter = 0;
-function log(date: string): Session {
-  return newSession(date, counter++, { completed: true, rpe: 7, durationMin: 60 });
-}
-
-/** Eight weeks of three sessions, two months off, then this week back. */
-async function brokenStreak(): Promise<Session[]> {
-  const written: Session[] = [];
-  const put = async (date: string) => {
-    const session = log(date);
-    written.push(session);
-    await putSession(session);
-  };
-  for (let w = 20; w >= 13; w--) {
-    for (const d of [0, 2, 4]) await put(addDays(THIS_WEEK, -7 * w + d));
-  }
-  for (const d of [0, 2, 4]) {
-    const date = addDays(THIS_WEEK, d);
-    if (date <= TODAY) await put(date);
-  }
-  return written;
-}
 
 beforeEach(async () => {
   globalThis.indexedDB = new IDBFactory();

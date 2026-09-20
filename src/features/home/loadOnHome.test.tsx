@@ -67,6 +67,11 @@ describe('training load on the front door', () => {
     // The coach card is a chunk away since M183, so it lands a microtask
     // after the heading does. Awaiting the card rather than the page is the
     // difference between reading Home and reading Home without its board.
+    //
+    // How long that takes is a property of the machine, not of the app, and
+    // `test/setup.ts` says how long every `findBy` here waits (PLAN.md
+    // M299) — this is one of the three tests that found the old second was
+    // not enough.
     await view.findByText("Coach's Corner");
     const text = view.container.textContent ?? '';
     expect(text, 'nothing on Home mentions load at all').toMatch(/Load spike/);

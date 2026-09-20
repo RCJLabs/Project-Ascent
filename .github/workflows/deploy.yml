@@ -62,8 +62,50 @@ jobs:
         with:
           path: dist
 
+  # The same suite, as other days (PLAN.md M299).
+  #
+  # `today()` reads the clock, and a quarter of the test files build their
+  # fixtures from it. Seven of them said one thing on the day they were
+  # written and another on a Sunday — and the suite, green on every push for
+  # two hundred milestones, was red on four days in seven and on most of the
+  # calendar. Nothing in CI could see that, because CI only ever ran it as
+  # the day it ran.
+  #
+  # Its own jobs rather than a step of `build`: it needs no `dist` and no
+  # browser, so it runs beside the build instead of after it, and the deploy
+  # waits on both. One runner per day, because ten days one after another is
+  # twenty minutes in front of every deploy and ten at once is two — and the
+  # days are independent by construction.
+  days:
+    runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.pick.outputs.list }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: pick
+        run: echo "list=$(node scripts/dates.mjs --list)" >> "$GITHUB_OUTPUT"
+
+  dates:
+    needs: days
+    strategy:
+      # Every day reported, not the first one to go: which days fail is the
+      # finding, and a run that stops at the earliest says nothing about the
+      # shape of it.
+      fail-fast: false
+      matrix:
+        day: ${{ fromJSON(needs.days.outputs.list) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:dates -- --day ${{ matrix.day }}
+
   deploy:
-    needs: build
+    needs: [build, dates]
     runs-on: ubuntu-latest
     environment:
       name: github-pages

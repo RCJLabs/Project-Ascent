@@ -204,7 +204,12 @@ describe('what the injury page says about it', () => {
     const strip = screen.getByLabelText('How it felt, by day');
     expect(within(strip).getAllByRole('listitem')).toHaveLength(14);
     expect(screen.getByText(/The counts above are all 20/)).toBeTruthy();
-    expect(screen.getByText(/20 fine/)).toBeTruthy();
+    // In the sentence, not anywhere on the page (PLAN.md M299). A chip
+    // reads "SEP 20 FINE", so a bare `/20 fine/` matched two nodes and
+    // threw on every date whose last fourteen answers included a
+    // twentieth — about half of them, and never on the days the suite had
+    // been run.
+    expect(screen.getByText(/^Answered on 20 of the/).textContent).toMatch(/20 fine/);
   });
 
   it('says nothing about a cap it did not apply', async () => {

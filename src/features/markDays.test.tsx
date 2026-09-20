@@ -6,6 +6,7 @@ import { addDays, shortLabel, today } from '@/engine/dates';
 import { isBare } from '@/engine/thinLog';
 import { useUndo } from '@/store/undo';
 import { hydrate, renderAt, reset } from '@/test/render';
+import { daysBeforeLastMonthEnded, showMonthOf } from '@/test/calendarMonth';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
 
 /**
@@ -18,10 +19,24 @@ import { CalendarPage } from '@/features/calendar/CalendarPage';
 
 const TODAY = today();
 
+/**
+ * A day behind us, in a month the calendar can be pointed at (PLAN.md
+ * M299). `calendarMonth.ts` holds the reason and the arithmetic; every pick
+ * below used to be `addDays(TODAY, -3)`, which is not on the grid the
+ * calendar opens on for the first days of a month.
+ */
+const behind = daysBeforeLastMonthEnded;
+
 async function calendar(): Promise<void> {
   await reset();
   await hydrate();
   renderAt('/calendar', <CalendarPage />);
+}
+
+/** The picker, open on the month `behind` counts in. */
+function picking(): void {
+  fireEvent.click(screen.getByText('Mark days'));
+  showMonthOf(behind(0));
 }
 
 /** The cell's label flips to "Unmark" once it is picked. */
@@ -39,41 +54,41 @@ describe('marking the days you trained', () => {
 
   it('turns the grid into a picker and says what it will do', async () => {
     await calendar();
-    fireEvent.click(screen.getByText('Mark days'));
+    picking();
     expect(screen.getByText('Days you trained but did not log')).toBeTruthy();
     expect(screen.getByText(/carry no training load/)).toBeTruthy();
-    expect(mark(addDays(TODAY, -3))).toBeTruthy();
+    expect(mark(behind(3))).toBeTruthy();
   });
 
   it('offers nothing to confirm until a day is picked', async () => {
     await calendar();
-    fireEvent.click(screen.getByText('Mark days'));
+    picking();
     expect(screen.queryByText(/Mark \d+ days? trained/)).toBeNull();
-    fireEvent.click(mark(addDays(TODAY, -3)));
+    fireEvent.click(mark(behind(3)));
     expect(screen.getByText('Mark 1 day trained')).toBeTruthy();
   });
 
   it('writes one bare session per day picked', async () => {
     await calendar();
-    fireEvent.click(screen.getByText('Mark days'));
-    for (const back of [2, 3, 5]) fireEvent.click(mark(addDays(TODAY, -back)));
+    picking();
+    for (const back of [2, 3, 5]) fireEvent.click(mark(behind(back)));
     fireEvent.click(screen.getByText('Mark 3 days trained'));
 
     await waitFor(async () => {
       const written = await listSessions();
       expect(written).toHaveLength(3);
-      expect(written.map((s) => s.date).sort()).toEqual([5, 3, 2].map((b) => addDays(TODAY, -b)));
+      expect(written.map((s) => s.date).sort()).toEqual([5, 3, 2].map((b) => behind(b)));
       expect(written.every(isBare)).toBe(true);
     });
   });
 
   it('unpicks a day that was picked by mistake', async () => {
     await calendar();
-    fireEvent.click(screen.getByText('Mark days'));
-    fireEvent.click(mark(addDays(TODAY, -2)));
-    fireEvent.click(mark(addDays(TODAY, -3)));
+    picking();
+    fireEvent.click(mark(behind(2)));
+    fireEvent.click(mark(behind(3)));
     expect(screen.getByText('Mark 2 days trained')).toBeTruthy();
-    fireEvent.click(mark(addDays(TODAY, -2)));
+    fireEvent.click(mark(behind(2)));
     expect(screen.getByText('Mark 1 day trained')).toBeTruthy();
   });
 
@@ -89,8 +104,8 @@ describe('marking the days you trained', () => {
    */
   it('does not leave the picked and unpicked styles fighting', async () => {
     await calendar();
-    fireEvent.click(screen.getByText('Mark days'));
-    const date = addDays(TODAY, -3);
+    picking();
+    const date = behind(3);
     expect(mark(date).className).toContain('border-line');
 
     fireEvent.click(mark(date));
@@ -107,8 +122,8 @@ describe('marking the days you trained', () => {
   // made the picked day a coin flip in the first place.
   it('never emits two backgrounds for one day', async () => {
     await calendar();
-    fireEvent.click(screen.getByText('Mark days'));
-    fireEvent.click(mark(addDays(TODAY, -3)));
+    picking();
+    fireEvent.click(mark(behind(3)));
     for (const cell of screen.getAllByLabelText(/as trained$/)) {
       const backgrounds = cell.className.split(/\s+/).filter((c) => c.startsWith('bg-'));
       expect(backgrounds, cell.getAttribute('aria-label') ?? '').toHaveLength(1);
@@ -119,26 +134,31 @@ describe('marking the days you trained', () => {
   it('refuses a day in the future', async () => {
     await calendar();
     fireEvent.click(screen.getByText('Mark days'));
-    expect((mark(addDays(TODAY, 2)) as HTMLButtonElement).disabled).toBe(true);
     expect((mark(TODAY) as HTMLButtonElement).disabled).toBe(false);
+    // In the month that holds it (PLAN.md M299): two days after the
+    // twenty-ninth is next month, and a month ending on a Saturday lends
+    // the grid no trailing days to find it among.
+    const soon = addDays(TODAY, 2);
+    showMonthOf(soon);
+    expect((mark(soon) as HTMLButtonElement).disabled).toBe(true);
   });
 
   // A day that already has a session is already answered.
   it('refuses a day that is already logged', async () => {
     await reset();
-    const date = addDays(TODAY, -4);
+    const date = behind(4);
     await putSession({ ...newSession(date, 0, { completed: true, rpe: 7, durationMin: 60 }) } as never);
     await hydrate();
     renderAt('/calendar', <CalendarPage />);
-    fireEvent.click(screen.getByText('Mark days'));
+    picking();
     expect((mark(date) as HTMLButtonElement).disabled).toBe(true);
   });
 
   // A fortnight in one tap is a lot of records to have made by accident.
   it('offers an undo that takes all of them back', async () => {
     await calendar();
-    fireEvent.click(screen.getByText('Mark days'));
-    for (const back of [2, 3, 5]) fireEvent.click(mark(addDays(TODAY, -back)));
+    picking();
+    for (const back of [2, 3, 5]) fireEvent.click(mark(behind(back)));
     fireEvent.click(screen.getByText('Mark 3 days trained'));
     await waitFor(async () => expect(await listSessions()).toHaveLength(3));
 
@@ -154,8 +174,8 @@ describe('marking the days you trained', () => {
 
   it('leaves the picker when it is done', async () => {
     await calendar();
-    fireEvent.click(screen.getByText('Mark days'));
-    fireEvent.click(mark(addDays(TODAY, -2)));
+    picking();
+    fireEvent.click(mark(behind(2)));
     fireEvent.click(screen.getByText('Mark 1 day trained'));
     await waitFor(() => expect(screen.queryByText('Days you trained but did not log')).toBeNull());
   });

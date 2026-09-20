@@ -9,6 +9,7 @@ import { addDays, dayOfWeek, shortLabel, startOfWeek, today } from '@/engine/dat
 import { blockWindow, plannedDay } from '@/engine/plan';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
+import { showMonthOf } from '@/test/calendarMonth';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { HomePage } from '@/features/home/HomePage';
 
@@ -183,6 +184,10 @@ describe('the month a climber opens after starting', () => {
     const { thursday: THURSDAY, nextSunday: NEXT_SUNDAY } = week();
     await started(THURSDAY);
     await calendar();
+    // On the month that holds it (PLAN.md M299). The gutter has a row per
+    // row of the grid, so next week has one only when next week is on the
+    // grid — and in the last week of a month it is not.
+    showMonthOf(NEXT_SUNDAY);
     // Four sessions, all of them ahead, so the gutter reads what it asks
     // for rather than what was done.
     expect(gutter(NEXT_SUNDAY)?.textContent?.trim()).toBe('4');

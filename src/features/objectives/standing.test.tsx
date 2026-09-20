@@ -3,11 +3,10 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { screen } from '@testing-library/react';
 import { resetDbForTests } from '@/db/db';
-import { newSession, putSession, type Session } from '@/db/sessions';
-import { addDays, startOfWeek, today } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { useObjectives } from '@/store/objectives';
 import { hydrate, renderAt, reset } from '@/test/render';
+import { brokenStreak } from '@/test/streak';
 import { ObjectiveDetailPage } from './ObjectiveDetailPage';
 import { ObjectivesPage } from './ObjectivesPage';
 
@@ -20,29 +19,6 @@ import { ObjectivesPage } from './ObjectivesPage';
  * the meter beside it, and the "Furthest away" card — and all three read a
  * streak the climber was no longer on.
  */
-
-const TODAY = today();
-const THIS_WEEK = startOfWeek(TODAY);
-
-let counter = 0;
-
-/** Eight weeks of three sessions, two months off, then this week back. */
-async function brokenStreak(): Promise<Session[]> {
-  const written: Session[] = [];
-  const put = async (date: string) => {
-    const session = newSession(date, counter++, { completed: true, rpe: 7, durationMin: 60 });
-    written.push(session);
-    await putSession(session);
-  };
-  for (let w = 20; w >= 13; w--) {
-    for (const d of [0, 2, 4]) await put(addDays(THIS_WEEK, -7 * w + d));
-  }
-  for (const d of [0, 2, 4]) {
-    const date = addDays(THIS_WEEK, d);
-    if (date <= TODAY) await put(date);
-  }
-  return written;
-}
 
 async function objective(requirements: { id: string; requirement: unknown }[]): Promise<void> {
   await useObjectives.getState().save({

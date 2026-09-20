@@ -117,10 +117,18 @@ describe('the month view marks the limit days', () => {
   it('marks one, and only the limit day', async () => {
     // Peak Performance runs a max-intensity Monday and a technique
     // Wednesday. One of those is the day the week is built around.
+    //
+    // From the week the month opens in, not from today (PLAN.md M299).
+    // Starting the block on `TODAY` puts only the Mondays after today in
+    // the month on view, and a block begun in the last week of a month has
+    // exactly one of them — so "more than one LIMIT" was a claim about
+    // where in its month the suite happened to run. Opening the block on
+    // the Sunday the month begins in covers every Monday it holds, on
+    // every date, and twelve weeks is longer than any month.
     await hydrate();
     useProfile.setState({
       activeProgramId: 'peak_performance',
-      startDates: { peak_performance: TODAY },
+      startDates: { peak_performance: startOfWeek(`${TODAY.slice(0, 7)}-01`) },
       plans: { peak_performance: { 1: 'perf', 3: 'tech' } },
       weekOverrides: {},
       adaptations: {},

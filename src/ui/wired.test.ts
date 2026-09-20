@@ -995,7 +995,11 @@ const TEST_ONLY: Record<string, string> = {
   'src/test/wall.ts':
     'the wall M232 built to order and M287 shared, reached by a vi.mock factory this sweep cannot see',
   'src/test/render.tsx': 'the harness the screen tests render through, imported only by tests',
+  'src/test/calendarMonth.ts':
+    'the month walk M299 shared out of six fixtures that each assumed one, imported only by tests',
   'src/test/setup.ts': 'named by vite.config.ts as setupFiles, so the runner loads it, not the app',
+  'src/test/streak.ts':
+    'the broken streak M299 shared out of the two copies that each had it, imported only by tests',
   'src/ui/paletteRules.ts': 'moved out of a script at M61 so the tool could itself be tested',
 };
 

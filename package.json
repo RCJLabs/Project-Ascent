@@ -10,6 +10,7 @@
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:dates": "node scripts/dates.mjs",
     "icons": "node scripts/gen-icons.mjs",
     "themes:check": "vite-node scripts/theme-report.ts",
     "priority": "vite-node scripts/priority-report.ts",

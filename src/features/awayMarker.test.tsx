@@ -5,6 +5,7 @@ import { addDays, shortLabel, today } from '@/engine/dates';
 import { useAway } from '@/store/away';
 import { useUndo } from '@/store/undo';
 import { hydrate, renderAt, reset } from '@/test/render';
+import { daysBeforeLastMonthEnded, showMonthOf } from '@/test/calendarMonth';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
 
 /**
@@ -26,6 +27,20 @@ async function calendar(): Promise<void> {
 
 const pick = (date: string) =>
   screen.getByLabelText(new RegExp(`^(Un)?[Mm]ark ${shortLabel(date)} as away$`));
+
+/**
+ * A day behind us, in a month the calendar can be pointed at (PLAN.md
+ * M299). `calendarMonth.ts` holds the reason and the arithmetic; the range
+ * these tests store used to be `addDays(TODAY, -9)` to `addDays(TODAY, -2)`,
+ * which splits across two months at the start of one.
+ */
+const behind = daysBeforeLastMonthEnded;
+
+/** The away picker, open on the month `behind` counts in. */
+function marking(): void {
+  fireEvent.click(screen.getByText('Away'));
+  showMonthOf(behind(0));
+}
 
 describe('marking a stretch away', () => {
   it('is offered beside the other answer, not instead of it', async () => {
@@ -51,52 +66,52 @@ describe('marking a stretch away', () => {
 
   it('offers nothing to confirm until a day is picked', async () => {
     await calendar();
-    fireEvent.click(screen.getByText('Away'));
+    marking();
     expect(screen.queryByText(/^Mark .* away$/)).toBeNull();
-    fireEvent.click(pick(addDays(TODAY, -3)));
+    fireEvent.click(pick(behind(3)));
     expect(screen.getByText(/^Mark .* away$/)).toBeTruthy();
   });
 
   /** First tap to last tap, everything between included — and it says so. */
   it('stores one range from the earliest tap to the latest', async () => {
     await calendar();
-    fireEvent.click(screen.getByText('Away'));
+    marking();
     expect(screen.getByText(/Tap the first day and the last/)).toBeTruthy();
-    fireEvent.click(pick(addDays(TODAY, -9)));
-    fireEvent.click(pick(addDays(TODAY, -2)));
+    fireEvent.click(pick(behind(9)));
+    fireEvent.click(pick(behind(2)));
     fireEvent.click(screen.getByText(/^Mark .* away$/));
 
     await waitFor(() => expect(useAway.getState().periods).toHaveLength(1));
     const stored = useAway.getState().periods[0]!;
-    expect(stored.from).toBe(addDays(TODAY, -9));
-    expect(stored.to).toBe(addDays(TODAY, -2));
+    expect(stored.from).toBe(behind(9));
+    expect(stored.to).toBe(behind(2));
     expect(stored.kind).toBe('trip');
   });
 
   it('carries the name the climber typed', async () => {
     await calendar();
-    fireEvent.click(screen.getByText('Away'));
+    marking();
     fireEvent.change(screen.getByLabelText('Call it something'), {
       target: { value: "  Font   '26 " },
     });
-    fireEvent.click(pick(addDays(TODAY, -4)));
+    fireEvent.click(pick(behind(4)));
     fireEvent.click(screen.getByText(/^Mark .* away$/));
     await waitFor(() => expect(useAway.getState().periods[0]?.note).toBe("Font '26"));
   });
 
   it('stores the kind the climber chose', async () => {
     await calendar();
-    fireEvent.click(screen.getByText('Away'));
+    marking();
     fireEvent.click(screen.getByText('Injured'));
-    fireEvent.click(pick(addDays(TODAY, -4)));
+    fireEvent.click(pick(behind(4)));
     fireEvent.click(screen.getByText(/^Mark .* away$/));
     await waitFor(() => expect(useAway.getState().periods[0]?.kind).toBe('injured'));
   });
 
   it('lists what is already stored, and takes one back', async () => {
     await calendar();
-    fireEvent.click(screen.getByText('Away'));
-    fireEvent.click(pick(addDays(TODAY, -4)));
+    marking();
+    fireEvent.click(pick(behind(4)));
     fireEvent.click(screen.getByText(/^Mark .* away$/));
     await waitFor(() => expect(useAway.getState().periods).toHaveLength(1));
 
@@ -110,10 +125,10 @@ describe('marking a stretch away', () => {
    */
   it('puts a removed marker back, whole', async () => {
     await calendar();
-    fireEvent.click(screen.getByText('Away'));
+    marking();
     fireEvent.change(screen.getByLabelText('Call it something'), { target: { value: 'Font' } });
-    fireEvent.click(pick(addDays(TODAY, -9)));
-    fireEvent.click(pick(addDays(TODAY, -2)));
+    fireEvent.click(pick(behind(9)));
+    fireEvent.click(pick(behind(2)));
     fireEvent.click(screen.getByText(/^Mark .* away$/));
     await waitFor(() => expect(useAway.getState().periods).toHaveLength(1));
 
@@ -123,8 +138,8 @@ describe('marking a stretch away', () => {
 
     const back = useAway.getState().periods[0];
     expect(back?.note).toBe('Font');
-    expect(back?.from).toBe(addDays(TODAY, -9));
-    expect(back?.to).toBe(addDays(TODAY, -2));
+    expect(back?.from).toBe(behind(9));
+    expect(back?.to).toBe(behind(2));
   });
 
   /**
@@ -141,6 +156,11 @@ describe('marking a stretch away', () => {
   it('cannot mark a day that has not happened', async () => {
     await calendar();
     fireEvent.click(screen.getByText('Away'));
-    expect(pick(addDays(TODAY, 1)).hasAttribute('disabled')).toBe(true);
+    // In the month that holds it (PLAN.md M299): tomorrow is next month on
+    // the last day of this one, and a month ending on a Saturday lends the
+    // grid no trailing days to find it among.
+    const tomorrow = addDays(TODAY, 1);
+    showMonthOf(tomorrow);
+    expect(pick(tomorrow).hasAttribute('disabled')).toBe(true);
   });
 });

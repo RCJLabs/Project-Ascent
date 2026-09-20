@@ -22,7 +22,20 @@ import { TrainPage } from '@/features/train/TrainPage';
 const TODAY = today();
 /** Nine weeks back, on a Sunday, so today is week 9 of a twelve-week block. */
 const START = addDays(startOfWeek(TODAY), -8 * 7);
-const week = (n: number) => addDays(START, (n - 1) * 7 + 1);
+/**
+ * The Sunday of week `n` — a day of that week that has already happened
+ * (PLAN.md M299).
+ *
+ * This was the Monday, `+ 7 * (n - 1) + 1`, and `interruption` ignores a
+ * session dated after today: run on a Sunday, the block's own current week
+ * had not reached its Monday, the session below landed tomorrow, and the
+ * last week trained was week 1 whatever this was asked for. The card the
+ * first test says stays away appeared, seven weeks missed.
+ *
+ * A week here begins on its Sunday, so `+ 7 * (n - 1)` is the one day of
+ * week `n` that exists from the moment week `n` does.
+ */
+const week = (n: number) => addDays(START, (n - 1) * 7);
 
 beforeEach(async () => {
   globalThis.indexedDB = new IDBFactory();

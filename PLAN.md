@@ -14702,6 +14702,13 @@ M50 for why it is not coming.
   or a name typed a beat late cost the climb: minus to zero and back through the grade picker. Tap
   the row now. The merge key that decides what is one row came out of `addClimb` on the way.
 
+- **M299 — the suite that only ran on a Thursday.** `today()` reads the clock and a hundred of the
+  412 test files build their fixtures from it, so what the suite asserts is a function of the day it
+  is run. Seven tests disagreed with their own comments — four of them on every day before Thursday,
+  one on five weeks in six — and every push for two hundred milestones was green. `ASCENT_TODAY`
+  pins the clock, `npm run test:dates` runs the date-touching files as ten different days, and the
+  deploy waits on it. One of the seven was the app rather than the test.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -20175,3 +20182,159 @@ First load 136.49KB against 137.3.
 
 That closes the logger audit: all five findings shipped, and the sixth was a list of what not to
 touch.
+
+## M299 — the suite that only ran on a Thursday
+
+The first thing this milestone did was fail. Four tests were red on a clean checkout, in files
+nothing had touched for milestones:
+
+```
+FAIL src/features/skillsRow.test.tsx > counts from the streak being run, not the one behind it
+FAIL src/features/objectives/standing.test.tsx > says the same number in the card that names what is furthest away
+FAIL src/features/pickItUp.test.tsx > stays away while the block is being run
+FAIL src/features/calendarLegend.test.tsx > says a marker in exactly the months that draw one
+```
+
+It was a Sunday. `today()` reads the clock, and a hundred of the 412 test files build their
+fixtures out of what it says — so **what the suite asserts is a function of the day it is run**,
+and it had never been run on this one.
+
+### The week is one day old on a Sunday
+
+A calendar week here begins on its Sunday (`dates.ts`, and `plan.ts` calls it *not up for
+negotiation*). Two files wanted a streak week and wrote it the same way:
+
+```ts
+for (const d of [0, 2, 4]) {
+  const date = addDays(THIS_WEEK, d);
+  if (date <= TODAY) await put(date);      // the Tuesday and the Thursday are not here yet
+}
+```
+
+That guard drops two of the three sessions on any day before Thursday. `deriveStreak` wants three,
+so the streak the tests are about was nought — and the two assertions that survived it survived
+because *nought is also less than eight*. They had been passing vacuously three days in seven.
+
+The week back on is the week **just gone** now, which is whole on every day of the week, and
+`src/test/streak.ts` holds it once instead of twice.
+
+`pickItUp` had the same shape one layer down: its block's current week was addressed by its Monday,
+and run on a Sunday the session it wrote was dated tomorrow. `interruption` ignores a session after
+today, so the last week trained was week 1 and the card the test says stays away appeared. A week's
+Sunday exists from the moment the week does.
+
+### And a month is not a fixed number of weeks
+
+`calendarLegend` was worse: it wanted a month with a legend and no LIMIT marker, and LIMIT draws on
+every planned day whose session type is a limit day — which is every Monday of the block. No month
+inside the block has one; no month outside it has a legend. It held on the weeks where the block's
+last month was clipped in a particular way, which is a property of where today sits in its month.
+Measured over forty consecutive dates: **five weeks in six it failed.**
+
+A logged day two months before the block starts is a month with a legend and nothing else in it, on
+every date. The run contains both answers by construction now rather than by luck.
+
+`dayShape` wanted *more than one* LIMIT and got one on the last week of a month; it opens its block
+on the Sunday the month begins in, so the month is covered whatever today is. The deload test asked
+for a month that happened not to deload and now asks a block that never does — Trip Prep is the one
+shipped program with `deloadWeeks: []`, which is a claim no date can move.
+
+### `ASCENT_TODAY`, so the suite can be asked
+
+None of this is findable by reading. `src/test/setup.ts` takes a pinned clock:
+
+```
+ASCENT_TODAY=2026-09-20 npx vitest run
+```
+
+Only the date moves — a test that installs its own fake timers starts from that instant rather than
+fighting it. It is what turned *four tests are red* into a list, and what every fix above was
+measured against rather than argued for.
+
+`npm run test:dates` is the sweep it makes possible: the date-touching files, run as each of the
+next seven days and as the first, the twenty-eighth and the last of next month. The file list is
+derived from the imports rather than kept, and the day list is derived from the run.
+
+It found seven more test files, all of them at the ends of a month. The calendar draws the month it
+is showing and borrows only as many days either side as its first and last rows need — so a month
+ending on a Saturday borrows none at all, and every fixture reaching for `addDays(TODAY, 2)` or
+`addDays(TODAY, -9)` was reaching for a day that was sometimes not on screen:
+
+```
+2026-10-01 Thu  FAILED   markDays ×3, weekPage
+2026-10-28 Wed  FAILED   startsMidWeek, testWeek, weekGutter ×3
+2026-10-31 Sat  FAILED   awayMarker ×2, markDays ×2, startsMidWeek, testWeek, weekGutter ×3
+```
+
+`src/test/calendarMonth.ts` walks the calendar to the month holding a day, reading the heading a
+climber reads. The fixtures name the day they mean and stop assuming where the page was left.
+
+### One of them was the app
+
+`statsAsOf` is the snapshot behind the *six months ago* ghost on Your body. It dropped the sessions
+after `asOf` and then derived the state without one:
+
+```ts
+const sessions = input.sessions.filter((s) => s.date <= input.asOf);
+const state = deriveClimberState(sessions);   // today's clock, in a shape about last March
+```
+
+`deriveClimberState` defaults `today` to the real clock, and the streak, the consecutive days, the
+rolling 30-day counts and `restedWithin24h` are all measured from it. So half of standing on a past
+day was missing: **the same log read differently on different days**, and the past shape a climber
+was being compared against carried today's consistency. `review.ts` passes `{ today: asOf }` for
+exactly this reason and has since it was written — the correct statement was one module over, which
+is the fourth time that has been the finding.
+
+The test that should have caught it named the live derivation and never called it: it compared
+`statsAsOf` on today against `statsAsOf` in 2030 and expected them to agree. That is not the claim
+in its own comment, and it is no longer true — a snapshot taken four years after a log stops should
+show a shape four years stale. It calls `deriveStats` now, and a second test reads the same snapshot
+from two different days and demands the same numbers.
+
+### And one that was not about dates at all
+
+Running the suite ten times over found three tests in `features/home` that pass alone and fail
+inside a run with something else to do. All three wait on the same thing: Home's coach board is a
+chunk away since M183, and what a `findBy` waits for there is a dynamic import.
+
+Testing Library allows a second, which is the budget of a machine doing nothing else. Half the
+screens in this app are code-split, so the argument is about every lazy screen rather than about
+those three — `asyncUtilTimeout` is ten seconds in `test/setup.ts` now, and only a test that is
+going to fail pays the difference.
+
+A suite run once a day hides this; a suite run ten times in a row does not.
+
+### The deploy waits on it
+
+Ten days, one runner each, because ten in sequence is twenty minutes in front of every deploy and
+ten at once is two. `fail-fast: false`, because *which* days fail is the finding.
+
+One test is exempt and says so: `updatePrompt`'s *is a fresh build in a fresh checkout* compares the
+build stamp to the clock the app is read on, so under a pinned clock the two are days apart by
+construction. Every other test in the suite now holds on any day.
+
+### What it cost
+
+Fourteen test files, one engine module, two shared fixtures, the setup file and a script. No app
+behaviour changed except the snapshot, which changed because it was wrong.
+
+Verified in the browser, on the sample climber's *six months ago* ghost — the same build, the one
+line changed:
+
+```
+March 2026, standing on today   Technique 21   Mental 37
+March 2026, standing on March   Technique 26   Mental 30
+```
+
+```
+101 date-touching test files, as 10 of 10 days
+  2026-09-20 Sun  ok  104s     2026-09-25 Fri  ok  105s
+  2026-09-21 Mon  ok  105s     2026-09-26 Sat  ok  103s
+  2026-09-22 Tue  ok  104s     2026-10-01 Thu  ok  104s
+  2026-09-23 Wed  ok  103s     2026-10-28 Wed  ok  106s
+  2026-09-24 Thu  ok  104s     2026-10-31 Sat  ok  105s
+```
+
+Battery: 12 killed, sanity survived. 6,949 tests over 413 files, from 6,946 over 412 — and for the
+first time, the same 6,949 on any day. Layout harness OK. First load 136.49KB against 137.3.

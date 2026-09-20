@@ -8,6 +8,7 @@ import { newSession, putSession } from '@/db/sessions';
 import { addDays, dayOfWeek, startOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
+import { showMonthOf } from '@/test/calendarMonth';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
 
 /**
@@ -155,22 +156,34 @@ describe('the week gutter', () => {
 describe('a week still ahead', () => {
   const nextWeek = addDays(THIS_WEEK, 7);
 
-  it('says what it asks for, not what was done', async () => {
+  /**
+   * In the month that holds it (PLAN.md M299).
+   *
+   * The gutter has a row per row of the grid, so next week has one only
+   * when next week is on the grid — and in the last week of a month it is
+   * not. These three read an absent row as an empty string and a missing
+   * meter, and the month they were written in was the only one they held
+   * in.
+   */
+  const ahead = async () => {
     await running();
     await calendar();
+    showMonthOf(nextWeek);
+  };
+
+  it('says what it asks for, not what was done', async () => {
+    await ahead();
     expect(shown(nextWeek).trim()).toBe('2');
     expect(shown(nextWeek)).not.toContain('/');
   });
 
   it('draws no meter, because there is nothing to fill', async () => {
-    await running();
-    await calendar();
+    await ahead();
     expect(gutter(nextWeek)?.querySelectorAll('span').length).toBe(1);
   });
 
   it('names it as planned rather than as done', async () => {
-    await running();
-    await calendar();
+    await ahead();
     expect(said(nextWeek)).toMatch(/2 sessions planned/);
     expect(said(nextWeek)).not.toMatch(/done/);
   });
@@ -226,10 +239,15 @@ describe('a week with nothing to report', () => {
   });
 
   it('still draws one for a week that was only trained off-plan', async () => {
-    await putSession(newSession(addDays(TODAY, -2), 0, { completed: true, rpe: 6 }));
+    // On the grid that holds it (PLAN.md M299): two days before the first
+    // of a month is last month, and a month beginning on a Sunday lends
+    // the grid no leading days to find its row among.
+    const trained = addDays(TODAY, -2);
+    await putSession(newSession(trained, 0, { completed: true, rpe: 6 }));
     await hydrate();
     await calendar();
-    expect(gutter(startOfWeek(addDays(TODAY, -2)))).toBeTruthy();
-    expect(shown(startOfWeek(addDays(TODAY, -2)))).toContain('+1');
+    showMonthOf(trained);
+    expect(gutter(startOfWeek(trained))).toBeTruthy();
+    expect(shown(startOfWeek(trained))).toContain('+1');
   });
 });

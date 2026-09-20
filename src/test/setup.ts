@@ -58,6 +58,62 @@ if (typeof window !== 'undefined') {
 }
 
 /**
+ * How long a `findBy` waits, once (PLAN.md M299).
+ *
+ * Testing Library allows a second, and half the screens here are code-split
+ * — Home's coach board, the logger's body, every route. What a `findBy` on
+ * one of them waits for is a dynamic import, so how long it takes is a
+ * property of the machine rather than of the app, and a second is the
+ * budget of a machine doing nothing else.
+ *
+ * Three tests in `features/home` proved it, all waiting on the same chunk,
+ * all passing alone and failing inside a run that had something else to do.
+ * Raising it here rather than in each of them: the argument is about every
+ * lazy screen in the app, not about those three. Only a test that is going
+ * to fail pays the difference.
+ */
+if (typeof window !== 'undefined') {
+  const { configure } = await import('@testing-library/dom');
+  configure({ asyncUtilTimeout: 10_000 });
+}
+
+/**
+ * Run the suite as any day of the week (PLAN.md M299).
+ *
+ * `today()` reads the clock, so a fixture that builds "this week" out of
+ * `startOfWeek(today()) + 2` says one thing on a Thursday, when five days
+ * of the week have happened, and another on a Sunday, when one has. Four
+ * of them did, and nobody found out for two hundred milestones because the
+ * suite had never been run on a Sunday.
+ *
+ * `ASCENT_TODAY=2026-09-20 npx vitest run` pins the clock to that day, so
+ * the same suite can be run as each of the seven. Only the date moves:
+ * timers are untouched, and a test that installs its own fake timers
+ * starts from this instant rather than fighting it.
+ */
+const PINNED = process.env.ASCENT_TODAY;
+if (PINNED !== undefined && PINNED !== '') {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(PINNED)) {
+    throw new Error(`ASCENT_TODAY must be a YYYY-MM-DD date, not ${PINNED}`);
+  }
+  // Midday, so no timezone can drag the pinned day onto its neighbour.
+  const instant = new Date(`${PINNED}T12:00:00`).getTime();
+  if (Number.isNaN(instant)) throw new Error(`ASCENT_TODAY is not a real date: ${PINNED}`);
+  const Real = Date;
+  class Pinned extends Real {
+    constructor(...args: [] | [number | string | Date] | [number, number, ...number[]]) {
+      if (args.length === 0) super(instant);
+      else if (args.length === 1) super(args[0]);
+      else super(...(args as [number, number]));
+    }
+    static override now(): number {
+      return instant;
+    }
+  }
+  globalThis.Date = Pinned as unknown as DateConstructor;
+}
+
+/**
  * No test inherits the previous one's unwritten writes (PLAN.md M220).
  *
  * Store actions persist fire-and-forget, on one module-level queue, because

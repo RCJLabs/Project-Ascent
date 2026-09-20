@@ -7,6 +7,7 @@ import { addDays, startOfWeek, today } from '@/engine/dates';
 import { putSession, newSession } from '@/db/sessions';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
+import { showMonthOf } from '@/test/calendarMonth';
 import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { HomePage } from '@/features/home/HomePage';
 import { LogPage } from '@/features/log/LogPage';
@@ -65,8 +66,15 @@ describe('the calendar', () => {
     expect(peak.deloadWeeks).toContain(5);
     expect(testWeeks(peak).map((t) => t.week)).toContain(5);
 
-    await running(addDays(today(), -28), 'peak_performance');
+    const start = startOfWeek(addDays(today(), -28));
+    await running(start, 'peak_performance');
     renderAt('/calendar', <CalendarPage />);
+    // On the month that holds week five's training days (PLAN.md M299).
+    // The grid marks only the days inside the month it is showing, and
+    // this week's Monday is next month when today is the Sunday that ends
+    // one — so this read an absent marker as a missing one, on the two
+    // days a year it was ever going to be run.
+    showMonthOf(addDays(start, 28 + 1));
     expect(screen.getAllByText('DL').length).toBeGreaterThan(0);
     expect(screen.getAllByText('T').length).toBeGreaterThan(0);
   });

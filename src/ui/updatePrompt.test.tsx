@@ -102,7 +102,12 @@ describe('how old the running copy is', () => {
     expect(said).not.toMatch(/null|undefined|NaN|was \./);
   });
 
-  it('is a fresh build in a fresh checkout', () => {
+  // The one test a pinned clock cannot be asked (PLAN.md M299). `__BUILT_AT__`
+  // is stamped by the real clock at build time and this compares it to the
+  // clock the app is read on, so under `ASCENT_TODAY` the two are days apart
+  // by construction and the failure would say nothing about the code. Every
+  // other test in the suite holds on any day.
+  it.skipIf(process.env.ASCENT_TODAY)('is a fresh build in a fresh checkout', () => {
     // The stamp is written at build time, so a test run minutes later
     // reads as today. A stamp that did not move would fail this the day
     // after it was written, which is the whole complaint about the version.

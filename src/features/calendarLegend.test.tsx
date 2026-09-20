@@ -22,6 +22,16 @@ import { CalendarPage } from '@/features/calendar/CalendarPage';
 
 const TODAY = today();
 
+/**
+ * The fifteenth of the month two before this one — a day that exists in
+ * every month, in a month two clicks of *Previous month* away.
+ */
+const TWO_MONTHS_BACK = ((): string => {
+  const [year, month] = TODAY.split('-').map(Number) as [number, number];
+  const shifted = year * 12 + (month - 1) - 2;
+  return `${Math.floor(shifted / 12)}-${String((shifted % 12) + 1).padStart(2, '0')}-15`;
+})();
+
 beforeEach(async () => {
   globalThis.indexedDB = new IDBFactory();
   resetDbForTests();
@@ -124,9 +134,26 @@ describe('the markers, only where the month carries them', () => {
       [...cell.querySelectorAll('span')].some((s) => s.textContent?.trim() === word),
     ).length;
 
-  it('says nothing about a deload or an assessment in a week that has neither', async () => {
-    await running('iron_grip', { 1: 'fp', 3: 'perf' });
+  /**
+   * A block that never deloads, rather than a month that happens not to
+   * (PLAN.md M299).
+   *
+   * This ran Iron Grip from the start of this week and asserted the month
+   * in view drew no DL. Iron Grip deloads on week four, which is twenty-one
+   * days after the block starts — inside the month in view whenever this
+   * week began before about the tenth, and in the next one when it began
+   * after. The test passed one week in three, and had never been run in the
+   * other two.
+   *
+   * Trip Prep is the one shipped program with `deloadWeeks: []`, so there
+   * is no date on which the grid could draw a DL here. The card is present
+   * to have carried the row — the block's own sessions are in the month —
+   * which is what stops this passing on an empty calendar.
+   */
+  it('says nothing about a deload in a block that never deloads', async () => {
+    await running('trip_prep', { 1: 'fp', 3: 'move' });
     await calendar();
+    expect(legend().length, 'no legend to have carried a deload row').toBeGreaterThan(0);
     expect(markers('DL')).toBe(0);
     expect(legendText()).not.toContain('deload week');
   });
@@ -177,14 +204,35 @@ describe('the markers, only where the month carries them', () => {
     return seen;
   }
 
+  /**
+   * The month with no markers is one the block does not reach (PLAN.md
+   * M299).
+   *
+   * This scanned six months from this one and asked for a month that had a
+   * legend and drew no LIMIT. LIMIT draws on every planned day whose
+   * session type is a limit day, and `perf` is one on every Monday of the
+   * block — so inside the block there is no such month, and outside it
+   * there is no legend either. The only months that satisfied both were
+   * the ones the block's last weeks clipped in a particular way, which is a
+   * property of where today sits in its month: it held on one week in six
+   * and failed on the other five, unnoticed for a hundred and fifty
+   * milestones.
+   *
+   * A logged day two months before the block starts is a month with a
+   * legend and nothing else in it, on every date — `worthExplaining` counts
+   * a logged day, and a month the block does not reach can draw no marker
+   * at all. The scan walks back to it and forward over the whole block, so
+   * the run contains both answers by construction rather than by luck.
+   */
   it('says a marker in exactly the months that draw one', async () => {
-    // Peak Performance over Iron Grip: twelve weeks with tests on weeks
-    // five and nine, so a run of months contains both answers. Iron Grip's
-    // blocks are short enough that every month in view carries a test week,
-    // and an agreement between two constants proves nothing.
+    await putSession(newSession(TWO_MONTHS_BACK, 0, { completed: true, rpe: 6 }));
     await running('peak_performance', { 1: 'perf', 3: 'tech' });
     await calendar();
-    const months = await scan(6);
+    for (let i = 0; i < 2; i++) {
+      fireEvent.click(screen.getByLabelText('Previous month'));
+      await screen.findByText('Mark days');
+    }
+    const months = await scan(8);
     for (const [i, month] of months.entries()) {
       for (const word of ['T', 'DL', 'LIMIT'] as const) {
         expect(month.says[word], `month ${i}: legend ${word}`).toBe(month.grid[word]);
@@ -192,23 +240,18 @@ describe('the markers, only where the month carries them', () => {
     }
     /*
      * The run has to contain both answers, or the agreement above is the
-     * agreement of two constants. DL and LIMIT are the two that vary
-     * across a Peak Performance block; every month inside it carries an
-     * assessment week, so T's absent case is held by the no-program test
-     * below, where the card exists for a logged day and no marker does.
+     * agreement of two constants. Every marker appears somewhere inside the
+     * block — LIMIT on each Monday, DL on weeks five and nine, T on week
+     * one — and none of them appears in the logged month the scan starts
+     * from, which is the absent case for all three.
      */
-    for (const word of ['DL', 'LIMIT'] as const) {
+    for (const word of ['DL', 'LIMIT', 'T'] as const) {
       expect(months.some((m) => m.grid[word]), `no month drew ${word}`).toBe(true);
       expect(
         months.some((m) => m.card && !m.grid[word]),
         `no month had a legend and no ${word}`,
       ).toBe(true);
     }
-    // The assessment week only ever appears, over this block — its absent
-    // case is the no-program test below. Asserting it appears at all is
-    // what catches the flag failing to reach the grid and the key together,
-    // which an agreement between two absences cannot see.
-    expect(months.some((m) => m.grid.T), 'no month drew an assessment week').toBe(true);
   });
 
   /**

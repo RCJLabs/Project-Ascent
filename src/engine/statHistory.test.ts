@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Session } from '@/db/sessions';
 import { COMPARE_DAYS, MIN_COMPARE_DAYS, compareStats, statsAsOf } from './statHistory';
 import { addDays } from './dates';
+import { deriveClimberState } from './derive';
+import { deriveStats } from './stats';
 
 const TODAY = '2026-09-10';
 
@@ -53,10 +55,46 @@ describe('standing on an earlier day', () => {
     // The comparison is only meaningful if the two shapes are computed the
     // same way; a snapshot with its own formula would call a difference in
     // definitions progress.
+    //
+    // This used to stand `statsAsOf` on 2030 beside `statsAsOf` on today
+    // and expect the two to agree, which names the live derivation and
+    // never calls it (PLAN.md M299). It is also no longer true, and should
+    // not be: a snapshot stands on the day it is given, so four years of
+    // silence decay the shape exactly as they do in the app. The claim the
+    // comment makes is this one.
     const sessions = run(40, TODAY);
-    const asOf = statsAsOf({ sessions, metrics: [], projects: [], asOf: TODAY });
-    const later = statsAsOf({ sessions, metrics: [], projects: [], asOf: '2030-01-01' });
-    expect(asOf).toEqual(later);
+    const live = deriveStats({
+      state: deriveClimberState(sessions, { today: TODAY }),
+      metrics: [],
+      projects: [],
+    });
+    expect(statsAsOf({ sessions, metrics: [], projects: [], asOf: TODAY })).toEqual({
+      STR: live.STR.value,
+      END: live.END.value,
+      TEC: live.TEC.value,
+      MEN: live.MEN.value,
+      AGI: live.AGI.value,
+    });
+  });
+
+  it('stands on the day it is given, not on the day it is read', () => {
+    // The half of "as of" that `statsAsOf` used to skip: it dropped the
+    // sessions after `asOf` and then derived the state against the real
+    // clock, so the streak, the consecutive days and the rolling 30-day
+    // counts inside a past shape were today's (PLAN.md M299). A snapshot
+    // of a log that has not changed has to be the same snapshot tomorrow,
+    // and this is the assertion that says so in the only way that can
+    // fail — by reading it twice from two different days.
+    const sessions = run(40, TODAY);
+    const snapshot = () => statsAsOf({ sessions, metrics: [], projects: [], asOf: TODAY });
+    const taken = snapshot();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date(`${addDays(TODAY, 400)}T12:00:00`));
+      expect(snapshot()).toEqual(taken);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('returns all five axes', () => {

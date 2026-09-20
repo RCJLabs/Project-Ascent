@@ -110,7 +110,12 @@ describe('the seven days', () => {
     } as never);
     week();
     await screen.findByText('Week 1 of 12');
-    expect(screen.getByText('3')).toBeTruthy();
+    // The badge, not any 3 on the page (PLAN.md M299). A bare `getByText`
+    // threw on the dates where something else in the week reads 3 — the
+    // first of a month among them — and the badge is the one drawn beside
+    // the sentence below, hidden from the reader who gets the sentence.
+    const badge = screen.getAllByText('3').find((el) => el.getAttribute('aria-hidden') === 'true');
+    expect(badge, 'no count beside the day').toBeTruthy();
     expect(TEXT()).toContain('3 exercises load your elbow');
     expect(TEXT()).toContain('Counts what that day loads of your elbow');
   });

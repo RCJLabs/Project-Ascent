@@ -29,7 +29,16 @@ export interface StatSnapshotInput {
 
 export function statsAsOf(input: StatSnapshotInput): Record<StatId, number> {
   const sessions = input.sessions.filter((s) => s.date <= input.asOf);
-  const state = deriveClimberState(sessions);
+  // Standing on `asOf`, not on today (PLAN.md M299). Dropping the sessions
+  // after that day is only half of standing there: `deriveClimberState`
+  // defaults `today` to the real clock, and the streak, the consecutive
+  // days, the rolling 30-day counts and `restedWithin24h` are all measured
+  // from it. Without this the "six months ago" shape on Progress carried
+  // today's consistency into the past it was being compared against, and
+  // the same snapshot read differently on different days for a log that
+  // had not changed. `review.ts` passes `{ today: asOf }` for exactly this
+  // reason; this is the one place that had not.
+  const state = deriveClimberState(sessions, { today: input.asOf });
   const stats = deriveStats({
     state,
     metrics: input.metrics.filter((m) => m.date <= input.asOf),

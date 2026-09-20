@@ -284,6 +284,35 @@ describe('the workflow that ships it', () => {
   });
 
   /**
+   * And runs the suite as days other than today (PLAN.md M299).
+   *
+   * `today()` reads the clock and a quarter of the test files build their
+   * fixtures from it, so the suite CI has been running is the suite for the
+   * one day CI ran on. Seven fixtures disagreed with their own comments on
+   * a Sunday, on most of the calendar, or both, and every push was green
+   * throughout.
+   *
+   * The dependency, not the order: a `dates` job that runs beside the
+   * deploy rather than before it is a job whose failure ships anyway, and
+   * that is the shape `live.mjs` and the layout harness were each nearly
+   * given.
+   */
+  it('runs the suite as other days before it ships it', () => {
+    const workflow = readFileSync(WORKFLOW, 'utf8');
+    expect(existsSync('scripts/dates.mjs'), 'no date sweep to run').toBe(true);
+    expect(workflow, 'the sweep is never invoked').toMatch(/npm run test:dates/);
+    const deploy = workflow.slice(workflow.indexOf('\n  deploy:')).slice(0, 200);
+    expect(deploy, 'the deploy does not wait on it').toMatch(/needs: \[[^\]]*\bdates\b/);
+    // And every day it names, rather than one job's worth of them: the
+    // matrix is fed by the script's own list, so a day added there is a
+    // day CI runs without anything here being edited.
+    expect(workflow, 'the days are not read from the script').toMatch(/dates\.mjs --list/);
+    expect(workflow, 'the days are not fanned out').toMatch(
+      /day: \$\{\{ fromJSON\(needs\.days\.outputs\.list\) \}\}/,
+    );
+  });
+
+  /**
    * And the browser it needs stays out of `package.json`.
    *
    * `scripts/layout.mjs` states the rule and the reason: *"Playwright is not
