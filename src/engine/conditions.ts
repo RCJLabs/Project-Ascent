@@ -63,22 +63,62 @@ export interface PoorRun {
 }
 
 /**
- * The run of bad days ending at the last day on rock, if there is one.
+ * Every day on rock and what it said, in the order they were logged.
  *
- * One session per date: a day with two logged sessions is one day on rock,
- * and it counts as answered when either of them answered.
+ * One entry per date: a day with two logged sessions is one day on rock, and
+ * it counts as answered when either of them answered. Where both did, the
+ * later one wins — it is the later reading of the same day, and a morning
+ * that dried out is better described by the afternoon.
+ *
+ * Unanswered days are kept, as `null`. `poorRun` needs them to end a run,
+ * and a tally that quietly dropped them would be counting answers rather
+ * than days.
  */
-export function poorRun(sessions: readonly Session[]): PoorRun | null {
-  const worst = worstCondition();
-  if (worst === null) return null;
-
+export function answersByDay(sessions: readonly Session[]): Map<string, string | null> {
   const byDate = new Map<string, string | null>();
   for (const session of sessions) {
     if (!session.completed || session.mode !== 'outdoor') continue;
     const said = conditionsOf(session);
     if (said !== null || !byDate.has(session.date)) byDate.set(session.date, said);
   }
+  return byDate;
+}
 
+/**
+ * How the rock has been, in days, worst first (PLAN.md M303).
+ *
+ * The second reader this module has ever had. `poorRun` below is the rule
+ * M289 built it for, and it is deliberately strict — three days on rock in a
+ * row, all of them the worst answer, ending at the last of them. Measured
+ * over the sample climber's year, 29 days on rock with every one of them
+ * answered: **it could fire on none of the 365 days.** A question asked on
+ * every outdoor session deserves an answer that is not that rare.
+ *
+ * A count is not a rule and claims nothing. It says what the log holds, in
+ * the climber's own words and in the registry's order, and leaves the
+ * reading to them — which is the same promise the run makes about grades.
+ *
+ * Only what was answered: days on rock with no answer are not *good* days,
+ * and rolling them into one would be the mistake the run's own comment
+ * names, a reading of the days you happened to tell it about.
+ */
+export function conditionsTally(
+  sessions: readonly Session[],
+): { word: string; days: number }[] {
+  const answers = [...answersByDay(sessions).values()];
+  return conditionOptions()
+    .map((word) => ({ word, days: answers.filter((said) => said === word).length }))
+    .filter((row) => row.days > 0);
+}
+
+/**
+ * The run of bad days ending at the last day on rock, if there is one.
+ */
+export function poorRun(sessions: readonly Session[]): PoorRun | null {
+  const worst = worstCondition();
+  if (worst === null) return null;
+
+  const byDate = answersByDay(sessions);
   const dates = [...byDate.keys()].sort().reverse();
   const run: string[] = [];
   for (const date of dates) {

@@ -104,6 +104,34 @@ export function VenuePage({ params }: { params: { key: string } }) {
               />
             )}
           </dl>
+          {/* How the rock has been here (PLAN.md M303). The logger asks this
+              on every outdoor session and, until now, one coach rule was the
+              only thing that ever read an answer — a rule strict enough that
+              it could not fire once across the sample climber's year. A crag
+              is what the answers are about: conditions belong to a place and
+              a season, and this is the only screen that groups by place. */}
+          {place.conditions.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-line">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-ink-soft mb-2">
+                How it has been
+              </h3>
+              <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                {place.conditions.map(({ word, days }) => (
+                  <li key={word}>
+                    <span className="font-semibold">{days}</span>{' '}
+                    <span className="text-ink-soft">{word.toLowerCase()}</span>
+                  </li>
+                ))}
+              </ul>
+              {/* Counted, not interpreted — the same refusal `conditions.ts`
+                  makes about grades. Your days, not the crag's year. */}
+              <p className="text-xs text-ink-soft mt-2 leading-relaxed">
+                Days you answered for, out of {place.outdoorDays} on rock here. It is your log
+                rather than the crag's record, and conditions turn with the season.
+              </p>
+            </div>
+          )}
+
           {/* Grades vary by crag, which is the whole reason the best is kept
               per place rather than per mode (PLAN.md M112f). */}
           {best.length > 0 && place.outdoorDays > 0 && (

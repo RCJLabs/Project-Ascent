@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { Session } from '@/db/sessions';
+import { newSession, type Session } from '@/db/sessions';
 import {
   POOR_RUN,
   conditionOptions,
   conditionsOf,
+  conditionsTally,
   poorRun,
   worstCondition,
 } from './conditions';
@@ -130,5 +131,109 @@ describe('a run of days the rock was against you', () => {
   it('says nothing about a log with no days on rock in it', () => {
     expect(poorRun([])).toBeNull();
     expect(poorRun([day('2026-05-01', { mode: 'indoor' })])).toBeNull();
+  });
+});
+
+/**
+ * How the rock has been, counted (PLAN.md M303).
+ *
+ * The module had one reader for two hundred milestones — `poorRun`, through
+ * the coach — and its rule is strict enough that over the sample climber's
+ * year, 29 days on rock with every one answered, it could fire on none of
+ * the 365 days. A count is what the question can always answer.
+ */
+describe('how the rock has been', () => {
+  const outdoor = (date: string, said?: string, patch: Partial<Session> = {}): Session =>
+    ({
+      ...newSession(date, 0, { completed: true }),
+      mode: 'outdoor',
+      ...(said === undefined ? {} : { fields: { conditions: said } }),
+      ...patch,
+    }) as Session;
+
+  it('counts days, worst first, in the registry’s own words', () => {
+    const [worst, middle] = conditionOptions();
+    const tally = conditionsTally([
+      outdoor('2026-03-01', middle),
+      outdoor('2026-03-03', worst),
+      outdoor('2026-03-05', worst),
+    ]);
+    expect(tally).toEqual([
+      { word: worst, days: 2 },
+      { word: middle, days: 1 },
+    ]);
+  });
+
+  it('leaves out an answer nobody gave', () => {
+    const [worst] = conditionOptions();
+    expect(conditionsTally([outdoor('2026-03-01', worst)])).toEqual([{ word: worst, days: 1 }]);
+  });
+
+  /**
+   * A day on rock nobody answered for is not a good day. Counting it as one
+   * is the mistake `poorRun`'s own comment names — a reading of the days you
+   * happened to tell it about.
+   */
+  it('counts no day the question was not answered on', () => {
+    expect(conditionsTally([outdoor('2026-03-01')])).toEqual([]);
+  });
+
+  it('counts a day with two sessions once', () => {
+    const [worst] = conditionOptions();
+    const twice = [
+      outdoor('2026-03-01', worst),
+      { ...outdoor('2026-03-01', worst), id: '2026-03-01#1' } as Session,
+    ];
+    expect(conditionsTally(twice)).toEqual([{ word: worst, days: 1 }]);
+  });
+
+  /**
+   * *"It counts as answered when either of them answered"* — the rule
+   * `answersByDay` states and nothing had held. A mutation that took the
+   * last session's value whatever it was survived a full battery, because
+   * every fixture here answered on every session.
+   */
+  it('counts a day as answered when only one of its sessions was', () => {
+    const [worst] = conditionOptions();
+    const morning = outdoor('2026-03-01', worst);
+    const afternoon = { ...outdoor('2026-03-01'), id: '2026-03-01#1' } as Session;
+    expect(conditionsTally([morning, afternoon])).toEqual([{ word: worst, days: 1 }]);
+    // And the run reads the same day the same way, which is the point of
+    // their sharing the function.
+    const rest = ['2026-03-03', '2026-03-05'].map((d) => outdoor(d, worst));
+    expect(poorRun([morning, afternoon, ...rest])?.days).toBe(3);
+  });
+
+  it('takes the later reading where a day was answered twice', () => {
+    const [worst, middle] = conditionOptions();
+    const both = [
+      outdoor('2026-03-01', worst),
+      { ...outdoor('2026-03-01', middle), id: '2026-03-01#1' } as Session,
+    ];
+    expect(conditionsTally(both)).toEqual([{ word: middle, days: 1 }]);
+  });
+
+  it('is about rock, not about the gym', () => {
+    const [worst] = conditionOptions();
+    const indoors = { ...outdoor('2026-03-01', worst), mode: 'indoor' } as Session;
+    expect(conditionsTally([indoors])).toEqual([]);
+  });
+
+  it('is about what happened, not what was planned', () => {
+    const [worst] = conditionOptions();
+    expect(conditionsTally([outdoor('2026-03-01', worst, { completed: false })])).toEqual([]);
+  });
+
+  /**
+   * The count and the run read the same days, because they read them
+   * through the same function. Two copies of "what a day on rock is" is one
+   * copy plus a thing to forget.
+   */
+  it('agrees with the run about which days there were', () => {
+    const [worst] = conditionOptions();
+    const days = ['2026-03-01', '2026-03-03', '2026-03-05'].map((d) => outdoor(d, worst));
+    const run = poorRun(days);
+    expect(run?.days).toBe(3);
+    expect(conditionsTally(days)).toEqual([{ word: worst, days: 3 }]);
   });
 });

@@ -175,7 +175,20 @@ function YearReview({ year: requested }: { year?: string }) {
                 <Stat label="Hours" value={String(Math.round(review.totals.hours))} />
                 <Stat label="Sends" value={String(review.totals.sends)} />
                 <Stat label="Feet" value={review.totals.feet.toLocaleString()} />
-                <Stat label="Days on rock" value={String(review.totals.outdoorDays)} />
+                {/* And what you said about them (PLAN.md M303). The logger
+                    asks on every outdoor session; for a year this is the
+                    only place the answers have ever added up to anything. */}
+                <Stat
+                  label="Days on rock"
+                  value={String(review.totals.outdoorDays)}
+                  {...(review.totals.conditions.length > 0
+                    ? {
+                        sub: review.totals.conditions
+                          .map(({ word, days }) => `${days} ${word.toLowerCase()}`)
+                          .join(' · '),
+                      }
+                    : {})}
+                />
               </div>
             </Card>
 

@@ -14728,6 +14728,12 @@ M50 for why it is not coming.
   worker was controlling, while still activating the new worker, which left every unloaded route
   404ing.
 
+- **M303 — the question with nothing to answer it.** The logger asks how the rock was on every
+  outdoor session, and `engine/conditions.ts` had exactly one reader in two hundred milestones: a
+  coach rule strict enough that, measured over the sample climber's year — 29 days on rock, every
+  one answered — it could fire on **none of the 365 days**. A count is what the question can always
+  answer, so the crag says how it has been there and the year says how it was.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -20614,3 +20620,78 @@ instead of before survived. A browser's does not, and neither does this one now.
 
 6,969 tests over 414 files, from 6,953. Layout harness OK. First load 136.87KB against 137.3 — the
 tracker runs before the first paint, so it is in the entry chunk by necessity and costs 0.36KB.
+
+## M303 — the question with nothing to answer it
+
+M298a's fourth entry said `conditions` had one reader. It does, and the premise survived the code:
+`engine/conditions.ts` is imported by exactly one file outside its own tests — `coach.ts`, taking
+`poorRun` and nothing else.
+
+What the entry did not say is how rarely that reader can speak. M289 built the rule deliberately
+strict: three days on rock in a row, all of them the worst answer, ending at the most recent one,
+and M289's own browser check then bounded it to `OUTDOOR_GAP_DAYS` so it could not talk about a
+stretch that was already history. Walked a day at a time across the sample climber's year:
+
+```
+sessions: 195, of which outdoor: 29
+answers:  Okay 15, Greasy 7, Good 7        (every day on rock answered)
+
+days in the year the run exists at all: 0
+days the tip could be shown:            0
+```
+
+**Zero.** The app asks on every outdoor session — M295 moved the question in front of the fold —
+and on a full year of a climber who answers it every time, it has nothing to say back. That is the
+finding, and it is not an argument for loosening the rule. The rule is right; it is a rule about a
+rare thing. What was missing is the ordinary thing beside it.
+
+### A count, which is never rare
+
+`conditionsTally` counts **days**, worst first, in the registry's own words. It claims nothing —
+the same refusal the run makes about grades, from the other side: *"the reading is a sentence
+beside the numbers and never a correction to them."*
+
+It counts only what was answered, because a day on rock nobody answered for is not a good day, and
+rolling them together would be the mistake `poorRun`'s own comment names — a reading of the days you
+happened to tell it about. Both now read those days through one function, `answersByDay`, rather
+than keeping two copies of what a day on rock is.
+
+### Where it is worth knowing
+
+**The crag.** Conditions belong to a place and a season, and the venue page is the only screen that
+groups by place. On the sample climber:
+
+```
+Malham       3 greasy · 5 okay · 3 good     out of 11 on rock here
+The Roaches            8 okay · 2 good      out of 10 on rock here
+Stanage      4 greasy · 2 okay · 2 good     out of 8 on rock here
+```
+
+With the caveat under it, because the number is small and seasonal: *your log rather than the
+crag's record.* A gym has no row at all.
+
+**The year.** `Days on rock` had a count and no character:
+
+```
+Days on rock   27
+               6 greasy · 14 okay · 7 good
+```
+
+### Two things the battery found
+
+`Totals` gained a field that is not a number, and `CHANGE_ROWS` was typed `keyof Totals` — so the
+year-on-year comparison would happily have tried to subtract one list of words from another.
+`NumericTotal` is derived from `Totals` rather than listed, so the next total that is not a number
+is refused where it is written instead of where it breaks.
+
+And a rule that had been stated and never held: *"it counts as answered when either of them
+answered."* A mutant that took the last session's value whatever it was survived, because every
+fixture in the file answered on every session. A day with an answered morning and a silent
+afternoon is an answered day, and there is a test for it now.
+
+Two of the first run's survivors were my own error — the battery was pointed at a test file that
+does not exist, so it reported green for a run that had executed nothing of what it was aiming at.
+The same shape M224 named about `dist`, in the tool built to catch it.
+
+Battery: 9 killed, sanity survived. 6,987 tests over 414 files, from 6,969. Layout harness OK.
+First load 136.92KB against 137.3.

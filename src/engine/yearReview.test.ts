@@ -2,15 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Session } from '@/db/sessions';
 import type { PersonalRecord } from './derive';
 import type { BlockRecord } from './blocks';
-import {
-  availableYears,
-  changes,
-  describeYear,
-  monthName,
-  reviewRange,
-  reviewYear,
-  totalsFor,
-} from './yearReview';
+import { conditionOptions } from './conditions';
+import { CHANGE_ROWS, availableYears, changes, describeYear, monthName, reviewRange, reviewYear, totalsFor } from './yearReview';
 
 function session(date: string, patch: Partial<Session> = {}): Session {
   return {
@@ -449,5 +442,51 @@ describe('the sentence that counts the year', () => {
   it('keeps the sessions it already agreed about', () => {
     expect(said([{ durationMin: 60 }])).toMatch(/^1 session, /);
     expect(said([{ durationMin: 60 }, { durationMin: 60 }])).toMatch(/^2 sessions, /);
+  });
+});
+
+/**
+ * And what the year on rock was like (PLAN.md M303).
+ *
+ * `outdoorDays` counts the days you went; this is what you said about them.
+ * The logger asks on every outdoor session and, before this, one coach rule
+ * was the only thing that ever read an answer.
+ */
+describe('how the rock was, over a year', () => {
+  const [WORST, MIDDLE] = conditionOptions();
+  const onRock = (date: string, said?: string): Session =>
+    session(date, {
+      mode: 'outdoor',
+      ...(said === undefined ? {} : { fields: { conditions: said } }),
+    });
+
+  const totals = (sessions: Session[]) =>
+    reviewYear({ sessions, records: NO_RECORDS, today: '2027-01-01' }, 2026).totals;
+
+  it('counts the days, worst first', () => {
+    const t = totals([onRock('2026-05-01', WORST), onRock('2026-06-01', MIDDLE), onRock('2026-07-01', WORST)]);
+    expect(t.outdoorDays).toBe(3);
+    expect(t.conditions).toEqual([
+      { word: WORST, days: 2 },
+      { word: MIDDLE, days: 1 },
+    ]);
+  });
+
+  /** The same window the rest of the totals counted, and no other. */
+  it('counts only the days inside the year', () => {
+    const t = totals([onRock('2025-12-31', WORST), onRock('2026-05-01', MIDDLE), onRock('2027-01-01', WORST)]);
+    expect(t.conditions).toEqual([{ word: MIDDLE, days: 1 }]);
+  });
+
+  it('says nothing for a year the question was never answered in', () => {
+    expect(totals([onRock('2026-05-01'), session('2026-05-03')]).conditions).toEqual([]);
+  });
+
+  /**
+   * A list has no delta, and `keyof Totals` would have let it into the
+   * comparison rows and failed the arithmetic there instead.
+   */
+  it('is not a row the year-on-year comparison tries to subtract', () => {
+    expect(CHANGE_ROWS.map(([, key]) => key)).not.toContain('conditions');
   });
 });

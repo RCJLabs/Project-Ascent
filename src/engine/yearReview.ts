@@ -38,6 +38,7 @@ import { gradeOrdinal, type GradeDisplay } from './grades';
 import { outcomeOf, sortBlocks, type BlockRecord } from './blocks';
 import { joinCapped } from './phrase';
 import { isRestSession } from './rest';
+import { conditionsTally } from './conditions';
 
 export interface Totals {
   sessions: number;
@@ -49,6 +50,14 @@ export interface Totals {
   drills: number;
   boulderSends: number;
   routeSends: number;
+  /**
+   * How the rock was, in days, worst first (PLAN.md M303).
+   *
+   * Beside `outdoorDays` rather than inside it: the count is the days you
+   * went, and this is what you said about them. Empty for a year nobody
+   * answered the question in, which every year before M170 is.
+   */
+  conditions: { word: string; days: number }[];
 }
 
 export interface MonthBar {
@@ -113,6 +122,7 @@ const EMPTY = (): Totals => ({
   drills: 0,
   boulderSends: 0,
   routeSends: 0,
+  conditions: [],
 });
 
 /** Years with anything logged in them, newest first. */
@@ -160,6 +170,11 @@ export function totalsFor(sessions: Session[], from: string, to: string): Totals
     }
   }
   totals.outdoorDays = outdoor.size;
+  // From the same window the rest of this counted, and through the engine
+  // that owns what a day on rock is rather than a second copy of the rule.
+  totals.conditions = conditionsTally(
+    sessions.filter((s) => s.completed && s.date >= from && s.date <= to),
+  );
   totals.hours = Math.round(totals.hours * 10) / 10;
   totals.feet = Math.round(totals.feet);
   return totals;
@@ -323,7 +338,20 @@ export interface Change {
  * Returned in a fixed order rather than sorted by how good it looks, so a
  * year that went badly does not have its one improvement floated to the top.
  */
-export const CHANGE_ROWS: [string, keyof Totals, string][] = [
+/**
+ * The totals that are a number, which is what a comparison can be made of.
+ *
+ * `Totals` gained `conditions` at M303 — a list of words and counts, which
+ * has no delta and no percentage — and `keyof Totals` would have let it into
+ * the rows below and then failed the arithmetic. Derived rather than listed,
+ * so the next total that is not a number is refused here rather than being
+ * caught by whatever it breaks.
+ */
+type NumericTotal = {
+  [K in keyof Totals]: Totals[K] extends number ? K : never;
+}[keyof Totals];
+
+export const CHANGE_ROWS: [string, NumericTotal, string][] = [
   ['Sessions', 'sessions', ''],
   // Its own row since M246 took it out of the session count. Rest is
   // training too, and a block with more of it is not a block that did less.

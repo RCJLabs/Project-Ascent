@@ -23,6 +23,7 @@
  */
 
 import type { Session } from '@/db/sessions';
+import { conditionsTally } from './conditions';
 import type { Project } from '@/db/projects';
 import type { Objective } from './objectives';
 import { addClimb, emptyTally, type GradeTally } from './derive';
@@ -61,6 +62,15 @@ export interface Venue {
    * outdoor best cannot tell them.
    */
   best: { V: string | null; YDS: string | null };
+  /**
+   * How the rock has been here, in days, worst first (PLAN.md M303).
+   *
+   * Empty for a gym, and for a crag nobody answered the question at. Per
+   * place because that is what makes it worth knowing: conditions are a
+   * property of somewhere, and *"greasy four of the nine days you have been
+   * here"* is a fact about a crag that no overall count can carry.
+   */
+  conditions: { word: string; days: number }[];
 }
 
 export interface VenueInput {
@@ -94,6 +104,8 @@ interface Tally {
   sessions: number;
   days: Set<string>;
   outdoorDays: Set<string>;
+  /** The sessions logged here, for the conditions tally (PLAN.md M303). */
+  onRock: Session[];
   projects: number;
   objectives: number;
 }
@@ -122,6 +134,7 @@ export function venues(input: VenueInput): Venue[] {
       sessions: 0,
       days: new Set(),
       outdoorDays: new Set(),
+      onRock: [],
       projects: 0,
       objectives: 0,
     };
@@ -135,7 +148,13 @@ export function venues(input: VenueInput): Venue[] {
     if (tally === null) continue;
     tally.sessions++;
     tally.days.add(session.date);
-    if (session.mode === 'outdoor') tally.outdoorDays.add(session.date);
+    if (session.mode === 'outdoor') {
+      tally.outdoorDays.add(session.date);
+      // Kept rather than counted here: `conditionsTally` owns what a day on
+      // rock is — one per date, the later answer winning — and a second copy
+      // of that rule in this file is a second place for it to drift.
+      tally.onRock.push(session);
+    }
     for (const climb of session.climbs ?? []) {
       addClimb(climb.scale === 'V' ? tally.boulder : tally.sport, climb);
     }
@@ -171,6 +190,7 @@ export function venues(input: VenueInput): Venue[] {
         days: t.days.size,
         outdoorDays: t.outdoorDays.size,
         best: { V: t.boulder.best, YDS: t.sport.best },
+        conditions: conditionsTally(t.onRock),
       };
     })
     .sort((a, b) => b.days - a.days || b.sessions - a.sessions || a.name.localeCompare(b.name));

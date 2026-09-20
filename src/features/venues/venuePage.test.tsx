@@ -6,6 +6,7 @@ import { loadPrograms } from '@/content/programs';
 import { resetDbForTests } from '@/db/db';
 import { putSession, type Session } from '@/db/sessions';
 import { putProject, type Project } from '@/db/projects';
+import { conditionOptions } from '@/engine/conditions';
 import { venueKey } from '@/engine/venues';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { useObjectives } from '@/store/objectives';
@@ -317,5 +318,83 @@ describe('renaming a place', () => {
       // in case and spacing.
       expect(where).toEqual(['Stanage', 'The  Works', 'The Works', 'The Works', 'The Works', 'the works']);
     });
+  });
+});
+
+/**
+ * How the rock has been here (PLAN.md M303).
+ *
+ * The logger asks for conditions on every outdoor session, and until this
+ * milestone one coach rule was the only thing that ever read an answer — a
+ * rule so strict that over the sample climber's year it could fire on none
+ * of the 365 days. A crag is what the answers are about.
+ */
+describe('how the rock has been here', () => {
+  const [WORST, MIDDLE] = conditionOptions();
+
+  async function daysAt(answers: (string | undefined)[]): Promise<void> {
+    globalThis.indexedDB = new IDBFactory();
+    resetDbForTests();
+    await reset();
+    await loadPrograms();
+    for (const [i, said] of answers.entries()) {
+      const date = `2026-04-0${i + 1}`;
+      await putSession({
+        id: `${date}#0`,
+        date,
+        planned: false,
+        completed: true,
+        rewarded: true,
+        mode: 'outdoor',
+        rpe: 7,
+        durationMin: 90,
+        warmup: true,
+        fields: { location: 'Stanage', ...(said === undefined ? {} : { conditions: said }) },
+        climbs: [],
+        createdAt: `${date}T18:00:00.000Z`,
+        updatedAt: `${date}T18:00:00.000Z`,
+      } as unknown as Session);
+    }
+    await hydrate();
+    const key = venueKey('Stanage');
+    renderAt(`/venues/${key}`, <VenuePage params={{ key }} />);
+    await screen.findByText('What you have done here');
+  }
+
+  it('counts the days in the climber’s own words, worst first', async () => {
+    await daysAt([WORST, MIDDLE, WORST]);
+    const card = screen.getByText('How it has been').closest('div')!;
+    const rows = [...card.querySelectorAll('li')].map((li) => li.textContent?.trim());
+    expect(rows).toEqual([`2 ${WORST!.toLowerCase()}`, `1 ${MIDDLE!.toLowerCase()}`]);
+  });
+
+  /** Counted, not interpreted — the refusal `conditions.ts` makes about grades. */
+  it('says how many days it is out of, and whose log it is', async () => {
+    await daysAt([WORST, MIDDLE, WORST]);
+    expect(screen.getByText(/out of 3 on rock here/)).toBeTruthy();
+    expect(screen.getByText(/your log rather than the crag's record/i)).toBeTruthy();
+  });
+
+  /** A day nobody answered for is not a good day, and not a row either. */
+  it('counts no day the question went unanswered on', async () => {
+    await daysAt([WORST, undefined, undefined]);
+    const card = screen.getByText('How it has been').closest('div')!;
+    expect([...card.querySelectorAll('li')].map((li) => li.textContent?.trim())).toEqual([
+      `1 ${WORST!.toLowerCase()}`,
+    ]);
+    expect(screen.getByText(/out of 3 on rock here/)).toBeTruthy();
+  });
+
+  it('stays away from a place nobody answered for at all', async () => {
+    await daysAt([undefined, undefined]);
+    expect(screen.queryByText('How it has been')).toBeNull();
+  });
+
+  /** A gym has no conditions to report, and the question is never asked there. */
+  it('stays away from the gym', async () => {
+    await climbedAtTheWorks();
+    renderAt(`/venues/${KEY}`, <VenuePage params={{ key: KEY }} />);
+    await screen.findByText('What you have done here');
+    expect(screen.queryByText('How it has been')).toBeNull();
   });
 });
