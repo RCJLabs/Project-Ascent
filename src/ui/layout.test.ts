@@ -125,9 +125,22 @@ describe('the nav stays where it is put', () => {
     expect(classes('nav')).toContain('order-last');
   });
 
+  /**
+   * And it is measured, not only declared (PLAN.md M302).
+   *
+   * `h-dvh` alone was reported failing in an installed app: the bottom bar
+   * gone after an update, the page otherwise normal, back on a force-close.
+   * The shell is one `overflow-hidden` box the height of the viewport, so a
+   * height that no longer matches the screen puts its last row — the tab
+   * bar — past the bottom edge with nothing to scroll to reach it. The unit
+   * is the fallback for the first paint now and `lib/appHeight.ts` writes
+   * the number, on every event that can change it.
+   */
   it('gives the shell a viewport height that cannot grow', () => {
-    const root = CODE.slice(CODE.indexOf('<div className='), CODE.indexOf('<a'));
-    expect(root).toContain('h-dvh');
+    const root = CODE.slice(CODE.indexOf('<div'), CODE.indexOf('<a'));
+    expect(root, 'the shell no longer takes its height from the viewport').toContain(
+      'h-[var(--app-height,100dvh)]',
+    );
     expect(root).toContain('overflow-hidden');
     // `min-h-dvh` is the version that lets the document scroll, which is
     // what put the bar under the chrome in the first place.

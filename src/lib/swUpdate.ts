@@ -60,3 +60,94 @@ export function watchForUpdates(
   every(check, 60_000);
   return check;
 }
+
+/**
+ * Pressing *Update now* and having something happen (PLAN.md M302).
+ *
+ * `updateSW(true)` messages the waiting worker to skip waiting, and
+ * workbox-window reloads the page from its `controlling` event — but only
+ * `if (event.isUpdate)`, which is false when there was no controller to
+ * update *from*. A document is not controlled by its own worker until the
+ * next navigation, so the first launch after an install sits in exactly
+ * that state: the prompt appears, the button is pressed, and **nothing
+ * happens at all**. Measured in a browser — no navigation, the page's own
+ * marker still set, the prompt still up.
+ *
+ * And it is worse than a dead button, because the tap does deliver
+ * skip-waiting. The new worker activates and drops the old precache while
+ * this document goes on running the old build, and a deploy has already
+ * taken the old chunks off the server — so every route not already loaded
+ * 404s into *"This page could not be downloaded"* until the app is
+ * relaunched. Measured the same way:
+ *
+ * ```
+ * after the tap — controlled: false, still the old document: true
+ * /progress  404 ProgressPage-CUsdU5rX.js   "This page could not be downloaded"
+ * /settings  404 …                          "This page could not be downloaded"
+ * ```
+ *
+ * Waiting for `controllerchange` is not the fix: `registerType: 'prompt'`
+ * means the generated worker does not call `clients.claim()`, so a page
+ * with no controller never gets one without a navigation. What the reload
+ * has to wait for is the **new worker being activated** — reloading before
+ * that is served the old shell by the old worker and lands in the same
+ * place.
+ *
+ * So: ask for the handover, reload when the new worker has it, and reload
+ * anyway after `HANDOVER_MS` rather than leave the button dead. A reload is
+ * what *Update now* means; the waiting is only about which build answers
+ * it.
+ */
+export const HANDOVER_MS = 4_000;
+
+export async function applyUpdate(
+  skipWaiting: () => void,
+  deps: {
+    registration?: () => Promise<ServiceWorkerRegistration | undefined>;
+    controlled?: () => boolean;
+    reload?: () => void;
+    after?: (fn: () => void, ms: number) => void;
+  } = {},
+): Promise<void> {
+  const controlled = deps.controlled ?? (() => Boolean(navigator.serviceWorker?.controller));
+  const reload = deps.reload ?? (() => window.location.reload());
+  const after = deps.after ?? ((fn, ms) => window.setTimeout(fn, ms));
+  const getRegistration =
+    deps.registration ?? (() => navigator.serviceWorker.getRegistration());
+
+  // The worker in hand **before** the message, not after: skip-waiting is
+  // what makes it stop waiting, so reading `registration.waiting` on the
+  // other side of the call is a race that returns null on the fast path and
+  // reloads into whichever worker happens to be active.
+  const waiting = controlled() ? undefined : (await getRegistration().catch(() => undefined))?.waiting;
+
+  skipWaiting();
+
+  // The ordinary path: workbox reloads on its own `controlling` event, and
+  // a second reload from here would race it.
+  if (controlled()) return;
+
+  let done = false;
+  const once = (): void => {
+    if (done) return;
+    done = true;
+    reload();
+  };
+  // Never a dead button, whatever the worker does.
+  after(once, HANDOVER_MS);
+
+  if (!waiting) {
+    // Nothing was waiting, so whatever is active is what a navigation will
+    // be served by — and that is the version being asked for.
+    once();
+    return;
+  }
+  // A worker that got there first fires no `statechange` to catch.
+  if (waiting.state === 'activated') {
+    once();
+    return;
+  }
+  waiting.addEventListener('statechange', () => {
+    if (waiting.state === 'activated') once();
+  });
+}

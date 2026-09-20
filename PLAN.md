@@ -14720,6 +14720,14 @@ M50 for why it is not coming.
   the harness found two in itself: a pass that silently measured the wrong app would have reported
   `layout OK`, and the tap-target rule was keyed on the string `'desktop'`.
 
+- **M302 — the bottom bar, gone after an update.** Reported from the installed app: the tabs
+  vanished after *Update now*, the page otherwise normal and styled, back on a force-close. Two
+  faults, both in that flow. The shell took its height from `h-dvh` and nothing re-read it, and a
+  height that no longer matches the screen puts the tab row past the bottom of an
+  `overflow-hidden` box — reproduced exactly. And *Update now* did nothing at all on a page no
+  worker was controlling, while still activating the new worker, which left every unloaded route
+  404ing.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -20509,3 +20517,100 @@ layout OK                                              3m15s, from 2m15s
 
 Battery: 4 killed by the suite, 1 by the harness, sanity survived. 6,953 tests over 413 files, from
 6,951. First load 136.51KB against 137.3. No app code changed.
+
+## M302 — the bottom bar, gone after an update
+
+Reported from the installed app: **the bottom nav buttons disappeared, and it happened after
+pressing *Update now***. The page looked normal otherwise — styled, readable, everything in its
+place — and the bar came back after a force-close.
+
+Three facts, and they rule out most of what a missing nav usually is. Styled and normal rules out a
+stylesheet that failed to load. Cured by a relaunch rules out anything stored. Only the bar rules
+out a broken render. What is left is the shell's own geometry, in a document that went on running.
+
+### One number going stale
+
+`AppShell` is one `overflow-hidden` box the height of the viewport, and M225 put the nav *in* that
+box rather than `fixed` above it, precisely so the bar could not end up underneath something. The
+layout is then only as good as the height it is given, and it was given `h-dvh` — a number the
+browser promises to keep up to date.
+
+Pinned above the viewport, changing nothing else:
+
+```
+shell 780px, viewport 560   tabs off screen: Home, Train, Calendar, Progress, Game
+```
+
+That is the entire report: the last row of an `overflow-hidden` box, past the bottom edge, with
+nothing to scroll to reach it. It needs the height to go stale exactly once, and a reload inside a
+WebView is the moment a viewport unit has to be re-resolved across a system-UI change.
+
+So the unit is the fallback and a measurement leads. `lib/appHeight.ts` writes `--app-height` on
+`resize`, `orientationchange`, `pageshow` and `visibilitychange` — the last two being the update
+reload and the installed app returning from the task switcher, which is where a phone spends its
+life. `100dvh` is what the shell uses until the first measurement lands, so the first paint is
+unchanged and a build whose script never ran is no worse off than the one that shipped this.
+
+`innerHeight`, not `visualViewport.height`: the visual viewport shrinks for the keyboard, and
+driving the shell from it would lift the nav over the line somebody is typing. This changes when
+the height is read, not what it means.
+
+**Honest limit.** Chromium resolves `dvh` correctly on every resize, so none of this reproduces the
+WebView fault itself — the harness check below passes against the old code too. What is fixed is
+the dependency: the height is re-read at every moment it can change instead of being trusted for
+the life of the document.
+
+### And *Update now* did nothing at all
+
+Found on the way, in the same flow, and reproducible here. `updateSW(true)` messages the waiting
+worker and workbox-window reloads from its `controlling` event — but only `if (event.isUpdate)`,
+which is false when there was no controller to update *from*. A document is not controlled by its
+own worker until the next navigation:
+
+```
+controlled by a worker: false
+navigation: none; mark survived: true; prompt still up: 1
+```
+
+It is worse than a dead button, because the tap does deliver skip-waiting. The new worker activates
+and drops the old precache while this document goes on running the old build — and a deploy has
+already taken the old chunks off the server:
+
+```
+/progress  404 ProgressPage-CUsdU5rX.js   "This page could not be downloaded"
+/settings  404 …                          "This page could not be downloaded"
+/guides    404 …                          "This page could not be downloaded"
+```
+
+Waiting for `controllerchange` is not the fix: `registerType: 'prompt'` means the generated worker
+never calls `clients.claim()`, so an uncontrolled page never gets a controller without a
+navigation. What the reload has to wait for is the new worker being **activated** — reloading
+before that is served the old shell by the old worker and lands in the same place. `applyUpdate`
+reads the waiting worker *before* messaging it, because skip-waiting is what makes it stop waiting,
+and reloads anyway after four seconds rather than leave the button dead.
+
+After, on the same scenario:
+
+```
+after the tap — controlled: true
+/progress  Progress                       failed requests: none
+```
+
+### The guard, and what it can and cannot see
+
+`scripts/layout.mjs` measured every route at a size that never moves, which is the one thing a
+phone's viewport never does. It shrinks the window under a live document now, twice per phone pass.
+Against the shipped code it passes; against a shell pinned to a fixed height it says exactly what
+was reported:
+
+```
+phone shrunk to 660px: tabs off screen: Home, Train, Calendar, Progress, Game
+small shrunk to 520px: tabs off screen: Home, Train, Calendar, Progress, Game
+```
+
+Battery: 8 killed, sanity survived. One mutant needed the fake registration fixed first — it
+returned the same `waiting` worker however late it was read, so reading it after the message
+instead of before survived. A browser's does not, and neither does this one now.
+
+6,969 tests over 414 files, from 6,953. Layout harness OK. First load 136.87KB against 137.3 — the
+tracker runs before the first paint, so it is in the entry chunk by necessity and costs 0.36KB.

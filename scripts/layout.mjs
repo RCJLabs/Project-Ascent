@@ -557,6 +557,38 @@ for (const size of SIZES) {
     await page.evaluate(() => document.getElementById('layout-pad')?.remove());
   }
 
+  /**
+   * And the screen changing size under a document that is already open
+   * (PLAN.md M302).
+   *
+   * Reported from an installed app: the bottom bar gone after *Update
+   * now*, the page otherwise normal and styled, back on a force-close.
+   * The shell is one `overflow-hidden` box the height of the viewport, so
+   * a height that no longer matches the screen puts its last row — the tab
+   * bar — past the bottom edge, with nothing to scroll to reach it.
+   * Reproduced by pinning the height above the viewport and changing
+   * nothing else: all five tabs off screen.
+   *
+   * Every route above is measured at a size that never moves, which is the
+   * one thing a phone's viewport never does — system bars, the keyboard,
+   * rotation, and a WebView coming back from the task switcher. This
+   * shrinks the window under a live document and asks the same question.
+   */
+  if (size.pointer !== 'mouse') {
+    await page.evaluate(() => { location.hash = '#/'; });
+    await page.waitForTimeout(400);
+    for (const height of [size.height - 120, size.height - 260]) {
+      await page.setViewportSize({ width: size.width, height });
+      await page.waitForTimeout(400);
+      const r = await page.evaluate(readPage, { tabNames: TABS, target: TARGET });
+      const at = `${size.name} shrunk to ${height}px`;
+      if (r.fatal) note(at, r.fatal);
+      else if (r.tabsOff.length) note(at, `tabs off screen: ${r.tabsOff.join(', ')}`);
+      else if (r.docScrolls) note(at, 'the document scrolls (M225: only `main` may)');
+    }
+    await page.setViewportSize({ width: size.width, height: size.height });
+  }
+
   await ctx.close();
 }
 await browser.close();

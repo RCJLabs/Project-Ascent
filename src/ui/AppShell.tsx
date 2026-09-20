@@ -115,7 +115,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const live = banner?.kind === 'running';
 
   return (
-    <div className="h-dvh flex flex-col overflow-hidden lg:flex-row">
+    <div
+      // Measured, with the unit as the fallback (PLAN.md M302).
+      // `lib/appHeight.ts` holds the reason: a stale `dvh` puts this
+      // shell's last row — the tab bar — past the bottom of an
+      // `overflow-hidden` box, with nothing to scroll to reach it.
+      className="h-[var(--app-height,100dvh)] flex flex-col overflow-hidden lg:flex-row"
+    >
       {/* Visible only when tabbed to. Without it, every page starts a
           keyboard user at the top of the nav and makes them walk through
           five tabs to reach the content they navigated to.

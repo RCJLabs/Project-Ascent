@@ -3,7 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import { App } from './App';
 import { watchForFullDisk } from './db/db';
-import { watchForUpdates } from './lib/swUpdate';
+import { trackAppHeight } from './lib/appHeight';
+import { applyUpdate, watchForUpdates } from './lib/swUpdate';
 import { useAppUpdate } from './store/appUpdate';
 import './index.css';
 
@@ -18,7 +19,9 @@ import './index.css';
  */
 const updateSW = registerSW({
   onNeedRefresh() {
-    useAppUpdate.getState().markReady(() => updateSW(true));
+    useAppUpdate.getState().markReady(() => {
+      void applyUpdate(() => updateSW(true));
+    });
   },
   onOfflineReady() {
     useAppUpdate.getState().markOfflineReady();
@@ -57,6 +60,12 @@ if ('serviceWorker' in navigator) {
  * signal, and only `QuotaExceeded` is claimed from it.
  */
 watchForFullDisk(window);
+
+/**
+ * Before the app renders, so the shell's first paint is already measured
+ * rather than relying on the unit it falls back to (PLAN.md M302).
+ */
+trackAppHeight();
 
 // Ask once, early: an offline-only app must not be evictable. Browsers
 // grant this silently for installed PWAs; declines are retryable from

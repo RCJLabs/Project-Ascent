@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFER_MS, UPDATE_CHECK_MS } from '@/engine/offline';
 import { useAppUpdate } from '@/store/appUpdate';
-import { watchForUpdates } from './swUpdate';
+import { HANDOVER_MS, applyUpdate, watchForUpdates } from './swUpdate';
 
 /**
  * The app asking whether there is a new version (PLAN.md M154).
@@ -160,5 +160,118 @@ describe('a "later" that expires', () => {
     h.advance(DEFER_MS);
     h.tick();
     expect(useAppUpdate.getState().deferred).toBe(false);
+  });
+});
+
+/**
+ * Pressing *Update now* and having something happen (PLAN.md M302).
+ *
+ * The reported failure is a button that does nothing: a page with no
+ * controller gets no `controlling` event with `isUpdate`, so workbox never
+ * reloads it. What the tap *does* deliver is skip-waiting, which activates
+ * the new worker and drops the old precache while this document goes on
+ * running the old build — and every route not already loaded then 404s.
+ */
+describe('applying the update that is waiting', () => {
+  function worker(state: ServiceWorker['state'] = 'installed') {
+    const listeners = new Set<() => void>();
+    const it = {
+      state,
+      addEventListener: (_type: string, fn: () => void) => listeners.add(fn),
+      become(next: ServiceWorker['state']) {
+        it.state = next;
+        for (const fn of listeners) fn();
+      },
+    };
+    return it as unknown as ServiceWorker & { become: (s: ServiceWorker['state']) => void };
+  }
+
+  /**
+   * A registration that stops having a `waiting` worker once it has been
+   * told to skip waiting — which is what a browser's does, and the only
+   * thing that can tell reading it *before* the message from reading it
+   * after. A fake that answers the same either way lets the race through.
+   */
+  function deps(options: { controlled: boolean; waiting?: ServiceWorker }) {
+    let controlled = options.controlled;
+    let waiting = options.waiting;
+    const reloads: number[] = [];
+    const timers: { fn: () => void; ms: number }[] = [];
+    return {
+      reloads,
+      timers,
+      skipWaiting: () => { waiting = undefined; },
+      dep: {
+        controlled: () => controlled,
+        reload: () => reloads.push(1),
+        after: (fn: () => void, ms: number) => { timers.push({ fn, ms }); },
+        registration: () => Promise.resolve({ get waiting() { return waiting; } } as unknown as ServiceWorkerRegistration),
+      },
+    };
+  }
+
+  it('leaves the ordinary path to workbox, which reloads on its own', async () => {
+    const d = deps({ controlled: true });
+    let asked = 0;
+    await applyUpdate(() => { asked += 1; d.skipWaiting(); }, d.dep);
+    expect(asked, 'the waiting worker was never told to skip waiting').toBe(1);
+    // A second reload from here would race workbox's own.
+    expect(d.reloads).toEqual([]);
+  });
+
+  it('reloads the page the handover cannot reach on its own', async () => {
+    const waiting = worker();
+    const d = deps({ controlled: false, waiting });
+    await applyUpdate(d.skipWaiting, d.dep);
+    expect(d.reloads, 'reloaded before the new worker was ready').toEqual([]);
+    waiting.become('activated');
+    expect(d.reloads, 'never reloaded').toEqual([1]);
+  });
+
+  /**
+   * Reloading before the new worker is activated is served the old shell by
+   * the old one, which lands in the same place the tap was meant to escape.
+   */
+  it('waits for the new worker rather than reloading into the old one', async () => {
+    const waiting = worker();
+    const d = deps({ controlled: false, waiting });
+    await applyUpdate(d.skipWaiting, d.dep);
+    waiting.become('activating');
+    expect(d.reloads).toEqual([]);
+    waiting.become('activated');
+    expect(d.reloads).toEqual([1]);
+  });
+
+  it('reloads once, however many ways it is told to', async () => {
+    const waiting = worker();
+    const d = deps({ controlled: false, waiting });
+    await applyUpdate(d.skipWaiting, d.dep);
+    waiting.become('activated');
+    waiting.become('activated');
+    for (const t of d.timers) t.fn();
+    expect(d.reloads).toEqual([1]);
+  });
+
+  /** A worker that got there first fires no `statechange` to catch. */
+  it('reloads for a worker that is already activated', async () => {
+    const d = deps({ controlled: false, waiting: worker('activated') });
+    await applyUpdate(d.skipWaiting, d.dep);
+    expect(d.reloads).toEqual([1]);
+  });
+
+  it('reloads when there was nothing waiting at all', async () => {
+    const d = deps({ controlled: false });
+    await applyUpdate(d.skipWaiting, d.dep);
+    expect(d.reloads).toEqual([1]);
+  });
+
+  /** Never a dead button, whatever the worker does. */
+  it('reloads anyway if the handover never comes', async () => {
+    const d = deps({ controlled: false, waiting: worker() });
+    await applyUpdate(d.skipWaiting, d.dep);
+    expect(d.reloads).toEqual([]);
+    expect(d.timers.map((t) => t.ms)).toEqual([HANDOVER_MS]);
+    for (const t of d.timers) t.fn();
+    expect(d.reloads).toEqual([1]);
   });
 });
