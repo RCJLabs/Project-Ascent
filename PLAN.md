@@ -14442,6 +14442,86 @@ or an edit, and belongs there.
 That reframes the fold from *short versus long* to **what happened versus what to make of it** — a
 line the logger can state and a climber can predict, instead of a list of five that is missing five.
 
+## Ten, run against the code (M298a)
+
+A brainstorm with the same rule the logger audit used, because the previous one put four entries in
+this file whose specifics did not survive contact with the source. Each of these names where it is
+true, and says whether it is **measured**, **inferred** or **a proposal**.
+
+### The nets have holes in them
+
+**1. The layout harness checks one text size of four.** `settings.ts:19` ships `small`, `normal`,
+`large`, `largest` with a `TEXT_SCALE` behind them; `scripts/layout.mjs` runs 49 routes × 3
+viewports at whatever the default is. Text scale is the largest multiplier on layout there is, and
+this harness exists because jsdom reports every box as zero — M225 and M269, the two worst bugs
+this app has shipped, were both in that class. One more pass at `largest` × 360×640 is about 35
+seconds of CI. *Measured.*
+
+**2. The live site has never been checked, and CI could check it.** Every verification this session
+ran against `vite preview` on built `dist`; the sandbox proxy blocks `ascent.rcjlabs.com`. The
+GitHub runner has open egress — it downloaded Chromium at M293 — so a post-deploy step could load
+the real URL and assert three things nothing currently asserts: the app boots, the service worker
+registers, and the version it reports matches the commit that just shipped. *Measured that it is
+unchecked; runner egress inferred from the M293 download.*
+
+**3. One sample climber.** `demoClimber.ts` builds one deterministic log, and every browser check,
+every layout run and every screenshot this session used it. Screens that only appear for a
+different shape — a rope climber, a beginner with three sessions, somebody mid-injury — are seen by
+whichever fixture a test happened to build. A second and third sample would widen every existing
+check at no runtime cost, and it is the same move M280–M282 made when routes were unreachable.
+*Measured.*
+
+### Things the app knows and does not say
+
+**4. `conditions` has exactly one reader.** M289 records how the rock was; `coach.ts`'s run-of-bad-
+days tip is the only thing that reads it. `/venues/:key` shows days and grades at a crag and not
+that every one of them was greasy; the year review does not mention it; the session archive does
+not show it. One field, three natural readers. *Measured.*
+
+**5. `blockCompare` says the app cannot tell a taper from an illness. It can now.** The comment at
+`blockCompare.ts:88` — *"the app has no idea whether the last four weeks were a taper, an illness
+or a holiday"* — predates M275's away markers and sits beside a builder that has had deload weeks
+for longer. A decline overlapping a marked injury, or a planned deload, is explainable. It is the
+same fix M275 applied to `outdoorReentry`: read the marker, change the sentence, leave the number
+alone. *Measured.*
+
+### Half-built loops
+
+**6. The coach loop returns nothing.** M292 lets a coach read an athlete's block and keep none of
+it. Nothing goes the other way: no note, no adjustment, no *"here is what I would change"*. The
+pair already exists — `programFile.ts` sends a program — so this closes with a **link** rather than
+a fourth format: the shared-block page offering *write them a program from this*, landing in the
+builder with the athlete's numbers in front of you. *Absence measured; the design is a proposal.*
+
+**7. The handout is builder-only.** M288's own entry called this the obvious next argument: a coach
+is at least as likely to put an athlete on Iron Grip as on something they wrote, and *Save as a
+handout* only exists for custom programs. The generator already takes any `Program`. *Measured.*
+
+**8. Correcting the day a session landed on is behind two folds.** `CorrectionCard` is `{full && …}`
+and then behind its own *open* toggle. Logging Saturday's session on Sunday morning is the most
+common mistake there is, and the way to fix it is three taps into a screen you have to know exists.
+The correction itself is good — move and merge, with `canMerge` guarding it. *Measured.*
+
+### The project itself
+
+**9. PLAN.md has no index.** It is over 19,000 lines and it is the only record of why anything is
+the way it is — which has been worth it, repeatedly, this session. Finding *"why is X like this"*
+means grepping. A generated index (milestone, title, files touched) would make the rolling audit
+cheaper, and it can be derived from git rather than maintained by hand. *Measured.*
+
+**10. Run the audit again, on another screen.** Reading one screen's modules against their own
+prose found five real defects in `features/log/` in a single pass, and four queue entries that were
+wrong before that. Progress, Calendar and Projects have had no such pass. This is the highest-yield
+item on the list and it is a process rather than a feature — which is why it is last: it produces
+the next ten. *Measured.*
+
+### What was checked and is not a gap
+
+Named climbs do suggest projects (`projects.ts:268`). Font grades are supported both ways
+(`grades.ts:115`). Reminders are deliberately `.ics` rather than notifications, and `lib/ics.ts`
+gives three reasons a PWA cannot do better. Away markers have five readers. Search indexes sessions,
+not just pages. None of these wants touching.
+
 ## Asked for, and waiting
 
 Nine features from a brainstorm run against the codebase rather than against imagination, in the
