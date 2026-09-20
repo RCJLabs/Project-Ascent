@@ -20693,5 +20693,31 @@ Two of the first run's survivors were my own error — the battery was pointed a
 does not exist, so it reported green for a run that had executed nothing of what it was aiming at.
 The same shape M224 named about `dist`, in the tool built to catch it.
 
+### And CI went red on it, for none of the above
+
+The first push of this failed the build job on `launchedFile.test.tsx`, a file this milestone does
+not touch:
+
+```
+AssertionError: the launched backup never reached the preview:
+  expected ' HomeSettingsAppearance…' to match /replace|merge/i
+```
+
+The test read a file, parsed it, built an import preview — and waited for all of it with
+`new Promise((r) => setTimeout(r, 60))`. A clock standing in for a condition. It holds on a quiet
+machine and loses on a loaded runner, and this milestone's seventeen new tests were enough extra
+load to find out.
+
+It is the M302 shape one layer up. There the fix was raising `asyncUtilTimeout` because a lazy
+chunk's arrival is a property of the machine; a hand-rolled sleep is the one wait that ignores that
+setting entirely. Both launch-file tests — Settings and the builder's copy, 60ms and 40ms — wait on
+the thing they are about now, and the ones asserting an **absence** wait for something that has to
+arrive first, so they ask after the page has finished reacting rather than before it started.
+
+**Eight more files still sleep on a clock** (`shell`, `cooldownCard`, `deleteProgram`,
+`undoEverywhere`, `hydrating`, `wallShop`, `blocks`, `settingsGroups`). Some are legitimately about
+timing and some are this bug waiting to happen; telling them apart is its own pass and is the next
+item rather than a hurried sweep at the end of this one.
+
 Battery: 9 killed, sanity survived. 6,987 tests over 414 files, from 6,969. Layout harness OK.
 First load 136.92KB against 137.3.
