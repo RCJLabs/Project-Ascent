@@ -247,6 +247,25 @@ function newest(paths: readonly string[]): { path: string; at: number } {
 describe('the workflow that ships it', () => {
   const WORKFLOW = '.github/workflows/deploy.yml';
 
+  /**
+   * A script with its comments taken out (PLAN.md M301).
+   *
+   * The first version of the empty-pass guard below matched `seeded: false`
+   * anywhere in `layout.mjs`, and the docblock explaining the flag says it
+   * in prose — so the mutant that deleted every unseeded size from the list
+   * survived, held up by the comment describing them. That is the shape
+   * this file's own `code()` exists for, one directory over.
+   *
+   * Not that `code()`: it strips string literals too, which is right for
+   * asking whether `fetch` is called and wrong for asking whether a size
+   * says `pointer: 'mouse'`. Comments only, for a claim about what the
+   * harness is configured with rather than about what it calls.
+   */
+  const configOf = (path: string): string =>
+    readFileSync(path, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|[^:])\/\/.*$/gm, '$1');
+
   it('builds before it tests, so the checks above are not all skipped', () => {
     const steps = readFileSync(WORKFLOW, 'utf8')
       .split('\n')
@@ -336,6 +355,46 @@ describe('the workflow that ships it', () => {
       expect(Object.keys(TEXT_SCALE), `${size} is not a text size`).toContain(size);
       expect(TEXT_SCALE[size as TextSize], `${size} is the default scale`).not.toBe(1);
     }
+  });
+
+  /**
+   * And measures the app a new climber opens (PLAN.md M301).
+   *
+   * The harness loads the sample climber before it walks a route, and said
+   * so in its own comment: *"so no page is measured empty."* That is the
+   * state every install starts in and the one every climber sees first —
+   * the empty lists, the *not enough yet* cards, the front door with
+   * nothing behind it — and nothing had ever measured it.
+   *
+   * Asserted here rather than in the script because the flag that makes a
+   * pass unseeded is both the intent and the behaviour: dropping it leaves
+   * a harness that runs clean and quietly stops checking. This is the only
+   * place that can tell.
+   */
+  it('measures the built app with nothing logged as well as with a year', () => {
+    const harness = configOf('scripts/layout.mjs');
+    expect(harness, 'no pass runs against an empty log').toMatch(/seeded: false/);
+    // And the flag decides the seeding rather than labelling a pass that
+    // loads the sample climber like every other one.
+    expect(harness, 'the flag decides nothing').toMatch(/seeded = size\.seeded !== false/);
+    // The count in the header is what the database said, not what the list
+    // claimed, so a flag that stops deciding is a harness that says so.
+    expect(harness, 'nothing counts the passes that were really empty').toMatch(/provenEmpty/);
+  });
+
+  /**
+   * And measures a mouse nav against a mouse target (PLAN.md M301).
+   *
+   * The tap-target rule read `size.name === 'desktop'`, so the first size
+   * added whose name was not exactly that — an unseeded desktop pass —
+   * measured a 40px mouse nav against the 44px finger target and reported
+   * all five tabs too small on all 36 routes. A rule keyed on a label is a
+   * rule one rename away from silently checking something else.
+   */
+  it('decides the tap target by what points at the screen, not by a name', () => {
+    const harness = configOf('scripts/layout.mjs');
+    expect(harness, 'the target is keyed on a name again').not.toMatch(/size\.name === 'desktop'/);
+    expect(harness, 'nothing says what points at the screen').toMatch(/pointer: 'mouse'/);
   });
 
   /**

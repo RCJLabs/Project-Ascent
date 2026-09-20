@@ -117,12 +117,34 @@ const BY_DEPTH = (a, b) => a.split('/').length - b.split('/').length || a.locale
  * where it bites — anything that survives 360×640 at 1.3 survives 390×780
  * at 1.15 — and a fourth pass over every route costs about 35 seconds where
  * three more would cost nearly two minutes.
+ *
+ * ## And the app a new climber opens (PLAN.md M301)
+ *
+ * The four above load the sample climber before walking a route, and this
+ * file said so itself: *"so no page is measured empty."* The empty lists,
+ * the *not enough yet* cards and the front door with nothing behind it are
+ * a different layout from the same routes with a year in them, and they are
+ * the layout every install starts in.
+ *
+ * `seeded: false` skips the load. Three of them and about twenty seconds
+ * each, because they reach only the 36 static routes — the detail routes
+ * need a record a new climber has not got — and because the phone, the
+ * large text and the mouse are three different ways for an empty page to be
+ * wrong. Every pass then proves which it was; `provenEmpty` below says why.
+ *
+ * `pointer` rather than a name: the tap-target rule read
+ * `size.name === 'desktop'`, so the first size added whose name was not
+ * exactly that measured a mouse nav against the 44px finger target and
+ * reported all five tabs too small on all 36 routes.
  */
 const SIZES = [
   { name: 'phone', width: 390, height: 780 },
   { name: 'small', width: 360, height: 640 },
-  { name: 'desktop', width: 1280, height: 900 },
+  { name: 'desktop', width: 1280, height: 900, pointer: 'mouse' },
   { name: 'large text', width: 360, height: 640, textSize: 'largest' },
+  { name: 'empty', width: 360, height: 640, seeded: false },
+  { name: 'empty large text', width: 360, height: 640, seeded: false, textSize: 'largest' },
+  { name: 'empty desktop', width: 1280, height: 900, seeded: false, pointer: 'mouse' },
 ];
 
 const TABS = ['Home', 'Train', 'Calendar', 'Progress', 'Game'];
@@ -316,6 +338,18 @@ const failures = [];
 let discovered = null;
 /** And the ones that could not be reached, with why. */
 let unreachable = new Map();
+/**
+ * Passes that the database itself said were empty, not passes that were
+ * declared so (PLAN.md M301).
+ *
+ * The flag on a size is both the intent and the mechanism, so a mutation
+ * that turns it into a label — `const seeded = true` — leaves a harness
+ * that runs every pass seeded and still prints a line about the ones with
+ * nothing logged. Counting what was observed instead, and failing when the
+ * list promises an empty pass and none happened, is the only thing that
+ * can tell the two apart from inside the script.
+ */
+let provenEmpty = 0;
 const note = (where, what) => { failures.push(`${where}: ${what}`); };
 
 for (const size of SIZES) {
@@ -339,16 +373,48 @@ for (const size of SIZES) {
   await page.waitForTimeout(600);
   const skip = page.getByRole('button', { name: 'Skip' });
   if (await skip.count()) { await skip.click(); await page.waitForTimeout(700); }
-  // The app's own sample climber, so no page is measured empty.
-  await page.evaluate(() => { location.hash = '#/settings'; });
-  await page.waitForTimeout(800);
-  const load = page.getByRole('button', { name: 'Load a sample climber' });
-  if (await load.count()) { await load.click(); await page.waitForTimeout(2500); }
+  /*
+   * The app's own sample climber, so no page is measured empty — except by
+   * the pass that is about the empty one (PLAN.md M301).
+   *
+   * And every pass then says which it was, rather than being trusted. A
+   * pass that quietly loaded the sample climber anyway would measure the
+   * same lived-in app as the ones above it and report green for it — the
+   * shape `privacy.test.ts` names about `dist`: a check that reads exactly
+   * like a check that ran. Settings offers *Load a sample climber* only
+   * while the log is empty, so whether it is on screen afterwards is the
+   * database answering, and the two cases are opposite answers.
+   *
+   * Checked after the load rather than inside the branch that does it: a
+   * first version asked only on the unseeded side, so the one mutation
+   * worth catching — the branch itself going — took the assertion with it.
+   */
+  const seeded = size.seeded !== false;
+  const settings = async () => {
+    await page.evaluate(() => { location.hash = '#/settings'; });
+    await page.waitForTimeout(800);
+    return page.getByRole('button', { name: 'Load a sample climber' });
+  };
+  if (seeded) {
+    const load = await settings();
+    if (await load.count()) { await load.click(); await page.waitForTimeout(2500); }
+  }
+  const offering = (await (await settings()).count()) > 0;
+  if (offering === seeded) {
+    throw new Error(
+      seeded
+        ? `the ${size.name} pass has nothing logged: Settings is still offering the sample climber`
+        : `the ${size.name} pass is not unseeded: Settings is not offering the sample climber`,
+    );
+  }
+  if (!seeded) provenEmpty += 1;
 
   // The detail routes, found by opening the page that lists them and
   // reading a real link — the ids belong to the sample climber and are
   // nobody's business to invent.
-  if (discovered === null) {
+  // Never from the unseeded pass: it has no records, so discovery there
+  // would mark every detail route unreachable for every size after it.
+  if (discovered === null && size.seeded !== false) {
     discovered = new Map();
     unreachable = new Map();
     /** The first link on the open page whose address matches the pattern. */
@@ -405,9 +471,13 @@ for (const size of SIZES) {
     }
   }
 
+  // A pass with nothing logged has none of the records the detail routes
+  // need, and the ids the seeded passes found belong to a database this one
+  // does not have. The static routes are the whole app a new climber can
+  // reach anyway.
   const checking = [
     ...STATIC.map((path) => [path, fill(path)]),
-    ...[...discovered].map(([path, href]) => [path, href]),
+    ...(size.seeded === false ? [] : [...discovered].map(([path, href]) => [path, href])),
   ];
 
   for (const [path, href] of checking) {
@@ -416,7 +486,13 @@ for (const size of SIZES) {
     await page.waitForTimeout(500);
     const r = await page.evaluate(readPage, {
       tabNames: TABS,
-      target: size.name === 'desktop' ? 0 : TARGET,
+      // A property of the size, not of its name (PLAN.md M301). This read
+      // `size.name === 'desktop'`, so the first size added whose name was
+      // not exactly that — an unseeded desktop pass — measured a mouse nav
+      // against the 44px finger target and reported all five tabs too
+      // small on all 36 routes. A rule keyed on a label is a rule that is
+      // one rename from silently changing what it checks.
+      target: size.pointer === 'mouse' ? 0 : TARGET,
     });
     const at = `${size.name} ${path}`;
     if (r.fatal) { note(at, r.fatal); continue; }
@@ -463,7 +539,7 @@ for (const size of SIZES) {
    * stack tall enough needs a storage warning, an update prompt and a live
    * session at once.
    */
-  if (size.name !== 'desktop') {
+  if (size.pointer !== 'mouse') {
     await page.evaluate(() => { location.hash = '#/'; });
     await page.waitForTimeout(400);
     for (const extra of [400, 800]) {
@@ -486,7 +562,15 @@ for (const size of SIZES) {
 await browser.close();
 
 const found = discovered ?? new Map();
-console.log(`${STATIC.length + found.size} routes × ${SIZES.length} sizes, plus the banner squeeze.`);
+const unseeded = SIZES.filter((z) => z.seeded === false).length;
+if (unseeded > 0 && provenEmpty === 0) {
+  failures.push(`${unseeded} passes are declared unseeded and none of them ran against an empty log`);
+}
+console.log(
+  `${STATIC.length + found.size} routes × ${SIZES.length - unseeded} sizes` +
+    (provenEmpty > 0 ? `, and ${STATIC.length} × ${provenEmpty} with nothing logged` : '') +
+    ', plus the banner squeeze.',
+);
 if (found.size) console.log(`found a record for: ${[...found.keys()].join(' ')}`);
 /**
  * Named with a reason, not just listed (PLAN.md M280).

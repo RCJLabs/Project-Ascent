@@ -14714,6 +14714,12 @@ M50 for why it is not coming.
   `largest` now, and a job after the deploy loads the real URL and asks whether it is serving the
   build that was just made, whether it boots, and whether the service worker registers.
 
+- **M301 — the app a new climber opens.** The layout harness loaded the sample climber before it
+  walked a route and said so in its own comment: *"so no page is measured empty."* Three unseeded
+  passes now measure the 36 static routes with nothing logged. They found no layout problem — and
+  the harness found two in itself: a pass that silently measured the wrong app would have reported
+  `layout OK`, and the tap-target rule was keyed on the string `'desktop'`.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -20430,3 +20436,76 @@ layout OK                                           135s, from 105s
 
 Battery: 7 killed, sanity survived. 6,951 tests over 413 files, from 6,949. First load 136.50KB
 against 137.3.
+
+## M301 — the app a new climber opens
+
+M298a's third entry asked for a second and third sample climber — a rope climber and a beginner —
+on the grounds that *"every browser check, layout run and screenshot uses the same deterministic
+log"*. That part is true: `layout.mjs` and `shots.mjs` both click *Load a sample climber*, and the
+generator takes a seed.
+
+The rest of it is the wrong lever. A second climber in the app is a product change — another
+Settings choice, more branches in a 696-line generator, more weight in the chunk that carries it —
+bought to widen a check. And the widening it would buy is not the widest one available, which costs
+nothing and is written down in the harness already:
+
+```js
+// The app's own sample climber, so no page is measured empty.
+```
+
+**No page is measured empty.** That is the state every install starts in, the one every climber sees
+first, and a different layout from the same routes with a year behind them: empty lists, *not enough
+yet* cards, a front door with nothing behind it. Nothing had ever looked at it.
+
+### Three passes, twenty seconds each
+
+`seeded: false` skips the load. They reach only the 36 static routes — the detail routes need a
+record a new climber has not got — across the phone, the largest text and a mouse, because those are
+three different ways for an empty page to be wrong.
+
+They found nothing. Every empty route holds its nav, its tap targets and its width at 360×640, at
+1.3× text, and at 1280×900. The front door passes the same invariant the seeded pass does: there is
+a way to start or log a session, above the nav, with nothing logged.
+
+### The harness found two things in itself
+
+**A pass could have been measuring the wrong app entirely.** The seeding was
+`if (await load.count()) { await load.click(); }` — so a renamed button, a slower boot, a moved
+Settings card, and the click silently does not happen. Every route is then measured empty and the
+harness prints `layout OK`, which is the M224 shape exactly: a check that reads like a check that
+ran. Every pass now states which it was and the database answers:
+
+```
+the phone pass has nothing logged: Settings is still offering the sample climber
+```
+
+Checked after the load rather than inside the branch that does it — a first version asked only on
+the unseeded side, so the one mutation worth catching took the assertion with it. And the count in
+the header is `provenEmpty`, incremented by passes the database confirmed, not by passes the list
+declared: the flag is both the intent and the mechanism, so turning it into a label is the mutation
+nothing else can see.
+
+```
+3 passes are declared unseeded and none of them ran against an empty log
+```
+
+**And the tap-target rule was keyed on a name.** `target: size.name === 'desktop' ? 0 : TARGET` —
+so the first size added whose name was not exactly that measured a 40px mouse nav against the 44px
+finger target and reported all five tabs too small on all 36 routes. It is `size.pointer === 'mouse'`
+now, and the banner squeeze with it. Found by adding a size, which is what the next change to this
+file will do too.
+
+### And the guard matched its own prose
+
+The first version of the suite guard read `layout.mjs` whole and matched `seeded: false`. The
+docblock explaining the flag says `seeded: false` in prose, so the mutant that deleted every
+unseeded size from the list survived — held up by the comment describing them. It strips comments
+now, which is what this file's own `code()` does one directory over, and for the same reason.
+
+```
+49 routes × 4 sizes, and 36 × 3 with nothing logged, plus the banner squeeze.
+layout OK                                              3m15s, from 2m15s
+```
+
+Battery: 4 killed by the suite, 1 by the harness, sanity survived. 6,953 tests over 413 files, from
+6,951. First load 136.51KB against 137.3. No app code changed.
