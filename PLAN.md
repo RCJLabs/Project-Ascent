@@ -14709,6 +14709,11 @@ M50 for why it is not coming.
   pins the clock, `npm run test:dates` runs the date-touching files as ten different days, and the
   deploy waits on it. One of the seven was the app rather than the test.
 
+- **M300 — the two nets that were not there.** The layout harness checked one text size of four,
+  and nothing had ever looked at the site the app is actually served from. It runs 360×640 at
+  `largest` now, and a job after the deploy loads the real URL and asks whether it is serving the
+  build that was just made, whether it boots, and whether the service worker registers.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -20338,3 +20343,90 @@ March 2026, standing on March   Technique 26   Mental 30
 
 Battery: 12 killed, sanity survived. 6,949 tests over 413 files, from 6,946 over 412 — and for the
 first time, the same 6,949 on any day. Layout harness OK. First load 136.49KB against 137.3.
+
+## M300 — the two nets that were not there
+
+M298a's brainstorm led with two holes in the safety net, and they are the same hole twice: a check
+that exists is not a check that covers the thing.
+
+### One text size of four
+
+`TEXT_SCALE` ships `small`, `normal`, `large` and `largest` — 0.92, 1, 1.15 and 1.3 — and
+`layout.mjs` ran 49 routes across three viewports at the default, for twenty-nine milestones.
+
+Text scale is the largest multiplier on layout the app has. Every size in it is a `rem` utility and
+the setting moves `--text-scale` on the root, so at `largest` **every box, gap and line grows by 30%
+at once**. That is the class this harness exists for: M225 and M269 were both in it, and both were
+found by a person on a phone.
+
+One extra pass rather than four. The smallest viewport at the largest text is where it bites —
+anything surviving 360×640 at 1.3 survives 390×780 at 1.15 — and the fourth pass costs about thirty
+seconds where three more would cost two minutes. The size is seeded into `localStorage` before the
+app boots rather than tapped through Settings, so the first paint is already at the size being
+checked.
+
+It failed on its first run, and the honest reading is a trade rather than a defect:
+
+```
+/ at 360×640, largest:  the day's button is 143px under the nav
+                        (21px with the sample-data banner cleared)
+```
+
+What sits above it is the date, the week strip, the block line and the card's own sentence about
+what today is — every one of them content a climber asked to see bigger. So a climber who turns text
+up 30% scrolls once to start a session, and that is the right loss; the alternative is cutting what
+they enlarged the text to read. The invariant is scoped to the default size, with the measurement
+written down beside it. **Everything else passed at 1.3×**: no tab off screen, no sideways spill, no
+control under 24px, no document scroll.
+
+### And nothing had ever looked at the live site
+
+Every check in this repo runs against `dist` through `vite preview`. That proves the artefact and
+says nothing about whether it reached anybody, and between the two sit the parts that go wrong
+quietly: the Pages upload, the custom domain, the base path, and a service worker that can serve a
+previous version for as long as it likes.
+
+`scripts/live.mjs` runs after the deploy and asks three things:
+
+1. **Is the thing being served the thing that was just built?** The entry chunk's name carries a
+   content hash, so the built name matching the served name is the whole question in one string.
+   The build job now reports it; a `?live=` query defeats the CDN.
+2. **Does it boot?** A 200 on a shell that never renders is a deploy that "worked".
+3. **Does the service worker register?** Offline is the premise, and nothing in CI had ever
+   exercised one.
+
+It gates nothing by construction, because it runs after the deploy. A failure is a report, which is
+the right blast radius for a check whose first failure mode is a CDN being slow.
+
+### The half that cannot be tested from here
+
+The proxy in this environment blocks `ascent.rcjlabs.com`, so the live half of this first runs on
+the runner. What *is* proven here is the script against `vite preview`, including both failure
+modes:
+
+```
+serving: index-CHoADplZ.js ✓          rendered: Sunday, September 20
+nav: 5 tabs                           service worker: registered
+
+ENTRY=index-NOTTHEONE.js  →  exit 1, "serving a different build than index-NOTTHEONE.js after 8s"
+URL=http://localhost:4199 →  exit 1, "is fetch failed after 6s"
+```
+
+### Both guarded by the thing they guard
+
+`privacy.test.ts` asserts the dependency rather than the line order — the first version of the live
+guard checked that `deploy-pages` appeared above `live.mjs` in the file, which is true however the
+jobs are sequenced, and a mutant taking `deploy` out of `needs` survived it.
+
+The text-size guard reads the size names out of `layout.mjs` and checks them against `TEXT_SCALE`
+rather than spelling them twice: a size renamed in `settings.ts` would otherwise leave the harness
+seeding a key the store ignores, and a pass that silently measures the default again reads exactly
+like a pass that ran.
+
+```
+49 routes × 4 sizes, plus the banner squeeze.
+layout OK                                           135s, from 105s
+```
+
+Battery: 7 killed, sanity survived. 6,951 tests over 413 files, from 6,949. First load 136.50KB
+against 137.3.

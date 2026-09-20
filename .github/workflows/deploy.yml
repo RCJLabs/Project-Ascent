@@ -17,6 +17,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # The entry chunk carries a content hash, so its name is how the job
+    # that checks the live site knows whether it is looking at this build.
+    outputs:
+      entry: ${{ steps.entry.outputs.name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -58,6 +62,11 @@ jobs:
             sleep 1
           done
           npm run layout
+      - id: entry
+        run: |
+          name=$(grep -oP 'assets/\Kindex-[A-Za-z0-9_-]+\.js' dist/index.html | head -1)
+          if [ -z "$name" ]; then echo "no entry chunk in dist/index.html"; exit 1; fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
@@ -107,9 +116,41 @@ jobs:
   deploy:
     needs: [build, dates]
     runs-on: ubuntu-latest
+    outputs:
+      url: ${{ steps.deployment.outputs.page_url }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # The app that is actually being served (PLAN.md M300).
+  #
+  # Everything above this runs against `dist` through `vite preview` — the
+  # suite, the budget, the layout harness. That proves the artefact and says
+  # nothing about whether it reached anybody, and between the two sit the
+  # parts that go wrong quietly: the upload, the custom domain, the base
+  # path, and a service worker that can keep serving a previous version.
+  #
+  # It gates nothing by construction, because it runs after the deploy. A
+  # failure here is a report, which is the right blast radius for a check
+  # whose first failure mode is a CDN being slow.
+  live:
+    needs: [build, deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # No `npm ci`: the script needs a browser and nothing else the
+      # manifest carries, and `--no-save` keeps it out of the manifest for
+      # the reason `scripts/layout.mjs` gives.
+      - run: npm i --no-save playwright-core
+      - run: npx playwright-core install --with-deps chromium
+      - name: The deployed app
+        env:
+          URL: ${{ needs.deploy.outputs.url }}
+          ENTRY: ${{ needs.build.outputs.entry }}
+        run: node scripts/live.mjs

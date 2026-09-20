@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { TEXT_SCALE, type TextSize } from '@/store/settings';
 
 /**
  * The privacy page's claims, held by the source rather than by the page
@@ -310,6 +311,57 @@ describe('the workflow that ships it', () => {
     expect(workflow, 'the days are not fanned out').toMatch(
       /day: \$\{\{ fromJSON\(needs\.days\.outputs\.list\) \}\}/,
     );
+  });
+
+  /**
+   * And measures it at a text size somebody actually set (PLAN.md M300).
+   *
+   * `TEXT_SCALE` ships four and the harness ran one of them for
+   * twenty-nine milestones. Text scale is the largest multiplier on layout
+   * the app has — every size is a `rem` utility and the setting moves
+   * `--text-scale` on the root, so at `largest` every box, gap and line
+   * grows by 30% at once.
+   *
+   * The name is checked against the table rather than spelled twice: a
+   * size renamed in `settings.ts` would otherwise leave the harness
+   * seeding a key the store ignores, and a pass that silently measures the
+   * default again is the shape M224 named — a check that reads exactly
+   * like a check that ran.
+   */
+  it('measures the built app at a text size that is not the default', () => {
+    const harness = readFileSync('scripts/layout.mjs', 'utf8');
+    const sizes = [...harness.matchAll(/textSize: '([a-z]+)'/g)].map((m) => m[1]);
+    expect(sizes, 'the harness checks one text size').not.toEqual([]);
+    for (const size of sizes) {
+      expect(Object.keys(TEXT_SCALE), `${size} is not a text size`).toContain(size);
+      expect(TEXT_SCALE[size as TextSize], `${size} is the default scale`).not.toBe(1);
+    }
+  });
+
+  /**
+   * And looks at the app that is actually being served (PLAN.md M300).
+   *
+   * Everything else in this file proves the artefact. This is the one check
+   * that proves it reached somebody — and it has to run *after* the deploy,
+   * because before it there is nothing new at the URL to look at.
+   */
+  it('checks the deployed app, after deploying it', () => {
+    const workflow = readFileSync(WORKFLOW, 'utf8');
+    const lines = workflow.split('\n').map((l) => l.trim());
+    const at = (needle: string) => lines.findIndex((l) => l.includes(needle));
+    expect(at('scripts/live.mjs'), 'nothing looks at the live site').toBeGreaterThanOrEqual(0);
+    // The **dependency**, not the line order. The first version of this
+    // asserted that `deploy-pages` appeared above `live.mjs` in the file,
+    // which is true however the jobs are sequenced — a mutant that took
+    // `deploy` out of `needs` left the text alone and survived.
+    const live = workflow.slice(workflow.indexOf('\n  live:'));
+    expect(live, 'no live job').not.toBe('');
+    expect(live.slice(0, 200), 'the live check does not wait for the deploy').toMatch(
+      /needs: \[[^\]]*\bdeploy\b/,
+    );
+    // It needs both halves: where to look, and which build to expect.
+    expect(workflow).toMatch(/URL: \$\{\{ needs\.deploy\.outputs\.url \}\}/);
+    expect(workflow).toMatch(/ENTRY: \$\{\{ needs\.build\.outputs\.entry \}\}/);
   });
 
   /**

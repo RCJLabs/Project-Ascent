@@ -103,10 +103,26 @@ function listingFor(path, found) {
  */
 const BY_DEPTH = (a, b) => a.split('/').length - b.split('/').length || a.localeCompare(b);
 
+/**
+ * The viewports, and the one text size that is not the default (PLAN.md M300).
+ *
+ * `TEXT_SCALE` ships four — 0.92, 1, 1.15 and 1.3 — and this checked one of
+ * them for twenty-nine milestones. Text scale is the largest multiplier on
+ * layout there is: every size in the app is a `rem` utility and the setting
+ * moves `--text-scale` on the root, so at `largest` every box, gap and line
+ * grows by 30% at once. That is the class of thing this harness exists for,
+ * and the two worst bugs the app has shipped (M225, M269) were both in it.
+ *
+ * One extra pass, not four. The smallest viewport at the largest text is
+ * where it bites — anything that survives 360×640 at 1.3 survives 390×780
+ * at 1.15 — and a fourth pass over every route costs about 35 seconds where
+ * three more would cost nearly two minutes.
+ */
 const SIZES = [
   { name: 'phone', width: 390, height: 780 },
   { name: 'small', width: 360, height: 640 },
   { name: 'desktop', width: 1280, height: 900 },
+  { name: 'large text', width: 360, height: 640, textSize: 'largest' },
 ];
 
 const TABS = ['Home', 'Train', 'Calendar', 'Progress', 'Game'];
@@ -305,6 +321,17 @@ const note = (where, what) => { failures.push(`${where}: ${what}`); };
 for (const size of SIZES) {
   const ctx = await browser.newContext({ viewport: { width: size.width, height: size.height } });
   const page = await ctx.newPage();
+  // Seeded before the app boots rather than tapped through Settings: the
+  // store reads this key on hydrate and puts `--text-scale` on the root,
+  // so the very first paint is already at the size being checked.
+  if (size.textSize) {
+    await page.addInitScript((wanted) => {
+      const key = 'project-ascent:device';
+      let device = {};
+      try { device = JSON.parse(localStorage.getItem(key) ?? '{}'); } catch { device = {}; }
+      localStorage.setItem(key, JSON.stringify({ ...device, textSize: wanted }));
+    }, size.textSize);
+  }
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
 
@@ -401,7 +428,25 @@ for (const size of SIZES) {
     if (r.small.length) note(at, `control under 24px: ${r.small.join('; ')}`);
     if (r.spill.length) note(at, `off the side: ${r.spill.join('; ')}`);
     if (errors.length) note(at, `threw: ${errors[0]}`);
-    if (path === '/' && r.action) {
+    /**
+     * At the default text size only (PLAN.md M300).
+     *
+     * The large-text pass found this failing on its first run and the
+     * honest reading is a trade rather than a defect. Measured at 1.3× on
+     * 360×640, the day's button lands 143px under the nav with the
+     * sample-data banner showing and about 21px under it without — and
+     * what sits above it is the date, the week strip, the block line and
+     * the card's own sentence about what today is. Every one of those is
+     * content a climber asked to see bigger.
+     *
+     * So a climber who has turned text up 30% scrolls once to start a
+     * session, and that is the right loss: the alternative is cutting what
+     * they enlarged the text to read. The pass still checks everything
+     * else at that size — tabs on screen, target sizes, sideways spill,
+     * the document not scrolling — which is where large text usually
+     * breaks things.
+     */
+    if (path === '/' && r.action && !size.textSize) {
       if (r.action.missing) note(at, 'no way to start or log a session');
       else if (r.action.below) {
         note(at, `the day's button is ${r.action.below}px under the nav (${r.action.name})`);
