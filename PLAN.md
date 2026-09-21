@@ -21036,3 +21036,28 @@ one a week number has to agree with, and says so.
 
 Battery: 13 killed, sanity survived. 7,033 tests over 418 files, from 7,015 over 416. Layout
 harness OK. First load 136.98KB against 137.3.
+
+### And CI went red on it, on one day in ten (M306b)
+
+The `dates` matrix M299 built failed on the 2026-09-27 runner — a **Sunday** — and on nothing else:
+
+```
+AssertionError: a rested deload day still reads as an unexplained gap:
+  expected 0 to be greater than 0
+```
+
+The new feature test anchors its block at `startOfWeek(today) - 21`, which puts today inside week
+four on every day of the year. That is right for the three tests about `inPlannedDeload`, which
+needs one deload day in the last seven. It is wrong for the fourth, which needs an *elapsed* deload
+day nobody logged — because on a Sunday today is the **first** day of week four and the rest of it
+is still ahead. There was nothing to find.
+
+Pushing the start back so week four is fully behind us fixes that one and breaks the other three,
+because by Saturday the acute window has left the deload week entirely. A program week is
+Sunday-aligned and the acute window is a rolling seven days; no single offset satisfies both. So
+two blocks, each answering the question it is for, and the reason written where the second one is
+defined.
+
+The M299 shape again, and the fourth time this session the suite's answer has depended on the day
+it ran. Checked across all ten pinned days before pushing, and then the whole 103-file date suite
+on each of them.

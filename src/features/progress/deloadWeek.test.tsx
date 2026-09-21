@@ -29,15 +29,34 @@ import { ProgressPage } from './ProgressPage';
 const DAY = today();
 /** Week four of Iron Grip is the week we are in. */
 const START = addDays(startOfWeek(DAY), -21);
+/**
+ * And a block far enough along that week four is entirely behind us
+ * (PLAN.md M306b).
+ *
+ * The two cannot be one fixture, and the reason is the M299 shape. A program
+ * week is Sunday-aligned and `inPlannedDeload` reads the last **seven days**,
+ * so: with today inside week four there is a deload day in that window on
+ * every weekday of the year — but on a Sunday today is the *first* day of it,
+ * and every other day of that week is still ahead. A test needing an elapsed
+ * deload day nobody logged had nothing to find, and CI said so on the
+ * 2026-09-27 runner.
+ *
+ * Pushing the start back to put week four fully behind us fixes that one and
+ * breaks the others, because by Saturday the acute window has left the deload
+ * week entirely. Two blocks, each answering the question it is for.
+ */
+const OLDER_START = addDays(startOfWeek(DAY), -35);
 
-const BLOCK: BlockRecord = {
-  id: `iron_grip#${START}`,
+const block = (startDate: string): BlockRecord => ({
+  id: `iron_grip#${startDate}`,
   programId: 'iron_grip',
   name: 'Iron Grip',
-  startDate: START,
+  startDate,
   weeks: 12,
   endedAt: null,
-};
+});
+
+const BLOCK = block(START);
 
 /** Ten weeks of steady training, and a light last week — the deload. */
 async function inADeloadWeek(): Promise<void> {
@@ -113,9 +132,11 @@ describe('a climber in a planned deload week', () => {
 
   it('says so on a deload day nobody logged', async () => {
     await inADeloadWeek();
+    // The older block, so week four is elapsed whatever day of the week
+    // this runs on — see `OLDER_START`.
     useProfile.setState({
-      blocks: [BLOCK],
-      startDates: { iron_grip: START },
+      blocks: [block(OLDER_START)],
+      startDates: { iron_grip: OLDER_START },
       activeProgramId: 'iron_grip',
     });
     await open();
