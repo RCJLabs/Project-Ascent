@@ -97,18 +97,65 @@ describe('no shipped program asks a retired question', () => {
     expect(validateProgram(program).some((i) => /Route/.test(i))).toBe(true);
   });
 
-  // And every field of a type, not the first one it names.
+  // And every field of a type, not the first one it names. Both of the
+  // others are ones a program may ask for — `location` used to be here and
+  // is now a finding of its own (PLAN.md M311), which would have made this
+  // pass on the wrong issue.
   it('catches it behind a question that is fine', () => {
     const program = structuredClone(CATALOGUE.find((p) => p.id === 'trip_prep')!);
     const type = program.sessionTypes.find((t) => !t.isRest)!;
-    type.fields = ['location', 'pumpLevel', 'projectName'];
-    expect(validateProgram(program).some((i) => /Project/.test(i))).toBe(true);
+    type.fields = ['pitches', 'pumpLevel', 'projectName'];
+    const issues = validateProgram(program);
+    expect(issues.some((i) => /Project/.test(i))).toBe(true);
+    expect(issues, 'the other two are questions a program owns').toHaveLength(1);
   });
 
   it('passes every shipped program as it stands', () => {
     for (const program of CATALOGUE) {
       expect(validateProgram(program), program.id).toEqual([]);
     }
+  });
+});
+
+/**
+ * And the questions the app asks for itself (PLAN.md M311).
+ *
+ * `alwaysAsked` is the marker M289 added for a question the logger puts to
+ * every session it applies to *rather than one a program declares* — and
+ * nothing held content to the second half of that sentence. Seven shipped
+ * session types declared `location`, which the logger prepends whether they
+ * do or not, so the declaration bought nothing and on two of them moved the
+ * input down the card. `conditions` is the one where it would have cost
+ * something: declaring it overrides the mode gate, which is how *how was
+ * the rock* reaches an indoor session.
+ */
+describe('no shipped program asks a question the logger owns', () => {
+  it('declares none of them, across the whole catalogue', () => {
+    const asked: string[] = [];
+    for (const program of CATALOGUE) {
+      for (const type of program.sessionTypes) {
+        for (const id of type.fields ?? []) {
+          if (FIELDS[id]?.alwaysAsked !== undefined) asked.push(`${program.id}/${type.id}: ${id}`);
+        }
+      }
+    }
+    expect(asked).toEqual([]);
+  });
+
+  it('is a validation failure, not a convention', () => {
+    const program = structuredClone(CATALOGUE.find((p) => p.id === 'trip_prep')!);
+    const type = program.sessionTypes.find((t) => !t.isRest)!;
+    type.fields = [...(type.fields ?? []), 'conditions'];
+    expect(validateProgram(program).some((i) => /Conditions/.test(i))).toBe(true);
+  });
+
+  it('says where the app asks it instead, in words a reader can act on', () => {
+    const program = structuredClone(CATALOGUE.find((p) => p.id === 'trip_prep')!);
+    const type = program.sessionTypes.find((t) => !t.isRest)!;
+    type.fields = [...(type.fields ?? []), 'location'];
+    const said = validateProgram(program).find((i) => /Where/.test(i));
+    expect(said).toBeTruthy();
+    expect(said).toContain(FIELDS.location.alwaysAsked);
   });
 });
 

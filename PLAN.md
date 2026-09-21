@@ -14899,6 +14899,17 @@ its label is missing. None of these wants touching.
   disagree about them, and left behind the one thing they did disagree about. The tense is counted
   with the rest of it now, and the week screen stops recounting it from day statuses.
 
+- **M311 — a marker named in prose and read by nobody.** M307a said the builder offered three
+  retired questions as chips. It offered four things it should not: the three retired ones and
+  *Conditions*, which the logger asks of a day on rock itself. `ASKABLE` excluded `location` and
+  `clipStyle` **by id** while its comment named both markers — one of each category, and the other
+  four straight through. So the builder handed a climber *Time on the wall*, which
+  `content/validate.ts` has forbidden shipped content from asking since M142 and which the logger
+  renders beside its own Duration input. Nothing downstream would have caught it: the builder's
+  validator never looked at `fields` at all, and neither did the file importer. The markers are
+  read in all four places a session type can come from now — and the seven shipped types that
+  declared `location` for nothing stopped doing it.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -21525,3 +21536,94 @@ gutter put back to `start > today`, which nothing had been able to catch.
 7,060 tests over 418 files, from 7,050. The new gutter tests branch on the weekday `ASCENT_TODAY`
 lands on, so they went through `npm run test:dates` as well as the suite. Layout harness OK. First
 load 137.03KB against 137.3, up 0.02.
+
+---
+
+## M311 — the marker, read where it matters
+
+M307a's fourth finding: *"the builder offers three retired questions as chips. `fields.ts` carries
+a `retired` marker on four fields; `ASKABLE` excludes two ids by hand and names the marker in its
+comment without reading it."*
+
+The count was low. The registry marks fields two ways, and both mean *a program does not ask this*:
+
+| marker | fields | what it says |
+| --- | --- | --- |
+| `retired` (M142) | `projectName`, `routeName`, `clipStyle`, `sessionDuration` | another part of the session asks it and the engines read that one |
+| `alwaysAsked` (M289) | `location`, `conditions` | the logger puts it to every session it applies to, rather than a program declaring it |
+
+Six fields of seventeen. `ASKABLE` excluded two of them by id — one from each list — and offered
+the other four as chips: **Project**, **Route**, **Time on the wall** and **Conditions**.
+
+### What a chip could do
+
+*Time on the wall* is the one with teeth. M142 removed it from every shipped program because it sat
+beside the logger's own Duration input on the same screen and only the second one reached load, the
+review, the career totals and the archive; `content/validate.ts` has refused to let shipped content
+ask it ever since. The builder handed it out as a chip, and the logger renders whatever a session
+type's `fields` names — so a climber could put that screen back in two taps, and nothing would have
+said a word. `validateProgram` never looked at `fields` at all.
+
+*Conditions* is the subtler one. The logger asks it when the day is on rock, which is `mode`'s job,
+and its own docblock gives the reason: indoors the answer is the same every time, and a question
+whose answer never varies trains a climber to stop reading the form. A declaration overrides that
+gate — the ternary in `LogPage` only adds `conditions` when the list does not already carry it — so
+the chip's one effect is to ask how the rock was in a gym.
+
+### Read the marker, in all four places
+
+A session type reaches the app four ways, and each had its own answer to this:
+
+1. **The builder's chips** now filter on `retired === undefined && alwaysAsked === undefined`.
+   `quickFold.test.tsx` already made this argument about the logger — *"the split is read off
+   `alwaysAsked` rather than listed in the component, so a fourth field lands in the right half by
+   saying so in the registry"* — and the builder is the other half of that sentence.
+2. **A program already saved** keeps its chip for anything it carries that the row no longer
+   offers. Filtering alone would strand it: the question would go on being asked with no chip left
+   to switch it off, which is worse than the fault.
+3. **The builder's validator** names it, at warning level with the registry's own sentence, so it
+   says where the answer is read from instead. A warning and not an error because refusing to run a
+   climber's own program over a stale field is the worse trade.
+4. **A shared file** drops it and says so, in the same breath as a drill this version does not have.
+   A file written before M142 can still name `sessionDuration`.
+
+### And the seven declarations that bought nothing
+
+`content/validate.ts` gained the second half of its rule, which meant fixing the content it caught:
+five Outdoor Climbing session types, General Training's climbing day and Trip Prep's all declared
+`location`. The logger has prepended it to every session since M133, so on five of them the
+declaration was inert. On the other two it listed `location` *last*, which pushed **Where** to the
+bottom of the card under the grades. That is the one thing on screen this milestone moves, and it
+is now pinned: the first registry question on any session card is *Where*, because the logger puts
+it there rather than the program.
+
+Two fixtures broke on it and both were the shape this audit keeps finding — they selected their
+session type with `(t.fields ?? []).includes('location')`, keying off the redundancy, so removing
+it left them with no session type at all.
+
+The builder's chip row, in a browser, on a fork of Iron Grip:
+
+```
+before  15 chips, including Project · Route · Time on the wall · Conditions
+after   11 chips: Hardest attempted · Hardest sent · Climbs done · Routes completed ·
+        Pitches · Attempts · High point this session · Pump · Day of the trip ·
+        Water depth · Gear
+```
+
+Battery: 9 killed, sanity survived. Two of them are the half-fixes — the chips filtering `retired`
+and forgetting `alwaysAsked`, and the validator doing the same — because a rule with one of two
+markers in it is exactly what was there before. One mutant of the nine started as a survivor and
+was mine: the builder's validator guards against an id an older save carries and this version's
+registry no longer has, and the first version of that guard could not fire, because the optional
+chaining beside it had already dealt with the case. Restructured so the compiler holds it and the
+line does something.
+
+7,070 tests over 418 files, from 7,060. Ten pinned days green. The chip row had no test at all before this; the one test
+near it asserted that *Where* and *Style* were absent, which is the two ids the code excluded by
+hand rather than the rule it should have read. Layout harness OK. First load 137.03KB against
+137.3.
+
+### Noted, not fixed
+
+`LIMITS.fields` in `programFile.ts` is 16 and there are 17 fields — the same stale count as M307a's
+fifth finding, which is still open.

@@ -13,6 +13,7 @@
  * still wrong without refusing to hold the half-finished thing.
  */
 
+import { FIELDS, type FieldSpec } from '@/content/fields';
 import { PLANNED_PROGRAM_IDS } from '@/content/programs';
 import type {
   Constraint,
@@ -202,9 +203,47 @@ function sessionIssues(program: Program): Issue[] {
     if (!type.isRest && type.intensity === undefined) {
       add('warning', `${type.name || type.id} does not say how hard it is, so the planner cannot space it.`);
     }
+    issues.push(...fieldIssues(type));
   }
   if (program.sessionTypes.every((t) => t.isRest)) {
     add('error', 'Every session type is a rest day. Add something to train.');
+  }
+  return issues;
+}
+
+/**
+ * No session type asks a question the app asks elsewhere (PLAN.md M311).
+ *
+ * `content/validate.ts` has held shipped content to this since M142, and
+ * the builder had no equivalent — so *Time on the wall* could be put back
+ * beside the logger's own Duration input by tapping a chip, which is the
+ * screen M142 spent a milestone clearing. The chips no longer offer these,
+ * and this catches the programs saved while they did, plus anything that
+ * arrives as a file.
+ *
+ * Warnings rather than errors: the program runs, the question is merely
+ * asked twice, and refusing to run a climber's own program over a stale
+ * field would be a worse trade than telling them about it. The message is
+ * the registry's own sentence, which says where the answer is read from
+ * instead.
+ */
+function fieldIssues(type: SessionType): Issue[] {
+  const issues: Issue[] = [];
+  for (const id of type.fields ?? []) {
+    // A program saved by an older version can name an id this one no longer
+    // has, which the type says is impossible and IndexedDB does not.
+    const spec: FieldSpec | undefined = FIELDS[id];
+    if (spec === undefined) continue;
+    const where = spec.retired ?? spec.alwaysAsked;
+    if (where === undefined) continue;
+    issues.push({
+      level: 'warning',
+      field: 'sessions',
+      message:
+        spec.retired !== undefined
+          ? `${type.name || type.id} asks for "${spec.label}", and that is ${where}.`
+          : `${type.name || type.id} asks for "${spec.label}", which the log already puts to ${where}.`,
+    });
   }
   return issues;
 }

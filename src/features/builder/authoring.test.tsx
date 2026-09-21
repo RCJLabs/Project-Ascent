@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { FIELDS } from '@/content/fields';
 import { getProgram, loadPrograms } from '@/content/programs';
 import type { ExerciseBlock, Program } from '@/content/types';
 import { blankProgram, forkProgram } from '@/engine/customProgram';
@@ -206,10 +207,56 @@ describe('the questions at the end', () => {
     await waitFor(() => expect(stored().sessionTypes[0]!.fields).toBeUndefined());
   });
 
-  it('does not offer where, which every session is asked, nor the retired style', async () => {
+  /**
+   * The registry decides, not a list here (PLAN.md M311).
+   *
+   * This asserted *Where* and *Style* were absent, which is exactly the two
+   * ids `ASKABLE` excluded by hand — a test written from the code rather
+   * than from the rule, and so unable to see the other four it should have
+   * excluded. The rule is the two markers: `retired` is a question answered
+   * better elsewhere, `alwaysAsked` is one the logger puts to every session
+   * itself. Swept over the whole registry so a fifth of either lands on the
+   * right side by saying so in the registry, which is the sentence
+   * `quickFold.test.tsx` already makes about the logger.
+   */
+  it('offers nothing the app asks for itself, nor anything retired', async () => {
     await open(authored(hangboard));
-    expect(screen.queryByText('Where')).toBeNull();
-    expect(screen.queryByText('Style')).toBeNull();
+    const elsewhere = Object.values(FIELDS).filter(
+      (f) => f.retired !== undefined || f.alwaysAsked !== undefined,
+    );
+    expect(elsewhere.length, 'no marked fields to check').toBeGreaterThan(4);
+    for (const spec of elsewhere) {
+      expect(screen.queryByText(spec.label), `${spec.id} is offered`).toBeNull();
+    }
+    // And the ones a program does own are still there, so this is not
+    // passing by rendering no chips at all.
+    for (const label of ['Pump', 'Attempts', 'Pitches']) {
+      expect(screen.getByText(label), label).toBeTruthy();
+    }
+  });
+
+  /**
+   * And a question already chosen keeps its chip, whatever the rule now
+   * says (PLAN.md M311).
+   *
+   * The builder offered *Time on the wall* until this milestone, so a
+   * program saved before it can carry `sessionDuration` — and the logger
+   * renders whatever `fields` names. Filtering the row alone would leave
+   * that input on screen with no chip left to switch it off.
+   */
+  it('keeps a chip for a question this type already carries', async () => {
+    const type = { id: 'fp', name: 'Fingers', icon: '✋', description: '', intensity: 'hard' as const };
+    await open({
+      ...authored(hangboard),
+      sessionTypes: [{ ...type, fields: ['sessionDuration', 'pumpLevel'] }],
+    });
+    const chip = screen.getByText('Time on the wall');
+    expect(chip).toBeTruthy();
+    fireEvent.click(chip);
+    await waitFor(() => expect(stored().sessionTypes[0]!.fields).toEqual(['pumpLevel']));
+    // Gone once it is off: the row offers it because it was on, not because
+    // it is offerable.
+    await waitFor(() => expect(screen.queryByText('Time on the wall')).toBeNull());
   });
 });
 

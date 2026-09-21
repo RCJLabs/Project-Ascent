@@ -673,13 +673,34 @@ function DrillsCard({
 
 /**
  * The questions the log puts to this session (PLAN.md M70, offered here
- * since M136). Not *where* — that is asked of every session since M133 —
- * and not the retired clip style, which nothing renders an input for.
+ * since M136, read off the registry since M311).
+ *
+ * It used to exclude two ids by hand — `location`, asked of everyone since
+ * M133, and the retired `clipStyle` — and name both markers in prose
+ * without reading either. There are four `retired` fields and two
+ * `alwaysAsked` ones, so the hand list caught one of each and offered the
+ * other four as chips: *Project*, *Route*, *Time on the wall* and
+ * *Conditions*. `content/validate.ts` forbids shipped content from asking
+ * exactly those first three, and the builder handed them out.
+ *
+ * `quickFold.test.tsx` states the rule this now uses, about the logger:
+ * *"the split is read off `alwaysAsked` rather than listed in the
+ * component, so a fourth field lands in the right half by saying so in the
+ * registry."* The builder is the other half of that sentence.
  */
-const ASKABLE = Object.values(FIELDS).filter((f) => f.id !== 'location' && f.id !== 'clipStyle');
+const ASKABLE = Object.values(FIELDS).filter(
+  (f) => f.retired === undefined && f.alwaysAsked === undefined,
+);
 
 function FieldsCard({ type, onChange }: { type: SessionType; onChange: (patch: Partial<SessionType>) => void }) {
   const chosen = new Set<FieldId>(type.fields ?? []);
+  // Plus anything this type already carries that is no longer offered
+  // (PLAN.md M311). A filter alone would strand it: a program saved while
+  // the chips included *Time on the wall* would go on asking it with no
+  // chip left to switch off, and the logger renders whatever `fields`
+  // names. Shown because it is on, and gone once it is turned off.
+  const stale = Object.values(FIELDS).filter((f) => chosen.has(f.id) && !ASKABLE.includes(f));
+  const offered = [...ASKABLE, ...stale];
   return (
     <Card title="Ask at the end">
       <p className="text-sm text-ink-soft mb-3 leading-relaxed">
@@ -688,7 +709,7 @@ function FieldsCard({ type, onChange }: { type: SessionType; onChange: (patch: P
         has been answered a few times.
       </p>
       <div className="flex flex-wrap gap-1.5">
-        {ASKABLE.map((field) => {
+        {offered.map((field) => {
           const on = chosen.has(field.id);
           return (
             <Chip

@@ -74,7 +74,7 @@ export const GENERAL_TRAINING: Program = {
       name: 'Climbing Session',
       icon: '🧗',
       description: 'Bouldering, sport, or trad. Focus on movement and fun.',
-      fields: ['hardestGradeAttempted', 'hardestGradeSent', 'sessionVolume', 'pumpLevel', 'location'],
+      fields: ['hardestGradeAttempted', 'hardestGradeSent', 'sessionVolume', 'pumpLevel'],
     },
     {
       id: 'str',

@@ -58,7 +58,16 @@ describe('the field registry', () => {
       for (const type of program.sessionTypes) for (const id of type.fields ?? []) asked.add(id);
     }
     expect(asked.size).toBeGreaterThanOrEqual(10);
-    expect(asked.has('location')).toBe(true);
+    // And nothing the app asks for itself (PLAN.md M311). This asserted
+    // `location` was among them, which was true and was the defect: the
+    // logger has put that question to every session since M133, so seven
+    // session types were declaring a question they did not own. `retired`
+    // is the same sentence about a question answered somewhere better.
+    for (const id of asked) {
+      const spec = FIELDS[id as FieldId];
+      expect(spec.retired, `${id} is asked and retired`).toBeUndefined();
+      expect(spec.alwaysAsked, `${id} is asked and always asked`).toBeUndefined();
+    }
   });
 
   // "Day of the trip (of the trip)" is what a unit repeating its label

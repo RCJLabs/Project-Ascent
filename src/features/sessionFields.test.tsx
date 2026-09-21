@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { FIELDS } from '@/content/fields';
 import { getProgram } from '@/content/programs';
 import { getSession, newSession, putSession } from '@/db/sessions';
 import { useProfile } from '@/store/profile';
@@ -20,12 +21,20 @@ const fullLog = () => useSettings.setState({ logView: 'full' });
  */
 
 const DATE = today();
+/** Every label the registry can put on the card, to read their order off it. */
+const KNOWN = new Set(Object.values(FIELDS).map((f) => f.label));
 
 /** An Outdoor Climbing session, which is the program that asks the most. */
 async function logging(): Promise<void> {
   await reset();
   const program = getProgram('outdoor_climbing')!;
-  const type = program.sessionTypes.find((t) => (t.fields ?? []).includes('location'))!;
+  // The type that declares the most, rather than the one that declares
+  // `location` (PLAN.md M311). Every session is asked where it happened,
+  // so keying a fixture off that declaration selected on a redundancy —
+  // and when the redundancy went, so did the fixture's session type.
+  const type = [...program.sessionTypes]
+    .filter((t) => !t.isRest)
+    .sort((a, b) => (b.fields ?? []).length - (a.fields ?? []).length)[0]!;
   await putSession({
     ...newSession(DATE, 0, { completed: false }),
     programId: program.id,
@@ -48,6 +57,26 @@ describe('a session type that asks for more', () => {
     await logging();
     expect(screen.getByText('This session')).toBeTruthy();
     expect(screen.getByText('Where')).toBeTruthy();
+  });
+
+  /**
+   * And it is the first question, on every session type there is (PLAN.md
+   * M311).
+   *
+   * Seven shipped session types used to declare `location` themselves. On
+   * five it changed nothing — the logger prepends it, and they listed it
+   * first anyway — and on the other two it pushed *Where* to the bottom of
+   * the card, under the grades. That was the whole cost of a declaration
+   * that bought nothing, and it is the one thing on screen this milestone
+   * moves.
+   */
+  it('asks it first, because the logger puts it there rather than the program', async () => {
+    await logging();
+    const labels = [...document.querySelectorAll('label')]
+      .map((l) => l.textContent?.trim() ?? '')
+      .filter((t) => KNOWN.has(t));
+    expect(labels.length, 'no registry questions on the card').toBeGreaterThan(2);
+    expect(labels[0]).toBe('Where');
   });
 
   it('keeps what it is told', async () => {

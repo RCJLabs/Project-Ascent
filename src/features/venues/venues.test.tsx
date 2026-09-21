@@ -45,7 +45,9 @@ async function climbedAt(date: string, location: string, index = 0): Promise<voi
 
 async function logger(): Promise<void> {
   const program = getProgram('outdoor_climbing')!;
-  const type = program.sessionTypes.find((t) => (t.fields ?? []).includes('location'))!;
+  // Any working type of it: the logger puts *Where* to every session, so
+  // there is no longer a declaration to select on (PLAN.md M311).
+  const type = program.sessionTypes.find((t) => !t.isRest)!;
   await putSession({
     ...newSession(DATE, 9, { completed: false }),
     programId: program.id,

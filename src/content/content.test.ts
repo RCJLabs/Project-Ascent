@@ -418,7 +418,14 @@ describe('modes versus programs', () => {
     const climbing = OUTDOOR_CLIMBING.sessionTypes.filter((t) => !t.isRest);
     expect(climbing).toHaveLength(5);
     for (const type of climbing) {
-      expect(type.fields, type.id).toContain('location');
+      // Where it happened is not among them, and that is the point rather
+      // than an omission (PLAN.md M311). All five declared it until now;
+      // the logger has prepended it to every session since M133, so the
+      // declaration said nothing and only moved the input's position on
+      // two other programs. What a mode's session type carries is what is
+      // particular to it.
+      expect(type.fields, type.id).not.toContain('location');
+      expect((type.fields ?? []).length, type.id).toBeGreaterThan(0);
       expect(type.blocks).toBeUndefined();
       expect(type.drillsByWeek).toBeUndefined();
     }

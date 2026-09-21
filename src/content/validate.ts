@@ -147,9 +147,19 @@ export function validateProgram(program: Program): string[] {
    */
   for (const type of program.sessionTypes) {
     for (const id of type.fields ?? []) {
-      const retired = FIELDS[id]?.retired;
-      if (retired !== undefined) {
-        where(`session type '${type.id}' asks for '${FIELDS[id]!.label}'; that is ${retired}`);
+      const spec = FIELDS[id];
+      if (spec === undefined) continue;
+      // And the ones the logger puts to every session itself (PLAN.md
+      // M311). The same argument one step over: `alwaysAsked` says the app
+      // asks this rather than the content, so a program naming one is
+      // either saying nothing — seven session types declared `location`,
+      // which the logger prepends whether or not they do — or overriding
+      // the logger's own rule about when to ask, which is how `conditions`
+      // would have reached an indoor session.
+      if (spec.retired !== undefined) {
+        where(`session type '${type.id}' asks for '${spec.label}'; that is ${spec.retired}`);
+      } else if (spec.alwaysAsked !== undefined) {
+        where(`session type '${type.id}' asks for '${spec.label}'; the logger asks it of ${spec.alwaysAsked}`);
       }
     }
   }

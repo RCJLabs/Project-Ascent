@@ -54,7 +54,7 @@ export const OUTDOOR_CLIMBING: Program = {
       name: 'Outdoor Bouldering',
       icon: '🪨',
       description: 'Bouldering on real rock. Brush holds, note texture, pad placement matters.',
-      fields: ['location', 'sessionNumber', 'attemptsToday', 'highPoint'],
+      fields: ['sessionNumber', 'attemptsToday', 'highPoint'],
     },
     {
       id: 'outdoor_sport',
@@ -64,7 +64,7 @@ export const OUTDOOR_CLIMBING: Program = {
       icon: '🧗',
       description:
         'Sport climbing on real rock. Buddy-check before every lead; note clip stances as part of the beta.',
-      fields: ['location', 'sessionNumber', 'attemptsToday', 'highPoint'],
+      fields: ['sessionNumber', 'attemptsToday', 'highPoint'],
     },
     {
       id: 'outdoor_trad',
@@ -74,7 +74,7 @@ export const OUTDOOR_CLIMBING: Program = {
       icon: '⛰️',
       description:
         'Traditional climbing. Placement quality and pitch count matter more than grade. On-sight ethics: no prior beta.',
-      fields: ['location', 'sessionNumber', 'attemptsToday', 'highPoint', 'pitches', 'gearNotes'],
+      fields: ['sessionNumber', 'attemptsToday', 'highPoint', 'pitches', 'gearNotes'],
     },
     {
       id: 'outdoor_dws',
@@ -83,7 +83,7 @@ export const OUTDOOR_CLIMBING: Program = {
       name: 'Deep Water Solo',
       icon: '🌊',
       description: 'Deep water soloing. Check water depth and tide before every session; never solo alone.',
-      fields: ['location', 'sessionNumber', 'attemptsToday', 'highPoint', 'waterDepth'],
+      fields: ['sessionNumber', 'attemptsToday', 'highPoint', 'waterDepth'],
     },
     {
       id: 'outdoor_alpine',
@@ -93,7 +93,7 @@ export const OUTDOOR_CLIMBING: Program = {
       icon: '🏔️',
       description:
         'Alpine or multipitch. Route-level grade, not pitch-level. Weather window and descent plan before every route.',
-      fields: ['location', 'pitches', 'attemptsToday'],
+      fields: ['pitches', 'attemptsToday'],
     },
     {
       id: 'rest',

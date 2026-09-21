@@ -101,7 +101,7 @@ export const TRIP_PREP: Program = {
       icon: '🎯',
       description: 'Climbing that looks like the trip. The session that matters.',
       priority: 1,
-      fields: ['hardestGradeAttempted', 'hardestGradeSent', 'sessionVolume', 'location'],
+      fields: ['hardestGradeAttempted', 'hardestGradeSent', 'sessionVolume'],
       blocks: [
         {
           id: 'specific',

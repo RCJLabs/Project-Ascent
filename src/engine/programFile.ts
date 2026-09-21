@@ -499,12 +499,33 @@ function readTracks(raw: unknown, dropped: string[]): Track[] {
   return out;
 }
 
+/**
+ * The questions a shared program may put to a session.
+ *
+ * An id this version has never heard of is dropped and named, and so is one
+ * the app now asks somewhere else (PLAN.md M311). The second case is not
+ * hypothetical: a file written before M142 can name *Time on the wall*, and
+ * accepting it would put that input back beside the logger's own Duration
+ * field — the screen M142 exists to have cleared. `content/validate.ts`
+ * holds shipped content to this and the builder's validator now holds a
+ * written program to it; a file is the third way a session type gets here.
+ */
 function readFields(raw: unknown, dropped: string[]): FieldId[] {
   const out: FieldId[] = [];
   for (const value of readList(raw, LIMITS.fields, dropped, 'questions')) {
     const id = typeof value === 'string' ? value.trim() : '';
-    if (id && id in FIELDS) out.push(id as FieldId);
-    else if (id) dropped.push(`a question this version does not ask ("${id}")`);
+    if (!id) continue;
+    const spec = id in FIELDS ? FIELDS[id as FieldId] : undefined;
+    if (spec === undefined) {
+      dropped.push(`a question this version does not ask ("${id}")`);
+      continue;
+    }
+    const elsewhere = spec.retired ?? spec.alwaysAsked;
+    if (elsewhere !== undefined) {
+      dropped.push(`a question the app now asks elsewhere ("${spec.label}")`);
+      continue;
+    }
+    out.push(id as FieldId);
   }
   return [...new Set(out)];
 }

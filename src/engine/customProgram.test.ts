@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { FIELDS } from '@/content/fields';
 import { getProgram } from '@/content/programs';
 import type { Program } from '@/content/types';
 import {
@@ -130,6 +131,61 @@ describe('session types', () => {
       ],
     };
     expect(messages(p).some((m) => /share the id/.test(m))).toBe(true);
+  });
+
+  /**
+   * The rule `content/validate.ts` has applied to shipped content since
+   * M142, now applied to a written one (PLAN.md M311).
+   *
+   * The builder offered *Time on the wall* as a chip until M311, and
+   * nothing here looked at `fields` at all — so a climber could put that
+   * input back beside the logger's own Duration field, which is the screen
+   * M142 spent a milestone clearing, and the builder would call the program
+   * perfect.
+   */
+  it('names a question the app asks somewhere better', () => {
+    const p: Program = {
+      ...runnable(),
+      sessionTypes: [{ id: 'hard', name: 'Session', icon: '💪', description: '', fields: ['sessionDuration'] }],
+      recommendedLayout: { name: 'Week', description: '', slots: { 1: 'hard' } },
+    };
+    const said = messages(p).filter((m) => /Time on the wall/.test(m));
+    expect(said).toHaveLength(1);
+    // The registry's own sentence, so it says where the answer is read from.
+    expect(said[0]).toContain(FIELDS.sessionDuration.retired);
+  });
+
+  it('names one the logger already puts to every session', () => {
+    const p: Program = {
+      ...runnable(),
+      sessionTypes: [{ id: 'hard', name: 'Session', icon: '💪', description: '', fields: ['conditions'] }],
+      recommendedLayout: { name: 'Week', description: '', slots: { 1: 'hard' } },
+    };
+    expect(messages(p).some((m) => /Conditions/.test(m))).toBe(true);
+  });
+
+  // A program saved by an older version can carry an id this one dropped.
+  // The type says that cannot happen; IndexedDB has never read the type.
+  it('says nothing about an id the registry no longer has', () => {
+    const p = {
+      ...runnable(),
+      sessionTypes: [
+        { id: 'hard', name: 'Session', icon: '💪', description: '', fields: ['fromAnOlderVersion'] },
+      ],
+      recommendedLayout: { name: 'Week', description: '', slots: { 1: 'hard' } },
+    } as unknown as Program;
+    expect(() => validateProgram(p)).not.toThrow();
+    expect(messages(p).filter((m) => /asks for/.test(m))).toEqual([]);
+  });
+
+  it('and does not block the program over either, which would be the worse trade', () => {
+    const p: Program = {
+      ...runnable(),
+      sessionTypes: [{ id: 'hard', name: 'Session', icon: '💪', description: '', fields: ['sessionDuration'] }],
+      recommendedLayout: { name: 'Week', description: '', slots: { 1: 'hard' } },
+    };
+    expect(canRun(p)).toBe(true);
+    expect(validateProgram(p).filter((i) => /Time on the wall/.test(i.message))[0]!.level).toBe('warning');
   });
 });
 

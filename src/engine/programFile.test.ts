@@ -186,6 +186,38 @@ describe('references that cannot resolve here', () => {
     expect(canRun(parseProgramFile(withGhosts).program)).toBe(true);
   });
 
+  /**
+   * A file is the third way a session type reaches the app (PLAN.md M311).
+   *
+   * The builder's chips no longer offer these and its validator names one
+   * that is already there, but a file written before M142 can still say
+   * `sessionDuration` — and accepting it would put *Time on the wall* back
+   * beside the logger's own Duration input. Dropped and named, like every
+   * other thing this version does not take.
+   */
+  it('drops a question the app now asks somewhere else', () => {
+    const { program, dropped } = parseProgramFile(
+      wrap({
+        name: 'X',
+        weeks: 4,
+        sessionTypes: [
+          {
+            id: 'a',
+            name: 'A',
+            icon: '',
+            description: '',
+            fields: ['sessionDuration', 'location', 'pumpLevel', 'not_a_field'],
+          },
+        ],
+      }),
+    );
+    expect(program.sessionTypes[0]!.fields).toEqual(['pumpLevel']);
+    expect(dropped.filter((d) => /asks elsewhere/.test(d))).toHaveLength(2);
+    expect(dropped.some((d) => /Time on the wall/.test(d))).toBe(true);
+    // And an id from no version at all still reads as its own kind of loss.
+    expect(dropped.some((d) => /does not ask \("not_a_field"\)/.test(d))).toBe(true);
+  });
+
   it('drops a drill this version does not ship', () => {
     const { program, dropped } = parseProgramFile(
       wrap({
