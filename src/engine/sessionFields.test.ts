@@ -135,6 +135,33 @@ describe('the quantities, as a series', () => {
     expect(series([session('2026-09-01', { fields: { retired: 7 } as never })])).toEqual([]);
   });
 
+  /**
+   * And a quantity the app stopped asking for (PLAN.md M312).
+   *
+   * `sessionDuration` is a `number`, so the kind test alone charts it — and
+   * M142 took *Time on the wall* out of every program because the logger's
+   * own Duration input is on the same screen and only that one reaches
+   * load, the review, the career totals and the archive. What was left was
+   * a second line about the thing the app measures properly, drawn from
+   * whatever was stored before M142 and flat ever after.
+   */
+  it('leaves a retired quantity alone, whatever its kind says', () => {
+    expect(FIELDS.sessionDuration.kind, 'the fixture stops testing anything if this changes').toBe('number');
+    expect(FIELDS.sessionDuration.retired, 'and if this does').toBeDefined();
+    expect(series([session('2026-09-01', { fields: { sessionDuration: 75 } })])).toEqual([]);
+  });
+
+  it('and charts every other quantity, so that is a rule and not a blanket', () => {
+    const live = Object.values(FIELDS).filter(
+      (f) => (f.kind === 'number' || f.kind === 'scale') && f.retired === undefined,
+    );
+    expect(live.length, 'nothing left to chart').toBeGreaterThan(4);
+    for (const spec of live) {
+      const rows = series([session('2026-09-01', { fields: { [spec.id]: 5 } })]);
+      expect(rows.map((r) => r.spec.id), spec.id).toEqual([spec.id]);
+    }
+  });
+
   it('makes nothing from nothing', () => {
     expect(series([])).toEqual([]);
     expect(series([session('2026-09-01')])).toEqual([]);

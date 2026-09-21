@@ -14910,6 +14910,17 @@ its label is missing. None of these wants touching.
   read in all four places a session type can come from now — and the seven shipped types that
   declared `location` for nothing stopped doing it.
 
+- **M312 — four numbers, measured once and never again.** M307a said `sessionFields.ts` counted
+  sixteen fields where there are seventeen. It also counted twenty-two session types where there
+  are twenty-seven and six `number` kinds where there are seven; `content/fields.ts` had four
+  counts of its own and every one was stale; and the Progress page's own comment carried the
+  twenty-two. None was wrong when written — each was measured in the milestone that put it there,
+  and nothing re-took it, which is the difference between a measurement and a sentence shaped like
+  one. Thirteen numbers across three files are re-taken by a test now. The code had the same
+  staleness: `isQuantity` read `kind` alone, so `sessionDuration` — a `number`, retired by M142
+  because the logger's own Duration input answers it — still drew a chart from whatever was stored
+  before then.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -21627,3 +21638,93 @@ hand rather than the rule it should have read. Layout harness OK. First load 137
 
 `LIMITS.fields` in `programFile.ts` is 16 and there are 17 fields — the same stale count as M307a's
 fifth finding, which is still open.
+
+---
+
+## M312 — the numbers nobody re-took
+
+M307a's fifth finding: *"`sessionFields.ts` counts sixteen fields where there are seventeen — 21
+session types name one rather than 22, seven numbers rather than six, and a `choice` kind that
+postdates the sentence."*
+
+Right about the seventeen. Wrong about the twenty-one, which is the joke: the audit's own count was
+taken the same way and was also stale by the time it was written down. Measured properly:
+
+| the prose said | actual |
+| --- | --- |
+| sixteen field ids are declared | **17** |
+| twenty-two session types name one | **27**, across 12 programs and 60 references |
+| six are a `number` | **7** |
+| the three M142 retired | **4** — M169 found `clipStyle`, retired at M108 and marked as nothing |
+| *(no mention of `choice`)* | **1**, `conditions`, added M289 |
+
+And `content/fields.ts` opens with four counts of its own — *"Nine programs declare `fields` on
+their session types — twenty-four declarations, sixteen distinct ids, sixty-two references"* —
+every one of which had moved. The Progress page's comment over the card that renders all this
+carried the twenty-two as well. Three files, thirteen numbers, one of them still right.
+
+None of these was ever wrong. Each was measured in the milestone that introduced it, written down,
+and then left, while the registry it described kept growing. That is what separates a measurement
+from a sentence shaped like one, and it is not fixable by correcting the numbers — which is what
+the last person to touch them did.
+
+### So a test re-takes them
+
+`fieldCounts.test.ts` names each claim, finds it in its file by pattern, parses the spelled-out
+number and compares it with the registry. Thirteen numbers over three files. A stale one fails; a
+reworded sentence fails too, because the pattern stops matching and a claim that matches nothing is
+an error rather than a pass.
+
+The floor under it took a correction of its own. I wrote *"with no claim matching, the loop asserts
+nothing"* and that is false — a claim that does not match fails on its own assertion, one line up.
+What the floor is actually for is an emptied table, which runs the loop zero times and asserts
+nothing at all; and the mutant that proves it is not the one I wrote first, which relaxed the floor
+while every claim still matched and so could not fail.
+
+### The code had the same fault
+
+`isQuantity` decided what to chart from `kind` alone:
+
+```ts
+return spec.kind === 'number' || spec.kind === 'scale';
+```
+
+`sessionDuration` is a `number`. It is also retired — M142 took *Time on the wall* out of every
+program because the logger's own Duration input sits on the same screen and only that one reaches
+load, the review, the career totals and the archive. So the Progress page would draw a second line
+about the thing the app measures properly, from whatever was answered before M142, running flat
+from the day it stopped being asked. Eight quantities in the registry, seven of them worth a chart.
+
+Retired and not `alwaysAsked`: a question the logger puts to every session itself is still being
+answered, and a number among those would be a real trend. Nothing is lost either way — a stored
+answer keeps its label in the archive and in the climber's own spreadsheet, which is why M142 kept
+the registry entries in the first place.
+
+In a browser, on the sample climber, writing the answers straight into IndexedDB:
+
+```
+1. sample climber as loaded                card absent   charted: []
+   -> stored Time on the wall on 8 sessions
+2. a retired quantity stored               card absent   charted: []
+   -> stored Pump on 8 sessions
+3. control, a live quantity stored too     card PRESENT  charted: ["Pump"]
+```
+
+The third row is the one that makes the second mean anything. Both answers are on the same eight
+sessions; one is charted and the other is not. My first two attempts at this check had no control
+in them, and a card that is absent for the right reason looks exactly like a selector that never
+found it — which it turned out to be, twice.
+
+### Which found the card that has never had anything to show
+
+Row 1 is not a quirk of the fixture: **What you told the logger** is absent on the sample climber
+because the sample climber answers `location` and `conditions` and nothing else, and neither is a
+quantity. Every screenshot of the Progress page has been missing that card. Fifth card in six
+milestones whose working state the sample data cannot reach — M307a's sixth finding, still open and
+still the highest-yield thing on the list.
+
+Battery: 9 killed, sanity survived. Each stale number put back is its own mutant, in each of the
+three files; so is a reworded claim, an emptied claims table, and `isQuantity` back to the kind
+alone.
+
+7,074 tests over 419 files, from 7,070. Layout harness OK. First load 137.02KB against 137.3.

@@ -1,31 +1,54 @@
 /**
  * The answers the logger asks for, read back (PLAN.md M88).
  *
- * M70 gave session types extra questions and rendered the inputs. Sixteen
- * field ids are declared, twenty-two session types name them, and
- * `session.fields` was written by the logger and read by **the same screen,
- * the same day, and nowhere else** — the shape M82 found in `checkIn`, one
- * layer down and larger. `content/fields.ts` opens by saying a question the
- * content asks and the app never renders is a promise the content cannot
- * keep; rendering the input kept half of it.
+ * M70 gave session types extra questions and rendered the inputs.
+ * Seventeen field ids are declared, twenty-seven session types name one,
+ * and `session.fields` was written by the logger and read by **the same
+ * screen, the same day, and nowhere else** — the shape M82 found in
+ * `checkIn`, one layer down and larger. `content/fields.ts` opens by saying
+ * a question the content asks and the app never renders is a promise the
+ * content cannot keep; rendering the input kept half of it.
+ *
+ * Those two numbers said sixteen and twenty-two until M312, and had since
+ * M289 added a seventeenth. `fieldCounts.test.ts` holds every count in this
+ * file and in `content/fields.ts` against the registry now, because a
+ * number in a docblock is a measurement that stops being one the moment
+ * nothing re-takes it.
  *
  * ## Only the ones that are quantities
  *
- * Of the sixteen, six are `number` and one is a `scale` — those are the ones
- * a series can be drawn from. The `text` fields (`highPoint`, `location`,
- * `gearNotes`, `clipStyle`, and the retired `projectName` and `routeName`)
- * are notes, and the two `grade` fields are handled separately and for a
+ * Of the seventeen, seven are a `number` and one is a `scale`. The six
+ * `text` fields (`highPoint`, `location`, `gearNotes`, `clipStyle`, and the
+ * retired `projectName` and `routeName`) are notes, `conditions` is the one
+ * `choice`, and the two `grade` fields are handled separately and for a
  * different reason: the app already derives the hardest grade of a session
  * from the climbs logged in it, so those two are not a missing reading but
  * a duplicate one. See `gradeDisagreement` below.
  *
+ * ## And not the ones the app stopped asking
+ *
+ * Seven of those eight quantities are charted, not eight (PLAN.md M312).
+ * `sessionDuration` is a `number` and is retired: M142 took *Time on the
+ * wall* out of every program because the logger's own Duration input sits
+ * on the same screen and only that one reaches load, the review, the career
+ * totals and the archive. A series drawn from the answers stored before
+ * then is a second line about the thing the app measures properly, and one
+ * that can only run flat and stop — so the kind is not the whole test.
+ *
+ * Retired, not `alwaysAsked`: a question the logger puts to every session
+ * itself is still a question being answered, and a number among those would
+ * be a real trend. Nothing is lost either way — a stored answer keeps its
+ * label in the archive and the climber's own spreadsheet, which is the
+ * reason M142 kept the registry entries at all.
+ *
  * **This is what M142 had to correct.** The third brainstorm called eleven
- * of the sixteen *asked and never read*; seven of those eleven are numbers
- * or scales and every one of them is charted here, generically, by the very
- * function this file exists for. The three M142 retired are a different
- * fault and a real one — a second place to answer a question the app reads
- * somewhere else — and the remaining one is a note nobody charts on
- * purpose.
+ * of the then-sixteen *asked and never read*; seven of those eleven are
+ * numbers or scales and every one of them is charted here, generically, by
+ * the very function this file exists for. The three M142 retired are a
+ * different fault and a real one — a second place to answer a question the
+ * app reads somewhere else — and the remaining one is a note nobody charts
+ * on purpose. M169 found a fourth, `clipStyle`, which had been retired at
+ * M108 and marked as nothing since.
  *
  * ## Sparse by construction
  *
@@ -112,7 +135,16 @@ export function fieldValue(session: Session, spec: FieldSpec): string | number |
 }
 
 /** Numeric kinds only — see the note above. */
+/**
+ * A number worth drawing a line through.
+ *
+ * The kind says it is a quantity; `retired` says the app stopped asking for
+ * it, and a chart of a question nothing asks runs flat and stops (PLAN.md
+ * M312). One field is both today — `sessionDuration`, whose answer the
+ * logger's Duration input has carried since M142.
+ */
 function isQuantity(spec: FieldSpec): boolean {
+  if (spec.retired !== undefined) return false;
   return spec.kind === 'number' || spec.kind === 'scale';
 }
 

@@ -1,16 +1,21 @@
 /**
  * The extra things a session type asks for (PLAN.md M70).
  *
- * Nine programs declare `fields` on their session types — twenty-four
- * declarations, sixteen distinct ids, sixty-two references — and until now
+ * Twelve programs declare `fields` on their session types — twenty-seven
+ * declarations, sixty references, eleven distinct ids — and until M70
  * **nothing in the app read one of them**. Outdoor Climbing asks every
- * session where it happened, how many attempts, what the high point was;
- * the logger never put any of it on screen. A question the content asks and
- * the app never renders is a promise the content cannot keep.
+ * session how many attempts, what the high point was; the logger never put
+ * any of it on screen. A question the content asks and the app never
+ * renders is a promise the content cannot keep.
  *
  * Declared here, as data, so a test can hold the two sides together: every
  * id the type union allows has an entry, and every id a program names
  * exists.
+ *
+ * Those counts read nine, twenty-four, sixteen and sixty-two until M312,
+ * having been taken once and then left. `fieldCounts.test.ts` re-takes
+ * every one of them, here and in `engine/sessionFields.ts`, so the next
+ * field added moves the sentences or fails.
  */
 
 import type { FieldId } from './types';

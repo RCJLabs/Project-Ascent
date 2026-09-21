@@ -744,7 +744,7 @@ export function ProgressPage() {
         )}
 
         {/* The logger's own extra questions, which until M88 were asked on
-            twenty-two session types and read by nothing. Beside the
+            twenty-seven session types and read by nothing. Beside the
             check-in card because it is the same kind of thing: what you
             told the app, given back to you. */}
         {on('block') && answered.length > 0 && (
