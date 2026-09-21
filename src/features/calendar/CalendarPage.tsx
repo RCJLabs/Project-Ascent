@@ -20,7 +20,7 @@ import { summarise } from '@/engine/injury';
 import { INTENSITY_LABEL } from '@/content/types';
 import { effortOfDay } from '@/engine/effort';
 import { monthMarks, worthExplaining } from '@/engine/monthMarks';
-import { tallied, weekTally, type WeekTally } from '@/engine/weekTally';
+import { tallied, weekTally, weekTense, type WeekTally } from '@/engine/weekTally';
 import { intensityOf } from '@/engine/scheduler';
 import { useProfile } from '@/store/profile';
 import type { Session } from '@/db/sessions';
@@ -59,6 +59,19 @@ const GRID = 'grid-cols-[repeat(7,minmax(0,1fr))_2.2rem]';
  * reads as failure. A week whose Sunday is still ahead shows what it asks
  * for and nothing about what was done, because nothing has been.
  *
+ * ## And the week we are in is half of that argument (PLAN.md M310)
+ *
+ * It stopped at the week boundary when the case is about the day boundary.
+ * `start > today` gave this two states where `describeWeekDays` has three,
+ * so a week half run and a week finished drew the same fraction with the
+ * same bar under it — **1/4** on the Sunday and **1/4** on the Saturday of
+ * one week, while the screen a tap away said *"1 of 4 training days done,
+ * 3 to come"* and then *"1 to come"*.
+ *
+ * The fraction stays `done/planned`, because M146's whole point is that the
+ * two screens cannot disagree about the count. What it gains is the tense:
+ * the same *"N to come"* the week screen says, from the same `weekTally`.
+ *
  * ## And a week can hold more than it asked for
  *
  * *2/4* on a week where two more sessions were logged off-plan under-reports
@@ -67,19 +80,32 @@ const GRID = 'grid-cols-[repeat(7,minmax(0,1fr))_2.2rem]';
  * adherence to a plan, and a week that did four different sessions did not
  * do the four it was asked for.
  */
-function WeekGutter({ start, tally, today }: { start: string; tally: WeekTally; today: string }) {
+function WeekGutter({
+  start,
+  end,
+  tally,
+  today,
+}: {
+  start: string;
+  end: string;
+  tally: WeekTally;
+  today: string;
+}) {
   // Nothing planned and nothing logged: a week before the block, after it,
   // or with no program at all. An empty gutter beats "0/0" on every row.
   if (!tallied(tally)) return <div aria-hidden />;
-  const { planned, done, extra } = tally;
-  const ahead = start > today;
+  const { planned, done, extra, toCome } = tally;
+  const tense = weekTense(start, end, today);
+  const ahead = tense === 'ahead';
+  // The week we are in says what is left, in the week screen's own words.
+  const left = tense === 'during' && toCome > 0 ? `, ${toCome} to come` : '';
   const label = ahead
     ? `Week of ${shortLabel(start)}: ${planned} session${planned === 1 ? '' : 's'} planned`
     : planned === 0
       ? `Week of ${shortLabel(start)}: ${extra} session${extra === 1 ? '' : 's'} logged, none planned`
       : `Week of ${shortLabel(start)}: ${done} of ${planned} planned session${
           planned === 1 ? '' : 's'
-        } done${extra > 0 ? `, and ${extra} more off the plan` : ''}`;
+        } done${left}${extra > 0 ? `, and ${extra} more off the plan` : ''}`;
 
   return (
     <Link
@@ -95,8 +121,8 @@ function WeekGutter({ start, tally, today }: { start: string; tally: WeekTally; 
         // it already carries the sentence.
         <Meter
           value={planned === 0 ? 0 : done / planned}
-          label={`${done} of ${planned} done`}
-          valueText={`${done} of ${planned}`}
+          label={`${done} of ${planned} done${left}`}
+          valueText={`${done} of ${planned}${left}`}
           size="sm"
           tone={planned > 0 && done >= planned ? 'positive' : 'accent'}
           className="w-full"
@@ -321,10 +347,17 @@ export function CalendarPage() {
         const week = cells.slice(row * 7, row * 7 + 7);
         return {
           start: week[0]!.date,
-          tally: weekTally(week.map((c) => ({ training: c.type !== undefined, sessions: c.logged }))),
+          end: week[6]!.date,
+          tally: weekTally(
+            week.map((c) => ({ date: c.date, training: c.type !== undefined, sessions: c.logged })),
+            today(),
+          ),
         };
       }),
-    [cells],
+    // `today()` in the deps, not just in the body: the gutter reads the
+    // clock again at render, and a tally frozen before midnight beside a
+    // tense read after it is the disagreement this milestone is about.
+    [cells, today()],
   );
 
   function renderDay({ date, logged, done, inMonth, type, isDeload, test }: (typeof cells)[number]) {
@@ -639,7 +672,7 @@ export function CalendarPage() {
         {weeks.map((week, row) => (
           <Fragment key={week.start}>
             {cells.slice(row * 7, row * 7 + 7).map((cell) => renderDay(cell))}
-            <WeekGutter start={week.start} tally={week.tally} today={today()} />
+            <WeekGutter start={week.start} end={week.end} tally={week.tally} today={today()} />
           </Fragment>
         ))}
       </div>

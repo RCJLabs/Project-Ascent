@@ -86,6 +86,8 @@ export interface WeekOutline {
   done: number;
   /** Finished training sessions on days the plan left empty. */
   extra: number;
+  /** Of `planned`, the ones still ahead — today included (PLAN.md M310). */
+  toCome: number;
   /** What this week asks that last week did not, by session type. */
   steps: WeekStepLine[];
   /** The deload took a set off at least one session this week. */
@@ -164,7 +166,7 @@ export function weekOutline(input: WeekInput): WeekOutline {
   const trainingDays = days.filter((d) => d.training);
   // Through the shared rule, so the month grid's gutter and this screen
   // cannot say different things about one week (PLAN.md M146).
-  const { planned, done, extra } = weekTally(days);
+  const { planned, done, extra, toCome } = weekTally(days, input.today);
 
   // Once per session type rather than once per day: a week with two
   // Fingerboard sessions asks the same thing of both, and saying it twice
@@ -199,6 +201,7 @@ export function weekOutline(input: WeekInput): WeekOutline {
     planned,
     done,
     extra,
+    toCome,
     steps,
     lightened,
     drills,
@@ -237,7 +240,10 @@ export function describeWeekDays(outline: WeekOutline, today: string): string | 
   const extra = outline.extra > 0 ? `, and ${outline.extra} unplanned` : '';
   if (outline.end < today) return `${outline.done} of ${outline.planned} ${noun} done${extra}`;
   if (outline.start > today) return `${outline.planned} ${noun} planned`;
-  const left = outline.days.filter((d) => d.status === 'planned' || d.status === 'today').length;
-  const toCome = left > 0 ? `, ${left} to come` : '';
+  // `outline.toCome`, not a fourth count of its own (PLAN.md M310). This
+  // recounted the days from their statuses while `weekTally` was already
+  // counting them one line away — and the gutter, which reads that tally,
+  // had no way to say the same thing.
+  const toCome = outline.toCome > 0 ? `, ${outline.toCome} to come` : '';
   return `${outline.done} of ${outline.planned} ${noun} done${toCome}${extra}`;
 }

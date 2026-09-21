@@ -14890,6 +14890,15 @@ its label is missing. None of these wants touching.
   without one. One function answers it now, and a source rule says nothing may answer it twice —
   which is what found the fourth.
 
+- **M310 — the week we are in, on a screen that knew two tenses.** The calendar's gutter drew
+  **1/4** for the week in progress and called it *"1 of 4 planned sessions done"* — the same
+  sentence it gives a week that is over, about a week with three sessions still ahead of it. The
+  cause is one line: `const ahead = start > today` gives the gutter **two** states where
+  `describeWeekDays` has three, so every week that has begun is one bucket whether it is half run
+  or finished. M146 lifted the counts into `weekTally` precisely so the two screens could not
+  disagree about them, and left behind the one thing they did disagree about. The tense is counted
+  with the rest of it now, and the week screen stops recounting it from day statuses.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -21425,3 +21434,94 @@ read it.
 
 7,050 tests over 418 files, from 7,044. Layout harness OK. First load 137.01KB against 137.3, up
 0.03 — `burnsOf` is in `projects.ts`, which the shell already carries.
+
+---
+
+## M310 — the week we are in
+
+The third finding of the M307a audit: *"the calendar's week gutter reads a fraction for the week
+in progress."* True, and the cause is smaller and worse than the finding made it sound.
+
+`WeekGutter` opened with
+
+```ts
+const ahead = start > today;
+```
+
+which is **two** states — a week that has not begun, and everything else. `describeWeekDays`, on
+the week screen, has three: it says *"3 to come"* about a week still running and says nothing of
+the sort about one that is over. So the gutter drew the same **1/4** with the same half-filled bar
+under it for a week with three sessions still ahead and a week that had finished with three
+missed, and its label said *"1 of 4 planned sessions done"* about five days that had not happened.
+
+Measured on the sample climber, a day at a time across one week, before the change:
+
+```
+2026-09-20 Sun | gutter "1/4" | week screen "1 of 4 training days done, 3 to come"
+2026-09-21 Mon | gutter "1/4" | week screen "1 of 4 training days done, 3 to come"
+2026-09-24 Thu | gutter "1/4" | week screen "1 of 4 training days done, 2 to come"
+2026-09-26 Sat | gutter "1/4" | week screen "1 of 4 training days done, 1 to come"
+```
+
+The gutter is the same six characters all week. The screen one tap away moves every day.
+
+### The fraction is not the bug
+
+The tempting fix — draw `done/elapsed` for the week in progress — is the fix M146 exists to
+prevent. Its whole point is that the month grid and the week screen cannot disagree about the
+count, and a gutter reading 1/1 beside a week screen reading *1 of 4* is a worse disagreement than
+the one being fixed. The fraction stays `done/planned`. What the gutter was missing is not a
+different denominator, it is the **tense**, and the week screen was already computing it.
+
+So `weekTally` counts it: `toCome`, the planned days with nothing finished on them whose date has
+not passed. Today counts as ahead rather than behind, which is `statusOf`'s rule in `week.ts` and
+the reason its own `left` includes `'today'` — a session planned for tonight is not one you
+missed. And `weekTense(start, end, today)` names the three states the gutter had flattened to two.
+
+### And the week screen stops recounting
+
+`describeWeekDays` had been deriving `left` a second time, from the rendered day statuses, three
+lines below the `weekTally` call that was already walking the same days:
+
+```ts
+const toCome = outline.toCome > 0 ? `, ${outline.toCome} to come` : '';
+```
+
+Two implementations of one question, agreeing by luck and by adjacency — the shape M307 and M309
+both turned out to be. There is one rule for all four numbers now, and the gutter can say what the
+week screen says because it reads the same count rather than a parallel one.
+
+On the sample climber, in a browser, after:
+
+```
+| 2/4    Week of Aug 30: 2 of 4 planned sessions done
+| 3/4+1  Week of Sep 6: 3 of 4 planned sessions done, and 1 more off the plan
+| 2/4    Week of Sep 13: 2 of 4 planned sessions done
+| 1/4    Week of Sep 20: 1 of 4 planned sessions done, 3 to come
+| 4      Week of Sep 27: 4 sessions planned
+```
+
+One row in five carries the clause, and it is the row you are standing in. The `Meter` carries it
+too — `label` and `valueText` both — because the bar is the half of that row a label cannot reach.
+
+### One clock, while I was in there
+
+The tally is memoised on the month's cells; the tense is read at render. So an app left open
+across midnight would count yesterday's days against today's week — the same disagreement this
+milestone is about, one day wide instead of one week. `today()` is in the memo's dependency list
+now. `exhaustive-deps` was never going to say so: `today` is an imported function and therefore a
+stable reference, and it is the string it returns that moves.
+
+That one is checked in the source rather than in a browser, because the only moment it can go
+wrong is one a test cannot sit through. The rule reads the memo out of `CalendarPage.tsx` and
+fails if it cannot find it, so it cannot pass by reading nothing — which is the M309 lesson, and
+the mutant that proves it is a `useMemo (` with a space in it: still compiles, still memoises, no
+longer matches.
+
+Battery: 9 killed, sanity survived. Two of them are the boundaries the old code could not have had
+— a week on its last day is still `during`, a week on its first day is `ahead` — and one is the
+gutter put back to `start > today`, which nothing had been able to catch.
+
+7,060 tests over 418 files, from 7,050. The new gutter tests branch on the weekday `ASCENT_TODAY`
+lands on, so they went through `npm run test:dates` as well as the suite. Layout harness OK. First
+load 137.03KB against 137.3, up 0.02.

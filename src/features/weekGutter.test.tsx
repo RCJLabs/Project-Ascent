@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { IDBFactory } from 'fake-indexeddb';
 import { screen } from '@testing-library/react';
 import { loadPrograms } from '@/content/programs';
@@ -249,5 +250,70 @@ describe('a week with nothing to report', () => {
     showMonthOf(trained);
     expect(gutter(startOfWeek(trained))).toBeTruthy();
     expect(shown(startOfWeek(trained))).toContain('+1');
+  });
+
+  /**
+   * The tense, which this had and the week screen did too (PLAN.md M310).
+   *
+   * `start > today` gave the gutter two states where `describeWeekDays` has
+   * three, so a week half run drew the same fraction with the same bar and
+   * the same sentence as a week finished — **1/4** on the Sunday of a week
+   * and on its Saturday, while the screen a tap away counted down from
+   * *"3 to come"*.
+   */
+  describe('the week we are in', () => {
+    it('says what is still ahead of it', async () => {
+      await running();
+      await calendar();
+      // Two planned days this week, neither done and both today or later on
+      // any day the suite runs — `running` starts the block this week.
+      const left = dayOfWeek(TODAY) <= 1 ? 2 : dayOfWeek(TODAY) <= 3 ? 1 : 0;
+      if (left > 0) expect(said(THIS_WEEK)).toContain(`${left} to come`);
+      else expect(said(THIS_WEEK)).not.toContain('to come');
+    });
+
+    it('says nothing of the sort about a week that is over', async () => {
+      const last = addDays(THIS_WEEK, -7);
+      useProfile.setState({});
+      await hydrate();
+      useProfile.setState({
+        activeProgramId: 'iron_grip',
+        startDates: { iron_grip: last },
+        plans: { iron_grip: { 1: 'fp', 3: 'perf' } },
+        weekOverrides: {},
+        adaptations: {},
+        injuries: [],
+      });
+      await calendar();
+      showMonthOf(last);
+      expect(said(last)).toMatch(/0 of 2 planned sessions done/);
+      expect(said(last)).not.toContain('to come');
+    });
+
+    it('carries it into the meter, which is the half a label cannot reach', async () => {
+      await running();
+      await calendar();
+      const meter = gutter(THIS_WEEK)?.querySelector('[role="progressbar"]');
+      const text = meter?.getAttribute('aria-valuetext') ?? '';
+      expect(text).toMatch(/^0 of 2/);
+      if (dayOfWeek(TODAY) <= 3) expect(text).toContain('to come');
+    });
+
+    /**
+     * Both halves read one clock, checked in the source because the only
+     * moment they can differ is one a test cannot sit through.
+     *
+     * The tally is memoised on the month's cells and the tense is read at
+     * render, so an app left open across midnight would count yesterday's
+     * days against today's week — the same disagreement, one day wide.
+     * `today()` belongs in the dependency list, and an imported function is
+     * a stable reference, so `exhaustive-deps` will never say so.
+     */
+    it('memoises the tally against the day it was counted on', () => {
+      const source = readFileSync('src/features/calendar/CalendarPage.tsx', 'utf8');
+      const memo = /const weeks = useMemo\(([\s\S]*?)\n  \);/.exec(source);
+      expect(memo, 'the weeks memo moved — this rule is reading nothing').toBeTruthy();
+      expect(memo![1]).toContain('[cells, today()]');
+    });
   });
 });
