@@ -27,7 +27,7 @@ import { addDays, daysBetween, shortLabel, today as todayKey } from './dates';
 import { poorRun } from './conditions';
 import { MIN_CHRONIC_DAYS, MIN_RATIO_DAYS, type ClimberState } from './derive';
 import { recoverySentence, type Diagnosis } from './plateau';
-import { activeProjects, attemptsFor, highPointOf } from './projects';
+import { activeProjects, attemptsFor, burnsIn, highPointOf } from './projects';
 import type { BlockAdherence } from './adherence';
 import type { Finding } from './planVsLog';
 import { FINGER_GAP_HOURS, fingerGaps } from './fingerGap';
@@ -414,7 +414,10 @@ function projectBurns(input: CoachInput, today: string): Tip[] {
   const out: Tip[] = [];
   for (const project of projects) {
     const attempts = attemptsFor(project.id, input.sessions);
-    const burns = attempts.reduce((n, a) => n + a.count, 0);
+    // `burnsIn` rather than a sum of its own (PLAN.md M309): this counted
+    // `count` with no floor, so an attempt row carrying a zero — which an
+    // import can produce — was a go this headline did not count.
+    const burns = burnsIn(attempts);
     const rung = [...BURN_RUNGS].reverse().find((r) => burns >= r);
     if (rung === undefined) continue;
 

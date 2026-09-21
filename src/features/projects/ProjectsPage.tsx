@@ -159,8 +159,8 @@ function CostCard({ projects, sessions }: { projects: Project[]; sessions: Sessi
           Across {history.overall.sends} sends, a project takes you{' '}
           <strong>{history.overall.burns} burns</strong> over{' '}
           <strong>{history.overall.sessions} {history.overall.sessions === 1 ? 'session' : 'sessions'}</strong>
-          {history.overall.span > 0 && <> and {history.overall.span} days</>}. Middle values, so one
-          epic does not move them.
+          {history.overall.span > 0 && <>, and {history.overall.span} days from the first go to the send</>}.
+          Middle values, so one epic does not move them.
         </p>
       ) : (
         <p className="text-sm text-ink-soft leading-relaxed">
@@ -178,7 +178,7 @@ function CostCard({ projects, sessions }: { projects: Project[]; sessions: Sessi
               </span>
               <span className="flex-1 min-w-0 text-ink-soft">
                 {row.burns} burns · {row.sessions} {row.sessions === 1 ? 'session' : 'sessions'}
-                {row.span > 0 ? ` · ${row.span} days` : ''}
+                {row.span > 0 ? ` · ${row.span} days to send` : ''}
               </span>
               <span className={`text-xs shrink-0 ${row.solid ? 'text-ink-soft' : 'text-warn'}`}>
                 {row.sends} {row.sends === 1 ? 'send' : 'sends'}
@@ -258,7 +258,7 @@ function ProjectRow({ project, sessions }: { project: Project; sessions: Session
           <p className="text-xs text-ink-soft mt-0.5">
             {summary.burns === 0
               ? 'No burns yet'
-              : `${summary.burns} burn${summary.burns === 1 ? '' : 's'} over ${summary.days} day${summary.days === 1 ? '' : 's'}`}
+              : `${summary.burns} burn${summary.burns === 1 ? '' : 's'} on ${summary.days} day${summary.days === 1 ? '' : 's'}`}
             {project.location ? ` · ${project.location}` : ''}
           </p>
         </div>

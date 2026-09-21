@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { newProject, type Project } from '@/db/projects';
 import { newSession, type ProjectAttempt, type Session } from '@/db/sessions';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   applyPatch,
   attemptsFor,
+  burnsIn,
+  burnsOf,
   highPointOf,
   linkOf,
   reconcileProjects,
@@ -332,5 +336,110 @@ describe('a project covered in halves', () => {
     const summary = summariseProject('p1', plain);
     expect(summary.highPoint).toBe(75);
     expect(summary.bestLink).toEqual({ from: 0, to: 75 });
+  });
+});
+
+/**
+ * What a burn is, answered once (PLAN.md M309).
+ *
+ * Three modules counted them and all three disagreed: this file summed
+ * `count` with a floor of one, `coach.ts` summed it without, and
+ * `projectHistory.costOf` counted the attempt *rows*. The sample climber's
+ * only sent project therefore cost "20 burns" on the Projects list and
+ * "7 burns" on the card underneath it, from the same eight rows.
+ */
+describe('how many burns a row is', () => {
+  it('is what the row says, when the row says more than one', () => {
+    expect(burnsOf({ count: 4 })).toBe(4);
+    expect(burnsOf({ count: 1 })).toBe(1);
+  });
+
+  /**
+   * A record that reached storage with a zero, or with no count at all, is
+   * still a go somebody took. `count` is typed as required and the type is
+   * not the boundary: `projectHistory.test.ts` builds its attempts without
+   * one through an `as unknown as Session`, which is the same door an import
+   * or a hand-edited backup comes through — and the version that summed
+   * `count` raw turned that into `NaN burns` in a coach headline.
+   */
+  it('is one for a row that carries no usable count', () => {
+    expect(burnsOf({ count: 0 })).toBe(1);
+    expect(burnsOf({})).toBe(1);
+    expect(burnsOf({ count: Number.NaN })).toBe(1);
+  });
+
+  it('adds up over a run of them', () => {
+    expect(burnsIn([{ count: 4 }, { count: 1 }, {}, { count: 0 }])).toBe(7);
+    expect(burnsIn([])).toBe(0);
+  });
+
+  it('is what the project summary counts', () => {
+    const sessions = [session('2026-09-01', [burn({ count: 4 }), burn({ count: 3 })])];
+    expect(summariseProject('p1', sessions, TODAY).burns).toBe(7);
+  });
+
+  /**
+   * And the summary is held to the floor too. Counts above one agree
+   * whichever way they are summed, so a fixture of fours and threes cannot
+   * tell `burnsOf` from a raw `+= attempt.count` — the battery said so by
+   * surviving. A zero and a missing one are what separate them.
+   */
+  it('is what the project summary counts for a row with nothing on it', () => {
+    const rough = [
+      session('2026-09-01', [burn({ count: 0 }), burn({ count: 2 })]),
+      session('2026-09-03', [burn() as ProjectAttempt & { count?: number }].map((a) => {
+        const { count: _count, ...rest } = a;
+        return rest as ProjectAttempt;
+      })),
+    ];
+    // 1 for the zero, 2 for the two, 1 for the row with no count at all.
+    expect(summariseProject('p1', rough, TODAY).burns).toBe(4);
+  });
+
+  /**
+   * And nothing counts them any other way.
+   *
+   * A property over the source rather than a fourth fixture, because both
+   * faults were a module reaching for `.count` or `.length` on its own
+   * instead of asking. `projects.ts` is where the question is answered, so it
+   * is the one file allowed to mention a burn beside either.
+   */
+  it('is the only place a burn is counted', () => {
+    const files = (dir: string): string[] =>
+      readdirSync(dir).flatMap((entry) => {
+        const path = join(dir, entry);
+        if (statSync(path).isDirectory()) return files(path);
+        return /\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry) ? [path] : [];
+      });
+    const offenders: string[] = [];
+    let examined = 0;
+    for (const path of files('src')) {
+      if (path === 'src/engine/projects.ts') continue;
+      const source = readFileSync(path, 'utf8');
+      source.split('\n').forEach((line, i) => {
+        // Comments out, and string literals with them: `planVsLog.ts` has
+        // the word "burns" in a sentence about rest between them, on a line
+        // that also interpolates a `.length` (PLAN.md M309).
+        const code = line
+          .replace(/^\s*[*/].*/, '')
+          .replace(/`[^`]*`/g, '``')
+          .replace(/'[^']*'/g, "''")
+          .replace(/"[^"]*"/g, '""');
+        if (!/\bburns\b/.test(code)) return;
+        examined += 1;
+        if (/\.count\b|\.length\b/.test(code)) offenders.push(`${path}:${i + 1}  ${line.trim()}`);
+      });
+    }
+    expect(offenders, 'count burns with burnsIn, not by hand').toEqual([]);
+    /**
+     * And it has to have *looked*, not merely walked.
+     *
+     * A floor on the files read proves the walk and nothing else: neutering
+     * the line test finds no offenders, which is what the assertion above
+     * wants, and the battery said so by surviving. The number that matters
+     * is how many lines mentioning a burn were put to the test.
+     */
+    expect(files('src').length, 'the walk stopped').toBeGreaterThan(200);
+    expect(examined, 'the scan stopped looking').toBeGreaterThan(20);
   });
 });

@@ -14882,6 +14882,14 @@ its label is missing. None of these wants touching.
   advised a block of volume at it. The reading walks the grades a climber has sent at now — and
   needs the step between them to be a step, which is the half the zeros had been hiding.
 
+- **M309 — four answers to what a burn is.** M307a said the Projects page used the word twice and
+  meant different things. It was worse: `ProjectAttempt.count` is *"burns of this kind in this
+  session"*, and `costOf` counted the attempt **rows** — so the sample climber's only sent project
+  cost *"7 burns"* on one card and *"20 burns"* on the one above it, from the same eight rows. Two
+  more modules summed `count` raw, which is a zero or a `NaN` on a record that reached storage
+  without one. One function answers it now, and a source rule says nothing may answer it twice —
+  which is what found the fourth.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -21338,3 +21346,82 @@ third was a bad mutant of my own — gutting a test and asking whether the suite
 it always will. Dropped rather than counted.
 
 7,044 tests over 418 files, from 7,039. Layout harness OK. First load 136.98KB against 137.3.
+
+## M309 — four answers to what a burn is
+
+M307a's first entry read the Projects page and found one word used twice: *"20 burns over 8 days"*
+on the list row and *"7 burns · 7 sessions · 68 days"* on the card beneath it, about the same
+climb. The audit put it down to `summariseProject` counting everything and `costOf` clipping at the
+send — both deliberate, neither labelled.
+
+That was the smaller half. Decomposed:
+
+```
+The Joker (sent)
+   attempt rows: 8      rows up to the send: 7
+   burns by count: 20   up to the send: 19
+   counts seen: [4, 1, 3, 2]
+```
+
+`ProjectAttempt.count` is *"burns of this kind in this session"*. `costOf` set
+`burns: upToSend.length` — the number of **rows** — so a project worked in threes and fours read as
+having taken seven goes when it took nineteen. The clip at the send accounts for one of the
+thirteen. And `sessions` is distinct dates, which for this project is also seven, so the card read
+*"7 burns · 7 sessions"* and the two numbers agreeing made the wrong one look deliberate.
+
+### Four counters, four rules
+
+Grepping for the rest of them:
+
+| where | how it counted | what a `count: 0` or a missing one gave |
+|---|---|---|
+| `projects.summariseProject` | `Math.max(1, count)` summed | one burn, which is right |
+| `coach.projectBurns` | `count` summed raw | *"0 burns on X"*, or `NaN burns` |
+| `achievements.persistence` | `count` summed raw | the same, silently, in an unlock |
+| `projectHistory.costOf` | attempt **rows** | one per row, whatever it says |
+
+Two of those are headlines a climber reads. `count` is typed as required and the type is not the
+boundary: `projectHistory.test.ts` builds its attempts without one through an
+`as unknown as Session`, which is the same door an import or a hand-edited backup comes through —
+and the raw sums turn that into a `NaN`.
+
+`projects.burnsOf` answers it once: as many burns as the row says, never fewer than one, and one
+for a row carrying nothing usable. All four call it.
+
+### And a rule, because a comment would not have found the fourth
+
+`achievements.ts` was not in M307a's list. It turned up because the test written for this milestone
+is a scan rather than a fixture: in every source file but `projects.ts`, a line mentioning a burn
+may not also mention `.count` or `.length`. That is the shape both faults took, and it found a
+third instance of one while the milestone was being written.
+
+The scan needed two corrections of its own. It first flagged a sentence in `planVsLog.ts` about
+*"the rest between burns"* on a line interpolating a `rows.length` — prose inside a template
+literal, so it strips string literals now as well as comments. And the battery then pointed out
+that neutering its line test still passed: no offenders found is what the assertion wants, so a
+scan that stops looking reads exactly like a clean tree. It counts the lines it actually put to the
+test and holds a floor under that, which is the M224 shape in the net written to catch M224's
+shape.
+
+### The labels, which were the original finding
+
+With the counting fixed the two numbers are 20 and 19, differing by the one lap after the send —
+explicable, but only if the words say which is which. So the list row reads *"on 8 days"* rather
+than *"over 8 days"*, which is days you were on it rather than a span; the cost row ends *"68 days
+to send"*; and the sentence above it says *"and 68 days from the first go to the send"* rather than
+leaving `days` next to `sessions` for the reader to disentangle.
+
+On the sample climber, in a browser, before and after:
+
+```
+before   20 burns over 8 days   |   7 burns · 7 sessions · 68 days
+after    20 burns on 8 days     |  19 burns · 7 sessions · 68 days to send
+```
+
+Battery: 7 killed, sanity survived. Two survivors on the first run and both were fixtures that
+could not see the difference: every attempt in the burn tests carried a count above one, where a
+raw sum and `burnsOf` agree, and the scan's own floor proved it had walked the tree rather than
+read it.
+
+7,050 tests over 418 files, from 7,044. Layout harness OK. First load 137.01KB against 137.3, up
+0.03 — `burnsOf` is in `projects.ts`, which the shell already carries.

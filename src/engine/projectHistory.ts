@@ -17,7 +17,7 @@
 import type { Project } from '@/db/projects';
 import type { Session } from '@/db/sessions';
 import { daysBetween } from './dates';
-import { attemptsFor } from './projects';
+import { attemptsFor, burnsIn } from './projects';
 import type { GradeScale } from './grades';
 
 /** Below this many sends at a grade, a number is an anecdote. */
@@ -90,7 +90,10 @@ export function costOf(project: Project, sessions: Session[], today?: string): S
     grade: project.grade,
     scale: project.scale,
     setting: project.setting,
-    burns: upToSend.length,
+    // Burns, not rows (PLAN.md M309). This counted attempt *records* and
+    // called them burns, so a project worked in fours read as having taken
+    // a quarter of the goes it took.
+    burns: burnsIn(upToSend),
     sessions: new Set(upToSend.map((a) => a.date)).size,
     span: Math.max(0, daysBetween(first, sentDate)),
     sentDate,

@@ -107,6 +107,34 @@ export interface DayHighPoint {
   value: number;
 }
 
+/**
+ * How many burns one attempt row is (PLAN.md M309).
+ *
+ * `ProjectAttempt.count` is *"burns of this kind in this session"*, so a row
+ * is as many burns as it says and **never fewer than one**. A record that
+ * reached storage with a zero, or with no count at all, is still a go
+ * somebody took: `count` is typed as required and the type is not the
+ * boundary — `projectHistory.test.ts` builds its attempts without one
+ * through an `as unknown as Session`, which is the same door an import or a
+ * hand-edited backup comes through.
+ *
+ * It is a function because there were **three** copies of this question and
+ * all three answered differently: `summariseProject` summed `count` with the
+ * floor, `coach.ts` summed it without — so a zero or a missing count gave a
+ * headline of "0 burns" or "NaN burns" — and `projectHistory.costOf` counted
+ * the *rows*, so the sample climber's only sent project cost "20 burns" on
+ * one card and "7 burns" on the card beside it, from the same eight rows.
+ */
+export function burnsOf(attempt: { count?: number }): number {
+  const count = attempt.count;
+  return typeof count === 'number' && count > 1 ? count : 1;
+}
+
+/** The same, over a run of them. */
+export function burnsIn(attempts: readonly { count?: number }[]): number {
+  return attempts.reduce((n, a) => n + burnsOf(a), 0);
+}
+
 export interface ProjectSummary {
   attempts: AttemptRecord[];
   /** Total burns, counting repeats. */
@@ -150,7 +178,7 @@ export function summariseProject(
   let burns = 0;
 
   for (const attempt of attempts) {
-    burns += Math.max(1, attempt.count);
+    burns += burnsOf(attempt);
     const link = linkOf(attempt);
     if (link !== null && (bestLink === null || link.to - link.from > bestLink.to - bestLink.from)) {
       bestLink = link;

@@ -5,6 +5,7 @@ import { CLIMBS_TO_EVEREST } from './altimeter';
 import { feetFromMetres } from './units';
 import { addDays, daysBetween, startOfWeek } from './dates';
 import { gradeOrdinal, type GradeScale } from './grades';
+import { burnsOf } from './projects';
 import { isRestSession } from './rest';
 
 /**
@@ -312,7 +313,9 @@ const DEFINITIONS: Definition[] = [
       const burns = new Map<string, number>();
       for (const session of log.completed) {
         for (const attempt of session.projectAttempts ?? []) {
-          burns.set(attempt.projectId, (burns.get(attempt.projectId) ?? 0) + attempt.count);
+          // `burnsOf`, not `attempt.count` (PLAN.md M309): this was the
+          // fourth place counting burns and the third to do it differently.
+          burns.set(attempt.projectId, (burns.get(attempt.projectId) ?? 0) + burnsOf(attempt));
         }
       }
       // Keyed on `sentDate`, not on `status`. A project sent and then
