@@ -51,6 +51,7 @@ import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
 import { useAllSessions } from '@/store/sessions';
+import { useDeloadDates } from '@/store/deload';
 import { useSettings } from '@/store/settings';
 import type { UnitSystem } from '@/engine/units';
 import { useSkills } from '@/store/skills';
@@ -194,8 +195,9 @@ export function AscentPage() {
   }, [hydrated, loadGame]);
 
   const sessions = useAllSessions();
+  const deloadDates = useDeloadDates();
   const derived = useMemo(() => {
-    const state = deriveClimberState(sessions);
+    const state = deriveClimberState(sessions, { deloadDates });
     const stats = deriveStats({ state, metrics: metricEntries, projects });
     const vitality = deriveVitality({
       state,
@@ -210,7 +212,7 @@ export function AscentPage() {
       feet: deriveAltimeter(sessions).feet,
       restedToday: state.restedWithin24h,
     };
-  }, [sessions, metricEntries, projects, injuries, skills.effects.restRecovery]);
+  }, [sessions, metricEntries, projects, injuries, skills.effects.restRecovery, deloadDates]);
 
   const avatar = useMemo(
     () =>

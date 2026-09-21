@@ -15,6 +15,7 @@ import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
 import { useProjects } from '@/store/projects';
 import { useSessions, allSessions } from '@/store/sessions';
+import { useDeloadDates } from '@/store/deload';
 import { useSkills } from '@/store/skills';
 import { BackLink } from '@/ui/BackLink';
 import { Card } from '@/ui/Card';
@@ -46,7 +47,11 @@ export function BodyPage() {
   const injuries = useProfile((s) => s.injuries);
   const skills = useSkills();
 
-  const state = useMemo(() => deriveClimberState(allSessions(byDate)), [byDate]);
+  const deloadDates = useDeloadDates();
+  const state = useMemo(
+    () => deriveClimberState(allSessions(byDate), { deloadDates }),
+    [byDate, deloadDates],
+  );
   const stats = useMemo(() => deriveStats({ state, metrics, projects }), [state, metrics, projects]);
   const statValues = useMemo(
     () => ({
@@ -65,8 +70,9 @@ export function BodyPage() {
         metrics,
         projects,
         today: today(),
+        deloadDates,
       }),
-    [byDate, metrics, projects],
+    [byDate, metrics, projects, deloadDates],
   );
   const vitality = useMemo(
     () =>

@@ -25,6 +25,7 @@ import { useCurrency, useOwned, useOwnedWalls, useXp } from '@/store/game';
 import { ALL_BOUGHT, unbought } from '@/engine/shop';
 import { useProfile } from '@/store/profile';
 import { useSessions, allSessions } from '@/store/sessions';
+import { useDeloadDates } from '@/store/deload';
 import { useSettings } from '@/store/settings';
 import { useNextUnlock, useSkills } from '@/store/skills';
 import { Avatar } from '@/ui/Avatar';
@@ -143,9 +144,10 @@ function AltimeterCard() {
 /** The rest-day activity, framed as one. */
 function AscentCard() {
   const byDate = useSessions((s) => s.byDate);
+  const deloadDates = useDeloadDates();
   const rested = useMemo(
-    () => deriveClimberState(allSessions(byDate)).restedWithin24h,
-    [byDate],
+    () => deriveClimberState(allSessions(byDate), { deloadDates }).restedWithin24h,
+    [byDate, deloadDates],
   );
 
   return (

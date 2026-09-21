@@ -14748,6 +14748,14 @@ M50 for why it is not coming.
   direction of the change. And the sample climber, which had no markers at all, took its deliberate
   week off out of *"longest gap 7 days"*.
 
+- **M306 — the deload weeks nothing read.** `deriveClimberState` has taken a `deloadDates` set
+  since M67 and no production code ever passed one: its only caller in the repository was a test.
+  So the correction the load model was built to make never ran, and a climber doing exactly what
+  their program asked was told their load was dropping on **fifteen days of a twelve-week block**.
+  One function answers it now and every derivation in the app asks — which had to be all of them,
+  because the cache keys on the set by identity. The guard that should have caught a missed one
+  could not see it either, and now can.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -20908,3 +20916,123 @@ window and found nothing there. A marker in each window kills it.
 
 7,015 tests over 416 files, from 6,992 over 415. Layout harness OK. First load 136.92KB against
 137.3.
+
+## M306 — the deload weeks nothing read
+
+M305 left this measured and unbuilt. `deloadWeeks` is a list on the **program** — ten of the eleven
+shipped programs have one, and Trip Prep deliberately does not — and the only thing that had ever
+turned one into a fact about a *day* was `PreSession`, stamping `deload: true` on a session as it
+starts one from the plan card.
+
+Five things create a session. One of them does that, and it is not even all of `PreSession`:
+`startRest` does not stamp, so a rest day taken inside a deload week — which is a large part of
+what a deload week is — carried nothing.
+
+And `derive.ts` has taken a `deloadDates` set since M67:
+
+```
+deloadDates callers in the repository:  1
+                              which is:  src/engine/coach.test.ts:396
+```
+
+So `inPlannedDeload`, the Progress load card's *"This is a planned deload week, so a lighter load
+is the point"*, and `zoneOf`'s detraining-to-optimal correction have all run on the session flag
+alone, for two hundred and thirty-nine milestones.
+
+### What that costs, measured
+
+One twelve-week Iron Grip block (deload weeks four and eight), three sessions a week, lighter in
+the deload weeks — a climber doing exactly what the program asked. Walked a day at a time, reading
+with the plan and without it:
+
+```
+days the reading changes when the plan is consulted:   26 of 63
+of those, days the app said "Load dropping":           15
+```
+
+Fifteen days of being told you are detraining for following the plan. The zone change is narrow by
+design — `zoneOf` only turns `detraining` into `optimal`, never a caution or a danger into
+something quieter — so this corrects the app's least urgent reading and touches none of its
+warnings. That is the right shape: M163's rule is that an explanation rewords and never suppresses.
+
+### One answer, and therefore every caller
+
+`engine/deload.ts` walks the climber's `blocks` — the record of what has been run, each row
+carrying the program, the start, the weeks it was set to run and the day it stopped — and returns
+the days inside a planned deload week. From `blocks` rather than the active program because the
+twenty-eight day window the ratio reads can span the end of one block and the start of the next.
+
+**It had to be every call site, not the two that read the answer.** `deriveClimberState`'s cache is
+one entry keyed on `deloadDates` **by identity**, so a page where one card passes a set and another
+omits it gets two walks of the whole log — the exact regression M157 exists to prevent. Eighteen
+call sites pass it now; `engine/review.ts` and `engine/statHistory.ts` take it through their input
+types; and a climber with no block gets the *same empty set* the default resolves to, so asking
+costs nothing.
+
+One exception, commented where it sits: `WelcomePage` derives from `[]` on the setup screen. There
+are no blocks to have a deload week in and an empty array is a fresh one every render, so a set
+there would be a line that reads as care and answers nothing.
+
+### The guard could not see the thing it guards
+
+`oneDerivation.test.tsx` is the right net — it renders a page and counts *distinct* results — and
+it passed every mutant that unwired a call site:
+
+```
+home-unwires-coach:      survived
+home-unwires-avatar:     survived
+progress-unwires-skills: survived
+```
+
+Because its fixture has no blocks, and `deloadDatesFor([])` returns the same set `deriveClimberState`
+resolves an omitted option to. That is the design working and it made the test blind: wired and
+unwired key identically. A block with deload weeks in the fixture is what makes the two keys
+differ. The same three mutants are killed now, and the file covers two more pages — Home, where the
+coach reads the log, and the game, which is the only page that mounts `useClimberAvatar` ungated.
+
+### The grid was reading the other answer
+
+`consistency.ts` read `session.deload` alone, so the heat grid drew the same seven days as an
+ordinary quiet week while the card above it called them a planned deload. It takes the same set
+now. And a quiet day inside one used to read *"nothing logged"* — the day the plan explained was
+the day the grid had least to say about — so it says *"nothing logged, deload week"*, with a
+marked-away stretch still winning above it, because what the climber typed beats what the program
+assumed.
+
+`monthMarks.ts` was checked and not changed: the calendar already reads `plan.isDeload` from the
+program and has been right all along.
+
+On the sample climber — Iron Grip, week six, with week four inside its own last twenty-eight days
+and four sessions logged on those days, none stamped:
+
+```
+before:  load-chart rows marked (deload): 0   grid cells saying deload: 0
+after:   load-chart rows marked (deload): 7   grid cells saying deload: 7
+
+  Sun, Sep 6: nothing logged, deload week
+  Mon, Sep 7: 1 session, deload
+  Fri, Sep 11: 1 session, outdoors, deload
+```
+
+### Found on the way, and not fixed here
+
+`blocks.rowWindow` starts a block's window at `startOfWeek(row.startDate)` and says of itself:
+
+> `plan.blockWindow` needs a `Program` … The arithmetic is the same and deliberately so.
+
+It is not the same. `blockWindow` uses `blockStart`, which is the first **whole** week — the Sunday
+*after* a start that is not itself a Sunday, because M259 established that the days between belong
+to no week at all. For any non-Sunday start the two are seven days apart, measured:
+
+```
+start 2026-08-16 (Sun)  startOfWeek 2026-08-16  blockStart 2026-08-16
+start 2026-08-20 (Thu)  startOfWeek 2026-08-16  blockStart 2026-08-23
+```
+
+`rowWindow` feeds `outcomeOf`, `weeksRun`, `reconstructBlocks` and the finder's *"what should I run
+next"*, so moving it moves when a block reads as finished. That is its own milestone with its own
+measurement, not a line to change inside this one. `deload.ts` follows `programWeek`, which is the
+one a week number has to agree with, and says so.
+
+Battery: 13 killed, sanity survived. 7,033 tests over 418 files, from 7,015 over 416. Layout
+harness OK. First load 136.98KB against 137.3.

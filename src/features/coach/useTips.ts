@@ -22,6 +22,7 @@ import { useProjects } from '@/store/projects';
 import { useObjectives } from '@/store/objectives';
 import { useAway } from '@/store/away';
 import { useSessions, allSessions } from '@/store/sessions';
+import { useDeloadDates } from '@/store/deload';
 import { useSettings } from '@/store/settings';
 
 /** Everything the board needs, derived in one place. */
@@ -42,9 +43,10 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
   const away = useAway((s) => s.periods);
   const display = useSettings((s) => s.display);
 
+  const deloadDates = useDeloadDates();
   return useMemo(() => {
     const sessions = allSessions(byDate);
-    const state = deriveClimberState(sessions);
+    const state = deriveClimberState(sessions, { deloadDates });
     const program = activeProgramId ? getProgram(activeProgramId) : undefined;
     // Planned against done, per type, for M104's skipped-type rule. Null
     // without a live block, which is the honest answer: nothing was placed,
@@ -124,5 +126,5 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
     });
     const visible = visibleTips(all, dismissed);
     return { all, visible, hidden: all.length - visible.length };
-  }, [byDate, projects, metrics, injuries, equipment, activeProgramId, startDates, plans, weekOverrides, tracks, lastExportAt, dismissed, display, objectives, away]);
+  }, [byDate, projects, metrics, injuries, equipment, activeProgramId, startDates, plans, weekOverrides, tracks, lastExportAt, dismissed, display, objectives, away, deloadDates]);
 }

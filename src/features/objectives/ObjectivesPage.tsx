@@ -22,6 +22,7 @@ import { useMetrics } from '@/store/metrics';
 import { useObjectives } from '@/store/objectives';
 import { useProjects } from '@/store/projects';
 import { useSessions, allSessions } from '@/store/sessions';
+import { useDeloadDates } from '@/store/deload';
 import { useSettings } from '@/store/settings';
 import { PageGrid } from '@/ui/PageGrid';
 import { BackLink } from '@/ui/BackLink';
@@ -48,9 +49,10 @@ export function useSkillInput(): SkillInput {
   const projects = useProjects((s) => s.projects);
   const display = useSettings((s) => s.display);
 
+  const deloadDates = useDeloadDates();
   return useMemo(() => {
     const sessions = allSessions(byDate);
-    const state = deriveClimberState(sessions);
+    const state = deriveClimberState(sessions, { deloadDates });
     return {
       state,
       stats: deriveStats({ state, metrics, projects }),
@@ -59,7 +61,7 @@ export function useSkillInput(): SkillInput {
       feet: deriveAltimeter(sessions).feet,
       display,
     };
-  }, [byDate, metrics, projects, display]);
+  }, [byDate, metrics, projects, display, deloadDates]);
 }
 
 export function ObjectivesPage() {

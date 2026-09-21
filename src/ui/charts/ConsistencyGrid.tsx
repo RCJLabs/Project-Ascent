@@ -66,7 +66,13 @@ function title(day: HeatDay): string {
   if (day.future) return when;
   const marked = day.away === null ? null : awayName(day.away);
   if (day.sessions === 0) {
-    return marked === null ? `${when}: nothing logged` : `${when}: away — ${marked}`;
+    if (marked !== null) return `${when}: away — ${marked}`;
+    // A quiet day inside a planned deload week is quiet on purpose
+    // (PLAN.md M306), and resting through one is a large part of what a
+    // deload week is — so the day the grid had least to say about was the
+    // one the plan explained. The climber's own marker still wins above:
+    // what they typed beats what the program assumed.
+    return day.deload ? `${when}: nothing logged, deload week` : `${when}: nothing logged`;
   }
   if (day.rested) return `${when}: rest day`;
   const bits = [`${day.sessions} session${day.sessions === 1 ? '' : 's'}`];

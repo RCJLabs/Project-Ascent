@@ -16,6 +16,7 @@ import { injuryPolicy } from '@/engine/injury';
 import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';
 import { useSessions, allSessions } from '@/store/sessions';
+import { useDeloadDates } from '@/store/deload';
 import { useSkillEffects } from '@/store/skills';
 import { PageGrid } from '@/ui/PageGrid';
 import { Button } from '@/ui/Button';
@@ -55,9 +56,10 @@ export function useBoard() {
     [ledger],
   );
 
+  const deloadDates = useDeloadDates();
   return useMemo(() => {
     const sessions = allSessions(byDate);
-    const state = deriveClimberState(sessions);
+    const state = deriveClimberState(sessions, { deloadDates });
     const program = activeProgramId ? getProgram(activeProgramId) : undefined;
     const rule = program?.constraints.find((c) => c.kind === 'sessions-per-week');
     const weeklyTarget = rule && rule.kind === 'sessions-per-week' ? rule.min : 3;
@@ -68,7 +70,7 @@ export function useBoard() {
       }),
       claimed: new Set(claimed),
     };
-  }, [byDate, bounties, activeProgramId, claimed, display, injuries]);
+  }, [byDate, bounties, activeProgramId, claimed, display, injuries, deloadDates]);
 }
 
 export function BoardPage() {

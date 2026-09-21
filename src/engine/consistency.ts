@@ -121,6 +121,16 @@ export interface HeatInput {
   sessions: readonly Session[];
   /** Stretches marked away, so silence inside one stops reading as a miss. */
   away?: readonly AwayPeriod[];
+  /**
+   * Days inside a planned deload week (PLAN.md M306).
+   *
+   * The grid used to read `session.deload` alone, which is stamped by one of
+   * the five things that create a session — so a deload week rested through
+   * drew as an ordinary quiet week, and this grid disagreed with the load
+   * card beside it about the same seven days. `engine/deload.ts` is the one
+   * thing that answers this now.
+   */
+  deloadDates?: ReadonlySet<string>;
   /** The last day the grid covers. Defaults to today. */
   to?: string;
   /** How many week columns. 53 covers a year including the partial week. */
@@ -229,7 +239,9 @@ export function buildHeatGrid(input: HeatInput): HeatGrid {
         sessions: totals?.sessions ?? 0,
         rested: totals?.rested ?? false,
         outdoor: totals?.outdoor ?? false,
-        deload: totals?.deload ?? false,
+        // The session's stamp *or* the plan's week: a day nobody logged is
+        // still a day of the deload week it falls in.
+        deload: (totals?.deload ?? false) || input.deloadDates?.has(date) === true,
         away: future ? null : awayOn(input.away, date),
         future,
       });

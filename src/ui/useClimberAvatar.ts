@@ -6,6 +6,7 @@ import { deriveStats } from '@/engine/stats';
 import { deriveVitality } from '@/engine/vitality';
 import { useProfile } from '@/store/profile';
 import { useSessions, allSessions } from '@/store/sessions';
+import { useDeloadDates } from '@/store/deload';
 import { useSkillEffects } from '@/store/skills';
 import { useXp } from '@/store/game';
 
@@ -33,10 +34,11 @@ export function useClimberAvatar(enabled = true): AvatarConfig | undefined {
   const figure = useProfile((s) => s.avatarFigure);
   const restBonus = useSkillEffects().restRecovery;
 
+  const deloadDates = useDeloadDates();
   return useMemo(() => {
     if (!enabled) return undefined;
     const sessions = allSessions(byDate);
-    const state = deriveClimberState(sessions);
+    const state = deriveClimberState(sessions, { deloadDates });
     const vitality = deriveVitality({
       state,
       endurance: deriveStats({ state }).END,
@@ -50,5 +52,5 @@ export function useClimberAvatar(enabled = true): AvatarConfig | undefined {
       palette,
       figure,
     });
-  }, [enabled, byDate, figure, injuries, palette, restBonus, xp.progress.level]);
+  }, [enabled, byDate, figure, injuries, palette, restBonus, xp.progress.level, deloadDates]);
 }

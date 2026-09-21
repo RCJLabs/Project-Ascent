@@ -7,6 +7,7 @@ import { evaluateSkills, type SkillState } from '@/engine/skills';
 import { deriveStats } from '@/engine/stats';
 import { useMetrics } from './metrics';
 import { useProjects } from './projects';
+import { useDeloadDates } from './deload';
 import { useSessions, allSessions } from './sessions';
 import { useSettings } from './settings';
 
@@ -23,9 +24,10 @@ export function useSkills(): SkillState {
   const projects = useProjects((s) => s.projects);
   const display = useSettings((s) => s.display);
 
+  const deloadDates = useDeloadDates();
   return useMemo(() => {
     const sessions = allSessions(byDate);
-    const state = deriveClimberState(sessions);
+    const state = deriveClimberState(sessions, { deloadDates });
     return evaluateSkills(SKILL_TREES, {
       state,
       stats: deriveStats({ state, metrics, projects }),
@@ -34,7 +36,7 @@ export function useSkills(): SkillState {
       feet: deriveAltimeter(sessions).feet,
       display,
     });
-  }, [byDate, metrics, projects, display]);
+  }, [byDate, metrics, projects, display, deloadDates]);
 }
 
 /**

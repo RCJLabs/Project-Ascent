@@ -48,6 +48,7 @@ import { useXp } from '@/store/game';
 import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';
 import { useProjects } from '@/store/projects';
+import { useDeloadDates } from '@/store/deload';
 import { useSessions, allSessions } from '@/store/sessions';
 
 
@@ -69,6 +70,7 @@ export function useReview(date: string, challenges: Challenge[] = []): WeekRevie
   const injuries = useProfile((s) => s.injuries);
   const xp = useXp();
   const display = useSettings((s) => s.display);
+  const deloadDates = useDeloadDates();
 
   return useMemo(() => {
     const program = activeProgramId ? getProgram(activeProgramId) : undefined;
@@ -83,8 +85,9 @@ export function useReview(date: string, challenges: Challenge[] = []): WeekRevie
       injuries: injuries.map((i) => i.part),
       display,
       challenges,
+      deloadDates,
     });
-  }, [byDate, date, activeProgramId, startDates, plans, projects, xp, injuries, display, challenges]);
+  }, [byDate, date, activeProgramId, startDates, plans, projects, xp, injuries, display, challenges, deloadDates]);
 }
 
 export const TONE: Record<NoteTone, { color: string; Icon: typeof Info }> = {

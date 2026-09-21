@@ -15,6 +15,7 @@ import { venueHref } from '@/ui/routes';
 import { useGradeLabel } from '@/ui/useGrade';
 import { useVenues } from '@/features/venues/useVenues';
 import { useSessions, allSessions } from '@/store/sessions';
+import { useDeloadDates } from '@/store/deload';
 import { useGame } from '@/store/game';
 import { useSettings } from '@/store/settings';
 import { PageGrid } from '@/ui/PageGrid';
@@ -80,11 +81,12 @@ export function CareerPage() {
   const ascent = useGame((s) => s.ascent.days);
 
 
+  const deloadDates = useDeloadDates();
   const career = useMemo(() => {
     const sessions = allSessions(byDate);
-    const state = deriveClimberState(sessions);
+    const state = deriveClimberState(sessions, { deloadDates });
     return deriveCareer({ sessions, records: state.personalRecords, display, ascent });
-  }, [byDate, display, ascent]);
+  }, [byDate, display, ascent, deloadDates]);
 
   const years = useMemo(() => {
     const filtered =

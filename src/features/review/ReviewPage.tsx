@@ -20,6 +20,7 @@ import { weekCard } from '@/ui/shareCard';
 import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';
 import { useSessions, allSessions } from '@/store/sessions';
+import { useDeloadDates } from '@/store/deload';
 import { ShareButton } from '@/features/share/ShareSheet';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -42,18 +43,19 @@ function useWeeklyChallenges(anchor: string): Challenge[] {
   const byDate = useSessions((s) => s.byDate);
   const activeProgramId = useProfile((s) => s.activeProgramId);
   const display = useSettings((s) => s.display);
+  const deloadDates = useDeloadDates();
 
   return useMemo(() => {
     const sessions = allSessions(byDate).filter((s) => s.completed);
     const program = activeProgramId ? getProgram(activeProgramId) : undefined;
     return weeklyChallenges(
       sessions,
-      deriveClimberState(sessions),
+      deriveClimberState(sessions, { deloadDates }),
       anchor,
       weeklyTargetOf(program),
       display,
     );
-  }, [byDate, activeProgramId, display, anchor]);
+  }, [byDate, activeProgramId, display, anchor, deloadDates]);
 }
 
 export function ReviewPage() {

@@ -25,6 +25,8 @@ export interface StatSnapshotInput {
   projects: readonly Project[];
   /** The day to stand on. Everything after it is ignored. */
   asOf: string;
+  /** Days inside a planned deload week (PLAN.md M306). */
+  deloadDates?: ReadonlySet<string>;
 }
 
 export function statsAsOf(input: StatSnapshotInput): Record<StatId, number> {
@@ -38,7 +40,7 @@ export function statsAsOf(input: StatSnapshotInput): Record<StatId, number> {
   // the same snapshot read differently on different days for a log that
   // had not changed. `review.ts` passes `{ today: asOf }` for exactly this
   // reason; this is the one place that had not.
-  const state = deriveClimberState(sessions, { today: input.asOf });
+  const state = deriveClimberState(sessions, { today: input.asOf, deloadDates: input.deloadDates });
   const stats = deriveStats({
     state,
     metrics: input.metrics.filter((m) => m.date <= input.asOf),
@@ -76,6 +78,8 @@ export interface ComparisonInput {
   metrics: readonly MetricEntry[];
   projects: readonly Project[];
   today: string;
+  /** Days inside a planned deload week (PLAN.md M306). */
+  deloadDates?: ReadonlySet<string>;
 }
 
 export interface StatComparison {

@@ -22,6 +22,7 @@ import { buildJournal } from '@/engine/journal';
 import { deriveCareer } from '@/engine/career';
 import { buildHeatGrid, describeConsistency } from '@/engine/consistency';
 import { useAway } from '@/store/away';
+import { useDeloadDates } from '@/store/deload';
 import { describeTrend, loadTrend } from '@/engine/loadTrend';
 import { describeTissue, tissueLoad } from '@/engine/tissueLoad';
 import { compareBlocks, describeBlocks } from '@/engine/blockCompare';
@@ -207,12 +208,13 @@ function JournalCard() {
 function CareerCard() {
   const byDate = useSessions((s) => s.byDate);
   const display = useSettings((s) => s.display);
+  const deloadDates = useDeloadDates();
 
   const career = useMemo(() => {
     const sessions = allSessions(byDate);
-    const state = deriveClimberState(sessions);
+    const state = deriveClimberState(sessions, { deloadDates });
     return deriveCareer({ sessions, records: state.personalRecords, display });
-  }, [byDate, display]);
+  }, [byDate, display, deloadDates]);
 
   const latest = career.achieved[0];
   const next = career.next[0];
@@ -250,10 +252,11 @@ function BodyCard() {
   const byDate = useSessions((s) => s.byDate);
   const injuries = useProfile((s) => s.injuries);
   const restBonus = useSkillEffects().restRecovery;
+  const deloadDates = useDeloadDates();
   const vitality = useMemo(() => {
-    const state = deriveClimberState(allSessions(byDate));
+    const state = deriveClimberState(allSessions(byDate), { deloadDates });
     return deriveVitality({ state, endurance: deriveStats({ state }).END, injuries, restBonus });
-  }, [byDate, injuries, restBonus]);
+  }, [byDate, injuries, restBonus, deloadDates]);
   const hurt = injuries.length;
 
   return (
@@ -481,14 +484,19 @@ export function ProgressPage() {
     return c && c.kind === 'sessions-per-week' ? c.min : 3;
   }, [program]);
 
+  // The planned deload weeks, so a light week reads as one (PLAN.md M306).
+  const deloadDates = useDeloadDates();
   const state = useMemo(
-    () => deriveClimberState(sessions, { weeklyTarget }),
-    [sessions, weeklyTarget],
+    () => deriveClimberState(sessions, { weeklyTarget, deloadDates }),
+    [sessions, weeklyTarget, deloadDates],
   );
   const points = useMemo(() => weeklyProgression(sessions, scale, 12), [sessions, scale]);
   const away = useAway((s) => s.periods);
   // So a marked fortnight stops drawing as a hole (PLAN.md M275).
-  const heat = useMemo(() => buildHeatGrid({ sessions, away }), [sessions, away]);
+  const heat = useMemo(
+    () => buildHeatGrid({ sessions, away, deloadDates }),
+    [sessions, away, deloadDates],
+  );
   const trend = useMemo(() => loadTrend({ sessions, to: today() }), [sessions]);
   // The marked stretches go in too (PLAN.md M305). They have been in scope
   // here since M275 and went to the heat grid and nowhere else, while this

@@ -82,6 +82,14 @@ export function WelcomePage() {
 
   const battery = useMemo(() => benchmarksFor(equipment), [equipment]);
   const entries = useMemo(() => baselineEntries(answers, today()), [answers]);
+  /**
+   * The one derivation in the app that takes no `deloadDates` (PLAN.md M306).
+   *
+   * An empty log on the setup screen: there are no blocks to have a deload
+   * week in, and an empty array is a fresh one every render, so it never
+   * shares the cache with anything anyway. Passing a set here would be a
+   * line that reads as care and answers nothing.
+   */
   const preview = useMemo(
     () => deriveStats({ state: deriveClimberState([]), metrics: entries }),
     [entries],

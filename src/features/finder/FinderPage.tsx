@@ -17,6 +17,7 @@ import type { Session } from '@/db/sessions';
 import { today } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { useSessions, useAllSessions } from '@/store/sessions';
+import { useDeloadDates } from '@/store/deload';
 import { injuryPolicy } from '@/engine/injury';
 import type { Discipline, Equipment } from '@/content/types';
 import { REGIONS, REGION_LABEL, partsIn, type BodyPart } from '@/content/bodyParts';
@@ -141,9 +142,10 @@ export function FinderPage() {
   // (PLAN.md M85). Computed here rather than inside the form so the form
   // keeps taking plain values and stays easy to test.
   const sessions = useAllSessions();
+  const deloadDates = useDeloadDates();
   const logged = useMemo(
-    () => gradesFromLog(baseline, deriveClimberState(sessions)),
-    [baseline, sessions],
+    () => gradesFromLog(baseline, deriveClimberState(sessions, { deloadDates })),
+    [baseline, sessions, deloadDates],
   );
   // The block just run, which is the most obviously relevant thing the log
   // holds about "what should I do next" and the finder was blind to it

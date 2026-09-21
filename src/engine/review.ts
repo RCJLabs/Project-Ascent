@@ -96,6 +96,11 @@ export interface WeekReview {
 
 export interface ReviewInput {
   sessions: Session[];
+  /**
+   * The days the climber's blocks put in a planned deload week
+   * (PLAN.md M306). `store/deload.ts` is where every caller gets it.
+   */
+  deloadDates?: ReadonlySet<string>;
   /** Any date inside the week to review. Defaults to today. */
   date?: string;
   program?: Program | undefined;
@@ -166,7 +171,7 @@ export function buildReview(input: ReviewInput): WeekReview {
   const now = loadStateAt(index, asOf);
   const then = loadStateAt(index, addDays(from, -1));
 
-  const state = deriveClimberState(all, { today: asOf });
+  const state = deriveClimberState(all, { today: asOf, deloadDates: input.deloadDates });
   const target = weeklyTargetOf(input.program);
 
   const boulderSends: Record<string, number> = {};

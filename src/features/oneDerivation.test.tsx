@@ -42,6 +42,9 @@ const { clearClimberStateCache } = await import('@/engine/derive');
 const { ProgressPage } = await import('@/features/progress/ProgressPage');
 const { useSettings } = await import('@/store/settings');
 const { BodyPage } = await import('@/features/body/BodyPage');
+const { useProfile } = await import('@/store/profile');
+const { HomePage } = await import('@/features/home/HomePage');
+const { GamePage } = await import('@/features/game/GamePage');
 
 beforeEach(async () => {
   globalThis.indexedDB = new IDBFactory();
@@ -58,6 +61,29 @@ beforeEach(async () => {
     });
   }
   await hydrate();
+  /**
+   * A block on record, because without one this test cannot see the thing
+   * it now guards (PLAN.md M306).
+   *
+   * `deloadDatesFor([])` returns the same empty set `deriveClimberState`
+   * resolves an omitted option to — by design, so a climber with no block
+   * costs nothing — which means a call site that forgot `deloadDates` keys
+   * *identically* to one that passed it. Measured: three mutants unwiring a
+   * call site all survived this file. A block with deload weeks in it is
+   * what makes the two keys differ, and the guard real.
+   */
+  useProfile.setState({
+    blocks: [
+      {
+        id: `iron_grip#${addDays(today(), -21)}`,
+        programId: 'iron_grip',
+        name: 'Iron Grip',
+        startDate: addDays(today(), -21),
+        weeks: 12,
+        endedAt: null,
+      },
+    ],
+  });
   clearClimberStateCache();
   calls.length = 0;
 });
@@ -76,6 +102,31 @@ describe('a page pays for one derivation', () => {
     // weekly target, the career card, the body card, and the skills store
     // behind it. Four before this milestone meant four walks of the log.
     expect(calls.length, 'the page stopped asking').toBeGreaterThanOrEqual(4);
+    expect(derivations(), `${calls.length} calls`).toBe(1);
+  });
+
+  /**
+   * Two more pages, added at M306, because that milestone gave every call
+   * site a `deloadDates` set the cache keys on **by identity**. One left
+   * unwired is not a wrong number anywhere obvious — it is two derivations
+   * of one log on a page a climber opens daily, which is the thing this file
+   * was written to notice.
+   *
+   * The front door, where the coach reads the log; and the game, which is
+   * the only page that mounts `useClimberAvatar` ungated and so the only one
+   * where leaving *that* caller unwired is visible at all.
+   */
+  it('including the front door', async () => {
+    renderAt('/', <HomePage />);
+    await screen.findByText("Coach's Corner");
+    expect(calls.length, 'the page stopped asking').toBeGreaterThanOrEqual(2);
+    expect(derivations(), `${calls.length} calls`).toBe(1);
+  });
+
+  it('and the game, where the avatar asks for itself', async () => {
+    renderAt('/game', <GamePage />);
+    await screen.findByText('Ranks');
+    expect(calls.length, 'the page stopped asking').toBeGreaterThanOrEqual(2);
     expect(derivations(), `${calls.length} calls`).toBe(1);
   });
 

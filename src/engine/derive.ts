@@ -247,13 +247,31 @@ export const emptyTally = (): GradeTally => ({
   bestOrdinal: -1,
 });
 
+/**
+ * One empty set, shared, for every climber with no planned deload in reach.
+ *
+ * It lives here rather than in `deload.ts` because it is this cache's
+ * concern and because `deload.ts` imports the program catalogue — a module
+ * this one is in the entry chunk with and must not drag in behind it
+ * (PLAN.md M78).
+ */
+export const NO_DELOAD: ReadonlySet<string> = new Set<string>();
+
 export interface DeriveOptions {
   /** Reference date; defaults to the real today. Injected so tests are stable. */
   today?: string;
   /** Sessions per week the active program asks for, for streak counting. */
   weeklyTarget?: number;
-  /** Dates inside a planned deload week. */
-  deloadDates?: Set<string>;
+  /**
+   * Dates inside a planned deload week (PLAN.md M67, wired at M306).
+   *
+   * `engine/deload.ts` is the one thing that answers this, and every caller
+   * in the app passes what it returns — `oneDerivation.test.ts` holds that,
+   * because the cache below keys on this **by identity**: one call site that
+   * forgets it turns every derivation on its page into a miss, and asks a
+   * different question besides.
+   */
+  deloadDates?: ReadonlySet<string>;
 }
 
 /**
@@ -295,6 +313,11 @@ export function deriveClimberState(sessions: Session[], options: DeriveOptions =
     ...options,
     today: options.today ?? todayKey(),
     weeklyTarget: options.weeklyTarget ?? 3,
+    // Resolved for the reason the two above are, and one more: a fresh
+    // `new Set()` per call is a new key every time, so the default has to be
+    // the *same* empty set every caller that has no block would get from
+    // `deloadDatesFor`.
+    deloadDates: options.deloadDates ?? NO_DELOAD,
   };
   const key = [sessions, resolved.today, resolved.weeklyTarget, resolved.deloadDates] as const;
   if (cached !== null && cached.key.every((v, i) => v === key[i])) return cached.value;
@@ -453,7 +476,7 @@ function deriveClimberStateUncached(sessions: Session[], options: DeriveOptions)
     load: deriveLoad(
       { byDate: loadByDate, earliest: earliestLoad, earliestSeen: earliestTrained },
       today,
-      options.deloadDates ?? new Set(),
+      options.deloadDates ?? NO_DELOAD,
     ),
     streakWeeks: deriveStreak(completed, today, weeklyTarget),
     longestStreakWeeks: deriveLongestStreak(completed, weeklyTarget),
@@ -679,7 +702,7 @@ export function buildLoadIndex(sessions: Session[]): LoadIndex {
 export function loadStateAt(
   index: LoadIndex,
   date: string,
-  deloadDates: Set<string> = new Set(),
+  deloadDates: ReadonlySet<string> = NO_DELOAD,
 ): LoadState {
   return deriveLoad(index, date, deloadDates);
 }
@@ -814,7 +837,7 @@ export function zonesFor(index: LoadIndex, dates: readonly string[]): AcwrZone[]
 function deriveLoad(
   index: LoadIndex,
   today: string,
-  deloadDates: Set<string>,
+  deloadDates: ReadonlySet<string>,
 ): LoadState {
   const loadByDate = index.byDate;
   const daily: DayLoad[] = [];
