@@ -14741,6 +14741,13 @@ M50 for why it is not coming.
   load that broke CI breaks the old code here — two of the converted tests fail with six cores
   spinning and pass after.
 
+- **M305 — a taper, an illness or a holiday.** `blockCompare.ts` said the app could not tell those
+  three apart, and two of them had been an `AwayPeriod` with a kind and a note on it since M275 —
+  with the list in scope on the Progress page twelve lines above the call, handed to the heat grid
+  and nothing else. The block card names the marked stretch now, from the window that matches the
+  direction of the change. And the sample climber, which had no markers at all, took its deliberate
+  week off out of *"longest gap 7 days"*.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -20791,4 +20798,113 @@ putting one converted sleep back, and pointing the sweep at a directory small en
 nothing.
 
 6,992 tests over 415 files, from 6,987 over 414. Layout harness OK. First load 136.90KB against
+137.3.
+
+## M305 — a taper, an illness or a holiday
+
+M298a's fifth entry said `blockCompare` claims the app cannot tell a taper from an illness, and
+that M275 had made that untrue. The premise survived the code, and it is worse than the entry
+said. `blockCompare.ts:88`:
+
+> a deload block is *supposed* to show as a decline, and the app has no idea whether the last four
+> weeks were a taper, an illness or a holiday
+
+An illness and a holiday are both an `AwayPeriod` — a date range, a kind, a line of text — and have
+been since M275, which built the record precisely so the app would stop asserting things about a
+quiet stretch it has no way to know. Four engines read it — `adherence`, `coach`, `comedown` and
+`consistency` — and two screens draw it. `ProgressPage` reads it too:
+
+```
+const away = useAway((s) => s.periods);
+const heat = useMemo(() => buildHeatGrid({ sessions, away }), [sessions, away]);
+const trend = ...
+const block = useMemo(() => compareBlocks({ sessions, to: today() }), [sessions]);
+```
+
+Twelve lines apart. The grid stopped drawing a marked fortnight as a hole and the card beside it
+went on saying the app had no idea.
+
+### Which window, not whether
+
+The rule worth getting right is not *should it mention the marker* but *which four weeks*. Training
+down is explained by what happened in the recent window; training up is explained by what happened
+in the earlier one. A climber coming back from three weeks with flu is not improving, they are
+recovering, and a card that named the flu beside *"6 more sessions"* would be reading it the wrong
+way round. So `blockAside` picks the side from the direction, and a marker on the other side is not
+named at all.
+
+Three days is the floor. **Not `EXPLAINS_FRACTION`** — that one is about a gap, where the gap is
+the whole span being explained and half of it is a fair bar. This window is twenty-eight days
+whatever happened in it, so a fraction would set the bar at a fortnight and throw away every long
+weekend. Two days out of twenty-eight cannot be the reason a month reads differently, and naming
+them would be the app blaming a quiet month on a Tuesday.
+
+`wasClimbing` is deliberately unread. `outdoorReentry` needs it, because three weeks off with a
+shoulder really is three weeks off rock; here a trip and an injury are both reasons a month is
+quieter than the one before, and which it was is the climber's word to print rather than this
+card's to interpret.
+
+### The sample climber had never been away
+
+`db/demo.ts` writes sessions, projects, metrics, injuries, objectives, a program, two blocks — and
+no away periods. So **M275 and its six readers have been invisible to every browser check, layout
+run and screenshot since it shipped**. The sample climber takes one week off in the spring,
+deliberately, because *"a log with no gap in it has never belonged to anyone"* — and its own
+consistency strip read that week as a lapse:
+
+```
+WITHOUT: 196 days logged over 51 weeks · 3.8 a week · longest run 3 days · longest gap 7 days.
+WITH   : 196 days logged over 51 weeks · 3.8 a week · longest run 3 days · longest gap 4 days
+         · 7 days marked away.
+```
+
+One period, `life` rather than `rest` — filing a week of moving house under deliberate rest tells
+the app the climber recovered, which `away.ts` names as the mistake the fourth kind exists to stop.
+Dated off the same constant the session loop skips, so the marker and the gap cannot drift, and off
+no RNG stream, so every record this file produced before M305 is byte-identical after it.
+
+Verified as the journey rather than as a fixture — load the sample climber, mark a fortnight from
+the calendar, read Progress:
+
+```
+away rows:     ["Moving house · Mar 30 – Apr 5, 2026 · 7 days"]
+offer:         Mark Sep 8 – Sep 21, 2026 away
+away rows now: ["Flu · Sep 8 – Sep 21, 2026 · 14 days", "Moving house · ..."]
+
+3 fewer sessions than the four weeks before. 14 of those days are marked Flu.
+```
+
+### The taper is still a guess, and here is why
+
+The corrected comment names one gap instead of denying three, because the third is real and is not
+a prose fix. A deload week is a property of the **program**, and the only thing that writes it onto
+a session is `PreSession.tsx:230`, at the moment a session is started from the plan card. So:
+
+- **A deload week rested through leaves no trace.** Which is a large part of what a deload week is.
+- **`deriveClimberState`'s `deloadDates` option has exactly one caller in the repository, and it is
+  `coach.test.ts:396`.** No production code has ever passed it. `inPlannedDeload`, the Progress
+  page's *"This is a planned deload week, so a lighter load is the point"*, and `zoneOf`'s
+  detraining-to-optimal correction all run on the session flag alone.
+- **The sample climber carries zero deload sessions**, while being on week six of Iron Grip, whose
+  `deloadWeeks` are `[4, 8]` — so week four is inside its own last twenty-eight days.
+- And it cannot be wired at one call site: the derive cache is one entry keyed on `deloadDates` by
+  identity across eighteen callers, so a page that passes a set and a page that does not would get
+  different answers to the same question.
+
+That is the next item, and it is a change to what the app tells a climber about injury risk rather
+than to a sentence.
+
+### And one check that read like a check that ran
+
+`blockCompare.test.ts`'s *"handles both periods being empty"* built its fixture from an
+**uncompleted** session, which leaves the log with no earliest date at all — so it took the
+"nothing logged yet" branch and matched `/nothing logged/i` on the way past. The branch it is named
+for had never been executed. Fixed here because the new sentence attaches to it.
+
+Battery: 9 killed, sanity survived. One survivor on the first run and it was a real hole: the
+flat-month guard is only reachable from one window at a time, and a test that marked the recent one
+could not tell a missing guard from a working one, because the mutant went looking in the earlier
+window and found nothing there. A marker in each window kills it.
+
+7,015 tests over 416 files, from 6,992 over 415. Layout harness OK. First load 136.92KB against
 137.3.

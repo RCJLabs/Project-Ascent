@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { Session } from '@/db/sessions';
+import type { AwayPeriod } from './away';
 import { addDays } from './dates';
-import { BLOCK_DAYS, blockChanges, compareBlocks, describeBlocks } from './blockCompare';
+import {
+  BLOCK_DAYS,
+  MIN_ASIDE_DAYS,
+  blockAside,
+  blockChanges,
+  compareBlocks,
+  describeBlocks,
+} from './blockCompare';
 import { CHANGE_ROWS } from './yearReview';
 
 const TO = '2026-09-10';
@@ -48,6 +56,24 @@ function earlier(count: number): Session[] {
 }
 
 const build = (sessions: Session[], to = TO) => compareBlocks({ sessions, to });
+
+/** A marked stretch, dated in days before TO. `fromAgo` is the earlier end. */
+const marked = (fromAgo: number, toAgo: number, patch: Partial<AwayPeriod> = {}): AwayPeriod => ({
+  id: `away-${fromAgo}-${toAgo}`,
+  from: addDays(TO, -fromAgo),
+  to: addDays(TO, -toAgo),
+  kind: 'injured',
+  updatedAt: `${addDays(TO, -fromAgo)}T09:00:00.000Z`,
+  ...patch,
+});
+
+const withAway = (sessions: Session[], away: AwayPeriod[]) =>
+  compareBlocks({ sessions, to: TO, away });
+
+/** Six fewer sessions in the last four weeks than in the four before them. */
+const DOWN = [...run(4, 6, 0), ...earlier(10)];
+/** Six more. */
+const UP = [...run(10, 2, 0), ...earlier(4)];
 
 describe('the two windows', () => {
   it('are four weeks each, back to back', () => {
@@ -180,8 +206,9 @@ describe('the sentence', () => {
   });
 
   it('does not call a decline a failure', () => {
-    // A deload block is supposed to show as a decline, and the app does not
-    // know whether the last four weeks were a taper, an illness or a holiday.
+    // A deload block is supposed to show as a decline. Since M305 the app
+    // can name an illness or a holiday the climber marked — and a verdict on
+    // one is still not its to give.
     const c = build([...run(2, 10, 0), ...earlier(12)]);
     expect(describeBlocks(c)).not.toMatch(/should|slipped|only|worse|dropped off|worry|failed/i);
   });
@@ -192,7 +219,125 @@ describe('the sentence', () => {
   });
 
   it('handles both periods being empty', () => {
-    const c = build([session(addDays(TO, -(BLOCK_DAYS * 2 - 1)), { completed: false })]);
-    expect(describeBlocks(c)).toMatch(/nothing logged/i);
+    // A completed session *older* than both windows, which is what makes the
+    // comparison available and both halves of it nought. The fixture used to
+    // be an uncompleted one inside the earlier window: that leaves the log
+    // with no earliest date at all, so this took the "nothing logged yet"
+    // branch and matched `/nothing logged/i` on the way past (PLAN.md M305).
+    const c = build([session(addDays(TO, -BLOCK_DAYS * 2))]);
+    expect(c.before).not.toBeNull();
+    expect(describeBlocks(c)).toBe('Nothing logged in either period.');
+  });
+});
+
+/**
+ * The stretches the climber marked, named beside the change (PLAN.md M305).
+ *
+ * The rule this holds is about *which window*: a quieter month is explained
+ * by what happened in it, and a busier one by what happened in the month
+ * before. Getting that backwards would tell a climber coming back from flu
+ * that they were improving.
+ */
+describe('the marked stretches', () => {
+  it('names one in the recent window when training went down', () => {
+    const c = withAway(DOWN, [marked(10, 1)]);
+    expect(describeBlocks(c)).toBe(
+      '6 fewer sessions than the four weeks before. 10 of those days are marked injured.',
+    );
+  });
+
+  it('names one in the earlier window when training went up', () => {
+    const c = withAway(UP, [marked(50, 40)]);
+    expect(describeBlocks(c)).toMatch(/The earlier four weeks have 11 days marked injured\.$/);
+  });
+
+  it('does not explain a decline with something that happened before it', () => {
+    // The marker is in the earlier window and training went *down*, so it is
+    // not the reason — saying it would blame this month on last month.
+    expect(blockAside(withAway(DOWN, [marked(50, 40)]))).toBeNull();
+  });
+
+  it('says nothing about a month that did not change', () => {
+    const level = [...run(8, 3, 0), ...earlier(8)];
+    // One marker in each window, because the guard is only reachable from
+    // one side at a time and which side depends on where the rounding of a
+    // half-hour lands. With a marker in the recent window only, a mutant
+    // that drops the guard entirely still returns null — it picks the
+    // earlier window and finds nothing there — and survived saying so.
+    expect(blockAside(withAway(level, [marked(20, 1)]))).toBeNull();
+    expect(blockAside(withAway(level, [marked(50, 40)]))).toBeNull();
+  });
+
+  it('ignores a stretch too short to be the reason', () => {
+    const short = MIN_ASIDE_DAYS - 1;
+    expect(blockAside(withAway(DOWN, [marked(short, 1)]))).toBeNull();
+    expect(blockAside(withAway(DOWN, [marked(MIN_ASIDE_DAYS, 1)]))?.days).toBe(MIN_ASIDE_DAYS);
+  });
+
+  it('counts days of the window, not days of the stretch', () => {
+    // Three months either side of it: the window is four weeks whatever the
+    // marker says, and four weeks is what the sentence is about.
+    const aside = blockAside(withAway(DOWN, [marked(120, -60)]));
+    expect(aside?.days).toBe(BLOCK_DAYS);
+  });
+
+  it('takes the stretch covering most of the window when two overlap', () => {
+    const c = withAway(DOWN, [marked(4, 1, { note: 'short' }), marked(20, 1, { note: 'long' })]);
+    expect(blockAside(c)?.period.note).toBe('long');
+  });
+
+  it('prints what the climber called it, and the kind when they called it nothing', () => {
+    expect(describeBlocks(withAway(DOWN, [marked(10, 1, { note: "Font '26" })]))).toContain(
+      "marked Font '26",
+    );
+    expect(describeBlocks(withAway(DOWN, [marked(10, 1, { kind: 'trip' })]))).toContain(
+      'marked climbing trip',
+    );
+  });
+
+  it('names a trip and an illness alike', () => {
+    // `wasClimbing` is deliberately unread here: both are reasons a month is
+    // quieter than the one before it, and which it was is the climber's word
+    // rather than this card's judgement.
+    const trip = describeBlocks(withAway(DOWN, [marked(10, 1, { kind: 'trip' })]));
+    const hurt = describeBlocks(withAway(DOWN, [marked(10, 1, { kind: 'injured' })]));
+    expect(trip.replace('climbing trip', 'X')).toBe(hurt.replace('injured', 'X'));
+  });
+
+  it('leaves the sentence exactly as it was for a climber who marked nothing', () => {
+    expect(describeBlocks(withAway(DOWN, []))).toBe(describeBlocks(build(DOWN)));
+    expect(describeBlocks(withAway(UP, []))).toBe(describeBlocks(build(UP)));
+  });
+
+  it('says nothing before there is a comparison to explain', () => {
+    // No earlier window means no change, and a marker over four weeks that
+    // are not being compared to anything explains nothing.
+    const c = compareBlocks({ sessions: run(4, 2, 0), to: TO, away: [marked(10, 1)] });
+    expect(c.before).toBeNull();
+    expect(c.beforeAway).toEqual([]);
+    expect(blockAside(c)).toBeNull();
+  });
+
+  it('explains a silence in both windows with the recent one', () => {
+    const c = compareBlocks({
+      sessions: [session(addDays(TO, -BLOCK_DAYS * 2))],
+      to: TO,
+      away: [marked(20, 1)],
+    });
+    expect(describeBlocks(c)).toBe(
+      'Nothing logged in either period. 20 of those days are marked injured.',
+    );
+  });
+
+  it('only ever names a stretch that touches the window it claims', () => {
+    for (const aside of [
+      blockAside(withAway(DOWN, [marked(10, 1)])),
+      blockAside(withAway(UP, [marked(50, 40)])),
+    ]) {
+      const c = aside!.window === 'now' ? withAway(DOWN, []) : withAway(UP, []);
+      const from = aside!.window === 'now' ? c.nowFrom : c.beforeFrom;
+      const to = aside!.window === 'now' ? c.nowTo : c.beforeTo;
+      expect(aside!.period.from <= to && aside!.period.to >= from).toBe(true);
+    }
   });
 });

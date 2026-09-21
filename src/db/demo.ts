@@ -134,6 +134,22 @@ export function demoObjectives(today = todayKey(), seed = DEMO_SEED) {
 }
 
 /**
+ * The week it says it was away, for the away store to hold (PLAN.md M305).
+ *
+ * Beside the injuries and objectives, and for their reason: it is one array
+ * under a key in `profile`, which the tag-per-record wipe cannot reach, so
+ * the store that owns it takes it out by id.
+ *
+ * Until M305 the sample climber had none, which meant M275 and its six
+ * readers were invisible to every browser check and every screenshot — the
+ * heat grid drew the spring week as an unexplained hole, and *Days you were
+ * away* was an empty list on a climber with a gap in their year.
+ */
+export function demoAway(today = todayKey(), seed = DEMO_SEED) {
+  return demoClimber(today, seed).away;
+}
+
+/**
  * Take it all back out, and nothing else.
  *
  * Returns how many records went, so the screen can say it rather than

@@ -47,6 +47,7 @@ import type { Climb, ProjectAttempt, Session, WallAngle } from '@/db/sessions';
 import { newSession, sessionId } from '@/db/sessions';
 import type { Injury } from '@/store/profile';
 import type { Program, ProgramId } from '@/content/types';
+import type { AwayPeriod } from './away';
 import type { BlockRecord } from './blocks';
 import { CUSTOM_PREFIX } from './customProgram';
 import { createRng, next, type Rng } from './ascent/rng';
@@ -57,6 +58,9 @@ export const DEMO_SEED = 20_260_112;
 
 /** A year, which is what the career page and the year review need. */
 export const DEMO_WEEKS = 52;
+
+/** The week the session loop skips, marked by `awayFor` (PLAN.md M305). */
+const WEEK_OFF = 26;
 
 /**
  * The program the sample climber wrote, and the block they finished
@@ -173,6 +177,16 @@ export interface DemoClimber {
    * target.
    */
   objectives: Objective[];
+  /**
+   * The stretches it says it was away (PLAN.md M305).
+   *
+   * M275 built the record, four engines and two screens read it, and
+   * **nothing ever wrote one here** — so every browser check, layout run and
+   * screenshot since has been of an app in which the feature does not exist.
+   * The sample climber takes a week off in the spring and the log has never
+   * said why, which is the exact gap the record was built for.
+   */
+  away: AwayPeriod[];
   /** The program the demo is mid-way through, and when it started. */
   programId: string;
   startDate: string;
@@ -420,8 +434,10 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
   for (let week = 0; week < DEMO_WEEKS; week += 1) {
     const monday = addDays(start, week * 7 + 1);
     // One week off in the spring, because a log with no gap in it has never
-    // belonged to anyone.
-    if (week === 26) continue;
+    // belonged to anyone. `WEEK_OFF` is the same number, and `awayFor` below
+    // marks the days this skips — two copies of one week is one copy plus a
+    // thing to forget.
+    if (week === WEEK_OFF) continue;
 
     const days = chance(rng, 0.2) ? 2 : 3;
     for (let d = 0; d < days; d += 1) {
@@ -595,11 +611,41 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
       },
     ],
     objectives: objectivesFor(today, start),
+    away: awayFor(start),
     programId: 'iron_grip',
     startDate: ironGripStart,
     program: written,
     blocks: [finishedBlock(ironGripStart, written)],
   };
+}
+
+/**
+ * The week off, said out loud (PLAN.md M305).
+ *
+ * One period, not a handful: the loop above skips exactly one week, and a
+ * marker over days with sessions in them would be a statement about silence
+ * made over a stretch that is not silent. `life` rather than `rest`, for the
+ * reason `away.ts` gives about the difference — the climber did not plan
+ * this and telling the app they recovered would be the wrong fact.
+ *
+ * Dated off `start` like everything else here, and off no RNG stream at all,
+ * so every record this file produced before M305 is byte-identical after it.
+ */
+function awayFor(start: string): AwayPeriod[] {
+  const from = addDays(start, WEEK_OFF * 7 + 1);
+  return [
+    {
+      id: 'demo-away-spring',
+      from,
+      // Monday to Sunday: the loop's week, whichever of its days it would
+      // have used.
+      to: addDays(from, 6),
+      kind: 'life',
+      note: 'Moving house',
+      // From the day, not the clock, for the reason the session stamps are.
+      updatedAt: `${from}T09:00:00.000Z`,
+    },
+  ];
 }
 
 /**

@@ -490,7 +490,11 @@ export function ProgressPage() {
   // So a marked fortnight stops drawing as a hole (PLAN.md M275).
   const heat = useMemo(() => buildHeatGrid({ sessions, away }), [sessions, away]);
   const trend = useMemo(() => loadTrend({ sessions, to: today() }), [sessions]);
-  const block = useMemo(() => compareBlocks({ sessions, to: today() }), [sessions]);
+  // The marked stretches go in too (PLAN.md M305). They have been in scope
+  // here since M275 and went to the heat grid and nowhere else, while this
+  // card's own sentence said the app could not tell a holiday from an
+  // illness.
+  const block = useMemo(() => compareBlocks({ sessions, to: today(), away }), [sessions, away]);
   const checkIns = useMemo(() => checkInHistory({ sessions, to: today() }), [sessions]);
   // What the rest-day ticks say, which nothing had ever read one at a time
   // (PLAN.md M94).
@@ -683,7 +687,8 @@ export function ProgressPage() {
             {block.before !== null && (
               <p className="text-xs text-ink-soft mt-2 leading-relaxed">
                 Up is not better and down is not worse — a deload block is supposed to show as a
-                decline, and so is the month after a trip.
+                decline, and so is the month after a trip. Days you marked away are named above
+                when there are enough of them to be the reason.
               </p>
             )}
           </Card>

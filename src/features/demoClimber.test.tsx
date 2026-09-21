@@ -2,8 +2,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { canLoadDemo, demoObjectives, demoProgram, loadDemo } from '@/db/demo';
-import { DEMO_PROGRAM_ID } from '@/engine/demoClimber';
+import { canLoadDemo, demoAway, demoObjectives, demoProgram, loadDemo } from '@/db/demo';
+import { DEMO_PROGRAM_ID, demoClimber } from '@/engine/demoClimber';
 import { useCustomPrograms } from '@/store/programs';
 import { daysBetween, today } from '@/engine/dates';
 import { getSession, newSession, putSession } from '@/db/sessions';
@@ -11,6 +11,7 @@ import { deriveClimberState } from '@/engine/derive';
 import { lastBlockFor } from '@/engine/finderHistory';
 import { measure } from '@/engine/skills';
 import { allSessions } from '@/store/sessions';
+import { useAway } from '@/store/away';
 import { useObjectives } from '@/store/objectives';
 import { useProfile } from '@/store/profile';
 import { useMetrics } from '@/store/metrics';
@@ -455,5 +456,77 @@ describe('the history after the sample climber has gone', () => {
      */
     expect(kept[0]?.reconstructed).toBeUndefined();
     expect(kept[0]?.reason).toBe('ran-out');
+  });
+});
+
+/**
+ * The week it took off, said out loud (PLAN.md M305).
+ *
+ * The session loop has skipped one week since M110 — *"a log with no gap in
+ * it has never belonged to anyone"* — and M275 built the record for saying
+ * why, read by four engines and two screens. Nothing ever wrote one here,
+ * so every browser check and every screenshot since M275 has been of an app
+ * in which that feature does not exist.
+ */
+describe('the week it was away', () => {
+  it('marks exactly the week the session loop skips', () => {
+    const [period, ...rest] = demoAway();
+    expect(rest).toEqual([]);
+    // Monday to Sunday, and nothing logged on any of it — a statement about
+    // silence has to be made over days that are silent.
+    expect(daysBetween(period!.from, period!.to)).toBe(6);
+    const made = demoClimber(today()).sessions;
+    const logged = made.filter((x) => x.date >= period!.from && x.date <= period!.to);
+    expect(logged).toEqual([]);
+  });
+
+  it('is the same climber every time', () => {
+    // Off no RNG stream, so the records either side of it are untouched.
+    expect(demoAway()).toEqual(demoAway());
+  });
+
+  it('does not say the climber rested', () => {
+    // `away.ts`: filing a week of life under `rest` tells the app they
+    // recovered, which is a different and unearned fact.
+    expect(demoAway()[0]?.kind).toBe('life');
+  });
+
+  it('is written when the sample climber is loaded', async () => {
+    await emptied();
+    await settings();
+    fireEvent.click(await screen.findByText('Load a sample climber'));
+    await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy());
+    expect(useAway.getState().periods.map((p) => p.id)).toEqual(demoAway().map((p) => p.id));
+  });
+
+  it('takes it back out when the sample data is cleared', async () => {
+    await emptied();
+    await settings();
+    fireEvent.click(await screen.findByText('Load a sample climber'));
+    await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy());
+    expect(useAway.getState().periods).toHaveLength(1);
+
+    fireEvent.click(await screen.findByText('Clear the sample data'));
+    await waitFor(() => expect(screen.getByText(/Sample data cleared/)).toBeTruthy());
+    expect(useAway.getState().periods).toEqual([]);
+  });
+
+  it('leaves a stretch the climber marked themselves', async () => {
+    await emptied();
+    await settings();
+    fireEvent.click(await screen.findByText('Load a sample climber'));
+    await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy());
+    const mine = {
+      id: 'mine',
+      from: '2024-02-05',
+      to: '2024-02-11',
+      kind: 'trip' as const,
+      updatedAt: '2024-02-05T09:00:00.000Z',
+    };
+    await useAway.getState().save(mine);
+
+    fireEvent.click(await screen.findByText('Clear the sample data'));
+    await waitFor(() => expect(screen.getByText(/Sample data cleared/)).toBeTruthy());
+    expect(useAway.getState().periods.map((p) => p.id)).toEqual(['mine']);
   });
 });

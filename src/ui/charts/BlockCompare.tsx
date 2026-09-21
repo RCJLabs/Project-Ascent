@@ -16,6 +16,11 @@ import type { Change } from '@/engine/yearReview';
  * The direction is an arrow and a signed number — shape and text, which also
  * happens to be what M15's rule requires — and the caption says outright
  * that a quieter month is not a worse one.
+ *
+ * The **table** stays neutral after M305 and the **sentence** under it no
+ * longer does, which is the split worth keeping: naming the fortnight a
+ * climber marked injured is a fact they typed, and painting the row green
+ * would still be a verdict the app is in no position to reach.
  */
 
 function Row({ change }: { change: Change }) {

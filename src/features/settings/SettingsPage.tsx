@@ -16,6 +16,7 @@ import { CsvError, parseCsv } from '@/engine/csv';
 import {
   canLoadDemo,
   demoBlocks,
+  demoAway,
   demoInjuries,
   demoObjectives,
   demoProgram,
@@ -39,6 +40,7 @@ import { formatBytes, storagePressure } from '@/engine/offline';
 import { useAppUpdate } from '@/store/appUpdate';
 import { unlock } from '@/lib/cues';
 import { hydrateAll } from '@/store';
+import { useAway } from '@/store/away';
 import { useObjectives } from '@/store/objectives';
 import { useProfile } from '@/store/profile';
 import { rankTemplates } from '@/engine/templates';
@@ -326,6 +328,9 @@ export function SettingsPage() {
       // Awaited, unlike the profile actions above: the objectives store
       // persists before it sets, so there is a promise to hold (M207, M220).
       for (const objective of demoObjectives()) await useObjectives.getState().save(objective);
+      // And the week it took off, which the log shows and has never
+      // explained (PLAN.md M305). Awaited for the objectives' reason.
+      for (const period of demoAway()) await useAway.getState().save(period);
       await hydrateAll();
       setMessage('Sample data loaded. Nothing in it happened.');
     } catch (e) {
@@ -348,6 +353,7 @@ export function SettingsPage() {
       await useCustomPrograms.getState().remove(demoProgram().id);
       for (const injury of demoInjuries()) profile.removeInjury(injury.id);
       for (const objective of demoObjectives()) await useObjectives.getState().remove(objective.id);
+      for (const period of demoAway()) await useAway.getState().remove(period.id);
       await hydrateAll();
       setMessage(`Sample data cleared — ${gone} record${gone === 1 ? '' : 's'}. Anything you logged yourself is still here.`);
     } catch (e) {
