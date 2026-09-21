@@ -14763,6 +14763,118 @@ M50 for why it is not coming.
   page prescribed week twelve while the Finish page said it had run to the end. 7,032 tests did not
   notice, because every block in every fixture starts on a Sunday.
 
+## Seven, run against Progress, Calendar and Projects (M307a)
+
+M298a's tenth entry: *"Reading one screen's modules against their own prose found five real defects
+in `features/log/` in a single pass… Progress, Calendar and Projects have had no such pass. This is
+the highest-yield item on the list."* This is that pass, under M298a's rule — each entry names
+where it is true, and says whether it is **measured**, **inferred** or **a proposal**.
+
+Nothing here is built. Four sweeps ran first, and two of them found nothing, which is worth saying:
+every optional field on an engine input interface is passed by something (two exceptions, below),
+and every module these three screens import has a reader.
+
+### One word, two meanings, one screen
+
+**1. The Projects page says "burns" twice about one project and means different things.** For the
+sample climber's only sent project, rendered:
+
+```
+The Joker  V5   20 burns over 8 days   · Stanage     (the list row)
+V5   7 burns · 7 sessions · 68 days   1 send*        (the "What they cost" card)
+```
+
+`summariseProject` counts **every** attempt and **days that carry one**; `costOf` counts attempts
+**up to the send** and the **calendar span** from the first burn to it. Both are right and both are
+deliberate — `costOf` says so: *"A project climbed again afterwards should not read as having taken
+forty burns."* Neither label says which it is, so one screen shows 20 and 7 for one climb, and 8
+and 68 for one stretch of time. The M169 shape about units rather than words. *Measured.*
+
+**2. The rope pyramid names a rung nobody has ever touched, every time it speaks.** `readPyramid`
+walks the top `WORKING_BAND = 4` rows and reports an established grade with less under it. Walked
+across the sample climber's year:
+
+```
+rope pyramid spoke on 152 days
+  named a rung with no sends AND no attempts: 152
+  named a rung tried but not sent:              0
+  named a rung with sends under it:             0
+```
+
+Because `WORKING_BAND` is four **rungs**, and a rung is a different amount of climbing on the two
+ladders. Four V grades is the working range the docblock argues for — *"a project grade, the grade
+under it and the two a climber warms up through"* — while four YDS rungs is 5.11a down to 5.10d,
+less than one number grade, on a ladder whose letters most gyms and guidebooks do not use. So the
+band fills with rungs nobody has climbed, and the card tells this climber *"a block of volume at
+5.10d is the cheapest gain on this page"* about a grade with **0 sends and 0 attempts**, while
+5.10c one rung further down has 22 sends. The boulder ladder is silent on all 358 days and that is
+correct: its pyramid is 7/48/138/254/384, which is the healthy shape. *Measured.*
+
+### A rule that stopped one boundary short
+
+**3. The calendar's week gutter reads a fraction for the week in progress.** M146's own docblock:
+*"A week that has not happened is not a week you missed. The first build read 0/4 down every future
+row, which is true and reads as failure."* The fix is `const ahead = start > today`, so it hides
+the fraction for a week whose **Sunday** is ahead — and shows `done/planned` for the week we are
+in, counting days that have not happened yet. On the sample climber, today a Monday, the current
+row reads **1/4** against four planned sessions of which three are still ahead. The argument is
+about the day boundary and the code stopped at the week boundary, on the one row a climber looks at
+most. *Measured.*
+
+### A list kept by hand beside a marker kept by machine
+
+**4. The builder offers three retired questions as chips.** `content/fields.ts` carries a
+`retired?: string` on a field, naming what reads the answer instead. Four fields carry it. The
+builder's `ASKABLE` excludes two ids by hand:
+
+```
+const ASKABLE = Object.values(FIELDS).filter((f) => f.id !== 'location' && f.id !== 'clipStyle');
+```
+
+and its comment says *"not the retired clip style, which nothing renders an input for"* — naming
+the marker in prose and then not reading it. So **Project**, **Route** and **Time on the wall** are
+still choosable questions for a session type a climber writes, each retired precisely because the
+app already reads that answer somewhere else. The M307 shape one file over: a comment is not a
+mechanism. *Measured.*
+
+### Prose that stopped being true
+
+**5. `sessionFields.ts` counts sixteen fields and there are seventeen.** Its docblock opens:
+*"Sixteen field ids are declared, twenty-two session types name them"* and *"Of the sixteen, six
+are `number` and one is a `scale`."* Measured now: **17** declared, **21** session types name one,
+**7** numbers, one scale — and a **`choice`** kind that did not exist when the sentence was written
+(`conditions`, M289). The code is right and the arithmetic in the prose is not, which is the
+fourth time this session. Worth correcting where it sits rather than as a milestone. *Measured.*
+
+### Gates the sample climber has never opened
+
+**6. The Projects page's headline sentence needs three sent projects, and a year of the sample
+climber sends one.** `projectHistory.overall` is null below `ENOUGH_AT_GRADE = 3` **projects sent**,
+so the card falls back to *"1 sent so far. 3 is where these numbers start meaning something."* That
+fallback is honest and the gate is defensible — but it means every browser check, layout run and
+screenshot of this page has shown the fallback and never the card. The same shape as M305's away
+markers and M306's deload weeks: a fixture that cannot reach the state. Whether the fix is a longer
+sample log or a second climber is the open question. *Measured; the fix is a proposal.*
+
+### A knob that does nothing
+
+**7. `deriveAltimeter`'s `paceWeeks` has no caller that changes it.** Two call sites in the
+repository, both in `altimeter.test.ts`, and both pass `8` — which is the default. So the option is
+reachable, typed, documented (*"Weeks of history the pace is measured over"*) and behaviourally
+dead: every call in the app produces what omitting it produces. The M306 shape without M306's
+consequence — nothing is being read wrong, there is just a parameter that is not one.
+`ascent/replay.ts`'s `untilTick` is the other of the two and is the same story. *Measured.*
+
+### What was checked and is not a gap
+
+`angles`, `ladders` and `ropeStyle` all speak on 348–356 of the sample climber's 358 days, so their
+coverage gates open in practice rather than only in principle — this was the M303 worry and it does
+not apply. The boulder pyramid's silence is the rule working, not a rule that cannot fire.
+`monthMarks` reads `isDeload` from the plan and has been right since M145, so M306's finding never
+touched the calendar. `weekTally` is the single source M146 lifted it out to be, read by both the
+week screen and the month grid. `costOf` clipping at the send is deliberate and documented; only
+its label is missing. None of these wants touching.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
