@@ -34,7 +34,7 @@
  */
 
 import type { Program } from '@/content/types';
-import { addDays, startOfWeek } from './dates';
+import { addDays, blockSpan } from './dates';
 import type { WeekPlan } from './scheduler';
 
 /** Why a block stopped being the one you are running. */
@@ -182,15 +182,20 @@ export function closeBlock(
 }
 
 /**
- * The day a block's window closes, from what the row itself remembers.
+ * The calendar a block covered, from what the row itself remembers.
  *
  * `plan.blockWindow` needs a `Program`, and a history row outlives the
  * program it names — a deleted custom one, or one whose length has since
- * been re-adapted. The arithmetic is the same and deliberately so.
+ * been re-adapted. So this takes the weeks from the row and the arithmetic
+ * from `dates.blockSpan`, which is the same function `blockWindow` calls.
+ *
+ * It used to say *"The arithmetic is the same and deliberately so"* and
+ * compute its own from `startOfWeek` (PLAN.md M307). It was not the same:
+ * `blockStart` snaps **forward** to the first whole week, so for every start
+ * that is not a Sunday this window began and ended seven days early.
  */
 export function rowWindow(row: BlockRecord): { from: string; to: string } {
-  const from = startOfWeek(row.startDate);
-  return { from, to: addDays(from, row.weeks * 7 - 1) };
+  return blockSpan(row.startDate, row.weeks);
 }
 
 export type BlockOutcome = 'running' | 'completed' | 'left' | 'unknown';

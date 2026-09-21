@@ -114,6 +114,31 @@ export function blockStart(startDate: string): string {
 }
 
 /**
+ * The calendar a block covers: whole weeks from `blockStart` (PLAN.md M307).
+ *
+ * One function because there were two, and they disagreed. `plan.blockWindow`
+ * took the arithmetic from `blockStart`; `blocks.rowWindow` took it from
+ * `startOfWeek` while its own docblock said *"The arithmetic is the same and
+ * deliberately so."* For any start that is not a Sunday the two were seven
+ * days apart — which is six starts in seven — and the app contradicted itself
+ * for the whole of a block's final week:
+ *
+ * ```
+ * 2026-11-08  week 12 | Train says running | Finish says completed
+ * ...
+ * 2026-11-14  week 12 | Train says running | Finish says completed
+ * ```
+ *
+ * A comment is not a mechanism. Both callers take `weeks` from whatever they
+ * have — a `Program` or a history row that outlives one — and the arithmetic
+ * from here, so the claim is true by construction.
+ */
+export function blockSpan(startDate: string, weeks: number): { from: string; to: string } {
+  const from = blockStart(startDate);
+  return { from, to: addDays(from, weeks * 7 - 1) };
+}
+
+/**
  * Which program week a date falls in, 1-based, Sunday-aligned so a week
  * always means the same calendar block regardless of the start day.
  * Returns null before the program started — which is `blockStart`, the

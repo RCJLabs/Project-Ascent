@@ -19,7 +19,7 @@ import {
   type SessionType,
 } from '@/content/types';
 import { testWeeks, type TestReason } from './assessments';
-import { addDays, blockStart, dayOfWeek, daysBetween, programWeek } from './dates';
+import { blockSpan, dayOfWeek, daysBetween, programWeek } from './dates';
 import { effectivePlan, type WeekOverrides } from './reschedule';
 import type { WeekPlan } from './scheduler';
 
@@ -78,8 +78,7 @@ export interface PlannedDay {
  * days between belong to no week at all (PLAN.md M259).
  */
 export function blockWindow(program: Program, startDate: string): { from: string; to: string } {
-  const from = blockStart(startDate);
-  return { from, to: addDays(from, program.weeks * 7 - 1) };
+  return blockSpan(startDate, program.weeks);
 }
 
 export type BlockState = 'before' | 'running' | 'ended';

@@ -40,12 +40,10 @@
  * the Sunday *after* a start that is not itself a Sunday (M259 — the days
  * between belong to no week at all).
  *
- * `blocks.rowWindow` uses `startOfWeek` and says of itself *"The arithmetic
- * is the same and deliberately so."* It is not: for any start that is not a
- * Sunday the two are seven days apart. That is a real disagreement in the
- * block-history screens and it is not this milestone's to fix — it moves
- * when a block reads as finished — so this follows `programWeek`, which is
- * the one a week number has to agree with.
+ * `blocks.rowWindow` took the same arithmetic from `startOfWeek` while
+ * saying it was the same, and was seven days out for every start that is not
+ * a Sunday. M307 made both windows one function; this reads the rows the
+ * same way they do.
  */
 
 import { getProgram } from '@/content/programs';

@@ -14756,6 +14756,13 @@ M50 for why it is not coming.
   because the cache keys on the set by identity. The guard that should have caught a missed one
   could not see it either, and now can.
 
+- **M307 — two windows that said they were one.** `blocks.rowWindow` computed a block's calendar
+  from `startOfWeek` while its own docblock said *"The arithmetic is the same and deliberately
+  so"* about `plan.blockWindow`, which uses `blockStart`. They are seven days apart for every start
+  that is not a Sunday — six starts in seven — so for the whole of a block's final week the Train
+  page prescribed week twelve while the Finish page said it had run to the end. 7,032 tests did not
+  notice, because every block in every fixture starts on a Sunday.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -21061,3 +21068,76 @@ defined.
 The M299 shape again, and the fourth time this session the suite's answer has depended on the day
 it ran. Checked across all ten pinned days before pushing, and then the whole 103-file date suite
 on each of them.
+
+## M307 — two windows that said they were one
+
+M306 found this and left it, because moving it moves when a block reads as finished.
+`blocks.rowWindow`:
+
+> `plan.blockWindow` needs a `Program`, and a history row outlives the program it names — a deleted
+> custom one, or one whose length has since been re-adapted. **The arithmetic is the same and
+> deliberately so.**
+
+It was not the same. `blockWindow` starts at `blockStart`; `rowWindow` started at `startOfWeek`.
+M259 settled what the difference means: `blockStart` snaps **forward** to the first whole week,
+because a block begun on a Thursday drew planned sessions onto days the climber had not started
+yet. So for every start that is not a Sunday the two are seven days apart — and `startProgram`
+stamps `today()`, so that is six starts in seven.
+
+### What a climber was told
+
+A twelve-week block begun on a Thursday, walked through its last fortnight:
+
+```
+2026-11-06  week 11 | Train says running | Finish says running
+2026-11-07  week 11 | Train says running | Finish says running
+2026-11-08  week 12 | Train says running | Finish says completed
+...
+2026-11-14  week 12 | Train says running | Finish says completed
+```
+
+Seven days of the app contradicting itself about whether the block was over, every time, for six
+climbers in seven. And the rest of what `rowWindow` feeds was out by the same week:
+
+- **`weeksRun`** counted from a Sunday that predates week one, so a block left at the end of week
+  four reported **five** — for every start day but Sunday.
+- **`finderHistory.daysSince`** over-reported by seven, and its `completed` flag was wrong for a
+  week. That is the number *"what should I run next"* is answered from.
+- **`reconstructBlocks`** bounded every reconstructed row a week early.
+
+### Nothing noticed, and the reason is one date
+
+The suite ran 7,032 tests over this and not one of them failed when the window moved. Every block
+in `blocks.test.ts` starts on `2026-01-04` — a **Sunday**, the one weekday on which `startOfWeek`
+and `blockStart` return the same day. So did both of the sample climber's blocks:
+
+```
+2026-08-16 Sun | startOfWeek 2026-08-16 | blockStart 2026-08-16 | agree: true
+2026-06-21 Sun | startOfWeek 2026-06-21 | blockStart 2026-06-21 | agree: true
+```
+
+Which is the fourth milestone running where the fixture avoided the state the bug lived in, and the
+narrowest: one date literal, chosen once, that happens to be the only start day where two
+implementations of one question agree.
+
+### One function, so the comment cannot be wrong again
+
+`dates.blockSpan(startDate, weeks)` is the arithmetic. `blockWindow` passes the program's weeks and
+`rowWindow` passes the row's, which is the one real difference between them and the reason both
+exist. A comment is not a mechanism; this is.
+
+The tests are a property over the whole week rather than another date literal — the window, the
+first day, the last day, `outcomeOf` on it, and `weeksRun` — for each of the seven days a climber
+might press Start. The list of those seven is itself asserted to cover seven weekdays, because a
+list that quietly shrank back to Sundays would pass everything below it.
+
+Battery: 6 killed, sanity survived. One survivor first time round and it was the point of the
+function: `rowWindow` reading a hard-coded twelve instead of `row.weeks` passed every test, because
+every row and every program in the file is twelve weeks long. A block adapted to eight now holds
+it.
+
+Verified in a browser that nothing moved where it should not: the sample climber's history still
+reads *"Week 6 of 12 · running"* and *"8 of 8 weeks · ran to the end"*. The fix is invisible on that
+fixture, which is exactly why nothing caught it.
+
+7,038 tests over 418 files, from 7,033. Layout harness OK. First load 136.95KB against 137.3.

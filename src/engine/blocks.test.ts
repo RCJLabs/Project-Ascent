@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Program } from '@/content/types';
+import { blockWindow } from './plan';
+import { addDays, blockStart, programWeek } from './dates';
 import {
   activeBlock,
   blockId,
@@ -152,6 +154,85 @@ describe('reading the history back', () => {
     const { from, to } = rowWindow(rows[0]!);
     expect(from).toBe('2026-01-04');
     expect(to).toBe('2026-03-28');
+  });
+});
+
+/**
+ * The window, on every day a climber might press Start (PLAN.md M307).
+ *
+ * `2026-01-04` is a **Sunday**, and so is every other block start in this
+ * file. That is the one weekday on which `startOfWeek` and `blockStart`
+ * return the same day — so a `rowWindow` built from the wrong one of those
+ * two passed every assertion above, and 7,032 tests besides, while being
+ * seven days out for the other six starts in seven.
+ *
+ * A property over the whole week rather than a second date literal, because
+ * one more literal is one more chance to pick the agreeable day again.
+ */
+describe('the window, whatever day the climber started on', () => {
+  const WEEK = ['2026-01-04', '2026-01-05', '2026-01-06', '2026-01-07', '2026-01-08', '2026-01-09', '2026-01-10'];
+  const at = (startDate: string, patch: Partial<BlockRecord> = {}): BlockRecord => ({
+    id: `a#${startDate}`, programId: 'a', name: 'A', startDate, weeks: 12, endedAt: null, ...patch,
+  });
+
+  it('is a whole week of start days, which is the point of it', () => {
+    // A list that quietly shrank back to Sundays would pass every assertion
+    // below while testing the one weekday the bug did not live on.
+    expect(new Set(WEEK.map((d) => new Date(`${d}T00:00:00`).getDay())).size).toBe(7);
+  });
+
+  it('is the same one the plan draws from', () => {
+    for (const startDate of WEEK) {
+      expect(rowWindow(at(startDate)), startDate).toEqual(
+        blockWindow(program('a', 'A'), startDate),
+      );
+    }
+  });
+
+  it('begins on the first whole week, never the Sunday behind the start', () => {
+    for (const startDate of WEEK) {
+      const { from } = rowWindow(at(startDate));
+      expect(from, startDate).toBe(blockStart(startDate));
+      expect(from >= startDate, `${startDate} began before the climber did`).toBe(true);
+    }
+  });
+
+  it('runs a block for its twelve whole weeks, and says so until the last of them', () => {
+    for (const startDate of WEEK) {
+      const row = at(startDate);
+      const { to } = rowWindow(row);
+      // The last day of the window is the last day of week twelve, and the
+      // block is still running on it. Reading the window from `startOfWeek`
+      // ended it while the plan was still prescribing week twelve.
+      expect(programWeek(startDate, to, 12), startDate).toBe(12);
+      expect(outcomeOf(row, to), startDate).toBe('running');
+      expect(outcomeOf(row, addDays(to, 1)), startDate).toBe('completed');
+    }
+  });
+
+  /**
+   * The reason `rowWindow` exists at all, and the one thing the fixtures
+   * above cannot show: every row in this file is twelve weeks, and so is
+   * every program, so a window reading the program's length instead of the
+   * row's passed the lot. The battery said so by surviving.
+   */
+  it('takes the length the row remembers, not the program it names', () => {
+    const adapted = at('2026-01-07', { weeks: 8 });
+    const { from, to } = rowWindow(adapted);
+    expect(to).toBe(addDays(from, 8 * 7 - 1));
+    // Eight weeks was what this block ran; the program still says twelve.
+    expect(blockWindow(program('a', 'A'), '2026-01-07').to).not.toBe(to);
+    expect(programWeek('2026-01-07', to, 8)).toBe(8);
+  });
+
+  it('counts the program weeks stayed on, not the calendar weeks since', () => {
+    for (const startDate of WEEK) {
+      for (const week of [1, 4, 12]) {
+        // The last day of that program week.
+        const ended = addDays(blockStart(startDate), week * 7 - 1);
+        expect(weeksRun(at(startDate, { endedAt: ended }), '2027-06-01'), `${startDate} wk${week}`).toBe(week);
+      }
+    }
   });
 });
 

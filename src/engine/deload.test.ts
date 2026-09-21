@@ -54,9 +54,9 @@ describe('the days a block spends in a deload week', () => {
    *
    * A start that is not a Sunday belongs to no week at all until the Sunday
    * after it (M259), so week four begins a week later than a naive
-   * `startOfWeek` would put it. `blocks.rowWindow` uses `startOfWeek` and
-   * says *"The arithmetic is the same and deliberately so"* — it is not, and
-   * following it here would have put every deload day seven days early.
+   * `startOfWeek` would put it — which is exactly what `blocks.rowWindow`
+   * did until M307, seven days out for six starts in seven. Following it
+   * here would have put every deload day a week early.
    */
   it('counts weeks from the first whole one, not from the Sunday behind the start', () => {
     const thursday = '2026-06-25';
