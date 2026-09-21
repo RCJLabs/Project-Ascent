@@ -32,7 +32,14 @@ const fullLog = () => useSettings.setState({ logView: 'full' });
  */
 
 const DATE = today();
-const settle = () => new Promise((r) => setTimeout(r, 40));
+/**
+ * Waited for, not slept through (PLAN.md M304).
+ *
+ * Forty milliseconds for a store write and an undo offer to land — a clock
+ * standing in for a condition, and the shape that reddened CI at M303 in a
+ * sibling of this file.
+ */
+const healed = () => waitFor(() => expect(useProfile.getState().injuries).toHaveLength(0));
 const offer = () => useUndo.getState().offer;
 
 beforeEach(async () => {
@@ -50,7 +57,7 @@ describe('marking an injury healed', () => {
     });
     renderAt('/injury/inj-1', <InjuryPage params={{ id: 'inj-1' }} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Mark healed' }));
-    await settle();
+    await healed();
     expect(useProfile.getState().injuries).toHaveLength(0);
     expect(offer()?.label).toBe('left fingers injury');
 

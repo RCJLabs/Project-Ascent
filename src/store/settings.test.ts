@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
+import { writesSettled } from './writes';
 import { getDb, resetDbForTests } from '@/db/db';
 import { hydrateSettings, useSettings } from './settings';
 
@@ -63,8 +64,11 @@ describe('a climber setting', () => {
     await hydrateSettings();
     useSettings.getState().setUnits('metric');
     useSettings.getState().setBoulderDisplay('Font');
-    // The store writes without awaiting; let the transaction land.
-    await new Promise((r) => setTimeout(r, 0));
+    // The store writes without awaiting, and `writesSettled` is the queue
+    // saying it is done (PLAN.md M304). This was a zero-millisecond sleep,
+    // which is a guess at how many turns of the event loop an IndexedDB
+    // transaction takes.
+    await writesSettled();
 
     const saved = await record();
     expect(saved['units']).toBe('metric');

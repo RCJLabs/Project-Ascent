@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
+import { writesSettled } from '@/store/writes';
 import { screen } from '@testing-library/react';
 import { newProject, putProject } from '@/db/projects';
 import { newSession, putSession } from '@/db/sessions';
@@ -27,7 +28,9 @@ async function sendOne(id: string, grade: string, dates: string[], burns: number
       })),
     } as never);
   });
-  await new Promise((r) => setTimeout(r, 0));
+  // The queue saying it is done, rather than a guess at how long it takes
+  // (PLAN.md M304).
+  await writesSettled();
 }
 
 describe('the cost card', () => {

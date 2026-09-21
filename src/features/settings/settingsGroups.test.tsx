@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { getProgram } from '@/content/programs';
 import { addDays, dayOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
@@ -130,8 +130,10 @@ describe('the calendar export', () => {
     // reading an empty plan as a finished one.
     await open();
     useProfile.setState({ activeProgramId: 'iron_grip', startDates: {}, plans: {}, weekOverrides: {}, adaptations: {} });
-    await new Promise((r) => setTimeout(r, 0));
-    expect(screen.queryByText('Put it in your calendar')).toBeNull();
+    // Retried until it is true, rather than asked once a tick later
+    // (PLAN.md M304): the card is on screen when this runs, so a single
+    // read before React has re-rendered finds it and fails.
+    await waitFor(() => expect(screen.queryByText('Put it in your calendar')).toBeNull());
     expect(screen.queryByText(/Nothing left in this program/)).toBeNull();
   });
 });

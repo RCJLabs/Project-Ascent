@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
+import { waitFor } from '@testing-library/react';
 import { loadPrograms } from '@/content/programs';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
@@ -37,7 +38,19 @@ async function withSession(
   if (activeProgramId) useProfile.setState({ activeProgramId } as never);
 }
 
-const settle = () => new Promise((r) => setTimeout(r, 60));
+/**
+ * Waited for, not slept through (PLAN.md M304).
+ *
+ * This was `setTimeout(r, 60)` — a clock standing in for the card arriving.
+ * The logger is a lazy route with a derived card inside it, so how long that
+ * takes is a property of the machine rather than of the app, and M303's
+ * sibling of this bet lost on a loaded CI runner. `asyncUtilTimeout` is ten
+ * seconds since M302 and a hand-rolled sleep is the one wait that ignores
+ * it.
+ */
+const shows = (view: { container: HTMLElement }, pattern: RegExp) =>
+  waitFor(() => expect(view.container.textContent ?? '').toMatch(pattern));
+const offered = (view: { container: HTMLElement }) => shows(view, /Build me a cooldown/i);
 
 const buttonSaying = (view: { container: HTMLElement }, re: RegExp) =>
   [...view.container.querySelectorAll('button')].find((b) => re.test(b.textContent ?? ''));
@@ -47,7 +60,7 @@ describe('the cooldown card', () => {
     await withSession();
     fullLog();
     const view = renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
-    await settle();
+    await offered(view);
     expect(view.container.textContent ?? '').toMatch(/Build me a cooldown/i);
   });
 
@@ -58,7 +71,7 @@ describe('the cooldown card', () => {
     await withSession();
     fullLog();
     const view = renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
-    await settle();
+    await offered(view);
     const text = view.container.textContent ?? '';
     expect(text.indexOf('Build me a cooldown')).toBeGreaterThan(text.indexOf('Effort'));
   });
@@ -67,10 +80,10 @@ describe('the cooldown card', () => {
     await withSession();
     fullLog();
     const view = renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
-    await settle();
+    await offered(view);
 
     buttonSaying(view, /Build me a cooldown/i)!.click();
-    await settle();
+    await shows(view, /Swap/i);
 
     const text = view.container.textContent ?? '';
     expect(text).toMatch(/stretches/i);
@@ -86,10 +99,10 @@ describe('the cooldown card', () => {
     });
     fullLog();
     const view = renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
-    await settle();
+    await offered(view);
 
     buttonSaying(view, /Build me a cooldown/i)!.click();
-    await settle();
+    await shows(view, /Weighted toward your/i);
 
     expect(view.container.textContent ?? '').toMatch(/Weighted toward your/i);
   });
@@ -100,10 +113,10 @@ describe('the cooldown card', () => {
     });
     fullLog();
     const view = renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
-    await settle();
+    await offered(view);
 
     buttonSaying(view, /Build me a cooldown/i)!.click();
-    await settle();
+    await shows(view, /Swap/i);
 
     // The milestone's own "never". The card is five minutes of stretching,
     // not a claim about injury, recovery or repair.
@@ -130,9 +143,9 @@ describe('the cooldown card', () => {
 
     fullLog();
     const view = renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
-    await settle();
+    await offered(view);
     buttonSaying(view, /Build me a cooldown/i)!.click();
-    await settle();
+    await shows(view, /Left out because of your injuries/i);
 
     expect(view.container.textContent ?? '').toMatch(/Left out because of your injuries/i);
   });
@@ -172,7 +185,10 @@ describe('a rest day', () => {
     );
     fullLog();
     const view = renderAt(`/log/${DATE}`, <LogPage params={{ date: DATE }} />);
-    await settle();
+    // The page, not the card: waiting for a card that must never arrive is
+    // a ten-second way of failing (PLAN.md M304). A rest day says what it
+    // is, and that is the latest moment the absence can be asked about.
+    await shows(view, /rest/i);
     expect(view.container.textContent ?? '').not.toMatch(/Build me a cooldown/i);
   });
 });

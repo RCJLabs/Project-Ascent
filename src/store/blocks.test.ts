@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
+import { writesSettled } from './writes';
 import { getDb, resetDbForTests } from '@/db/db';
 import { loadPrograms } from '@/content/programs';
 import { activeBlock, outcomeOf, sortBlocks } from '@/engine/blocks';
@@ -145,7 +146,9 @@ describe('a climber who was here before the history was', () => {
     useProfile.getState().startProgram('iron_grip', PLAN);
     useProfile.getState().startProgram('peak_performance', PLAN);
     const before = useProfile.getState().blocks;
-    await new Promise((r) => setTimeout(r, 10));
+    // `startProgram` persists fire-and-forget, so this waits for the queue
+    // rather than betting ten milliseconds on it (PLAN.md M304).
+    await writesSettled();
     useProfile.setState({ blocks: [] });
     await hydrateProfile();
     expect(useProfile.getState().blocks).toEqual(before);

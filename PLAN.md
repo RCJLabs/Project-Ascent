@@ -14734,6 +14734,13 @@ M50 for why it is not coming.
   one answered — it could fire on **none of the 365 days**. A count is what the question can always
   answer, so the crag says how it has been there and the year says how it was.
 
+- **M304 — the waits that are bets on a clock.** M303's push failed CI on a file the milestone had
+  never touched: a test slept 60ms and then read the screen. Nineteen tests across the suite waited
+  that way. Seven are about a duration and now say so in one list with the reason; the other twelve
+  ask the question again until it is true. A sweep over all 415 test files holds the rule, and the
+  load that broke CI breaks the old code here — two of the converted tests fail with six cores
+  spinning and pass after.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -20721,3 +20728,67 @@ item rather than a hurried sweep at the end of this one.
 
 Battery: 9 killed, sanity survived. 6,987 tests over 414 files, from 6,969. Layout harness OK.
 First load 136.92KB against 137.3.
+
+## M304 — the waits that are bets on a clock
+
+M303 shipped, and its first push went red on `launchedFile.test.tsx`, a file it had not touched.
+The test slept 60ms and then read the screen. The milestone's own new tests were the extra load
+that made 60ms not enough. That fix went out as M303b; this is the rest of the suite.
+
+`await new Promise((r) => setTimeout(r, 60))` and then an assertion is not a wait. It is a guess
+about how long a machine takes, made once, on a quiet one. `waitFor` and `findBy*` ask the question
+again until it is true: they cost nothing when it already is, and they are bounded by the
+`asyncUtilTimeout` the setup file sets once — which a hand-rolled sleep is the one wait that ignores
+entirely, and why raising it in M302 did not help these.
+
+Nineteen sleeps, in ten files. Twelve are gone:
+
+- Three were waiting for the write queue to drain (`settings`, `projectCost`, `blocks`). The store
+  writes without awaiting and `writesSettled()` is the queue itself, so they now await the thing
+  rather than a number that was long enough when it was written.
+- Nine were waiting for the screen (`cooldownCard`, `undoEverywhere`, `deleteProgram`,
+  `settingsGroups`, `hydrating`). Each became a `waitFor` on what the test is actually about — and
+  the ones asserting an **absence** could not simply be converted, because "keep asking until it is
+  gone" passes instantly on a page that has not rendered yet. Those wait for something that must
+  arrive first, and then assert the absence.
+
+Seven stay, because the duration is the subject rather than the wait: the order two queued writes
+run in, an effect that must be given the chance to run before you can say it did not, a run of the
+wall game, a banner sampled across frames, two photos a real gap apart so their timestamps differ.
+Each is one line in `SLEEPS_ON_PURPOSE` with the reason.
+
+### Holding it
+
+`src/test/waiting.ts` is the decision, a pure function over `{ path, source }`, for the reason
+`assertions.ts` is one: a guard that can only be exercised by the thing it guards cannot be shown
+to work, because a broken guard and a clean suite look identical. `waiting.test.ts` reads all 415
+test files and asks it.
+
+Two faults in the rule, both caught before it could report a clean suite:
+
+- The pattern was `/new Promise\([^)]*setTimeout\(/`, which refuses to cross a parenthesis — and
+  the arrow's own parameter list closes one before the body starts. It matched none of the nineteen.
+  A rule that could not fire. The round-trip test, which feeds it a sleep and a `waitFor` and checks
+  it separates them, is what found it.
+- It then flagged `launchedFile.test.tsx`, whose M303b comment says *"this was
+  `new Promise((r) => setTimeout(r, 60))`"*. Prose read as source, the fourth time that shape has
+  been the finding; the privacy sweep next door strips comments for the same reason, and so does
+  this now.
+
+The exemption list is exact, not a floor: a file that has stopped sleeping and kept its entry fails
+here, for the reason `wired.test.ts` gives about its own list.
+
+### That the fix is a fix
+
+Stashed the changes, pinned six cores spinning, ran the ten touched files against the old code:
+`deleteProgram > offers it back once it is gone` and `cooldownCard > builds one when asked` both
+failed. Restored and re-ran under the same load: 25 passed, and 69 across all ten files. The
+failure mode is reproducible and the fix closes it.
+
+Battery: 7 killed, sanity survived — dropping an exemption, the parenthesis bug, removing the
+comment stripping, an exemption for a file that does not sleep, a reason too short to be one,
+putting one converted sleep back, and pointing the sweep at a directory small enough to walk
+nothing.
+
+6,992 tests over 415 files, from 6,987 over 414. Layout harness OK. First load 136.90KB against
+137.3.

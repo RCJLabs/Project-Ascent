@@ -45,8 +45,30 @@ describe('the guard itself', () => {
   });
 });
 
-/** The subscription is fire-and-forget, so the write lands a tick later. */
+/**
+ * The subscription is fire-and-forget, so the write lands a tick later.
+ *
+ * Every remaining use of this is proving that a write **did not** happen,
+ * which is the one thing a condition cannot be waited for (PLAN.md M304):
+ * there is nothing to wait for, only a chance to give. The control case —
+ * the one that expects a write — waits for the write instead, because that
+ * is the half a slow machine can turn red.
+ *
+ * `reconcile` is deliberately not on the write queue: `projects.ts`
+ * subscribes with `void useProjects.getState().reconcile()`, so
+ * `writesSettled` has no handle on it and there is nothing else to await.
+ */
 const settle = () => new Promise((r) => setTimeout(r, 30));
+
+/** The count, once it is what it is going to be. */
+async function countsUpTo(want: number): Promise<number> {
+  const db = await getDb();
+  for (let tries = 0; tries < 100; tries++) {
+    if ((await db.count('projects')) === want) break;
+    await settle();
+  }
+  return db.count('projects');
+}
 
 describe('a wipe followed by a reload', () => {
   /**
@@ -106,8 +128,15 @@ describe('a wipe followed by a reload', () => {
     } finally {
       if (guarded) endHydration();
     }
-    await settle();
-    return db.count('projects');
+    // Guarded, nothing should arrive, so this gives it the chance to and
+    // then asks. Unguarded, something should, so this waits for it — thirty
+    // milliseconds is a bet the control case can lose on a busy machine, and
+    // losing it reports the guard working when it was never tested.
+    if (guarded) {
+      await settle();
+      return db.count('projects');
+    }
+    return countsUpTo(1);
   }
 
   it('writes no project back into the emptied database', async () => {

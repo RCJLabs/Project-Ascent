@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
+import { waitFor } from '@testing-library/react';
 import { blankProgram } from '@/engine/customProgram';
 import { useCustomPrograms } from '@/store/programs';
 import { useProfile } from '@/store/profile';
@@ -30,6 +31,20 @@ async function withProgram(name = 'Athlete block'): Promise<string> {
 const deleteButton = (view: { container: HTMLElement }) =>
   [...view.container.querySelectorAll('button')].find((b) => /delete/i.test(b.textContent ?? ''));
 
+/**
+ * Waited for, not slept through (PLAN.md M304).
+ *
+ * Thirty milliseconds for a confirm to render and sixty for a delete to
+ * reach the store — clocks standing in for conditions, and the shape that
+ * reddened CI at M303 two directories over.
+ */
+const asked = (view: { container: HTMLElement }) =>
+  waitFor(() => expect(view.container.textContent ?? '').toMatch(/keep it/i));
+const gone = (id: string) =>
+  waitFor(() =>
+    expect(useCustomPrograms.getState().custom.map((p) => p.id)).not.toContain(id),
+  );
+
 describe('deleting a custom program', () => {
   it('asks before doing it', async () => {
     const id = await withProgram();
@@ -37,7 +52,7 @@ describe('deleting a custom program', () => {
     await view.findByRole('heading', { level: 1 });
 
     deleteButton(view)!.click();
-    await new Promise((r) => setTimeout(r, 30));
+    await asked(view);
     expect(
       useCustomPrograms.getState().custom.map((p) => p.id),
       'one tap deleted it outright',
@@ -50,12 +65,12 @@ describe('deleting a custom program', () => {
     const view = renderAt(`/build/${id}`, <BuilderPage params={{ id }} />);
     await view.findByRole('heading', { level: 1 });
     deleteButton(view)!.click();
-    await new Promise((r) => setTimeout(r, 30));
+    await asked(view);
     // Now the real one.
     [...view.container.querySelectorAll('button')]
       .find((b) => /delete for good/i.test(b.textContent ?? ''))!
       .click();
-    await new Promise((r) => setTimeout(r, 60));
+    await gone(id);
 
     expect(useCustomPrograms.getState().custom.map((p) => p.id)).not.toContain(id);
     const offer = useUndo.getState().offer;
@@ -77,11 +92,11 @@ describe('deleting a custom program', () => {
     const view = renderAt(`/build/${id}`, <BuilderPage params={{ id }} />);
     await view.findByRole('heading', { level: 1 });
     deleteButton(view)!.click();
-    await new Promise((r) => setTimeout(r, 30));
+    await asked(view);
     [...view.container.querySelectorAll('button')]
       .find((b) => /delete for good/i.test(b.textContent ?? ''))!
       .click();
-    await new Promise((r) => setTimeout(r, 60));
+    await waitFor(() => expect(useProfile.getState().activeProgramId).toBeNull());
 
     expect(useProfile.getState().activeProgramId, 'still pointing at a deleted program').toBeNull();
   });
