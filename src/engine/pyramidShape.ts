@@ -9,6 +9,20 @@
  * shape is the whole point of drawing a pyramid, and the app drew it and
  * looked away.
  *
+ * ## And then it read the padding (PLAN.md M308)
+ *
+ * `pyramid()` fills every rung between the hardest grade and the easiest so
+ * the chart can draw a ladder, and this read those zeros as a gap in ability.
+ * On YDS, where a rung is a letter grade, that was **every** reading the card
+ * gave: 152 of the 152 days it spoke over the sample climber's year it named
+ * a grade with no sends *and no attempts*, and advised a block of volume at
+ * it. `progress.ts` states the rule itself about the bottom of the pyramid —
+ * *"padding down to V0 would imply a base the climber has never touched,
+ * which reads as a gap in ability rather than a gap in the log"* — and the
+ * same is true of the padding inside it. So the reading walks the grades a
+ * climber has sent at, and `CLEARLY_MORE` below is the half of that fix the
+ * zeros had been hiding.
+ *
  * ## What is *not* built here, and why
  *
  * The second brainstorm parked *"a thin top of the pyramid"* because it needs
@@ -65,7 +79,7 @@ export const ENOUGH_SENDS = 25;
 export const ESTABLISHED = 3;
 
 /**
- * How far below the top to look.
+ * How far below the top to look, in **grades sent at** (PLAN.md M308).
  *
  * The working range — the grades a climber is currently operating in. Beyond
  * it the log's history dominates and an inversion says nothing, which is the
@@ -73,17 +87,53 @@ export const ESTABLISHED = 3;
  * here for that reason: it is wide enough to hold a project grade, the grade
  * under it and the two a climber warms up through, and narrow enough that the
  * V2s of three years ago are never one side of the comparison.
+ *
+ * It used to count **rungs of the ladder**, which made it a different width
+ * on each: four V grades is that working range, and four YDS rungs is 5.11a
+ * down to 5.10d — less than one number grade, on a ladder whose letters most
+ * gyms and guidebooks never hand out. Counting the grades a climber has
+ * actually sent at makes the same number mean the same thing on both.
  */
 export const WORKING_BAND = 4;
+
+/**
+ * How much more is *more* (PLAN.md M308).
+ *
+ * Reading only the grades a climber has sent at fixed one fault and exposed
+ * another the zeros had been hiding. Adjacent real grades sit close
+ * together: the sample climber's rope ladder runs 10 / 22 / 31 / 28, and the
+ * last step — thirty-one sends at 5.10a against twenty-eight at 5.9 — is an
+ * inversion by a strict reading and a wobble by any other. Worse, it is the
+ * confound this module opens by stating: *"a climber who improves stops
+ * logging what they warm up on."* A card that fires on that is the app
+ * reporting the climber's filing habits as their shape.
+ *
+ * Half again, so the step has to be a step. A ratio rather than a count
+ * because the same claim has to hold for a log of forty sends and one of
+ * four hundred, and because `ESTABLISHED` already answers the other half of
+ * the question — whether the upper grade is a band at all.
+ */
+export const CLEARLY_MORE = 1.5;
 
 export interface PyramidFinding {
   /** The established grade with more sends than the one below it. */
   grade: string;
   sends: number;
-  /** The grade immediately below, and how little is under it. */
-  below: string;
+  /**
+   * The nearest grade below that the climber has sent at, and how little is
+   * on it — or null when there is no such grade at all (PLAN.md M308).
+   *
+   * **Nearest sent, not next on the ladder.** `pyramid()` fills every rung
+   * between the hardest and the easiest so the chart can draw a ladder, and
+   * a rung with no sends and no attempts is a rung nobody has been on. That
+   * module says so itself about the bottom of the pyramid — *"padding down
+   * to V0 would imply a base the climber has never touched, which reads as a
+   * gap in ability rather than a gap in the log"* — and the same is true of
+   * the padding inside it.
+   */
+  below: string | null;
   belowSends: number;
-  /** Nothing at all below, which is the sharper version of the same shape. */
+  /** Nothing below carries a send at all, which is the sharper version. */
   empty: boolean;
 }
 
@@ -97,18 +147,38 @@ export interface PyramidFinding {
  */
 export function readPyramid(rows: readonly PyramidRow[], totalSends: number): PyramidFinding | null {
   if (totalSends < ENOUGH_SENDS) return null;
-  const band = rows.slice(0, WORKING_BAND);
+  /**
+   * The grades the climber has actually sent at (PLAN.md M308).
+   *
+   * Two reasons, and the second is why a row with attempts and no sends is
+   * not here either. **A rung nobody has been on is not a thin base**: on
+   * YDS the band used to fill with letter grades most gyms and guidebooks
+   * never hand out, so the card advised a block of volume at a grade with no
+   * sends *and no attempts*, on 152 of the 152 days it spoke. And **a grade
+   * tried and never sent is `plateau.ts`'s finding**, on the same page: two
+   * cards about one fact is the thing `blockCompare` and `venues` both take
+   * care not to be.
+   */
+  const sent = rows.filter((row) => row.sends > 0);
+  const band = sent.slice(0, WORKING_BAND);
+  const top = band[0];
+  if (top === undefined || top.sends < ESTABLISHED) return null;
+  // Everything at one grade, which is the starkest version of this shape and
+  // the one the band cannot reach by walking pairs.
+  if (band.length === 1) {
+    return { grade: top.grade, sends: top.sends, below: null, belowSends: 0, empty: true };
+  }
   for (let i = 0; i < band.length - 1; i += 1) {
     const above = band[i]!;
     const below = band[i + 1]!;
     if (above.sends < ESTABLISHED) continue;
-    if (above.sends <= below.sends) continue;
+    if (above.sends < below.sends * CLEARLY_MORE) continue;
     return {
       grade: above.grade,
       sends: above.sends,
       below: below.grade,
       belowSends: below.sends,
-      empty: below.sends === 0,
+      empty: false,
     };
   }
   return null;
@@ -130,13 +200,18 @@ export function describePyramid(
 ): string | null {
   if (finding === null) return null;
   const grade = label(finding.grade);
-  const below = label(finding.below);
   // No singular. `readPyramid` will not report a grade under `ESTABLISHED`,
   // so `sends` is three or more by construction — a `=== 1` branch here was
   // unreachable, and the battery said so by surviving its removal.
   const count = `${finding.sends} sends`;
-  const under = finding.empty
-    ? `nothing at ${below} at all`
-    : `${finding.belowSends} at ${below}`;
-  return `Your log has ${count} at ${grade} and ${under}, which is the pyramid the other way up. That is either a grade you moved past before consolidating it, or a grade you stopped writing down — both are common and only you know which. If it is the first, a block of volume at ${below} is the cheapest gain on this page.`;
+  const reading =
+    'That is either a grade you moved past before consolidating it, or a grade you stopped writing down — both are common and only you know which.';
+  // Nothing sent below at all. There is no grade to name, so the sentence
+  // does not name one: the old wording pointed at the next rung on the
+  // ladder, which was routinely one nobody had been on (PLAN.md M308).
+  if (finding.below === null) {
+    return `Your log has ${count} and every one of them at ${grade}, which is the pyramid the other way up. ${reading} If it is the first, a block of volume a grade or two below is the cheapest gain on this page.`;
+  }
+  const below = label(finding.below);
+  return `Your log has ${count} at ${grade} and ${finding.belowSends} at ${below}, which is the pyramid the other way up. ${reading} If it is the first, a block of volume at ${below} is the cheapest gain on this page.`;
 }

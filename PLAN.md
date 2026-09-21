@@ -14875,6 +14875,13 @@ touched the calendar. `weekTally` is the single source M146 lifted it out to be,
 week screen and the month grid. `costOf` clipping at the send is deliberate and documented; only
 its label is missing. None of these wants touching.
 
+- **M308 — the pyramid read its own padding.** `pyramid()` fills every rung between the hardest
+  grade and the easiest so the chart can draw a ladder, and `readPyramid` took those zeros for a
+  thin base. On YDS, where a rung is a letter grade, that was **every** reading the card gave:
+  304 of 304 over the sample climber's year it named a grade with no sends *and no attempts* and
+  advised a block of volume at it. The reading walks the grades a climber has sent at now — and
+  needs the step between them to be a step, which is the half the zeros had been hiding.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -21253,3 +21260,81 @@ reads *"Week 6 of 12 · running"* and *"8 of 8 weeks · ran to the end"*. The fi
 fixture, which is exactly why nothing caught it.
 
 7,038 tests over 418 files, from 7,033. Layout harness OK. First load 136.95KB against 137.3.
+
+## M308 — the pyramid read its own padding
+
+M307a's second entry. `readPyramid` walks the top `WORKING_BAND` rows of the pyramid and reports an
+established grade with less under it than above. The rows come from `pyramid()`, which fills every
+rung between the hardest grade climbed and the easiest so the chart can draw a ladder — and
+`progress.ts` states the rule about those fills itself:
+
+> Stop at the easiest grade actually climbed. **Padding down to V0 would imply a base the climber
+> has never touched, which reads as a gap in ability rather than a gap in the log.**
+
+That is exactly right, and it was applied to the bottom of the pyramid and not to the gaps inside
+it. The correct statement, already written, one file over — the shape this audit keeps finding.
+
+Walked across the sample climber's year, on each of the six ladder views the page can show:
+
+```
+                BEFORE                          AFTER
+                spoke  named an untouched rung  spoke
+  V/all             0        0                      0
+  V/indoor          0        0                      0
+  V/outdoor         0        0                      0
+  YDS/all         152      152                      0
+  YDS/indoor      152      152                      0
+  YDS/outdoor       0        0                      0
+```
+
+Three hundred and four readings, and every one of them named a rung with no sends **and no
+attempts**. Because `WORKING_BAND = 4` counted rungs of the ladder, and a rung is a different
+amount of climbing on each: four V grades is the working range its docblock argues for — *"a
+project grade, the grade under it and the two a climber warms up through"* — while four YDS rungs
+is 5.11a down to 5.10d, less than one number grade, on a ladder whose letters most gyms and
+guidebooks never hand out. So the band filled with grades nobody had been on, and the card told
+this climber *"a block of volume at 5.10d is the cheapest gain on this page"* about a grade with
+nothing on it, while 5.10c one rung further down carried twenty-two sends.
+
+### The grades a climber has sent at
+
+The band is those now, not the rungs between them, so the same number means the same thing on both
+ladders. Two things fall out of it:
+
+- **A grade tried and never sent is not in the band either**, because that is `plateau.ts`'s
+  finding, on the same page. Two cards about one fact is what M169 named.
+- **One sent grade and nothing else** is the starkest version of this shape and the one a walk over
+  adjacent pairs cannot reach, so it is answered before the walk — and held to the same
+  `ESTABLISHED` floor, which the battery had to point out.
+
+### And the half the zeros were hiding
+
+Real grades sit close together. The sample climber's rope ladder runs **10 / 22 / 31 / 28**, and
+reading only the sent grades put that last step in front of the comparison for the first time:
+thirty-one sends at 5.10a against twenty-eight at 5.9. An inversion by a strict reading, a wobble
+by any other — and by this module's own opening confound, the likeliest explanation is that 5.9 is
+the grade this climber has stopped bothering to log. A card firing on that is the app reporting
+somebody's filing habits as their shape.
+
+`CLEARLY_MORE = 1.5`, so the step has to be a step. A ratio rather than a count because the claim
+has to hold for a log of forty sends and one of four hundred, and because `ESTABLISHED` already
+answers the other half — whether the upper grade is a band at all.
+
+Shipping the first half alone would have traded one wrong card for a milder one, which is why both
+are here rather than one now and one later.
+
+### What the sample climber sees
+
+Nothing, on all six views — because both of its pyramids are healthy: **7 / 48 / 138 / 254 / 384**
+on the boulder ladder and **10 / 22 / 31 / 28** on the rope. That makes this the third card in
+three milestones whose working state the fixture cannot reach, which is M307a's sixth entry and
+still the open one. The rule firing is held in `pyramidShape.test.ts` instead, on logs built for
+it.
+
+Battery: 7 killed, sanity survived. Three survivors on the first run and two were real: nothing
+pinned `CLEARLY_MORE`, so removing the margin passed; and nothing pinned the floor on the
+single-grade case, which needs a log wider than the eight rungs `pyramid()` returns to reach. The
+third was a bad mutant of my own — gutting a test and asking whether the suite still passes, which
+it always will. Dropped rather than counted.
+
+7,044 tests over 418 files, from 7,039. Layout harness OK. First load 136.98KB against 137.3.

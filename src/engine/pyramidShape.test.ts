@@ -5,6 +5,7 @@ import { demoClimber } from './demoClimber';
 import { deriveClimberState } from './derive';
 import { pyramid, type PyramidRow } from './progress';
 import {
+  CLEARLY_MORE,
   ENOUGH_SENDS,
   ESTABLISHED,
   WORKING_BAND,
@@ -93,9 +94,16 @@ describe('what it says nothing about', () => {
     expect(readPyramid(fresh, total(fresh))).toBeNull();
   });
 
-  it('is silent on a single-row ladder', () => {
+  /**
+   * It used to be silent here, because the walk over adjacent pairs had no
+   * pair to walk (PLAN.md M308). Forty sends and every one of them at one
+   * grade is the starkest version of this shape there is, so it is the one
+   * case the band cannot reach and is answered before the walk.
+   */
+  it('reads a ladder with one sent grade as the whole finding', () => {
     const one = rows(['V5', 40]);
-    expect(readPyramid(one, total(one))).toBeNull();
+    const found = readPyramid(one, total(one))!;
+    expect(found).toMatchObject({ grade: 'V5', sends: 40, below: null, empty: true });
   });
 
   it('is silent on no rows at all', () => {
@@ -135,11 +143,83 @@ describe('the inversion it does report', () => {
    * which is why the *lower* row has no floor: requiring three sends below
    * would rule out exactly the case worth reporting.
    */
-  it('reports a grade with nothing under it at all', () => {
+  /**
+   * A rung nobody has been on is not a thin base (PLAN.md M308).
+   *
+   * `pyramid()` fills every rung between the hardest and the easiest so the
+   * chart can draw a ladder, and this used to read those zeros as a gap in
+   * ability — *"6 sends at V6 and nothing at V5 at all"* about a climber with
+   * thirty sends at V4. On YDS, where the rungs are letter grades most gyms
+   * never hand out, that was every single reading the card gave.
+   */
+  it('does not call a skipped rung a thin base', () => {
     const skipped = rows(['V6', 6], ['V5', 0], ['V4', 30]);
+    expect(readPyramid(skipped, total(skipped))).toBeNull();
+  });
+
+  it('reads past it to the nearest grade actually sent', () => {
+    const skipped = rows(['V6', 30], ['V5', 0], ['V4', 4]);
     const found = readPyramid(skipped, total(skipped))!;
-    expect(found.empty).toBe(true);
-    expect(found.belowSends).toBe(0);
+    expect(found).toMatchObject({ grade: 'V6', sends: 30, below: 'V4', belowSends: 4, empty: false });
+  });
+
+  /**
+   * And a grade tried and never sent is `plateau.ts`'s finding, on the same
+   * page. Two cards about one fact is the shape M169 named.
+   */
+  it('leaves a grade with attempts and no sends to the plateau card', () => {
+    const tried: PyramidRow[] = [
+      { grade: 'V6', sends: 30, attempts: 0, conversion: 1 },
+      { grade: 'V5', sends: 0, attempts: 9, conversion: 0 },
+      { grade: 'V4', sends: 40, attempts: 0, conversion: 1 },
+    ];
+    expect(readPyramid(tried, total(tried))).toBeNull();
+  });
+
+  /**
+   * A wobble is not a shape (PLAN.md M308).
+   *
+   * The sample climber's rope ladder runs 10 / 22 / 31 / 28, and the last
+   * step is an inversion by a strict reading — and by the module's own
+   * confound the likeliest explanation is that 5.9 is the grade they stopped
+   * bothering to log. Reading only the sent grades put pairs like that in
+   * front of the comparison for the first time; `CLEARLY_MORE` is what keeps
+   * them out.
+   */
+  it('needs the step to be a step, not a wobble', () => {
+    expect(CLEARLY_MORE).toBe(1.5);
+    const close = rows(['V6', 31], ['V5', 28]);
+    expect(readPyramid(close, total(close))).toBeNull();
+    const half = rows(['V6', 30], ['V5', 20]);
+    expect(readPyramid(half, total(half)), 'exactly half again is a step').not.toBeNull();
+    const step = rows(['V6', 31], ['V5', 4]);
+    expect(readPyramid(step, total(step))).toMatchObject({ grade: 'V6', below: 'V5' });
+  });
+
+  /**
+   * The floor applies to the single-grade case too, and reaching it needs a
+   * log wider than the eight rungs `pyramid()` returns: thirty sends across
+   * the ladder, two of them inside the window. Without the check the card
+   * says "2 sends and every one of them at V9", which breaks the invariant
+   * `describePyramid` leans on — that `sends` is three or more, so there is
+   * no singular to get wrong.
+   */
+  it('holds the single sent grade to the same floor as the rest', () => {
+    const thin = rows(['V9', ESTABLISHED - 1]);
+    expect(readPyramid(thin, 30)).toBeNull();
+    expect(readPyramid(rows(['V9', ESTABLISHED]), 30)).not.toBeNull();
+  });
+
+  /**
+   * The band is four grades the climber has **sent** at, not four rungs of
+   * the ladder — which is what made it a quarter as wide on YDS as on V.
+   */
+  it('counts the band in sent grades rather than ladder rungs', () => {
+    const wide = rows(['V9', 30], ['V8', 0], ['V7', 0], ['V6', 0], ['V5', 4]);
+    // Four rungs from the top stops at V6, which has no sends; the fifth row
+    // is the first one that is a grade this climber climbs.
+    expect(WORKING_BAND).toBe(4);
+    expect(readPyramid(wide, total(wide))).toMatchObject({ grade: 'V9', below: 'V5' });
   });
 
   /** At most one, and the highest, because that is the grade being worked now. */
@@ -166,9 +246,12 @@ describe('the inversion it does report', () => {
    */
   it('needs the grade above to be established, not merely present', () => {
     expect(ESTABLISHED).toBe(3);
-    expect(readPyramid(rows(['V6', 1], ['V5', 0], ['V4', 40]), 41)).toBeNull();
-    expect(readPyramid(rows(['V6', 2], ['V5', 0], ['V4', 40]), 42)).toBeNull();
-    expect(readPyramid(rows(['V6', 3], ['V5', 0], ['V4', 40]), 43)).not.toBeNull();
+    // Every row sent at, so the only thing under test is the floor on the
+    // upper one (PLAN.md M308: an unsent row is no longer in the band).
+    expect(readPyramid(rows(['V6', 1], ['V5', 40]), 41)).toBeNull();
+    expect(readPyramid(rows(['V6', 2], ['V5', 40]), 42)).toBeNull();
+    expect(readPyramid(rows(['V6', 3], ['V5', 2]), 5)).toBeNull();
+    expect(readPyramid(rows(['V6', 3], ['V5', 2]), ENOUGH_SENDS)).not.toBeNull();
   });
 
   /**
@@ -202,10 +285,13 @@ describe('what it says out loud', () => {
     expect(said).toMatch(/4 at V5/);
   });
 
-  it('says nothing at all is nothing at all', () => {
-    const said = say(rows(['V6', 3], ['V5', 0], ['V4', 30]))!;
-    expect(said).toMatch(/nothing at V5 at all/);
-    expect(said).toMatch(/3 sends at V6/);
+  it('names no grade below when there is none to name', () => {
+    // It used to point at the next rung on the ladder, which was routinely
+    // one nobody had been on (PLAN.md M308).
+    const said = say(rows(['V6', 30]))!;
+    expect(said).toMatch(/30 sends and every one of them at V6/);
+    expect(said).not.toMatch(/at V5/);
+    expect(said).toMatch(/a grade or two below/);
   });
 
   /**
