@@ -15015,6 +15015,17 @@ its label is missing. None of these wants touching.
   a screen this does not touch — twenty-pixel glossary words in the logger's exercise rows, which
   the harness had never reached because no fixture had ever put a finger day on the screen.
 
+- **M322 — the coach loop's return leg.** M298a's sixth entry, and the last of its ten. M292 got a
+  block from an athlete to a coach and kept none of it; nothing went the other way. Reading the
+  code first changed the shape: **both directions already worked** — `forkProgram` copies any
+  catalogue program, the builder edits it, *Save as a file* exports it and the athlete opens it
+  under **From someone else** — so nothing was missing but the step between the two screens. The
+  entry's own proposal, *"landing in the builder with the athlete's numbers in front of you"*,
+  contradicted the best thing about M292: those numbers live in component state under a page that
+  promises *"nothing on this screen is saved"*. So they travel the way a launched file does — one
+  in-memory slot, keyed by the program it was held for, gone on reload — and the only thing written
+  is the coach's own forked program.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -22860,3 +22871,117 @@ which survives by construction and whose survival is the phase test's own claim.
 
 7,162 tests over 428 files, from 7,146. Ten pinned days green. Layout harness OK. First load
 128.08KB against 129.1.
+
+
+## M322 — the coach loop's return leg
+
+M298a's sixth entry, and the last of its ten:
+
+> **6. The coach loop returns nothing.** M292 lets a coach read an athlete's block and keep none of
+> it. Nothing goes the other way: no note, no adjustment, no *"here is what I would change"*. The
+> pair already exists — `programFile.ts` sends a program — so this closes with a **link** rather
+> than a fourth format: the shared-block page offering *write them a program from this*, landing in
+> the builder with the athlete's numbers in front of you. *Absence measured; the design is a
+> proposal.*
+
+The absence was real. The proposal was smaller than it sounded and wrong in its last clause.
+
+### Both halves already worked
+
+Read against the code, the loop turns out to be one step short rather than half-built:
+
+```
+athlete → coach   /finish → Save as a file → .ascent-block.json → /shared reads it
+coach → athlete   BuilderList "start from one that already works" → forkProgram →
+                  builder → Save as a file → athlete's BuilderList, "From someone else"
+```
+
+Every leg of that ships today. What did not exist was the join: a coach looking at an athlete's
+numbers had no way to start writing, and the builder had no idea a block existed. So this is a
+card and a slot, not a feature — which is why it is the smallest of M298a's ten and was left last.
+
+### The clause that had to go
+
+*"Landing in the builder with the athlete's numbers in front of you"* cannot be done the obvious
+way, because `/shared` tells the coach, in its own copy:
+
+> Nothing on this screen is saved: it is here while the tab is, and none of it touches your own
+> grades, your log or your numbers.
+
+The parsed block is component state under that sentence. Navigate to `/build` and it is gone;
+persisting it to reach the builder would make that sentence false, and it is the best thing M292
+built. M219's race tape set the precedent both are following — *"the run counts for the race and
+for nothing else, and the card says so."*
+
+So the report crosses the navigation the way a launched file does. `lib/writingFor.ts` is one
+in-memory slot beside `lib/launchFile.ts`, written by no store, hydrated by nothing, gone on
+reload. The page's promise stays literally true: it is here while the tab is.
+
+**Keyed, not taken.** `launchFile.ts` clears as it returns, because importing twice is the failure
+it guards. This is read on every render of a page a coach may sit on for an hour, so clearing on
+read would blank the note the moment it drew. The slot names the program it was held for instead
+and a read for any other program comes back null — so opening one of your own programs afterwards
+cannot show somebody else's block above it, and no page has to remember to clear.
+
+### Matched by name, because that is what the file carries
+
+`blockFile.ts` writes `report.program.name` and no id. Adding one would be a schema change for a
+lookup that already resolves: the thirteen programs have thirteen distinct names, and the eleven a
+climber can actually run are the eleven a coach might copy. A block from a program this app does
+not ship — one the athlete wrote, or one of the two `mode` entries, which prescribe nothing a coach
+could change — matches nothing, and the card says so rather than offering a copy of something else.
+
+The fork is named `Iron Grip (revised)`. `forkProgram`'s own default is `(mine)`, which is the
+wrong word for a program written for somebody else, and reads wrong at the athlete's end too.
+
+### What it looks like, across two profiles in a browser
+
+```
+athlete  /finish → Save as a file → iron-grip-2026-09-22.ascent-block.json
+                   program in the file: "Iron Grip", and no programId
+
+coach    /shared → opens it → WRITE THEM ONE BACK
+         "They ran Iron Grip. Start from a copy and change what their numbers say to
+          change — then Save as a file and send it back."
+         [ Start from Iron Grip ]  [ Write a blank one ]
+         "The program is yours and is saved with your own. Their block is not: it goes
+          when this tab does, exactly as it says above."
+
+         → /build/custom_mud7jbjw-…
+         ANSWERING A BLOCK THEY SENT YOU
+         Iron Grip · 0 improved, 0 held, 0 down, 9 untested
+         "None of the 8 Iron Grip assessments … has been taken this block" — their app's words
+
+         coach stores: {sessions: 0, metrics: 0, programs: 1}
+```
+
+One program, which is the fork the coach asked for. No sessions, no metrics — which is the
+assertion M292 is, made again from the other side.
+
+### A dead flag the battery found
+
+The note is dismissible, and the first draft held that in a `gone` state beside the slot:
+`if (block === null || gone) return null`. A mutant deleting `|| gone` survived, and it was right
+to: the handler clears the slot *and* sets state, so by the time React re-renders there is nothing
+to read and the flag cannot change an outcome. Two sources of truth, one of them inert.
+
+It is a `redraw` counter now, and the slot is the only truth. Both halves of the handler are held
+by a mutant each — clearing without redrawing leaves the note on screen, redrawing without clearing
+brings it back.
+
+### Noted, not fixed
+
+The sample climber makes a thin demo of this. Its Iron Grip block is six weeks old and its
+benchmarks fall every eight, so no assessment lands inside the block window and the report a coach
+opens reads *0 improved, 9 untested*. Correct, and not much to coach from. That is a generator
+question rather than this one's.
+
+And the layout harness cannot reach either of these cards: `/shared` draws them only once a file is
+open, and the harness has no way to hand a route a file. Checked by hand instead, at 360, 390, 768
+and 1280 — no sideways scroll, no control under the floor. Ninth time this audit has found a
+screen its own automation cannot get to.
+
+Battery 10 killed, 1 sanity survived.
+
+7,179 tests over 430 files, from 7,162. Layout harness OK. First load 128.10KB against 129.1. No
+date matrix: this reads no clock.

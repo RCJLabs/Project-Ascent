@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Upload } from 'lucide-react';
+import { useLocation } from 'wouter';
+import { PencilLine, Upload } from 'lucide-react';
+import { PROGRAMS } from '@/content/programs';
+import { blankProgram, forkProgram } from '@/engine/customProgram';
+import { holdWritingFor } from '@/lib/writingFor';
+import { useCustomPrograms } from '@/store/programs';
 import {
   BlockFileError,
   labelFor,
@@ -92,8 +97,78 @@ export function SharedBlockPage() {
         </Card>
 
         {block && <BlockView block={block} />}
+        {block && <WriteBack block={block} />}
       </PageGrid>
     </>
+  );
+}
+
+/**
+ * The way back (PLAN.md M322).
+ *
+ * A coach reads a block and then does one of two things: sends the same
+ * program with changes, or writes a new one. Both of those already worked end
+ * to end — `forkProgram` copies any catalogue program, the builder edits it,
+ * *Save as a file* exports it and `BuilderList`'s **From someone else** opens
+ * it at the athlete's end. What did not exist was the step between reading
+ * their numbers and starting, so this is a link and not a fourth file format,
+ * which is what M298a's entry asked for.
+ *
+ * **The program they ran is matched by name**, because that is what the file
+ * carries: `blockFile.ts` writes `report.program.name` and no id, and adding
+ * one would be a schema change for a lookup that already resolves for all
+ * eleven programs a climber can run. A block from a program this app does not
+ * ship — one they wrote themselves, or one of the two modes, which prescribe
+ * nothing to change — matches nothing, and the card says so rather than
+ * offering a copy of something else.
+ */
+function WriteBack({ block }: { block: SharedBlock }) {
+  const save = useCustomPrograms((s) => s.save);
+  const [, navigate] = useLocation();
+  // `kind === 'program'`, the same filter the builder's own copy buttons use:
+  // a mode is a menu with no prescription in it, so there is nothing a coach
+  // could change and send back.
+  const ran = PROGRAMS.find((p) => p.kind === 'program' && p.name === block.program);
+
+  async function start(program: Parameters<typeof save>[0]) {
+    await save(program);
+    // Held in memory, not written: see `lib/writingFor.ts`. This is the one
+    // thing that crosses the navigation, and it crosses it the way a launched
+    // file does.
+    holdWritingFor({
+      programId: program.id,
+      program: block.program,
+      summary: block.summary,
+      better: block.better,
+      worse: block.worse,
+      flat: block.flat,
+      untested: block.untested,
+    });
+    navigate(`/build/${program.id}`);
+  }
+
+  return (
+    <Card title="Write them one back">
+      <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+        {ran
+          ? `They ran ${ran.name}. Start from a copy and change what their numbers say to change — then Save as a file and send it back.`
+          : `${block.program} is not a program this app ships, so there is nothing to copy — but you can still write them one from scratch.`}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {ran && (
+          <Button onClick={() => void start(forkProgram(ran, `${ran.name} (revised)`))}>
+            <PencilLine size={15} /> Start from {ran.name}
+          </Button>
+        )}
+        <Button variant="outline" onClick={() => void start(blankProgram())}>
+          <PencilLine size={15} /> Write a blank one
+        </Button>
+      </div>
+      <p className="text-2xs text-ink-soft mt-3 leading-relaxed">
+        The program is yours and is saved with your own. Their block is not: it goes when this tab
+        does, exactly as it says above.
+      </p>
+    </Card>
   );
 }
 

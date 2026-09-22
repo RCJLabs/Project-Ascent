@@ -24,6 +24,7 @@ import { buildProgramFile, fileName } from '@/engine/programFile';
 import { handoutName, programHandout } from '@/engine/programHandout';
 import { today } from '@/engine/dates';
 import { useCustomPrograms } from '@/store/programs';
+import { clearWritingFor, writingFor } from '@/lib/writingFor';
 import { BackLink } from '@/ui/BackLink';
 import { PageSkeleton } from '@/ui/Skeleton';
 import { useGradeOptions } from '@/ui/useGrade';
@@ -103,6 +104,7 @@ export function BuilderPage({ params }: { params: { id: string } }) {
       <PageHeader title={program.name || 'Untitled'} subtitle={`${program.weeks} weeks`} />
 
       <div className="grid grid-cols-1 gap-3">
+        <WritingForCard programId={program.id} />
         <IssuePanel issues={issues} runnable={canRun(program)} />
 
         <Card title="What it is">
@@ -468,6 +470,63 @@ function NumberBox({ value, label, onChange }: { value: number; label: string; o
         size="compact"
       />
     </span>
+  );
+}
+
+/**
+ * Whose block this program is an answer to (PLAN.md M322).
+ *
+ * A coach who taps *Start from Iron Grip* on `/shared` arrives here with the
+ * athlete's report one navigation behind them, and the point of writing is to
+ * change what their numbers say to change. So the four counts and their own
+ * sentence come along.
+ *
+ * **In memory, and only for this program.** `lib/writingFor.ts` holds one
+ * slot keyed by the program it was held for, so this draws on the fork and on
+ * nothing else — opening any other program reads null without any page having
+ * to clear it. A reload ends it, which is the same lifetime `/shared` promises
+ * for the block itself.
+ *
+ * Dismissible, because a coach who has read it is then editing a program for
+ * however long that takes and does not need it above every field.
+ */
+function WritingForCard({ programId }: { programId: string }) {
+  /**
+   * A counter, and nothing else is needed.
+   *
+   * The slot is the only source of truth — a `gone` flag beside it read as a
+   * second one and was dead on arrival: clearing the slot and setting state in
+   * the same handler means the re-render already finds nothing, so the flag
+   * could never change an outcome. A battery mutant that deleted it survived,
+   * which is how that came out.
+   */
+  const [, redraw] = useState(0);
+  const block = writingFor(programId);
+  if (block === null) return null;
+  return (
+    <Card title="Answering a block they sent you">
+      <p className="text-sm text-ink-soft leading-relaxed">
+        {block.program} · {block.better} improved, {block.flat} held, {block.worse} down,{' '}
+        {block.untested} untested
+      </p>
+      {block.summary && (
+        <p className="text-sm text-ink-soft mt-2 leading-relaxed">
+          {block.summary}{' '}
+          <span className="text-2xs uppercase tracking-widest">— their app’s words</span>
+        </p>
+      )}
+      <Button
+        size="sm"
+        variant="outline"
+        className="mt-3"
+        onClick={() => {
+          clearWritingFor();
+          redraw((n) => n + 1);
+        }}
+      >
+        Put it away
+      </Button>
+    </Card>
   );
 }
 
