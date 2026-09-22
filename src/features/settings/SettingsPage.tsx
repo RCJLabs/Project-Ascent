@@ -29,7 +29,6 @@ import { hasDemo } from '@/db/demoFlag';
 import { takeLaunchFile } from '@/lib/launchFile';
 import { getProgram } from '@/content/programs';
 import { KIT_CHIPS, KIT_NAMES, kitOffer, unclaimedKit } from '@/engine/kit';
-import { layoutsFor, planFromLayout } from '@/engine/scheduler';
 import { useSessions, allSessions } from '@/store/sessions';
 import { useMetrics } from '@/store/metrics';
 import { useCustomPrograms } from '@/store/programs';
@@ -300,7 +299,6 @@ export function SettingsPage() {
     setBusy(true);
     try {
       const made = await loadDemo();
-      const program = getProgram(made.programId);
       const profile = useProfile.getState();
       // Through the store's own actions, because they are what persist.
       // Writing the profile with `setState` and then re-hydrating threw the
@@ -313,10 +311,12 @@ export function SettingsPage() {
       useProfile.setState((p) => ({
         startDates: { ...p.startDates, [made.programId]: made.startDate },
       }));
-      // The program's own recommended week, which is what a climber picking
-      // it from the catalogue gets offered first.
-      const layout = program ? layoutsFor(program)[0] : undefined;
-      profile.startProgram(made.programId, layout ? planFromLayout(layout) : {});
+      // The week the generator dated the sessions against (PLAN.md M319).
+      // It is still the program's own recommended layout — the generator
+      // reads it from the same place this did — but asking `loadDemo` for it
+      // is what stops the plan on the profile and the log underneath it from
+      // being two answers to one question.
+      profile.startProgram(made.programId, made.plan);
       // The block it finished before this one, so **Blocks you have run**
       // has the two rows it needs to draw (PLAN.md M282). Prepended, because
       // `startProgram` above has already written the running one.

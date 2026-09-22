@@ -54,6 +54,9 @@ import { measure, type SkillInput, type SkillRequirement } from './skills';
 import { CUSTOM_PREFIX } from './customProgram';
 import { createRng, next, type Rng } from './ascent/rng';
 import { addDays, startOfWeek } from './dates';
+import { getProgram } from '@/content/programs';
+import type { SessionType } from '@/content/types';
+import { layoutsFor, planFromLayout, type WeekPlan } from './scheduler';
 
 /** One climber, so a screenshot taken today matches one taken in a year. */
 export const DEMO_SEED = 20_260_112;
@@ -210,6 +213,15 @@ export interface DemoClimber {
   /** The program the demo is mid-way through, and when it started. */
   programId: string;
   startDate: string;
+  /**
+   * The week it committed to, for the profile to hold (PLAN.md M319).
+   *
+   * Carried out rather than derived again by the caller: the sessions below
+   * are stamped from this plan, so a second derivation is a second answer to
+   * one question and the two can drift. They had — the plan `SettingsPage`
+   * seeded asked for four days a week the log never used.
+   */
+  plan: WeekPlan;
   /** One program the climber wrote, for the `programs` store to hold. */
   program: Program;
   /** Blocks finished before the running one, oldest first. */
@@ -482,6 +494,115 @@ const BENCHMARK_NOTES = [
   'Elbow quiet throughout, which is the news.',
 ] as const;
 
+/** The catalogue program the sample climber is six weeks into. */
+const IRON_GRIP_ID = 'iron_grip' as ProgramId;
+
+/**
+ * Iron Grip, through the registry rather than its own module.
+ *
+ * A direct `import { IRON_GRIP } from '@/content/programs/ironGrip'` reads
+ * better and costs a chunk: `perf.test.ts` holds every program body inside
+ * the shared catalogue chunk, and naming the module pulled Iron Grip's twelve
+ * weeks of protocols out of it and in here. The registry is also what every
+ * reader of these sessions uses — `useTips`, `withDeclaredMode`, `fingerGap` —
+ * so the generator and they now agree about a program whose weeks the climber
+ * has adapted.
+ *
+ * `!` rather than a fallback: a demo that quietly generated no program link
+ * because the id stopped resolving is the failure this milestone is about.
+ * Every test that builds a climber holds it, because the generator throws
+ * here rather than writing four hundred unlinked sessions.
+ */
+function ironGrip(): Program {
+  return getProgram(IRON_GRIP_ID)!;
+}
+
+/**
+ * The week the sample climber committed to when they started the block
+ * (PLAN.md M319).
+ *
+ * The program's own recommended layout, which is what a climber picking Iron
+ * Grip from the catalogue is offered first — and now the **one** statement of
+ * it. `SettingsPage` derived the same thing separately and handed it to
+ * `startProgram`, so the plan on the profile and the log underneath it were
+ * two answers to one question. They disagreed: the plan asked for Monday,
+ * Wednesday, Thursday and Saturday, and the generator wrote Monday, Wednesday
+ * and Friday.
+ *
+ * A function rather than a module constant, so nothing here runs the layout
+ * solver at import time.
+ */
+export function demoPlan(): WeekPlan {
+  // Held by `demoPlanned.test.ts`, which names the four days: a program that
+  // lost its recommended layout would otherwise seed an empty week in silence.
+  return planFromLayout(layoutsFor(ironGrip())[0]!);
+}
+
+/** A day the generator writes a session on, and what the plan called it. */
+interface TrainingDay {
+  date: string;
+  /** Undefined outside the block, where nothing placed it. */
+  type?: SessionType;
+}
+
+/**
+ * Whether climbs get logged on a planned session (PLAN.md M319).
+ *
+ * Off the type's own declared fields rather than its id. Iron Grip's climbing
+ * session asks for `hardestGradeAttempted`; its finger day — *"Hangboard
+ * protocol plus pulling, pushing, core, and armor work"* — asks for nothing of
+ * the sort, and eight boulder problems written onto a hangboard session would
+ * be the generator showing the app data the session type never asks for.
+ */
+function onTheWall(type: SessionType): boolean {
+  return (type.fields ?? []).includes('hardestGradeAttempted');
+}
+
+/**
+ * The days inside the running block, taken from the plan (PLAN.md M319).
+ *
+ * Weekday order, so the sessions come out dated forwards like every other
+ * week — `landTheSends` reads the last burn on a project as its send, and a
+ * make-up day appended out of order would move that date backwards.
+ */
+function planDays(rng: Rng, plan: WeekPlan, program: Program, monday: string): TrainingDay[] {
+  const out: TrainingDay[] = [];
+  let skipped: SessionType | undefined;
+  for (const day of [0, 1, 2, 3, 4, 5, 6] as const) {
+    const typeId = plan[day];
+    if (typeId === undefined) continue;
+    const type = program.sessionTypes.find((t) => t.id === typeId);
+    if (type === undefined) continue;
+    if (type.isRest === true) continue;
+    // Missed now and then, because six weeks run to the letter is nobody's
+    // block and an adherence card reading 100% is a card nobody looks at.
+    if (chance(rng, 0.85)) {
+      // Monday is day 1, and the week's Sunday is the day before `monday`.
+      out.push({ date: addDays(monday, day - 1), type });
+      continue;
+    }
+    // The first one missed rather than the last, and nothing rests on which:
+    // a battery mutant that took the last survived, because a week that loses
+    // two sessions and makes one of them up is the same fixture either way.
+    skipped ??= type;
+  }
+  // Made up the next day, half the time. `blockAdherence` scores the week and
+  // not the day — *"a climber who moves Tuesday's session to Wednesday did the
+  // work"* — and a fixture whose logged days all sit on the plan's days would
+  // never have put that rule through a browser. Tuesday because the plan
+  // leaves it free and the route night below takes the Friday.
+  if (skipped !== undefined && chance(rng, 0.5)) out.push({ date: addDays(monday, 1), type: skipped });
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Monday, Wednesday, Friday — the shape before the block, placed by nobody. */
+function freeDays(rng: Rng, monday: string): TrainingDay[] {
+  const days = chance(rng, 0.2) ? 2 : 3;
+  const out: TrainingDay[] = [];
+  for (let d = 0; d < days; d += 1) out.push({ date: addDays(monday, d * 2) });
+  return out;
+}
+
 export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
   const rng = createRng(seed);
   /**
@@ -499,10 +620,11 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
   /**
    * A third, for the roped sessions (PLAN.md M277), on the same reasoning.
    *
-   * These land on a Thursday, which the bouldering loop below never uses —
-   * it walks Monday, Wednesday, Friday and rests on Sunday. Off its own
-   * stream and onto its own day, so every V record this file produced before
-   * M277 is byte-identical after it.
+   * These land on a day the bouldering loop below does not use — a Thursday
+   * before the block, a Friday inside it (PLAN.md M319), where the plan puts
+   * a finger session on the Thursday. Off its own stream and onto its own
+   * day, so every V record this file produced before M277 is byte-identical
+   * after it.
    */
   const ropes = createRng(seed ^ 0x0f0f_b00b);
   /**
@@ -523,6 +645,9 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
   /** Named once, because the finished block below is dated backwards off it. */
   const ironGripStart = addDays(startOfWeek(today), -7 * 5);
   const written = writtenProgram();
+  /** The block they are six weeks into, and the week they committed to. */
+  const running = ironGrip();
+  const plan = demoPlan();
 
   const sessions: Session[] = [];
   const metrics: MetricEntry[] = [];
@@ -535,33 +660,66 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
     // thing to forget.
     if (week === WEEK_OFF) continue;
 
-    const days = chance(rng, 0.2) ? 2 : 3;
-    for (let d = 0; d < days; d += 1) {
-      const date = addDays(monday, d * 2);
+    /**
+     * Whether this week falls inside the block the climber is running.
+     *
+     * `ironGripStart` is a Sunday, so a week is in it once its Monday is
+     * past that. Six of the hundred and four — before them this climber was
+     * training on their own, and a session from then carries no program link
+     * because nothing placed it.
+     */
+    const inBlock = monday > ironGripStart;
+    /**
+     * Which days this week trained on, and what the plan called each one
+     * (PLAN.md M319).
+     *
+     * Every bouldering session this generator wrote used to claim
+     * `planned: true` and carry no `sessionTypeId`, which is a sentence with
+     * no subject. Measured on the sample climber: `blockAdherence` read it as
+     * nought of twenty-one placed sessions done against seventeen unplanned
+     * ones, `planVsLog` found one thing to say instead of three,
+     * `deriveClimberState.sessionsByType` came back `{}`, and `loadRelief`
+     * had no per-type median to take and so withheld its answer whole. Four
+     * engines on their empty-input path, on the one fixture every browser
+     * check, layout run and screenshot uses.
+     *
+     * `fingerGap` is a fifth reader and this does **not** reach it: it tests
+     * the session type's *name* against a pattern that has `hangboard` and
+     * `fingerboard` in it but not the bare word, so Iron Grip's *"Finger
+     * Protocol + Engine"* misses. Measured, not assumed, and left for its own
+     * milestone — widening that pattern reaches every drill `bodyLoad` scans.
+     */
+    const training = inBlock ? planDays(rng, plan, running, monday) : freeDays(rng, monday);
+    for (const { date, type } of training) {
       if (date > today) continue;
       const id = sessionId(date, 0);
+      /** A hangboard day logs no climbs; see `onTheWall`. */
+      const wall = type === undefined || onTheWall(type);
       // Project season in the back half of the year, which is both more
       // plausible and what puts enough burns on the project pages for them
       // to draw anything.
       // Week 30 of the log, not the same fraction of it (PLAN.md M313).
-    // This one is an event in the climber's history — the season they
-    // started getting outside — rather than a proportion of how long they
-    // have been logging, and stretching it put every project campaign in
-    // the sparse half: Careless Torque came out shelved with no burns on
-    // it at all, which is a card nobody can read.
-    const outdoor = chance(rng, week >= 30 ? 0.4 : 0.12);
+      // This one is an event in the climber's history — the season they
+      // started getting outside — rather than a proportion of how long they
+      // have been logging, and stretching it put every project campaign in
+      // the sparse half: Careless Torque came out shelved with no burns on
+      // it at all, which is a card nobody can read.
+      const outdoor = wall && chance(rng, week >= 30 ? 0.4 : 0.12);
       sessions.push(
         newSession(date, 0, {
           ...stamps(date),
           demo: true,
           completed: true,
           rewarded: true,
-          planned: true,
+          // What the field says it means — *"placed by the plan rather than
+          // logged by hand"* — rather than a `true` on every record.
+          planned: type !== undefined,
+          ...(type ? { programId: running.id, sessionTypeId: type.id } : {}),
           mode: outdoor ? 'outdoor' : 'indoor',
           rpe: 5 + Math.floor(next(rng) * 4),
           durationMin: 60 + Math.floor(next(rng) * 4) * 15,
           warmup: chance(rng, 0.85),
-          climbs: climbsFor(rng, week, id),
+          ...(wall ? { climbs: climbsFor(rng, week, id) } : {}),
           ...(outdoor ? { projectAttempts: burnsFor(rng, week, id) } : {}),
           ...(outdoor
             ? {
@@ -589,7 +747,12 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
      * on the screen with a real difference between them.
      */
     if (week % 2 === 1 && chance(ropes, 0.85)) {
-      const date = addDays(monday, 3);
+      // Friday inside the block, because the plan puts a finger day on the
+      // Thursday there and two sessions cannot share a slot on one date
+      // (PLAN.md M319). Which also makes it the honest thing it already was:
+      // a night the program did not ask for, and the only sessions the
+      // adherence card has to count as unplanned.
+      const date = addDays(monday, inBlock ? 4 : 3);
       if (date <= today) {
         const id = sessionId(date, 0);
         sessions.push(
@@ -744,8 +907,9 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
     ],
     objectives: objectivesFor(today, start, sessions, metrics),
     away: awayFor(start),
-    programId: 'iron_grip',
+    programId: running.id,
     startDate: ironGripStart,
+    plan,
     program: written,
     blocks: [finishedBlock(ironGripStart, written)],
   };

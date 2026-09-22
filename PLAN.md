@@ -14981,6 +14981,16 @@ its label is missing. None of these wants touching.
   whole when any of them has no history, and every number is arithmetic about the plan rather than
   a prediction about the person — which is the rule `objectives.ts` sets and `peak.ts` follows.
 
+- **M319 — the sample climber runs the program it says it is running.** Every one of the four
+  hundred sessions the generator wrote said `planned: true` and carried no `sessionTypeId`, which is
+  a claim with nothing behind it — and the block it seeded asked for Monday, Wednesday, Thursday and
+  Saturday while the log was written on Monday, Wednesday and Friday. So the one fixture every
+  browser check, layout run and screenshot uses read as a climber who had missed **all twenty-one**
+  sessions their block placed and done seventeen unplanned ones. Four engines were on their
+  empty-input path against it. The days inside the block come off the plan now, with misses and a
+  make-up day, and the plan is carried out of the generator rather than derived a second time by
+  the screen that seeds it.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -22452,3 +22462,113 @@ reach, and the first where the cause is one missing field rather than a thin log
 weekday. Layout harness OK. First load 137.07KB against 137.3: **slack is 0.23 now**, and it has
 absorbed eleven milestones this window. The next feature that touches the entry chunk will hit it,
 and bumping the constant at that moment is the wrong way to decide.
+
+
+## M319 — the sample climber runs the program it says it is running
+
+M318 shipped with a note against it: **0 of 403** demo sessions carried a `sessionTypeId`, so the
+tip it built could never name a session for the sample climber. Measured properly, that was the
+small half of it.
+
+### What the fixture was actually saying
+
+`blockAdherence`, on the sample climber, with the block six weeks in:
+
+```
+plan: {1:'fp', 3:'perf', 4:'fp', 6:'perf'}     Mon / Wed / Thu / Sat
+logged on:     Sun Mon Wed Thu Fri              rest / boulder / boulder / routes / boulder
+adherence:     planned 21, done 0, unplanned 17
+  fp    Finger Protocol + Engine   planned 11, done 0
+  perf  Climbing Session           planned 10, done 0
+planVsLog:     1 finding
+sessionsByType: {}
+```
+
+*Nought of twenty-one.* Every screenshot, every layout run and every browser verification since
+M110 has been of a climber who missed every session their program ever placed — and the screen
+said so, in those words, on the block review page.
+
+Two separate faults behind it. The sessions carried no program link at all, despite claiming
+`planned: true`; and the days the generator wrote on were not the days the plan asked for.
+
+### The days come off the plan
+
+Inside the running block — six of the hundred and four weeks — the generator now walks the plan
+and writes what it placed. Before the block it writes what it always did, on Monday, Wednesday and
+Friday, and those sessions carry **no** program link, because nothing placed them. That is a
+different sentence from the one this fixed, and the honest one.
+
+Three things keep it from being a plan reproduced rather than a log:
+
+- **A session missed, roughly one in seven.** A block run to the letter for six weeks is nobody's
+  block, and an adherence card reading 100% is a card nobody looks at.
+- **A make-up on the Tuesday**, half the time, for the first day missed. `blockAdherence` scores
+  the week and not the day — *"a climber who moves Tuesday's session to Wednesday did the work"* —
+  and a fixture whose sessions all sat on the plan's own days would never have put that rule
+  through a browser.
+- **The route night stays unplanned**, and moves to the Friday inside the block, because the plan
+  puts a finger day on the Thursday it used to take. It is the only thing the adherence card now
+  counts as unplanned, which is what that counter is for.
+
+### A hangboard day logs no climbs
+
+Iron Grip's finger day is *"Hangboard protocol plus pulling, pushing, core, and armor work"*. The
+generator used to write eight boulder problems onto every training day it made, which on that one
+is the fixture showing the app data the session type never asks for. Which day takes climbs is
+read off the type's own declared fields — `hardestGradeAttempted` — rather than off its id, so a
+program written in the builder would be read the same way.
+
+The sessions still carry RPE and a duration, so they still carry load: the climber trains *more*
+now, not less, and the four-week baseline went from 26.1 to 33.4.
+
+### One plan, not two
+
+`SettingsPage` derived the week it seeded from `layoutsFor(program)[0]`, and the generator would
+have had to derive the same thing to stamp its sessions. Two answers to one question, and the
+audit's most-repeated finding. `loadDemo` returns the plan now and the screen passes it straight
+through.
+
+### What the screens say instead
+
+Block review, in a browser, loaded through the button a climber would press:
+
+```
+You did 9 of 10 Climbing Session and 10 of 11 Finger Protocol + Engine. That is 19 of
+21 sessions the plan placed. You also logged 2 sessions the plan did not place.
+
+WHERE IT DRIFTED FROM THE PLAN
+  Finger Protocol + Engine before Climbing Session · spacing  never the day before → 2 times
+  Week 4 · deload                                             a lighter week → 1.34× the weeks before
+  Climbing Session · effort                                   hard as written → RPE 5 logged
+```
+
+Three findings where there was one, and two of the three cannot exist without a session type. The
+spacing one is the make-up day doing exactly what the coach tip warns about — *"moving one session
+forward a day moves it onto the one it was meant to stay clear of"* — which is a better
+demonstration of the rule than a fixture that never breaks it.
+
+`loadRelief` can now take a median per type off the log, so M318's tip has a fixture. And the
+ratio reaches `caution` on the Saturdays it never reached before: over four weeks of pinned days
+the sample climber reads 16 detraining / 8 optimal / 4 caution, where it used to read 16 / 12 / 0.
+
+### Two things measured and not fixed
+
+**`fingerGap` still cannot see the finger day.** The premise above said five engines; it is four.
+`words()` puts the session type's *name* first and calls it the most reliable signal — its own
+example is *"Hangboard / Finger"* — but the pattern that name is tested against is
+`/max hang|repeater|dead ?hang|min edge|density hang|hangboard|fingerboard|\bedge\b|crimp/`, which
+"Finger Protocol + Engine" does not match. Stamping the id changed nothing there. Widening the
+pattern to the bare word is a one-line change with a blast radius across every drill and exercise
+`bodyLoad` scans, and it needs its own measurement pass rather than a footnote in this one.
+
+**A battery mutant survived, twice.** Moving the make-up onto the route night's Friday produces two
+sessions on one date and one silently overwriting the other — and a sweep of sixty pinned days
+never caught it, because moving a session re-orders that week's draws, so the run that would have
+collided rolls a different set of misses and misses the collision too. A generator that hides its
+own bug from a data assertion has to be checked on its shape, so the test now asserts the days:
+every placed session on a day the plan asks for or on the Tuesday, everything else on a day the
+plan leaves free.
+
+7,141 tests over 426 files, from 7,124. Ten pinned days green, which this needed more than most —
+the generator's whole output turns on what day it is. Layout harness OK. First load 137.09KB
+against 137.3.

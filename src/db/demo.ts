@@ -49,6 +49,7 @@ import { getDb, readOr } from './db';
 import { hasRealData } from './exportImport';
 import { demoClimber, DEMO_SEED } from '@/engine/demoClimber';
 import { today as todayKey } from '@/engine/dates';
+import type { WeekPlan } from '@/engine/scheduler';
 
 /**
  * Every program the sample climber leaves state on, for the clear to unpick.
@@ -86,6 +87,18 @@ export function demoBlocks(today = todayKey(), seed = DEMO_SEED) {
 export interface DemoProfile {
   programId: string;
   startDate: string;
+  /**
+   * The week the generator dated its sessions against (PLAN.md M319).
+   *
+   * Handed out rather than worked out again by the caller. `SettingsPage`
+   * used to ask `layoutsFor` for the program's first layout, which is the
+   * same derivation the generator now makes — one question, two answers, and
+   * nothing holding them together. The log was written on Monday, Wednesday
+   * and Friday while the plan on the profile asked for Monday, Wednesday,
+   * Thursday and Saturday, so the sample climber arrived having missed every
+   * session the block ever placed.
+   */
+  plan: WeekPlan;
   injuryId: string;
 }
 
@@ -110,6 +123,7 @@ export async function loadDemo(seed = DEMO_SEED, today = todayKey()): Promise<De
   return {
     programId: made.programId,
     startDate: made.startDate,
+    plan: made.plan,
     injuryId: made.injuries[0]!.id,
   };
 }

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { canLoadDemo, demoAway, demoObjectives, demoProgram, loadDemo } from '@/db/demo';
-import { DEMO_PROGRAM_ID, demoClimber } from '@/engine/demoClimber';
+import { DEMO_PROGRAM_ID, demoClimber, demoPlan } from '@/engine/demoClimber';
 import { useCustomPrograms } from '@/store/programs';
 import { daysBetween, today } from '@/engine/dates';
 import { getSession, newSession, putSession } from '@/db/sessions';
@@ -89,6 +89,11 @@ describe('loading and clearing it', () => {
     const started = useProfile.getState().startDates['iron_grip']!;
     expect(started < today()).toBe(true);
     expect(daysBetween(started, today())).toBeGreaterThan(21);
+    // The week the generator dated the sessions against, handed over rather
+    // than worked out a second time here (PLAN.md M319). This screen used to
+    // ask `layoutsFor` for the program's first layout, and the log underneath
+    // was written on days that layout never asked for.
+    expect(useProfile.getState().plans['iron_grip']).toEqual(demoPlan());
   });
 
   it('offers the way out once it is loaded, and not the way in', async () => {
