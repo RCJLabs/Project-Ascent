@@ -22,28 +22,53 @@ import { readFileSync } from 'node:fs';
  */
 
 describe('the index', () => {
+  /**
+   * A shallow clone is not a stale index, and the difference took a red CI
+   * to learn (PLAN.md M315a).
+   *
+   * `actions/checkout` takes one commit by default. The generator reads the
+   * log, so on a shallow clone it wrote a one-row index, and the freshness
+   * check below reported *"on disk: 305 milestones · generated: 1"* — which
+   * is a true statement about the checkout and a misleading one about the
+   * tree. Named here so the next person reads one line instead of a diff.
+   */
+  it('is being checked against the whole history', () => {
+    const shallow = execFileSync('git', ['rev-parse', '--is-shallow-repository'], {
+      encoding: 'utf8',
+    }).trim();
+    expect(
+      shallow,
+      'this is a shallow clone, so `git log` holds one commit and the index cannot be ' +
+        'checked. The workflow needs `fetch-depth: 0` on its checkout.',
+    ).toBe('false');
+  });
+
   it('is what the generator would write today', () => {
-    const before = readFileSync('INDEX.md', 'utf8');
-    execFileSync('node', ['scripts/gen-index.mjs'], { encoding: 'utf8' });
-    const after = readFileSync('INDEX.md', 'utf8');
-    if (before !== after) {
-      const b = before.split('\n');
-      const a = after.split('\n');
-      const at = b.findIndex((line, i) => line !== a[i]);
-      expect.fail(
-        `INDEX.md is stale. Run \`npm run index\`, and if the difference is this\n` +
-          `milestone's own row, \`git commit --amend\` it into the commit that\n` +
-          `shipped it — the generator cannot see a commit that does not exist yet.\n` +
-          `First difference at line ${at + 1}:\n` +
-          `  on disk:   ${b[at] ?? '(end of file)'}\n` +
-          `  generated: ${a[at] ?? '(end of file)'}`,
-      );
-    }
-    // The `if` above is the check; this is what gives the passing case an
-    // assertion, which `setup.ts` requires of every test. A battery mutant
-    // aimed here survived, which is how I know which of the two is load-
-    // bearing.
-    expect(after).toBe(before);
+    const onDisk = readFileSync('INDEX.md', 'utf8');
+    // `--stdout`, so a failing run does not also rewrite a tracked file.
+    const generated = execFileSync('node', ['scripts/gen-index.mjs', '--stdout'], {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+    });
+
+    // One assertion, carrying the first difference: a raw diff of a
+    // eleven-hundred-line file is not a thing anyone reads, and `expect.fail`
+    // left the test with no assertion counted, so a failure reported itself
+    // twice — once as the real complaint and once as "this test asserted
+    // nothing".
+    const a = onDisk.split('\n');
+    const b = generated.split('\n');
+    const at = a.findIndex((line, i) => line !== b[i]);
+    const difference =
+      at === -1 && a.length === b.length
+        ? null
+        : `line ${at + 1}\n  on disk:   ${a[at] ?? '(end of file)'}\n  generated: ${b[at] ?? '(end of file)'}`;
+    expect(
+      difference,
+      'INDEX.md is stale. Run `npm run index`; if the difference is this milestone\'s own ' +
+        'row, `git commit --amend` it into the commit that shipped it, because the ' +
+        'generator cannot see a commit that does not exist yet.',
+    ).toBeNull();
   });
 
   /**

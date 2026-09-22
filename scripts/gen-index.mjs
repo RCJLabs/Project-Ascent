@@ -177,5 +177,13 @@ for (const file of [...touched.keys()].filter((f) => present.has(f) && !RECORDS.
 }
 out.push('');
 
-writeFileSync('INDEX.md', out.join('\n'));
-console.log(`INDEX.md: ${ids.length} milestones, ${withdrawn.size} withdrawn, ${touched.size} files`);
+const text = out.join('\n');
+if (process.argv.includes('--stdout')) {
+  // For `indexFresh.test.ts`, which compares without writing: a test that
+  // rewrites a tracked file leaves the tree changed when it fails, which is
+  // a surprise on top of a failure (PLAN.md M315a).
+  process.stdout.write(text);
+} else {
+  writeFileSync('INDEX.md', text);
+  console.log(`INDEX.md: ${ids.length} milestones, ${withdrawn.size} withdrawn, ${touched.size} files`);
+}

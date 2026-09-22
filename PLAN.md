@@ -14948,6 +14948,12 @@ its label is missing. None of these wants touching.
   worst. Derived and not maintained, because a hand-written index of a file this long is a second
   record to keep in step with the first, and M312 has just finished showing what becomes of those.
 
+- **M315a — the index reported the checkout, not the tree.** M315's freshness test regenerates
+  `INDEX.md` from `git log` and compares. `actions/checkout` takes one commit by default, so CI's
+  log held one commit, the generated index had one row against the committed 305, and the first red
+  CI of this audit was a test describing its own clone. `fetch-depth: 0` on the build job, and the
+  test now says *"this is a shallow clone"* rather than printing a diff for someone to decode.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -22083,3 +22089,56 @@ unchanged, and it would be alarming otherwise: nothing here ships.
 
 No browser check and no date matrix. Neither has anything to look at — this milestone adds a
 script, a generated file and a test, changes no screen, and reads no clock.
+
+---
+
+## M315a — a test that described its own clone
+
+M315 went red on CI. First red of this audit, and the deploy was skipped, so the live site kept
+serving M314 while the failure sat on `main`.
+
+```
+AssertionError: INDEX.md is stale.
+First difference at line 6:
+  on disk:   305 milestones, M0 to M315, over 823 of the files still here.
+  generated: 1 milestones, M0 to M315, over 846 of the files still here.
+```
+
+`actions/checkout@v4` clones at depth 1 unless told otherwise. The generator reads `git log`, so in
+CI it read **one commit** and wrote a one-row index. Every word of that message is true and none of
+it is about the tree.
+
+The check is worth having in CI — a stale index that only fails locally is a rule nobody runs — so
+the build job takes `fetch-depth: 0`. This repository is four hundred commits; the whole history
+costs a second of checkout.
+
+### Three faults, only one of them the red one
+
+**The clone.** Fixed in the workflow, and the test now looks first:
+`git rev-parse --is-shallow-repository` must say `false`, with a message naming `fetch-depth: 0`.
+Verified against a real shallow clone rather than assumed — `git clone --depth 1` of this repo
+answers `true`, so the guard fires there and the next person reads one line instead of a diff.
+
+**The test wrote to the tree.** It regenerated `INDEX.md` in place to compare, so a *failing* run
+also left the file rewritten. The generator takes `--stdout` now and the test never writes.
+
+**The failure reported itself twice.** `expect.fail()` throws before the trailing assertion runs,
+and this repo's setup fails any test that finished without one — so a stale index produced its real
+complaint *and* `"This test asserted nothing and so cannot fail"`. One assertion now, carrying the
+first differing line in its message, because a raw diff of eleven hundred lines is not something
+anyone reads.
+
+### What the battery could and could not show
+
+4 killed, sanity survived. Two mutants survived the first run and both were badly built: one
+weakened the shallow check to something that passes in any clone rather than inverting it, and one
+was semantically identical to the original on a fresh index.
+
+The second is worth recording, because it is a limit of the method rather than a mistake.
+`const at = a.length === b.length ? -1 : 0` makes the comparison blind to any drift that keeps the
+line count — and on a fresh index it produces exactly what the real code produces, so it survives.
+Applying it **together** with a hand-edited INDEX.md shows what it costs: the suite passes on a
+genuinely stale index. One mutant at a time cannot catch a weakening whose damage needs a second
+condition to show. Checked by hand, restored, and said here rather than left as a green tick.
+
+7,097 tests over 422 files, from 7,096. First load 137.00KB against 137.3.

@@ -23,6 +23,14 @@ jobs:
       entry: ${{ steps.entry.outputs.name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The whole history, not the one commit a checkout takes by
+          # default (PLAN.md M315a). `indexFresh.test.ts` regenerates
+          # INDEX.md from `git log` and compares, and on a shallow clone the
+          # log holds one commit — so the generated index had one row, the
+          # committed one had 305, and the first red CI of this audit was a
+          # test reporting the checkout rather than the tree.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
