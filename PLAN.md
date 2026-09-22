@@ -14972,6 +14972,15 @@ its label is missing. None of these wants touching.
   programs**, six times in Outdoor Climbing and twice in General Training. A rest day prescribes
   nothing because it is a rest day.
 
+- **M318 — which session to drop.** The coach has warned about a load spike since M162 and said the
+  true, useless thing: *"an easier week now costs a week."* Easier how — the climber is looking at a
+  week with four sessions in it, and the app knows which four and what each one has weighed every
+  other time they have done it. It names one now: *"3 sessions left in the week as planned, and
+  Wednesday's Climbing Session is the biggest of them: the week ends at 1.86× with it and 1.69×
+  without."* Each estimate is the median of that climber's own sessions of that type, withheld
+  whole when any of them has no history, and every number is arithmetic about the plan rather than
+  a prediction about the person — which is the rule `objectives.ts` sets and `peak.ts` follows.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -22342,3 +22351,104 @@ end.
 7,113 tests over 424 files, from 7,106. Ten pinned days green. Layout harness OK. First load
 137.04KB against 137.3, up 0.03 — `ProgramDetailPage` now imports the handout generator, and it is
 a lazy route.
+
+---
+
+## M318 — which session to drop
+
+The coach has warned about a load spike since M162, and the warning ends:
+
+> An easier week now costs a week.
+
+True, and useless. The climber is looking at a week with four sessions in it. The app knows which
+four — it laid them out — and knows what each one has weighed every other time they have done it.
+What it offered was a link to the calendar.
+
+### The sentence it says now
+
+```
+You are at 1.92× your own four-week baseline, and a jump this size is what this model
+exists to flag — not the training itself, the speed of the change. 3 sessions left in
+the week as planned, and Wednesday's Climbing Session is the biggest of them: the week
+ends at 1.86× with it and 1.69× without. An easier week now costs a week.
+```
+
+### Arithmetic about the plan, not a prediction about the climber
+
+`engine/objectives.ts` sets the rule the whole app answers to — *"no projection that has not been
+earned"* — and `peak.ts` is the precedent for staying inside it: it projects a **prescription**,
+never an outcome. This does the same, and the distinction is one sentence wide. *"The week ends at
+1.86×"* is arithmetic anyone can check against their own calendar. *"You will be at 1.86×"* would
+be a claim about what a person is going to do, and a test holds the tip to never saying it.
+
+**Each session is estimated from this climber's own sessions of that type.** A planned session has
+no load — load is RPE × hours and neither exists until it has been trained — but every other
+Thursday they have done it does. The median of those is the estimate: their number, for their
+session, not a constant from a table. A median rather than a mean because one hard evening does not
+make every Thursday heavier.
+
+**Withheld whole when any planned type has no history.** A ranking with one invented number in it
+ranks wrongly and still sounds certain, and the tip it feeds names *one* session out of four.
+Getting that wrong is worse than the general advice it replaces, which is at least not specific
+enough to be wrong. Below two prior sessions of a type there is no median, only the one time.
+
+**And only when dropping it buys something.** *"1.86× with it and 1.85× without"* is a suggestion
+to skip a session for nothing.
+
+### One arithmetic for the ratio, not two
+
+To ask what a week would come to, this needed the acute and chronic windows — which `deriveLoad`
+already computes. Writing them again here would have been the fault this audit has found in
+`rowWindow`, in four burn counters and in the week gutter, and the version of it that says *the
+ratio* would be the worst yet: two numbers disagreeing about how hard a climber is training. So
+`windows()` came out of `deriveLoad` and both call it.
+
+That extraction exposed a smaller duplicate underneath: `bracket` divided by `CHRONIC_WEEKS` a
+second time, needing the chronic *total* to fold the unscored days into. It takes that total back
+from the window now rather than summing again — exact, because `CHRONIC_WEEKS` is four and a power
+of two is the one divisor that round-trips.
+
+### Reading the output, which is what found the bug
+
+The first draft printed:
+
+> You are at **2.24×** your own four-week baseline … the week comes to **1.94×** with it.
+
+Training more, and the ratio falls. The arithmetic is right — by Thursday the heavy days at the
+start of this week have rolled out of a seven-day window — and the sentence was wrong, because two
+numbers about two different days were printed as though they were about one. *"The week **ends
+at**"* is the whole fix.
+
+### What the battery had to correct
+
+Two survivors, both the same fault and the one this audit keeps finding: **the fixture was too
+clean to tell the difference.**
+
+- Every `hard` session in it weighed exactly 8 × 1.5h, so the mean and the median are the same
+  number and swapping one for the other changed nothing. There is an outlier in it now.
+- The drop saved 0.27, far above the threshold that decides whether it is worth a sentence, so
+  lowering that threshold to −1 changed nothing either. There is a session worth 1 load in it now,
+  and the case that says nothing about it.
+
+8 killed in the end, sanity survived — including the acute window widened by a day, which is the
+mutant that proves the extraction above kept one arithmetic rather than making two.
+
+And M314's own sweep caught me mid-milestone: `ReliefInput.minHistory` was an optional field with
+no caller, which is exactly the shape that milestone removed three of. Gone before it shipped.
+
+### Noted, not fixed: the sample climber cannot reach this
+
+**0 of 403** demo sessions carry a `sessionTypeId`, and the estimate is keyed on it — so this tip
+can never name a session for the sample climber. The browser check injects four weeks of `fp` and
+`perf` history and three hard days on top of the real log to see it work at all.
+
+That is a deeper gap than this milestone. `PreSession.start()` sets the id on every session started
+from a plan, so real logs carry it; the generator never has. `blockAdherence`'s skipped-type rule
+and `planVsLog` both read it too, which means the sample climber has been quietly exercising the
+degraded path of all three. Seventh card this session whose working state the sample data cannot
+reach, and the first where the cause is one missing field rather than a thin log.
+
+7,124 tests over 425 files, from 7,113. Ten pinned days green, which this wanted — the tip names a
+weekday. Layout harness OK. First load 137.07KB against 137.3: **slack is 0.23 now**, and it has
+absorbed eleven milestones this window. The next feature that touches the entry chunk will hit it,
+and bumping the constant at that moment is the wrong way to decide.

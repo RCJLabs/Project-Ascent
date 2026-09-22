@@ -12,6 +12,9 @@ import { useMemo } from 'react';
 import { getProgram } from '@/content/programs';
 import { blockAdherence } from '@/engine/adherence';
 import { buildTips, visibleTips, type Tip } from '@/engine/coach';
+import { loadRelief } from '@/engine/loadRelief';
+import { plannedDay } from '@/engine/plan';
+import { addDays, startOfWeek } from '@/engine/dates';
 import { today } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { diagnose } from '@/engine/plateau';
@@ -81,10 +84,39 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
             today: today(),
           })
         : [];
+    /**
+     * Which session the rest of this week could lose (PLAN.md M318).
+     *
+     * Only when the ratio is actually hot: it walks the plan to the end of
+     * the week and takes a median per session type, and every other climber
+     * would pay for an answer no tip is going to read.
+     *
+     * From today rather than tomorrow when today has nothing logged on it —
+     * *"drop tonight's session"* is the most actionable thing the app can
+     * say at nine in the morning, and the least useful once the session is
+     * in the log.
+     */
+    const hot = state.load.zone === 'caution' || state.load.zone === 'danger';
+    const relief =
+      hot && program && startDate && plan
+        ? loadRelief({
+            sessions,
+            ahead: plannedAhead(
+              program,
+              startDate,
+              plan,
+              activeProgramId ? weekOverrides[activeProgramId] : undefined,
+              sessions,
+              today(),
+            ),
+            today: today(),
+          })
+        : null;
     const all = buildTips({
       state,
       sessions,
       projects,
+      relief,
       metrics,
       adherence,
       findings,
@@ -127,4 +159,33 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
     const visible = visibleTips(all, dismissed);
     return { all, visible, hidden: all.length - visible.length };
   }, [byDate, projects, metrics, injuries, equipment, activeProgramId, startDates, plans, weekOverrides, tracks, lastExportAt, dismissed, display, objectives, away, deloadDates]);
+}
+
+/**
+ * The sessions the plan still has in this week, today included when today
+ * is still open (PLAN.md M318).
+ *
+ * The calendar week rather than the next seven days, because the week is
+ * what the climber is looking at and what they can move. The ratio's own
+ * window is a rolling seven days and `loadRelief` reads it that way; these
+ * are the days there is any point offering to drop.
+ */
+function plannedAhead(
+  program: Parameters<typeof plannedDay>[0],
+  startDate: string,
+  plan: Parameters<typeof plannedDay>[2],
+  overrides: Parameters<typeof plannedDay>[4],
+  sessions: { date: string; completed: boolean }[],
+  from: string,
+): { date: string; typeId: string; name: string }[] {
+  const loggedToday = sessions.some((s) => s.date === from && s.completed);
+  const end = addDays(startOfWeek(from), 6);
+  const out: { date: string; typeId: string; name: string }[] = [];
+  for (let date = loggedToday ? addDays(from, 1) : from; date <= end; date = addDays(date, 1)) {
+    const day = plannedDay(program, startDate, plan, date, overrides);
+    if (day.sessionType && !day.isRest) {
+      out.push({ date, typeId: day.sessionType.id, name: day.sessionType.name });
+    }
+  }
+  return out;
 }

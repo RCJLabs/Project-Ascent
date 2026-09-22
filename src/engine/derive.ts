@@ -834,6 +834,27 @@ export function zonesFor(index: LoadIndex, dates: readonly string[]): AcwrZone[]
   return loadSeries(index, dates).map((point) => point.zone);
 }
 
+/**
+ * The two windows, from one place (PLAN.md M318).
+ *
+ * Acute is the seven days ending on the last of these, chronic is the
+ * twenty-eight divided by four, and the ratio is the quotient. Lifted out
+ * of `deriveLoad` when `loadRelief` needed to ask the same question about a
+ * week that has not happened yet: a second copy of this arithmetic is the
+ * fault this audit has found in `rowWindow`, in four burn counters and in
+ * the week gutter, and the version of it that says *the ratio* would be the
+ * worst one yet — two numbers disagreeing about how hard a climber is
+ * training.
+ *
+ * Takes the days rather than an index, so a caller can hand it a week it is
+ * considering rather than only one it has lived.
+ */
+export function windows(daily: readonly { load: number }[]): { acute: number; chronic: number } {
+  const acute = daily.slice(-ACUTE_DAYS).reduce((sum, d) => sum + d.load, 0);
+  const chronic = daily.reduce((sum, d) => sum + d.load, 0) / CHRONIC_WEEKS;
+  return { acute, chronic };
+}
+
 function deriveLoad(
   index: LoadIndex,
   today: string,
@@ -853,9 +874,12 @@ function deriveLoad(
     unmeasured.push(entry?.unmeasured === true);
   }
 
-  const acute = daily.slice(-ACUTE_DAYS).reduce((sum, d) => sum + d.load, 0);
-  const chronicTotal = daily.reduce((sum, d) => sum + d.load, 0);
-  const chronic = chronicTotal / CHRONIC_WEEKS;
+  const { acute, chronic } = windows(daily);
+  // Back from the window rather than summed again: `bracket` needs the
+  // total because it adds the unscored days to it before dividing, and
+  // `CHRONIC_WEEKS` is four, so multiplying by it undoes the division
+  // exactly — a power of two is the one divisor that round-trips.
+  const chronicTotal = chronic * CHRONIC_WEEKS;
   const unmeasuredDays = unmeasured.filter(Boolean).length;
   const unmeasuredAcute = unmeasured.slice(-ACUTE_DAYS).filter(Boolean).length;
 

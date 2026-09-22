@@ -23,12 +23,13 @@ import type { MetricEntry } from '@/db/metrics';
 import type { MetricId } from '@/content/types';
 import { METRICS } from '@/content/metrics';
 import { assessmentStatus } from './assessments';
-import { addDays, daysBetween, shortLabel, today as todayKey } from './dates';
+import { addDays, daysBetween, fromKey, shortLabel, today as todayKey } from './dates';
 import { poorRun } from './conditions';
 import { MIN_CHRONIC_DAYS, MIN_RATIO_DAYS, type ClimberState } from './derive';
 import { recoverySentence, type Diagnosis } from './plateau';
 import { activeProjects, attemptsFor, burnsIn, highPointOf } from './projects';
 import type { BlockAdherence } from './adherence';
+import type { LoadRelief } from './loadRelief';
 import type { Finding } from './planVsLog';
 import { FINGER_GAP_HOURS, fingerGaps } from './fingerGap';
 import type { Objective } from './objectives';
@@ -76,6 +77,17 @@ export interface CoachInput {
    * things the coach has no business holding to write one tip.
    */
   adherence?: BlockAdherence | null;
+  /**
+   * Which session the rest of the week could lose (PLAN.md M318).
+   *
+   * Passed in already computed, like `adherence` and for the same reason:
+   * working it out needs the program, its start date, the week plan and the
+   * overrides, which is four things the coach has no business holding.
+   * Null whenever it cannot be said honestly — no baseline, nothing left in
+   * the week, or a planned session of a type this climber has never done,
+   * which would put an invented number in a ranking that names one session.
+   */
+  relief?: LoadRelief | null;
   /**
    * Whether the running program puts a drill in any week (PLAN.md M132).
    *
@@ -794,7 +806,36 @@ function unscoredEffort({ state }: CoachInput): Tip | null {
 /** Enough of a log that a missing score is worth mentioning at all. */
 const MIN_SESSIONS_FOR_SCORE = 6;
 
-function loadSpike({ state, objectives }: CoachInput, today: string): Tip | null {
+/**
+ * What the week weighs, and the one session that is most of it.
+ *
+ * A sentence about the plan, never about the climber: *"the week as planned
+ * comes to 1.84×"* is arithmetic anyone can check against their own
+ * calendar, where *"you will be at 1.84×"* would be a claim about what
+ * somebody is going to do. `engine/objectives.ts` sets that rule — *"no
+ * projection that has not been earned"* — and `peak.ts` is the precedent
+ * for staying inside it by projecting a prescription.
+ */
+function reliefLine(relief: LoadRelief | null | undefined): string {
+  if (!relief?.drop) return '';
+  const { session, without } = relief.drop;
+  const left = relief.planned.length;
+  const day = fromKey(session.date).toLocaleDateString(undefined, { weekday: 'long' });
+  /**
+   * *"The week ends at"*, not *"comes to"*.
+   *
+   * Reading the first draft's output is what found this. It read *"You are
+   * at 2.24× … the week comes to 1.94× with it"*, which looks like training
+   * more lowering the ratio. The arithmetic is right — by Thursday the
+   * heavy days at the start of this week have rolled out of a seven-day
+   * window — and the sentence was wrong, because two numbers about two
+   * different days were printed as though they were about one. Both of
+   * these are the end of the week; saying so is the whole fix.
+   */
+  return ` ${left} ${left === 1 ? 'session' : 'sessions'} left in the week as planned, and ${day}'s ${session.name} is the biggest of them: the week ends at ${relief.asPlanned.toFixed(2)}× with it and ${without.toFixed(2)}× without.`;
+}
+
+function loadSpike({ state, objectives, relief }: CoachInput, today: string): Tip | null {
   const { acwr, zone, inPlannedDeload } = state.load;
   // A deload is a deliberate change of load in the other direction, and the
   // ratio moving is the point of it rather than a surprise.
@@ -825,7 +866,7 @@ function loadSpike({ state, objectives }: CoachInput, today: string): Tip | null
       tone: 'caution',
       weight: 93,
       headline: 'Load spike',
-      body: `You are at ${ratio}× your own four-week baseline, and a jump this size is what this model exists to flag — not the training itself, the speed of the change. An easier week now costs a week. Fingers and tendons adapt slower than the muscles that made this feel possible.`,
+      body: `You are at ${ratio}× your own four-week baseline, and a jump this size is what this model exists to flag — not the training itself, the speed of the change.${reliefLine(relief)} An easier week now costs a week. Fingers and tendons adapt slower than the muscles that made this feel possible.`,
       action: { label: 'Plan the week', href: '/calendar' },
     };
   }
@@ -845,7 +886,7 @@ function loadSpike({ state, objectives }: CoachInput, today: string): Tip | null
     tone: 'caution',
     weight: 62,
     headline: 'Ramping quickly',
-    body: `You are at ${ratio}× your own four-week baseline. That is a fine week and a bad month — the ratio is about the speed of the change, not the size of the load, so holding here for a while is how it becomes the new baseline safely.`,
+    body: `You are at ${ratio}× your own four-week baseline. That is a fine week and a bad month — the ratio is about the speed of the change, not the size of the load, so holding here for a while is how it becomes the new baseline safely.${reliefLine(relief)}`,
     action: { label: 'Plan the week', href: '/calendar' },
   };
 }
