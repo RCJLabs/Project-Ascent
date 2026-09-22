@@ -551,8 +551,58 @@ describe('the bundle stays small', () => {
    *
    * And the floor rises with it: at 137.3 a rebuild measuring under 135.8
    * fails for being too small.
+   *
+   * ## 137.3 → 129.1 at M320, measured 137.08 → 128.03
+   *
+   * The first move down since M123, and the largest this file has recorded:
+   * **9.05KB, 6.6% of the whole first load, from one static import.**
+   *
+   * `store/index.ts` hydrates every store at boot, and it named
+   * `store/game.ts` among them. That one edge carried ten modules into the
+   * entry chunk — the wallet and ledger in `db/game.ts`, the run history
+   * through `ascent/history` to `ascent/scale` and the altimeter, the payout
+   * table through `ascent/rewards` to `engine/economy`, and, the largest of
+   * them, **`engine/derive.ts` at 15KB rendered**, which `engine/xp.ts`
+   * reads to price a climber's level. Forty-six kilobytes of rendered code
+   * for screens that are every one of them a lazy route.
+   *
+   * `deriveClimberState` is the one worth naming. It is the app's heaviest
+   * engine and Home does not call it — M104 moved that to `useTips` and made
+   * the lazy coach route real. It was on the boot path anyway, through the
+   * game's XP.
+   *
+   * The store is still hydrated at boot, through a dynamic `import()`:
+   * `hydrateAll` is called from an effect, so the fetch happens after the
+   * first paint instead of in front of it. **The bytes over the wire are
+   * unchanged** — the service worker precaches every chunk either way. What
+   * moved is what has to be parsed and executed before the app can draw,
+   * which is the thing this number has measured since M78.
+   *
+   * Which is a claim, so it was measured rather than asserted. Chromium, a
+   * cold profile with no worker, throttled to 1.6Mbps at 40ms with the CPU
+   * at a quarter speed, five runs each:
+   *
+   * ```
+   * before   FCP 1024 1032 1040 1052 1056   median 1040   entry done at 778ms
+   * after    FCP  968  980  988  988 1000   median  988   entry done at 743ms
+   * ```
+   *
+   * **52ms, and the two ranges do not overlap.** In the same trace the game
+   * chunk is requested at 999ms against a paint at 980 — after it, which is
+   * the ordering the paragraph above depends on.
+   *
+   * 1.07KB of slack, the same 1.00 target, bounded both ways by running it:
+   * **128.0 fails — the budget and the guard's own lower bound together —
+   * 129.53 reads 1.50 of slack and fails the guard, and 129.52 passes.** The
+   * measurement those were run against is 128.0283203125; rebuilds of the
+   * same tree land between 128.01 and 128.03, which is `__BUILT_AT__`
+   * changing in the entry chunk and the hash churn M145 measured.
+   *
+   * And the floor drops with it: at 129.1 a rebuild measuring under 127.6
+   * now fails for being too small, so the next cut of more than half a
+   * kilobyte moves this line in its own commit.
    */
-  const BUDGET = 137.3;
+  const BUDGET = 129.1;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
@@ -1388,6 +1438,50 @@ describe('the bundle stays small', () => {
     }
   });
 
+  it.runIf(built)('keeps the game economy out of the entry chunk', () => {
+    /**
+     * Ten modules and 46KB of rendered code, on the boot path of an app that
+     * opens on Home, because `store/index.ts` named one of them (PLAN.md
+     * M320).
+     *
+     * `hydrateAll` loads every store at boot and `store/game.ts` was one
+     * static import among thirteen. Behind it: the wallet and ledger in
+     * `db/game.ts`, the run history through `ascent/history` to
+     * `ascent/scale` and the altimeter, the payout table through
+     * `ascent/rewards` to `engine/economy` — and `engine/derive.ts`, which
+     * `engine/xp.ts` reads to price a level. **9.05KB gzipped**, for screens
+     * that are every one of them a lazy route.
+     *
+     * `engine/derive.ts` is the one to watch. It is the heaviest engine in
+     * the app, M104 already moved it off Home's own imports, and it came
+     * back on the boot path through a game's XP calculation. This fails if
+     * any of that is ever statically imported from the shell again.
+     */
+    const html = readFileSync('dist/index.html', 'utf8');
+    const entryName = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)![1]!;
+    const entry = readFileSync(`${dist}/${entryName}`, 'utf8');
+    // One per module, because a partial leak would pass a single probe.
+    // Property names and string literals, not exported constant names:
+    // `LEVEL_UNIT` was the first draft's marker for `economy.ts` and it is
+    // minified away, so the sweep would have passed on a chunk that carried
+    // the whole table.
+    const markers = {
+      'db/game.ts': 'game-xp',
+      'engine/economy.ts': 'sendBase',
+      'engine/derive.ts': 'unknownBecause',
+      'engine/ascent/rewards.ts': 'freeSoloMultiplier',
+    };
+    const built_ = readdirSync(dist).filter((f) => f.endsWith('.js'));
+    for (const [module, marker] of Object.entries(markers)) {
+      expect(entry.includes(marker), `${module}'s ${marker} is in the entry chunk`).toBe(false);
+      // The control the paragraph above is about: a marker that no longer
+      // exists anywhere is absent from the entry for the wrong reason, and
+      // this whole sweep would pass on a rename.
+      const somewhere = built_.some((f) => readFileSync(`${dist}/${f}`, 'utf8').includes(marker));
+      expect(somewhere, `${marker} is not in any chunk, so it is not a marker`).toBe(true);
+    }
+  });
+
   it.runIf(built)('keeps the arcade out of the entry chunk', () => {
     /**
      * The Ascent is one lazy route and its tuning table has no business on
@@ -1404,13 +1498,16 @@ describe('the bundle stays small', () => {
     const html = readFileSync('dist/index.html', 'utf8');
     const entryName = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)![1]!;
     const entry = readFileSync(`${dist}/${entryName}`, 'utf8');
-    // Markers from `ascent/config` only. `rewards.PAYOUT` is deliberately
-    // not on this list: `store/game.ts` prices a finished run through
-    // `payoutFor` to write the ledger, so that table is a real boot-path
-    // dependency and `freeSoloMultiplier` is in the entry on purpose.
+    // Markers from `ascent/config`, and since M320 from `rewards.PAYOUT` too.
+    // That table used to be exempt, with a reason: *"`store/game.ts` prices a
+    // finished run through `payoutFor` to write the ledger, so that table is a
+    // real boot-path dependency and `freeSoloMultiplier` is in the entry on
+    // purpose."* Every word of that was true and the conclusion was not —
+    // `store/game.ts` had no business on the boot path either, and it is off
+    // it now. The exemption goes with it.
     //
     // One marker per table, because a partial leak would pass a single probe.
-    for (const marker of ['arrivalWindowRatio', 'rampSeconds', 'maxRampReduction', 'laneChangeMs']) {
+    for (const marker of ['arrivalWindowRatio', 'rampSeconds', 'maxRampReduction', 'laneChangeMs', 'freeSoloMultiplier']) {
       expect(entry.includes(marker), `${marker} is in the entry chunk`).toBe(false);
     }
     // The control: the Ascent's *route* is eager — the shell needs every

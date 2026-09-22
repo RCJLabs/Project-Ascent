@@ -14991,6 +14991,16 @@ its label is missing. None of these wants touching.
   make-up day, and the plan is carried out of the generator rather than derived a second time by
   the screen that seeds it.
 
+- **M320 — nine kilobytes the boot path was carrying for a game.** The first-load budget had
+  0.21KB of slack left, twelve milestones had spent 1.05, and the question was what leaves the
+  entry chunk rather than what the constant should be. Measured per module: `store/index.ts`
+  hydrates thirteen stores at boot and one of them was `store/game.ts`, which carried ten modules
+  and 46KB of rendered code in with it — the wallet, the ledger, the run history, the altimeter,
+  the payout table, and **`engine/derive.ts`**, the heaviest engine in the app, which `xp.ts`
+  reads to price a level. Every screen that shows any of it is a lazy route. It is a dynamic
+  `import()` now, still hydrated at boot and no longer parsed before the first paint: **137.08 →
+  128.03KB**, and a cold throttled paint 52ms sooner. The budget comes down with it, to 129.1.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -22572,3 +22582,122 @@ plan leaves free.
 7,141 tests over 426 files, from 7,124. Ten pinned days green, which this needed more than most —
 the generator's whole output turns on what day it is. Layout harness OK. First load 137.09KB
 against 137.3.
+
+
+## M320 — nine kilobytes the boot path was carrying for a game
+
+The budget had 0.21KB of slack, twelve milestones had spent the 1.05 M291 bought, and the next
+feature to touch the entry chunk was going to hit it. Raising the line at that moment is the thing
+this file has warned about since M78 — *"headroom a regression can hide in is not headroom"* — so
+the question was what should leave, and the honest way to answer it is to look rather than guess.
+
+### Looking, which nothing in this project had done
+
+Every previous entry in `perf.test.ts` measures a *delta*: what this milestone cost. None of them
+measures the **composition** — what the 137KB is made of. A rollup plugin over `chunk.modules`
+gives it exactly, and the answer was not subtle:
+
+```
+ 15164  src/engine/derive.ts
+  5872  src/store/game.ts
+  5434  src/engine/altimeter.ts
+  5181  src/engine/economy.ts
+  4708  src/engine/xp.ts
+  4098  src/db/game.ts
+  3172  src/engine/ascent/history.ts
+  1517  src/engine/ascent/rewards.ts
+  1112  src/engine/ascent/scale.ts
+   266  src/engine/ascent/endings.ts
+```
+
+Ten modules, 46,524 rendered bytes, **9.05KB gzipped**, reachable from the entry by exactly one
+edge: `store/index.ts` naming `store/game.ts` among the thirteen stores `hydrateAll` loads.
+
+`engine/derive.ts` is the one worth stopping on. It is the app's heaviest engine, M104 spent a
+milestone moving it off Home's own imports — *"one eager import of this hook from Home pulled the
+page's JSX, its tone table and its icons into the entry chunk"* — and it was back on the boot path
+anyway, through a game's XP calculation. Nothing that renders before `hydrateAll` runs reads a byte
+of any of it.
+
+### Fetched, not imported
+
+`hydrateAll` still loads the game store at boot, and deliberately: the logger's achievements card
+and the climber's avatar read it, and a climber opening the log should not watch them fill in. The
+change is one `await import('./game')`, and what it moves is *when the code is parsed*.
+
+**The bytes over the wire are unchanged.** The service worker precaches every chunk regardless, so
+this buys no bandwidth at all. It has to be said plainly, because a dynamic import that gets
+fetched a moment later is the easiest way to make a size metric improve while nothing does.
+
+So the claim — that the fetch lands after the paint rather than in front of it — was measured.
+Chromium, cold profile, no worker, 1.6Mbps at 40ms with the CPU at a quarter speed, five runs each:
+
+```
+before   FCP 1024 1032 1040 1052 1056   median 1040   entry done at 778ms
+after    FCP  968  980  988  988 1000   median  988   entry done at 743ms
+```
+
+**52ms, and the ranges do not overlap.** In the same trace the game chunk is requested at 999ms
+against a paint at 980.
+
+### Three candidates measured, one taken
+
+The other two were measured the same way and both came back too small to spend a milestone on:
+
+- **`PreSession.tsx` → `engine/scheduler.ts`** (10.2KB rendered) for one three-line function,
+  `intensityOf`. Splitting it out saves **nothing**: 137.08 → 137.12, which is the hash churn M145
+  measured. `scheduler.ts` is reachable from the shell another way, so cutting one edge frees no
+  module. The shape looked exactly like M104's and the measurement said otherwise, which is the
+  argument for measuring.
+- **`HomePage.tsx` → `fingerGap.ts` → `bodyLoad.ts`** (9.4KB rendered) for a first-run safety
+  card that picks one of two wordings. 137.08 → 136.83, a quarter of a kilobyte: the rules table
+  is regex and gzips away, and the drill registry behind it is eager for other reasons.
+
+Both are recorded here rather than left for the next person to re-derive.
+
+### The guard, and a premise it corrects
+
+A cut with nothing holding it is a cut that comes back, so `keeps the game economy out of the
+entry chunk` sits beside the five sweeps already in that file. One marker per module, and each
+marker checked to exist *somewhere* in `dist` — `LEVEL_UNIT` was the first draft's marker for
+`economy.ts` and it is minified away, so the sweep would have passed on a chunk that carried the
+whole table.
+
+It also corrects the arcade guard, which had exempted `rewards.PAYOUT` with a reason:
+
+> `store/game.ts` prices a finished run through `payoutFor` to write the ledger, so that table is
+> a real boot-path dependency and `freeSoloMultiplier` is in the entry on purpose.
+
+Every word true, the conclusion wrong: `store/game.ts` had no business on the boot path either.
+The exemption is gone and `freeSoloMultiplier` is on the forbidden list.
+
+### What the tests could not see
+
+Nothing asserted that `hydrateAll` hydrates the game store at all. The whole of it was held by one
+static import being present, so a mutant that simply dropped the line would have shipped — the
+perf guard would have been *happier*. `store/gameBoot.test.ts` holds it now, and the third of its
+three claims took three attempts:
+
+- Asserting the store is loaded after `await hydrateAll()` does not catch a `hydrateGame()` fired
+  without an await, because the game's read finishes first anyway.
+- Nor does reading `hydrationInProgress()` at the moment it hydrates, for a sharper version of the
+  same reason: the game's read is *faster* than the twelve beside it, so even unawaited it lands
+  inside the guard. Both tests are tests of which IndexedDB read wins a race.
+- Making the game's load the deliberately slow one is the version that holds an ordering instead
+  of a timing, and it is in `SLEEPS_ON_PURPOSE` with that as its reason.
+
+Battery 3 killed, sanity survived. The bundling mutant is not one the battery can run — it never
+rebuilds — so restoring the static import and building by hand was the check: four tests fail, the
+budget by 8KB.
+
+### The number
+
+**137.3 → 129.1**, the first move down since M123 and the largest this file records. Bounded both
+ways by running it: 128.0 fails the budget and the guard's lower bound together, 129.53 reads 1.50
+of slack and fails the guard, 129.52 passes. Slack is 1.07 against the same 1.00 target the last
+five raises used. The floor drops too — a rebuild under 127.6 now fails for being too small.
+
+That is roughly eleven milestones of runway at the rate the last twelve spent it, bought by
+deleting one word from an import list.
+
+7,146 tests over 427 files, from 7,142. Layout harness OK. No date matrix: this reads no clock.

@@ -59,6 +59,8 @@ export const SLEEPS_ON_PURPOSE: Record<string, string> = {
     'holds the shape as a fixture, which is the one file that has to contain what the rule forbids',
   'src/store/hydrating.test.ts':
     'proves a write does not happen, which is a chance to give rather than a condition to wait for',
+  'src/store/gameBoot.test.ts':
+    'makes the game store the slow load on purpose, so an unawaited hydrate cannot finish in time to pass',
 };
 
 export interface SleepingFile {

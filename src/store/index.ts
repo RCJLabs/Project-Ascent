@@ -1,4 +1,3 @@
-import { useGame } from './game';
 import { useMetrics } from './metrics';
 import { hydrateProfile } from './profile';
 import { useObjectives } from './objectives';
@@ -13,6 +12,39 @@ import { beginHydration, endHydration } from './hydrating';
 import { writesSettled } from './writes';
 import { loadPrograms } from '@/content/programs';
 import { loadDrills } from '@/content/drills';
+
+/**
+ * The game's store, fetched rather than imported (PLAN.md M320).
+ *
+ * One static `import { useGame } from './game'` put **9.15KB gzipped** into
+ * the entry chunk — 6.7% of the whole first load — and nothing that renders
+ * before this function runs reads a byte of it. `store/game.ts` reaches the
+ * wallet and the ledger in `db/game.ts`, the run history through
+ * `ascent/history` to `ascent/scale` and the altimeter, and the payout table
+ * through `ascent/rewards` to `engine/economy`; every screen that shows any
+ * of it — the Ascent, the board, Career, the logger's achievements card — is
+ * a lazy route.
+ *
+ * Still loaded at boot, and deliberately: the logger's achievements card and
+ * the climber's avatar read this store, and a climber who opens the log
+ * should not watch them fill in. What changes is only *when the code is
+ * parsed*. `hydrateAll` is called from an effect, so this fetch happens after
+ * the first paint rather than in front of it.
+ *
+ * **The bytes over the wire are the same** — the service worker precaches
+ * every chunk regardless. What moves is what has to be downloaded, parsed and
+ * executed before the app can draw anything, which is what the budget in
+ * `perf.test.ts` has always been about.
+ *
+ * Inside `hydrateAll` rather than at each screen that needs it, so the
+ * after-import refresh below still reaches the game: an import that rewrote
+ * the wallet and left the old balance in memory is the exact bug this
+ * function exists for.
+ */
+async function hydrateGame(): Promise<void> {
+  const { useGame } = await import('./game');
+  await useGame.getState().load();
+}
 
 /**
  * Load every store from IndexedDB.
@@ -52,7 +84,7 @@ export async function hydrateAll(): Promise<void> {
       hydrateProfile(),
       useSessions.getState().load(),
       useMetrics.getState().load(),
-      useGame.getState().load(),
+      hydrateGame(),
       useProjects.getState().load(),
       useTemplates.getState().load(),
       useCustomPrograms.getState().load(),
