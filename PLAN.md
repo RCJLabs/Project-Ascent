@@ -14940,6 +14940,14 @@ its label is missing. None of these wants touching.
   two were smaller and different from each other: `paceWeeks` was a choice nobody makes, and
   `untilTick` was the seam where `replayRun` had been written as a second copy of `advanceGhost`.
 
+- **M315 — an index, derived rather than kept.** M298a's ninth entry, and the only one of its ten
+  about the project rather than the app: PLAN.md is the sole record of why anything is the way it
+  is, it is twenty-two thousand lines, and the way to use it is to grep. `INDEX.md` is generated
+  from the git log and PLAN.md — every milestone with its date, its title and the line that writes
+  it up, and every source file with the milestones that touched it, which is the half grep answers
+  worst. Derived and not maintained, because a hand-written index of a file this long is a second
+  record to keep in step with the first, and M312 has just finished showing what becomes of those.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -21980,3 +21988,98 @@ branches.
 test seam, labelled as one, and the sweep carries it with that reason rather than silently. The
 rule is that a field either has a caller or says why not — a marker that tells a decision from an
 omission, which is M169's argument about `retired` applied one layer over.
+
+---
+
+## M315 — an index, derived rather than kept
+
+M298a's ninth entry, and the only one of its ten about the project rather than the app:
+
+> **PLAN.md has no index.** It is over 19,000 lines and it is the only record of why anything is
+> the way it is — which has been worth it, repeatedly, this session. Finding *"why is X like
+> this"* means grepping. A generated index (milestone, title, files touched) would make the
+> rolling audit cheaper, and it can be derived from git rather than maintained by hand.
+
+Twenty-two thousand lines now. The entry already contains the design, and the important word in it
+is **derived**: a hand-written index of a file this long is a second record to keep in step with
+the first, and M312 spent a milestone on what becomes of those.
+
+### Three records that disagree
+
+The first thing a sweep turns up is that this project records a milestone in more than one place
+and the places do not agree:
+
+| | |
+| --- | --- |
+| commits naming a milestone | 336, over **304** distinct ids, M0 to M314 |
+| `## M###` sections in PLAN.md | 126, none before M178 |
+| `- **M### —` proposal bullets | 311 |
+| named in PLAN.md, never a commit | 32 |
+
+So the index is built from the log — a commit is the only record that something actually shipped —
+and cross-referenced into PLAN.md for the write-up. Every milestone gets its date, its title and
+the line where PLAN.md explains it.
+
+### Which took three wrong parses to get right
+
+Every one of them produced a confident, wrong finding first:
+
+1. **12 milestones shipped and recorded nowhere.** They were recorded — as `### M158 — …` and
+   `## Ten, run against the code (M298a)`. A pattern that reads only `## M###` misses both.
+2. **77 in PLAN.md never built.** Most had commits: `M118 — the game gets its door` uses an em
+   dash where `M314: three options nobody passed` uses a colon, and a pattern that knows only the
+   colon reports a third of the project as unbuilt.
+3. **`stamp` has no caller.** Left over from M314's sweep and the same shape as the other two: the
+   word appears in a *sentence* in `PreSession.tsx`.
+
+That is the fifth, sixth and seventh time in this rolling audit that a loose pattern over prose has
+produced a finding that was about the pattern. It is also the argument for this milestone: an index
+assembled by hand from those three answers would have been wrong in all three directions, and would
+have looked authoritative.
+
+### What it holds
+
+**By milestone** — 304 rows: `M310 · 2026-09-21 · the week we are in, on a gutter that knew two
+tenses · L21481`. The first commit's words, because a milestone that ran to four commits is
+headlined by the one that opened it: taking the last subject called M1 *"convert Peak Performance
+and The Long Game"*, which is a quarter of what M1 was. The last commit's date, because that is
+when it landed.
+
+**Numbers with no milestone** — the 32, split into the ones the log withdrew or refused by name
+(*"M195 withdrawn: the link was there, and my own sweep could not see it"*) and the ones PLAN.md
+proposed and nothing shipped. A gap in the numbering is part of the record; an index that showed it
+as a hole would leave a reader to guess which kind it was.
+
+**By file** — 819 rows: `src/engine/coach.ts — M173, M174, M178, M188, M190, M198, M234, M249,
+M268, M275, M289, M309 *(+10 earlier)*`. This is the half grep answers worst, because a file's
+history is in `git log` and the *reasons* are in PLAN.md under numbers only that log can give you.
+Capped at twelve, since a file the whole project has touched answers *"which milestones"* with
+*"nearly all of them"* — `PLAN.md` itself drew a single line of 280 ids before the cap, which is
+why it and `INDEX.md` are left out entirely.
+
+### The one-commit lag, said out loud
+
+The index is built from the log, so it cannot describe the commit that ships it — that commit does
+not exist when the generator runs. The order is commit, `npm run index`, `git commit --amend`; the
+amend keeps the subject and the date, which is all a row holds.
+
+`indexFresh.test.ts` regenerates and fails on any difference, so a stale index is a failing test
+rather than something to notice. It regenerates rather than re-deriving the rows: a test that
+parsed the log a second time would be the duplicate this whole approach exists to avoid, and it
+would agree with the generator by having been written from it. Under it sits the M309 floor — a
+generator whose patterns stopped matching writes a file with headings and no rows, and a
+regenerate-and-compare check passes on that happily, because a generator agrees with itself
+whatever it produces.
+
+Battery: 6 killed, sanity survived. An index edited by hand, a row deleted from it, a file listed
+that the tree no longer has, the em dash dropped from the parse, the freshness comparison
+neutered, and the floor's own parse narrowed. One mutant survived first time and was aimed at the
+wrong line: the `expect(after).toBe(before)` at the end of the freshness test is there to give the
+passing case an assertion, and the `if (before !== after)` above it is the check. The comment now
+says which is which.
+
+7,096 tests over 422 files, from 7,093. Layout harness OK. First load 137.01KB against 137.3 —
+unchanged, and it would be alarming otherwise: nothing here ships.
+
+No browser check and no date matrix. Neither has anything to look at — this milestone adds a
+script, a generated file and a test, changes no screen, and reads no clock.
