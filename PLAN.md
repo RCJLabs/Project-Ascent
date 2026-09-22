@@ -14954,6 +14954,15 @@ its label is missing. None of these wants touching.
   CI of this audit was a test describing its own clone. `fetch-depth: 0` on the build job, and the
   test now says *"this is a shallow clone"* rather than printing a diff for someone to decode.
 
+- **M316 — the fix for the commonest mistake was the hardest thing to find.** M298a's eighth entry
+  said correcting the day a session landed on sits behind two folds. From the quick view every
+  climber starts in it is six steps: open the session, open the fold, scroll past every card the
+  logger has, tap *"Logged on the wrong day?"*, work a date picker, press Move. It is now three —
+  the line is in front of the fold, and beside the date input is a button named for the day before,
+  because *"logged on the wrong day"* is nearly always *"this was last night"*. The engine behind
+  it was tested from the first; nothing had ever rendered the card, which is how its position went
+  unexamined for two hundred milestones.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -22142,3 +22151,92 @@ genuinely stale index. One mutant at a time cannot catch a weakening whose damag
 condition to show. Checked by hand, restored, and said here rather than left as a green tick.
 
 7,097 tests over 422 files, from 7,096. First load 137.00KB against 137.3.
+
+---
+
+## M316 — three taps, and the session goes where you sent it
+
+M298a's eighth entry:
+
+> **Correcting the day a session landed on is behind two folds.** `CorrectionCard` is
+> `{full && …}` and then behind its own *open* toggle. Logging Saturday's session on Sunday
+> morning is the most common mistake there is, and the way to fix it is three taps into a screen
+> you have to know exists. The correction itself is good — move and merge, with `canMerge`
+> guarding it. *Measured.*
+
+Three taps was generous. `logView` defaults to `quick`, so from where a climber actually stands it
+is six steps:
+
+```
+open the session → open the fold → scroll past every card the logger has
+  → "Logged on the wrong day?" → work a date picker → Move
+```
+
+The card sits last in the full form, immediately above the fold button, which is the furthest point
+in the page from where anyone forms the thought *this is the wrong day*. That thought arrives while
+looking at the date, at the top.
+
+### Why it was never noticed
+
+`sessionEdit.ts` — `move`, `merge`, `canMerge` — has had tests since it was written. **Nothing had
+ever rendered `CorrectionCard.`** The engine was covered and the card's position was not a thing
+any test could see, which is the M305 shape one layer over: a correct mechanism nobody had looked
+at through the screen it lives on.
+
+### What changed
+
+**Out from behind the fold.** M295 counted ten cards back there and accepted the cost of hiding
+them — *"what is lost is a little discoverability"* — which is right for nine of them. They are
+things to *add* to a session. This is the one that fixes a session that should not be on this day
+at all, and it is now a single quiet line in both views, still opening the card rather than taking
+up room until it is wanted. M295's own note has been corrected: nine behind the fold, not ten.
+
+**The day before, by name, in one tap.** The date input can express any correction, and needs three
+interactions with a picker to express the commonest one. Beside it now is a button reading
+**Sunday** — the weekday of the day before this session, not the word *Yesterday*, because the card
+is reached from any day in the log and a session three weeks old would move to the day before *it*
+while the button claimed otherwise.
+
+### And the thing the browser found
+
+Tapping it worked and the session vanished from the page with nothing said.
+
+`onMoved` selected the moved session by id, and a moved session is on another day by definition —
+so `DayBody` kept rendering the day it had left, with the session gone from it. Survivable while
+the card sat behind two folds and a scroll, because anyone who got that far knew what they had just
+pressed. Two taps from the front of the logger it reads as a delete.
+
+It follows the session now, and only when the session went somewhere:
+
+```ts
+onMoved={(s) => {
+  if (s.date === date) setSelectedId(s.id);
+  else navigate(logHref(s.date));
+}}
+```
+
+A merge lands on the day it happened, so it stays; a move does not, so the page goes with it. The
+mutant that always navigates survived the first battery — navigating to *this* day is a no-op on
+the log page — until the test stopped asking whether the hash mentioned yesterday and started
+asking whether it mentioned `/log/` at all, which is what a bounce off Home would look like.
+
+In the running app, on the sample climber, from the quick view:
+
+```
+fold reads: More about this session        (shut)
+"Logged on the wrong day?" visible:  true
+day-before button:                   ["Sunday"]
+sessions on 2026-09-21 before:       ["2026-09-21#0"]
+sessions on 2026-09-21 after:        []
+the page is now at:                  /log/2026-09-20
+its heading reads:                   Sunday, September 20
+sessions on the new day:             ["2026-09-20#0", "2026-09-20#1"]
+```
+
+Battery: 7 killed, sanity survived — the card back behind the fold, the card always open, the day
+before becoming the day after, the button reading *Yesterday* whatever day it is on, Move allowed
+to a day the session is already on, and both halves of the follow.
+
+7,106 tests over 423 files, from 7,097 — nine of them the first this card has ever had. Ten pinned
+days green, which this wanted: the button is named for a weekday. Layout harness OK. First load
+137.01KB against 137.3.

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
+import { logHref } from '@/ui/routes';
 import {
   AlertTriangle,
   Award,
@@ -25,7 +26,7 @@ import { drillText } from '@/content/drillText';
 import { getProtocol } from '@/content/protocols';
 import { SCALE_MAX, getField, type FieldSpec } from '@/content/fields';
 import type { Drill, FieldId, SessionType } from '@/content/types';
-import { fromKey, isDateKey, shortLabel, today } from '@/engine/dates';
+import { addDays, fromKey, isDateKey, shortLabel, today } from '@/engine/dates';
 import { clearTimerState, loadTimerState, saveTimerState } from '@/lib/timerState';
 import { ClimbEntry, RepeatLast, type EditedClimb, type Outcome } from './ClimbEntry';
 import { sessionOwner } from '@/db/media';
@@ -179,6 +180,7 @@ export function LogPage({ params }: { params: { date: string } }) {
  * own heading — so this starts at the first card.
  */
 export function DayBody({ date }: { date: string }) {
+  const [, navigate] = useLocation();
   const { program, day, trackId } = usePlannedDay(date);
   // The plan and the way to begin, shared with the card Home shows
   // (PLAN.md M124), so a session started from either is the same record.
@@ -253,7 +255,21 @@ export function DayBody({ date }: { date: string }) {
                 ),
               );
             }}
-            onMoved={(s) => setSelectedId(s.id)}
+            /**
+             * Follow it if it left, select it if it stayed (PLAN.md M316).
+             *
+             * Both corrections come back through here and they end in
+             * different places: a merge lands on this day, and a move does
+             * not — so selecting it by id left the climber on a day the
+             * session was no longer on, watching it vanish with nothing
+             * said. That was survivable while the card sat behind two
+             * folds and a scroll. Two taps from the front of the logger it
+             * would read as a delete.
+             */
+            onMoved={(s) => {
+              if (s.date === date) setSelectedId(s.id);
+              else navigate(logHref(s.date));
+            }}
           />
         )}
 
@@ -1432,7 +1448,12 @@ function SessionEditor({
 
       {full && session.completed && <SaveTemplateCard session={session} typeName={type?.name} />}
 
-      {full && <CorrectionCard session={session} others={others} typeName={type?.name} onMoved={onMoved} />}
+      {/* Not behind the fold (PLAN.md M316). Nine of the ten cards M295
+          counted back there are things to add to a session; this is the one
+          that fixes a session that should not be on this day at all, and the
+          moment a climber wants it is the moment they are looking at the
+          date. One quiet line in both views, which opens the card. */}
+      <CorrectionCard session={session} others={others} typeName={type?.name} onMoved={onMoved} />
 
       {/* The fold itself. Above the button so the button stays last
           whichever way the page is showing.
@@ -1440,10 +1461,14 @@ function SessionEditor({
           **It stopped listing what is behind it at M295.** The list read
           *"check-in, projects, warmup, notes, photos"* and there were ten
           cards back there — the drill, the cooldown, partners, the
-          templates, the correction and, until this milestone, the three
+          templates, the correction and, until that milestone, the three
           fields the app asks of everyone. A list that names half its
           contents is worse than no list, because it is read as the whole
           of it.
+
+          Nine back there now: the correction came out in front of this at
+          M316, being the one of the ten that fixes a session rather than
+          adding to one.
 
           The alternative was to name all ten, which wraps to three lines
           on a 360px phone and goes stale the next time a card moves. What
@@ -2582,6 +2607,28 @@ function CorrectionCard({
     .map((other) => ({ other, check: canMerge(session, other) }))
     .filter((m) => m.check.ok);
 
+  /**
+   * The day before, by name, in one tap (PLAN.md M316).
+   *
+   * *"Logged on the wrong day"* is nearly always *"this was last night"* —
+   * you climbed on the Saturday, you did not log it, and you opened the app
+   * on the Sunday. The date input can express any correction and that one
+   * needs three interactions with a picker to express the commonest one.
+   *
+   * Named rather than called "Yesterday": this card is reached from any day
+   * in the log, not only from today, and *"Yesterday"* on a session dated
+   * three weeks ago is a lie about which day it would move to.
+   */
+  const dayBefore = addDays(session.date, -1);
+  const dayBeforeName = fromKey(dayBefore).toLocaleDateString(undefined, { weekday: 'long' });
+
+  const moveTo = (date: string) => {
+    void move(session, date).then((moved) => {
+      onMoved(moved);
+      setMessage(`Moved to ${shortLabel(date)}.`);
+    });
+  };
+
   if (!open) {
     return (
       <Button variant="ghost" size="sm" onClick={() => setOpen(true)} className="underline self-center">
@@ -2595,6 +2642,9 @@ function CorrectionCard({
       <label className="text-sm block mb-3">
         <span className="block text-ink-soft mb-1">Move to a different day</span>
         <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => moveTo(dayBefore)}>
+            {dayBeforeName}
+          </Button>
           <Input
             type="date"
             value={target}
@@ -2602,16 +2652,7 @@ function CorrectionCard({
             aria-label="New date"
             className="flex-1 min-w-0"
           />
-          <Button
-            size="sm"
-            disabled={target === session.date || target === ''}
-            onClick={() => {
-              void move(session, target).then((moved) => {
-                onMoved(moved);
-                setMessage(`Moved to ${shortLabel(target)}.`);
-              });
-            }}
-          >
+          <Button size="sm" disabled={target === session.date || target === ''} onClick={() => moveTo(target)}>
             Move
           </Button>
         </div>
