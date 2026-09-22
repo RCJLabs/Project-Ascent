@@ -83,10 +83,22 @@ describe('what counts as a finger session', () => {
     expect(loadsFingersDirectly({ ...hang(TODAY), completed: false })).toBe(false);
   });
 
-  it('names only the three rules that mean deliberate finger loading', () => {
+  it('borrows only the two rules that ask this same question', () => {
     // `sustained` and `open-hand` also carry `fingers`, and are left out for
-    // the reason in the header. Pinned so widening it is a decision.
-    expect([...DIRECT_FINGER_RULES].sort()).toEqual(['campus', 'fingers', 'one-arm']);
+    // the reason in the header. `fingers` itself left at M321: its pattern
+    // carries `dead ?hang`, which is right for flagging a part a climber has
+    // hurt and wrong for a protocol that needs forty-eight hours after it.
+    // The rest of that rule is restated in `PROTOCOLS`, and the two tests
+    // below are the halves of it that matter. Pinned so moving either way is
+    // a decision.
+    expect([...DIRECT_FINGER_RULES].sort()).toEqual(['campus', 'one-arm']);
+  });
+
+  it.each([
+    ['Dead Hang', 'Ground Zero prescribes it at 3 x 10-15s as passive hanging tolerance'],
+    ['Passive Dead Hangs', 'Peak Performance puts it in the Shoulder block, as insurance'],
+  ])('is not %s, because %s', (name) => {
+    expect(loadsFingersDirectly(named(TODAY, name))).toBe(false);
   });
 });
 

@@ -221,6 +221,33 @@ describe('the primitives are safe to use', () => {
     expect(Number(h) * 4).toBeGreaterThanOrEqual(24);
   });
 
+  it('keeps a glossary term at the 24px target floor', () => {
+    /**
+     * Measured in the layout harness at 390 and at desktop: `Max Hangs` came
+     * back 87x20 on the logger, and so did every other exercise name Iron
+     * Grip's finger day prescribes (PLAN.md M321).
+     *
+     * M280 exempted a target sitting in a block of text, which is right for a
+     * guide — these are words in sentences there. The logger renders the same
+     * component as the **title of an exercise row**, where it is a control in
+     * a list and the exemption does not apply. The harness never saw it
+     * because no fixture had ever put a finger day on the screen.
+     *
+     * Padding rather than a height, because the element is inline and a
+     * height would move the line it sits in.
+     */
+    const term = readFileSync('src/ui/Term.tsx', 'utf8');
+    // The button's own className, taken from the JSX rather than the file, so
+    // the sweep cannot match the word in the comment above it.
+    const cls = /<button[\s\S]*?className=\{`([^`]+)`\}/.exec(term)?.[1] ?? '';
+    expect(cls, 'no className found on the button').toContain('focus-ring');
+    const pad = /\bpy-(\d+(?:\.\d+)?)\b/.exec(cls)?.[1];
+    expect(pad, 'the glossary term has no vertical padding').toBeTruthy();
+    // 20px of line box plus four of padding is the floor exactly. Tailwind's
+    // scale is quarter-rem, so `py-0.5` is 2px a side.
+    expect(20 + Number(pad) * 4 * 2).toBeGreaterThanOrEqual(24);
+  });
+
   it('requires an accessible name on an icon button', () => {
     const source = readFileSync('src/ui/IconButton.tsx', 'utf8');
     // `label: string`, not `label?: string` — a screen reader cannot infer

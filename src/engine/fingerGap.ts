@@ -27,12 +27,51 @@
  * already draws — between what a session's *words* say it did and what
  * having climbs on it implies.
  *
- * So this reads the words, and only the three rules that mean deliberate,
- * high-force finger loading: max hangs, repeaters, density hangs, minimum
- * edge, campus, one-arm work. Not `sustained` — ARC and laps are the low
- * end on purpose, and no program's own gap constraint protects them. Not
- * `open-hand` — a sloper is a grip, not a protocol. Not climbing, which is
- * the mistake this avoids.
+ * So this reads the words, and only what means deliberate, high-force finger
+ * loading: max hangs, repeaters, density hangs, minimum edge, campus,
+ * one-arm work. Not `sustained` — ARC and laps are the low end on purpose,
+ * and no program's own gap constraint protects them. Not `open-hand` — a
+ * sloper is a grip, not a protocol. Not climbing, which is the mistake this
+ * avoids.
+ *
+ * ## And not a dead hang, which the borrowed rule said it was (PLAN.md M321)
+ *
+ * That list was the prose. The code asked `bodyLoad`'s `fingers` rule, whose
+ * pattern also carries `dead ?hang` — correct for the question *that* table
+ * answers, which is whether a line loads a part a climber has hurt. A
+ * bodyweight hang does. It is not the question here, and the catalogue says
+ * so in its own words: Ground Zero prescribes `Dead Hang` at *"3 x 10-15s"*
+ * because it *"builds passive hanging tolerance — your first exposure to
+ * finger-tendon load"*, and Peak Performance puts `Passive Dead Hangs` in a
+ * block called **Shoulder**, where the rationale reads *"decompress the
+ * shoulder capsule and spine. Light resistance, perfect form — this is
+ * insurance, not a workout."*
+ *
+ * Neither is a protocol that needs forty-eight hours after it. So the
+ * protocols are stated here rather than borrowed, and `campus` and
+ * `one-arm` still come from the table, because for those two the table
+ * already asks this question. Swept over all 368 authored names in the
+ * catalogue, the narrowing moves exactly two strings and nothing else:
+ * `Dead Hang` and `Passive Dead Hangs`.
+ *
+ * ## What the words are, which was less than the app knew (PLAN.md M321)
+ *
+ * `words()` read the session type's **name** and the exercises the climber
+ * typed. Nine of the catalogue's session types prescribe finger protocols
+ * and **five of them were missed**, because their names do not say so:
+ * Iron Grip's *Finger Protocol + Engine*, Trip Prep's *Finger Primer*, Two
+ * Days a Week's *Climb & Apply*, Lockdown's *Session A: Static Power* and
+ * Ground Zero's *Structural Integrity* — the last of which is the dead-hang
+ * false positive above and stays missed on purpose.
+ *
+ * A climber who taps a session type and completes it has said what they did.
+ * The app has the prescription behind that type and was not reading it, so a
+ * finger day logged without typing an exercise into it counted as nothing.
+ * It reads every phase's lines rather than resolving which phase the date
+ * falls in — the date is not in this function's hands, and a test holds the
+ * approximation to being one: no shipped session type prescribes finger work
+ * in some phases and not others, so for the catalogue as it stands the two
+ * readings are the same reading.
  */
 
 import { getDrill } from '@/content/drills';
@@ -63,7 +102,19 @@ export const FINGER_GAP_WINDOW_DAYS = 56;
  * A subset of the rules whose `parts` include `fingers`, and the subset is
  * the whole point — see the header for the two left out.
  */
-export const DIRECT_FINGER_RULES: readonly DrillLoad[] = ['campus', 'one-arm', 'fingers'];
+export const DIRECT_FINGER_RULES: readonly DrillLoad[] = ['campus', 'one-arm'];
+
+/**
+ * The protocols the forty-eight hours are about, named here.
+ *
+ * `fingers` used to be on the list above and is not, for the reason the
+ * header gives: its pattern matches a passive dead hang, which is the one
+ * thing under that rule this question wants to exclude. Everything else in
+ * it is restated here, minus a bare `\bedge\b` — `min-edge` and `Min-Edge
+ * Hangs` are covered by the clause before it, and nothing else in the
+ * catalogue reaches the rule through that word alone.
+ */
+const PROTOCOLS = /max hang|repeater|density hang|min(imum)?[- ]edge|hangboard|fingerboard|crimp/i;
 
 function isDirect(ids: readonly DrillLoad[]): boolean {
   return ids.some((id) => DIRECT_FINGER_RULES.includes(id));
@@ -78,6 +129,7 @@ function isDirect(ids: readonly DrillLoad[]): boolean {
  * reverse, which is worse.
  */
 export function directFingerWork(text: string): boolean {
+  if (PROTOCOLS.test(text)) return true;
   return isDirect(rulesInText(text));
 }
 
@@ -92,7 +144,17 @@ function words(session: Session): string {
   const parts: string[] = [];
   if (session.programId !== undefined && session.sessionTypeId !== undefined) {
     const type = getProgram(session.programId)?.sessionTypes.find((t) => t.id === session.sessionTypeId);
-    if (type) parts.push(type.name);
+    if (type) {
+      parts.push(type.name);
+      // And what it prescribes, which is the half the name leaves out
+      // (PLAN.md M321). Every phase: see the header for why that is the same
+      // answer as resolving the date's own phase, and the test that holds it.
+      for (const block of type.blocks ?? []) {
+        for (const prescription of Object.values(block.perPhase)) {
+          for (const exercise of prescription.exercises) parts.push(exercise.name);
+        }
+      }
+    }
   }
   for (const exercise of session.exercises ?? []) parts.push(exercise.name);
   return parts.join(' ');

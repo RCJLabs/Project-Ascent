@@ -15001,6 +15001,20 @@ its label is missing. None of these wants touching.
   `import()` now, still hydrated at boot and no longer parsed before the first paint: **137.08 →
   128.03KB**, and a cold throttled paint 52ms sooner. The budget comes down with it, to 129.1.
 
+- **M321 — the finger rule could not see a finger session.** M320's follow-up named one miss and
+  a worry, and a sweep of all 368 authored names in the catalogue said both were wrong. `words()`
+  reads a session type's **name** and the exercises a climber typed; nine shipped types prescribe a
+  finger protocol and **five say nothing about it in their name**, so a climber who tapped *Finger
+  Protocol + Engine*, did the max hangs and typed nothing had done no finger work as far as the
+  48-hour rule could tell. Adding the bare word *finger* to the pattern — the fix I had proposed —
+  would have caught two of the five, and the blast radius I said it needed a sweep for turned out
+  to be zero. The prescription is what the app knows and was not reading. And the borrowed rule was
+  too wide the other way: it counts a passive dead hang, which the content's own rationale calls
+  *"insurance, not a workout"*. Measured in a browser: six untyped Iron Grip finger days produced
+  no tip before and the right one after. Fixing the generator then turned the layout harness red on
+  a screen this does not touch — twenty-pixel glossary words in the logger's exercise rows, which
+  the harness had never reached because no fixture had ever put a finger day on the screen.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -22701,3 +22715,148 @@ That is roughly eleven milestones of runway at the rate the last twelve spent it
 deleting one word from an import list.
 
 7,146 tests over 427 files, from 7,142. Layout harness OK. No date matrix: this reads no clock.
+
+
+## M321 — the finger rule could not see a finger session
+
+M320 left this as a follow-up with a stated premise and a stated worry, and both were wrong:
+
+> `words()` puts the session type's *name* first and calls it the most reliable signal — its own
+> example is *"Hangboard / Finger"* — but the pattern that name is tested against does not contain
+> the bare word, so *"Finger Protocol + Engine"* misses. Widening the pattern is a one-line change
+> with a blast radius across every drill and exercise `bodyLoad` scans, and it needs its own
+> measurement pass.
+
+The measurement pass is the milestone, and it says: the bare word is not the discriminator, and
+widening the pattern would have cost nothing because nothing in the catalogue needed it.
+
+### The sweep
+
+Every session type in all thirteen programs, every exercise they prescribe, every drill name and
+focus — 368 strings. Nine session types prescribe a finger protocol. **Five of them are missed**,
+and only two of those five contain the word *finger*:
+
+```
+                                              by name   by prescription   has "finger"
+iron_grip/fp     Finger Protocol + Engine         no          yes             yes
+trip_prep/fp     Finger Primer                    no          yes             yes
+two_day_week/climb  Climb & Apply                 no          yes             no
+lockdown/sa      Session A: Static Power          no          yes             no
+ground_zero/str  Structural Integrity             no          yes             no
+peak_performance/fp  Fingerboard & Armor         yes          yes             no
+the_siege/fp     Fingerboard + Structural        yes          yes             no
+the_cruiser/hb   Hangboard Module (optional)     yes          yes             no
+general_training/hb  Hangboard / Finger          yes          yes             yes
+```
+
+So the word would have fixed two of five. And the blast radius: **no drill and no exercise in the
+catalogue contains the bare word without already matching**, so the change I was wary of would
+have been harmless and insufficient at the same time.
+
+What the app was not reading is the **prescription**. A climber who taps a session type and
+completes it has said what they did — that is `words()`'s own argument for reading the name — and
+behind the name sits the block the program wrote, with *7/3 Repeaters* and *Max Hangs* in it. The
+logger does not require anyone to type those in again.
+
+### Two of the nine are not finger sessions, and one of them proves it
+
+Scanning prescriptions surfaced the opposite error. `ground_zero/str` matches on `Dead Hang`, and
+the program's own rationale says what that is:
+
+> Dead Hang builds **passive hanging tolerance** — your first exposure to finger-tendon load.
+> Start short.
+
+Three sets of ten to fifteen seconds, in the beginner program. And Peak Performance prescribes
+`Passive Dead Hangs` inside a block called **Shoulder**:
+
+> Passive Dead Hangs decompress the shoulder capsule and spine. Light resistance, perfect form —
+> **this is insurance, not a workout.**
+
+Neither needs forty-eight hours after it. This file's own header already said so — it lists *"max
+hangs, repeaters, density hangs, minimum edge, campus, one-arm work"* and dead hangs are not on
+that list — but the code asked `bodyLoad`'s `fingers` rule, whose pattern carries `dead ?hang`.
+That is correct for the question **that** table answers, which is whether a line loads a part the
+climber has hurt; a bodyweight hang does. It is a different question, and the prose had been
+describing a narrower rule than the code ran for eleven milestones.
+
+So the protocols are named in `fingerGap` now, and `campus` and `one-arm` are still borrowed,
+because for those two the table is asking this same question. Across all 368 strings the narrowing
+moves exactly two: `Dead Hang` and `Passive Dead Hangs`. A test holds that by reading
+`LOAD_RULES`'s live pattern rather than a copy of it — the first draft restated the pattern, forgot
+the two rules still borrowed beside it, and reported three campus drills as moved when nothing had
+moved.
+
+### Every phase, and the test that says why that is allowed
+
+`words()` scans every phase's lines rather than working out which phase the session's date falls
+in, because the date is not in its hands and putting it there changes the signature of a function
+four things call. That is an approximation, so it is bounded: **no shipped session type prescribes
+finger work in some phases and not others**, so for this catalogue the two readings are the same
+reading. A test asserts it, and if a program ever breaks that the shortcut gets argued again
+instead of quietly becoming wrong.
+
+### What it does on screen
+
+The coach tip stands down when `planVsLog` already reports a `spacing` finding, so it cannot fire
+on a climber running a live block — the first browser check found that by getting `false` twice and
+was wrong about why. The case it is for is a climber logging finger days outside a block. Six of
+them, two pairs a day apart, `programId` and `sessionTypeId` set and **nothing typed in**:
+
+```
+before   tip absent
+after    "2 finger sessions inside the 48-hour gap — out of 6 in the last eight weeks,
+          the closest 24 hours apart."
+```
+
+The same six with *Max Hangs* typed into them fire the tip on both builds. That is the whole
+milestone in two lines: the path that needed the climber to repeat themselves worked, and the path
+where the app already knew did not.
+
+### And an M319 bug it found
+
+The sample climber went from **0 finger sessions the rule could see to 11**, and one pair of them
+was twenty-four hours apart. M319's make-up day stands in for the first session a week loses and
+lands on the Tuesday — so a week that kept its Monday and lost its Thursday put a hangboard session
+on Monday and another on Tuesday, dating the replacement before the session it replaced. Against
+the one number eleven of the thirteen programs declare.
+
+It never surfaced as a tip, which is why it shipped: `fingerGaps` wants two breaches and this was
+one. The fixture was wrong in a way the app was never going to complain about. The make-up stands
+in for Monday's session only now, and a test holds the sample climber to the forty-eight hours
+across a week of pinned days.
+
+The sample climber therefore has **no** finger-gap breach to demonstrate, which is the honest
+answer: a well-run Iron Grip block does not breach the rule, and this file's header refuses to rig
+one — *"a sample climber whose log was arranged to trigger a rule is a demo of the rule and not of
+a climber."*
+
+### And a logger bug the harness had never been able to reach
+
+Fixing the generator turned the layout harness red — on a screen this milestone does not touch:
+
+```
+desktop /log/:date: control under 24px: button "Max Hangs" 87x20; "Hammer Curls" 112x20;
+                    "Wrist Extensor Curls" 162x20; "Finger Extensions" 141x20
+```
+
+Those are the exercise names Iron Grip's finger day prescribes, rendered through `ui/Term.tsx` as
+glossary words a climber can tap for a definition. Twenty pixels tall against the twenty-four
+`ui.test.ts` holds `Button.tsx` to.
+
+Not caused here — checked, by reverting the generator alone and watching the harness go green
+again. **Reached** here. M280 exempted a target sitting in a block of text, which is right for a
+guide page, where these are words inside sentences; the logger renders the same component as the
+*title of an exercise row*, where it is a control in a list and the exemption does not apply. The
+harness has run on every route at four widths since M280 and never saw it, because no fixture had
+ever put a finger day on the screen. Eighth time in this audit that the fixture has been avoiding
+the state the bug lives in, and the second in three milestones where the fix for one thing was what
+exposed the next.
+
+Four pixels of vertical padding, which for an inline element grows the box and moves no line, and a
+test holding the arithmetic.
+
+Battery 8 killed, 2 sanity survived. One of those two is *"only one phase of each block is read"*,
+which survives by construction and whose survival is the phase test's own claim.
+
+7,162 tests over 428 files, from 7,146. Ten pinned days green. Layout harness OK. First load
+128.08KB against 129.1.

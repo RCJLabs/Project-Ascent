@@ -581,10 +581,14 @@ function planDays(rng: Rng, plan: WeekPlan, program: Program, monday: string): T
       out.push({ date: addDays(monday, day - 1), type });
       continue;
     }
-    // The first one missed rather than the last, and nothing rests on which:
-    // a battery mutant that took the last survived, because a week that loses
-    // two sessions and makes one of them up is the same fixture either way.
-    skipped ??= type;
+    // **Monday's, and only Monday's** (PLAN.md M321). The make-up below lands
+    // on the Tuesday, so making up anything later in the week dates the
+    // replacement before the session it replaces. Harmless-looking, and M321
+    // caught what it cost: the Monday finger day plus a Tuesday standing in
+    // for a Thursday put two hangboard sessions twenty-four hours apart in
+    // the sample climber's log, which is the one thing the app's own
+    // forty-eight hour rule exists to tell a climber not to do.
+    if (day === 1) skipped = type;
   }
   // Made up the next day, half the time. `blockAdherence` scores the week and
   // not the day — *"a climber who moves Tuesday's session to Wednesday did the

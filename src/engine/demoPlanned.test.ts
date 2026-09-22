@@ -23,7 +23,8 @@ import { deriveClimberState } from './derive';
 import { loadRelief, MIN_HISTORY } from './loadRelief';
 import { isRestSession } from './rest';
 import { getProgram } from '@/content/programs';
-import { addDays, dayOfWeek } from './dates';
+import { addDays, dayOfWeek, daysBetween } from './dates';
+import { FINGER_GAP_HOURS, loadsFingersDirectly } from './fingerGap';
 import type { DayOfWeek } from '@/content/types';
 
 /** A Sunday through the Saturday after it, so every weekday is a `today`. */
@@ -151,6 +152,32 @@ describe('the sessions inside the running block', () => {
       const today = addDays('2026-09-01', i);
       const ids = demoClimber(today).sessions.map((s) => s.id);
       expect(new Set(ids).size, today).toBe(ids.length);
+    }
+  });
+});
+
+describe('the rule the app teaches, obeyed by the climber it shows', () => {
+  it('never puts two finger sessions inside the forty-eight hours', () => {
+    /**
+     * The make-up day used to stand in for whichever session the week lost
+     * first, and it lands on the Tuesday — so a week that kept its Monday
+     * and lost its Thursday put a hangboard session on Monday and another on
+     * Tuesday. Twenty-four hours, in the sample climber's own log, against
+     * the one number eleven of the thirteen programs declare and this one
+     * states in prose (PLAN.md M321).
+     *
+     * It never showed up as a tip, which is why it survived M319: `fingerGaps`
+     * wants two breaches before it says anything and this was one. The
+     * fixture was wrong in a way the app was never going to complain about.
+     */
+    for (const today of WEEK) {
+      const made = demoClimber(today);
+      const dates = made.sessions.filter(loadsFingersDirectly).map((s) => s.date).sort();
+      expect(dates.length, `${today}: no finger sessions at all`).toBeGreaterThan(5);
+      for (let i = 1; i < dates.length; i += 1) {
+        const hours = Math.abs(daysBetween(dates[i - 1]!, dates[i]!)) * 24;
+        expect(hours, `${today}: ${dates[i - 1]} then ${dates[i]}`).toBeGreaterThanOrEqual(FINGER_GAP_HOURS);
+      }
     }
   });
 });

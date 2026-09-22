@@ -68,7 +68,22 @@ export function Term({ name, className = '' }: { name: string; className?: strin
       <button
         onClick={() => void toggle()}
         aria-expanded={open}
-        className={`focus-ring text-left underline decoration-dotted decoration-ink-soft underline-offset-4 ${className}`}
+        /**
+         * `py-0.5` is the tap target, not a margin (PLAN.md M321).
+         *
+         * A glossary word is twenty pixels tall at the app's body size, and
+         * the floor `ui.test.ts` holds `Button.tsx` to is twenty-four. M280
+         * exempted a target sitting in a block of text and that is the right
+         * exemption for a guide, where these are words in sentences — but the
+         * logger renders the same component as the **title of an exercise
+         * row**, where it is a control in a list and the exemption does not
+         * apply. Four pixels of vertical padding take it to the floor.
+         *
+         * Padding rather than height or leading because this is inline: the
+         * box grows, the line does not move, and a paragraph with three terms
+         * in it lays out exactly as before.
+         */
+        className={`focus-ring text-left underline decoration-dotted decoration-ink-soft underline-offset-4 py-0.5 ${className}`}
       >
         {name}
       </button>
