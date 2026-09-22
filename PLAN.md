@@ -14921,6 +14921,15 @@ its label is missing. None of these wants touching.
   because the logger's own Duration input answers it — still drew a chart from whatever was stored
   before then.
 
+- **M313 — a second year, and a project history to put in it.** M307a's sixth finding, and the one
+  that kept turning up under the other five: the sample climber's log was a year long and sent one
+  project, so the Projects page headline — which wants three sends before a median means anything —
+  had shown its fallback on every screenshot ever taken of it. A longer log alone does not fix
+  that, because the projects were a hand-written list of three; the length is what makes a history
+  plausible and the history still has to be written. Both, then: 104 weeks, and six projects that
+  come from one table with their burns, so *sent* and *the burns behind it* cannot disagree. Four
+  sends, three of them at one grade, so the page draws its solid row and its thin one at once.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -21728,3 +21737,114 @@ three files; so is a reworded claim, an emptied claims table, and `isQuantity` b
 alone.
 
 7,074 tests over 419 files, from 7,070. Layout harness OK. First load 137.02KB against 137.3.
+
+---
+
+## M313 — a second year, and something to put in it
+
+M307a's sixth finding, and the one that kept surfacing under the others: *"the Projects headline
+needs three sent projects and a year of the sample climber sends one, so every screenshot of that
+page has shown the fallback."* Five milestones in six had found some version of it — a card whose
+working state the sample data cannot reach.
+
+The call was to fix it with a longer sample log. That is the right call and it is not sufficient,
+which is worth saying plainly: the projects were a hand-written list of three, so a hundred and
+four weeks of sessions still sends one. The length is what makes a project history *plausible*; the
+history has to be written. Both, then.
+
+### The log
+
+`DEMO_WEEKS` 52 → 104. 196 sessions became 395, 105KB of JSON became 217KB, and generation still
+takes 9ms — the cost of this is nothing, which is why it had never been examined.
+
+What it broke is the interesting part. Three of the generator's dials were written as week numbers
+against a year-long log:
+
+- `ceilingAt` put the climber at the top of the V ladder by week 59 and left them there for a year.
+  An arc that flat reads as a broken fixture rather than as a plateau.
+- `routeCeilingAt` and the pull-up benchmark did the same, one rung at a time.
+- The objectives' requirements — *forty outdoor days*, *twenty flashes*, *twenty weeks running* —
+  were tuned by hand until the Brad Pit objective read **one met, two open**, which is the shape
+  the page needs because a screen with no gap on it is the screenshot this climber is worst at.
+  Over two years all six were met, and both objectives came out finished.
+
+The first three read the log as a fraction of itself now, so the arc stretches and keeps both its
+endpoints. The requirements are pitched off `measure` — the same function the objective card runs
+— at a round number just under what the climber has done, or just past it:
+
+```
+under(56, 10) → 50   a target met, with headroom
+past(38, 10)  → 40   a target not met, and a round one
+```
+
+*"56 of 50"* is a requirement done. *"56 of 8"* is a broken fixture, which is what M207's battery
+caught in the first version of these, and is why the rounding is there.
+
+Not every dial is a fraction. The season this climber started getting outside is an event in their
+history rather than a proportion of how long they have been logging, so it stays at week 30 — and
+stretching it was what left Careless Torque with no burns at all, nine of its eleven weeks sitting
+before the climber ever went outdoors.
+
+### The projects
+
+Six, from one table. The table says what each one is and the weeks it was worked over; the burns
+are generated from it, and the project records are built from it afterwards with each `sentDate`
+read off the session that actually carries the send.
+
+That last part is the fix to a fault the audit had not named. The old project said *sent, forty
+days ago* and the generator put a send somewhere in weeks 41 to 43 of 52 — two statements of one
+fact, agreeing because both had been tuned until they did. Moving the windows broke the agreement
+immediately: The Joker's send week had no outdoor session in it, and a two-year log came out with
+the project still open and its last go five weeks ago. The answer is not a better week. The table
+says **whether** a project went; the log says **when**, and the answer is the last burn on it,
+which is also what sending something means.
+
+On the page, on the sample climber, before and after:
+
+```
+before  1 of 7 active · Brad Pit · The Joker (sent) · Careless Torque (shelved)
+        What they cost — "1 sent so far. 3 is where these numbers start meaning
+        something rather than describing one climb."
+
+after   1 of 7 active · Brad Pit V6, 12 burns on 4 days, 70%, 18d
+        Sent — The Joker V5 · Sheep Track Traverse V5 · The Long Reach V5 · Bracken Arête V4
+        What they cost — "Across 4 sends, a project takes you 13 burns over 6 sessions,
+        and 66 days from the first go to the send. Middle values, so one epic does not
+        move them."
+        V5  12 burns · 6 sessions · 65 days to send   3 sends
+        V4  13 burns · 6 sessions · 70 days to send   1 send **
+        ** Fewer than 3 sends at that grade — one climb, not a pattern.
+        Shelved — Careless Torque V7, 22 burns on 7 days, 94%
+```
+
+Both by-grade states on one screen, which is better than clearing the threshold: the footnote about
+a thin grade has a grade to point at.
+
+### What the battery had to correct
+
+Two survivors, both mine and both the same mistake — fixing a symptom next to its cause:
+
+- I raised the burn chance from 0.45 to 0.7 to get Careless Torque off *"No burns yet"*. The mutant
+  putting it back survived, because by then I had also moved that campaign's window inside the
+  outdoor season, and the window was the whole fault. The rate is back at 0.45.
+- The objectives test counts met requirements upward only — *at most half* — so a requirement
+  pitched too high passes it, and a card with nothing ticked is the same bad screenshot from the
+  other end. It now names the one that should be done.
+
+Neither would have been found by reading the diff. Both were found by asking what would still pass
+if the change were undone.
+
+Battery: 8 killed, sanity survived. 7,077 tests over 419 files, from 7,074. Ten pinned days green.
+Layout harness OK. First load 137.03KB against 137.3 — the sample climber is not in the entry
+chunk, which `demoClimber.test.tsx` has held since M110.
+
+### Noted, not fixed
+
+The three project names that were already here are real gritstone problems carrying invented grades
+— The Joker and Careless Torque are both a good deal harder than the sample says. The three added
+here are invented outright to avoid making that worse, and the existing ids stay because an
+objective and two tests name `demo-brad-pit` directly. A climber reading the sample data will still
+raise an eyebrow at the first two.
+
+One week off in two years is also thinner than it was in one. `awayFor` writes exactly one period,
+deliberately, and M305's argument for that has not changed — but the ratio has.

@@ -199,6 +199,17 @@ describe('the objectives it brings', () => {
         Math.floor(objective.requirements.length / 2),
       );
     }
+    // And one of them ticked, on the one the climber is training for
+    // (PLAN.md M313). This was one-sided: nothing met passes a test that
+    // only counts upwards, and a card with no progress on it is the same
+    // bad screenshot from the other end. *"The base is there, the fingers
+    // and the mileage are not"* is the shape the requirements are written
+    // to make, so it is the shape held here.
+    const [bradPit] = demoObjectives();
+    const met = bradPit!.requirements.filter((r) => measure(r.requirement, input).met);
+    expect(met.map((r) => r.id), 'nothing on the objective being trained for is done').toEqual([
+      'demo-req-pyramid',
+    ]);
   });
 
   it('takes them back out when the sample data is cleared', async () => {

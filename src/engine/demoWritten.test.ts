@@ -52,7 +52,11 @@ describe('the journal has something in it', () => {
     // one none — which is also what stops a single note on any project
     // satisfying the kinds above.
     const worked = made.projects.find((p) => p.status === 'active')!;
-    const sent = made.projects.find((p) => p.status === 'sent')!;
+    // The one sent most recently, not the first in the list: four are sent
+    // now, and beta belongs to the one they were last on (PLAN.md M313).
+    const sent = made.projects
+      .filter((p) => p.status === 'sent')
+      .sort((a, b) => (a.sentDate! < b.sentDate! ? 1 : -1))[0]!;
     const shelved = made.projects.find((p) => p.status === 'shelved')!;
     expect(worked.beta.length).toBeGreaterThan(sent.beta.length);
     expect(sent.beta.length).toBeGreaterThan(0);

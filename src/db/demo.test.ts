@@ -5,6 +5,7 @@ import { canLoadDemo, loadDemo, wipeDemo } from './demo';
 import { hasDemo } from './demoFlag';
 import { newSession, putSession } from './sessions';
 import { demoClimber, DEMO_SEED, DEMO_WEEKS } from '@/engine/demoClimber';
+import { ENOUGH_AT_GRADE, projectHistory } from '@/engine/projectHistory';
 
 /**
  * A climber who does not exist (PLAN.md M110).
@@ -138,7 +139,76 @@ describe('the climber it makes', () => {
   });
 
   it('brings the three states a project can be in', () => {
-    expect(demoClimber(TODAY).projects.map((p) => p.status).sort()).toEqual(['active', 'sent', 'shelved']);
+    const states = new Set(demoClimber(TODAY).projects.map((p) => p.status));
+    expect([...states].sort()).toEqual(['active', 'sent', 'shelved']);
+  });
+
+  /**
+   * And enough sends for the page to say anything (PLAN.md M313).
+   *
+   * `projectHistory.overall` is null below `ENOUGH_AT_GRADE`, because a
+   * median of two is an anecdote — so a year of this climber, which sent
+   * one project, showed the fallback on every screenshot ever taken of that
+   * page. Held here as the number the page needs rather than the number the
+   * table happens to carry: a fixture that stops clearing the bar should
+   * fail where the bar is, not somewhere downstream.
+   */
+  it('sends enough projects for the Projects page to have a headline', () => {
+    const { projects, sessions } = demoClimber(TODAY);
+    const history = projectHistory(projects, sessions, TODAY);
+    expect(history.sent.length).toBeGreaterThanOrEqual(ENOUGH_AT_GRADE);
+    expect(history.overall, 'the page falls back to "not enough yet"').not.toBeNull();
+    // And one grade with enough at it, so the by-grade rows show both a
+    // solid row and a thin one rather than all of one kind.
+    expect(history.byGrade.some((row) => row.solid), 'no grade is solid').toBe(true);
+    expect(history.byGrade.some((row) => !row.solid), 'every grade is solid').toBe(true);
+  });
+
+  /**
+   * Every project has been touched, whatever the dice said.
+   *
+   * The burns are rolled per outdoor day, so a project can come out of a
+   * seeded log with none at all — which is what happened to Careless
+   * Torque, shelved, reading *"No burns yet"* on a card whose whole
+   * subject is how many goes it took. The seed is fixed, so this is not a
+   * flake: it either holds forever or fails forever, which is the point of
+   * asserting it rather than hoping.
+   */
+  it('leaves burns on every project it brings', () => {
+    const { projects, sessions } = demoClimber(TODAY);
+    for (const project of projects) {
+      const days = sessions.filter((s) =>
+        (s.projectAttempts ?? []).some((a) => a.projectId === project.id),
+      );
+      expect(days.length, `${project.name} has no burns on it`).toBeGreaterThan(2);
+    }
+  });
+
+  /**
+   * The send is in the log, not only on the record.
+   *
+   * It used to be neither, quite: the project said *sent, forty days ago*
+   * and the generator put a send somewhere in a three-week window, and they
+   * agreed because both had been tuned until they did. Then the window
+   * moved and one of them was a week with no outdoor session in it, which
+   * is how a two-year log came out with The Joker still open.
+   */
+  it('backs every sent project with a send in the sessions', () => {
+    const { projects, sessions } = demoClimber(TODAY);
+    const sent = projects.filter((p) => p.status === 'sent');
+    expect(sent.length).toBeGreaterThan(2);
+    for (const project of sent) {
+      const sends = sessions.flatMap((s) =>
+        (s.projectAttempts ?? []).filter((a) => a.projectId === project.id && a.outcome === 'send'),
+      );
+      expect(sends, `${project.name} says sent with no send logged`).toHaveLength(1);
+      const day = sessions.find((s) => (s.projectAttempts ?? []).includes(sends[0]!))!.date;
+      expect(project.sentDate, `${project.name} is dated off something other than its send`).toBe(day);
+    }
+    // And nothing claims a send it does not have.
+    for (const project of projects.filter((p) => p.status !== 'sent')) {
+      expect(project.sentDate, `${project.name} is not sent but carries a date`).toBeUndefined();
+    }
   });
 
   it('tags everything it makes', () => {
@@ -164,7 +234,11 @@ describe('loading it', () => {
     const profile = await loadDemo(DEMO_SEED, TODAY);
     const db = await getDb();
     expect(await db.count('sessions')).toBeGreaterThan(50);
-    expect(await db.count('projects')).toBe(3);
+    // What the generator made, not a number typed here: this asserts the
+    // load wrote them all, where a literal asserted the size of the table.
+    const made = demoClimber(TODAY).projects.length;
+    expect(made).toBeGreaterThan(3);
+    expect(await db.count('projects')).toBe(made);
     expect(await db.count('metrics')).toBeGreaterThan(0);
     expect(profile.programId).toBe('iron_grip');
   });

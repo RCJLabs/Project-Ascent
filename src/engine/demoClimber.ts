@@ -49,6 +49,8 @@ import type { Injury } from '@/store/profile';
 import type { Program, ProgramId } from '@/content/types';
 import type { AwayPeriod } from './away';
 import type { BlockRecord } from './blocks';
+import { deriveClimberState } from './derive';
+import { measure, type SkillInput, type SkillRequirement } from './skills';
 import { CUSTOM_PREFIX } from './customProgram';
 import { createRng, next, type Rng } from './ascent/rng';
 import { addDays, startOfWeek } from './dates';
@@ -56,8 +58,26 @@ import { addDays, startOfWeek } from './dates';
 /** One climber, so a screenshot taken today matches one taken in a year. */
 export const DEMO_SEED = 20_260_112;
 
-/** A year, which is what the career page and the year review need. */
-export const DEMO_WEEKS = 52;
+/**
+ * Two years, which is what the Projects page needs (PLAN.md M313).
+ *
+ * A year was enough for the career page and the year review, and the whole
+ * point of this climber is that every screen has something to show. The
+ * Projects page never did: its headline wants three sends before it will
+ * say anything, because below that a median is an anecdote, and a year of
+ * one climber sends one project. A second year is where a project history
+ * comes from — four sends, at two grades, with the burns that made them.
+ *
+ * Everything here that was written against the length of the log reads it
+ * as a fraction now rather than counting weeks, so the arc stretches
+ * instead of running off the end of the ladder and flattening.
+ */
+export const DEMO_WEEKS = 104;
+
+/** How far through the log a week is, in the 52 the thresholds were written for. */
+function asYearOne(week: number): number {
+  return (week * 52) / DEMO_WEEKS;
+}
 
 /** The week the session loop skips, marked by `awayFor` (PLAN.md M305). */
 const WEEK_OFF = 26;
@@ -197,6 +217,48 @@ export interface DemoClimber {
 }
 
 /**
+ * One project, worked over a stretch of the log (PLAN.md M313).
+ *
+ * The list of projects and the burns behind them used to be two statements
+ * of the same fact: the project said *sent, forty days ago* and this
+ * function put a send somewhere in weeks 41 to 43 of 52, and they agreed
+ * because both were tuned until they did. They come from this table now —
+ * the burns are generated from it and the project records are built from it
+ * afterwards, with each `sentDate` read off the session that actually
+ * carries the send.
+ *
+ * Grades against the climber's own ceiling: the V4 lands while `ceilingAt`
+ * is still at V5 indoors, the three V5s over the long plateau that is this
+ * app's whole subject, and the V6 is the one still open.
+ */
+interface Campaign {
+  id: string;
+  name: string;
+  grade: string;
+  location: string;
+  /** The weeks of the log it was worked over, inclusive. */
+  from: number;
+  to: number;
+  /** Whether it went. **When** is the log's to say, not this table's. */
+  goes: boolean;
+  shelved?: boolean;
+}
+
+const CAMPAIGNS: Campaign[] = [
+  { id: 'demo-bracken-arete', name: 'Bracken Arête', grade: 'V4', location: 'Stanage', from: 34, to: 46, goes: true },
+  { id: 'demo-careless-torque', name: 'Careless Torque', grade: 'V7', location: 'Stanage', from: 48, to: 58, goes: false, shelved: true },
+  { id: 'demo-the-long-reach', name: 'The Long Reach', grade: 'V5', location: 'The Roaches', from: 60, to: 71, goes: true },
+  { id: 'demo-sheep-track-traverse', name: 'Sheep Track Traverse', grade: 'V5', location: 'Stanage', from: 73, to: 84, goes: true },
+  { id: 'demo-the-joker', name: 'The Joker', grade: 'V5', location: 'Stanage', from: 86, to: 95, goes: true },
+  { id: 'demo-brad-pit', name: 'Brad Pit', grade: 'V6', location: 'The Roaches', from: 97, to: DEMO_WEEKS - 1, goes: false },
+];
+
+/** The one being worked that week, if any. Earliest wins where two overlap. */
+function campaignAt(week: number): Campaign | undefined {
+  return CAMPAIGNS.find((c) => week >= c.from && week <= c.to);
+}
+
+/**
  * Burns on a project, escalating.
  *
  * Without these every project page reads "No burns yet" — the timeline, the
@@ -205,28 +267,55 @@ export interface DemoClimber {
  * which is the job this climber exists to do.
  */
 function burnsFor(rng: Rng, week: number, id: string): ProjectAttempt[] {
-  // Two projects worked over the back half of the year, one of them sent.
-  if (week < 30 || !chance(rng, 0.45)) return [];
-  const onJoker = week < 44;
-  const progress = Math.min(1, (week - 30) / 18);
+  const campaign = campaignAt(week);
+  // A coin toss per day out, which leaves some days for other crags. It
+  // was Careless Torque's window that starved it, not this number: nine
+  // weeks of it sat before the season this climber started getting
+  // outside, so there were six days out to roll against and all six came
+  // up tails. `demo.test.ts` holds every campaign to leaving a mark now,
+  // rather than leaving it to the dice on whatever seed is current.
+  if (campaign === undefined || !chance(rng, 0.45)) return [];
+  const progress = Math.min(1, (week - campaign.from) / Math.max(1, campaign.to - campaign.from));
   const high = Math.round(35 + progress * 55 + next(rng) * 8);
-  // No extra roll on top of the two that already gate a burn: behind three
-  // dice the send never landed, and the project list said "sent" over a
-  // timeline with nothing but falls in it.
-  const sent = onJoker && week >= 41;
   return [
     {
       id: `${id}-a`,
-      projectId: onJoker ? 'demo-the-joker' : 'demo-brad-pit',
-      outcome: sent ? 'send' : high > 80 ? 'fell-high' : high > 55 ? 'fell-crux' : 'fell-mid',
-      ...(sent ? {} : { highPoint: Math.min(95, high) }),
+      projectId: campaign.id,
+      outcome: high > 80 ? 'fell-high' : high > 55 ? 'fell-crux' : 'fell-mid',
+      highPoint: Math.min(95, high),
       // Worked from partway up often enough that the longest link is not
       // always the ground-up high point (PLAN.md M102).
-      ...(!sent && chance(rng, 0.3) ? { from: Math.round(next(rng) * 30) } : {}),
+      ...(chance(rng, 0.3) ? { from: Math.round(next(rng) * 30) } : {}),
       count: 1 + Math.floor(next(rng) * 4),
       ...(chance(rng, 0.25) ? { note: pick(rng, ['Skin gone.', 'Wind picked up.', 'Closer.']) } : {}),
     },
   ];
+}
+
+/**
+ * The last go on a project that went, turned into the send (PLAN.md M313).
+ *
+ * The send used to be emitted at a week named in the table, and burns are
+ * only written on outdoor sessions — so The Joker's send fell in a week
+ * that had none, and the project came out of a two-year log still open with
+ * its last go forty days ago. The fix is not a better week. The table says
+ * *whether* a project went; the log says *when*, and the answer is the last
+ * burn on it, which is also what sending something means.
+ */
+function landTheSends(sessions: Session[]): void {
+  for (const campaign of CAMPAIGNS) {
+    if (!campaign.goes) continue;
+    let last: ProjectAttempt | undefined;
+    for (const session of sessions) {
+      for (const attempt of session.projectAttempts ?? []) {
+        if (attempt.projectId === campaign.id) last = attempt;
+      }
+    }
+    if (last === undefined) continue;
+    last.outcome = 'send';
+    delete last.highPoint;
+    delete last.from;
+  }
 }
 
 /** Timestamps from the day the record is about, never from the clock. */
@@ -281,7 +370,7 @@ const BELAYERS = ['Priya', 'Priya', 'Priya', 'Tom', 'Marta'];
 
 /** The route ceiling, trailing the boulder one — they are different skills. */
 function routeCeilingAt(week: number): number {
-  return Math.min(ROUTES.length - 1, 1 + Math.floor(week / 14));
+  return Math.min(ROUTES.length - 1, 1 + Math.floor(asYearOne(week) / 14));
 }
 
 /**
@@ -326,9 +415,16 @@ function routesFor(rng: Rng, week: number, id: string): Climb[] {
  * about one and say nothing at all against a line that only goes up.
  */
 function ceilingAt(week: number): number {
-  if (week < 20) return Math.min(3, Math.floor(week / 7));
-  if (week < 38) return 3;
-  return Math.min(LADDER.length - 1, 3 + Math.floor((week - 38) / 7));
+  // Read as a fraction of the log, not as a count of weeks (PLAN.md M313).
+  // These thresholds were written for a 52-week log, and against a 104-week
+  // one they put the climber at the top of the ladder by week 59 and left
+  // them there for a year — an arc that reads as a broken fixture rather
+  // than as a plateau. Stretched, the shape and both endpoints are what
+  // they always were.
+  const w = asYearOne(week);
+  if (w < 20) return Math.min(3, Math.floor(w / 7));
+  if (w < 38) return 3;
+  return Math.min(LADDER.length - 1, 3 + Math.floor((w - 38) / 7));
 }
 
 function climbsFor(rng: Rng, week: number, id: string): Climb[] {
@@ -447,7 +543,13 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
       // Project season in the back half of the year, which is both more
       // plausible and what puts enough burns on the project pages for them
       // to draw anything.
-      const outdoor = chance(rng, week >= 30 ? 0.4 : 0.12);
+      // Week 30 of the log, not the same fraction of it (PLAN.md M313).
+    // This one is an event in the climber's history — the season they
+    // started getting outside — rather than a proportion of how long they
+    // have been logging, and stretching it put every project campaign in
+    // the sparse half: Careless Torque came out shelved with no burns on
+    // it at all, which is a card nobody can read.
+    const outdoor = chance(rng, week >= 30 ? 0.4 : 0.12);
       sessions.push(
         newSession(date, 0, {
           ...stamps(date),
@@ -556,7 +658,7 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
             // and it is the kind of note the journal exists to surface.
             ...(chance(prose, 0.5) ? { note: pick(prose, BENCHMARK_NOTES) } : {}),
           },
-          { metricId: 'max_pullups', date, value: 8 + Math.floor(week / 12) + Math.floor(next(rng) * 3), demo: true },
+          { metricId: 'max_pullups', date, value: 8 + Math.floor(asYearOne(week) / 12) + Math.floor(next(rng) * 3), demo: true },
         );
       }
     }
@@ -564,6 +666,8 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
 
   const made = (name: string, grade: string, patch: Partial<Project> = {}): Project => ({
     id: `demo-${name.toLowerCase().replace(/\W+/g, '-')}`,
+    // `patch.id` below overrides this: the campaign owns the id, because
+    // an objective and two tests name `demo-brad-pit` directly.
     name,
     grade,
     scale: 'V',
@@ -584,20 +688,48 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
       text,
     }));
 
+  /**
+   * The day a send actually got logged, read off the log (PLAN.md M313).
+   *
+   * Not a date written beside the project and tuned until it lined up with
+   * the burns: the send burn is in a session, the session has a date, and
+   * that date is the one the record carries. A campaign whose send never
+   * reached an outdoor session would come back undated here rather than
+   * claiming a day nothing happened on, which `demo.test.ts` holds.
+   */
+  const sendDate = (id: string): string | undefined =>
+    sessions.find((s) => (s.projectAttempts ?? []).some((a) => a.projectId === id && a.outcome === 'send'))?.date;
+  landTheSends(sessions);
+  // Beta goes on the one most recently sent rather than on an id written
+  // here: "the project they got up last" is the rule, and a list of ids is
+  // a second place to say which one that is (PLAN.md M313).
+  const latestSend = [...CAMPAIGNS]
+    .filter((c) => c.goes)
+    .sort((a, b) => b.to - a.to)[0]?.id;
+
   return {
     sessions,
-    // One sent, one being worked, one shelved: the three states the project
-    // pages actually have between them.
-    projects: [
-      made('The Joker', 'V5', {
-        location: 'Stanage',
-        status: 'sent',
-        sentDate: addDays(today, -40),
-        beta: beta(1, 60),
-      }),
-      made('Brad Pit', 'V6', { location: 'The Roaches', beta: beta(3, 50) }),
-      made('Careless Torque', 'V7', { location: 'Stanage', status: 'shelved' }),
-    ],
+    // Sent, being worked, and shelved: the three states the project pages
+    // have between them, and four of the first so the page's headline has
+    // the three sends it needs before a median means anything (M313).
+    projects: CAMPAIGNS.map((c) => {
+      const sent = c.goes ? sendDate(c.id) : undefined;
+      return made(c.name, c.grade, {
+        id: c.id,
+        location: c.location,
+        // Created the week it was first touched, not the day the log opens.
+        createdAt: `${addDays(start, c.from * 7 + 1)}T09:00:00.000Z`,
+        ...(sent !== undefined
+          ? { status: 'sent' as const, sentDate: sent }
+          : c.shelved
+            ? { status: 'shelved' as const }
+            : { status: 'active' as const }),
+        // Beta accumulates on the one being worked now, and a line on the
+        // one most recently sent; a shelved project collected none.
+        ...(c.id === latestSend ? { beta: beta(1, 60) } : {}),
+        ...(sent === undefined && !c.shelved ? { beta: beta(3, 50) } : {}),
+      });
+    }),
     metrics,
     injuries: [
       {
@@ -610,7 +742,7 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
         note: 'Felt it on a hard lock-off. Easing, slowly.',
       },
     ],
-    objectives: objectivesFor(today, start),
+    objectives: objectivesFor(today, start, sessions, metrics),
     away: awayFor(start),
     programId: 'iron_grip',
     startDate: ironGripStart,
@@ -659,8 +791,36 @@ function awayFor(start: string): AwayPeriod[] {
  * never shows a gap, which is the screen this climber exists to photograph
  * least.
  */
-function objectivesFor(today: string, start: string): Objective[] {
+/**
+ * Targets read off the climber's own log (PLAN.md M313).
+ *
+ * These were three numbers typed in and tuned until the Brad Pit objective
+ * read *one met, two open* — the shape the page needs, because a screen
+ * with no gap on it is the screenshot this climber is worst at. Tuned
+ * against a 52-week log, and the log is 104 now: forty outdoor days was a
+ * stretch over one year and is behind this climber over two, so the
+ * objective came out two-thirds done.
+ *
+ * `under` gives a round number this climber has already passed and `past`
+ * one they have not, so the shape holds at any length of log. Round,
+ * because *"56 of 50"* is a target met and *"56 of 8"* is a broken fixture,
+ * which is the fault M207's battery caught in the first version of these.
+ */
+const under = (now: number, step: number): number => Math.max(step, Math.floor(now / step) * step);
+const past = (now: number, step: number): number => (Math.floor(now / step) + 1) * step;
+
+function objectivesFor(today: string, start: string, sessions: Session[], metrics: MetricEntry[]): Objective[] {
   const stamp = (date: string) => `${date}T09:00:00.000Z`;
+  /**
+   * Where this climber stands, counted by the thing that will count it
+   * again on screen.
+   *
+   * Not a second tally written here: `measure` is what the objective card
+   * runs, and a requirement pitched against any other reading of the log is
+   * a target that is met in one place and open in another.
+   */
+  const input: SkillInput = { state: deriveClimberState(sessions), metrics, projects: [] };
+  const standing = (requirement: SkillRequirement): number => measure(requirement, input).current;
   return [
     {
       id: 'demo-objective-brad-pit',
@@ -683,17 +843,26 @@ function objectivesFor(today: string, start: string): Objective[] {
         // fingers and the mileage are not.
         {
           id: 'demo-req-pyramid',
-          requirement: { kind: 'sends', scale: 'V', grade: 'V5', count: 40 },
+          requirement: {
+            kind: 'sends',
+            scale: 'V',
+            grade: 'V5',
+            count: under(standing({ kind: 'sends', scale: 'V', grade: 'V5', count: 0 }), 10),
+          },
           why: 'A grade is a base before it is a ceiling. This part is done.',
         },
         {
           id: 'demo-req-hang',
-          requirement: { kind: 'metric', metricId: 'max_hang_20mm_7s', atLeast: 52 },
+          requirement: {
+            kind: 'metric',
+            metricId: 'max_hang_20mm_7s',
+            atLeast: past(standing({ kind: 'metric', metricId: 'max_hang_20mm_7s', atLeast: 0 }), 5),
+          },
           why: 'The crux is a two-finger drag off the lip. Fingers first.',
         },
         {
           id: 'demo-req-outside',
-          requirement: { kind: 'outdoor-days', count: 40 },
+          requirement: { kind: 'outdoor-days', count: past(standing({ kind: 'outdoor-days', count: 0 }), 10) },
           why: 'Grit is a skill. Indoor V6 is not this V6.',
         },
       ],
@@ -721,17 +890,21 @@ function objectivesFor(today: string, start: string): Objective[] {
       requirements: [
         {
           id: 'demo-req-volume',
-          requirement: { kind: 'outdoor-days', count: 45 },
+          requirement: { kind: 'outdoor-days', count: past(standing({ kind: 'outdoor-days', count: 0 }), 10) + 10 },
           why: 'Six days on circuits asks for a body that has been outside.',
         },
         {
           id: 'demo-req-flash',
-          requirement: { kind: 'style-sends', style: 'flash', count: 20 },
+          requirement: {
+            kind: 'style-sends',
+            style: 'flash',
+            count: past(standing({ kind: 'style-sends', style: 'flash', count: 0 }), 10),
+          },
           why: 'A circuit is flashing, not projecting. Practise the thing.',
         },
         {
           id: 'demo-req-consistent',
-          requirement: { kind: 'streak-weeks', weeks: 20 },
+          requirement: { kind: 'streak-weeks', weeks: past(standing({ kind: 'streak-weeks', weeks: 0 }), 5) },
           why: 'Nothing here needs a peak. It needs twenty weeks of showing up.',
         },
       ],
