@@ -43,7 +43,21 @@ describe('the index', () => {
     ).toBe('false');
   });
 
-  it('is what the generator would write today', () => {
+  /**
+   * Given a real timeout, because it is a subprocess (PLAN.md M317).
+   *
+   * Alone this takes about three hundred milliseconds. In a full run it
+   * took **39.5 seconds** against the 5-second default and failed — not
+   * because the index was stale but because `git log --name-only` over
+   * four hundred commits, spawned synchronously, is competing with four
+   * hundred other test files for the machine. M304's finding in another
+   * costume: a budget that is really a bet on how busy the box is.
+   *
+   * The number is about contention, not about the check. Two minutes is
+   * long enough that saturation cannot reach it and short enough that a
+   * genuine hang still reports.
+   */
+  it('is what the generator would write today', { timeout: 120_000 }, () => {
     const onDisk = readFileSync('INDEX.md', 'utf8');
     // `--stdout`, so a failing run does not also rewrite a tracked file.
     const generated = execFileSync('node', ['scripts/gen-index.mjs', '--stdout'], {

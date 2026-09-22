@@ -155,7 +155,7 @@ function sessionLines(program: Program, type: SessionType): string[] {
     }
   }
   /**
-   * A session with nothing under it says so.
+   * A session with nothing under it says so — where that is a gap.
    *
    * `section` above refuses to leave an empty heading behind, and this is
    * the same rule one level down. The browser found it: the sample
@@ -163,8 +163,28 @@ function sessionLines(program: Program, type: SessionType): string[] {
    * all, which is what a program written in the builder looks like until
    * somebody fills it in — and the handout gave the athlete a heading, a
    * sentence of description, and a void.
+   *
+   * ## Two places where it is not a gap (PLAN.md M317)
+   *
+   * Written for the builder and true there, and false on the catalogue the
+   * moment the handout was offered for it: **every one of the eleven
+   * shipped programs** said it under its rest day, and the two modes said
+   * it under six session types and two. An athlete read that their coach
+   * had not finished writing the rest day.
+   *
+   * A rest day prescribes nothing because it is a rest day — `isRest` is
+   * the content's own word for that. A mode prescribes nothing because it
+   * is a mode: `general_training` is a menu with no dose, and a day at the
+   * crag is as long as the day is, which is M138's argument for letting
+   * those two say nothing and M155's for not drawing them an empty panel.
+   *
+   * Both already carry a description, so the heading is not left bare. What
+   * goes is a sentence about an omission that is not one.
    */
-  if (out.length === beforeBlocks) out.push('*Nothing written down for this one yet.*');
+  const prescribes = !type.isRest && program.kind !== 'mode';
+  if (out.length === beforeBlocks && prescribes) {
+    out.push('*Nothing written down for this one yet.*');
+  }
   out.push('');
   return out;
 }

@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadDrills } from '@/content/drills';
-import { getProgram, loadPrograms } from '@/content/programs';
+import { PROGRAMS, getProgram, loadPrograms } from '@/content/programs';
 import type { Program, SessionType } from '@/content/types';
 import { blankProgram } from './customProgram';
 import { handoutName, programHandout } from './programHandout';
@@ -123,6 +123,68 @@ describe('what it refuses to invent', () => {
     );
     expect(out).toContain('### Board night — 60 min');
     expect(out).toContain('*Nothing written down for this one yet.*');
+  });
+
+  /**
+   * And keeps quiet where the absence is the design (PLAN.md M317).
+   *
+   * The line above was written for the builder and is right there. Offered
+   * for the catalogue it became a lie eleven times over: every shipped
+   * program has a rest day, a rest day prescribes nothing because it is a
+   * rest day, and the athlete read that their coach had not finished
+   * writing it.
+   */
+  it('says nothing of the sort about a rest day', () => {
+    const out = programHandout(
+      bare({
+        sessionTypes: [
+          {
+            id: 'rest' as SessionType['id'],
+            name: 'Rest / Recovery',
+            icon: 'moon',
+            description: 'Full rest or light activity.',
+            isRest: true,
+          },
+        ],
+      }),
+      DAY,
+    );
+    expect(out).toContain('### Rest / Recovery');
+    expect(out).toContain('Full rest or light activity.');
+    expect(out).not.toContain('Nothing written down');
+  });
+
+  it('nor about a mode, which prescribes nothing by definition', () => {
+    const out = programHandout(
+      bare({
+        kind: 'mode',
+        sessionTypes: [
+          {
+            id: 'crag' as SessionType['id'],
+            name: 'Outdoor Bouldering',
+            icon: 'rock',
+            description: 'Bouldering on real rock.',
+          },
+        ],
+      }),
+      DAY,
+    );
+    expect(out).toContain('### Outdoor Bouldering');
+    expect(out).toContain('Bouldering on real rock.');
+    expect(out).not.toContain('Nothing written down');
+  });
+
+  it('and the whole catalogue is clear of it, which it was not', () => {
+    // The measurement that opened M317: eleven of eleven programs said it
+    // under their rest day, Outdoor Climbing said it six times, and General
+    // Training twice.
+    for (const program of PROGRAMS) {
+      expect(programHandout(program, DAY), program.id).not.toContain('Nothing written down');
+    }
+    // A working session with nothing under it is still a gap, and the
+    // catalogue having none of those is what makes the sweep above mean
+    // something rather than passing on an empty rule.
+    expect(PROGRAMS.length).toBeGreaterThan(10);
   });
 
   it('still says what it is, with nothing else filled in', () => {

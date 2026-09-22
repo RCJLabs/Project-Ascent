@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
-import { Activity, AlertTriangle, BookOpen, ChevronDown, ChevronRight, ChevronUp, Clock, Layers, Play, Timer } from 'lucide-react';
+import { Activity, AlertTriangle, BookOpen, ChevronDown, ChevronRight, ChevronUp, Clock, FileText, Layers, Play, Timer } from 'lucide-react';
 import { getDrill } from '@/content/drills';
 import { drillText } from '@/content/drillText';
 import { guideSummaryFor } from '@/content/guides/summary';
@@ -8,7 +8,10 @@ import { getMetric } from '@/content/metrics';
 import { getProtocol } from '@/content/protocols';
 import { getProgram } from '@/content/programs';
 import { INTENSITY_LABEL, type Exercise, type Phase, type Program, type SessionType, type TrackId } from '@/content/types';
+import { today } from '@/engine/dates';
 import { dosageLine } from '@/engine/prescription';
+import { handoutName, programHandout } from '@/engine/programHandout';
+import { downloadText } from '@/lib/download';
 import { intensityOf } from '@/engine/scheduler';
 import { describeWork, sessionMinutes } from '@/engine/sessionLength';
 import { BackLink } from '@/ui/BackLink';
@@ -22,7 +25,6 @@ import { EQUIPMENT_LABELS } from '@/engine/customProgram';
 import { displayRange } from '@/engine/grades';
 import { prescriptionLine } from '@/engine/prescription';
 import { DELOAD_STEP, deloadLightens } from '@/engine/plan';
-import { today } from '@/engine/dates';
 import { usePlannedDay } from '@/features/log/usePlannedDay';
 import { useSettings } from '@/store/settings';
 import { useProfile } from '@/store/profile';
@@ -640,7 +642,47 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
         </Card>
           </>
         )}
+
+        {/**
+         * The program, for someone who has not got the app (PLAN.md M317).
+         *
+         * M288 built this and put it in the builder, where it could only
+         * ever hand over a program the coach had written themselves — and a
+         * coach is at least as likely to put an athlete on Iron Grip. The
+         * generator took any `Program` from the day it was written.
+         *
+         * Outside the fold rather than behind it. What is back there is the
+         * program explained to the person deciding whether to run it; this
+         * is a thing you do with the program once you have decided, and the
+         * fold's label does not mention it — M295 settled that a fold which
+         * lists half its contents is worse than one that lists none, so a
+         * card nobody would think to look behind goes in front.
+         *
+         * No *"Save as a file"* beside it, which the builder does have. The
+         * file exists to carry a program to another copy of the app, and
+         * every copy of the app already has this one.
+         */}
+        <Card title="Write it out">
+          <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+            One page of text an athlete can open anywhere — the week, the blocks, every session and
+            its doses. Nothing to install, and nothing that needs this app.
+          </p>
+          <Button variant="outline" onClick={() => shareHandout(program)}>
+            <FileText size={15} /> Save as a handout
+          </Button>
+        </Card>
       </div>
     </>
   );
+}
+
+/**
+ * The same download the builder offers, from the page the catalogue has.
+ *
+ * `downloadText` rather than an anchor of its own: M292 found two bugs in
+ * the hand-rolled version — a detached anchor and a synchronous revoke —
+ * and `lib/download.ts` exists to have them fixed in one place.
+ */
+function shareHandout(program: Program): void {
+  downloadText(programHandout(program, today()), handoutName(program), 'text/markdown');
 }

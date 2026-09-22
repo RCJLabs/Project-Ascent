@@ -14963,6 +14963,15 @@ its label is missing. None of these wants touching.
   it was tested from the first; nothing had ever rendered the card, which is how its position went
   unexamined for two hundred milestones.
 
+- **M317 — the handout, and what it said about every rest day.** M298a's seventh entry: M288 built
+  *Save as a handout* into the builder, where it can only hand over a program the coach wrote
+  themselves, and the generator has taken any `Program` since the day it was written. It is on the
+  catalogue's own page now. Generating all thirteen before wiring the button is what earned the
+  milestone: *"Nothing written down for this one yet"* — a sentence written for a half-finished
+  program in the builder — appeared under the rest day of **every one of the eleven shipped
+  programs**, six times in Outdoor Climbing and twice in General Training. A rest day prescribes
+  nothing because it is a rest day.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -22240,3 +22249,96 @@ to a day the session is already on, and both halves of the follow.
 7,106 tests over 423 files, from 7,097 — nine of them the first this card has ever had. Ten pinned
 days green, which this wanted: the button is named for a weekday. Layout harness OK. First load
 137.01KB against 137.3.
+
+---
+
+## M317 — the handout, and what it had been saying about every rest day
+
+M298a's seventh entry:
+
+> **The handout is builder-only.** M288's own entry called this the obvious next argument: a coach
+> is at least as likely to put an athlete on Iron Grip as on something they wrote, and *Save as a
+> handout* only exists for custom programs. The generator already takes any `Program`. *Measured.*
+
+All of that is true, and moving a button would have been a ten-minute milestone. The entry's last
+sentence is what made it a real one: *the generator already takes any `Program`* is a claim, and
+M288's own lesson about this file is that **reading the output is what finds the bug**. So all
+thirteen were generated and read before anything was wired up.
+
+### What eleven programs were telling their athletes
+
+```
+ground_zero      → Rest / Recovery          base_camp        → Rest / Recovery
+two_day_week     → Rest / Recovery          gravity_defied   → Rest / Recovery
+lockdown         → Rest / Recovery          iron_grip        → Rest / Recovery
+the_long_game    → Rest / Recovery          peak_performance → Rest / Mobility
+the_siege        → Rest / Mobility          trip_prep        → Rest / Recovery
+the_cruiser      → Recovery & Mobility
+
+general_training → Climbing Session, Rest / Recovery
+outdoor_climbing → Outdoor Bouldering, Outdoor Sport, Outdoor Trad,
+                   Deep Water Solo, Alpine / Multipitch, Rest / Recovery
+```
+
+Under each of those headings, the handout said:
+
+> *Nothing written down for this one yet.*
+
+The line is M288's and it is right where it was written. A program built in the builder carries
+named session types with no blocks until somebody fills them in, and a heading followed by a void
+is worse than a heading followed by an admission. That is the builder.
+
+On the catalogue it is false in two distinct ways. **A rest day prescribes nothing because it is a
+rest day** — `isRest` is the content's own word for it, and every one of the eleven has one. **A
+mode prescribes nothing because it is a mode** — M138 lets `general_training` and
+`outdoor_climbing` say nothing about length because a menu has no dose and a day at the crag is as
+long as the day is, and M155 stopped drawing them an empty panel on screen for the same reason.
+Both already carry a description, so the heading is not bare either way. What went is a sentence
+about an omission that is not one.
+
+Had the button shipped without this, the first thing a coach handed an athlete would have said
+their coach had not finished writing the rest day.
+
+### The button
+
+On `ProgramDetailPage`, outside the fold rather than behind it. What is back there is the program
+explained to someone deciding whether to run it; this is something you do with the program once you
+have decided, and the fold's label does not mention it — M295 settled that a fold listing half its
+contents is worse than one listing none, so a card nobody would think to look behind goes in front
+of it.
+
+**No *Save as a file* beside it**, which the builder does have. The file carries a program to
+another copy of the app, and every copy of the app already has Iron Grip. The two buttons belong
+together in the builder and only one of them belongs here.
+
+From the running app:
+
+```
+iron_grip         fold shut · handout offered: true · file offered: false
+                  iron-grip.md, 5058 chars, "Nothing written down" × 0   (was × 1)
+                  ### Rest / Recovery → "Active recovery. Fingers need 48 hours."
+
+outdoor_climbing  fold shut · handout offered: true · file offered: false
+                  outdoor-climbing.md, 1212 chars, "Nothing written down" × 0   (was × 6)
+```
+
+### And a flake of my own, two milestones old
+
+The full suite went red on `indexFresh.test.ts` — not stale, **timed out**: 39.5 seconds against
+the 5-second default. Alone that check takes three hundred milliseconds. It spawns the generator,
+which walks four hundred commits of `git log --name-only`, and in a full run it is doing that while
+four hundred other test files have the machine. M304's finding in another costume — a budget that
+is really a bet on how busy the box is. It has a two-minute timeout now, long enough that
+saturation cannot reach it and short enough that a real hang still reports.
+
+It would have reached CI eventually. It surfaced here because this suite is bigger than the one
+M315 shipped against.
+
+Battery: 5 killed, sanity survived — the card gone, the rest-day clause gone, the mode clause gone,
+the line never said, and the line said everywhere. That last pair matters: a rule this narrow can
+fail by going quiet as easily as by going loud, and the builder's own case is what holds the loud
+end.
+
+7,113 tests over 424 files, from 7,106. Ten pinned days green. Layout harness OK. First load
+137.04KB against 137.3, up 0.03 — `ProgramDetailPage` now imports the handout generator, and it is
+a lazy route.
