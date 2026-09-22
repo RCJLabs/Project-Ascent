@@ -256,9 +256,36 @@ export function SettingsPage() {
     }
   }
 
-  /** What the sample-data card can offer right now (PLAN.md M110). */
+  /**
+   * Whether this page is still on screen (PLAN.md M323).
+   *
+   * `refreshDemo` below asks the database two questions and then writes the
+   * answer into state, and nothing made it wait for the page still being
+   * there. In a browser that is harmless — React 19 drops an update to an
+   * unmounted tree without complaint — and under a test runner it is fatal:
+   * the environment is torn down when the test ends, `window` goes with it,
+   * and React's own scheduler reads `window` on the way into
+   * `dispatchSetState`. CI went red on it with all 7,179 tests passing.
+   */
+  const onScreen = useRef(true);
+  useEffect(() => () => void (onScreen.current = false), []);
+
+  /**
+   * What the sample-data card can offer right now (PLAN.md M110).
+   *
+   * Both answers first, then one write, then the guard — rather than the
+   * `setDemo({ loaded: await …, offerable: await … })` this was, where the
+   * awaits are arguments and there is nowhere to put a check between the
+   * last of them and the write.
+   *
+   * The guard is here and not in the effect below because three handlers
+   * call this too — after loading the sample climber, after clearing it, and
+   * after an import — and every one of them is a tap that can be the last
+   * thing a climber does on this page.
+   */
   const refreshDemo = useCallback(async () => {
-    setDemo({ loaded: await hasDemo(), offerable: await canLoadDemo() });
+    const next = { loaded: await hasDemo(), offerable: await canLoadDemo() };
+    if (onScreen.current) setDemo(next);
   }, []);
 
   useEffect(() => {

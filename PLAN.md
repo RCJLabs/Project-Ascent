@@ -15026,6 +15026,16 @@ its label is missing. None of these wants touching.
   in-memory slot, keyed by the program it was held for, gone on reload — and the only thing written
   is the coach's own forked program.
 
+- **M323 — a state write that arrived after the page had gone.** M322 went red on CI with **all
+  7,179 tests passing**: an unhandled rejection caught after teardown, `ReferenceError: window is
+  not defined`, from `dispatchSetState` on `SettingsPage`. `refreshDemo` asks the database two
+  questions and writes the answer into state, and nothing made it wait for the page still being
+  there — harmless in a browser, where React drops an update to an unmounted tree in silence, and
+  fatal under a runner that has already taken `window` away. Not M322's bug: M322's two new test
+  files moved the scheduling enough to lose a race that was always there. The sweep found the
+  project had already written this guard once, at `AttachPage`'s shared-photo effect, and missed it
+  twice. Both are guarded now.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -22985,3 +22995,87 @@ Battery 10 killed, 1 sanity survived.
 
 7,179 tests over 430 files, from 7,162. Layout harness OK. First load 128.10KB against 129.1. No
 date matrix: this reads no clock.
+
+
+## M323 — a state write that arrived after the page had gone
+
+M322 went red on CI, the second red of this audit, and the deploy was skipped — so the live site
+kept serving M321 while the failure sat on main. **All 7,179 tests passed.**
+
+```
+Unhandled Rejection
+ReferenceError: window is not defined
+ ❯ resolveUpdatePriority  react-dom-client.development.js:1308
+ ❯ dispatchSetState       react-dom-client.development.js:9126
+ ❯ src/features/settings/SettingsPage.tsx:261:5
+This error originated in "src/features/settings/launchedFile.test.tsx"
+This error was caught after test environment was torn down.
+```
+
+### One await too many to be safe
+
+```ts
+const refreshDemo = useCallback(async () => {
+  setDemo({ loaded: await hasDemo(), offerable: await canLoadDemo() });
+}, []);
+useEffect(() => { void refreshDemo(); }, [refreshDemo, byDate]);
+```
+
+Two IndexedDB round trips, then a write into state, and nothing between the last await and the
+write that asks whether the page is still there. A test whose own assertion resolves before those
+two reads settle finishes; vitest tears the environment down; the reads land; React reaches for
+`window` on its way into `dispatchSetState`, and `window` is gone.
+
+In a browser this is invisible — React 19 drops an update to an unmounted tree without a word —
+which is exactly why it sat there. The runner is the only thing that makes it audible.
+
+**Not M322's bug, and not a flake.** M322 added two test files, which moved the scheduling of a
+430-file run enough to lose a race that had always been there. `launchedFile.test.tsx` names the
+same hazard in its own header, one layer up: *"a clock standing in for a condition… on a loaded CI
+runner they take longer than sixty milliseconds"*. It fixed its own wait and left the component
+writing into nothing.
+
+### The guard, where the awaits are
+
+Both answers first, then one write, then the check — rather than awaits as arguments, where there
+is nowhere to put a check. A ref rather than the effect-local flag, because three handlers call
+`refreshDemo` too: after loading the sample climber, after clearing it, and after an import. Every
+one of those is a tap that can be the last thing a climber does on the page.
+
+### The project had already solved this once
+
+A sweep for the shape — an `await` and then a `set…` in the same async body — found seven sites.
+Four are event handlers, where the page is still there because the climber just tapped something.
+One is not a component. The three that matter are mount effects, and one of them already carried
+the fix:
+
+```
+AttachPage.tsx:80   let live = true; … if (!live) return;   ← already guarded, deliberately
+AttachPage.tsx:50   refreshCounts                            ← missed
+SettingsPage.tsx    refreshDemo                              ← missed, and the one that fired
+```
+
+So this was not an unknown hazard. Somebody wrote the guard, wrote a paragraph about why, and the
+two places with the identical shape did not get it. Both have it now — with the ref rather than the
+flag at `refreshCounts`, because the upload handler calls it too.
+
+### A test that deletes `window`
+
+`afterUnmount.test.tsx` renders the page, unmounts it with the reads in flight, removes `window`
+and waits for them to land. Unmounting alone proves nothing: React drops the update in silence, so
+a page writing into the void looks identical to one that is not. The defect only has a symptom once
+the global is gone, so the global goes — which is precisely what the runner does between files.
+
+Checked the way every test in this file has to be checked: it **fails** with the guard removed and
+passes with it. The sleep is in `SLEEPS_ON_PURPOSE`, because the gap between an unmount and a
+database read landing is the thing under test.
+
+### What it does not prove
+
+The original race is timing-dependent and does not reproduce locally — three runs of
+`launchedFile.test.tsx` alone came back clean, as did two full-suite runs before the push. So the
+regression test holds the *mechanism*, not the schedule. If CI comes back green that is evidence
+and not proof, and the guard is what makes the schedule stop mattering.
+
+7,180 tests over 431 files, from 7,179. First load 128.10KB against 129.1, unchanged: nothing here
+reaches the entry chunk.

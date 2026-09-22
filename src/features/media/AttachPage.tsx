@@ -46,9 +46,27 @@ export function AttachPage() {
   const [landed, setLanded] = useState<Target | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * Still on screen (PLAN.md M323).
+   *
+   * The same guard the shared-photo effect below already carries, at the one
+   * place on this page that was missed: `refreshCounts` reads the database
+   * and then writes the answer into state, and a page unmounted in between
+   * writes into nothing. Harmless in a browser and fatal under a test runner,
+   * where the environment is gone by then and React reads `window` on its way
+   * into `dispatchSetState` — which is how CI went red at M322, on the
+   * identical shape in `SettingsPage`.
+   *
+   * A ref rather than the effect-local `live` flag used below, because the
+   * upload handler calls this too and an effect's flag does not reach it.
+   */
+  const onScreen = useRef(true);
+  useEffect(() => () => void (onScreen.current = false), []);
+
   const refreshCounts = useCallback(async () => {
     const owners = await mediaOwners();
-    setCounts(new Map([...owners].map(([owner, ids]) => [owner, ids.length])));
+    const next = new Map([...owners].map(([owner, ids]) => [owner, ids.length] as const));
+    if (onScreen.current) setCounts(next);
   }, []);
 
   useEffect(() => {
