@@ -31,6 +31,8 @@
  * only says "at most these" lets the next one through.
  */
 
+import { code } from './source';
+
 /**
  * Every hand-rolled sleep, by the shape all of them take.
  *
@@ -40,7 +42,8 @@
  * that could not fire, which the round-trip test below caught before the
  * sweep above could report a clean suite it had never looked at.
  */
-const SLEEP = /new Promise\([^;{}]*setTimeout\(/;
+const SLEEP =
+ /new Promise\([^;{}]*setTimeout\(/;
 
 export const SLEEPS_ON_PURPOSE: Record<string, string> = {
   'src/store/writes.test.ts':
@@ -57,19 +60,6 @@ export const SLEEPS_ON_PURPOSE: Record<string, string> = {
   'src/store/hydrating.test.ts':
     'proves a write does not happen, which is a chance to give rather than a condition to wait for',
 };
-
-/**
- * The file with its comments taken out.
- *
- * A milestone that fixes one of these writes down what it replaced, and the
- * first run of this rule reported the file that says
- * *"this was `new Promise((r) => setTimeout(r, 60))`"* as an offender. Prose
- * and a source scan is the fourth time that has been the finding; the
- * privacy sweep next door strips for the same reason.
- */
-function code(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
-}
 
 export interface SleepingFile {
   path: string;

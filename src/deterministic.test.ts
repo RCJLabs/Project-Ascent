@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { code } from '@/test/source';
 
 /**
  * The suite says the same thing on every day of the week (PLAN.md M179b).
@@ -57,8 +58,8 @@ const TESTS = walk('src')
 export function weekdayDependent(files: readonly { path: string; source: string }[]): string[] {
   return files
     .filter((f) => {
-      const code = f.source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/.*$/gm, ' ');
-      return /getUTCDay\(\)|getDay\(\)/.test(code) && /\btoday\(\)/.test(code);
+      const stripped = code(f.source);
+      return /getUTCDay\(\)|getDay\(\)/.test(stripped) && /\btoday\(\)/.test(stripped);
     })
     .map((f) => f.path)
     .sort();

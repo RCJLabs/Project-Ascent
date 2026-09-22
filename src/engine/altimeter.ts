@@ -141,10 +141,19 @@ export interface AltimeterState {
   laps: number;
 }
 
+/**
+ * Weeks of history the pace is measured over (PLAN.md M314).
+ *
+ * A constant rather than an option. It was an option with no caller: two
+ * tests passed it and both passed `8`, which is this, so the app has only
+ * ever measured pace one way and the parameter described a choice nobody
+ * makes. When a screen wants a different window it can take one back, with
+ * the caller that wants it.
+ */
+const PACE_WEEKS = 8;
+
 export interface AltimeterOptions {
   today?: string;
-  /** Weeks of history the pace is measured over. */
-  paceWeeks?: number;
 }
 
 export function deriveAltimeter(
@@ -152,7 +161,6 @@ export function deriveAltimeter(
   options: AltimeterOptions = {},
 ): AltimeterState {
   const today = options.today ?? todayKey();
-  const paceWeeks = options.paceWeeks ?? 8;
 
   let feet = 0;
   let recentFeet = 0;
@@ -164,7 +172,7 @@ export function deriveAltimeter(
     feet += height;
     if (firstDate === null || session.date < firstDate) firstDate = session.date;
     const age = daysBetween(session.date, today);
-    if (age >= 0 && age < paceWeeks * 7) recentFeet += height;
+    if (age >= 0 && age < PACE_WEEKS * 7) recentFeet += height;
   }
 
   feet = Math.round(feet);
@@ -182,7 +190,7 @@ export function deriveAltimeter(
   // they have really been doing.
   const weeksOfHistory =
     firstDate === null ? 0 : Math.max(1, (daysBetween(firstDate, today) + 1) / 7);
-  const window = Math.min(paceWeeks, weeksOfHistory);
+  const window = Math.min(PACE_WEEKS, weeksOfHistory);
   const pace = window === 0 ? 0 : recentFeet / window;
 
   const enoughHistory = weeksOfHistory >= 3 && pace > 0;

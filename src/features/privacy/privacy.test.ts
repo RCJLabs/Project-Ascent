@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { TEXT_SCALE, type TextSize } from '@/store/settings';
+import { bare, code } from '@/test/source';
 
 /**
  * The privacy page's claims, held by the source rather than by the page
@@ -41,15 +42,6 @@ function sourceFiles(dir = SRC): string[] {
  * sentence *"the catalogue is fetched, not imported"*. A parser would be more
  * correct and would not change a single answer here.
  */
-function code(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ')
-    .replace(/'(?:[^'\\\n]|\\.)*'/g, "''")
-    .replace(/"(?:[^"\\\n]|\\.)*"/g, '""')
-    .replace(/`(?:[^`\\]|\\.)*`/g, '``');
-}
-
 const FILES = sourceFiles();
 
 /**
@@ -68,13 +60,13 @@ const FILES_FOR_STALENESS = [
   'vite.config.ts',
   'package.json',
 ];
-const CODE = FILES.map((path) => ({ path, text: code(readFileSync(path, 'utf8')) }));
+const CODE = FILES.map((path) => ({ path, text: bare(readFileSync(path, 'utf8')) }));
 
 /**
  * The one file excluded from the *name* sweep below, and only from that one.
  *
  * The privacy page says "no analytics" in its own prose, and JSX text is not
- * a string literal, so `code()` cannot strip it. It stays in the
+ * a string literal, so `bare()` cannot strip it. It stays in the
  * network-call sweep — a `fetch` added to the privacy page would be found —
  * and comes out of the sweep for names it exists in order to deny.
  */
@@ -113,7 +105,7 @@ describe('the app makes no network requests', () => {
   it('loads the catalogue with a dynamic import of its own code', () => {
     const registry = readFileSync('src/content/programs/index.ts', 'utf8');
     expect(registry).toMatch(/import\('\.\/catalogue'\)/);
-    expect(code(registry)).not.toMatch(/\bfetch\s*\(/);
+    expect(bare(registry)).not.toMatch(/\bfetch\s*\(/);
   });
 });
 
@@ -129,7 +121,7 @@ describe('and no third party is watching', () => {
     ['Amplitude', /\bamplitude\b/i],
   ])('names no %s in code', (name, pattern) => {
     // `engine/progress.ts` opens with "Progress analytics (PLAN.md §5.9)" —
-    // in a comment, which `code()` strips. That is the whole reason this
+    // in a comment, which `bare()` strips. That is the whole reason this
     // reads code rather than text.
     expect(mentioning(pattern, [THE_PAGE]), `${name} appears in code`).toEqual([]);
   });
@@ -254,17 +246,15 @@ describe('the workflow that ships it', () => {
    * anywhere in `layout.mjs`, and the docblock explaining the flag says it
    * in prose — so the mutant that deleted every unseeded size from the list
    * survived, held up by the comment describing them. That is the shape
-   * this file's own `code()` exists for, one directory over.
+   * this file's own sweep exists for, one directory over.
    *
-   * Not that `code()`: it strips string literals too, which is right for
+   * Not `bare()`: that strips string literals too, which is right for
    * asking whether `fetch` is called and wrong for asking whether a size
-   * says `pointer: 'mouse'`. Comments only, for a claim about what the
-   * harness is configured with rather than about what it calls.
+   * says `pointer: 'mouse'`. `code()` is comments only, for a claim about
+   * what the harness is configured with rather than about what it calls —
+   * the same pair, from the one place that has them (PLAN.md M314).
    */
-  const configOf = (path: string): string =>
-    readFileSync(path, 'utf8')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/(^|[^:])\/\/.*$/gm, '$1');
+  const configOf = (path: string): string => code(readFileSync(path, 'utf8'));
 
   it('builds before it tests, so the checks above are not all skipped', () => {
     const steps = readFileSync(WORKFLOW, 'utf8')

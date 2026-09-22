@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { code } from '@/test/source';
 
 /**
  * Nothing is built and left unreachable (PLAN.md M26).
@@ -175,13 +176,14 @@ const SCREENS = SOURCES.filter((f) => {
  * And the comments come off first, or the check passes on its own
  * documentation: this file's *"`Protocol.safety` got past it"* is a
  * property access as far as a regex is concerned, and so is every doc
- * comment that names the field it is about. Stripping is deliberately
- * crude — a URL inside a string loses its tail — because the error it can
- * make is a **missing** read, which fails loudly, rather than an invented
- * one, which is the failure this whole block exists to stop.
+ * comment that names the field it is about. This was its own stripper and
+ * argued for being crude — a URL inside a string lost its tail, which can
+ * only *lose* a read, and a missing read fails loudly where an invented one
+ * passes quietly. True, and an argument for tolerating the crudeness rather
+ * than for keeping it: `code` fails in the same safe direction and loses
+ * nothing (PLAN.md M314).
  */
-const stripComments = (source: string): string =>
-  source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/.*$/gm, ' ');
+const stripComments = code;
 
 /** Whether a file's source actually reads `name` off something. */
 export function reads(source: string, name: string): boolean {
@@ -456,8 +458,7 @@ describe('every engine interface field is read', () => {
    * `injuryLog.ts` reads `history.elapsed` inside one, and the first draft
    * of this rule called that field dead.
    */
-  const code = (source: string): string =>
-    source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
+  // `code` and not `bare`: comments out, string literals left alone.
 
   const CORPUS = walk('src')
     .filter((p) => /\.tsx?$/.test(p))

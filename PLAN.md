@@ -14930,6 +14930,16 @@ its label is missing. None of these wants touching.
   come from one table with their burns, so *sent* and *the burns behind it* cannot disagree. Four
   sends, three of them at one grade, so the page draws its solid row and its thin one at once.
 
+- **M314 — three options nobody passed, and the sweep that found the third.** M307a's seventh
+  finding named `paceWeeks` and `untilTick` as parameters nothing varies. A sweep over all 133
+  optional fields on the engine's options interfaces found a third the audit had missed, and it was
+  the one that mattered: `icsCalendar`'s `sequence`, whose docblock promises *"bumped when a
+  re-export should supersede what is already in there"* and which nothing ever passed — so every
+  calendar this app has written says `SEQUENCE:0`, against stable UIDs, while the export card on
+  screen promises *"exporting again after changing the plan updates the same events."* The other
+  two were smaller and different from each other: `paceWeeks` was a choice nobody makes, and
+  `untilTick` was the seam where `replayRun` had been written as a second copy of `advanceGhost`.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -21848,3 +21858,125 @@ raise an eyebrow at the first two.
 
 One week off in two years is also thinner than it was in one. `awayFor` writes exactly one period,
 deliberately, and M305's argument for that has not changed — but the ratio has.
+
+---
+
+## M314 — a parameter is a claim that somebody chooses
+
+M307a's last finding: *"`deriveAltimeter`'s `paceWeeks` has two callers, both tests, both passing
+the default. A parameter that is not one."*
+
+True, and the interesting part is what a sweep for the same shape turned up. Of 133 optional fields
+on the engine's `*Options` and `*Input` interfaces, **three** are passed by no production caller:
+
+| field | what it was | what it is now |
+| --- | --- | --- |
+| `AltimeterOptions.paceWeeks` | two test callers, both passing `8` | `const PACE_WEEKS = 8` |
+| `ReplayOptions.untilTick` | the seam of a duplicated loop | gone; `replayRun` *is* a ghost |
+| `CalendarOptions.sequence` | a promise nothing kept | computed on every export |
+
+The audit named the first two and they are the small ones. The third is the one with a user on the
+other end of it.
+
+### The calendar that could not supersede itself
+
+`icsCalendar` took a `sequence`, documented as *"bumped when a re-export should supersede what is
+already in there"*, and no caller anywhere passed it — so it defaulted to `0`, every time, on every
+calendar this app has ever written.
+
+The UIDs are stable by design: `${date}-${program.id}@project-ascent`, precisely so re-exporting
+updates the events rather than doubling them. And the export card says so on screen —
+
+> Exporting again after changing the plan updates the same events rather than adding a second copy
+> of them.
+
+A client receiving the same UID at the same `SEQUENCE` is entitled to treat the second copy as not
+newer and keep the first. So the promise on screen rested on a field that was declared, documented,
+and never once set. Move a session, export again, and the calendar may still show the old day.
+
+**May**, not will: clients differ, and several replace on UID regardless of sequence. I cannot test
+Apple or Google Calendar from here, and the honest claim is that the file no longer depends on
+their generosity. It carries minutes-since-the-epoch now — monotonic without storing a counter,
+derived from the same stamp the tests inject so nothing is at the mercy of the clock, and four
+orders of magnitude below the 32-bit ceiling some clients hold it to.
+
+Exported from the running app, on the sample climber:
+
+```
+events      27
+UID (first) 2026-09-23-iron_grip@project-ascent
+SEQUENCE    29834039        (was 0, on every export ever made)
+```
+
+### The loop that was written twice
+
+`replayRun` carried its own tick loop and an `untilTick` option to stop it early. `advanceGhost`
+carried the same loop, character for character apart from the receiver — and a test held the two to
+the same answer, which is the tell. A pair of implementations that need checking against each other
+is a pair. The option existed so the check could be written, not because anything called it.
+
+```ts
+export function replayRun(tape: Tape): RunState {
+  const ghost = createGhost(tape);
+  advanceGhost(ghost, tape.ticks);
+  return ghost.state;
+}
+```
+
+The test that compared them would now be a call against itself, so it asks something real instead:
+half a tape is short of the whole of it, and a ghost taken there in two goes lands where one taken
+straight to the end does.
+
+### Seven strippers, and the fifth time the same finding
+
+The sweep needed to read source as source — a sentence *about* a field matches a search *for* it —
+and the tree already had **seven** implementations of that across six files. `waiting.ts` says so
+in its own docblock, calling it *"the fourth time that has been the finding"*.
+
+They had also drifted into two camps, and one camp was wrong: three used `/\/\/.*$/gm`, which takes
+the `//` out of `https://ascent.rcjlabs.com` and everything after it, so any rule reading that line
+was reading a fragment. The other four guard the colon.
+
+`src/test/source.ts` has one of each, because the *other* difference between them is deliberate and
+argued in `wired.test.ts`: `code()` leaves string literals alone, since a template literal carries
+real expressions and blanking it deletes reads; `bare()` blanks them, since `privacy.test.ts` hunts
+`fetch(` and needs the word in a URL and an error message to stop counting. Six files read through
+those two now.
+
+One of the seven argued for being crude on the grounds that its failure mode is loud — a missing
+read fails, an invented one passes quietly. Sound, and an argument for tolerating the crudeness
+rather than for keeping it: the guarded form fails in the same direction and loses nothing.
+
+### What the battery had to correct
+
+Three survivors, all of them tests of mine that could not fail:
+
+- Putting the naive stripper back broke nothing, because no scanned file happens to carry a URL on
+  a line a rule cares about **today**. A shared helper's behaviour is its own subject, so
+  `source.test.ts` tests it directly.
+- My escaped-quote test needed the call to sit *between* two literals. With one literal after the
+  escape there is no closing quote to pair with, so the naive pattern leaves the call standing by
+  luck:
+
+  ```
+  source  const a = 'it\'s'; fetch(url); const b = 'x';
+  naive   const a = ''s''x';
+  this    const a = ''; fetch(url); const b = '';
+  ```
+
+- And renaming a local in `deterministic.test.ts` while migrating it produced
+  `/getUTCDay\(\)/.test(code)` — a regex tested against a *function*. `tsc` caught that one, which
+  is the only reason it is a footnote rather than a milestone.
+
+Battery: 11 killed, sanity survived.
+
+7,093 tests over 421 files, from 7,077. Ten pinned days green. Layout harness OK. First load
+137.00KB against 137.3, down 0.03 — `paceWeeks` and `untilTick` came out of the bundle with their
+branches.
+
+### Noted, not fixed
+
+`CalendarOptions.stamp` has no production caller either and is the one legitimate case: it is a
+test seam, labelled as one, and the sweep carries it with that reason rather than silently. The
+rule is that a field either has a caller or says why not — a marker that tells a decision from an
+omission, which is M169's argument about `retired` applied one layer over.

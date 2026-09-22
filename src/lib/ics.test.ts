@@ -217,3 +217,34 @@ describe('a whole schedule', () => {
     expect(empty).toContain('END:VCALENDAR');
   });
 });
+
+/**
+ * A re-export that supersedes the last one (PLAN.md M314).
+ *
+ * The UIDs are stable on purpose — re-exporting updates the same events
+ * rather than doubling them — and `SEQUENCE` is what tells a client the
+ * second copy is the newer one. It was an option nothing passed, so every
+ * calendar this app has ever written said `SEQUENCE:0`, and a client is
+ * entitled to keep the first copy it saw.
+ */
+describe('the sequence number', () => {
+  const at = (iso: string) => icsCalendar([event({})], { name: 'Training', stamp: new Date(iso) });
+  const seqOf = (file: string) => Number(/SEQUENCE:(\d+)/.exec(file)![1]);
+
+  it('is on every event', () => {
+    const file = icsCalendar([event({}), event({ uid: 'u2@project-ascent' })], { name: 'Training' });
+    expect((file.match(/SEQUENCE:/g) ?? []).length).toBe(2);
+  });
+
+  it('climbs between one export and a later one', () => {
+    expect(seqOf(at('2026-09-22T10:00:00Z'))).toBeLessThan(seqOf(at('2026-09-22T11:00:00Z')));
+  });
+
+  it('is the same number for the same moment, so a test is not at the mercy of the clock', () => {
+    expect(seqOf(at('2026-09-22T10:00:00Z'))).toBe(seqOf(at('2026-09-22T10:00:00Z')));
+  });
+
+  it('is not zero, which is what it was for every calendar written before this', () => {
+    expect(seqOf(at('2026-09-22T10:00:00Z'))).toBeGreaterThan(0);
+  });
+});

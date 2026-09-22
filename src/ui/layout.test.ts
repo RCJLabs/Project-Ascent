@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { code } from '@/test/source';
 
 /**
  * M17's "done when", made executable.
@@ -106,7 +107,7 @@ describe('the nav stays where it is put', () => {
    * explain, so a rule reading raw text was satisfied by its own
    * explanation: deleting `min-h-0` from the className left the rule green.
    */
-  const CODE = SHELL.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/.*$/gm, ' ');
+  const CODE = code(SHELL);
   const element = (tag: string) => CODE.slice(CODE.indexOf(`<${tag}`), CODE.indexOf(`</${tag}>`));
   /** Every class token written inside one element, in any kind of quote. */
   const classes = (tag: string) =>

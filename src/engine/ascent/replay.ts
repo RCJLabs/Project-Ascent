@@ -242,28 +242,28 @@ function clampInput(value: number): Input {
   return value > 0 ? 1 : value < 0 ? -1 : 0;
 }
 
-export interface ReplayOptions {
-  /** Stop early, for a ghost that only needs to be as far as the live run. */
-  untilTick?: number;
-}
-
 /**
  * Play a tape back, one tick at a time.
  *
  * `step(state, TICK_MS)` simulates exactly one tick — the accumulator takes
  * the whole of it — so driving the replay this way is what makes the tick
  * index in the tape mean what it meant when it was written.
+ *
+ * ## A ghost run to the end (PLAN.md M314)
+ *
+ * This used to carry the loop itself, and an `untilTick` option to stop it
+ * early — which made it `advanceGhost` written a second time, character for
+ * character apart from the receiver, with a test holding the two to the
+ * same answer. That test is the tell: a pair of implementations that need
+ * checking against each other is a pair, and the option existed so the
+ * check could be written rather than because anything called it.
+ *
+ * So the ghost is the one loop and this is the whole tape's worth of it.
  */
-export function replayRun(tape: Tape, options: ReplayOptions = {}): RunState {
-  const state = createRun({ seed: tape.seed, mode: tape.mode, modifiers: tape.modifiers });
-  const last = Math.min(tape.ticks, options.untilTick ?? tape.ticks);
-  let cursor = 0;
-  while (state.ticks < last && !state.over) {
-    const found = inputAt(tape, state.ticks, cursor);
-    cursor = found.cursor;
-    step(state, TICK_MS, found.input);
-  }
-  return state;
+export function replayRun(tape: Tape): RunState {
+  const ghost = createGhost(tape);
+  advanceGhost(ghost, tape.ticks);
+  return ghost.state;
 }
 
 /**

@@ -100,7 +100,7 @@ describe('deriveAltimeter', () => {
     const recent = [1, 8, 15, 22].map((back) =>
       session(addDays(TODAY, -back), [{ grade: 'V4', count: 20 }]),
     );
-    const a = deriveAltimeter([old, ...recent], { today: TODAY, paceWeeks: 8 });
+    const a = deriveAltimeter([old, ...recent], { today: TODAY });
     // 4 × 300 ft inside the window, over eight weeks.
     expect(a.pace).toBe(150);
   });
@@ -109,7 +109,7 @@ describe('deriveAltimeter', () => {
     // Eight days of history, 600 ft in it. Averaging over the full eight-week
     // window would report 75 ft/week for someone climbing seven times that.
     const sessions = [0, 7].map((back) => session(addDays(TODAY, -back), [{ grade: 'V4', count: 20 }]));
-    const a = deriveAltimeter(sessions, { today: TODAY, paceWeeks: 8 });
+    const a = deriveAltimeter(sessions, { today: TODAY });
     expect(a.pace).toBe(Math.round(600 / (8 / 7)));
     expect(a.pace).toBeGreaterThan(500);
     // And a rate this noisy is exactly why the projection stays withheld.

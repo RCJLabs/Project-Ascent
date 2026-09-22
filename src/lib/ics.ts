@@ -107,8 +107,6 @@ export interface IcsEvent {
 export interface CalendarOptions {
   /** Shown as the calendar's name by clients that read X-WR-CALNAME. */
   name: string;
-  /** Bumped when a re-export should supersede what is already in there. */
-  sequence?: number;
   /** Injectable so a test is not at the mercy of the clock. */
   stamp?: Date;
 }
@@ -163,8 +161,26 @@ function addDaysKey(key: string, days: number): string {
 }
 
 export function icsCalendar(events: readonly IcsEvent[], options: CalendarOptions): string {
-  const stamp = utcStamp(options.stamp ?? new Date());
-  const sequence = options.sequence ?? 0;
+  const at = options.stamp ?? new Date();
+  const stamp = utcStamp(at);
+  /**
+   * Bumped on every export, so a re-export supersedes what is already in
+   * there (PLAN.md M314).
+   *
+   * This was an option promising exactly that and nothing ever passed it,
+   * so every calendar this app has written carries `SEQUENCE:0`. The UIDs
+   * are stable by design — `${date}-${program.id}@project-ascent`, so that
+   * re-exporting updates the same events rather than doubling them — and a
+   * client is entitled to treat a second copy at the same sequence as not
+   * newer and keep the old one. Move a session and re-export, and the
+   * calendar may still show the old day.
+   *
+   * Minutes since the epoch: monotonic without storing anything, deterministic
+   * from the stamp so a test is not at the mercy of the clock either, and
+   * nowhere near the 32-bit ceiling some clients hold it to. Bumping when
+   * nothing changed costs nothing — equal-or-higher reads as current.
+   */
+  const sequence = Math.floor(at.getTime() / 60_000);
 
   const lines: string[] = [
     'BEGIN:VCALENDAR',

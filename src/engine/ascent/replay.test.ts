@@ -223,13 +223,27 @@ describe('a ghost beside a live run', () => {
     expect(metres(ghost.state)).toBe(metres(replayRun(tape)));
   });
 
+  /**
+   * Stopping short and carrying on from there (PLAN.md M314).
+   *
+   * This compared a ghost at half a tape with `replayRun(tape, { untilTick:
+   * half })` — two implementations of the same loop, held to the same
+   * answer by a test. `replayRun` is the ghost run to the end now, so that
+   * comparison would be a call against itself. What is worth holding is
+   * that stopping is real and resuming is seamless: half a tape is short of
+   * the whole of it, and a ghost taken there in two goes lands where one
+   * taken straight to the end does.
+   */
   it('is wherever the tape had reached at that tick', () => {
     const { tape } = playAndRecord(4242, 16, weave);
     const half = Math.floor(tape.ticks / 2);
     const ghost = createGhost(tape);
     advanceGhost(ghost, half);
     expect(ghost.state.ticks).toBe(half);
-    expect(metres(ghost.state)).toBe(metres(replayRun(tape, { untilTick: half })));
+    expect(metres(ghost.state)).toBeLessThan(metres(replayRun(tape)));
+
+    advanceGhost(ghost, tape.ticks);
+    expect(metres(ghost.state)).toBe(metres(replayRun(tape)));
   });
 
   it('stops at the end of the tape rather than climbing on', () => {
