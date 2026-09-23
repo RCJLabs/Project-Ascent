@@ -22,7 +22,7 @@ jobs:
     outputs:
       entry: ${{ steps.entry.outputs.name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # The whole history, not the one commit a checkout takes by
           # default (PLAN.md M315a). `indexFresh.test.ts` regenerates
@@ -31,7 +31,7 @@ jobs:
           # committed one had 305, and the first red CI of this audit was a
           # test reporting the checkout rather than the tree.
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -75,9 +75,15 @@ jobs:
           name=$(grep -oP 'assets/\Kindex-[A-Za-z0-9_-]+\.js' dist/index.html | head -1)
           if [ -z "$name" ]; then echo "no entry chunk in dist/index.html"; exit 1; fi
           echo "name=$name" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-pages-artifact@v3
+      # v5, and hidden files in (PLAN.md M329). From v4 the action leaves out
+      # every name starting with a dot unless told otherwise, and `dist/` has
+      # one: `.well-known/assetlinks.json`, the file Android reads to let the
+      # Play Store app open without a URL bar. A plain version bump would
+      # have deployed green without it.
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
+          include-hidden-files: true
 
   # The same suite, as other days (PLAN.md M299).
   #
@@ -98,7 +104,7 @@ jobs:
     outputs:
       list: ${{ steps.pick.outputs.list }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: pick
         run: echo "list=$(node scripts/dates.mjs --list)" >> "$GITHUB_OUTPUT"
 
@@ -113,8 +119,8 @@ jobs:
         day: ${{ fromJSON(needs.days.outputs.list) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -131,7 +137,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
   # The app that is actually being served (PLAN.md M300).
   #
@@ -148,10 +154,15 @@ jobs:
     needs: [build, deploy]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
+          # From v5 the action caches npm by default when nothing says
+          # otherwise. This job installs one package with `--no-save` and has
+          # nothing worth caching, and it runs with Pages write access —
+          # which is where the action's own README advises turning it off.
+          package-manager-cache: false
       # No `npm ci`: the script needs a browser and nothing else the
       # manifest carries, and `--no-save` keeps it out of the manifest for
       # the reason `scripts/layout.mjs` gives.

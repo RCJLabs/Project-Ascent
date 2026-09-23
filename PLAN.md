@@ -15079,6 +15079,13 @@ its label is missing. None of these wants touching.
   and names what arrived on the boot path, what grew and what left. The budget and its measure moved
   to `scripts/firstLoad.mjs`, shared with the test, and the tool reproduces the totals M325, M326 and
   M327 recorded by hand.
+- **M329 — the Node 20 actions, and the file a version bump would have dropped.** Every CI run
+  warned that `checkout`, `setup-node` and `deploy-pages` at v4 target Node 20, which GitHub has
+  deprecated and now forces onto Node 24. They move to their current majors (v7, v7, v5), and
+  `upload-pages-artifact` to v5 — which leaves out every dot-named path unless told otherwise, so
+  `include-hidden-files: true` keeps `.well-known/assetlinks.json` on the site. Its v4 had no way to
+  keep it at all. The workflow test now requires both, and the post-deploy check fetches the file
+  from the live site.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -23585,3 +23592,64 @@ Battery: twenty mutants and a sanity check; three survived the first run — one
 changed nothing, nested dependency paths and a span inside another, both now tested. 7,326 tests
 over 437 files, from 7,309. No app code changed, so the layout harness and the date matrix had
 nothing new to see; CI runs the matrix on the push.
+
+## M329 — the Node 20 actions, and the file a version bump would have dropped
+
+Every run of the deploy workflow carried the same annotation, on every job: *"Node.js 20 is
+deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24:
+actions/checkout@v4, actions/setup-node@v4"* — and `actions/deploy-pages@v4` on the deploy job. Read
+off the latest run's annotations rather than remembered, along with one notice this did not act on
+(below).
+
+### What each action's current major changes
+
+Read from each action's own `action.yml` and changelog at the new tag, not from its version number:
+
+| Action | Was | Now | What changed that matters here |
+|---|---|---|---|
+| `checkout` | v4 | v7 | Node 24 from v5. v6 keeps credentials in a separate file, v7 refuses fork PR checkouts under `pull_request_target`. Neither touches a push-triggered build with `fetch-depth: 0`. |
+| `setup-node` | v4 | v7 | Node 24 from v5. **v5 caches npm by default** when no `cache` input is given; v6 dropped `always-auth`. |
+| `deploy-pages` | v4 | v5 | Node 24, and status polling with backoff. Same inputs and outputs. |
+| `upload-pages-artifact` | v3 | v5 | **From v4 the archive excludes every path starting with a dot**; v4 had no way to include them, and v5 added `include-hidden-files`. v5 wraps `upload-artifact` v7, on Node 24; v4 wrapped v4.6.2, still on Node 20. |
+
+### The one that would have broken the Play Store app
+
+`dist/` has exactly one dot-named path: `.well-known/assetlinks.json`, the Digital Asset Links file
+Android fetches before it lets the TWA open without a URL bar (M12). A plain bump of the upload
+action would have archived `dist/` without it, and the deploy would have gone green: every check
+before the upload reads `dist/`, which still has the file. The first sign would have been a URL bar
+on a phone.
+
+- **`include-hidden-files: true`** on the upload.
+- **The workflow test** requires it, and refuses v4 outright, which cannot be told.
+- **The live check fetches the file** from the deployed site, after the deploy — the only place the
+  loss can be seen. Checked against two local previews: with the file it reads *"assetlinks.json:
+  served"*; with `.well-known` removed, the preview's fallback answers with the app shell and the
+  check says *"assetlinks.json is missing — the app shell was served in its place"*. The sandbox
+  cannot reach the production domain, so CI is the first run against it.
+
+### The rest
+
+- **`package-manager-cache: false` on the live job**, which installs one package with `--no-save`
+  and runs with Pages write access — where setup-node's own README advises turning the new default
+  off. The build and date jobs already asked for `cache: npm` and are unchanged.
+- **A test pins each action's major from below**, at the first one off Node 20, so a revert is a
+  failure rather than a warning nobody reads.
+
+### What I got wrong
+
+- **My first table said `upload-pages-artifact` left Node 20 at v4.** Its v4.0.0 pins
+  `upload-artifact` v4.6.2, on Node 20, and has no `include-hidden-files` input — so a v4 would have
+  kept the warning *and* dropped the file with no way to keep it. Caught by reading v4's
+  `action.yml` before committing to the comment that claimed otherwise.
+
+### Measured and left
+
+- **`ubuntu-latest` moves to Ubuntu 26 from October 19, 2026**, per a notice on the same run. The
+  layout and live jobs run `playwright-core install --with-deps chromium`, which installs system
+  packages by name — the step most likely to notice a new distribution. Not pinned: pinning
+  `ubuntu-24.04` trades a surprise for a chore, and which is better is the climber's call.
+
+Battery: eight mutants and a sanity check, all killed — a revert of any action, the hidden-files
+setting off or unset, v4, and the live check pointed elsewhere. 7,328 tests over 437 files, from
+7,326.

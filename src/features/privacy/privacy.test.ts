@@ -294,6 +294,58 @@ describe('the workflow that ships it', () => {
   });
 
   /**
+   * And ships the one file whose name starts with a dot (PLAN.md M329).
+   *
+   * `upload-pages-artifact` has left out every dot-named path since v4 —
+   * which had no way to put them back — and from v5 only
+   * `include-hidden-files` does. `public/.well-known/` is the directory
+   * Android reads before letting the Play Store app open without a URL bar.
+   * Bumping the action for GitHub's Node 20 deprecation would have deployed
+   * green without it; the setting is the fix and this is what keeps it.
+   */
+  it('ships the hidden directory the Play Store app reads', () => {
+    const workflow = configOf(WORKFLOW);
+    const upload = workflow.slice(workflow.indexOf('upload-pages-artifact@'));
+    const major = Number(/upload-pages-artifact@v(\d+)/.exec(upload)?.[1]);
+    expect(existsSync('public/.well-known/assetlinks.json'), 'nothing hidden to ship').toBe(true);
+    expect(major, 'v4 drops dot-named paths and cannot be told not to').not.toBe(4);
+    if (major >= 5) {
+      expect(upload.slice(0, 200), 'the upload drops .well-known').toMatch(/include-hidden-files:\s*true/);
+    }
+    // And the live check looks for it, since the upload is the step that can
+    // lose it and every check before the upload reads `dist/`, which has it.
+    expect(configOf('scripts/live.mjs')).toMatch(/\.well-known\/assetlinks\.json/);
+  });
+
+  /**
+   * And runs every action on a runtime GitHub still supports (PLAN.md M329).
+   *
+   * The majors at which each moved off Node 20, which GitHub deprecated and
+   * began forcing onto Node 24 — every run carried the warning until this.
+   * Pinned from below, so a revert to v4 is a failure here rather than a
+   * warning nobody reads.
+   */
+  it('uses no action major that still targets Node 20', () => {
+    const FIRST_ON_NODE_24: Record<string, number> = {
+      'actions/checkout': 5,
+      'actions/setup-node': 5,
+      'actions/deploy-pages': 5,
+      // A composite action, so its runtime is the `upload-artifact` it wraps:
+      // v4 wraps one still on Node 20, and v5 is the first that does not.
+      'actions/upload-pages-artifact': 5,
+    };
+    const used = [...configOf(WORKFLOW).matchAll(/uses:\s*(actions\/[\w-]+)@v(\d+)/g)].map((m) => ({
+      action: m[1]!,
+      major: Number(m[2]),
+    }));
+    expect(used.length, 'the pattern read no actions').toBeGreaterThanOrEqual(8);
+    for (const { action, major } of used) {
+      expect(FIRST_ON_NODE_24[action], `${action} is not in the table`).toBeDefined();
+      expect(major, `${action}@v${major} targets Node 20`).toBeGreaterThanOrEqual(FIRST_ON_NODE_24[action]!);
+    }
+  });
+
+  /**
    * And runs the suite as days other than today (PLAN.md M299).
    *
    * `today()` reads the clock and a quarter of the test files build their

@@ -18,6 +18,11 @@
  * 3. **Does the service worker register?** It is what makes the app work on
  *    a phone in a gym basement, and nothing else in CI has ever exercised
  *    it.
+ * 4. **Is `/.well-known/assetlinks.json` there, as JSON?** (PLAN.md M329.)
+ *    The file Android reads before letting the Play Store app open without
+ *    a URL bar. The Pages upload drops every dot-named path unless told
+ *    not to, so this is the one file a green deploy can lose without
+ *    anything else noticing.
  *
  * It gates nothing, by construction: it runs after the deploy, so a failure
  * is a report rather than a block. That is the right blast radius for a
@@ -81,12 +86,28 @@ try {
 }
 console.log(`serving: ${ENTRY ? `${ENTRY} ✓` : 'answered'}`);
 
+const problems = [];
+
+// A statement list — the file is `[]` until the app is signed, and an empty
+// list is an honest one. What must not happen is a 404, or the app shell
+// served in its place.
+try {
+  const links = await fetch(new URL(`.well-known/assetlinks.json?live=${Date.now()}`, URL_), { cache: 'no-store' });
+  const body = await links.text();
+  if (!links.ok) problems.push(`assetlinks.json is ${links.status} ${links.statusText}`);
+  // What the file's absence looks like behind a fallback: a 200, and the page.
+  else if (body.trimStart().startsWith('<')) problems.push('assetlinks.json is missing — the app shell was served in its place');
+  else if (!Array.isArray(JSON.parse(body))) problems.push('assetlinks.json is not a statement list');
+  else console.log('assetlinks.json: served');
+} catch (e) {
+  problems.push(`assetlinks.json did not parse: ${e instanceof Error ? e.message : String(e)}`);
+}
+
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT ?? 'playwright-core');
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM ?? undefined });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 
-const problems = [];
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 
