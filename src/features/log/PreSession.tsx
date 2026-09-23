@@ -128,7 +128,15 @@ export function useStartSession(date: string): DayPlan {
   // warning: after the session it is a verdict on something already
   // climbed.
   const hurt = useMemo(() => concerning(injuryPolicy(injuries)), [injuries]);
-  const loadNote = useMemo(() => (day ? describeDayLoad(dayLoad(day, hurt)) : null), [day, hurt]);
+  const loadNote = useMemo(() => {
+    if (!day) return null;
+    const load = dayLoad(day, hurt);
+    const note = describeDayLoad(load);
+    // Only the exercises and the drill are marked in the session; the
+    // climbing itself has no line to mark (PLAN.md M327).
+    const marked = load.conflicts.some((c) => c.kind !== 'climbing');
+    return note === null ? null : marked ? `${note}. Each one is marked in the session` : note;
+  }, [day, hurt]);
 
   /**
    * The rest day's drill (PLAN.md M164).
@@ -347,7 +355,7 @@ export function PreSessionCard({ date, onOpen }: { date: string; onOpen?: () => 
       {loadNote !== null && (
         <p className="text-warn text-xs mb-3 flex items-start gap-1.5">
           <AlertTriangle size={13} className="shrink-0 mt-0.5" />
-          <span>{loadNote}. Each one is marked in the session.</span>
+          <span>{loadNote}.</span>
         </p>
       )}
 

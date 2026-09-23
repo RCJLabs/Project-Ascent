@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { Session } from '@/db/sessions';
 import { partsInText } from './bodyLoad';
 import { addDays } from './dates';
+import { CLIMBING_PARTS } from './climbing';
 import {
   ALL_PARTS,
-  CLIMBING_PARTS,
   TISSUE_DAYS,
   describeTissue,
   quietestLoaded,

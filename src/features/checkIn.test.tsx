@@ -180,3 +180,55 @@ describe('what the answer changes', () => {
     expect(await screen.findByText(/Leave the fingerboard/)).toBeTruthy();
   });
 });
+
+/**
+ * The day that was missing from the three above (PLAN.md M327): a climbing
+ * session, which prescribes no exercises. The check-in used to read it as
+ * loading nothing and answered sore fingers with *"Train, with changes."*
+ * and no change at all.
+ */
+describe('beyond what the day prescribes', () => {
+  it('answers sore fingers the way it does on a finger day', async () => {
+    await reset();
+    await putSession({
+      ...newSession(DATE, 0, { completed: false }),
+      programId: 'iron_grip',
+      sessionTypeId: 'perf',
+      checkIn: { fingers: 'sore', sleep: 'good' },
+    } as never);
+    await hydrate();
+    useProfile.setState({
+      activeProgramId: 'iron_grip',
+      startDates: { iron_grip: startOfWeek(DATE) },
+      plans: { iron_grip: { [dayOfWeek(DATE)]: 'perf' } },
+      weekOverrides: {},
+      adaptations: {},
+      injuries: [],
+    });
+    fullLog();
+    renderAt('/', <DayBody date={DATE} />);
+    expect(await screen.findByText(/Leave the fingerboard/)).toBeTruthy();
+    expect(screen.getByText(/will not tell you to push through/)).toBeTruthy();
+  });
+
+  // The same reading `tissueLoad` gives the session afterwards: a day that
+  // was not planned as climbing, with climbs logged on it, climbed.
+  it('counts climbs logged on a day that was not a climbing day', async () => {
+    await logging(NO_FINGER_DAY, {
+      patch: {
+        checkIn: { fingers: 'sore', sleep: 'good' },
+        climbs: [{ id: 'c1', grade: 'V3', scale: 'V', count: 4, result: 'send' }],
+      },
+    });
+    expect(await screen.findByText(/Leave the fingerboard/)).toBeTruthy();
+  });
+
+  // And the drill the session carries, which the check-in had never been
+  // told about: a hangboard retest on a mobility day is finger work.
+  it('counts the drill the session carries', async () => {
+    await logging(NO_FINGER_DAY, {
+      patch: { checkIn: { fingers: 'sore', sleep: 'good' }, drillId: 'graduation_retest_fingers' },
+    });
+    expect(await screen.findByText(/Leave the fingerboard/)).toBeTruthy();
+  });
+});

@@ -15065,6 +15065,13 @@ its label is missing. None of these wants touching.
   *Compression*, the `t` of *Don't* as a T-raise, *a slow arc* as ARC), negations (*"No hangboard
   this week"*), and Iron Grip's no-board *Foot-On Laddering* flagged as campus — which now has a
   `contact` rule of its own. Two old tests had pinned the accidents as features.
+- **M327 — a climbing day told an injured climber nothing.** The day card's load warning read a
+  day's prescribed exercises and its drill, and a climbing session prescribes neither: across the
+  catalogue's 308 climbing session-weeks it was silent to a finger injury on 224, an elbow on 255, a
+  shoulder on 261. The check-in was worse — it thought such a day loaded nothing, so *sore fingers*
+  on the way into limit bouldering got *"Train, with changes."* and no change on 268 of them. Both
+  now count the climbing, with the four parts the body-load chart already counted for it: the
+  climber's call, made knowing a returning elbow is flagged on every climbing day.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -23440,3 +23447,72 @@ Battery: twenty-two mutants and a sanity check; one survived the first run — `
 words, which no catalogue text contains — and a climber's note that does now kills it. 7,292 tests
 over 436 files, from 7,256. Layout harness OK, the date matrix green on all ten days, first load
 128.71KB against 129.1.
+
+## M327 — a climbing day told an injured climber nothing
+
+M326 measured it and left it: `dayLoad` counts a day's prescribed exercises and its drill, and a
+climbing session type prescribes neither. Max Intensity Bouldering is burns, rests and a grade.
+`tissueLoad`, reading the same session afterwards, has always counted climbing against the fingers,
+the pulleys, the elbow and the shoulder by definition (`CLIMBING_PARTS`). So the app answered *what
+does a climbing session load* twice, and the silent answer was the one read before the session.
+
+### Measured
+
+Every climbing session type in the catalogue — the 27 that record climbing or happen on rock,
+across twelve of the thirteen programs (Ground Zero has none) — over its first twelve weeks: 308
+session-weeks.
+
+| Reported injury | Day card said nothing |
+|---|---|
+| Fingers | 224 of 308 |
+| Elbow | 255 |
+| Shoulder | 261 |
+
+Every Outdoor Climbing session was silent, and every one of Peak Performance's projecting days.
+
+**The check-in was the worse half.** It leaves out advice about a part the session does not load —
+*"leave the fingerboard alone"* on a legs day is a line that teaches people to stop reading — and it
+was told only the prescribed exercises. On a climbing day that is nothing, so a climber who answered
+*sore fingers* got *"Train, with changes."* and no change. The line *"Climb on jugs, or make it a
+movement session. Finger soreness is the one thing this app will not tell you to push through"* was
+withheld on 268 of the 308. Its own drill it had never been told about at all.
+
+### What changed
+
+- **`engine/climbing.ts`** holds `CLIMBING_PARTS` and `onTheWall`, which lived in `tissueLoad` and
+  the test-week planner and could not be reached from `bodyLoad` without a cycle. One answer each
+  now, three readers.
+- **`dayLoad` counts the climbing** on a climbing day, for any of the four parts, as a piece of the
+  day beside the exercises and the drill: *"Climbing loads your elbow."*, *"Climbing and the drill
+  load your fingers."* The card no longer says *"Each one is marked in the session"* when the only
+  piece is the climbing, which has no line to mark.
+- **The check-in is told what the session loads**: the prescription, the drill, and the climbing —
+  on a climbing day, or any session with climbs logged on it, which is `tissueLoad`'s own rule.
+- **All four parts, every climbing day** — the climber's decision, offered against fingers-only,
+  hard-days-only and check-in-only. The chart already said climbing loads the elbow and the
+  shoulder; the card saying otherwise would have been the disagreement this ends.
+
+### What I got wrong
+
+- **The first build was over budget**: 129.13KB against 129.1. The check-in's new function sat in
+  `bodyLoad`, which Home loads at boot, and only the logger asks it. Its own module now, fetched with
+  the logger: 129.08KB. **That is 0.02KB of headroom** — the next thing that reaches Home pays for
+  itself or raises the budget with a reason.
+- **Two mutants survived**: the logger passing the session's climbs and its drill to the check-in
+  could both be deleted and every test passed, because the engine tests fed the function directly.
+  Two check-ins through the real logger hold them now — climbs logged on a mobility day, and a
+  hangboard retest carried on one.
+- **My first sanity mutant pointed at the wrong file** and was skipped rather than run; the battery
+  said so, and the rerun had a real one.
+
+### Measured and left
+
+- **It is loud by design.** The sample climber's returning elbow is flagged on every climbing day.
+  If climbers stop reading it, the lever is intensity — flag limit and power-endurance days, not
+  volume — which was offered and not chosen.
+- **The line does not say how much.** A technique day and a limit day read the same sentence. The
+  intensity is beside it on the card; folding it into the warning is a wording decision.
+
+Battery: fifteen mutants and a sanity check, two survivors on the first run, both killed. 7,309
+tests over 436 files, from 7,292. Layout harness OK, the date matrix green on all ten days, first
+load 129.08KB against 129.1.

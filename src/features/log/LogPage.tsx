@@ -124,7 +124,8 @@ import {
   type ReadinessCall,
   type TissueFeel,
 } from '@/engine/readiness';
-import { describeParts, drillConflict, exerciseConflict, exerciseLoads, unspokenFor } from '@/engine/bodyLoad';
+import { describeParts, drillConflict, exerciseConflict, unspokenFor } from '@/engine/bodyLoad';
+import { sessionLoads } from '@/engine/sessionLoads';
 import { REST_ITEMS } from '@/engine/restHabits';
 import { startedAsRest } from '@/engine/rest';
 import { VENUE_LIST_ID, VenueOptions, useVenues } from '@/features/venues/useVenues';
@@ -854,8 +855,15 @@ function SessionEditor({
   const drill = (session.drillId ? getDrill(session.drillId) : undefined) ?? day?.drill;
   // What today actually loads, so the check-in does not tell a climber on a
   // legs-and-core day to leave the fingerboard alone.
+  // And what the climbing and the drill load (PLAN.md M327), without which a
+  // climbing day read as loading nothing at all.
   const loads = type
-    ? [...new Set(blocks.flatMap((b) => b.entry.exercises).flatMap(exerciseLoads))]
+    ? sessionLoads({
+        type,
+        exercises: blocks.flatMap((b) => b.entry.exercises),
+        drill,
+        climbed: session.climbs.length > 0,
+      })
     : undefined;
   // Through `readCheckIn`, so a stored answer this version cannot read is
   // treated as no answer rather than as a bad one (PLAN.md M244). Spread

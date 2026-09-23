@@ -65,7 +65,8 @@ import { concerning, injuryPolicy } from './injury';
 import { directFingerWork } from './fingerGap';
 import { metricConflict } from './bodyLoad';
 import { gradeOrdinal, V_GRADES } from './grades';
-import { onTheWall, takenIn, testWeek, testsOn } from './testDays';
+import { onTheWall } from './climbing';
+import { takenIn, testWeek, testsOn } from './testDays';
 import { doseRange } from './exerciseLog';
 import { restStart, trainingStart } from './sessionStart';
 

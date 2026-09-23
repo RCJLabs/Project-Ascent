@@ -48,47 +48,15 @@
  */
 
 import { getMetric } from '@/content/metrics';
-import { INTENSITY_ORDER, type FieldId, type Metric, type MetricId, type Program, type SessionType, type TestPlace } from '@/content/types';
+import { INTENSITY_ORDER, type Metric, type MetricId, type Program, type SessionType, type TestPlace } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import type { TestReason } from './assessments';
+import { onTheWall } from './climbing';
 import { addDays, startOfWeek } from './dates';
 import { directFingerWork, typeWords } from './fingerGap';
 import { plannedDay, type PlannedDay } from './plan';
 import type { WeekOverrides } from './reschedule';
 import { intensityOf, type WeekPlan } from './scheduler';
-
-/**
- * The fields only a session on the wall asks for.
- *
- * Every field, so a new one has to be classified before it compiles: a
- * session type that records a grade or a pump level is a climbing day, and
- * one that records only where it was and what the weather did is not
- * anything in particular.
- */
-const RECORDS_CLIMBING: Record<FieldId, boolean> = {
-  hardestGradeAttempted: true,
-  hardestGradeSent: true,
-  sessionVolume: true,
-  routesCompleted: true,
-  pitches: true,
-  attemptsToday: true,
-  highPoint: true,
-  projectName: true,
-  routeName: true,
-  pumpLevel: true,
-  sessionNumber: true,
-  clipStyle: true,
-  waterDepth: true,
-  gearNotes: true,
-  location: false,
-  conditions: false,
-  sessionDuration: false,
-};
-
-/** A session on the wall: it records climbing, or it happens on rock. */
-export function onTheWall(type: Pick<SessionType, 'fields' | 'outdoor'>): boolean {
-  return type.outdoor === true || (type.fields ?? []).some((f) => RECORDS_CLIMBING[f]);
-}
 
 /** The day that prescribes finger work, by the finger-gap rule's own reading. */
 function onTheBoard(type: SessionType): boolean {

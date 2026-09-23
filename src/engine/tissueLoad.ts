@@ -2,6 +2,7 @@ import type { Session } from '@/db/sessions';
 import type { BodyPart } from '@/content/bodyParts';
 import { addDays, daysBetween } from './dates';
 import { partsInText } from './bodyLoad';
+import { CLIMBING_PARTS } from './climbing';
 import { loadOrZero } from './derive';
 import { counted } from './phrase';
 
@@ -46,15 +47,7 @@ export const ALL_PARTS: BodyPart[] = [
   'ankle',
 ];
 
-/**
- * What climbing loads, whatever the session notes say.
- *
- * A bouldering session loads fingers whether or not anyone wrote the word
- * down, and most logged sessions carry no prose at all. Without this the
- * chart would report a climber who logs grades and nothing else as having
- * trained no tissue whatsoever.
- */
-export const CLIMBING_PARTS: BodyPart[] = ['fingers', 'pulley', 'shoulder', 'elbow'];
+
 
 export interface TissueShare {
   part: BodyPart;

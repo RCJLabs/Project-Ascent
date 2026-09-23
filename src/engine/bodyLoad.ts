@@ -21,6 +21,7 @@
 
 import type { BodyPart } from '@/content/bodyParts';
 import type { Drill, DrillLoad, Equipment, Exercise, Metric, Protocol, SessionType } from '@/content/types';
+import { CLIMBING_PARTS, onTheWall } from './climbing';
 
 export interface LoadRule {
   /** The name a drill's `loads` refers to it by (PLAN.md M137). */
@@ -333,7 +334,7 @@ export interface SessionConflict {
    * not sit in a block, so a sentence that counts them together has to be
    * able to tell them apart.
    */
-  kind: 'exercise' | 'drill';
+  kind: 'exercise' | 'drill' | 'climbing';
   /** Block name, or undefined for the session type itself. */
   block?: string;
   exercise: string;
@@ -520,6 +521,8 @@ export function dayLoad(
   injured: readonly BodyPart[],
 ): DayLoad {
   const conflicts: SessionConflict[] = [];
+  const climbing = day.sessionType ? climbingConflict(day.sessionType, injured) : null;
+  if (climbing) conflicts.push(climbing);
   if (day.sessionType && day.phase) {
     conflicts.push(...sessionConflicts(day.sessionType, day.phase.id, injured));
   }
@@ -528,6 +531,32 @@ export function dayLoad(
     if (finding) conflicts.push({ kind: 'drill', exercise: day.drill.name, finding });
   }
   return { conflicts, parts: [...new Set(conflicts.flatMap((c) => c.finding.parts))] };
+}
+
+/**
+ * The climbing itself, on a day that is climbing (PLAN.md M327).
+ *
+ * Everything above reads a day's *words* — its exercises, its drill — and a
+ * climbing session type prescribes neither: Max Intensity Bouldering is
+ * burns, rests and a grade. So on 224 of the catalogue's 308 climbing
+ * session-weeks a climber who had reported a hurt finger was told nothing
+ * about the day, while `tissueLoad`, reading the same session afterwards,
+ * counted it against the finger by definition. One question, two answers,
+ * and the silent one was the one read before the session.
+ *
+ * All four of `CLIMBING_PARTS`, not only the fingers: the chart already says
+ * a climbing session loads the elbow and the shoulder, and the day card
+ * saying otherwise would be the disagreement this exists to end. That was
+ * the climber's call to make, and it was made knowing it flags a returning
+ * elbow on every climbing day.
+ */
+const CLIMBING_BECAUSE = 'climbing loads the fingers, the elbow and the shoulder';
+
+function climbingConflict(type: SessionType, injured: readonly BodyPart[]): SessionConflict | null {
+  if (!onTheWall(type)) return null;
+  const hit = CLIMBING_PARTS.filter((part) => injured.includes(part));
+  if (hit.length === 0) return null;
+  return { kind: 'climbing', exercise: type.name, finding: { parts: hit, because: CLIMBING_BECAUSE } };
 }
 
 /**
@@ -540,11 +569,14 @@ export function dayLoad(
  */
 export function describeDayLoad(load: DayLoad): string | null {
   if (load.conflicts.length === 0) return null;
+  const climbing = load.conflicts.some((c) => c.kind === 'climbing');
   const exercises = load.conflicts.filter((c) => c.kind === 'exercise').length;
   const drill = load.conflicts.some((c) => c.kind === 'drill');
   const pieces: string[] = [];
+  if (climbing) pieces.push('Climbing');
   if (exercises > 0) pieces.push(`${exercises} ${exercises === 1 ? 'exercise' : 'exercises'}`);
   if (drill) pieces.push('the drill');
   const plural = pieces.length > 1 || exercises > 1;
-  return `${pieces.join(' and ')} ${plural ? 'load' : 'loads'} ${describeParts(load.parts)}`;
+  const listed = pieces.length > 2 ? `${pieces.slice(0, -1).join(', ')} and ${pieces.at(-1)}` : pieces.join(' and ');
+  return `${listed} ${plural ? 'load' : 'loads'} ${describeParts(load.parts)}`;
 }

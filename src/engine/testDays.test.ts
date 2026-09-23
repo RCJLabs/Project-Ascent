@@ -6,7 +6,8 @@ import type { MetricEntry } from '@/db/metrics';
 import { testWeeks } from './assessments';
 import { addDays } from './dates';
 import { layoutsFor, planFromLayout, type WeekPlan } from './scheduler';
-import { onTheWall, stillToTake, takenIn, testWeek, testsOn, type TestWeek } from './testDays';
+import { onTheWall } from './climbing';
+import { stillToTake, takenIn, testWeek, testsOn, type TestWeek } from './testDays';
 import { directFingerWork, typeWords } from './fingerGap';
 
 /**

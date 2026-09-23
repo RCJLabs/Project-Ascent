@@ -73,7 +73,34 @@ describe('the front door, before you travel', () => {
     await open({ program: 'iron_grip', typeId: 'perf', injured: 'pulley' });
     const view = renderAt('/', <HomePage />);
     await bodyUp(view);
-    expect(view.container.textContent ?? '').toMatch(/the drill loads your pulley/);
+    // And the climbing, since M327: this is Iron Grip's climbing day.
+    expect(view.container.textContent ?? '').toMatch(/Climbing and the drill load your pulley\./);
+  });
+
+  /**
+   * The day this count used to be silent on (PLAN.md M327): a climbing
+   * session with no prescribed exercises and no drill this week. It loads a
+   * finger injury by definition, and the card now says so — once, for the
+   * climbing, with no promise that anything is marked in the session.
+   */
+  it('counts the climbing on a climbing day that prescribes nothing', async () => {
+    await open({ program: 'peak_performance', typeId: 'proj', injured: 'fingers' });
+    const view = renderAt('/', <HomePage />);
+    await bodyUp(view);
+    const text = view.container.textContent ?? '';
+    expect(text).toMatch(/Climbing loads your fingers\./);
+    expect(text).not.toMatch(/Each one is marked/);
+  });
+
+  it('says nothing about climbing on a day that is not climbing', async () => {
+    // Ground Zero's strength day loads the elbow through three lines and is
+    // not a climbing session, so the climbing is not counted on top.
+    await open({ program: 'ground_zero', typeId: 'str', injured: 'elbow' });
+    const view = renderAt('/', <HomePage />);
+    await bodyUp(view);
+    const text = view.container.textContent ?? '';
+    expect(text).toMatch(/3 exercises load your elbow\. Each one is marked in the session\./);
+    expect(text).not.toMatch(/Climbing (and|loads)/);
   });
 
   it('says nothing when the day leaves the hurt part alone', async () => {

@@ -21,6 +21,9 @@ import {
   scanText,
   sessionConflicts,
 } from './bodyLoad';
+import { sessionLoads } from './sessionLoads';
+import { onTheWall } from './climbing';
+import { readinessFor } from './readiness';
 
 const ex = (name: string, patch: Partial<Exercise> = {}): Exercise => ({ name, ...patch });
 
@@ -373,6 +376,52 @@ describe('what a whole planned day loads', () => {
     ]);
   });
 
+  /**
+   * The climbing itself (PLAN.md M327). The fixture above is a strength day
+   * with no fields; a climbing day is one that records climbing.
+   */
+  describe('on a climbing day', () => {
+    const climbing: SessionType = { id: 'perf', name: 'Limit bouldering', icon: '', description: '', fields: ['hardestGradeSent'] };
+    const outside: SessionType = { id: 'crag', name: 'Crag day', icon: '', description: '', outdoor: true };
+
+    it('counts the climbing for any of the four parts it loads', () => {
+      for (const part of ['fingers', 'pulley', 'elbow', 'shoulder'] as const) {
+        const load = dayLoad({ sessionType: climbing, phase: { id: 'p1' } }, [part]);
+        expect(load.conflicts.map((c) => c.kind), part).toEqual(['climbing']);
+        expect(load.parts).toEqual([part]);
+      }
+    });
+
+    it('and only those four', () => {
+      expect(dayLoad({ sessionType: climbing, phase: { id: 'p1' } }, ['knee', 'ankle', 'back', 'hip', 'wrist']).conflicts).toEqual([]);
+    });
+
+    it('counts a day on rock as climbing, whatever its fields', () => {
+      expect(dayLoad({ sessionType: outside }, ['elbow']).conflicts.map((c) => c.kind)).toEqual(['climbing']);
+    });
+
+    it('counts it without a phase, which the climbing does not need', () => {
+      expect(dayLoad({ sessionType: climbing }, ['fingers']).conflicts).toHaveLength(1);
+    });
+
+    it('does not count it on a day that is not climbing', () => {
+      expect(dayLoad({ sessionType: type, phase: { id: 'p1' } }, ['shoulder']).conflicts.map((c) => c.kind)).not.toContain('climbing');
+    });
+
+    it('says the climbing first, then the rest', () => {
+      const say = (day: Parameters<typeof dayLoad>[0], injured: Parameters<typeof dayLoad>[1]) =>
+        describeDayLoad(dayLoad(day, injured));
+      expect(say({ sessionType: climbing }, ['elbow'])).toBe('Climbing loads your elbow');
+      expect(say({ sessionType: climbing, drill: heels }, ['fingers', 'knee'])).toBe(
+        'Climbing and the drill load your fingers and knee',
+      );
+      const both: SessionType = { ...type, fields: ['sessionVolume'] };
+      expect(say({ sessionType: both, phase: { id: 'p1' }, drill: heels }, ['fingers', 'knee'])).toBe(
+        'Climbing, 2 exercises and the drill load your fingers and knee',
+      );
+    });
+  });
+
   describe('said out loud', () => {
     const say = (day: Parameters<typeof dayLoad>[0], injured: Parameters<typeof dayLoad>[1]) =>
       describeDayLoad(dayLoad(day, injured));
@@ -563,5 +612,73 @@ describe("a protocol's safety rules, split by whether they are about you", () =>
       'Miss a rung twice in a row and the session is over.',
       'If you pump out, you went too hard — drop a grade rather than pushing through.',
     ]);
+  });
+});
+
+/**
+ * What the check-in is told a session loads (PLAN.md M327).
+ *
+ * It leaves out advice about a part the session does not load, which is
+ * right on a legs day and was wrong on every climbing day: the session was
+ * described by its prescribed exercises alone, and a climbing session
+ * prescribes none.
+ */
+describe('what the check-in is told a session loads', () => {
+  const climbingDay: SessionType = { id: 'perf', name: 'Limit bouldering', icon: '', description: '', fields: ['hardestGradeSent'] };
+  const legsDay: SessionType = { id: 'legs', name: 'Legs', icon: '', description: '' };
+  const squat: Exercise = { name: 'Goblet Squats' };
+
+  it('counts the climbing on a climbing day', () => {
+    expect(sessionLoads({ type: climbingDay, exercises: [], climbed: false }).sort()).toEqual(
+      ['elbow', 'fingers', 'pulley', 'shoulder'],
+    );
+  });
+
+  it('counts climbs logged on a day that is not a climbing day', () => {
+    expect(sessionLoads({ type: legsDay, exercises: [squat], climbed: true })).toContain('fingers');
+  });
+
+  it('leaves a legs day with no climbs on it as a legs day', () => {
+    expect(sessionLoads({ type: legsDay, exercises: [squat], climbed: false }).sort()).toEqual(['ankle', 'knee']);
+  });
+
+  it('counts the drill, which it was never told about', () => {
+    const heels: Drill = {
+      id: 'h', name: 'Heel practice', loads: ['hook'], duration: '20 min',
+      focus: 'Footwork', category: 'technique', discipline: 'both', level: 'V0-V17',
+      equipment: ['wall'], sources: [],
+    };
+    expect(sessionLoads({ type: legsDay, exercises: [], drill: heels, climbed: false }).sort()).toEqual(['hip', 'knee']);
+  });
+
+  it('now lets sore fingers be answered on the way into a climbing day', () => {
+    const loads = sessionLoads({ type: climbingDay, exercises: [], climbed: false });
+    const said = readinessFor({ fingers: 'sore', sleep: 'good' }, { loads });
+    expect(said.advice.join(' ')).toMatch(/will not tell you to push through/);
+  });
+});
+
+describe('every climbing day in the catalogue', () => {
+  it('tells a climber with a hurt finger, elbow or shoulder, every week', () => {
+    // The sweep that found it: 224 of 308 climbing session-weeks said nothing
+    // to a finger injury, 255 to an elbow and 261 to a shoulder. Every one of
+    // them names the part now.
+    let checked = 0;
+    const silent: string[] = [];
+    for (const program of PROGRAMS) {
+      for (const type of program.sessionTypes) {
+        if (type.isRest === true || !onTheWall(type)) continue;
+        for (const phase of program.phases) {
+          checked += 1;
+          for (const part of ['fingers', 'elbow', 'shoulder'] as const) {
+            if (dayLoad({ sessionType: type, phase }, [part]).parts.length === 0) {
+              silent.push(`${program.id}/${type.id} ${phase.id} ${part}`);
+            }
+          }
+        }
+      }
+    }
+    expect(checked, 'the sweep read almost nothing').toBeGreaterThan(40);
+    expect(silent).toEqual([]);
   });
 });
