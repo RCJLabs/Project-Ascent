@@ -63,6 +63,9 @@ import { plannedDay, prescriptionFor, weekInPhase, type PlannedDay } from './pla
 import { restDayDrill } from './restDrill';
 import { concerning, injuryPolicy } from './injury';
 import { directFingerWork } from './fingerGap';
+import { metricConflict } from './bodyLoad';
+import { gradeOrdinal, V_GRADES } from './grades';
+import { onTheWall, takenIn, testWeek, testsOn } from './testDays';
 import { doseRange } from './exerciseLog';
 import { restStart, trainingStart } from './sessionStart';
 
@@ -348,6 +351,61 @@ function latest(entries: readonly MetricEntry[], metricId: string, date: string)
     if (best === null || entry.date > best.date) best = entry;
   }
   return best === null ? null : best.value;
+}
+
+/**
+ * A result for one test inside the block (PLAN.md M325), built on the last
+ * one so the block report has a line to draw rather than two unrelated dots.
+ *
+ * The boulder grade is not drawn at all: it is the hardest problem the
+ * session it was taken in sent, which is what the number means.
+ */
+function testResult(
+  rng: Rng,
+  metricId: string,
+  date: string,
+  metrics: readonly MetricEntry[],
+  session: Session,
+  /** The block's first test week, whose max hang is last season's number again. */
+  baseline: boolean,
+): MetricEntry | null {
+  const before = latest(metrics, metricId, date);
+  const step = (lo: number, hi: number) => lo + Math.floor(next(rng) * (hi - lo + 1));
+  const value = (): number | null => {
+    switch (metricId) {
+      // Added pounds, off the benchmark eight weeks before; the first phase
+      // is the strength one, so the second test is the one that moves.
+      case 'max_hang_20mm_7s':
+        return (before ?? 25) + (baseline ? step(0, 2) : step(3, 5));
+      case 'repeater_weight':
+        return before === null ? 10 + step(0, 2) * 2.5 : before + step(1, 2) * 2.5;
+      case 'dead_hang':
+        return before === null ? 50 + step(0, 10) : before + step(2, 8);
+      case 'max_pushups':
+        return before === null ? 30 + step(0, 8) : before + step(0, 4);
+      // The four the elbow keeps this climber from — modelled anyway, so the
+      // reason they are missing is the elbow and not a gap in this switch.
+      case 'weighted_pullup_3rm':
+        return before === null ? 25 + step(0, 3) * 5 : before + step(0, 1) * 5;
+      case 'lock_off_90':
+        return before === null ? 8 + step(0, 4) : before + step(0, 2);
+      case 'max_pullups':
+        return (before ?? 10) + step(0, 2);
+      default:
+        return null;
+    }
+  };
+  if (metricId === 'core_lever') {
+    return { metricId, date, value: 0, display: pick(rng, ['tuck / 12s', 'advanced tuck / 6s']), demo: true };
+  }
+  if (metricId === 'max_boulder_grade') {
+    const sent = (session.climbs ?? []).filter((c) => c.result === 'send').map((c) => gradeOrdinal('V', c.grade));
+    if (sent.length === 0) return null;
+    const top = Math.max(...sent);
+    return { metricId, date, value: top, display: V_GRADES[top]!, demo: true };
+  }
+  const v = value();
+  return v === null ? null : { metricId, date, value: v, demo: true };
 }
 
 /** Timestamps from the day the record is about, never from the clock. */
@@ -668,18 +726,17 @@ interface TrainingDay {
   type?: SessionType;
 }
 
-/**
- * Whether climbs get logged on a planned session (PLAN.md M319).
- *
- * Off the type's own declared fields rather than its id. Iron Grip's climbing
- * session asks for `hardestGradeAttempted`; its finger day — *"Hangboard
- * protocol plus pulling, pushing, core, and armor work"* — asks for nothing of
- * the sort, and eight boulder problems written onto a hangboard session would
- * be the generator showing the app data the session type never asks for.
+/*
+ * Whether climbs get logged on a planned session (PLAN.md M319) is
+ * `onTheWall`'s answer: off the type's own declared fields rather than its
+ * id. Iron Grip's climbing session asks for a grade; its finger day —
+ * *"Hangboard protocol plus pulling, pushing, core, and armor work"* — asks
+ * for nothing of the sort, and eight boulder problems written onto a
+ * hangboard session would be the generator showing the app data the session
+ * type never asks for. The same function the test-week planner uses to find
+ * the climbing day (PLAN.md M325), so the two cannot disagree about which
+ * one it is.
  */
-function onTheWall(type: SessionType): boolean {
-  return (type.fields ?? []).includes('hardestGradeAttempted');
-}
 
 /**
  * The days inside the running block, taken from the plan (PLAN.md M319).
@@ -800,6 +857,11 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
    * before M324 comes out of the same draws after it.
    */
   const logbook = createRng(seed ^ 0x106b_00c5);
+  /**
+   * A sixth, for the tests taken inside the block (PLAN.md M325), on the same
+   * reasoning again: every record above comes out of the same draws after it.
+   */
+  const bench = createRng(seed ^ 0x7e57_da75);
   /** The plan's day, read the way the logger reads it. */
   const planOn = (date: string) => plannedDay(running, ironGripStart, plan, date);
   /** The drill `PreSession` offers on a day the plan leaves free. */
@@ -950,6 +1012,34 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
           ...(chance(prose, 0.2) ? { notes: pick(prose, SESSION_NOTES) } : {}),
         }),
       );
+      /**
+       * The tests the plan gives this session, in a test week (PLAN.md M325).
+       *
+       * Taken the way the day's nudge says to take them, which includes the
+       * part that is not the planner's: anything that loads the elbow waits.
+       * `TestSafety` says so beside each one, the climber told the app about
+       * the elbow, and a sample climber who max-tested a lock-off on the
+       * injury a lock-off gave them would be the fixture ignoring the app.
+       */
+      if (day?.test !== undefined && type !== undefined) {
+        const battery = testWeek(running, ironGripStart, plan, date);
+        /**
+         * And what an earlier session of the same kind was given and did not
+         * get, because it was missed. The nudge lists those as still to take;
+         * the same session later in the week is where a climber takes them —
+         * which is also what a Tuesday make-up for a missed Monday is.
+         */
+        const taken = battery ? takenIn(battery, metrics) : new Set<string>();
+        const carried = (battery?.days ?? [])
+          .filter((d) => d.date < date && d.sessionType.id === type.id)
+          .flatMap((d) => d.metrics)
+          .filter((m) => !taken.has(m.id));
+        for (const metric of [...testsOn(battery, date), ...carried]) {
+          if (metricConflict(metric, hurt) !== null) continue;
+          const entry = testResult(bench, metric.id, date, metrics, sessions.at(-1)!, day.test === 'baseline');
+          if (entry) metrics.push(entry);
+        }
+      }
     }
     /**
      * A route session most fortnights, on the Thursday.

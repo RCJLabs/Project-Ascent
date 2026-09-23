@@ -14,7 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import { getProgram } from '@/content/programs';
-import { INTENSITY_LABEL, type DayOfWeek } from '@/content/types';
+import { INTENSITY_LABEL, type DayOfWeek, type Metric } from '@/content/types';
 import { TEST_REASON_LABEL } from '@/engine/assessments';
 import { describeDayLoad, describeParts } from '@/engine/bodyLoad';
 import {
@@ -30,6 +30,7 @@ import {
 import { blockWindow, DELOAD_STEP } from '@/engine/plan';
 import { effectivePlan, previewMove, type MovePreview } from '@/engine/reschedule';
 import { intensityOf } from '@/engine/scheduler';
+import { testsOn } from '@/engine/testDays';
 import { describeWeekDays, type WeekDay, type WeekOutline } from '@/engine/week';
 import { useProfile } from '@/store/profile';
 import { BackLink } from '@/ui/BackLink';
@@ -38,6 +39,7 @@ import { Card } from '@/ui/Card';
 import { IconButton } from '@/ui/IconButton';
 import { logHref, weekHref } from '@/ui/routes';
 import { useWeekOutline } from './useWeekOutline';
+import { useTestWeek } from '@/features/log/useTestWeek';
 
 /**
  * The week, as a screen (PLAN.md M135).
@@ -82,6 +84,7 @@ export function WeekPage({ params }: { params?: { start?: string } } = {}) {
   const planning = program !== undefined && startDate !== undefined && plan !== undefined;
 
   const outline = useWeekOutline(start);
+  const battery = useTestWeek(start);
 
   /**
    * Pick-then-place, as the calendar did it from §5.3 to M134, and for the
@@ -167,7 +170,14 @@ export function WeekPage({ params }: { params?: { start?: string } } = {}) {
         </div>
       )}
 
-      <WeekFacts outline={outline} program={program} startDate={startDate} planning={planning} count={count} />
+      <WeekFacts
+        outline={outline}
+        program={program}
+        startDate={startDate}
+        planning={planning}
+        count={count}
+        spread={(battery?.days.length ?? 0) > 0}
+      />
 
       {movable && !rearranging && (
         <div className="flex justify-end mb-2">
@@ -256,6 +266,7 @@ export function WeekPage({ params }: { params?: { start?: string } } = {}) {
             <DayRow
               key={d.date}
               d={d}
+              tests={testsOn(battery, d.date)}
               today={now}
               mode={
                 moving
@@ -329,8 +340,11 @@ function WeekFacts({
   startDate,
   planning,
   count,
+  spread,
 }: {
   outline: WeekOutline;
+  /** The week's tests have sessions to go to (PLAN.md M325). */
+  spread: boolean;
   program: ReturnType<typeof getProgram>;
   startDate: string | undefined;
   planning: boolean;
@@ -386,7 +400,14 @@ function WeekFacts({
       {outline.test !== undefined && (
         <Link href="/assessments" className="focus-ring text-sm leading-relaxed mb-2 flex items-start gap-1.5 rounded-lg">
           <Ruler size={14} className="text-accent shrink-0 mt-0.5" />
-          <span>{TEST_REASON_LABEL[outline.test]}</span>
+          <span>
+            {TEST_REASON_LABEL[outline.test]}
+            {spread && (
+              <span className="block text-ink-soft">
+                Spread over the week — each session below says which tests are its own.
+              </span>
+            )}
+          </span>
         </Link>
       )}
       {outline.steps.length > 0 && (
@@ -446,6 +467,7 @@ const STATUS: Record<WeekDay['status'], { text: string; tone: string } | null> =
 
 function DayRow({
   d,
+  tests,
   today,
   mode,
   preview,
@@ -454,6 +476,8 @@ function DayRow({
   onCancel,
 }: {
   d: WeekDay;
+  /** The week's tests this day carries, in the program's order (PLAN.md M325). */
+  tests: Metric[];
   today: string;
   mode: RowMode;
   preview: MovePreview | undefined;
@@ -509,6 +533,15 @@ function DayRow({
             <span className={intensity === 'max' ? 'text-warn font-bold' : ''}>{INTENSITY_LABEL[intensity!]}</span>
             {d.spent ? ` · ${d.spent}` : ''}
             {d.day!.drill ? ` · ${d.day!.drill.name}` : ''}
+          </span>
+        )}
+        {/* Which of the week's tests are this day's (PLAN.md M325), named
+            rather than counted: the question on a Sunday night is what to
+            take on Thursday, not how many. */}
+        {tests.length > 0 && (
+          <span className="flex items-start gap-1 text-xs text-ink-soft mt-0.5">
+            <Ruler size={11} className="text-accent shrink-0 mt-0.5" aria-hidden="true" />
+            <span>Test: {tests.map((m) => m.label).join(', ')}</span>
           </span>
         )}
       </span>

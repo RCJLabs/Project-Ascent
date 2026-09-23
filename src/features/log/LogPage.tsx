@@ -131,6 +131,8 @@ import { VENUE_LIST_ID, VenueOptions, useVenues } from '@/features/venues/useVen
 import { BadParameter } from '@/ui/RecordNotFound';
 import { DayHeading } from './DayHeading';
 import { usePlannedDay } from './usePlannedDay';
+import { testsOn } from '@/engine/testDays';
+import { useTestWeek } from './useTestWeek';
 import { DayNudges, PreSessionCard, useStartSession } from './PreSession';
 
 function rid(): string {
@@ -182,6 +184,7 @@ export function LogPage({ params }: { params: { date: string } }) {
 export function DayBody({ date }: { date: string }) {
   const [, navigate] = useLocation();
   const { program, day, trackId } = usePlannedDay(date);
+  const tests = useTestWeek(date);
   // The plan and the way to begin, shared with the card Home shows
   // (PLAN.md M124), so a session started from either is the same record.
   const { start } = useStartSession(date);
@@ -244,6 +247,7 @@ export function DayBody({ date }: { date: string }) {
             session={session}
             program={program}
             day={day}
+            testing={testsOn(tests, date).length > 0}
             trackId={trackId}
             others={sessions.filter((s) => s.id !== session.id)}
             onChange={(s) => void update(s)}
@@ -566,6 +570,7 @@ function SessionEditor({
   session,
   program,
   day,
+  testing,
   trackId,
   others,
   onChange,
@@ -575,6 +580,12 @@ function SessionEditor({
   session: Session;
   program: ReturnType<typeof getProgram>;
   day: PlannedDay | undefined;
+  /**
+   * The plan puts a test on this day (PLAN.md M325). Not the same as the week
+   * being a test week: a rest day or a technique day in one has nothing to
+   * defer.
+   */
+  testing: boolean;
   trackId: string | undefined;
   /** The day's other sessions, which this one can be merged into. */
   others: Session[];
@@ -854,7 +865,7 @@ function SessionEditor({
   // its own reason is the one thing M129 built this card not to do.
   const checkIn = readCheckIn(session.checkIn);
   const readiness = checkIn
-    ? readinessFor(checkIn, { ...(loads ? { loads } : {}), test: day?.test !== undefined })
+    ? readinessFor(checkIn, { ...(loads ? { loads } : {}), test: testing })
     : null;
   // Only where the answers ask for less and some block has a notch to give.
   // The rule is in the engine, where it can be tested against a session that

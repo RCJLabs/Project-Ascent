@@ -14,7 +14,9 @@ import {
   type AssessmentStatus,
 } from '@/engine/assessments';
 import { blockReport, describeBlock } from '@/engine/blockReport';
-import { shortLabel, today } from '@/engine/dates';
+import { testWeek } from '@/engine/testDays';
+import { dayOfWeek, shortLabel, today } from '@/engine/dates';
+import { DAY_NAMES } from '@/engine/scheduler';
 import { holdTest } from '@/engine/holdTest';
 import { entryNote } from '@/engine/onboarding';
 import { HoldTimer } from './HoldTimer';
@@ -41,6 +43,8 @@ export function AssessmentsPage() {
   const load = useMetrics((s) => s.load);
   const activeProgramId = useProfile((s) => s.activeProgramId);
   const startDates = useProfile((s) => s.startDates);
+  const plans = useProfile((s) => s.plans);
+  const weekOverrides = useProfile((s) => s.weekOverrides);
   const [open, setOpen] = useState<MetricId | null>(null);
   const [picking, setPicking] = useState(false);
 
@@ -50,6 +54,18 @@ export function AssessmentsPage() {
 
   const program = activeProgramId ? getProgram(activeProgramId) : undefined;
   const startDate = activeProgramId ? startDates[activeProgramId] : undefined;
+  const plan = activeProgramId ? plans[activeProgramId] : undefined;
+  const overrides = activeProgramId ? weekOverrides[activeProgramId] : undefined;
+  /**
+   * Which session this week's plan gives each test (PLAN.md M325), so the
+   * list the day's nudge opens says the same thing the nudge did.
+   */
+  const plannedOn = useMemo(() => {
+    const week = program && startDate && plan ? testWeek(program, startDate, plan, today(), overrides) : null;
+    const out = new Map<MetricId, string>();
+    for (const day of week?.days ?? []) for (const m of day.metrics) out.set(m.id, day.date);
+    return out;
+  }, [program, startDate, plan, overrides]);
   const battery = useMemo(
     () => assessmentBattery(entries, { program, startDate }),
     [entries, program, startDate],
@@ -96,6 +112,7 @@ export function AssessmentsPage() {
                 <MetricRow
                   key={status.metric.id}
                   status={status}
+                  plannedOn={status.due !== null ? plannedOn.get(status.metric.id) : undefined}
                   open={open === status.metric.id}
                   onToggle={() => setOpen(open === status.metric.id ? null : status.metric.id)}
                 />
@@ -176,10 +193,13 @@ function NewBenchmarkCard({ metricId, onDone }: { metricId: MetricId; onDone: ()
 
 function MetricRow({
   status,
+  plannedOn,
   open,
   onToggle,
 }: {
   status: AssessmentStatus;
+  /** The day this week's plan puts the test on, while it is still due. */
+  plannedOn: string | undefined;
   open: boolean;
   onToggle: () => void;
 }) {
@@ -196,6 +216,7 @@ function MetricRow({
           <p className="text-xs text-ink-soft mt-0.5">
             {latest ? `${shortLabel(latest.date)}` : 'Never tested'}
             {status.dueLabel ? ` · ${status.dueLabel}` : ''}
+            {plannedOn !== undefined ? ` · ${plannedOn === today() ? 'today' : `planned ${weekday(plannedOn)}`}` : ''}
           </p>
           {/* One line, closed — enough to decide not to open it (M161). */}
           <TestSafety metric={metric} injured={hurt} compact />
@@ -408,4 +429,8 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
       )}
     </div>
   );
+}
+
+function weekday(date: string): string {
+  return DAY_NAMES[dayOfWeek(date)]!;
 }

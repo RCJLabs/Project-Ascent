@@ -58,6 +58,7 @@ describe('which benchmarks are a stopwatch', () => {
       unit: 'sec',
       kind: 'passfail',
       higherIsBetter: true,
+      place: 'gym',
     };
     expect(holdTest(passfail)).toBeNull();
     expect(holdTest({ ...passfail, kind: 'text' })).toBeNull();

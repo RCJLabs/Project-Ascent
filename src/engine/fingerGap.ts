@@ -76,7 +76,7 @@
 
 import { getDrill } from '@/content/drills';
 import { getProgram } from '@/content/programs';
-import type { Drill, DrillLoad } from '@/content/types';
+import type { Drill, DrillLoad, SessionType } from '@/content/types';
 import type { Session } from '@/db/sessions';
 import { daysBetween } from './dates';
 import { rulesInText } from './bodyLoad';
@@ -144,19 +144,27 @@ function words(session: Session): string {
   const parts: string[] = [];
   if (session.programId !== undefined && session.sessionTypeId !== undefined) {
     const type = getProgram(session.programId)?.sessionTypes.find((t) => t.id === session.sessionTypeId);
-    if (type) {
-      parts.push(type.name);
-      // And what it prescribes, which is the half the name leaves out
-      // (PLAN.md M321). Every phase: see the header for why that is the same
-      // answer as resolving the date's own phase, and the test that holds it.
-      for (const block of type.blocks ?? []) {
-        for (const prescription of Object.values(block.perPhase)) {
-          for (const exercise of prescription.exercises) parts.push(exercise.name);
-        }
-      }
-    }
+    if (type) parts.push(typeWords(type));
   }
   for (const exercise of session.exercises ?? []) parts.push(exercise.name);
+  return parts.join(' ');
+}
+
+/**
+ * A session type's name and everything it prescribes.
+ *
+ * The prescription is the half the name leaves out (PLAN.md M321). Every
+ * phase: see the header for why that is the same answer as resolving the
+ * date's own phase, and the test that holds it. Exported so the test-week
+ * planner asks which day is the finger day the way this does (PLAN.md M325).
+ */
+export function typeWords(type: Pick<SessionType, 'name' | 'blocks'>): string {
+  const parts = [type.name];
+  for (const block of type.blocks ?? []) {
+    for (const prescription of Object.values(block.perPhase)) {
+      for (const exercise of prescription.exercises) parts.push(exercise.name);
+    }
+  }
   return parts.join(' ');
 }
 

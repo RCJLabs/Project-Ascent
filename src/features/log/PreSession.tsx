@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
 import { Link } from 'wouter';
 import { AlertTriangle, ChevronRight, Clock, Flag, Plus, Ruler, Zap } from 'lucide-react';
 import { INTENSITY_LABEL, type Drill, type Program, type SessionType } from '@/content/types';
@@ -17,7 +17,14 @@ import { openAt } from '@/lib/openedView';
 import { type LogView } from '@/store/settings';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { lazyRoute } from '@/ui/lazyRoute';
 import { usePlannedDay } from './usePlannedDay';
+
+const TestsToday = lazyRoute(
+  () => import('./TestsToday'),
+  (m) => m.TestsToday,
+);
 
 /**
  * The card you read before a session exists, and the button that makes one
@@ -409,13 +416,25 @@ export function DayNudges({ date }: { date: string }) {
         </Link>
       )}
       {day?.test !== undefined && (
+        // Top-aligned, because the day's list can run to several lines and
+        // an icon centred beside it reads as belonging to the middle one.
         <Link
           href="/assessments"
-          className="focus-ring flex items-center gap-2 bg-surface border border-line rounded-2xl p-3"
+          className="focus-ring flex items-start gap-2 bg-surface border border-line rounded-2xl p-3"
         >
-          <Ruler size={16} className="text-accent shrink-0" />
-          <span className="flex-1 min-w-0 text-xs leading-relaxed">{TEST_REASON_LABEL[day.test]}</span>
-          <ChevronRight size={16} className="text-ink-soft shrink-0" />
+          <Ruler size={16} className="text-accent shrink-0 mt-0.5" />
+          <span className="flex-1 min-w-0 text-xs leading-relaxed">
+            <span className="block">{TEST_REASON_LABEL[day.test]}</span>
+            {/* Fetched, because only a test week needs it (PLAN.md M325);
+                and silent if the fetch fails, since the link still goes to
+                the list it summarises. */}
+            <ErrorBoundary fallback={() => null}>
+              <Suspense fallback={null}>
+                <TestsToday date={date} />
+              </Suspense>
+            </ErrorBoundary>
+          </span>
+          <ChevronRight size={16} className="text-ink-soft shrink-0 mt-0.5" />
         </Link>
       )}
     </>

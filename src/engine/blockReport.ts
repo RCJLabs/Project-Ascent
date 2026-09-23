@@ -155,6 +155,8 @@ function resultFor(
     unit: '',
     kind: 'text' as const,
     higherIsBetter: true,
+    // Nowhere to take it, since nothing knows what it was.
+    place: 'tally' as const,
   };
 
   const points = seriesFor(entries, id).filter((e) => e.date >= from && e.date <= through);

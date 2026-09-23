@@ -33,6 +33,17 @@ export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export type MetricKind = 'number' | 'text' | 'grade' | 'passfail';
 
+/**
+ * Where a test is taken, which decides the session it belongs in (PLAN.md
+ * M325).
+ *
+ * - `board` — on a hangboard: the finger tests.
+ * - `gym` — a bar, the floor, a dumbbell: pulling, pushing, core, mobility.
+ * - `wall` — on the climbing wall: a grade, a lap count, an interval set.
+ * - `tally` — counted rather than taken, so no session is the one for it.
+ */
+export type TestPlace = 'board' | 'gym' | 'wall' | 'tally';
+
 export interface Metric {
   id: MetricId;
   label: string;
@@ -43,6 +54,7 @@ export interface Metric {
   scale?: GradeScale;
   higherIsBetter: boolean;
   description?: string;
+  place: TestPlace;
 }
 
 // ── Protocols (timer-able training methods) ───────────────────────────────

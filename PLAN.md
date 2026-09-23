@@ -15046,6 +15046,16 @@ its label is missing. None of these wants touching.
   hangboard drills — so a climber running Iron Grip exactly as written was told they had breached
   it, about the program's own layout. A test now holds every `Session` field to being filled or
   named with a reason.
+- **M325 — a test week said when, and never what.** Every day of a test week read *"Test week"*
+  and linked to the whole battery at once; Iron Grip's is nine maximal efforts. `engine/testDays.ts`
+  spreads the week's battery over its sessions — a board test to the finger day, a bar or floor test
+  to a strength day that is not a climbing day, a grade to a climbing day, the hardest first — and
+  between days of a kind, by kind before count, so two pulling tests land apart. The day's nudge lists
+  its share in the program's order, flags what loads a hurt part and carries what an earlier day
+  missed; the week names each session's tests, the assessments list says which day each is planned
+  for, and *"let the test wait"* fires only on a day that has one. The sample climber takes its
+  in-block tests that way, leaving the four that load its elbow, so the block report has four lines
+  to draw where it had none.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -23225,3 +23235,106 @@ see. The second fix had its own slip — matching `/campus/i` against the track 
 campus board"* first — and it keys on what the program says about the risk now instead.
 
 7,209 tests over 433 files, from 7,180. Layout harness OK. First load 128.17KB against 129.1.
+
+## M325 — a test week said when, and never what
+
+M67 put a program's test weeks on the calendar — week one, the first week of each later phase, the
+last week — and from then on every day of such a week read *"Test week"*, with a nudge that linked
+to the assessments page, which lists the whole battery as due. Nothing said which test, or which
+day. Iron Grip asks for nine: a max hang, repeaters, a weighted pull-up 3RM, a lock-off, a lever,
+max pull-ups, a dead hang, max push-ups and a boulder grade. Taken in one session, the last six
+numbers measure how tired the first three made you.
+
+### What decides where a test goes
+
+Each metric now says where it is taken — `place` on `Metric`: `board`, `gym`, `wall`, or `tally`
+for the one that is counted rather than taken (`total_outdoor_days`). All 37 declare one, and the
+type makes it required. A session type is read three ways, each from something the app already
+knew rather than a new tag:
+
+- **the finger day** — the 48-hour rule's own reading of the type's name and prescription
+  (`typeWords` came out of `fingerGap.ts` for this, so the two cannot disagree about which day it is);
+- **a climbing day** — it declares a field only a climbing session asks for, or it is on rock. A
+  `Record<FieldId, boolean>`, so a new field has to be classified before it compiles. The sample
+  climber's generator had its own one-field version of this question and now calls this one;
+- **prescribed work** — it has blocks.
+
+A board test goes to the finger day, a gym test to a day with work that is not a climbing day, a
+wall test to a climbing day; each falls back a step when the week has none of that kind, and never
+to a day the plan calls rest. Between candidates: fewer of the same kind first, then fewer at all,
+then — for a wall test only — the harder day, then the earlier. Within a day, the order the program
+lists its battery, which authors wrote freshest-first.
+
+On the layout the app recommends for each of the ten programs with test weeks:
+
+| Program | Spread |
+|---|---|
+| Iron Grip | Mon: max hang, weighted pull-up, lever, dead hang · Wed: boulder grade · Thu: repeaters, lock-off, max pull-ups, push-ups |
+| The Siege | Mon: redpoint · Tue: max hang, min edge, pull-ups · Thu: linked laps · Sat: project high point |
+| Base Camp | Mon: 4x4 · Tue: push-ups, pull-ups, dead hang, plank · Thu: flash grade |
+| Peak Performance | Mon: boulder grade · Fri: max hang, weighted pull-up, push-ups, front lever, hollow body · Sat: flash |
+
+### Where it shows
+
+- **The day's nudge** (Home and the log): *"On Thursday, in this order, after the warm-up:"* and the
+  list, a tick on anything already recorded that week, `TestSafety`'s one-line flag under each test
+  that loads a part the climber reported, and *"Still to take from earlier in the week"* for what a
+  missed day left. A day with none says where they are.
+- **The week page** names each session's tests under it.
+- **The assessments list** adds *"planned Thursday"* (or *today*) to each due row in a test week, so
+  the page the nudge opens says the same thing the nudge did.
+- **The check-in's *"Let the test wait for a better day"*** used to fire on every day of a test
+  week — a rest day, a technique day with nothing to test. It reads the day's tests now.
+
+### The sample climber
+
+It had no reading inside its running block: two benchmarks every eight weeks, the last of them two
+weeks before the block started, so its block report read nine tests and nought taken. It now takes
+the battery in block weeks one and five, on the days the plan gives them, off a sixth RNG stream so
+every earlier record is byte-identical. A missed session's tests are taken at the next session of
+the same type that week — which is also what a Tuesday make-up for a missed Monday is — and the
+boulder grade is the hardest problem that session sent rather than a drawn number.
+
+**It does not take the four that load its elbow** — weighted pull-up, lock-off, lever, max
+pull-ups. The injury is *"Felt it on a hard lock-off"*, `TestSafety` says so beside each one, and a
+fixture that max-tested a lock-off on it would be the sample climber ignoring the app. Those four
+stay due on its assessments page, which is what a real climber in that position would see. The
+block report now has max hang, repeaters, dead hang and push-ups moving and the grade flat.
+
+### What I got wrong
+
+- **The first build put the planner on the boot path**: 128.17KB to 129.85KB against a budget of
+  129.1. The planner, `TestSafety`, `phrase.ts` and the list are needed only in a test week; the list
+  is fetched (`lazyRoute`, behind a silent boundary — the link still works without it), the week
+  page and the log compute it themselves, and `usePlannedDay` is back as it was. 128.44KB.
+- **A field nobody read.** `TestWeek.unplaced` listed what no session could carry; `wired.test.ts`
+  said so. Dropped, and the case — a tally, or a week with nothing in it — is left to the
+  assessments list, which still shows it due.
+- **Eight of twenty-seven mutants survived the first battery, and every one was real.** The kind
+  criterion, the finger-day tier, the climbing-day tier and the rest-day filter all changed nothing
+  on the shipped layouts, because those layouts happen to agree with a cruder rule; each has a
+  case now where it does not. A filter in the list was dead. And three of the generator's rules
+  were masked: the elbow skip because the result function had no model for those four tests (so
+  it skipped them anyway, for the wrong reason), the carry because a grade asked of a finger
+  session came back empty, and a `planned` date on the make-up because the carry already did its
+  job — that field is gone. The generator's tests now sweep twelve other seeds, since the shipping
+  one misses only a Wednesday in the weeks that test.
+- **"Wednesday's tests are in"**, on the log of a Wednesday the climber missed, because the grade
+  it was given was taken on the Saturday. *"Taken this week: Max Boulder Grade."*
+
+### Measured and left, with reasons
+
+- **Peak Performance's recommended layout puts five tests on its Friday** — the only strength day
+  in a week of three climbing days. The alternative is a max hang on a limit-bouldering day.
+- **Ground Zero puts max push-ups on a mobility day.** `gym` holds mobility and strength together;
+  one beginner program shows the difference, and splitting the place for it is a fifth kind to keep.
+- **The list does not say where a missed test should go**, only that it is still to take. The
+  sample climber's rule — the next session of the same type — is a reasonable default and not one
+  the app states.
+- **A `findBy` that matches two elements hangs to the test timeout** in this suite rather than
+  failing at the query's own timeout. Cost twenty minutes here; the tests use a unique anchor.
+
+Battery: twenty-seven mutants and a sanity check on the first run, eight survivors — all of them
+the ones above — and ten of ten killed on the second with the sanity one surviving. 7,256 tests over
+436 files, from 7,209. Layout harness OK at every size, the date matrix green on all ten days, and
+the first load 128.44KB against 129.1.
