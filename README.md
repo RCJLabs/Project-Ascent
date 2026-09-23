@@ -18,6 +18,7 @@ npm run dev        # dev server
 npm test           # engine + storage tests (vitest)
 npm run lint       # typecheck
 npm run build      # production build to dist/
+npm run bundle     # what the first load is made of; -- --against HEAD for what a change added
 npm run icons      # regenerate public/icons (committed)
 ```
 

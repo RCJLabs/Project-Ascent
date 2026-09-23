@@ -15072,6 +15072,13 @@ its label is missing. None of these wants touching.
   on the way into limit bouldering got *"Train, with changes."* and no change on 268 of them. Both
   now count the climbing, with the four parts the body-load chart already counted for it: the
   climber's call, made knowing a returning elbow is flagged on every climbing day.
+- **M328 — `npm run bundle`.** The first-load test said whether the entry chunk fit its budget and
+  never what moved it, so every milestone that went over answered that by hand: build with maps,
+  stash, build again, walk both maps. Now one command lists the entry chunk by source file with what
+  each would save if it were gone, and `-- --against <ref>` builds that ref in a temporary worktree
+  and names what arrived on the boot path, what grew and what left. The budget and its measure moved
+  to `scripts/firstLoad.mjs`, shared with the test, and the tool reproduces the totals M325, M326 and
+  M327 recorded by hand.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -23516,3 +23523,65 @@ withheld on 268 of the 308. Its own drill it had never been told about at all.
 Battery: fifteen mutants and a sanity check, two survivors on the first run, both killed. 7,309
 tests over 436 files, from 7,292. Layout harness OK, the date matrix green on all ten days, first
 load 129.08KB against 129.1.
+
+## M328 — `npm run bundle`
+
+`perf.test.ts` has held the first load under a budget since M78. It could say the number and nothing
+about it, and the budget is now 0.02KB from its ceiling, so the next change that reaches Home has to
+find its own bytes. Three milestones this week found them the same way, by hand: build with
+sourcemaps, `git stash`, build again, walk both maps, diff the files. Each answer was one sentence —
+M325's planner, safety note and phrase helper had reached the boot path through one import; M327's
+check-in function sat in a module Home loads — and each took twenty minutes.
+
+```
+npm run bundle                      the entry chunk by source file
+npm run bundle -- --against HEAD    what the working tree added since HEAD
+npm run bundle -- --against main --top 40
+```
+
+### What it reports
+
+- **The first load against the budget**, with the headroom, measured by the same function the test
+  uses — the budget and its measure are in `scripts/firstLoad.mjs` now, and the budget's history
+  stays in the test beside the checks.
+- **The entry chunk by source**: each file's minified bytes, attributed through the sourcemap, and
+  its **gzip cost if removed** — the entry gzipped whole minus the entry gzipped without that file.
+  Gzip is not additive, so these do not sum; the cost is the number a decision needs. Dependencies
+  are named by package.
+- **Against a ref**: what is **new in the entry chunk** first — the shape of M325's mistake — then
+  what grew or shrank, largest first, and the total's change, marked as noise when it is within the
+  0.02KB rebuilds wander by.
+
+It reproduces what was measured by hand: against M326, `climbing.ts` new at 381 bytes, `bodyLoad`
++411, `PreSession` +108, 128.71 → 129.08KB; against M325, 128.44 → 129.06KB. And it found one
+thing the hand diffs had called noise: each new lazy chunk adds its file name to the entry's preload
+map, about eighteen bytes attributed to `main.tsx`.
+
+### What I got wrong, four times, each caught by a number that could not be right
+
+- **Dependencies named as app files.** The builds are written under `node_modules/.cache`, and a
+  relative path from there to `react-dom` climbs out without saying `node_modules`. Sources are named
+  from absolute paths now.
+- **A stylesheet 29KB larger, unzipped, in the comparison build.** Its worktree linked `node_modules` in, the
+  repo's ignore rule is `node_modules/`, a directory pattern, and a link is not a directory — so
+  Tailwind scanned every package. The worktree's own `.gitignore` gets the bare name.
+- **An identical tree measuring 44 bytes apart in `ErrorBoundary.tsx`.** The first worktree lived
+  under `node_modules/.cache`, and Vite does not apply `tsconfig.json` to a file whose path says
+  `node_modules`: the class fields compiled into a constructor. It builds in the system temp
+  directory now.
+- **A map build reading one byte light.** The shipped chunk ends in a newline, and the first strip
+  of the sourcemap comment took it too. Checked against the real build: the two entries are the same
+  length to the byte, and a test holds it.
+
+### Measured and left
+
+- **The builds are not tested**, only everything between a build and a report — decoding, naming,
+  costing, comparing, the strip. Two builds are thirty seconds, and the numbers they give were
+  checked against three milestones measured independently.
+- **It is not in CI.** The test still guards the budget; when it fails, its message now names the
+  command that says why.
+
+Battery: twenty mutants and a sanity check; three survived the first run — one mutant of mine that
+changed nothing, nested dependency paths and a span inside another, both now tested. 7,326 tests
+over 437 files, from 7,309. No app code changed, so the layout harness and the date matrix had
+nothing new to see; CI runs the matrix on the push.

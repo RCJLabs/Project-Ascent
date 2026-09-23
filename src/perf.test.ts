@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { DRILLS } from '@/content/drills';
 import { DRILL_TEXT } from '@/content/drillText';
 import { CATALOGUE } from '@/content/programs/catalogue';
-import { gzipSync } from 'node:zlib';
+import { BUDGET as FIRST_LOAD_BUDGET, firstLoad } from '../scripts/firstLoad.mjs';
 import { describe, expect, it } from 'vitest';
 import type { Session } from '@/db/sessions';
 import type { MetricEntry } from '@/db/metrics';
@@ -602,18 +602,15 @@ describe('the bundle stays small', () => {
    * now fails for being too small, so the next cut of more than half a
    * kilobyte moves this line in its own commit.
    */
-  const BUDGET = 129.1;
+  //
+  // **The number itself is in `scripts/firstLoad.mjs` since M328**, with the
+  // measure, so `npm run bundle` reports against the same line this holds.
+  // The history above stays here, beside the checks.
+  const BUDGET = FIRST_LOAD_BUDGET;
 
   /** The first load, gzipped: the entry chunk plus every stylesheet. */
   function firstLoadKb(): number {
-    const html = readFileSync('dist/index.html', 'utf8');
-    const entry = /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)?.[1];
-    expect(entry, 'no entry chunk in index.html').toBeDefined();
-    const js = gzipSync(readFileSync(`${dist}/${entry}`)).length;
-    const css = readdirSync(dist)
-      .filter((f) => f.endsWith('.css'))
-      .reduce((n, f) => n + gzipSync(readFileSync(`${dist}/${f}`)).length, 0);
-    return (js + css) / 1024;
+    return firstLoad('dist').kb;
   }
 
   it.runIf(built)('keeps the first load under the budget', () => {
@@ -1391,7 +1388,10 @@ describe('the bundle stays small', () => {
     // strip, the altimeter, the arcade card and — the large one — `BoardCard`,
     // which it imported from `BoardPage.tsx` and so carried the whole board
     // page in the entry chunk. Those are on the Game tab now, lazily.
-    expect(total, `first load is ${total.toFixed(2)}KB gzipped`).toBeLessThan(BUDGET);
+    expect(
+      total,
+      `first load is ${total.toFixed(2)}KB gzipped — \`npm run bundle -- --against HEAD\` says what grew`,
+    ).toBeLessThan(BUDGET);
   });
 
   it.runIf(built)('leaves no headroom a regression could hide in', () => {
