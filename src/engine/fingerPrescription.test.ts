@@ -17,7 +17,9 @@ import { loadDrills, DRILLS } from '@/content/drills';
 import type { SessionType } from '@/content/types';
 import { newSession, type Session } from '@/db/sessions';
 import { LOAD_RULES, rulesInText } from './bodyLoad';
-import { directFingerWork, loadsFingersDirectly } from './fingerGap';
+import { directFingerWork, drillOnTheBoard, fingerGaps, loadsFingersDirectly } from './fingerGap';
+import { demoClimber } from './demoClimber';
+import { addDays } from './dates';
 
 const TODAY = '2026-03-30';
 
@@ -188,3 +190,56 @@ describe('the narrowing, against the content it was measured on', () => {
     expect(moved.sort()).toEqual(['Dead Hang', 'Passive Dead Hangs']);
   });
 });
+
+describe('what a drill is, to the forty-eight hours (PLAN.md M324)', () => {
+  it('counts the library’s hangboard drills and nothing else', () => {
+    // Named, not counted. Before M324 this list was seven wall drills —
+    // crimp bouldering, a pull-power drill and a lead-fall ladder — and none
+    // of the three below.
+    expect(DRILLS.filter(drillOnTheBoard).map((d) => d.id).sort()).toEqual([
+      'graduation_retest_fingers',
+      'graduation_retest_static',
+      'pp_graduation_retest',
+    ]);
+  });
+
+  it('never counts a climbing drill, however hard it is on the fingers', () => {
+    const crimps = getDrillOrThrow('limit_boulders_on_the_crimps');
+    expect(crimps.equipment).toEqual(['wall']);
+    expect(drillOnTheBoard(crimps)).toBe(false);
+    const session = { ...logged('iron_grip', 'perf'), drillId: crimps.id };
+    expect(loadsFingersDirectly(session)).toBe(false);
+  });
+
+  it('counts a board drill whatever it is called', () => {
+    expect(drillOnTheBoard({ name: 'Sunday thing', focus: 'Whatever', equipment: ['hangboard'] })).toBe(true);
+    expect(drillOnTheBoard({ name: 'Sunday thing', focus: 'Whatever', equipment: ['campus'] })).toBe(true);
+  });
+
+  it('reads the words of a drill written for no kit at all', () => {
+    // A custom drill with nothing ticked is somewhere this app cannot see,
+    // and its name is all there is. The wall is never that case.
+    expect(drillOnTheBoard({ name: 'Max hangs at home', focus: 'Fingers', equipment: [] })).toBe(true);
+    expect(drillOnTheBoard({ name: 'Stretching', focus: 'Hips', equipment: [] })).toBe(false);
+    expect(drillOnTheBoard({ name: 'Max hangs', focus: 'Fingers', equipment: ['wall'] })).toBe(false);
+  });
+
+  it('lets a climber run Iron Grip as written without being told they broke it', () => {
+    // The finding. Iron Grip puts a crimp drill on the Wednesday before a
+    // Thursday finger day in weeks 1-3, and `PreSession` stamps that drill on
+    // every perf session a climber starts. The rule read the drill's words,
+    // counted the Wednesday as a finger session, and found the program's own
+    // layout inside its own gap. Swept over a week of days, because which
+    // sessions have happened turns on the weekday.
+    for (let i = 0; i < 7; i += 1) {
+      const today = addDays('2026-09-20', i);
+      expect(fingerGaps(demoClimber(today).sessions, today), today).toBeNull();
+    }
+  });
+});
+
+function getDrillOrThrow(id: string) {
+  const drill = DRILLS.find((d) => d.id === id);
+  if (!drill) throw new Error(`no drill ${id}`);
+  return drill;
+}

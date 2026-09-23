@@ -99,6 +99,11 @@ export interface DemoProfile {
    * session the block ever placed.
    */
   plan: WeekPlan;
+  /**
+   * The track the sessions were stamped with (PLAN.md M324), handed out for
+   * the reason the plan is: the log and the profile have to be one answer.
+   */
+  trackId: string;
   injuryId: string;
 }
 
@@ -124,6 +129,7 @@ export async function loadDemo(seed = DEMO_SEED, today = todayKey()): Promise<De
     programId: made.programId,
     startDate: made.startDate,
     plan: made.plan,
+    trackId: made.trackId,
     injuryId: made.injuries[0]!.id,
   };
 }

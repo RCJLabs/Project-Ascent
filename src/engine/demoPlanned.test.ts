@@ -19,6 +19,7 @@
 import { describe, expect, it } from 'vitest';
 import { blockAdherence } from './adherence';
 import { demoClimber, demoPlan } from './demoClimber';
+import { plannedDay } from './plan';
 import { deriveClimberState } from './derive';
 import { loadRelief, MIN_HISTORY } from './loadRelief';
 import { isRestSession } from './rest';
@@ -80,10 +81,21 @@ describe('the sessions inside the running block', () => {
     }
   });
 
-  it('claim planned only when the plan placed them', () => {
+  it('claim planned only on a date the plan placed something', () => {
+    // M319 wrote this as `planned === (sessionTypeId !== undefined)`, which
+    // called a session made up on a free Tuesday "placed by the plan". M324
+    // put the generator through `PreSession`'s own writer and the writer
+    // disagreed: `planned` is whether the plan put a session on the date,
+    // and a Tuesday it left free was the climber's choice. The field's own
+    // words — *"placed by the plan rather than logged by hand"* — side with
+    // the writer, so this test moved rather than the code.
     const made = demoClimber('2026-09-22');
+    const program = getProgram('iron_grip')!;
     for (const session of made.sessions) {
-      expect(session.planned, session.date).toBe(session.sessionTypeId !== undefined);
+      const placed =
+        session.date >= made.startDate &&
+        plannedDay(program, made.startDate, made.plan, session.date).sessionType !== undefined;
+      expect(session.planned, session.date).toBe(placed);
     }
   });
 
@@ -102,7 +114,7 @@ describe('the sessions inside the running block', () => {
     // `landTheSends` reads the *last* burn on a project as the send — so a
     // Tuesday session left at the end of its week would date a send before
     // burns that came after it.
-    const placed = demoClimber('2026-09-22').sessions.filter((s) => s.planned);
+    const placed = demoClimber('2026-09-22').sessions.filter((s) => s.sessionTypeId !== undefined);
     const dates = placed.map((s) => s.date);
     expect(dates).toEqual([...dates].sort());
   });
@@ -126,7 +138,10 @@ describe('the sessions inside the running block', () => {
       const made = demoClimber(today);
       for (const session of made.sessions.filter((s) => s.date >= made.startDate)) {
         const day = dayOfWeek(session.date) as DayOfWeek;
-        if (session.planned) {
+        // By type, not by `planned`: a make-up carries its type and is not
+        // planned (M324), and it is exactly the session this has to hold to
+        // the Tuesday.
+        if (session.sessionTypeId !== undefined) {
           // On the day the plan asks for it, or made up on the Tuesday.
           const asked = plan[day] === session.sessionTypeId;
           expect(asked || day === 2, `${today}: ${session.date} ${session.sessionTypeId}`).toBe(true);

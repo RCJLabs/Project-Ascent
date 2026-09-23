@@ -343,7 +343,10 @@ export function SettingsPage() {
       // reads it from the same place this did — but asking `loadDemo` for it
       // is what stops the plan on the profile and the log underneath it from
       // being two answers to one question.
-      profile.startProgram(made.programId, made.plan);
+      // And the track (PLAN.md M324): every session in the log says which one
+      // it ran, and a profile holding none would draw the upcoming weeks on
+      // the default the log never used.
+      profile.startProgram(made.programId, made.plan, made.trackId);
       // The block it finished before this one, so **Blocks you have run**
       // has the two rows it needs to draw (PLAN.md M282). Prepended, because
       // `startProgram` above has already written the running one.

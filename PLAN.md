@@ -15036,6 +15036,17 @@ its label is missing. None of these wants touching.
   project had already written this guard once, at `AttachPage`'s shared-photo effect, and missed it
   twice. Both are guarded now.
 
+- **M324 — the sample climber, written the way the app writes a climber.** Of the thirty fields on
+  `Session`, the fixture every check uses had never filled nine; two it never should, which left
+  seven — `exercises`, `drillId`, `drillDone`, `trackId`, `deload`, `startedAt`, `endedAt` — with
+  well over a hundred file reads between them. The start button's stamping moved into
+  `engine/sessionStart.ts` and the generator calls it, so a field added there reaches the sample
+  climber without anyone remembering. The first thing the fuller fixture found: the 48-hour finger
+  rule's drill branch was inverted — it counted seven *wall* drills and none of the library's three
+  hangboard drills — so a climber running Iron Grip exactly as written was told they had breached
+  it, about the program's own layout. A test now holds every `Session` field to being filled or
+  named with a reason.
+
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -23079,3 +23090,138 @@ and not proof, and the guard is what makes the schedule stop mattering.
 
 7,180 tests over 431 files, from 7,179. First load 128.10KB against 129.1, unchanged: nothing here
 reaches the entry chunk.
+
+
+## M324 — the sample climber, written the way the app writes a climber
+
+The brainstorm's first item. Every bug in M319, M320, M321 and M323 was found the moment the fixture
+reached a state it had never been in, so the question was which states it still could not reach —
+and that turned out to be countable.
+
+### The count, and a correction to it
+
+Of the thirty fields `Session` declares, the sample climber's 406 sessions had never filled nine.
+The brainstorm listed nine; two of them are not gaps. `completedExercises` is deprecated and *"never
+written"*, folded into `exercises` on read, and `imported` marks a row built from a spreadsheet. That
+left seven, and they are not obscure:
+
+```
+exercises   37 files      trackId     13
+deload      20            startedAt   10
+drillId     13            endedAt      8
+drillDone   13
+```
+
+Plus assessments inside the running block, of which there were none — which is the next milestone.
+
+### The same writer, not a second opinion
+
+Six of the seven are stamped by one place in a real session's life: `useStartSession` in
+`PreSession.tsx`, which sets the block, the type, the track, the day's drill, the deload flag and —
+when the date is today — the clock. The generator would have had to restate that list, and the
+audit's most repeated finding is two answers to one question. So the stamping moved into
+`engine/sessionStart.ts`, both call it, and a field added there reaches the sample climber without
+anyone remembering to. What stays in the hook is the only thing it knows: whether the date is today.
+
+The rest is what the logger keeps. Exercises come through `prescriptionFor`, which is what the
+logger draws — track filtered, the week's step applied, the deload lightened — with the finger
+protocol logged at a percentage of the climber's own last max hang, read off the prescription's
+*"60-70% max added weight"*. The track is `no_board`: the climber carries an elbow, and Iron Grip
+calls the board track *"the highest injury risk in the program"*.
+
+**The writer disagreed with M319 about one thing, and the writer was right.** M319 called a session
+made up on a free Tuesday `planned: true`. The start button calls it `planned: false` — the plan put
+nothing on that date — and the field's own words, *"placed by the plan rather than logged by hand"*,
+side with the button. The test moved, not the code.
+
+### What it found: the finger rule's drill branch was inverted
+
+`fingerGap` has read a session's drill since M160, with a comment that says *"a hangboard drill
+loads fingers whatever it is called"*. It asked for the drill's words **and** its kit, and the words
+decided. Swept over all 156 drills:
+
+```
+counted   limit_boulders_on_the_crimps    [wall]
+          volume_on_moderate_crimps       [wall]
+          projecting_with_crimp_focus     [wall]
+          the_crimp_project               [wall]
+          crimp_pull_power_application    [wall]
+          offset_pull_practice            [wall]   "One-Arm" in its focus
+          tlg_fall_ladder                 [wall]   "Lead Fall Practice — The Fall Ladder"
+missed    graduation_retest_fingers       [hangboard]
+          graduation_retest_static        [hangboard]
+          pp_graduation_retest            [hangboard]
+```
+
+Seven wall drills and none of the three hangboard ones. That is climbing, which the file's own
+header rules out by name — *"Not climbing, which is the mistake this avoids."*
+
+It had never shown because no fixture had carried a `drillId`. `PreSession` stamps one on every perf
+session a real climber starts, and Iron Grip places the first three crimp drills on weeks 1–3 — the
+Wednesday before a Thursday finger day. So the sample climber, running the program exactly as
+written, came out at **three breaches, the tightest 24 hours**, and the coach would have told it so.
+So would every real Iron Grip climber who used the start button. The program says what it means:
+*"2 fingerboard sessions per week, with 72 hours between. Supplementary climbing fills in the other
+days."*
+
+The kit decides now, in the order the comment always implied: a board in it and it counts whatever
+it is called; the wall and it does not; neither — a drill written for somewhere the app does not know
+— and its words are all there is. Exactly the three retests count. Across a week of pinned days the
+sample climber has no breach, and the coach board lost *"No drills yet"* because thirteen drills are
+now done.
+
+### Local time, on purpose
+
+`coach.ts`'s `lateSessions` reads `new Date(startedAt).getHours()` — local. Every other stamp in the
+generator is fixed UTC, which is right for fields nothing reads as a time of day and wrong for this
+one: a fixed-UTC evening is a late trainer in Tokyo and an early one in Denver, so the tip would fire
+by longitude. Starts are built from local 17:45 plus up to ninety minutes, which is the same evening
+wherever the log is loaded. The test holds it in any timezone the suite runs in.
+
+### Reading the screens found three more
+
+The layout harness came back clean at four widths. Reading what the screens *said* did not:
+
+- **Today's session had a clock that had not happened.** Loaded at 00:05, the logger said *"1 h on
+  the clock"* about a session starting eighteen hours later. The generator cannot know the time of
+  day, so today's session is logged without one — drawn anyway, so which day is today moves nothing.
+- **My deload contradicted the program.** The first draft held the load on the deload week,
+  following `plan.ts`'s generic `DELOAD_STEP` — the default for a program that wrote no deload.
+  Iron Grip wrote one: *"Three sets on the same edge, a step lighter than you have been hanging."*
+  The logger printed the program's sentence over a load that disagreed with it. A step down now, and
+  the test that asserted the opposite was mine.
+- **The deload week had been heavier than training.** M319 measured the sample climber's week four
+  at 1.34× the weeks before it, which `planVsLog` reported. The effort and length drop with the sets
+  now, and that finding is gone for the honest reason.
+
+### Measured and left, with reasons
+
+- **The check-in's lighter dose is not taken.** The logger shows *"5 sets · today 4 sets"* when that
+  session's own check-in said tender fingers or short sleep. It is a suggestion, and a climber who
+  logs the full dose against one is a climber who exists; nothing downstream contradicts it.
+- **A hangboard day offers "Same as last time"** — eleven climbs from Saturday, onto a session with
+  no climbing in it. Reached since M319 gave finger days no climbs; a judgement about the logger, not
+  a fixture defect.
+- **The injury flag reads coaching notes as activity.** The campus rule has nine hits in the
+  catalogue and five are false, four of them from an exercise's `notes`: *"Skip entirely if sore
+  from campus"* flags push-ups as campus work, *"Warm up with a hang ladder"* gives max hangs the
+  campus reason, and *"Bump to 3x20 if elbows feel tight"* tells a climber with an injured elbow that
+  their elbow rehab is *"the highest-force protocol there is"*. `\bbump\b` has no true positive at
+  all — campus bumping is written *bumps*. This predates M324 and it is the third time in `bodyLoad`
+  that a keyword table has read prose; the fix is a decision about what text an injury flag reads,
+  across every rule, which is a milestone and not a footnote.
+
+### The net
+
+`demoLogbook.test.ts` reads `Session`'s fields out of `db/sessions.ts` and holds every one of them to
+being filled by the sample climber or named in `NEVER_FROM_THE_DEMO` with a reason. A field added to
+`Session` lands in one list or the other, or the suite says so. It is the rule that keeps the list
+this milestone started from from growing back.
+
+Battery 19 killed, 3 sanity survived. Two survived the first run, both real: the weekly load notch
+was held only by *"never lighter"*, which a flat line passes, and the track choice was compared with
+its own constant, so switching the sample climber to the campus board changed nothing a test could
+see. The second fix had its own slip — matching `/campus/i` against the track names found *"No
+campus board"* first — and it keys on what the program says about the risk now instead.
+
+7,209 tests over 433 files, from 7,180. Layout harness OK. First load 128.17KB against 129.1.

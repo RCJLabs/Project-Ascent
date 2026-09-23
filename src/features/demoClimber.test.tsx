@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { canLoadDemo, demoAway, demoObjectives, demoProgram, loadDemo } from '@/db/demo';
-import { DEMO_PROGRAM_ID, demoClimber, demoPlan } from '@/engine/demoClimber';
+import { DEMO_PROGRAM_ID, DEMO_TRACK, demoClimber, demoPlan } from '@/engine/demoClimber';
 import { useCustomPrograms } from '@/store/programs';
 import { daysBetween, today } from '@/engine/dates';
 import { getSession, newSession, putSession } from '@/db/sessions';
@@ -94,6 +94,8 @@ describe('loading and clearing it', () => {
     // ask `layoutsFor` for the program's first layout, and the log underneath
     // was written on days that layout never asked for.
     expect(useProfile.getState().plans['iron_grip']).toEqual(demoPlan());
+    // And the track every session in the log was stamped with (PLAN.md M324).
+    expect(useProfile.getState().tracks['iron_grip']).toBe(DEMO_TRACK);
   });
 
   it('offers the way out once it is loaded, and not the way in', async () => {

@@ -76,10 +76,10 @@
 
 import { getDrill } from '@/content/drills';
 import { getProgram } from '@/content/programs';
-import type { DrillLoad } from '@/content/types';
+import type { Drill, DrillLoad } from '@/content/types';
 import type { Session } from '@/db/sessions';
 import { daysBetween } from './dates';
-import { drillLoads, rulesInText } from './bodyLoad';
+import { rulesInText } from './bodyLoad';
 import { isRestSession } from './rest';
 
 /**
@@ -166,13 +166,49 @@ export function loadsFingersDirectly(session: Session): boolean {
   if (directFingerWork(words(session))) return true;
   if (session.drillId !== undefined) {
     const drill = getDrill(session.drillId);
-    // A drill's own words *and* its kit: a hangboard drill loads fingers
-    // whatever it is called.
-    if (drill && drillLoads(drill).includes('fingers') && directFingerWork(`${drill.name} ${drill.focus}`)) {
-      return true;
-    }
+    if (drill) return drillOnTheBoard(drill);
   }
   return false;
+}
+
+/** The kit that makes a drill a board session rather than a climbing one. */
+const BOARD_KIT: readonly Drill['equipment'][number][] = ['hangboard', 'campus'];
+
+/**
+ * Whether a drill is finger work in this rule's sense (PLAN.md M324).
+ *
+ * The comment this replaced said *"a hangboard drill loads fingers whatever
+ * it is called"* and the code did the opposite. It asked for the drill's
+ * words **and** its kit, and the words decided: swept over all 156 drills,
+ * the rule counted seven and **every one of them was a wall drill** —
+ * *Limit Boulders on the Crimps*, *Volume on Moderate Crimps*, *Projecting
+ * With Crimp Focus*, *The Crimp Project*, *Crimp Pull-Power Application*,
+ * *Offset Pull Practice* (for "One-Arm" in its focus) and *Lead Fall
+ * Practice — The Fall Ladder* (for `ladder`, which is a campus word). The
+ * library's only three hangboard drills, the graduation retests, it missed.
+ *
+ * That is climbing, which the header above rules out by name, and it was
+ * never seen because no fixture had ever carried a `drillId` until M324 gave
+ * the sample climber the one `PreSession` stamps on every perf day. Iron
+ * Grip places the first three on weeks 1–3, the Wednesday before a Thursday
+ * finger day — so a climber running it exactly as written was told they had
+ * breached the forty-eight hours, by the app, about the program's own
+ * layout. The program's rhythm says what it means: *"2 fingerboard sessions
+ * per week, with 72 hours between. Supplementary climbing fills in the other
+ * days."*
+ *
+ * So the kit decides, in the order the words above always implied:
+ *
+ * - **A board** in its kit, and it counts whatever it is called.
+ * - **The wall**, and it does not — it is climbing, however hard.
+ * - **Neither**, which is a drill written for somewhere this app does not
+ *   know about, and its words are all there is to go on.
+ */
+export function drillOnTheBoard(drill: Pick<Drill, 'name' | 'focus' | 'equipment'>): boolean {
+  const kit = drill.equipment ?? [];
+  if (kit.some((k) => BOARD_KIT.includes(k))) return true;
+  if (kit.includes('wall')) return false;
+  return directFingerWork(`${drill.name} ${drill.focus}`);
 }
 
 export interface FingerGaps {

@@ -8,7 +8,7 @@ import { shortLabel, today } from '@/engine/dates';
 import { concerning, injuryPolicy } from '@/engine/injury';
 import { type PlannedDay } from '@/engine/plan';
 import { restDayDrill } from '@/engine/restDrill';
-import { NO_HABITS } from '@/engine/restHabits';
+import { restStart, trainingStart } from '@/engine/sessionStart';
 import { intensityOf } from '@/engine/scheduler';
 import { describeWork, sessionMinutes } from '@/engine/sessionLength';
 import { useProfile } from '@/store/profile';
@@ -197,39 +197,21 @@ export function useStartSession(date: string): DayPlan {
    * climbs is the app's definition of a rest day, and the editor reads the
    * same field to know which half to render.
    */
+  // The stamping itself is `engine/sessionStart.ts` (PLAN.md M324), which the
+  // sample climber is now written through as well. What stays here is the one
+  // thing only this hook knows: whether the date is today, and so whether a
+  // clock is running at all.
+  const clock = () => (date === today() ? new Date().toISOString() : undefined);
+
   async function startRest() {
-    await create(date, {
-      ...(date === today() ? { startedAt: new Date().toISOString() } : {}),
-      ...(activeProgramId ? { programId: activeProgramId } : {}),
-      ...(trackId ? { trackId } : {}),
-      ...(restDrill ? { drillId: restDrill.id } : {}),
-      restChecklist: NO_HABITS,
-      planned: false,
-    });
+    await create(date, restStart({ startedAt: clock(), programId: activeProgramId, trackId, restDrill }));
   }
 
   async function start(sessionTypeId?: string) {
-    await create(date, {
-      // A clock only makes sense on the day it is ticking through. Logging
-      // Tuesday's session on Thursday has nothing to time.
-      ...(date === today() ? { startedAt: new Date().toISOString() } : {}),
-      ...(activeProgramId ? { programId: activeProgramId } : {}),
-      ...(sessionTypeId ? { sessionTypeId } : {}),
-      // The mode is not set here (PLAN.md M180). It used to be, from
-      // `chosen?.outdoor` — a second copy of a rule `sessionMode.ts`
-      // already held, and one that only this handler applied. `newSession`
-      // reads the declaration off whatever `sessionTypeId` it is given, so
-      // every way of creating a session gets it and this one does not have
-      // to remember. The logger can still say otherwise afterwards; a
-      // program cannot know that this Tuesday was at the crag.
-      ...(trackId ? { trackId } : {}),
-      // The plan's drill on a training day; the rest day's own on a rest day
-      // (PLAN.md M164). Stamped at the start like any other, so the editor
-      // has something to tick and `drillsCompleted` can move.
-      ...(day?.drill ? { drillId: day.drill.id } : restDrill ? { drillId: restDrill.id } : {}),
-      ...(day?.isDeload ? { deload: true } : {}),
-      planned: Boolean(day?.sessionType),
-    });
+    await create(
+      date,
+      trainingStart({ startedAt: clock(), programId: activeProgramId, sessionTypeId, trackId, day, restDrill }),
+    );
   }
 
   return { program, day, primary, label, others, loadNote, restDrill, trackId, start, startRest, offersRest };

@@ -57,6 +57,14 @@ import { addDays, startOfWeek } from './dates';
 import { getProgram } from '@/content/programs';
 import type { SessionType } from '@/content/types';
 import { layoutsFor, planFromLayout, type WeekPlan } from './scheduler';
+import type { Exercise } from '@/content/types';
+import type { LoggedExercise, SetOutcome } from '@/db/sessions';
+import { plannedDay, prescriptionFor, weekInPhase, type PlannedDay } from './plan';
+import { restDayDrill } from './restDrill';
+import { concerning, injuryPolicy } from './injury';
+import { directFingerWork } from './fingerGap';
+import { doseRange } from './exerciseLog';
+import { restStart, trainingStart } from './sessionStart';
 
 /** One climber, so a screenshot taken today matches one taken in a year. */
 export const DEMO_SEED = 20_260_112;
@@ -222,6 +230,8 @@ export interface DemoClimber {
    * seeded asked for four days a week the log never used.
    */
   plan: WeekPlan;
+  /** The track it runs the block on, for the profile to hold (PLAN.md M324). */
+  trackId: string;
   /** One program the climber wrote, for the `programs` store to hold. */
   program: Program;
   /** Blocks finished before the running one, oldest first. */
@@ -328,6 +338,16 @@ function landTheSends(sessions: Session[]): void {
     delete last.highPoint;
     delete last.from;
   }
+}
+
+/** The newest reading of a metric on or before a date, or null. */
+function latest(entries: readonly MetricEntry[], metricId: string, date: string): number | null {
+  let best: MetricEntry | null = null;
+  for (const entry of entries) {
+    if (entry.metricId !== metricId || entry.date > date) continue;
+    if (best === null || entry.date > best.date) best = entry;
+  }
+  return best === null ? null : best.value;
 }
 
 /** Timestamps from the day the record is about, never from the clock. */
@@ -518,6 +538,109 @@ function ironGrip(): Program {
 }
 
 /**
+ * Which way through Iron Grip the sample climber takes (PLAN.md M324).
+ *
+ * No campus board, for two reasons the log already gives: the climber is
+ * carrying an elbow injury — *"Felt it on a hard lock-off. Easing, slowly."*
+ * — and Iron Grip's own description of the board track calls it *"the highest
+ * injury risk in the program"*. Nobody coaching this climber would put them
+ * on it. `demoPlanned.test.ts` holds that the program declares the id.
+ */
+export const DEMO_TRACK = 'no_board';
+
+/**
+ * An evening start, in the climber's own timezone (PLAN.md M324).
+ *
+ * **Local time, deliberately, and the one place this file is not pure.**
+ * Every other stamp here is fixed UTC — `stamps()` writes `T18:00:00.000Z` —
+ * because nothing reads those as an hour of the day. `startedAt` is read as
+ * exactly that: `coach.ts`'s `lateSessions` takes
+ * `new Date(startedAt).getHours()` against `LATE_HOUR`, which is local. A
+ * fixed-UTC evening would be a late trainer in Tokyo and an early one in
+ * Denver, so the tip would fire by longitude. This builds 17:45 plus up to
+ * ninety minutes *where the log is loaded*, which is the same evening
+ * everywhere and nowhere near nine o'clock.
+ */
+function evening(date: string, minutes: number): string {
+  const at = new Date(`${date}T17:45:00`);
+  at.setMinutes(at.getMinutes() + minutes);
+  return at.toISOString();
+}
+
+/** When a session that started at `startedAt` and ran `minutes` finished. */
+function endOf(startedAt: string, minutes: number): string {
+  return new Date(Date.parse(startedAt) + minutes * 60_000).toISOString();
+}
+
+/**
+ * What a finger-protocol line was done at (PLAN.md M324).
+ *
+ * The dose is the logger's own — `prescriptionFor` has already applied the
+ * week's step and the deload — and the load is a percentage of this climber's
+ * own last max hang, read off the prescription's *"60-70% max added weight"*
+ * and rounded to the 2.5lb plates a gym has. Up a notch a week inside the
+ * phase, the way Iron Grip's Anvil rationale asks — *"Easy? Add 2.5 lbs"* —
+ * and a notch **down** on a deload week, because that is what Iron Grip's own
+ * deload step says: *"Three sets on the same edge, a step lighter than you
+ * have been hanging, and stop while it still feels easy."* The first draft
+ * held the load, following `plan.ts`'s generic `DELOAD_STEP` — which is the
+ * default for a program that wrote no deload of its own, and Iron Grip did.
+ * The logger printed the program's sentence over a load that contradicted it.
+ */
+function fingerLine(
+  rng: Rng,
+  exercise: Exercise,
+  maxHang: number | null,
+  notch: number,
+): LoggedExercise {
+  const sets = doseRange(exercise.sets)?.max;
+  const reps = doseRange(exercise.reps)?.max;
+  const hold = doseRange(exercise.hold)?.max;
+  const pct = /(\d+)\s*[-–]\s*(\d+)\s*%/.exec(exercise.load ?? '');
+  const load =
+    pct && maxHang !== null
+      ? Math.round(((maxHang * (Number(pct[1]) + Number(pct[2]))) / 200) / 2.5) * 2.5 + notch * 2.5
+      : undefined;
+  const outcome: SetOutcome = pick(rng, ['solid', 'solid', 'solid', 'hard', 'hard', 'failed'] as const);
+  return {
+    name: exercise.name,
+    ...(sets !== undefined ? { sets } : {}),
+    ...(reps !== undefined ? { reps } : {}),
+    ...(hold !== undefined ? { hold } : {}),
+    ...(load !== undefined ? { load } : {}),
+    outcome,
+  };
+}
+
+/**
+ * What the logger would hold for a session of this type on this day
+ * (PLAN.md M324).
+ *
+ * Read through `prescriptionFor`, which is what the logger draws — the track
+ * filtered, the week's step applied, the deload lightened — so nothing here
+ * decides a dose. The finger protocol is logged with its numbers, since it is
+ * the session. The rest is ticked, the way a climber ticks a block of pulls,
+ * and dropped now and then, which is what happens to the end of a session
+ * that ran long. A menu logs as many lines as it asks to be picked.
+ */
+function loggedFor(rng: Rng, type: SessionType, day: PlannedDay, maxHang: number | null): LoggedExercise[] {
+  if (day.phase === undefined || day.week === null) return [];
+  const inPhase = weekInPhase(day.phase, day.week) ?? 1;
+  // A notch a week, and on a deload one step below the week before it.
+  const notch = Math.max(0, inPhase - (day.isDeload ? 3 : 1));
+  const out: LoggedExercise[] = [];
+  for (const block of prescriptionFor(type, day.phase, DEMO_TRACK, day.week, day.isDeload)) {
+    const lines = block.entry.exercises;
+    const protocol = lines.some((e) => directFingerWork(e.name));
+    if (!protocol && !chance(rng, 0.8)) continue;
+    for (const exercise of lines.slice(0, block.entry.selection?.pick ?? lines.length)) {
+      out.push(directFingerWork(exercise.name) ? fingerLine(rng, exercise, maxHang, notch) : { name: exercise.name });
+    }
+  }
+  return out;
+}
+
+/**
  * The week the sample climber committed to when they started the block
  * (PLAN.md M319).
  *
@@ -652,6 +775,40 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
   /** The block they are six weeks into, and the week they committed to. */
   const running = ironGrip();
   const plan = demoPlan();
+  /**
+   * The elbow, hoisted out of the return (PLAN.md M324).
+   *
+   * The rest-day drill has to avoid it, and it is the reason for the track
+   * above. Read through `injuryPolicy` and `concerning`, which is what
+   * `PreSession` hands `restDayDrill`, so the demo is offered the drill a
+   * real climber with this injury would be.
+   */
+  const injury: Injury = {
+    id: 'demo-injury',
+    part: 'elbow',
+    side: 'right',
+    since: addDays(today, -48),
+    severity: 'managing',
+    status: 'returning',
+    note: 'Felt it on a hard lock-off. Easing, slowly.',
+  };
+  const hurt = concerning(injuryPolicy([injury]));
+  /**
+   * A fifth stream, for what the logger wrote (PLAN.md M324), on the reasoning
+   * the four above give: exercises, drills and start times are drawn here and
+   * nowhere else, so every climb, burn, note and benchmark this file produced
+   * before M324 comes out of the same draws after it.
+   */
+  const logbook = createRng(seed ^ 0x106b_00c5);
+  /** The plan's day, read the way the logger reads it. */
+  const planOn = (date: string) => plannedDay(running, ironGripStart, plan, date);
+  /** The drill `PreSession` offers on a day the plan leaves free. */
+  const restDrillOn = (date: string) => {
+    const day = planOn(date);
+    return day.isRest && day.over !== true ? restDayDrill(date, hurt) : null;
+  };
+  /** Inside the running block, which is where anything was stamped by a plan. */
+  const underPlan = (date: string) => date >= ironGripStart;
 
   const sessions: Session[] = [];
   const metrics: MetricEntry[] = [];
@@ -709,19 +866,70 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
       // the sparse half: Careless Torque came out shelved with no burns on
       // it at all, which is a card nobody can read.
       const outdoor = wall && chance(rng, week >= 30 ? 0.4 : 0.12);
+      // Drawn here rather than inline, in the same order the literal drew
+      // them, so the stream stays where it was.
+      const rpe = 5 + Math.floor(next(rng) * 4);
+      const durationMin = 60 + Math.floor(next(rng) * 4) * 15;
+      /**
+       * Everything a plan stamps, through the function that stamps it for a
+       * real climber (PLAN.md M324). Outside the block nothing placed these
+       * sessions and none of it applies.
+       */
+      const day = underPlan(date) ? planOn(date) : undefined;
+      /**
+       * No clock on today's session (PLAN.md M324).
+       *
+       * This file is a seed and a date, and it cannot know the time of day.
+       * Loaded at midnight, an evening start stamped on today is a session
+       * that began tonight and has already ended — measured in the browser at
+       * 00:05, where the logger said *"1 h on the clock"* about a session
+       * eighteen hours away. Today's is logged the way a session entered
+       * after the fact is: with no clock. Drawn anyway, so which day is today
+       * does not move every draw after it.
+       */
+      const minutes = day ? Math.floor(next(logbook) * 90) : 0;
+      const started = day && date < today ? evening(date, minutes) : undefined;
+      const stamped = day
+        ? trainingStart({
+            startedAt: started,
+            programId: running.id,
+            sessionTypeId: type?.id,
+            trackId: DEMO_TRACK,
+            day,
+            restDrill: restDrillOn(date),
+          })
+        : { planned: false };
+      /**
+       * A deload week is lighter, which is the only thing that makes it one.
+       *
+       * The draws above do not know what week it is, so a deload week came
+       * out as heavy as any other — measured at M319, where `planVsLog` put
+       * the sample climber's week four at 1.34× the weeks before it. The
+       * program's own step says a set comes off and the climber stops while
+       * it still feels easy, so the effort does and the length does.
+       */
+      const light = day?.isDeload === true;
+      const effort = light ? Math.max(4, rpe - 2) : rpe;
+      const length = light ? Math.max(45, Math.round((durationMin * 0.7) / 15) * 15) : durationMin;
+      const maxHang = latest(metrics, 'max_hang_20mm_7s', date);
+      const lines = day && type ? loggedFor(logbook, type, day, maxHang) : [];
+      // The plan's drill is usually done; the rest-day one a free day is
+      // offered is a suggestion, and mostly stays one.
+      const drillDone =
+        stamped.drillId === undefined ? undefined : chance(logbook, day?.drill ? 0.75 : 0.3);
       sessions.push(
         newSession(date, 0, {
           ...stamps(date),
           demo: true,
           completed: true,
           rewarded: true,
-          // What the field says it means — *"placed by the plan rather than
-          // logged by hand"* — rather than a `true` on every record.
-          planned: type !== undefined,
-          ...(type ? { programId: running.id, sessionTypeId: type.id } : {}),
+          ...stamped,
           mode: outdoor ? 'outdoor' : 'indoor',
-          rpe: 5 + Math.floor(next(rng) * 4),
-          durationMin: 60 + Math.floor(next(rng) * 4) * 15,
+          rpe: effort,
+          durationMin: length,
+          ...(started ? { endedAt: endOf(started, length) } : {}),
+          ...(lines.length > 0 ? { exercises: lines } : {}),
+          ...(drillDone !== undefined ? { drillDone } : {}),
           warmup: chance(rng, 0.85),
           ...(wall ? { climbs: climbsFor(rng, week, id) } : {}),
           ...(outdoor ? { projectAttempts: burnsFor(rng, week, id) } : {}),
@@ -759,18 +967,43 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
       const date = addDays(monday, inBlock ? 4 : 3);
       if (date <= today) {
         const id = sessionId(date, 0);
+        const rpe = 5 + Math.floor(next(ropes) * 4);
+        const durationMin = 90 + Math.floor(next(ropes) * 3) * 15;
+        /**
+         * Started from the same button as any other session (PLAN.md M324).
+         *
+         * Which is why it carries the program and the track with no type
+         * under them: `PreSession` stamps the running block on everything
+         * started while one is running, and a free Friday offers the rest-day
+         * drill as a suggestion. Unplanned, because the plan put nothing here.
+         */
+        const minutes = underPlan(date) ? Math.floor(next(logbook) * 90) : 0;
+        // No clock on today's, for the reason the training sessions give.
+        const started = underPlan(date) && date < today ? evening(date, minutes) : undefined;
+        const stamped = underPlan(date)
+          ? trainingStart({
+              startedAt: started,
+              programId: running.id,
+              trackId: DEMO_TRACK,
+              day: planOn(date),
+              restDrill: restDrillOn(date),
+            })
+          : { planned: false };
+        const drillDone = stamped.drillId === undefined ? undefined : chance(logbook, 0.3);
         sessions.push(
           newSession(date, 0, {
             ...stamps(date),
             demo: true,
             completed: true,
             rewarded: true,
-            planned: false,
+            ...stamped,
             // Malham is the sport crag on the location list; the rest of the
             // year's routes are indoors, which is where routes mostly happen.
             mode: 'indoor',
-            rpe: 5 + Math.floor(next(ropes) * 4),
-            durationMin: 90 + Math.floor(next(ropes) * 3) * 15,
+            rpe,
+            durationMin,
+            ...(started ? { endedAt: endOf(started, durationMin) } : {}),
+            ...(drillDone !== undefined ? { drillDone } : {}),
             warmup: chance(ropes, 0.9),
             climbs: routesFor(ropes, week, id),
             // Roped climbing has a second person in it by definition, which
@@ -795,12 +1028,25 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
     if (chance(rng, 0.6)) {
       const date = addDays(monday, 6);
       if (date <= today) {
+        /**
+         * Logged as a rest day, through the rest button (PLAN.md M324): the
+         * block and the track, and the drill the day offers. No clock — a rest
+         * day is ticked off after the fact more often than it is started — and
+         * the checklist below replaces the empty one `restStart` begins with,
+         * because it is what got ticked.
+         */
+        const stamped = underPlan(date)
+          ? restStart({ programId: running.id, trackId: DEMO_TRACK, restDrill: restDrillOn(date) })
+          : {};
+        const drillDone = stamped.drillId === undefined ? undefined : chance(logbook, 0.3);
         sessions.push(
           newSession(date, 0, {
             ...stamps(date),
             demo: true,
             completed: true,
             rewarded: true,
+            ...stamped,
+            ...(drillDone !== undefined ? { drillDone } : {}),
             restChecklist: {
               hydration: chance(rng, 0.8),
               mobility: chance(rng, 0.5),
@@ -898,22 +1144,13 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
       });
     }),
     metrics,
-    injuries: [
-      {
-        id: 'demo-injury',
-        part: 'elbow',
-        side: 'right',
-        since: addDays(today, -48),
-        severity: 'managing',
-        status: 'returning',
-        note: 'Felt it on a hard lock-off. Easing, slowly.',
-      },
-    ],
+    injuries: [injury],
     objectives: objectivesFor(today, start, sessions, metrics),
     away: awayFor(start),
     programId: running.id,
     startDate: ironGripStart,
     plan,
+    trackId: DEMO_TRACK,
     program: written,
     blocks: [finishedBlock(ironGripStart, written)],
   };
