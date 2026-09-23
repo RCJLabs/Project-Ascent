@@ -307,7 +307,12 @@ function MarkTools({
   const full = marks.length >= MAX_MARKS;
   return (
     <div className="mt-3 space-y-2">
-      <div className="flex items-center gap-1.5">
+      {/* Wraps (PLAN.md M330). Four tools, undo and *Clear* are 401px at the
+          largest text and a 360px phone has 318 inside the viewer, so *Clear*
+          sat 80px off the edge — found the first time the layout harness
+          could open a photo. The two that act on the marks go down a line
+          together and stay on the right, where they are at every other size. */}
+      <div className="flex flex-wrap items-center gap-1.5">
         {TOOLS.map(({ id, label, icon: Icon }) => (
           <IconButton
             key={id}
@@ -324,26 +329,26 @@ function MarkTools({
           </IconButton>
         ))}
 
-        <span className="flex-1" />
-
-        <IconButton
-          inline={false}
-          label="Undo the last mark"
-          disabled={marks.length === 0}
-          onClick={onUndo}
-          className="text-white bg-white/10 hover:bg-white/20 disabled:bg-transparent"
-        >
-          <Undo2 size={19} />
-        </IconButton>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={marks.length === 0}
-          onClick={onClear}
-          className="text-white border-white/40 hover:bg-white/10"
-        >
-          Clear
-        </Button>
+        <div className="ml-auto flex items-center gap-1.5">
+          <IconButton
+            inline={false}
+            label="Undo the last mark"
+            disabled={marks.length === 0}
+            onClick={onUndo}
+            className="text-white bg-white/10 hover:bg-white/20 disabled:bg-transparent"
+          >
+            <Undo2 size={19} />
+          </IconButton>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={marks.length === 0}
+            onClick={onClear}
+            className="text-white border-white/40 hover:bg-white/10"
+          >
+            Clear
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-1.5">

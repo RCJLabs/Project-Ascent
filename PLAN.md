@@ -15086,6 +15086,12 @@ its label is missing. None of these wants touching.
   `include-hidden-files: true` keeps `.well-known/assetlinks.json` on the site. Its v4 had no way to
   keep it at all. The workflow test now requires both, and the post-deploy check fetches the file
   from the live site.
+- **M330 — the screens that wait for a file.** The layout harness walks addresses, and what a
+  backup, a spreadsheet, a block, a program, a run or a photo opens has none — so seven file inputs
+  drew states no automation had measured. Each is now a door: the button a climber taps, the picker
+  it raises, a file the app itself saved, and the page measured once the file has visibly landed, in
+  every pass. The walk counts the file inputs it passes and fails on one with no door. The first run
+  found the photo viewer's *Clear* 80px off a small phone at the largest text; the tray wraps now.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -23653,3 +23659,90 @@ on a phone.
 Battery: eight mutants and a sanity check, all killed — a revert of any action, the hidden-files
 setting off or unset, v4, and the live check pointed elsewhere. 7,328 tests over 437 files, from
 7,326.
+
+
+## M330 — the screens that wait for a file
+
+M322 closed with this: *"the layout harness cannot reach either of these cards: `/shared` draws
+them only once a file is open, and the harness has no way to hand a route a file."* That was the
+ninth screen the audit found its own automation could not get to, and each one had been checked by
+hand, once.
+
+### Counted first
+
+Seven `type="file"` inputs in `src`, on six screens: the backup import and the spreadsheet import in
+Settings, `/shared`'s block file, the builder's program file, the Ascent's run file, `/attach`, and
+the photo card on a project. Every state behind them — a backup's preview, a spreadsheet's column
+mapping, a block somebody sent, a run to race, a photo waiting for a home, the photo viewer with its
+pen tray — is drawn with no address change, so a harness that walks addresses never sees any of it.
+
+### Doors
+
+`scripts/layout.mjs` gains a `DOORS` table. Each door is opened the way a climber opens it: tap the
+button, take the file picker that tap raises, hand it a file, wait until what the file opens is on
+screen, and ask the same four questions as every route. Through the picker, not `setInputFiles`:
+every one of these inputs is `hidden`, and a harness that filled them directly would pass a button
+that had stopped opening its picker.
+
+Each door names what proves it landed — the preview's title, the builder's address, *Race it*, the
+photo's thumbnail — and that is asked again after measuring, so what was measured is the opened
+state and not the page it started on. Six doors run in every pass, the empty ones included,
+because a backup restored onto a fresh install is the most common way that preview is ever seen.
+The project door needs a record, so it runs only where there is one. **50 states across the seven
+passes.**
+
+### The files are the app's own
+
+Not fixtures. The first seeded pass saves them through the app: the sample climber's backup, its
+`spreadsheets/climbs.csv` read out of that zip (store-only, so walking the local headers is the
+whole reader), the block review's file, its own program from the builder, and a run played on
+today's wall. A run file names its wall by date, so a stored one would open a different screen on
+every day after the day it was saved. The photo is the one file the app never produces, so the page
+draws one: 3024×4032, a phone's portrait shape, because the app resizes on the way in and a small
+square would skip that.
+
+The run is played with no input. Across 21 dates sampled over a year it ended in 7.4–18.0 seconds
+(838–2,116 ticks); the harness waits 120. A sample, not a proof.
+
+### Nothing lists which inputs need a door
+
+The walk records every file input on every route it measures, by what it accepts, and **one that no
+door opened is a failure**. `privacy.test.ts` holds the other half without a browser: every source
+file with a file input has a door per input, named by its button's whole label, and the harness
+still counts inputs, still fails on an unopened one, opens through the picker and counts a door only
+where it landed.
+
+### What it found
+
+**The photo viewer's *Clear* sat 80px off the right edge**, at the largest text on a 360px phone.
+Four tools, undo and *Clear* share one row: 401px at 1.3×, with 318 inside the viewer. Undo and
+*Clear* are now a group that wraps to a second line and stays on the right. At the default text
+size every control is where it was, to the pixel. The cost at 1.3× on the smallest phone is one row:
+the photo goes from 276px tall to about 211.
+
+### What I got wrong
+
+- **The attach door "landed" with no file.** Its proof was the *Where it goes* card, which that page
+  draws before any photo is picked — on purpose, per its own comment. The mutant that handed no
+  file found it; the proof is now *Pick a different one*, which exists only once a photo is ready.
+- **A `same` field that nothing checked.** I let the project door stand for the photo card on a
+  logged day too, and the mutant that removed it survived: the walk never sees that input, because
+  the card is drawn only in the logger's full view. Removed rather than kept as a claim.
+- **A battery that killed for the wrong reason.** One mutant added a file input to a source file, and
+  restoring it left that file newer than `dist`, so the staleness test failed every mutant after it.
+  Two sanity checks dying is what gave it away. Rebuilt and re-run with that mutant last.
+
+### Measured and left
+
+- **A program opened from a file says nothing on arrival.** `BuilderList` sets *Imported "…" by …*
+  and then navigates to the builder, which unmounts the list and the notice with it — so on the
+  success path the line is never drawn, for a picked file or a launched one. It belongs with the
+  athlete-side *what changed* item, which is about exactly that moment.
+- **M329's Ubuntu 26 question, measured.** `playwright-core` 1.63, which CI installs unpinned, carries
+  `ubuntu26.04` in its dependency tables and download map. Still not pinned.
+
+Harness mutants, on a phone and an empty pass: no file handed (all 13 door openings fail, and the none-measured line), the
+spreadsheet door dropped (the coverage failure names the input), the photo never opened (fails), and
+inputs no longer counted (survives in the harness, killed by the test). Battery on the test: nine
+mutants killed and two sanity checks survived. CI's layout step goes from 3m27s to 4m30s here.
+7,329 tests over 437 files, from 7,328. First load 129.08KB, unchanged: the viewer is lazy.

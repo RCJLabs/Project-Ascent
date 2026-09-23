@@ -440,6 +440,59 @@ describe('the workflow that ships it', () => {
   });
 
   /**
+   * And opens every screen that waits for a file (PLAN.md M330).
+   *
+   * The harness walks addresses, and what a backup, a spreadsheet, a block,
+   * a program, a run or a photo opens has none — so for 329 milestones the
+   * layout of all of it was checked by hand, when somebody remembered. The
+   * first run that could open them found the photo viewer's *Clear* 80px
+   * off the side of a small phone at the largest text.
+   *
+   * Two halves, because either alone can go quiet. Here, without a browser:
+   * every source file with a file input has a door per input, named by the
+   * button a climber taps. In the harness: the walk counts the inputs it
+   * passes and fails on one no door opened — which only means something
+   * while it still counts them, so that is pinned too.
+   */
+  it('opens every screen that waits for a file', () => {
+    const harness = configOf('scripts/layout.mjs');
+    const doors = [...harness.matchAll(/button: '([^']+)',\s*\n\s*file: '/g)].map((m) => m[1]!);
+    expect(doors, 'the harness opens no file at all').not.toEqual([]);
+
+    const sources = (dir: string): string[] =>
+      readdirSync(dir).flatMap((name) => {
+        const path = join(dir, name);
+        if (statSync(path).isDirectory()) return sources(path);
+        return /\.tsx$/.test(name) && !/\.test\.tsx$/.test(name) ? [path] : [];
+      });
+    // The whole label, so a door renamed to *Open a program* is not held up
+    // by the *Open a program file* it no longer matches.
+    const labelled = (text: string, label: string) =>
+      new RegExp(`['">\\s]${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"<\\n]`).test(text);
+    const inputs = sources('src').flatMap((path) => {
+      const text = code(readFileSync(path, 'utf8'));
+      const count = (text.match(/type="file"/g) ?? []).length;
+      return count === 0 ? [] : [{ path, count, opened: doors.filter((d) => labelled(text, d)).length }];
+    });
+    expect(inputs.length, 'no file input found — the pattern has drifted').toBeGreaterThan(0);
+    for (const { path, count, opened } of inputs) {
+      expect(opened, `${path} has ${count} file input(s) and the harness opens ${opened}`).toBeGreaterThanOrEqual(count);
+    }
+
+    // The walk counts what it passes, and a count with nothing checking it
+    // is a count.
+    expect(harness, 'the walk does not count file inputs').toMatch(/querySelectorAll\('input\[type="file"\]'\)/);
+    expect(harness, 'nothing records the inputs the walk passed').toMatch(/fileInputs\.add\(/);
+    expect(harness, 'nothing fails an input no door opened').toMatch(/if \(!opened\.has\(input\)\) note\(/);
+    // Through the picker the button raises, not by filling a hidden input a
+    // broken button would never have opened.
+    expect(harness, 'the doors are not opened by their buttons').toMatch(/waitForEvent\('filechooser'/);
+    expect(harness, 'a door fills its input directly').not.toMatch(/setInputFiles/);
+    // Counted where they landed, not where they were listed.
+    expect(harness, 'a door that never landed would count').toMatch(/if \(await hasLanded\(page, landed\)\) doorsMeasured \+= 1/);
+  });
+
+  /**
    * And looks at the app that is actually being served (PLAN.md M300).
    *
    * Everything else in this file proves the artefact. This is the one check

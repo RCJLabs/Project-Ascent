@@ -151,6 +151,88 @@ const TABS = ['Home', 'Train', 'Calendar', 'Progress', 'Game'];
 /** The app's own tap target, quoted in `lib/marks.ts` and `TallyRow`. */
 const TARGET = 44;
 
+/**
+ * The screens that wait for a file (PLAN.md M330).
+ *
+ * Seven inputs in the app take a file, and what each one draws once it has
+ * one — a backup's preview, a spreadsheet's columns, a block somebody sent,
+ * a run to race, a photo looking for a home — was drawn nowhere this script
+ * could see. It walks addresses, and none of those states has one. M322 was
+ * the ninth time the audit found a screen its own automation could not get
+ * to, and every one of them was checked by hand, once, and never again.
+ *
+ * So each input is a door, opened the way a climber opens it: the button
+ * they tap, the picker that tap raises, a file handed to the picker, and
+ * the page measured **once the file has visibly landed** — the same four
+ * questions as every route, asked of the state the file put it in.
+ *
+ * `landed` is what proves it did. A door whose file never arrived would
+ * otherwise measure the page it started on and report it clean, which is
+ * M301's shape: a check that reads exactly like a check that ran.
+ *
+ * Which inputs need a door is not listed here at all: the walk counts every
+ * file input on every route, and one with no door is a failure, which is
+ * what stops this being the tenth list in the repository that drifts from
+ * the code it describes.
+ */
+const DOORS = [
+  {
+    name: 'a backup, before it is restored',
+    path: '/settings',
+    button: 'Import backup',
+    file: 'backup',
+    landed: { text: 'Import this backup?' },
+  },
+  {
+    name: 'a spreadsheet, before it is imported',
+    path: '/settings',
+    button: 'Import a spreadsheet',
+    file: 'climbs',
+    landed: { text: 'Import this spreadsheet?' },
+  },
+  {
+    name: 'a block somebody sent',
+    path: '/shared',
+    button: 'Open a block file',
+    file: 'block',
+    landed: { text: 'Write them one back' },
+  },
+  {
+    name: 'a program somebody sent',
+    path: '/build',
+    button: 'Open a program file',
+    file: 'program',
+    // It opens in the builder, which is the only proof there is.
+    landed: { hash: '^#/build/[^/]+$' },
+  },
+  {
+    name: 'a run to race',
+    path: '/ascent',
+    button: 'Open a run file',
+    file: 'run',
+    landed: { button: 'Race it' },
+  },
+  {
+    name: 'a photo, before it has a home',
+    path: '/attach',
+    button: 'Choose a photo',
+    file: 'photo',
+    // Not *Where it goes*: that list is drawn before any photo is picked,
+    // and the first version of this door "landed" with no file at all.
+    landed: { button: 'Pick a different one' },
+  },
+  {
+    // Last: it keeps the photo, and nothing after it should be measuring a
+    // project that has one because a door put it there.
+    name: 'a photo on a project',
+    path: '/projects/:id',
+    button: 'Add a photo',
+    file: 'photo',
+    landed: { button: 'Open photo' },
+    then: { name: 'the photo, opened', button: 'Open photo', landed: { dialog: 'Photo' } },
+  },
+];
+
 /** Everything measured in one pass, so a page is read once. Takes a single
  *  argument because that is all `page.evaluate` passes through. */
 function readPage({ tabNames, target }) {
@@ -319,6 +401,8 @@ function readPage({ tabNames, target }) {
 
   return {
     action,
+    // Every input that takes a file, by what it accepts — for the doors.
+    files: [...document.querySelectorAll('input[type="file"]')].map((el) => el.getAttribute('accept') ?? ''),
     tabsOff: tabs.filter((t) => t.missing || !t.on).map((t) => t.name),
     tooSmall: tabs.filter((t) => !t.missing && t.h + 0.5 < target).map((t) => `${t.name} ${t.h}px`),
     docScrolls: doc.scrollHeight > doc.clientHeight + 1,
@@ -327,6 +411,152 @@ function readPage({ tabNames, target }) {
     small: [...new Set(small)].slice(0, 4),
     spill: [...new Set(spill)].slice(0, 3),
   };
+}
+
+/**
+ * One entry out of a backup archive.
+ *
+ * The app writes its zips store-only, with no data descriptors (`lib/zip.ts`
+ * says why), so walking the local headers is the whole reader — and a
+ * compression library for a smoke check would be a dependency for nothing.
+ */
+function storedEntry(zip, wanted) {
+  for (let at = 0; at + 30 <= zip.length && zip.readUInt32LE(at) === 0x04034b50; ) {
+    const size = zip.readUInt32LE(at + 18);
+    const nameLength = zip.readUInt16LE(at + 26);
+    const start = at + 30 + nameLength + zip.readUInt16LE(at + 28);
+    if (zip.toString('utf8', at + 30, at + 30 + nameLength) === wanted) return zip.subarray(start, start + size);
+    at = start + size;
+  }
+  return null;
+}
+
+const MIME = { zip: 'application/zip', json: 'application/json', csv: 'text/csv', jpg: 'image/jpeg' };
+const payload = (name, buffer) => ({ name, mimeType: MIME[name.split('.').pop()] ?? 'application/octet-stream', buffer });
+
+/**
+ * The files the doors are opened with, **saved by the app itself**
+ * (PLAN.md M330).
+ *
+ * Not fixtures. A block file or a run file written once and checked in is
+ * last month's format and, for a run, last month's wall — `tapeFile.ts`
+ * names the wall by date, so a stored tape would open a different screen on
+ * every day after the one it was saved. Each of these is what a climber on
+ * this build would send: the sample climber's backup, the spreadsheet
+ * inside it, its block, its own program and a run played on today's wall.
+ *
+ * The run is played with no input at all, which on every wall so far ends
+ * on the first rock that falls in the middle lane — thirteen seconds on the
+ * day this was written. The photo is the one file nothing in the app
+ * produces, so it is drawn: a phone's portrait shape and size, because the
+ * app resizes on the way in and a small square would skip that.
+ *
+ * Returns the files it got and a sentence for each one it did not; a door
+ * without its file is a failure rather than a skip, because every one of
+ * these is a button in the app that should have worked.
+ */
+async function gatherFiles(page, found) {
+  const got = {};
+  const missing = [];
+  const go = async (href) => {
+    await page.evaluate((h) => { location.hash = `#${h}`; }, href);
+    await page.waitForTimeout(800);
+  };
+  const saved = async (click, timeout = 10_000) => {
+    const [download] = await Promise.all([page.waitForEvent('download', { timeout }), click()]);
+    return payload(download.suggestedFilename(), readFileSync(await download.path()));
+  };
+  const attempt = async (key, why, fetch) => {
+    try { got[key] = await fetch(); } catch (e) { missing.push(`${key}: ${why} (${e.message.split('\n')[0]})`); }
+  };
+
+  await attempt('backup', 'Export backup saved nothing', async () => {
+    await go('/settings');
+    return saved(() => page.getByRole('button', { name: 'Export backup', exact: true }).click());
+  });
+  if (got.backup) {
+    const csv = storedEntry(got.backup.buffer, 'spreadsheets/climbs.csv');
+    if (csv) got.climbs = payload('climbs.csv', csv);
+    else missing.push('climbs: the backup has no spreadsheets/climbs.csv');
+  }
+  await attempt('block', 'the block review saved no file', async () => {
+    await go('/finish');
+    return saved(() => page.getByRole('button', { name: 'Save as a file' }).first().click());
+  });
+  await attempt('program', 'the builder saved no file', async () => {
+    const own = found.get('/build/:id');
+    if (!own) throw new Error('no program of its own was found to save');
+    await go(own);
+    return saved(() => page.getByRole('button', { name: 'Save as a file' }).first().click());
+  });
+  await attempt('run', 'no run ended to save', async () => {
+    await go('/ascent');
+    await page.getByRole('button', { name: 'Climb', exact: true }).click();
+    const save = page.getByRole('button', { name: 'Save this run to a file' });
+    await save.waitFor({ timeout: 120_000 });
+    return saved(() => save.click());
+  });
+  await attempt('photo', 'the page could not draw one', async () => {
+    const base64 = await page.evaluate(async () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 3024;
+      canvas.height = 4032;
+      const g = canvas.getContext('2d');
+      g.fillStyle = '#8a7f6a';
+      g.fillRect(0, 0, canvas.width, canvas.height);
+      g.fillStyle = '#3b4a3f';
+      g.fillRect(600, 900, 1800, 2400);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      let text = '';
+      for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      return btoa(text);
+    });
+    return payload('wall.jpg', Buffer.from(base64, 'base64'));
+  });
+  return { got, missing };
+}
+
+/** Whether what a door promised is on screen now. */
+async function hasLanded(page, landed) {
+  if (landed.hash) return new RegExp(landed.hash).test(await page.evaluate(() => location.hash));
+  if (landed.text) return (await page.getByText(landed.text, { exact: true }).count()) > 0;
+  if (landed.button) return (await page.getByRole('button', { name: landed.button, exact: true }).count()) > 0;
+  if (landed.dialog) return (await page.getByRole('dialog', { name: landed.dialog, exact: true }).count()) > 0;
+  throw new Error(`a door promises nothing it can check: ${JSON.stringify(landed)}`);
+}
+const describeLanded = (landed) => Object.entries(landed).map(([k, v]) => `${k} "${v}"`).join(', ');
+
+/** Polled, since what a file opens is drawn after it is read. */
+async function arrives(page, landed, within = 8000) {
+  for (const end = Date.now() + within; Date.now() < end; ) {
+    if (await hasLanded(page, landed)) return true;
+    await page.waitForTimeout(200);
+  }
+  return hasLanded(page, landed);
+}
+
+/**
+ * Tap the button, take the picker it raises, hand it the file.
+ *
+ * Through the picker rather than `setInputFiles` on the input: every input
+ * here is `hidden`, and a button that stopped opening it would leave a
+ * harness that fills the input directly reporting a door nobody can use.
+ */
+async function openDoor(page, door, file) {
+  const button = page.getByRole('button', { name: door.button, exact: true }).first();
+  if ((await button.count()) === 0) return { problem: `no "${door.button}" button` };
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser', { timeout: 5000 }).catch(() => null),
+    button.click(),
+  ]);
+  if (chooser === null) return { problem: `"${door.button}" raised no file picker` };
+  const accept = (await chooser.element().getAttribute('accept')) ?? '';
+  await chooser.setFiles(file);
+  if (!(await arrives(page, door.landed))) {
+    return { accept, problem: `the file never landed — nothing showed ${describeLanded(door.landed)}` };
+  }
+  return { accept };
 }
 
 const require = createRequire(import.meta.url);
@@ -351,6 +581,27 @@ let unreachable = new Map();
  */
 let provenEmpty = 0;
 const note = (where, what) => { failures.push(`${where}: ${what}`); };
+
+/** The files the doors open, gathered once by the first seeded pass. */
+let files = null;
+/** Every file input the walk saw, as `path<tab>accept`, and every one a door opened. */
+const fileInputs = new Set();
+const opened = new Set();
+/** Doors that landed and were measured, counted rather than assumed. */
+let doorsMeasured = 0;
+
+/** The same four questions, whether a route or a door asked them. */
+function judge(at, r, errors) {
+  if (r.fatal) { note(at, r.fatal); return; }
+  if (r.tabsOff.length) note(at, `tabs off screen: ${r.tabsOff.join(', ')}`);
+  if (r.tooSmall.length) note(at, `tab under ${TARGET}px: ${r.tooSmall.join(', ')}`);
+  if (r.docScrolls) note(at, 'the document scrolls (M225: only `main` may)');
+  if (r.pageWide) note(at, 'the page scrolls sideways');
+  if (r.mainWide) note(at, '`main` scrolls sideways');
+  if (r.small.length) note(at, `control under 24px: ${r.small.join('; ')}`);
+  if (r.spill.length) note(at, `off the side: ${r.spill.join('; ')}`);
+  if (errors.length) note(at, `threw: ${errors[0]}`);
+}
 
 for (const size of SIZES) {
   const ctx = await browser.newContext({ viewport: { width: size.width, height: size.height } });
@@ -495,15 +746,9 @@ for (const size of SIZES) {
       target: size.pointer === 'mouse' ? 0 : TARGET,
     });
     const at = `${size.name} ${path}`;
-    if (r.fatal) { note(at, r.fatal); continue; }
-    if (r.tabsOff.length) note(at, `tabs off screen: ${r.tabsOff.join(', ')}`);
-    if (r.tooSmall.length) note(at, `tab under ${TARGET}px: ${r.tooSmall.join(', ')}`);
-    if (r.docScrolls) note(at, 'the document scrolls (M225: only `main` may)');
-    if (r.pageWide) note(at, 'the page scrolls sideways');
-    if (r.mainWide) note(at, '`main` scrolls sideways');
-    if (r.small.length) note(at, `control under 24px: ${r.small.join('; ')}`);
-    if (r.spill.length) note(at, `off the side: ${r.spill.join('; ')}`);
-    if (errors.length) note(at, `threw: ${errors[0]}`);
+    judge(at, r, errors);
+    if (r.fatal) continue;
+    for (const accept of r.files) fileInputs.add(`${path}\t${accept}`);
     /**
      * At the default text size only (PLAN.md M300).
      *
@@ -527,6 +772,50 @@ for (const size of SIZES) {
       else if (r.action.below) {
         note(at, `the day's button is ${r.action.below}px under the nav (${r.action.name})`);
       }
+    }
+  }
+
+  /*
+   * The doors (PLAN.md M330), after the walk so nothing they write — a
+   * played run, a photo on a project — is in a page the walk measured.
+   *
+   * The files come from the first pass with something in it, like the
+   * detail addresses do, and every pass after it opens the same ones: a
+   * backup restored onto an empty install is the most common way that
+   * preview is ever seen.
+   */
+  if (files === null && seeded) {
+    const { got, missing } = await gatherFiles(page, discovered);
+    files = got;
+    for (const m of missing) note(`${size.name} files`, m);
+  }
+  for (const door of DOORS) {
+    const href = door.path.includes(':') ? (seeded ? discovered.get(door.path) : undefined) : door.path;
+    // Neither a record to open nor a file to open it with is this pass's to
+    // report: an empty log has no project, and a missing file said so above.
+    if (href === undefined || !files?.[door.file]) continue;
+    const at = `${size.name} ${door.name}`;
+    errors.length = 0;
+    await page.evaluate((h) => { location.hash = `#${h}`; }, href);
+    await page.waitForTimeout(700);
+    const { accept, problem } = await openDoor(page, door, files[door.file]);
+    if (accept !== undefined) opened.add(`${door.path}\t${accept}`);
+    if (problem) { note(at, problem); continue; }
+    const measure = async (where, landed) => {
+      const r = await page.evaluate(readPage, { tabNames: TABS, target: size.pointer === 'mouse' ? 0 : TARGET });
+      judge(where, r, errors);
+      errors.length = 0;
+      // Asked again after measuring, so what was measured is the state the
+      // file opened — not a page that drew it and moved on.
+      if (await hasLanded(page, landed)) doorsMeasured += 1;
+      else note(where, 'measured after the file had gone');
+    };
+    await measure(at, door.landed);
+    if (door.then) {
+      const where = `${size.name} ${door.then.name}`;
+      await page.getByRole('button', { name: door.then.button, exact: true }).first().click();
+      if (await arrives(page, door.then.landed)) await measure(where, door.then.landed);
+      else note(where, `nothing showed ${describeLanded(door.then.landed)}`);
     }
   }
 
@@ -593,6 +882,20 @@ for (const size of SIZES) {
 }
 await browser.close();
 
+/**
+ * Every input the walk found has a door (PLAN.md M330).
+ *
+ * The list above is not trusted to be complete: the walk counted each file
+ * input it passed, and one no door opened is a screen this script cannot
+ * see, which is the thing it exists to stop. The next one added fails here
+ * rather than being found by hand for the tenth time.
+ */
+for (const input of fileInputs) {
+  const [path, accept] = input.split('\t');
+  if (!opened.has(input)) note(path, `a file input (accepts "${accept}") that no door opens, so nothing measures what it draws`);
+}
+if (doorsMeasured === 0) failures.push(`${DOORS.length} doors are listed and none was opened and measured`);
+
 const found = discovered ?? new Map();
 const unseeded = SIZES.filter((z) => z.seeded === false).length;
 if (unseeded > 0 && provenEmpty === 0) {
@@ -601,7 +904,7 @@ if (unseeded > 0 && provenEmpty === 0) {
 console.log(
   `${STATIC.length + found.size} routes × ${SIZES.length - unseeded} sizes` +
     (provenEmpty > 0 ? `, and ${STATIC.length} × ${provenEmpty} with nothing logged` : '') +
-    ', plus the banner squeeze.',
+    `, plus the banner squeeze and ${doorsMeasured} screens opened with a file.`,
 );
 if (found.size) console.log(`found a record for: ${[...found.keys()].join(' ')}`);
 /**
