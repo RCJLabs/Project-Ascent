@@ -184,12 +184,10 @@ export function SettingsPage() {
    * and React's own scheduler reads `window` on the way into
    * `dispatchSetState`. CI went red on it with all 7,179 tests passing.
    *
-   * **Set in the setup as well as cleared in the cleanup** (PLAN.md M331).
-   * This only cleared it, and `StrictMode` — which `main.tsx` renders under —
-   * runs every effect's cleanup once on mount before running it again. So in
-   * development the ref was false from the first paint, `refreshDemo` never
-   * wrote, and *Load a sample climber* was never offered. A production build
-   * does not double-run effects, which is why nothing shipped showed it.
+   * Set in the setup as well as cleared in the cleanup (PLAN.md M331): it
+   * only cleared, and `StrictMode` runs every cleanup once on mount, so in
+   * development *Load a sample climber* was never offered.
+   * `test/lateWrites.ts` finds a late write that skips this check.
    */
   const onScreen = useRef(true);
   useEffect(() => {
@@ -268,6 +266,10 @@ export function SettingsPage() {
       // silent import gives a climber no way to notice they picked the wrong
       // file until the data is already in.
       const preview = await previewFile(parsed);
+      // A launched backup is read on mount, and the climber may have left
+      // before it is (PLAN.md M332). Nothing is imported until they confirm,
+      // so nothing is lost but the preview.
+      if (!onScreen.current) return;
       const on = new Date(parsed.exportedAt);
       setPendingImport({
         bytes,
@@ -282,6 +284,7 @@ export function SettingsPage() {
         photosMissing > 0,
       )
     } catch (e) {
+      if (!onScreen.current) return;
       setMessage(e instanceof Error ? e.message : 'Import failed.', true);
     } finally {
       if (fileRef.current) fileRef.current.value = '';

@@ -1003,6 +1003,8 @@ const TEST_ONLY: Record<string, string> = {
     'the rule M304 sweeps the suite with, a pure function for the reason `assertions.ts` is one',
   'src/test/streak.ts':
     'the broken streak M299 shared out of the two copies that each had it, imported only by tests',
+  'src/test/lateWrites.ts':
+    'the rule M332 sweeps the app with, a pure function so each of its rules can be shown to fire',
   'src/ui/paletteRules.ts': 'moved out of a script at M61 so the tool could itself be tested',
 };
 

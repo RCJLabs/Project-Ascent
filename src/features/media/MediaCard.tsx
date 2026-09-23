@@ -67,8 +67,18 @@ export function MediaCard({
   const latest = useRef(items);
   latest.current = items;
 
+  // A flag of this effect's own rather than one for the page (PLAN.md M332):
+  // its cleanup runs when the owner changes too, so a slow read for the day
+  // just left cannot land on the day just opened, as well as not landing on
+  // a page that has gone.
   useEffect(() => {
-    void listMedia(owner).then(setItems);
+    let live = true;
+    void listMedia(owner).then((found) => {
+      if (live) setItems(found);
+    });
+    return () => {
+      live = false;
+    };
   }, [owner]);
 
   const ids = items.map((i) => i.id).join(' ');

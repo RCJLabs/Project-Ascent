@@ -20,6 +20,13 @@ export function BuilderList() {
   const [, navigate] = useLocation();
   const fileRef = useRef<HTMLInputElement>(null);
   const [notice, setNotice] = useState<{ tone: 'good' | 'bad'; lines: string[] } | null>(null);
+  // Whether the page is still here when a file read finishes (PLAN.md M332).
+  // Set in the setup as well as cleared: `StrictMode` runs the cleanup on mount.
+  const onScreen = useRef(true);
+  useEffect(() => {
+    onScreen.current = true;
+    return () => void (onScreen.current = false);
+  }, []);
 
   async function create(program = blankProgram()) {
     await save(program);
@@ -50,6 +57,10 @@ export function BuilderList() {
     try {
       const { program, dropped } = parseProgramFile(await file.text());
       await save(program);
+      // Saved whether or not anyone is still here (PLAN.md M332). A launched
+      // file is read on mount, and a climber who has left is neither told nor
+      // taken back to the builder.
+      if (!onScreen.current) return;
       // An import is never silently lossy: if anything could not survive the
       // trip, it is named before the program opens.
       setNotice({
@@ -61,6 +72,7 @@ export function BuilderList() {
       });
       if (dropped.length === 0) navigate(`/build/${program.id}`);
     } catch (e) {
+      if (!onScreen.current) return;
       setNotice({
         tone: 'bad',
         lines: [e instanceof ProgramFileError ? e.message : 'That file could not be read.'],

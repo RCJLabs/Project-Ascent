@@ -411,17 +411,14 @@ function WallRow({
    * Here the write is started from a callback and has to be checked from
    * one, so the flag is a ref.
    *
-   * Set in the setup as well as cleared in the cleanup (PLAN.md M331).
-   * `StrictMode` runs the cleanup once on mount, so cleared alone this was
-   * false from the first paint in development, and a run's payout and
-   * achievement never appeared under `npm run dev`.
+   * Set in the setup as well as cleared (PLAN.md M331): cleared alone, a
+   * run's payout and achievement never appeared in development under
+   * `StrictMode`.
    */
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
-    return () => {
-      alive.current = false;
-    };
+    return () => void (alive.current = false);
   }, []);
 
   /**

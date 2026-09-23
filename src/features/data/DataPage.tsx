@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { AlertTriangle, Check, Sparkles, TriangleAlert } from 'lucide-react';
 import { readDbHealth, type DbHealth } from '@/db/health';
@@ -40,10 +40,21 @@ export function DataPage() {
   const [done, setDone] = useState<string | null>(null);
   const byDate = useSessions((s) => s.byDate);
   const pressure = useStoragePressure();
-
-  const refresh = useCallback(() => {
-    void readDbHealth().then(setDb);
+  // Whether the page is still here when the health read finishes (PLAN.md M332).
+  // Set in the setup as well as cleared: `StrictMode` runs the cleanup on mount.
+  const onScreen = useRef(true);
+  useEffect(() => {
+    onScreen.current = true;
+    return () => void (onScreen.current = false);
   }, []);
+
+  // On mount and after a tidy, and either can finish after the page has gone
+  // (PLAN.md M332).
+  const refresh = useCallback(() => {
+    void readDbHealth().then((health) => {
+      if (onScreen.current) setDb(health);
+    });
+  }, [onScreen]);
   useEffect(refresh, [refresh]);
 
   const stale = useMemo(() => {

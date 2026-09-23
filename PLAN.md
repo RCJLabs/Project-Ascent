@@ -15099,6 +15099,12 @@ its label is missing. None of these wants touching.
   unmounts at twelve moments. Under it sat a worse one: the guard idiom only cleared its ref, and
   `StrictMode` runs that cleanup on mount — so in `npm run dev` the sample climber was never offered
   and the Ascent never showed a run's payout. Production was never affected.
+- **M332 — the sweep for a write after the page has gone.** `src/test/lateWrites.ts` parses the app
+  with TypeScript's own parser and finds every `useState` write that is late — after an `await`, in
+  a `.then` — in code a mount effect can reach, following calls by name and through wrappers like
+  Settings' `setMessage`. Each must check a flag an effect's cleanup clears, after the await. It
+  found fifteen: the four launched-file paths M331 left, and two it had not listed — `/data`'s health
+  read and a project's photo list, which could also land on the wrong day. All guarded.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -23849,3 +23855,81 @@ them rather than this list.
 Battery: seven mutants killed — each of the three writes unguarded, each of the three refs cleared
 only, and the scheduler turn removed — and two sanity checks survived. 7,331 tests over 437 files,
 from 7,329. First load 129.09KB, unchanged. Layout harness OK.
+
+
+## M332 — the sweep for a write after the page has gone
+
+The queue's fourth item, and M331's last paragraph: *"The four are the next milestone's, which is
+the sweep that finds them rather than this list."* Twice now CI has gone red with every test
+passing on one shape — an async read on mount, a state write after it, and the page gone in
+between — and both times the fix was a hand-made list of sites. M323's notes counted seven; M331
+found three more beside the one M323 fixed.
+
+### The rule, as a pure function
+
+`src/test/lateWrites.ts`, beside `waiting.ts` and for its reason: a guard that can only be exercised
+by what it guards cannot be shown to work. It parses every source file with TypeScript's parser —
+already a dev dependency, and the only thing that can follow a call from an effect into a named
+function, which is where M323's bug was.
+
+- **A write** is a call to a `useState` setter, or to a function that calls one as soon as it runs:
+  Settings reports through `setMessage`, which calls `setMessageState`, and a call to it after an
+  await is the same write one name removed.
+- **Late** is after an `await` of its own function, inside a `.then`/`.catch`/`.finally` callback,
+  or the setter handed straight to one.
+- **Reached** is inside an effect, or in a function the effect calls by name, followed through the
+  functions those call. A handler only a tap calls is left alone: the page is there because the
+  climber just touched it.
+- **Guarded** is a check, after the point the write became late, of a flag an effect's cleanup sets —
+  found, not named. A check before the await, or of some other boolean, does not count.
+
+What it does not see is written at the top of the file: calls across files, calls through a
+property, functions passed by name into something that calls them later.
+
+### What it found
+
+Fifteen unguarded writes in six files. Four were M331's list: the builder's launched program file,
+`/shared`'s block, Settings' launched backup, and a photo shared to `/attach`. Two were not on any
+list:
+
+- **`/data`**: `useEffect(refresh, [refresh])` with `refresh` doing `readDbHealth().then(setDb)`.
+  An effect written as a function name, which a regex over effect bodies never sees.
+- **A project's photos**: `listMedia(owner).then(setItems)` on `[owner]`. Its flag is local to the
+  effect rather than to the page, because that cleanup also runs when the owner changes — a slow
+  read for one day could otherwise land on the next. That race is inferred from the code; I did not
+  observe it.
+
+A launched program that finishes saving after the climber has left is saved and not announced, and
+they are not taken back to the builder. That is the Ascent's rule from M243: the work is done; only
+what the page would have shown about it is dropped.
+
+### One hook would have been better, and did not fit
+
+The first version replaced every copy with a `useOnScreen()` hook, written correctly once. The copy
+M331 fixed was wrong in three places because it lived in three. It cost **0.02KB of first load**
+(129.086 → 129.106KB) and put the app 0.006KB over its 129.1KB budget. The code was not the cost: a hook shared by six lazy
+pages becomes its own chunk, and the entry names every chunk it may preload. Whether to raise the
+budget is an open decision, and not mine to take here. So the guard is written out in each page, and
+two tests hold the copies: this sweep finds a write that skips its check, and M331's source check —
+widened to `.ts` — finds a copy that clears its flag without ever setting it. With the budget
+raised, the hook is a small change.
+
+### Checked
+
+- The sweep reports every write guarded by hand before it existed, by name, so a rule that
+  recognised nothing cannot pass by finding nothing.
+- On the dev server, under `StrictMode`, every changed page still does its job: Settings offers the
+  sample climber, `/data` shows its 457 records, a block file opens, a program file lands in the
+  builder, a project's photo is listed again after leaving and coming back, a shared photo waits for
+  a home, a backup is previewed. No page errors.
+- The layout harness opens all seven file inputs through the guarded code: 50 screens, OK.
+
+### What I got wrong
+
+- **The hook**, above: built before measuring, and measured before committing.
+- **The battery found two rules no fixture held**: a cleanup written as `() => () => …`, and an
+  `if (flag)` wrapped around the await itself, which checks the wrong moment. Both have fixtures now.
+
+Battery: 23 mutants killed — each of the eleven guards removed, and each of the analyzer's twelve
+rules broken — and a sanity check survived. 7,347 tests over 438 files, from 7,331. First load
+129.08KB, unchanged.

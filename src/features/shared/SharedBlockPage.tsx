@@ -44,6 +44,13 @@ export function SharedBlockPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [block, setBlock] = useState<SharedBlock | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  // Whether the page is still here when a file read finishes (PLAN.md M332).
+  // Set in the setup as well as cleared: `StrictMode` runs the cleanup on mount.
+  const onScreen = useRef(true);
+  useEffect(() => {
+    onScreen.current = true;
+    return () => void (onScreen.current = false);
+  }, []);
 
   /** A block file the app was opened with, the same path as the picker. */
   useEffect(() => {
@@ -55,9 +62,14 @@ export function SharedBlockPage() {
 
   async function read(file: File): Promise<void> {
     try {
-      setBlock(parseBlockFile(await file.text()));
+      const opened = parseBlockFile(await file.text());
+      // A launched file is read on mount, after which the page may be gone
+      // (PLAN.md M332).
+      if (!onScreen.current) return;
+      setBlock(opened);
       setProblem(null);
     } catch (e) {
+      if (!onScreen.current) return;
       setBlock(null);
       setProblem(e instanceof BlockFileError ? e.message : 'That file could not be read.');
     } finally {

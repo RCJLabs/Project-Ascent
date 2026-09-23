@@ -60,9 +60,8 @@ export function AttachPage() {
    * A ref rather than the effect-local `live` flag used below, because the
    * upload handler calls this too and an effect's flag does not reach it.
    *
-   * Set in the setup as well as cleared, because `StrictMode` runs the
-   * cleanup once on mount (PLAN.md M331) — cleared alone, the counts never
-   * arrived in development.
+   * Set in the setup as well as cleared (PLAN.md M331): cleared alone, the
+   * counts never arrived in development under `StrictMode`.
    */
   const onScreen = useRef(true);
   useEffect(() => {
@@ -133,16 +132,20 @@ export function AttachPage() {
     setLanded(null);
     try {
       const image = await prepareImage(file);
+      // A shared photo is prepared on mount, and a big one takes long enough
+      // to leave before it is done (PLAN.md M332).
+      if (!onScreen.current) return;
       setPrepared(image);
       setPreview((old) => {
         if (old !== null) URL.revokeObjectURL(old);
         return URL.createObjectURL(image.blob);
       });
     } catch (e) {
+      if (!onScreen.current) return;
       setPrepared(null);
       setError(e instanceof ImageError ? e.message : 'That photo could not be read.');
     } finally {
-      setBusy(false);
+      if (onScreen.current) setBusy(false);
     }
   }
 

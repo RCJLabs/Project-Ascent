@@ -126,14 +126,15 @@ describe('under StrictMode', () => {
       readdirSync(dir).flatMap((name) => {
         const path = join(dir, name);
         if (statSync(path).isDirectory()) return sources(path);
-        return /\.tsx$/.test(name) && !/\.test\.tsx$/.test(name) ? [path] : [];
+        return /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name) ? [path] : [];
       });
     const cleared = sources('src').flatMap((path) => {
       const text = code(readFileSync(path, 'utf8'));
       return [...text.matchAll(/(\w+)\.current = false/g)].map((m) => ({ path, ref: m[1]! }));
     });
-    // Both guards M323 wrote, at least; a sweep that finds none walked nothing.
-    expect(cleared.length).toBeGreaterThanOrEqual(2);
+    // The three M331 fixed and the three M332 added, at least: a sweep that
+    // finds fewer has stopped reading the files the rule is about.
+    expect(cleared.length).toBeGreaterThanOrEqual(6);
     for (const { path, ref } of cleared) {
       const text = code(readFileSync(path, 'utf8'));
       expect(text, `${path} clears ${ref} and never sets it`).toMatch(new RegExp(`\\b${ref}\\.current = true`));
