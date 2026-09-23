@@ -15092,6 +15092,13 @@ its label is missing. None of these wants touching.
   it raises, a file the app itself saved, and the page measured once the file has visibly landed, in
   every pass. The walk counts the file inputs it passes and fails on one with no door. The first run
   found the photo viewer's *Clear* 80px off a small phone at the largest text; the tray wraps now.
+- **M331 — the guard that was off in development.** M330's CI went red in M323's own test, all
+  7,329 tests passing. Two causes. Settings' mount effect made three more async writes than the one
+  M323 guarded, and they now check too. And the test deleted `window` in the same tick it unmounted,
+  so a render queued while the page was up ran with no `window`, which the runner never does. It now
+  unmounts at twelve moments. Under it sat a worse one: the guard idiom only cleared its ref, and
+  `StrictMode` runs that cleanup on mount — so in `npm run dev` the sample climber was never offered
+  and the Ascent never showed a run's payout. Production was never affected.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -23746,3 +23753,99 @@ spreadsheet door dropped (the coverage failure names the input), the photo never
 inputs no longer counted (survives in the harness, killed by the test). Battery on the test: nine
 mutants killed and two sanity checks survived. CI's layout step goes from 3m27s to 4m30s here.
 7,329 tests over 437 files, from 7,328. First load 129.08KB, unchanged: the viewer is lazy.
+
+
+## M331 — the guard that was off in development
+
+M330's deploy was skipped: CI's build job failed with **all 7,329 tests passing** and one uncaught
+error.
+
+```
+ReferenceError: window is not defined
+ ❯ performWorkOnRootViaSchedulerTask  react-dom-client.development.js:18936
+This error originated in "src/features/settings/afterUnmount.test.tsx"
+```
+
+That is M323's test, the one that deletes `window` on purpose. M330 changed nothing the Settings
+page draws. The live site stayed on M329.
+
+### Reproduced before touched
+
+The file alone failed **2 runs in 25** locally, with two unhandled rejections rather than CI's
+throw. A scratch test that unmounted at every millisecond from 0 to 29 after the page appeared
+reproduced CI's throw exactly, at 2, 3, 5 and 7ms. Two symptoms, two causes.
+
+### Three writes beside the one M323 guarded
+
+```ts
+useEffect(() => {
+  void refreshStorage();
+  void mediaBytes().then(setPhotoBytes);
+  void readSnapshot().then(setSnapshot);
+}, []);
+```
+
+Settings' mount effect, unchanged since before M323. M323 guarded `refreshDemo` twenty lines below
+and left these. The two database reads landing after unmount were the two rejections. All three now
+check the same ref. `refreshStorage` cannot be tested here — jsdom has no `navigator.storage`, so it
+returns before its await — and is guarded for the same reason as the others.
+
+### A test that stood where the runner never stands
+
+With the three guarded, the sweep still threw. The test unmounted and deleted `window` in the same
+tick. An update that lands while the page is still up — a guarded one, correctly — queues a render,
+and React reads `window.event` as that render starts, before it looks at anything else. So the
+render ran after the global was gone. The runner tears down turns after the last unmount, never
+during it, and that render would have run with `window` in place.
+
+So the test waits one scheduler turn after unmounting before deleting `window`, and unmounts at
+twelve moments rather than one: before anything can have landed, as the page appears, and 1–10ms
+after. The first moment skips the turn. Nothing has had a turn in which to queue a render, and
+`mediaBytes` — one read of an empty store — lands inside a single turn, so waiting there would hide
+exactly the write it has to catch. The battery says so: without that moment its unguarded mutant
+survived.
+
+30 runs of the file, all clean, against 2 in 25 before.
+
+### The guard was off in development
+
+```ts
+const onScreen = useRef(true);
+useEffect(() => () => void (onScreen.current = false), []);
+```
+
+`main.tsx` renders under `StrictMode`, which in development runs every effect's cleanup once on mount
+and then runs the effects again. This effect's setup does nothing, so the ref was **false from the
+first paint** and every guarded write was dropped. Checked on the dev server, before and after:
+
+- **Settings, fresh install:** *Load a sample climber* was never offered. Since M323.
+- **The Ascent, after a run:** no *Today's payout*, no achievement. Since M243, which wrote the
+  same idiom as `alive`. After: *+25 XP* and *No Takes*.
+- **Add a photo:** the per-target counts use the same idiom from M323. Not checked on the dev
+  server; fixed with the others.
+
+A production build does not double-run effects, which is why nothing shipped was affected and why
+the layout harness, which drives the built app, never noticed. All three set the ref in the setup as
+well as clearing it. A source check fails any ref cleared in a cleanup that nothing sets back.
+
+### What I got wrong
+
+- **I first said the StrictMode guard was broken, then a test said it was not, and the test was
+  wrong.** It nested `StrictMode` inside the router, and there jsdom ran each effect once — the
+  trace showed one setup. A four-line probe with `StrictMode` at the root showed the ref ending
+  false, and the dev server showed the missing card. The regression test renders the way `main.tsx`
+  does.
+- **My first comment on the Settings guards said they were what put CI red.** They were the
+  rejections; CI's throw was the test's timing. Corrected before committing.
+
+### Measured and left
+
+The scan behind this counted every async body that awaits and then writes component state. Of 29,
+five are run by an effect and unguarded, and four of them are launched-file paths: `BuilderList`'s
+program, `SharedBlockPage`'s block, Settings' backup, and `AttachPage`'s shared photo. The fifth,
+`refreshStorage`, is fixed here. The four are the next milestone's, which is the sweep that finds
+them rather than this list.
+
+Battery: seven mutants killed — each of the three writes unguarded, each of the three refs cleared
+only, and the scheduler turn removed — and two sanity checks survived. 7,331 tests over 437 files,
+from 7,329. First load 129.09KB, unchanged. Layout harness OK.

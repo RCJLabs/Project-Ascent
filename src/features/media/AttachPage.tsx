@@ -59,9 +59,16 @@ export function AttachPage() {
    *
    * A ref rather than the effect-local `live` flag used below, because the
    * upload handler calls this too and an effect's flag does not reach it.
+   *
+   * Set in the setup as well as cleared, because `StrictMode` runs the
+   * cleanup once on mount (PLAN.md M331) — cleared alone, the counts never
+   * arrived in development.
    */
   const onScreen = useRef(true);
-  useEffect(() => () => void (onScreen.current = false), []);
+  useEffect(() => {
+    onScreen.current = true;
+    return () => void (onScreen.current = false);
+  }, []);
 
   const refreshCounts = useCallback(async () => {
     const owners = await mediaOwners();

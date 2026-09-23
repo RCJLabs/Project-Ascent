@@ -173,16 +173,48 @@ export function SettingsPage() {
     [byDate],
   );
 
+  /**
+   * Whether this page is still on screen (PLAN.md M323).
+   *
+   * `refreshDemo` below asks the database two questions and then writes the
+   * answer into state, and nothing made it wait for the page still being
+   * there. In a browser that is harmless — React 19 drops an update to an
+   * unmounted tree without complaint — and under a test runner it is fatal:
+   * the environment is torn down when the test ends, `window` goes with it,
+   * and React's own scheduler reads `window` on the way into
+   * `dispatchSetState`. CI went red on it with all 7,179 tests passing.
+   *
+   * **Set in the setup as well as cleared in the cleanup** (PLAN.md M331).
+   * This only cleared it, and `StrictMode` — which `main.tsx` renders under —
+   * runs every effect's cleanup once on mount before running it again. So in
+   * development the ref was false from the first paint, `refreshDemo` never
+   * wrote, and *Load a sample climber* was never offered. A production build
+   * does not double-run effects, which is why nothing shipped showed it.
+   */
+  const onScreen = useRef(true);
+  useEffect(() => {
+    onScreen.current = true;
+    return () => void (onScreen.current = false);
+  }, []);
+
+  // Each behind the same check as `refreshDemo` (PLAN.md M331). M323 guarded
+  // that one and left these three beside it, and the two database reads
+  // landing after the page had gone failed M323's own test two runs in 25.
   useEffect(() => {
     void refreshStorage();
-    void mediaBytes().then(setPhotoBytes);
-    void readSnapshot().then(setSnapshot);
+    void mediaBytes().then((bytes) => {
+      if (onScreen.current) setPhotoBytes(bytes);
+    });
+    void readSnapshot().then((snapshot) => {
+      if (onScreen.current) setSnapshot(snapshot);
+    });
   }, []);
 
   async function refreshStorage() {
     if (!('storage' in navigator)) return;
     const persisted = await navigator.storage.persisted?.().catch(() => false);
     const estimate = await navigator.storage.estimate?.().catch(() => undefined);
+    if (!onScreen.current) return;
     setStorage({ persisted: persisted ?? null, usage: estimate?.usage, quota: estimate?.quota });
   }
 
@@ -255,20 +287,6 @@ export function SettingsPage() {
       if (fileRef.current) fileRef.current.value = '';
     }
   }
-
-  /**
-   * Whether this page is still on screen (PLAN.md M323).
-   *
-   * `refreshDemo` below asks the database two questions and then writes the
-   * answer into state, and nothing made it wait for the page still being
-   * there. In a browser that is harmless — React 19 drops an update to an
-   * unmounted tree without complaint — and under a test runner it is fatal:
-   * the environment is torn down when the test ends, `window` goes with it,
-   * and React's own scheduler reads `window` on the way into
-   * `dispatchSetState`. CI went red on it with all 7,179 tests passing.
-   */
-  const onScreen = useRef(true);
-  useEffect(() => () => void (onScreen.current = false), []);
 
   /**
    * What the sample-data card can offer right now (PLAN.md M110).
