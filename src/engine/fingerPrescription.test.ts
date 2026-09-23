@@ -17,7 +17,7 @@ import { loadDrills, DRILLS } from '@/content/drills';
 import type { SessionType } from '@/content/types';
 import { newSession, type Session } from '@/db/sessions';
 import { LOAD_RULES, rulesInText } from './bodyLoad';
-import { directFingerWork, drillOnTheBoard, fingerGaps, loadsFingersDirectly } from './fingerGap';
+import { DIRECT_FINGER_RULES, directFingerWork, drillOnTheBoard, fingerGaps, loadsFingersDirectly } from './fingerGap';
 import { demoClimber } from './demoClimber';
 import { addDays } from './dates';
 
@@ -91,8 +91,12 @@ describe('the catalogue this reads', () => {
         if (loadsFingersDirectly(logged(program.id, type.id))) counted.push(`${program.id}/${type.id}`);
       }
     }
+    // Gravity Defied's Engine Room since M326: its Recruitment Hangs are
+    // ten to fifteen seconds on a 20mm edge that "teach the fingers to fire
+    // at full recruitment", which the name now says to the `contact` rule.
     expect(counted.sort()).toEqual([
       'general_training/hb',
+      'gravity_defied/eng',
       'iron_grip/fp',
       'lockdown/sa',
       'peak_performance/fp',
@@ -169,11 +173,14 @@ describe('the narrowing, against the content it was measured on', () => {
     // and a copy of the pattern here would answer a question about a copy.
     // The first draft of this restated only that pattern and forgot the two
     // rules still borrowed beside it, so `Campus Skips`, `Foot-On Laddering`
-    // and `One-Arm Negatives` all read as moved when nothing had moved.
+    // and `One-Arm Negatives` all read as moved when nothing had moved. Read
+    // off `DIRECT_FINGER_RULES` since M326 moved *Foot-On Laddering* from
+    // `campus` to its own `contact` rule, which a list of two ids restated
+    // here would have reported as the narrowing moving it.
     const fingersRule = LOAD_RULES.find((rule) => rule.id === 'fingers')!;
     const before = (text: string) =>
       fingersRule.pattern.test(text) ||
-      rulesInText(text).some((id) => id === 'campus' || id === 'one-arm');
+      rulesInText(text).some((id) => DIRECT_FINGER_RULES.includes(id));
     const moved: string[] = [];
     const names = new Set<string>();
     for (const program of PROGRAMS) {

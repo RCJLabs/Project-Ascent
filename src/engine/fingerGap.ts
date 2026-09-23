@@ -50,8 +50,11 @@
  * Neither is a protocol that needs forty-eight hours after it. So the
  * protocols are stated here rather than borrowed, and `campus` and
  * `one-arm` still come from the table, because for those two the table
- * already asks this question. Swept over all 368 authored names in the
- * catalogue, the narrowing moves exactly two strings and nothing else:
+ * already asks this question — as does `contact` since M326, which took
+ * *Foot-On Laddering* out of `campus` without taking it off this list, and
+ * put Gravity Defied's recruitment hangs on it. Swept over all 368 authored
+ * names in the catalogue, the narrowing moves exactly two strings and
+ * nothing else:
  * `Dead Hang` and `Passive Dead Hangs`.
  *
  * ## What the words are, which was less than the app knew (PLAN.md M321)
@@ -102,7 +105,7 @@ export const FINGER_GAP_WINDOW_DAYS = 56;
  * A subset of the rules whose `parts` include `fingers`, and the subset is
  * the whole point — see the header for the two left out.
  */
-export const DIRECT_FINGER_RULES: readonly DrillLoad[] = ['campus', 'one-arm'];
+export const DIRECT_FINGER_RULES: readonly DrillLoad[] = ['campus', 'one-arm', 'contact'];
 
 /**
  * The protocols the forty-eight hours are about, named here.

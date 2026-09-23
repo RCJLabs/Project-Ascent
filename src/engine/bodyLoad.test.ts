@@ -8,6 +8,7 @@ import {
   describeParts,
   drillConflict,
   exerciseConflict,
+  exerciseLoads,
   dayLoad,
   describeDayLoad,
   partsInText,
@@ -16,6 +17,7 @@ import {
   unspokenFor,
   drillFindings,
   drillLoads,
+  rulesInText,
   scanText,
   sessionConflicts,
 } from './bodyLoad';
@@ -57,9 +59,113 @@ describe('reading what an exercise loads', () => {
     expect(findings[0]!.because).toMatch(/campus/);
   });
 
-  it('reads an exercise’s notes and load, not only its name', () => {
-    const finding = exerciseConflict(ex('Session work', { notes: 'on the campus board' }), ['elbow']);
+  it('reads an exercise’s load, not only its name', () => {
+    const finding = exerciseConflict(ex('Session work', { load: 'on the campus board' }), ['elbow']);
     expect(finding?.parts).toEqual(['elbow']);
+  });
+
+  /**
+   * And never its notes (PLAN.md M326). `notes` is a form cue or a caveat by
+   * its own type, and a caveat names what not to do — these three are the
+   * catalogue's own, and each used to load a part the line does not.
+   */
+  it.each([
+    ['Push-Ups', 'Maintenance only. Skip entirely if sore from campus.', 'fingers'],
+    ['Wrist Extensor Curls', 'Bump to 3x20 if elbows feel tight.', 'shoulder'],
+    ['Inverted Rows or Pull-Ups', 'Drop to 3x5 if shoulders feel beat up.', 'knee'],
+  ])('does not read %s’s notes as what it does', (name, notes, part) => {
+    expect(exerciseLoads(ex(name, { notes }))).not.toContain(part);
+  });
+});
+
+/**
+ * Words inside other words, and words about something else (PLAN.md M326).
+ *
+ * Every case is one the sweep over the catalogue found — an exercise name, a
+ * test's definition or a drill's paragraph — so each is a sentence a climber
+ * has actually been shown a flag beside.
+ */
+describe('what the scan does not read as training', () => {
+  it.each([
+    ['Compression Planks', 'shoulder', '`press` inside Compression'],
+    ['Lower back pressed into the floor', 'shoulder', '`press` inside pressed'],
+    ['Self-scored mobility check', 'back', '`core` inside scored'],
+    ["Refine, Don't Rehearse", 'shoulder', 'the `t` of Don\'t as a T-raise'],
+    ['top arm tracing a slow arc from one side to the other', 'pulley', 'arc, lower case, as ARC'],
+    ['End a problem after two ugly burns in a row', 'back', '"in a row" as a row'],
+    ['Compression Planks (long-lever)', 'elbow', 'a long-lever plank as a lever'],
+    ['Box Jumps', 'shoulder', 'a box jump as a catch'],
+    ['Drop to 3x8 if shoulders feel grumpy', 'ankle', '"drop" as a drop landing'],
+    ['Lead Fall Practice — The Fall Ladder', 'fingers', 'a fall ladder as campus laddering'],
+    ['Dyno to an intermediate hold, then BUMP to the finish', 'pulley', 'a bump as campus work'],
+    // Not from the catalogue: the kind of line a climber writes in a session
+    // note, which `tissueLoad` reads with this same table.
+    ['Chipped a hold on the warm-up, the setters were on it by lunch', 'hip', '`hip` inside chipped'],
+  ])('%s — does not load the %s', (text, part) => {
+    expect(partsInText(text)).not.toContain(part);
+  });
+
+  it.each([
+    ['Very easy climbing only. No hangboard this week.'],
+    ['Intentional easy week — no crimp focus, no limit attempts.'],
+    ['Hardest boulder sent with no dynamic moves.'],
+    ["I fell on the second-to-last move because I did not flag"],
+  ])('reads a thing the sentence rules out as not done: %s', (text) => {
+    expect(partsInText(text)).toEqual([]);
+  });
+
+  it('still reads the word when nothing rules it out', () => {
+    expect(partsInText('Hangboard this week')).toContain('fingers');
+    expect(partsInText('Not a max hang: a repeater')).toContain('fingers');
+  });
+});
+
+describe('what the scan reads now that it did not', () => {
+  it.each([
+    ['Inverted Rows', 'elbow'],
+    ['Archer Rows', 'shoulder'],
+    ['Toes-to-Bar', 'back'],
+    ['Step-Ups', 'knee'],
+    ['Box Jumps', 'ankle'],
+    ['Drop-Knee Isolation', 'knee'],
+    ['Recruitment Hangs', 'fingers'],
+    ['Recruitment Pulls', 'elbow'],
+    ['I-Y-T Raises', 'shoulder'],
+    ['ARC Pacing — 2x10 min', 'pulley'],
+  ])('%s loads the %s', (text, part) => {
+    expect(partsInText(text)).toContain(part);
+  });
+
+  it('gives the no-board track its own reason, not the campus board’s', () => {
+    // Iron Grip offers *Foot-On Laddering* because campus is its highest
+    // injury risk. The parts are the same four; the reason is not.
+    const [first] = scanText('Foot-On Laddering');
+    expect(first!.because).not.toMatch(/campus/);
+    expect(first!.parts).toEqual(['fingers', 'pulley', 'elbow', 'shoulder']);
+    expect(scanText('Campus Laddering')[0]!.because).toMatch(/campus/);
+  });
+});
+
+describe('the campus rule, over everything authored', () => {
+  it('fires only where the words say campus', () => {
+    // The rule whose reason is "the highest-force protocol there is". Five of
+    // its nine catalogue hits were false before M326; this holds it to the
+    // word, across every name, every load, every test and every drill.
+    const texts: string[] = [];
+    for (const program of PROGRAMS) {
+      for (const type of program.sessionTypes) {
+        texts.push(type.name);
+        for (const block of type.blocks ?? []) {
+          for (const entry of Object.values(block.perPhase)) {
+            for (const e of entry.exercises) texts.push([e.name, e.load].filter(Boolean).join(' '));
+          }
+        }
+      }
+    }
+    for (const drill of DRILLS) texts.push(`${drill.name} ${drill.focus}`);
+    const campus = texts.filter((t) => rulesInText(t).includes('campus'));
+    expect(campus.length).toBeGreaterThan(0);
+    expect(campus.filter((t) => !/campus|double dyno/i.test(t))).toEqual([]);
   });
 });
 
@@ -314,9 +420,12 @@ describe('the parts a sentence names outright', () => {
   });
 
   it('does not answer the activity question by mistake', () => {
-    // The same sentence through the load scan reports four parts, three of
-    // which the author never mentioned — because it matched "campus".
-    expect(partsInText('Never campus with any existing finger or elbow symptom.')).toEqual([
+    // The same sentence through the load scan reported four parts, three of
+    // which the author never mentioned — because it matched "campus". Since
+    // M326 the load scan reads *"Never campus"* as a thing not done and
+    // names nothing, which is still not the answer this table gives.
+    expect(partsInText('Never campus with any existing finger or elbow symptom.')).toEqual([]);
+    expect(partsInText('Campus with any existing finger or elbow symptom.')).toEqual([
       'fingers',
       'pulley',
       'elbow',

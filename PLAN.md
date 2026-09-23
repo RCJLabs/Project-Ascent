@@ -15056,6 +15056,15 @@ its label is missing. None of these wants touching.
   for, and *"let the test wait"* fires only on a day that has one. The sample climber takes its
   in-block tests that way, leaving the four that load its elbow, so the block report has four lines
   to draw where it had none.
+- **M326 — the injury flag read the advice as the activity.** `bodyLoad`'s keyword table read an
+  exercise's `notes`, which its own type calls *"form cue or caveat"*: *"Skip entirely if sore from
+  campus"* made push-ups campus work, and *"Bump to 3x20 if elbows feel tight"* told an injured elbow
+  its rehab was *"the highest-force protocol there is"*. Lines are read by name and load now, and the
+  three true readings notes carried are named in the table instead. The sweep over every rule and
+  every authored text found the rest: words inside words (`core` in *scored*, `press` in
+  *Compression*, the `t` of *Don't* as a T-raise, *a slow arc* as ARC), negations (*"No hangboard
+  this week"*), and Iron Grip's no-board *Foot-On Laddering* flagged as campus — which now has a
+  `contact` rule of its own. Two old tests had pinned the accidents as features.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -23338,3 +23347,96 @@ Battery: twenty-seven mutants and a sanity check on the first run, eight survivo
 the ones above — and ten of ten killed on the second with the sanity one surviving. 7,256 tests over
 436 files, from 7,209. Layout harness OK at every size, the date matrix green on all ten days, and
 the first load 128.44KB against 129.1.
+
+## M326 — the injury flag read the advice as the activity
+
+M324 measured it and left it: the campus rule had nine hits in the catalogue and five were false,
+four of them from an exercise's `notes`. The decision it needed was what text an injury flag reads,
+across every rule — so the sweep was every rule over every authored text: 231 distinct exercise
+lines (name, load, notes), every session type, 37 tests (label and definition), 156 drills (name and
+focus, and the paragraph their `loads` are derived from). 293 hits outside the paragraphs and 252
+inside them, each read in context.
+
+### What each thing is read by
+
+- **An exercise line: its name and its load, never its notes.** `Exercise.notes` is *"Form cue or
+  caveat — never dosage"* by its own type, and a caveat names what not to do. Fourteen lines gained
+  a rule from their notes; eight were false — *"Skip entirely if sore from campus"* (push-ups),
+  *"Skip if shoulders are beat up from campus"*, *"Bump to 3x20 if elbows feel tight"*, *"Warm up
+  with a hang ladder"*, two *"Drop to 3x…"* that loaded the legs, *"pressed into the floor"*, and
+  *"from shoulder to hip"*. Of the true ones, three said something the name did not — *Recruitment
+  Pulls*, *Toes-to-Bar*, *Step-Ups* — and the table names those now. The load stays: *"Jug or 20mm
+  edge"* is what a line is done on.
+- **A test: its label and its definition.** A definition says what the test is, so it stays; what
+  was wrong with it was the rules.
+- **A drill: its name, focus and kit, and `loads` from its paragraph** — which is prose and refers.
+  The rules fixed most of it; nine drills leave out a rule their paragraph mentions and does not do,
+  listed with the sentence in `drillText.test.ts`, where a stale entry fails.
+
+### The rules
+
+- **Inside other words.** `core` in *Self-scored*; `press` in *Compression Planks*, *pressed*,
+  *express*; single letters, so the `t` of *Don't* and *can't* and the `Y` of *"because Y"* were
+  T- and Y-raises; `arc` lower case, so the thoracic opener's *"top arm tracing a slow arc"* was ARC
+  climbing; `hip` inside *chipped*. Words now, and ARC in capitals — the one case-sensitive rule.
+- **Words that meant something else.** *"Two ugly burns in a row"* as a row; a *long-lever* plank
+  as a lever; box, depth and broad jumps as a catch through the shoulder (they are landings, and
+  `legs` reads them); `drop` for *"drop intensity"* and *"Drop to 3x8"* (its only true hits were
+  drop knees, which `hook` reads once it allows the hyphen).
+- **Words the sentence rules out.** A match straight after *no*, *not*, *without* or *never* does not
+  count: *"No hangboard this week"*, *"no crimp focus"*, *"with no dynamic moves"*, *"I did not
+  flag"*. Only the word straight before, so *"not a max hang but a repeater"* still reads the
+  repeater.
+- **Campus is the word campus.** `\bbump\b` had no true positive — the bumps were wall moves and a
+  set count — and `ladder` found a lead-fall drill, a hang ladder as a warm-up and *Foot-On
+  Laddering*. That last is Iron Grip's no-board track, offered *because* the program calls campus its
+  highest injury risk; the flag called it *"the highest-force protocol there is"*. It and the
+  recruitment work have a `contact` rule now — the same four parts, the reason *"fast, hard contact on
+  holds loads the fingers and the arm together"*. A test holds the campus rule, across everything
+  authored, to firing only where the words say campus.
+- **Reads now that it did not:** *Inverted Rows* and *Archer Rows* (`row` was singular), *Toes-to-
+  Bar*, *Step-Ups*, *Recruitment Hangs* with no load written, *Drop-Knee Isolation* as the knee.
+
+### What it changed that a climber sees
+
+- Wrist Extensor Curls, for an injured elbow: *"it loads the forearm and wrist"*, not campus.
+- A finger injury no longer rules the shoulder CARs (*"a high gaston"*) or the thoracic opener (*"a
+  slow arc"*) out of the rest-day drill.
+- Box Jump Height warns an injured ankle or knee, not a shoulder. Flexibility and Max Static Grade
+  warn about nothing, which is what they load.
+- **The 48-hour finger rule borrows `contact`**, so Gravity Defied's Engine Room counts as a finger
+  session: its Recruitment Hangs are ten to fifteen seconds on a 20mm edge that *"teach the fingers
+  to fire at full recruitment"*, by the program's own rationale. One a week, so no breach follows.
+
+### What I got wrong, and what two old tests had pinned
+
+- **M161's test pinned two accidents as reads.** *"Reads flexibility out of its description"* —
+  through `core` in *Self-scored*. *"Reads hollow_body out of its description"* — through `press`
+  in *pressed*. Both are now tests that those words load nothing.
+- **The rest-day drill's test said a hurt finger rules out the shoulder drills "which load it
+  too".** They do not; the word was *gaston*. It holds the opposite now.
+- **My first `contact` draft** put laddering in the `fingers` and `dynamic` rules instead, which gave
+  *Campus Laddering* a knee. A rule of its own was smaller than a patch in two.
+- **I dropped `fingers` from the wrist-prep drill and put it back.** The word it matched —
+  *"the forearm flexors that crimp"* — is a reference, but the drill holds a load in the hand, and a
+  hurt finger is the one injury where gripping deserves a flag. The exclusion list says so.
+
+### Measured and left, with reasons
+
+- **`tissueLoad` reads the climber's own session notes with this table.** Those are the log — a
+  climber with no exercises entered says what they did there — and *"shoulder grumbling on anything
+  overhead"* reading as shoulder is closer to right than wrong. Not the same question as authored
+  advice.
+- **A climbing day with no drill carries no load note**, so a finger-injured climber on a limit day
+  with nothing prescribed is told nothing by `dayLoad`. What climbing loads is `CLIMBING_PARTS`'s
+  question, and wiring it here is a decision about how loud the day card should be.
+- **Paragraph references in the gentler rules** — a few `dynamic`, `sustained` and `legs` hits in
+  wall-drill paragraphs that describe rather than prescribe. On wall drills, whose climbing loads
+  those parts anyway, a wrong reason costs less than the list of exceptions it would take.
+- **Wall Angel reads the wrist** (*"wrists and elbows staying in contact"*) and **Landing Control
+  reads a catch** (*"a dyno fall"*). Definitions, and close enough to the movement to leave.
+
+Battery: twenty-two mutants and a sanity check; one survived the first run — `hip` inside other
+words, which no catalogue text contains — and a climber's note that does now kills it. 7,292 tests
+over 436 files, from 7,256. Layout harness OK, the date matrix green on all ten days, first load
+128.71KB against 129.1.

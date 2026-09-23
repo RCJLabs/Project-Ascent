@@ -83,15 +83,16 @@ describe('what counts as a finger session', () => {
     expect(loadsFingersDirectly({ ...hang(TODAY), completed: false })).toBe(false);
   });
 
-  it('borrows only the two rules that ask this same question', () => {
+  it('borrows only the rules that ask this same question', () => {
     // `sustained` and `open-hand` also carry `fingers`, and are left out for
     // the reason in the header. `fingers` itself left at M321: its pattern
     // carries `dead ?hang`, which is right for flagging a part a climber has
     // hurt and wrong for a protocol that needs forty-eight hours after it.
     // The rest of that rule is restated in `PROTOCOLS`, and the two tests
-    // below are the halves of it that matter. Pinned so moving either way is
-    // a decision.
-    expect([...DIRECT_FINGER_RULES].sort()).toEqual(['campus', 'one-arm']);
+    // below are the halves of it that matter. `contact` joined at M326,
+    // when laddering and recruitment work left `campus` and `fingers` for a
+    // rule of their own. Pinned so moving either way is a decision.
+    expect([...DIRECT_FINGER_RULES].sort()).toEqual(['campus', 'contact', 'one-arm']);
   });
 
   it.each([

@@ -119,6 +119,7 @@ export type Equipment = 'none' | 'wall' | 'hangboard' | 'campus' | 'gym' | 'weig
 export type DrillLoad =
   | 'campus'
   | 'one-arm'
+  | 'contact'
   | 'fingers'
   | 'lever'
   | 'pull'

@@ -58,19 +58,33 @@ describe('what a test loads, from its own words', () => {
   });
 
   /**
-   * And reads the *description*, not only the label. Six metrics name parts
-   * their label does not, and two — Wall Angel and Flexibility — name
-   * nothing at all without it. A scan over the label alone would pass every
-   * other case in this file, which the battery showed.
+   * And reads the *description*, not only the label. Wall Angel names nothing
+   * at all without it. A scan over the label alone would pass every other
+   * case in this file, which the battery showed.
+   *
+   * This list had two more until M326, and both were the scan reading inside
+   * a word: Flexibility loaded the back because *"Self-scored"* contains
+   * `core`, and Hollow Body loaded the shoulder because *"pressed into the
+   * floor"* contains `press`.
    */
   it.each([
     ['wall_angel', 'shoulder'],
-    ['flexibility', 'back'],
     ['landing_control', 'hip'],
-    ['hollow_body', 'shoulder'],
   ])('reads %s out of its description', (id, part) => {
     expect(metricLoads({ label: m(id).label, description: undefined })).not.toContain(part);
     expect(metricLoads(m(id))).toContain(part);
+  });
+
+  it.each([
+    ['flexibility', []],
+    ['hollow_body', ['back']],
+    // *"Hardest boulder sent with no dynamic moves."*
+    ['max_static_grade', []],
+    // A box jump is a landing: the ankle and the knee, not a catch through
+    // the shoulder.
+    ['box_jump_height', ['ankle', 'knee']],
+  ])('reads %s as what it is and nothing inside its words', (id, parts) => {
+    expect(metricLoads(m(id)).sort()).toEqual([...parts].sort());
   });
 
   /**

@@ -39,7 +39,13 @@ export interface LoadRule {
 export const LOAD_RULES: LoadRule[] = [
   {
     id: 'campus',
-    pattern: /\bcampus|\bbump\b|ladder(ing)?\b|double dyno/i,
+    // `bump` and `ladder` came out at M326. Neither had a true positive the
+    // word `campus` did not already carry: the bumps were wall moves (a
+    // paddle, "BUMP to the finish hold") and *"Bump to 3x20"* on wrist
+    // curls; the ladders were a lead-fall drill, a hang ladder as a warm-up,
+    // and Iron Grip's *Foot-On Laddering* — the no-board track's substitute,
+    // which the program offers precisely because it is not campus work.
+    pattern: /\bcampus|double dyno/i,
     parts: ['fingers', 'pulley', 'elbow', 'shoulder'],
     because: 'campus work is the highest-force protocol there is',
   },
@@ -65,6 +71,19 @@ export const LOAD_RULES: LoadRule[] = [
     because: 'one-arm work doubles the load through a single side',
   },
   {
+    id: 'contact',
+    // Iron Grip's no-board track, named (PLAN.md M326). *Foot-On Laddering*
+    // read as `campus` through the word `ladder`, so a climber on the track
+    // the program offers *because* campus is its highest injury risk was
+    // told the substitute was "the highest-force protocol there is". The
+    // parts were right — fast contact on holds loads the fingers and the arm
+    // together — and the reason was the one thing it is not. Recruitment
+    // work is the same quality; its notes said so and its name did not.
+    pattern: /\bladdering\b|recruitment (?:pull|hang)s?/i,
+    parts: ['fingers', 'pulley', 'elbow', 'shoulder'],
+    because: 'fast, hard contact on holds loads the fingers and the arm together',
+  },
+  {
     id: 'fingers',
     pattern: /max hang|repeater|dead ?hang|min(imum)? edge|density hang|hangboard|fingerboard|\bedge\b|crimp/i,
     parts: ['fingers', 'pulley'],
@@ -72,19 +91,23 @@ export const LOAD_RULES: LoadRule[] = [
   },
   {
     id: 'lever',
-    pattern: /front lever|back lever|\blever\b|muscle[- ]?up|typewriter/i,
+    // Not a *long-lever* plank, which is a trunk exercise with a descriptor.
+    pattern: /front lever|back lever|(?<!long[- ])\blever\b|muscle[- ]?up|typewriter/i,
     parts: ['elbow', 'shoulder', 'back'],
     because: 'it holds the elbow and shoulder under tension',
   },
   {
     id: 'pull',
-    pattern: /lock[- ]?off|pull[- ]?up|chin[- ]?up|\brow\b|lat pull|\bpulldown\b/i,
+    // Not "two ugly burns in a row" — and `rows`, which the singular missed:
+    // *Inverted Rows* and *Archer Rows* read as nothing until M326.
+    pattern: /lock[- ]?off|pull[- ]?up|chin[- ]?up|(?<!in a )\brows?\b|lat pull|\bpulldown\b/i,
     parts: ['elbow', 'shoulder', 'back'],
     because: 'pulling loads the elbow and shoulder',
   },
   {
     id: 'dynamic',
-    pattern: /dyno|dynamic|deadpoint|explosive|throw|pop\b|jump/i,
+    // A box jump is a landing, not a catch: `legs` reads those.
+    pattern: /dyno|dynamic|deadpoint|explosive|throw|pop\b|(?<!box |depth |broad )\bjump/i,
     parts: ['shoulder', 'elbow', 'knee'],
     because: 'catching a dynamic move is a shock load',
   },
@@ -92,7 +115,12 @@ export const LOAD_RULES: LoadRule[] = [
     // Sustained gripping is not a low-force activity for a healing tendon,
     // even though it feels like the easy end of training.
     id: 'sustained',
-    pattern: /\barc\b|linked lap|\blaps?\b|circuit|\bpump\b|4 ?x ?4|continuous|traverse/i,
+    //
+    // Case-sensitive, which no other rule is, for one word: ARC the method
+    // is written in capitals, and *"top arm tracing a slow arc"* is the
+    // thoracic opener that a climber with a finger injury was never offered
+    // on a rest day because this read it as sustained gripping (M326).
+    pattern: /\bARC\b|[Ll]inked [Ll]aps?|\b[Ll]aps?\b|[Cc]ircuits?|\b[Pp]ump\b|4 ?[xX] ?4|[Cc]ontinuous|[Tt]raverse/,
     parts: ['fingers', 'pulley'],
     because: 'sustained gripping keeps the fingers under load for a long time',
   },
@@ -104,7 +132,10 @@ export const LOAD_RULES: LoadRule[] = [
   },
   {
     id: 'shoulder',
-    pattern: /overhead|press|dip\b|push[- ]?up|shoulder|scapul|face pull|\bY\b|\bT\b|\bW\b/i,
+    // `press` as a word, not inside *Compression* or *pressed*; and the
+    // letters as an I-Y-T, not the `t` in *Don't* (M326).
+    pattern:
+      /overhead|\bpress(?:es)?\b|dip\b|push[- ]?up|shoulder|scapul|face pull|\b[IYTW](?:-[IYTW]){1,3}\b|\b[YTW][- ]raises?\b/i,
     parts: ['shoulder'],
     because: 'it works through the shoulder',
   },
@@ -116,7 +147,7 @@ export const LOAD_RULES: LoadRule[] = [
   },
   {
     id: 'hook',
-    pattern: /heel hook|toe hook|high ?step|drop ?knee|rock ?over|flag\b/i,
+    pattern: /heel hook|toe hook|high[- ]?step|drop[- ]?knee|rock[- ]?over|flag\b/i,
     parts: ['knee', 'hip'],
     because: 'it torques the knee and hip',
   },
@@ -125,19 +156,22 @@ export const LOAD_RULES: LoadRule[] = [
     // `forward fold` and `toe touch` added at M161: the Toe Touch assessment
     // is a straight-leg forward fold and named neither a hip nor a hamstring,
     // so the scan read nothing off the one flexibility test in the catalogue.
-    pattern: /hip|hamstring|adductor|frog|pigeon|split|straddle|forward fold|toe touch/i,
+    pattern: /\bhips?\b|hamstring|adductor|frog|pigeon|\bsplits?\b|straddle|forward fold|toe touch/i,
     parts: ['hip'],
     because: 'it works through the hip',
   },
   {
     id: 'legs',
-    pattern: /squat|lunge|calf|ankle|hop\b|landing|drop\b/i,
+    // `drop` came out at M326: its only hits were *drop knee*, which is
+    // `hook`, and *"Drop to 3x8"*. Box jumps and step-ups came in.
+    pattern: /squat|lunge|calf|ankle|hop\b|landing|\b(?:box|depth|broad) jumps?|step[- ]?ups?\b/i,
     parts: ['ankle', 'knee'],
     because: 'it loads the ankle and knee',
   },
   {
     id: 'core',
-    pattern: /core|plank|hollow|dead ?bug|leg raise|\bab\b|oblique|hanging knee/i,
+    // `core` as a word: *"Self-scored"* was reading as trunk work (M326).
+    pattern: /\bcore\b|plank|hollow|dead ?bug|leg raise|\bab\b|oblique|hanging knee|toes[- ]to[- ]bar/i,
     parts: ['back'],
     because: 'it works through the trunk',
   },
@@ -162,9 +196,27 @@ export function scanText(text: string): LoadFinding[] {
   return rulesFor(rulesInText(text));
 }
 
+/**
+ * A word the sentence says is not being done (PLAN.md M326).
+ *
+ * *"No hangboard this week"*, *"no crimp focus"*, *"with no dynamic moves"* —
+ * a drill paragraph or a test's definition naming the thing it rules out.
+ * Only the word straight before the match: "not a max hang but a repeater"
+ * still reads the repeater.
+ */
+const NEGATED = /\b(?:no|not|without|never)\s+$/i;
+
+function saysItDoes(rule: LoadRule, text: string): boolean {
+  const flags = rule.pattern.flags.includes('g') ? rule.pattern.flags : `${rule.pattern.flags}g`;
+  for (const match of text.matchAll(new RegExp(rule.pattern.source, flags))) {
+    if (!NEGATED.test(text.slice(Math.max(0, (match.index ?? 0) - 12), match.index))) return true;
+  }
+  return false;
+}
+
 /** The rules some text matches, by name, hardest first (PLAN.md M137). */
 export function rulesInText(text: string): DrillLoad[] {
-  return LOAD_RULES.filter((rule) => rule.pattern.test(text)).map((rule) => rule.id);
+  return LOAD_RULES.filter((rule) => saysItDoes(rule, text)).map((rule) => rule.id);
 }
 
 /** The findings for a set of rule names, in the rules' own order. */
@@ -178,8 +230,23 @@ export function partsInText(text: string): BodyPart[] {
   return [...new Set(scanText(text).flatMap((f) => f.parts))];
 }
 
+/**
+ * What a line is called and what it is done on — never its notes (PLAN.md
+ * M326).
+ *
+ * `Exercise.notes` is *"Form cue or caveat — never dosage"* by its own type,
+ * and a caveat names what not to do: *"Skip entirely if sore from campus"*
+ * made push-ups campus work, *"Bump to 3x20 if elbows feel tight"* told an
+ * injured elbow its rehab was *"the highest-force protocol there is"*, and
+ * *"Drop to 3x5 if shoulders feel beat up"* loaded the legs. Swept over the
+ * catalogue's 231 distinct lines: fourteen gained a rule from their notes,
+ * eight of them false; of the true ones, three said something the name did
+ * not, and the table names those three now instead.
+ *
+ * The load stays: *"Jug or 20mm edge"* is what the line is done on.
+ */
 function joinExercise(exercise: Exercise): string {
-  return [exercise.name, exercise.notes, exercise.load].filter(Boolean).join(' ');
+  return [exercise.name, exercise.load].filter(Boolean).join(' ');
 }
 
 /** Every part an exercise loads, by its own words. Empty when none match. */

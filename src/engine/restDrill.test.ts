@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { DRILLS, offWallDrills } from '@/content/drills';
+import { DRILLS, getDrill, offWallDrills } from '@/content/drills';
 import { loadPrograms } from '@/content/programs';
 import { CATALOGUE } from '@/content/programs/catalogue';
 import { drillConflict } from './bodyLoad';
@@ -126,10 +126,12 @@ describe('one drill, for one day', () => {
 
 describe('and not the one that loads what hurts', () => {
   /**
-   * `off_wrist_forearm_prep` loads `fingers`, `shoulder` and `forearm`. A
-   * climber resting a hurt finger should not meet it on the day they are
-   * resting it — the same reading M153 put in the logger and M161 on the
-   * assessments, rather than a second list of what is safe.
+   * `off_wrist_forearm_prep` loads `fingers` and `forearm` — it holds a
+   * load in the hand, and its `shoulder` went at M326 as a word about
+   * mantels rather than about the drill. A climber resting a hurt finger
+   * should not meet it on the day they are resting it — the same reading
+   * M153 put in the logger and M161 on the assessments, rather than a second
+   * list of what is safe.
    */
   it('never offers a drill that loads a reported injury', () => {
     for (const injured of [['fingers'], ['shoulder'], ['hip'], ['fingers', 'shoulder']] as const) {
@@ -145,9 +147,17 @@ describe('and not the one that loads what hurts', () => {
     const offered = new Set<string>();
     for (let i = 0; i < 40; i += 1) offered.add(restDayDrill(addDays(DAY, i), ['fingers'])!.id);
     expect(offered).not.toContain('off_wrist_forearm_prep');
-    // And the shoulder ones, which load it too — so this is the engine's
-    // reading and not a hand-kept exclusion list.
-    expect(offered).not.toContain('off_shoulder_cars');
+  });
+
+  it('does not rule out a drill for a finger injury on a word about something else', () => {
+    // Shoulder CARs was ruled out here until M326, and this test said it was
+    // because the shoulder ones load the fingers too. They do not: its
+    // paragraph ends *"a shoulder that complains on a high gaston"*, and the
+    // scan read `gaston` as open-hand gripping. So was the thoracic opener,
+    // whose *"top arm tracing a slow arc"* read as ARC.
+    for (const id of ['off_shoulder_cars', 'off_thoracic_opening']) {
+      expect(drillConflict(getDrill(id)!, ['fingers']), id).toBeNull();
+    }
   });
 
   it('still has plenty left for a climber with one thing hurt', () => {

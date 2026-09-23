@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DRILLS } from './drills';
 import { DRILL_TEXT, drillText } from './drillText';
 import { LOAD_RULES, rulesInText } from '@/engine/bodyLoad';
+import type { DrillLoad } from './types';
 
 /**
  * The drill text, out of the entry chunk (PLAN.md M137).
@@ -38,14 +39,82 @@ describe('every drill has its text', () => {
   });
 });
 
+/**
+ * Words a paragraph uses about something the drill is not (PLAN.md M326).
+ *
+ * A drill's paragraph is coaching prose, and prose refers: to the phase
+ * coming next, to the board the wall work applies, to a climbing move a
+ * mobility drill buys range for. The scan cannot tell *"Campus board is about
+ * to enter the picture"* from campusing, so the drill's `loads` leaves the
+ * rule out and says why here. Each one was read against its sentence; none
+ * is a judgement that the work is easy, only that the words are not about
+ * this drill.
+ */
+const MENTIONED_NOT_DONE: Record<string, { rules: DrillLoad[]; because: string }> = {
+  deload_max_hang_day_off_flow: {
+    rules: ['campus'],
+    because: '"Campus board is about to enter the picture" — next phase, not this deload day',
+  },
+  contact_strength_projecting: {
+    rules: ['campus'],
+    because: '"where campus-board power meets real rock" — the wall, applying it',
+  },
+  crimp_pull_power_application: {
+    rules: ['campus'],
+    because: '"Campus board recruits fast-twitch; the wall is…" — contrasting the board with this',
+  },
+  sg_beta_refinement_rests: {
+    rules: ['campus'],
+    because: '"a heel that turns a campus into a reach" — beta that removes the campus move',
+  },
+  off_shoulder_cars: {
+    rules: ['open-hand'],
+    because: '"a shoulder that complains on a high gaston" — why the drill exists, off the wall',
+  },
+  // Not `fingers`, though the word it matched — *"the forearm flexors that
+  // crimp"* — is a reason too: the drill holds a load in the hand, which is
+  // gripping, and a hurt finger is the one injury where that is worth a flag.
+  off_wrist_forearm_prep: {
+    rules: ['shoulder'],
+    because: '"every mantel and every press" — why the wrist matters, not what the drill does',
+  },
+  off_ninety_ninety_hips: {
+    rules: ['hook'],
+    because: '"every high step, drop knee and heel hook is bought with hip rotation" — why, not what',
+  },
+  projecting_with_crimp_focus: {
+    rules: ['open-hand'],
+    because: '"even when pinch or jug alternatives exist" — the holds it tells you to avoid',
+  },
+  step_up_dyno: {
+    rules: ['shoulder'],
+    because: '"Press through the HEEL" — a leg drive, not a shoulder press',
+  },
+};
+
+const said = (id: string): DrillLoad[] => {
+  const left = new Set(MENTIONED_NOT_DONE[id]?.rules ?? []);
+  return rulesInText(DRILL_TEXT[id]!).filter((rule) => !left.has(rule));
+};
+
 describe('what the text says it loads', () => {
   it('is what the drill carries, drill by drill', () => {
     // Edit a description and this names the drill whose `loads` no longer
     // agrees with it. The order is the rules' own, hardest first.
-    const drift = DRILLS.filter((d) => rulesInText(DRILL_TEXT[d.id]!).join() !== d.loads.join()).map(
-      (d) => `${d.id}: text says [${rulesInText(DRILL_TEXT[d.id]!).join(', ')}], drill says [${d.loads.join(', ')}]`,
+    const drift = DRILLS.filter((d) => said(d.id).join() !== d.loads.join()).map(
+      (d) => `${d.id}: text says [${said(d.id).join(', ')}], drill says [${d.loads.join(', ')}]`,
     );
     expect(drift).toEqual([]);
+  });
+
+  it('leaves out only what the text still says, for a drill that exists', () => {
+    // An exclusion the text no longer triggers is a stale one, and a stale
+    // one would silently swallow the rule the day the words come back.
+    const ids = new Set(DRILLS.map((d) => d.id));
+    const stale = Object.entries(MENTIONED_NOT_DONE).flatMap(([id, { rules }]) =>
+      !ids.has(id) ? [id] : rules.filter((r) => !rulesInText(DRILL_TEXT[id]!).includes(r)).map((r) => `${id}:${r}`),
+    );
+    expect(stale).toEqual([]);
   });
 
   it('is derived from the text and nothing else', () => {
@@ -67,7 +136,8 @@ describe('what the text says it loads', () => {
   it('names every rule once', () => {
     const ids = LOAD_RULES.map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids.length).toBe(14);
+    // Fifteen since M326 added `contact`.
+    expect(ids.length).toBe(15);
   });
 });
 
