@@ -5,7 +5,7 @@ import type { MetricEntry } from '@/db/metrics';
 import { newSession, type Session } from '@/db/sessions';
 import { addDays } from './dates';
 import { deriveClimberState } from './derive';
-import { diagnose, RULES, type DiagnosisInput } from './plateau';
+import { diagnose, resetDates, RULES, type DiagnosisInput } from './plateau';
 
 const TODAY = '2026-09-09';
 let counter = 0;
@@ -197,7 +197,56 @@ describe('plateau', () => {
     const reset = run(sessions).reset!;
     expect(reset).toBeDefined();
     expect(reset.steps.map((s) => s.days)).toEqual(['Days 1–2', 'Days 3–5', 'Day 6', 'Day 7']);
-    expect(reset.steps[0]!.detail).toContain('rest');
+  });
+
+  /**
+   * A light week inside the flat line (PLAN.md M342).
+   *
+   * This file's own fixture is one: three sessions a week, and the last
+   * week's third falls tomorrow, so the ratio reads 0.7. The coach said
+   * *"Training has dropped off — more sessions"* beside a reset that opened
+   * with two days of rest, on 56 days of the sample year.
+   */
+  describe('on a light week', () => {
+    const full = [...sessions, make({ date: TODAY, grades: [{ grade: 'V3', count: 4 }, { grade: 'V5', count: 2 }] })];
+
+    it('opens with two days of rest when the week has been a normal one', () => {
+      const d = run(full);
+      expect(deriveClimberState(full, { today: TODAY }).load.zone).not.toBe('detraining');
+      expect(d.verdict).toBe('plateau');
+      expect(d.reset!.steps[0]).toMatchObject({ title: 'Nothing' });
+      expect(d.reset!.steps[0]!.detail).toContain('Two full rest days');
+      expect(d.reset!.steps[0]!.done).toBeUndefined();
+      expect(d.explanation).not.toMatch(/run light/);
+    });
+
+    it('is still a plateau, and says the week has done the rest already', () => {
+      const load = deriveClimberState(sessions, { today: TODAY }).load;
+      expect(load.zone, 'the fixture is not a light week').toBe('detraining');
+      const d = run(sessions);
+      expect(d.verdict).toBe('plateau');
+      expect(d.explanation).toContain(`This week has already run light, at ${load.acwr!.toFixed(2)}× your own baseline`);
+      expect(d.reset!.steps[0]).toMatchObject({ days: 'Days 1–2', title: 'Done already', done: true });
+      expect(d.reset!.steps.slice(1).every((step) => step.done === undefined)).toBe(true);
+      // Every step is still there, so a set-aside of the coach's card holds.
+      expect(d.reset!.steps).toHaveLength(4);
+    });
+
+    it('hedges the figure when unscored sessions make it an estimate', () => {
+      const state = deriveClimberState(sessions, { today: TODAY });
+      const estimated = { ...state, load: { ...state.load, estimated: true } };
+      const d = diagnose({ state: estimated, sessions, today: TODAY });
+      expect(d.explanation).toContain(`at about ${state.load.acwr!.toFixed(1)}× your own baseline`);
+      expect(d.reset!.steps[0]!.detail).toContain(`about ${state.load.acwr!.toFixed(1)}×`);
+    });
+
+    it('dates the reset from the first step not done', () => {
+      expect(resetDates(TODAY)).toEqual([TODAY, addDays(TODAY, 2), addDays(TODAY, 5), addDays(TODAY, 6)]);
+      expect(resetDates(TODAY, run(full).reset!.steps)[0]).toBe(TODAY);
+      const started = resetDates(TODAY, run(sessions).reset!.steps);
+      expect(started[1], 'the half-volume days start today').toBe(TODAY);
+      expect(started.slice(2)).toEqual([addDays(TODAY, 3), addDays(TODAY, 4)]);
+    });
   });
 });
 

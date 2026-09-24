@@ -63,7 +63,7 @@ export function TrainingState({
   );
 
   const { color, Icon } = LOOK[diagnosis.verdict];
-  const dates = resetDates(todayKey());
+  const dates = resetDates(todayKey(), diagnosis.reset?.steps);
 
   return (
     <Card title="Training state">
@@ -106,7 +106,7 @@ export function TrainingState({
                         {step.days}
                       </span>
                       <span className="text-2xs text-ink-soft ml-auto">
-                        from {shortLabel(dates[i] ?? dates[0]!)}
+                        {step.done ? 'done' : `from ${shortLabel(dates[i] ?? dates[0]!)}`}
                       </span>
                     </div>
                     <div className="font-semibold text-sm">{step.title}</div>

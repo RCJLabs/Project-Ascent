@@ -567,6 +567,44 @@ describe('a plateau, set aside', () => {
   });
 });
 
+/**
+ * A flat line and a light week, on one board (PLAN.md M342).
+ *
+ * M337a found them together on 56 days of the sample year: *"Training has
+ * dropped off … the way back up is more sessions"* beside a plateau card
+ * whose reset opened with two days of rest. Both from `diagnose` and the
+ * real ratio here, since the fault was the two disagreeing.
+ */
+describe('a plateau in a light week', () => {
+  const board = (sessions: Session[]) => {
+    const state = deriveClimberState(sessions, { today: TODAY });
+    const diagnosis = diagnose({ state, sessions, today: TODAY });
+    return { state, diagnosis, list: buildTips({ state, sessions, diagnosis, today: TODAY }) };
+  };
+  const find = (list: { id: string; body: string }[], id: string) => list.find((t) => t.id === id);
+
+  it('starts the reset after its rest, and says why, beside the card that says train', () => {
+    const light = board(steady(10).filter((s) => s.date < back(3)));
+    expect(light.state.load.zone, 'the fixture is not a light week').toBe('detraining');
+    expect(light.diagnosis.verdict).toBe('plateau');
+    const plateau = find(light.list, 'plateau')!;
+    expect(plateau.body).toContain('This week has already run light');
+    expect(plateau.body).toContain('can start at its third day');
+    expect(plateau.body).not.toContain('There is a seven-day reset');
+    expect(find(light.list, 'detraining')?.body).toContain('more sessions, not harder ones');
+  });
+
+  it('offers the reset from its first day on an ordinary week', () => {
+    const ordinary = board(steady(10));
+    expect(ordinary.state.load.zone).not.toBe('detraining');
+    expect(ordinary.diagnosis.verdict).toBe('plateau');
+    const plateau = find(ordinary.list, 'plateau')!;
+    expect(plateau.body).toContain('There is a seven-day reset written for exactly this.');
+    expect(plateau.body).not.toMatch(/run light|third day/);
+    expect(find(ordinary.list, 'detraining')).toBeUndefined();
+  });
+});
+
 describe('gaps in the training', () => {
   it('names a gap only once there is enough history for it to be a choice', () => {
     const few = steady(1, { restChecklist: undefined });

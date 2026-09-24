@@ -60,6 +60,12 @@ export interface ResetStep {
   days: string;
   title: string;
   detail: string;
+  /**
+   * Already behind the climber, so the reset starts after it (PLAN.md M342).
+   * Only ever the opening rest, and only when this week has already run
+   * light.
+   */
+  done?: true;
 }
 
 export interface ResetProtocol {
@@ -223,13 +229,26 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
   const training = state.recentSessions >= RULES.trainingVolume;
   if (stalled && training) {
     const wall = stuckGrade(tally, scale);
+    // A light week inside a flat line (PLAN.md M342). The month's volume is
+    // what makes this a plateau, so it stands; but the reset opened with two
+    // days of rest while the coach, beside it, said *"Training has dropped
+    // off … the way back up is more sessions"* — on 56 days of the sample
+    // year. This week has already done what those two days are for, so the
+    // reset says so and starts after them, and the two cards point one way.
+    const light = state.load.zone === 'detraining' && state.load.acwr !== null
+      ? state.load.estimated
+        ? `about ${state.load.acwr.toFixed(1)}×`
+        : `${state.load.acwr.toFixed(2)}×`
+      : null;
     return {
       verdict: 'plateau',
       reasons: [],
       headline: 'Plateaued',
       explanation: `${state.recentSessions} sessions in the last month and no new grade ${
         daysSincePr === null ? 'yet' : `in ${Math.round(daysSincePr / 7)} weeks`
-      }. That is the signature of a body that has adapted to what you keep asking of it.`,
+      }. That is the signature of a body that has adapted to what you keep asking of it.${
+        light === null ? '' : ` This week has already run light, at ${light} your own baseline, which is the drop in load a reset begins with.`
+      }`,
       evidence: [
         ...baseEvidence,
         ...(wall
@@ -239,7 +258,7 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
             }]
           : []),
       ],
-      reset: buildReset(input, today, wall?.grade ?? null, scale),
+      reset: buildReset(input, today, wall?.grade ?? null, scale, light),
       sinceGrade: daysSincePr,
     };
   }
@@ -330,6 +349,7 @@ function buildReset(
   today: string,
   wallGrade: string | null,
   scale: GradeScale,
+  light: string | null,
 ): ResetProtocol {
   const novel = novelStimulus(input);
   const retest = retestTarget(input, wallGrade, scale, today);
@@ -338,12 +358,19 @@ function buildReset(
     rationale:
       'Adaptation stops when the stimulus stops changing. Drop the load first so the change lands on a recovered body, then change one thing and measure it.',
     steps: [
-      {
-        days: 'Days 1–2',
-        title: 'Nothing',
-        detail:
-          'Two full rest days. Not easy climbing — rest. This is the part that gets skipped, and it is the part that makes the rest of the week work.',
-      },
+      light === null
+        ? {
+            days: 'Days 1–2',
+            title: 'Nothing',
+            detail:
+              'Two full rest days. Not easy climbing — rest. This is the part that gets skipped, and it is the part that makes the rest of the week work.',
+          }
+        : {
+            days: 'Days 1–2',
+            title: 'Done already',
+            detail: `This week has run at ${light} your own baseline, and these two days are for exactly that: the load down, and the fatigue with it. Start at the next step.`,
+            done: true,
+          },
       {
         days: 'Days 3–5',
         title: 'Half volume, capped effort',
@@ -474,7 +501,15 @@ function nextGrade(state: ClimberState, scale: GradeScale): string | null {
   return ladder[tally.bestOrdinal + 1] ?? tally.best;
 }
 
-/** The date each reset step falls on, for display. */
-export function resetDates(today: string): string[] {
-  return [today, addDays(today, 2), addDays(today, 5), addDays(today, 6)];
+/**
+ * The date each reset step falls on, for display: from today, or from the
+ * first step not already done (PLAN.md M342), so a reset whose rest is
+ * behind the climber puts its half-volume days on today rather than on the
+ * day after tomorrow. A done step's date is before today and is not shown.
+ */
+export function resetDates(today: string, steps: readonly Pick<ResetStep, 'done'>[] = []): string[] {
+  const offsets = [0, 2, 5, 6];
+  const first = steps.findIndex((step) => step.done !== true);
+  const from = offsets[first === -1 ? 0 : first] ?? 0;
+  return offsets.map((offset) => addDays(today, offset - from));
 }

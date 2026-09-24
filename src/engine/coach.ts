@@ -430,7 +430,13 @@ function plateau({ diagnosis }: CoachInput, spike: Tip | null): Tip | null {
       tone: 'caution',
       weight: 88,
       headline: 'The line has gone flat',
-      body: `${diagnosis.explanation} There is a seven-day reset written for exactly this.`,
+      // Its rest already behind the climber on a light week (PLAN.md M342),
+      // and the explanation has just said why.
+      body: `${diagnosis.explanation} ${
+        diagnosis.reset?.steps[0]?.done
+          ? 'The seven-day reset written for exactly this can start at its third day.'
+          : 'There is a seven-day reset written for exactly this.'
+      }`,
       action: { label: 'Open the reset', href: '/progress' },
     };
   }

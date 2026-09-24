@@ -15157,6 +15157,13 @@ its label is missing. None of these wants touching.
   *"+1 reps"* is now *"+1 rep"*. The change label also printed the stored unit, so a climber reading
   kilograms saw *"13.6 BW+kg"* above *"+10 BW+lbs"*; it now converts. The code that builds these
   labels moved out of the first load, which dropped by 0.59KB.
+- **M342 — a light week inside a plateau.** M337a's finding 3, the last of its seven. On 56 days of
+  the sample year, still 56 once the planned deloads are counted, the coach showed *"Training has
+  dropped off … more sessions, not harder ones"* beside a plateau whose reset opened with two days
+  of rest. A plateau needs a month of volume, so it stands; but a light week is the drop in load
+  the reset begins with. On such a week the plateau now says so, the reset marks its rest *done*
+  and dates the rest from today, and the two cards point one way. A coaching judgement, marked as
+  one.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -24751,3 +24758,106 @@ benchmarks):
 There were no console errors. The layout harness passed.
 
 Still open from M337a: 3, the plateau beside the detraining tip.
+
+## M342 — a light week inside a plateau
+
+M337a's finding 3: *"On 56 days `plateau` and `detraining` fired together … one card says do more
+and the other offers a reset, and Home shows only the plateau. `diagnose` does not read the
+ratio's direction before calling a plateau."* The last of the audit's seven.
+
+### Measured again, with what the replay left out
+
+M337a's replay passed no deload dates, so a planned deload never silenced the detraining tip.
+This one builds them the way `useDeloadDates` does, from the sample climber's blocks. That gives
+14 days: 6–12 September 2026, and a week in October that is still ahead. No plateau falls in the
+September week, so **56 days** stands. Every one of
+them is the same variant, *"Training has dropped off"*. There is no layoff and no trip. They fall
+in twelve spells of 1–8 days through a flat line of 11 to 49 weeks, at 0.52–0.80×, with 13–16
+sessions in the month.
+
+### Which card was right
+
+Both facts are true, and the M337a entry said so. The advice was what disagreed. The reset's
+first step is *"Two full rest days. Not easy climbing — rest"*, under the rationale *"Drop the
+load first so the change lands on a recovered body"*. The detraining card says *"A week or two
+here is recovery; a month is losing what you built. The way back up is more sessions, not harder
+ones."*
+
+Three ways to settle it were weighed:
+
+- **Suppress the plateau during a dip.** Progress's verdict would flip from *Plateaued* for a few
+  days every few weeks, and a 20-week flat line does not stop being one because of a light week.
+- **Suppress the detraining card during a plateau.** This could be defended: the plateau needs a
+  month of volume, so while it stands the drop is short by construction, and the card's own words
+  say that is recovery. But it would hide a load fact from Coach's Corner to fix wording on
+  another card.
+- **Let the plateau read the week (taken).** A light week is the drop in load the reset begins
+  with. So the reset marks its two rest days done and starts at Days 3–5: two sessions at RPE 6
+  or below, half volume. That is also what *"more sessions, not harder ones"* asks for.
+
+This is a **coaching judgement**, the same kind as M338's ranking. Is two lighter days in a week
+worth two full rest days, for the purpose of a reset? The rationale's own terms say yes: its aim
+is a recovered body, and the ratio is saying the load is down.
+
+### What changed
+
+In `diagnose`, the plateau branch reads `state.load.zone`. When it is `detraining` with a ratio
+in hand, three things change:
+
+- **The explanation** gains *"This week has already run light, at 0.73× your own baseline, which
+  is the drop in load a reset begins with."* It is hedged as *"about 0.7×"* when unscored sessions
+  make the ratio an estimate, as the detraining card does (M162).
+- **The reset's first step** becomes *Done already*, marked `done: true`, and says why. All four
+  steps stay, so M338's plateau signature does not move.
+- **`resetDates`** dates from the first step not done. Progress shows *done* in place of that
+  step's date, so the half-volume days start today rather than the day after tomorrow.
+
+The coach's plateau card follows the step: *"The seven-day reset written for exactly this can
+start at its third day"*, in place of *"There is a seven-day reset written for exactly this"*.
+The detraining card is unchanged.
+
+On the replay, the light-week sentence appears on exactly the 56 overlap days. It never appears
+without the detraining card beside it, and the plateau signatures are the same four as M338's.
+
+### Held by
+
+- `plateau.test.ts`, *on a light week* — four tests:
+  - Rest, and nothing added, on a full week.
+  - On a light week: still a plateau, the sentence with the real ratio, the first step done and
+    no other.
+  - The estimate hedged.
+  - The dates from the first open step.
+
+  This file's own fixture turned out to be a light week (0.73×): its last session is two days
+  ago. So its old *"the first step says rest"* assertion was what failed first, and it is now
+  two tests, one per kind of week.
+- `coach.test.ts`, *a plateau in a light week* — the real `diagnose` beside the real detraining
+  card. It says *"can start at its third day"* next to *"more sessions, not harder ones"*, and on
+  an ordinary week the old sentence with no detraining card.
+- `features/progress/resetCard.test.tsx` (new) — the Progress card renders *done* and *Done
+  already*, with Days 3–5 from today; and *Nothing* from today on an ordinary week.
+
+Mutation battery: 10 of 10 killed. The mutants were:
+- never light, and light on the wrong zone;
+- the estimate unhedged;
+- the sentence dropped;
+- the rest step never done, or its flag dropped;
+- the dates ignoring what is done, in the engine and in the card;
+- the card dating a done step;
+- the coach always offering day one.
+
+Two sanity mutants survived: a comment, and an equivalent fallback.
+
+Browser (preview build, twelve flat weeks, one with its last session two days ago and one with a
+session today):
+- **Light week:** Coach's Corner shows *The line has gone flat* first and *Training has dropped
+  off* second. The plateau card reads *"… This week has already run light, at 0.73× your own
+  baseline, which is the drop in load a reset begins with. The seven-day reset written for
+  exactly this can start at its third day."* The Progress reset reads *DAYS 1–2 · done · Done
+  already*, then *DAYS 3–5 · from Sep 24* (today), *Day 6 · from Sep 27* and *Day 7 · from Sep 28*.
+- **Ordinary week:** no detraining card, the old sentence, and the reset from today.
+
+There were no console errors. The layout harness passed. The first load did not change.
+
+**M337a is closed.** Its seven findings shipped as M338 (1 and 2), M339 (4), M340 (5), M341 (6 and
+7) and M342 (3).
