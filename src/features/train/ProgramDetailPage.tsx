@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { Activity, AlertTriangle, BookOpen, ChevronDown, ChevronRight, ChevronUp, Clock, FileText, Layers, Play, Timer } from 'lucide-react';
+import { Activity, AlertTriangle, BookOpen, ChevronDown, ChevronRight, ChevronUp, Clock, FileText, Layers, Pencil, Play, Timer } from 'lucide-react';
 import { getDrill } from '@/content/drills';
 import { drillText } from '@/content/drillText';
 import { guideSummaryFor } from '@/content/guides/summary';
 import { getMetric } from '@/content/metrics';
 import { getProtocol } from '@/content/protocols';
-import { getProgram } from '@/content/programs';
+import { PROGRAMS, getProgram } from '@/content/programs';
 import { INTENSITY_LABEL, type Exercise, type Phase, type Program, type SessionType, type TrackId } from '@/content/types';
 import { today } from '@/engine/dates';
 import { dosageLine } from '@/engine/prescription';
+import { countChanges, programChanges } from '@/engine/programChanges';
 import { handoutName, programHandout } from '@/engine/programHandout';
 import { downloadText } from '@/lib/download';
 import { intensityOf } from '@/engine/scheduler';
@@ -355,6 +356,47 @@ function StartOrOpen({ programId, kind }: { programId: string; kind: string }) {
   );
 }
 
+/**
+ * What a copy changed from the program it was copied from, as a way to the
+ * list (PLAN.md M334).
+ *
+ * M333 put the list above the builder, which is where an athlete lands when
+ * they open the program their coach sent — and this page, not the builder,
+ * is where they decide to run it and tap Start. So it says here too, in one
+ * row: whose changes, how many, and where in the program. The lines
+ * themselves stay in the builder, because this page is one screen on
+ * purpose (M121) and a coach's reply can run to dozens of them.
+ */
+function ChangedFrom({ program }: { program: Program }) {
+  const origin = program.forkedFrom;
+  const source = origin ? PROGRAMS.find((p) => p.id === origin.id) : undefined;
+  const groups = useMemo(() => (source ? programChanges(source, program) : []), [source, program]);
+  if (!origin) return null;
+
+  const count = countChanges(groups);
+  const title = program.author
+    ? `What ${program.author} changed from ${origin.name}`
+    : `What changed from ${origin.name}`;
+  const detail = !source
+    ? `${origin.name} is not in this version of the app, so there is nothing to compare with`
+    : count === 0
+      ? `Nothing — it is still ${origin.name} as the app ships it`
+      : `${count} ${count === 1 ? 'change' : 'changes'}: ${groups.map((g) => g.title).join(', ')}`;
+  return (
+    <Link
+      href={`/build/${program.id}`}
+      className="bg-surface border border-line rounded-2xl p-4 flex items-center gap-3 hover:border-accent transition-colors"
+    >
+      <Pencil size={18} className="text-accent shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="font-bold text-sm">{title}</div>
+        <p className="text-xs text-ink-soft">{detail}</p>
+      </div>
+      <ChevronRight size={16} className="text-ink-soft shrink-0" />
+    </Link>
+  );
+}
+
 export function ProgramDetailPage({ params }: { params: { id: string } }) {
   const display = useSettings((s) => s.display);
   const program = getProgram(params.id);
@@ -469,6 +511,8 @@ export function ProgramDetailPage({ params }: { params: { id: string } }) {
           <MissingKit program={program} />
           <StartOrOpen programId={program.id} kind={program.kind} />
         </Card>
+
+        <ChangedFrom program={program} />
 
         {program.prerequisites && (
           <Card title="Before you start">

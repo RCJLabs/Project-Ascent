@@ -15112,6 +15112,12 @@ its label is missing. None of these wants touching.
   Finger Protocol, The Anvil"*. It is the athlete's reply and the coach's running list alike. An
   import used to set an *Imported* line that its own navigation unmounted; it now simply opens the
   program.
+- **M334 — the coach's changes where the athlete starts the program.** The program page under Train
+  now has one row for a copy: *"What Sam changed from Iron Grip — 11 changes: Length, The week,
+  Phases, …"*, linking to the list in the builder. It compares with Iron Grip as shipped, not at the
+  length the climber runs it. A lucide icon shared by two lazy pages becomes its own chunk, and
+  that chunk's name alone tipped the first load over its budget until the row used an icon already
+  in a shared chunk.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -24028,3 +24034,58 @@ Battery: 30 mutants killed and a sanity check survived. One more was equivalent 
 `source.forkedFrom ??` changed nothing, because the clone already carries it — and that code is
 gone. Another, days listed from Sunday, survived until a test moved a Sunday. 7,381 tests over 440
 files, from 7,347. Layout harness OK.
+
+
+## M334 — the coach's changes where the athlete starts the program
+
+M333's first *measured and left*: the list of a coach's changes sat above the builder, where an
+athlete lands when they open the file. But they run the program from its page under Train — *Yours*
+links a runnable written program there — and that page said nothing about whose program it was.
+
+### One row, not the list
+
+The program page is one screen on purpose (M121): what it is for, how long, a week, the kit, the
+guide, Start, and *What's in it* behind a tap. A coach's reply can run to dozens of lines. So the
+page gets a row in the shape of *Read the full guide*: whose changes, how many, and where —
+*"What Sam changed from Iron Grip · 11 changes: Length, The week, Phases, Finger Protocol + Engine,
+Climbing Session, Rules"* — and it links to the list in the builder. An untouched copy says *"Nothing
+— it is still Iron Grip as the app ships it"*. A copy of a program this version lacks says so. A
+program with no origin, and a shipped one, get no row.
+
+In a browser, as the athlete: open the reply, back to Train, *Yours*, the program. The row sat inside
+the 360px screen at the default and the largest text, and tapping it opened the builder's list.
+
+*Climbing Session* is in that row although the test reply never touched it. That is true, not an
+invented change: shortening to ten weeks took that session's drills for weeks eleven and twelve with
+it, and the athlete's copy has none.
+
+### Against the shipped program, not the one being run
+
+Both pages compare with `PROGRAMS`, the catalogue as shipped, and not with `getProgram`, which hands
+back a program at the length this climber runs it over (M56). A climber running Iron Grip over ten
+weeks would otherwise be told an untouched copy went *"10 weeks → 12"*. The code was right from M333
+and nothing held it; a test now runs the adaptation through the profile store, and a mutant
+swapping in `getProgram` on either page fails it.
+
+### The icon that tipped the budget
+
+The first version used `PencilLine` and measured **129.1006KB against 129.1**, with the diff engine
+correctly placed in the chunk the two pages already share (`programHandout`, whose importers are
+exactly those two). The growth was the icon. A lucide icon used by one lazy page is inlined into
+it; used by two, it becomes a chunk of its own, and the entry lists every chunk it may preload by
+name. `pencil-line-*.js` appeared, and its name was the difference. `Pencil` already had a shared
+chunk, and with it the first load is 129.065KB.
+
+`npm run bundle -- --against` reports source files that changed size in the entry chunk, and said
+nothing here: no source file had. The growth was a new file name in a list. Finding it took a build
+of each and a directory listing, which the tool could do itself.
+
+### Measured and left
+
+- **`npm run bundle` does not list chunks added or removed** against its ref. That is the change
+  that decides a margin this small, and the tool is the place to see it.
+- **The budget has 0.035KB of headroom.** Still open.
+
+Battery: eight mutants killed and a sanity check survived — including `getProgram` in place of the
+catalogue on each page, which no M333 test could have caught: none of them ran an adaptation.
+7,386 tests over 440 files, from 7,381. Layout harness OK.

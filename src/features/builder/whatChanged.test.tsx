@@ -6,10 +6,12 @@ import type { Program } from '@/content/types';
 import { forkProgram } from '@/engine/customProgram';
 import { buildProgramFile } from '@/engine/programFile';
 import { useCustomPrograms } from '@/store/programs';
+import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { APP_VERSION } from '@/version';
 import { BuilderList } from './BuilderList';
 import { BuilderPage } from './BuilderPage';
+import { ProgramDetailPage } from '@/features/train/ProgramDetailPage';
 
 /**
  * The reply, read by the athlete it was written for (PLAN.md M333).
@@ -122,5 +124,84 @@ describe('the athlete opening what the coach sent', () => {
     expect(
       screen.getByText('7/3 Repeaters: sets 3-5 → 3 — Finger Protocol, The Anvil (Repeaters)'),
     ).toBeTruthy();
+  });
+});
+
+/**
+ * And on the page they run it from (PLAN.md M334): one row, with whose
+ * changes, how many and where, and the way to the list.
+ */
+describe('the program page under Train', () => {
+  async function page(program: Program): Promise<void> {
+    await loadPrograms();
+    await reset();
+    await useCustomPrograms.getState().save(program);
+    await hydrate();
+    renderAt(`/train/${program.id}`, <ProgramDetailPage params={{ id: program.id }} />);
+  }
+
+  it('says whose changes, how many and where, and links to them', async () => {
+    const p = reply();
+    p.author = 'Sam';
+    p.weeks = 10;
+    p.phases = p.phases.map((ph) =>
+      ph.id === 'hammer' ? { ...ph, weekEnd: 7 } : ph.id === 'spark' ? { ...ph, weekStart: 8, weekEnd: 10 } : ph,
+    );
+    await page(p);
+    const row = (await screen.findByText('What Sam changed from Iron Grip')).closest('a')!;
+    // Hash routing: wouter writes the href with its `#`.
+    expect(row.getAttribute('href')).toBe(`#/build/${p.id}`);
+    expect(within(row).getByText('3 changes: Length, Phases')).toBeTruthy();
+  });
+
+  it('says so when nothing changed, and does without a name it was not given', async () => {
+    await page(reply());
+    expect(await screen.findByText('What changed from Iron Grip')).toBeTruthy();
+    expect(screen.getByText('Nothing — it is still Iron Grip as the app ships it')).toBeTruthy();
+  });
+
+  it('says there is nothing to compare with when this app lacks the original', async () => {
+    const p = reply();
+    p.forkedFrom = { id: 'retired_program', name: 'Old Faithful', version: APP_VERSION };
+    await page(p);
+    expect(
+      await screen.findByText('Old Faithful is not in this version of the app, so there is nothing to compare with'),
+    ).toBeTruthy();
+  });
+
+  /**
+   * Against the program as shipped, not as this climber runs it. Running
+   * Iron Grip over ten weeks makes `getProgram` hand back a ten-week Iron
+   * Grip, and a copy compared with that would read *"10 weeks → 12"* — a
+   * change nobody made.
+   */
+  it('compares with the program as shipped, whatever length it is being run over', async () => {
+    const copy = reply();
+    await loadPrograms();
+    await reset();
+    await useCustomPrograms.getState().save(copy);
+    await hydrate();
+    // After hydrating, which loads adaptations from the profile, and through
+    // the store, which is the one way the app sets them.
+    useProfile.getState().setProgramLength('iron_grip', 10);
+    expect(getProgram('iron_grip')!.weeks).toBe(10);
+
+    renderAt(`/train/${copy.id}`, <ProgramDetailPage params={{ id: copy.id }} />);
+    expect(await screen.findByText('Nothing — it is still Iron Grip as the app ships it')).toBeTruthy();
+    renderAt(`/build/${copy.id}`, <BuilderPage params={{ id: copy.id }} />);
+    expect(await screen.findByText('Nothing yet — this is still Iron Grip as the app ships it.')).toBeTruthy();
+    useProfile.getState().setProgramLength('iron_grip', null);
+  });
+
+  it('is not there for a program with no origin, nor for a shipped one', async () => {
+    const p = reply();
+    delete p.forkedFrom;
+    await page(p);
+    await screen.findByText(p.name);
+    expect(screen.queryByText(/changed from/)).toBeNull();
+
+    renderAt('/train/iron_grip', <ProgramDetailPage params={{ id: 'iron_grip' }} />);
+    await screen.findAllByText('Iron Grip');
+    expect(screen.queryByText(/changed from/)).toBeNull();
   });
 });
