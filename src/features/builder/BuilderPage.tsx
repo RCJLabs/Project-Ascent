@@ -21,8 +21,10 @@ import { EQUIPMENT_LABELS, MAX_WEEKS, canRun, nextPhaseId, removeSessionType, re
 import { contentIssues, reconcileProgramPhases, trimDrills } from '@/engine/prescription';
 import { safetyIssues } from '@/engine/programSafety';
 import { buildProgramFile, fileName } from '@/engine/programFile';
+import { countChanges, programChanges } from '@/engine/programChanges';
 import { handoutName, programHandout } from '@/engine/programHandout';
 import { today } from '@/engine/dates';
+import { APP_VERSION } from '@/version';
 import { useCustomPrograms } from '@/store/programs';
 import { clearWritingFor, writingFor } from '@/lib/writingFor';
 import { BackLink } from '@/ui/BackLink';
@@ -105,6 +107,7 @@ export function BuilderPage({ params }: { params: { id: string } }) {
 
       <div className="grid grid-cols-1 gap-3">
         <WritingForCard programId={program.id} />
+        <ChangesCard program={program} />
         <IssuePanel issues={issues} runnable={canRun(program)} />
 
         <Card title="What it is">
@@ -526,6 +529,81 @@ function WritingForCard({ programId }: { programId: string }) {
       >
         Put it away
       </Button>
+    </Card>
+  );
+}
+
+/** Past this, the rest wait behind a tap: the first lines are the ones a reader asked for. */
+const CHANGES_SHOWN = 12;
+
+/**
+ * What this copy changed from the program it was copied from (PLAN.md M333).
+ *
+ * For the athlete who opens the program their coach sent back, this is the
+ * reply: twelve weeks of program arrive, and these are the lines of it that
+ * are the coach's. For the coach writing it, it is the same list growing as
+ * they go. Computed here, from the shipped program this app has, rather than
+ * carried in the file — which is why a file names its origin and nothing
+ * more, and why a copy made in another version says so.
+ */
+function ChangesCard({ program }: { program: Program }) {
+  const [all, setAll] = useState(false);
+  const origin = program.forkedFrom;
+  const source = origin ? PROGRAMS.find((p) => p.id === origin.id) : undefined;
+  const groups = useMemo(() => (source ? programChanges(source, program) : []), [source, program]);
+  if (!origin) return null;
+
+  if (!source) {
+    return (
+      <Card title={`Changed from ${origin.name}`}>
+        <p className="text-sm text-ink-soft leading-relaxed">
+          Copied from {origin.name}, which this version of the app does not have — so there is
+          nothing here to compare it with.
+        </p>
+      </Card>
+    );
+  }
+
+  const count = countChanges(groups);
+  let left = all ? Infinity : CHANGES_SHOWN;
+  const shown = groups
+    .map((g) => {
+      const lines = g.lines.slice(0, Math.max(0, left));
+      left -= lines.length;
+      return { ...g, lines };
+    })
+    .filter((g) => g.lines.length > 0);
+
+  return (
+    <Card title={`Changed from ${origin.name}`}>
+      <p className="text-sm text-ink-soft leading-relaxed">
+        {count === 0
+          ? `Nothing yet — this is still ${origin.name} as the app ships it.`
+          : `${count} ${count === 1 ? 'change' : 'changes'}${program.author ? ` by ${program.author}` : ''} to ${origin.name} as the app ships it.`}
+      </p>
+      {shown.map((group) => (
+        <div key={group.title} className="mt-3">
+          <p className="text-2xs font-bold uppercase tracking-widest text-ink-soft">{group.title}</p>
+          <ul className="mt-1 grid grid-cols-1 gap-1">
+            {group.lines.map((line, i) => (
+              <li key={`${i}-${line}`} className="text-sm leading-relaxed">
+                {line}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      {count > CHANGES_SHOWN && (
+        <Button size="sm" variant="outline" className="mt-3" onClick={() => setAll((v) => !v)}>
+          {all ? 'Show fewer' : `Show all ${count}`}
+        </Button>
+      )}
+      {origin.version !== APP_VERSION && (
+        <p className="text-2xs text-ink-soft mt-3 leading-relaxed">
+          Copied in version {origin.version}; this app is {APP_VERSION}. If {origin.name} itself
+          changed between the two, that shows here as a change too.
+        </p>
+      )}
     </Card>
   );
 }

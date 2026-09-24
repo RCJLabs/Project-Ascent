@@ -15105,6 +15105,13 @@ its label is missing. None of these wants touching.
   Settings' `setMessage`. Each must check a flag an effect's cleanup clears, after the await. It
   found fifteen: the four launched-file paths M331 left, and two it had not listed — `/data`'s health
   read and a project's photo list, which could also land on the wrong day. All guarded.
+- **M333 — what the coach changed.** A copy of a program now names the shipped program it came
+  from, and the program file carries that name. The app that opens the file compares the program
+  with its own copy of the original and lists the differences above the builder, in a coach's
+  words: *"12 weeks → 10"*, *"Thursday: Finger Protocol → rest"*, *"7/3 Repeaters: sets 3-5 → 3 —
+  Finger Protocol, The Anvil"*. It is the athlete's reply and the coach's running list alike. An
+  import used to set an *Imported* line that its own navigation unmounted; it now simply opens the
+  program.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -23933,3 +23940,91 @@ raised, the hook is a small change.
 Battery: 23 mutants killed — each of the eleven guards removed, and each of the analyzer's twelve
 rules broken — and a sanity check survived. 7,347 tests over 438 files, from 7,331. First load
 129.08KB, unchanged.
+
+
+## M333 — what the coach changed
+
+The queue's fifth item. M322 closed the loop between coach and athlete — the athlete saves a block,
+the coach reads it on `/shared`, taps *Start from Iron Grip*, edits, and sends a program file back —
+and the athlete then opened twelve weeks of program with **nothing saying which parts were the
+coach's**. The changes are the whole reply.
+
+### Measured first
+
+- **No provenance anywhere.** `forkProgram` copied a program and forgot it: no `forkedFrom` in the
+  types, `customProgram.ts` or `programFile.ts`.
+- **Every fork is of a shipped program.** The coach's *Start from* forks the catalogue program the
+  athlete ran, and the builder's *start from one that already works* forks the catalogue too. Every
+  install has the catalogue, so a file only has to **name** its origin. The receiving app can work
+  out the difference itself, and nothing about the original travels.
+- **The import's confirmation was never seen.** M330's finding: `BuilderList` set *Imported "…" by
+  …* and then navigated to the program, which unmounted the list and the line with it.
+
+### Where it came from
+
+`Program.forkedFrom = { id, name, version }`, set by `forkProgram` from a shipped source. A copy of a
+copy keeps the shipped origin it already carries. A program written from nothing, or copied from
+one, names none. The file reader rebuilds it like every other field and keeps it only when the id
+is one this version ships — `readNext`'s rule from M136, because a shipped id means the same program
+on every install. An unknown one is left behind and **said**, in the import's own list of what did
+not survive.
+
+`version` is the app that made the copy. Iron Grip can change between releases, and a comparison
+across two of them would pass the release's edit off as the coach's. When the versions differ, the
+card says so.
+
+### What changed, in a coach's words
+
+`engine/programChanges.ts` compares the copy with the original and groups what moved where a climber
+would look for it: length and deloads, the week's days (Monday first), phases, sessions gone or new,
+then each session's blocks and exercises down to the dose field by field, then benchmarks, rules,
+tracks, kit, grades, and whether the program's own words were rewritten.
+
+- **Said once where it is the same everywhere.** A set taken off an exercise in every phase is one
+  line, not three. The phases are named only when the change is in some of them, and two phases
+  changed differently stay two lines.
+- **A rule swapped for one of its kind is one change**: *"48 hours → 72 hours between …"*, not a rule
+  dropped and an unrelated one added.
+- **Not the name** — every copy has a new one — and not reworded prose. An exercise's notes and a
+  phase's rationale are the program explaining itself, and a list that reported each reworded
+  sentence would bury the one set that changed. A renamed exercise reads as one dropped and one
+  added, which is what it is to the climber doing it.
+
+The first test sweeps every shipped program, copied and left alone, and requires **no changes**.
+An invented change is the failure nobody would notice.
+
+### On the page
+
+A card above the builder: *"Changed from Iron Grip"*, *"11 changes by Sam to Iron Grip as the app
+ships it"*, the groups, the first dozen lines and the rest behind *Show all*. It reads *"Nothing yet
+— this is still Iron Grip as the app ships it"* for an untouched copy, which is the coach's view on
+the first edit. It says there is nothing to compare with when this app lacks the original.
+
+A clean import now just opens the program, and its page says what arrived. An import that left
+something out stays on the list and says what, as it always has.
+
+In a browser, as an athlete: the file opened through the picker, landed on the program, and showed
+the eleven changes at 360px on both the default and the largest text, with no sideways scroll and
+no page errors.
+
+### A test that pinned an accident
+
+`launchedFile.test.tsx` asserted the *Imported* line after a launched file. It passed only because it
+rendered the list without the router, so the navigation never unmounted it. It now asserts what a
+climber sees: the address moves to the program, and the program's page names it and shows what
+changed.
+
+### Measured and left
+
+- **The card is on the builder only.** The athlete lands there, but the program page under Train,
+  where they will run it from, does not mention the coach's changes.
+- **Copies made before this milestone name no origin**, and there is no honest way to backfill one:
+  a name ending *"(revised)"* is a guess.
+- **The first load has 0.02KB of headroom** (129.078 against 129.1). Nothing here reached the entry,
+  but an edit that renames a chunk moves the entry's list of chunk names, and at this margin that
+  alone can tip it. Whether to raise the budget is still open.
+
+Battery: 30 mutants killed and a sanity check survived. One more was equivalent — the fork's
+`source.forkedFrom ??` changed nothing, because the clone already carries it — and that code is
+gone. Another, days listed from Sunday, survived until a test moved a Sunday. 7,381 tests over 440
+files, from 7,347. Layout harness OK.

@@ -15,6 +15,7 @@
 
 import { FIELDS, type FieldSpec } from '@/content/fields';
 import { PLANNED_PROGRAM_IDS } from '@/content/programs';
+import { APP_VERSION } from '@/version';
 import type {
   Constraint,
   DayOfWeek,
@@ -73,12 +74,21 @@ export function blankProgram(name = 'My program'): Program {
   };
 }
 
-/** A copy of an existing program, renamed and re-identified. */
+/**
+ * A copy of an existing program, renamed and re-identified.
+ *
+ * It remembers where it came from (PLAN.md M333) — the shipped program,
+ * even through a copy of a copy, because that is the one both ends of a
+ * file have. A written program with no such origin names none.
+ */
 export function forkProgram(source: Program, name?: string): Program {
   return {
     ...structuredClone(source),
     id: newProgramId(),
     name: name ?? `${source.name} (mine)`,
+    // A copy of a copy already carries its origin in the clone above; only a
+    // shipped source gives one.
+    ...(isCustomId(source.id) ? {} : { forkedFrom: { id: source.id, name: source.name, version: APP_VERSION } }),
     // A fork is not the thing it came from: its graduation graph and its
     // prerequisites belonged to the original's place in the catalog.
     nextPrograms: [],

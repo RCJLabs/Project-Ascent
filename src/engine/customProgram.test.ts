@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FIELDS } from '@/content/fields';
 import { getProgram } from '@/content/programs';
 import type { Program } from '@/content/types';
+import { APP_VERSION } from '@/version';
 import {
   MAX_WEEKS,
   blankProgram,
@@ -260,6 +261,25 @@ describe('forking a shipped program', () => {
 
   it('produces something that still validates', () => {
     expect(canRun(forkProgram(source))).toBe(true);
+  });
+
+  /**
+   * And remembers where it came from (PLAN.md M333) — which is what lets the
+   * app that opens it show what the copy changed.
+   */
+  it('names the shipped program it was copied from, and the app that copied it', () => {
+    expect(forkProgram(source).forkedFrom).toEqual({ id: 'iron_grip', name: 'Iron Grip', version: APP_VERSION });
+    // The original is not touched: provenance belongs to the copy.
+    expect(source.forkedFrom).toBeUndefined();
+  });
+
+  it('keeps naming the shipped one through a copy of a copy', () => {
+    const first = forkProgram(source, 'First');
+    expect(forkProgram(first, 'Second').forkedFrom).toEqual(first.forkedFrom);
+  });
+
+  it('names nothing for a program with no shipped origin', () => {
+    expect(forkProgram(blankProgram()).forkedFrom).toBeUndefined();
   });
 });
 

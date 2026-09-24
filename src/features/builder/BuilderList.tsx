@@ -61,6 +61,14 @@ export function BuilderList() {
       // file is read on mount, and a climber who has left is neither told nor
       // taken back to the builder.
       if (!onScreen.current) return;
+      // A whole import opens the program, whose page says what arrived and —
+      // for a copy of a shipped program — what the sender changed
+      // (PLAN.md M333). This used to set an *Imported* line first, which the
+      // navigation then unmounted: a notice no climber ever saw.
+      if (dropped.length === 0) {
+        navigate(`/build/${program.id}`);
+        return;
+      }
       // An import is never silently lossy: if anything could not survive the
       // trip, it is named before the program opens.
       setNotice({
@@ -70,7 +78,6 @@ export function BuilderList() {
           ...dropped.map((d) => `Left out: ${d}.`),
         ],
       });
-      if (dropped.length === 0) navigate(`/build/${program.id}`);
     } catch (e) {
       if (!onScreen.current) return;
       setNotice({

@@ -589,6 +589,20 @@ export interface Program {
    * `adaptProgram` and by nothing else.
    */
   adaptedFrom?: number;
+  /**
+   * The shipped program this one was copied from (PLAN.md M333).
+   *
+   * A coach answering an athlete's block starts from a copy of what they
+   * ran, changes what the numbers say to change, and sends it back — and
+   * the athlete used to receive twelve weeks of program with nothing saying
+   * which parts were the coach's. Every fork in the app is of a shipped
+   * program, which every install already has, so naming it is enough for
+   * the receiving app to show the difference itself. `version` is the app
+   * that made the copy: the program it names can change between releases,
+   * and a comparison across two of them says so rather than passing a
+   * release's edit off as the coach's.
+   */
+  forkedFrom?: { id: ProgramId; name: string; version: string };
   recommendedLayout?: WeeklyLayout;
   assessments: MetricId[];
   /** Progression graph: which programs follow, and why (AUDIT.md §6.12). */

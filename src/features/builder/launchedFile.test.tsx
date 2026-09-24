@@ -8,6 +8,7 @@ import { setLaunchFile, takeLaunchFile } from '@/lib/launchFile';
 import { useCustomPrograms } from '@/store/programs';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { BuilderList } from './BuilderList';
+import { BuilderPage } from './BuilderPage';
 
 /**
  * A shared program tapped in a file manager (PLAN.md M111).
@@ -57,15 +58,29 @@ describe('a program the app was opened with', () => {
     ).toContain('Opened block');
   });
 
-  it('says which program arrived', async () => {
+  /**
+   * By opening it (PLAN.md M333). An import that lands silently is one the
+   * climber cannot tell from a file that failed to open.
+   *
+   * This asserted an *Imported "…"* line on the list, and passed only
+   * because the list here is rendered without the router: in the app the
+   * import navigates to the program and the list, notice and all, unmounts.
+   * No climber ever saw that line. What they see is the program's own page,
+   * named, with what the sender changed — so that is what is held.
+   */
+  it('says which program arrived, by opening it', async () => {
     const file = await shared('Named block');
     await reset();
     setLaunchFile(file);
 
-    const view = renderAt('/build', <BuilderList />);
-    // The same notice the picker shows. An import that lands silently is one
-    // the climber cannot tell from a file that failed to open.
-    await shows(view, /Imported "Named block"/);
+    renderAt('/build', <BuilderList />);
+    await imported('Named block');
+    const arrived = useCustomPrograms.getState().custom.find((p) => p.name === 'Named block')!;
+    await waitFor(() => expect(window.location.hash).toBe(`#/build/${arrived.id}`));
+
+    const page = renderAt(window.location.hash, <BuilderPage params={{ id: arrived.id }} />);
+    await shows(page, /Named block/);
+    await shows(page, /Changed from Iron Grip/);
   });
 
   it('does not import it a second time on the next visit', async () => {

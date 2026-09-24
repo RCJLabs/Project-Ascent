@@ -201,7 +201,32 @@ function readProgram(raw: Record<string, unknown>, dropped: string[]): Program {
   const layout = readLayout(raw['recommendedLayout'], knownTypes, dropped);
   if (layout) program.recommendedLayout = layout;
 
+  const origin = readOrigin(raw['forkedFrom'], dropped);
+  if (origin) program.forkedFrom = origin;
+
   return program;
+}
+
+/**
+ * The shipped program this one was copied from (PLAN.md M333), so the app
+ * that opens it can show what the sender changed.
+ *
+ * Only an id the catalogue ships, for `readNext`'s reason: a shipped id is
+ * the same on every install and a written one is not. One this version does
+ * not have is said, and the program still arrives — it is the comparison
+ * that cannot be made, not the program.
+ */
+function readOrigin(raw: unknown, dropped: string[]): Program['forkedFrom'] | undefined {
+  const r = asRecord(raw);
+  if (r === null) return undefined;
+  const id = slug(r['id'], '');
+  const name = str(r['name'], LIMITS.name);
+  if (!id || !name) return undefined;
+  if (!PLANNED_PROGRAM_IDS.includes(id)) {
+    dropped.push(`which program it was copied from ("${name}" is not in this version), so what changed cannot be shown`);
+    return undefined;
+  }
+  return { id, name, version: str(r['version'], 40) || 'unknown' };
 }
 
 function readSessionType(raw: unknown, reading: Reading): SessionType | null {

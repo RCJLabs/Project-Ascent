@@ -12,6 +12,9 @@ import {
 const source = getProgram('iron_grip')!;
 const wrap = (program: unknown) =>
   JSON.stringify({ app: 'project-ascent', kind: 'program', schemaVersion: 1, program });
+/** Through a file and back. */
+const roundTrip = (p: Parameters<typeof buildProgramFile>[0]) =>
+  parseProgramFile(JSON.stringify(buildProgramFile(p))).program;
 
 describe('a round trip', () => {
   const file = buildProgramFile(forkProgram(source, 'Shared Grip'));
@@ -265,6 +268,42 @@ describe('references that cannot resolve here', () => {
     expect(exercises[0]!.protocolId).toBe('repeaters_7_3');
     expect(exercises[1]!.protocolId).toBeUndefined();
     expect(exercises[1]!.name).toBe('Fake');
+  });
+});
+
+/**
+ * Where a copy came from travels with it (PLAN.md M333), so the athlete's
+ * app can show what their coach changed — and it is read like everything
+ * else in a file: rebuilt, and kept only when it can mean something here.
+ */
+describe('where it was copied from', () => {
+  it('arrives with the program', () => {
+    expect(roundTrip(forkProgram(source, 'Reply')).forkedFrom).toEqual({
+      id: 'iron_grip',
+      name: 'Iron Grip',
+      version: forkProgram(source).forkedFrom!.version,
+    });
+  });
+
+  it('is left behind, and said, when it names a program this version does not ship', () => {
+    const { program, dropped } = parseProgramFile(
+      wrap({ name: 'X', forkedFrom: { id: 'not_a_program', name: 'Somewhere', version: '9.9.9' } }),
+    );
+    expect(program.forkedFrom).toBeUndefined();
+    expect(dropped.join(' ')).toMatch(/copied from .*Somewhere/);
+  });
+
+  it('keeps nothing it was not asked to, and fills a missing version', () => {
+    const { program } = parseProgramFile(
+      wrap({ name: 'X', forkedFrom: { id: 'iron_grip', name: 'Iron Grip', extra: 'smuggled' } }),
+    );
+    expect(program.forkedFrom).toEqual({ id: 'iron_grip', name: 'Iron Grip', version: 'unknown' });
+  });
+
+  it('ignores one that is not the right shape', () => {
+    for (const forkedFrom of ['iron_grip', 42, { id: 'iron_grip' }, { name: 'Iron Grip' }, null]) {
+      expect(parseProgramFile(wrap({ name: 'X', forkedFrom })).program.forkedFrom, JSON.stringify(forkedFrom)).toBeUndefined();
+    }
   });
 });
 
