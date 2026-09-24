@@ -4,6 +4,8 @@ import type { Session } from '@/db/sessions';
 import { addDays, today } from './dates';
 import { deriveClimberState } from './derive';
 import type { BlockAdherence, TypeAdherence } from './adherence';
+import type { Objective } from './objectives';
+import { diagnose, type Diagnosis } from './plateau';
 import {
   BACKUP_INTERVAL_DAYS,
   BURN_RUNGS,
@@ -13,6 +15,7 @@ import {
   LAYOFF_DAYS,
   STEEP_ACWR,
   OUTDOOR_GAP_DAYS,
+  PLATEAU_RUNGS,
   buildTips,
   visibleTips,
   BACKUP_RETURN,
@@ -385,6 +388,63 @@ describe('load drifting down', () => {
     });
   });
 
+  /**
+   * Ramping quickly leads Home over a flat line (PLAN.md M338).
+   *
+   * At 62 this sat under the plateau's 88, and the sample climber's year had
+   * the two together on 29 of its 36 caution days — so Home, which shows one
+   * tip, said *"The line has gone flat"* and never *"Ramping quickly"*. Both
+   * come from a real log here, one long session on top of ten steady weeks,
+   * because that pair is what a plateau plus one big day actually produces.
+   */
+  describe('ramping quickly', () => {
+    /** Ten steady weeks and `big` long days in the last few: one is caution, two is danger. */
+    const log = (big = 1) => [
+      ...steady(10),
+      ...Array.from({ length: big }, (_, i) => session(back(i * 2 + 1), { id: `${back(i * 2 + 1)}#big`, rpe: 8, durationMin: 150 })),
+    ];
+    const read = (sessions: Session[], patch: { injuries?: ['pulley']; objectives?: Objective[] } = {}) => {
+      const state = deriveClimberState(sessions, { today: TODAY });
+      const diagnosis = diagnose({ state, sessions, today: TODAY, ...(patch.injuries ? { injuries: patch.injuries } : {}) });
+      const list = buildTips({ state, sessions, diagnosis, today: TODAY, ...(patch.objectives ? { objectives: patch.objectives } : {}) });
+      return { state, diagnosis, list, spike: list.find((t) => t.id === 'load-spike') };
+    };
+
+    it('comes before the plateau it arrives beside', () => {
+      const { state, diagnosis, list, spike } = read(log());
+      expect(state.load.zone, 'the fixture is not a caution-zone ratio').toBe('caution');
+      expect(diagnosis.verdict, 'the fixture has no plateau to outrank').toBe('plateau');
+      expect(spike?.headline).toBe('Ramping quickly');
+      expect(ids(list)).toContain('plateau');
+      // Home shows the first tip that has not been set aside.
+      expect(visibleTips(list, {})[0]!.id).toBe('load-spike');
+    });
+
+    it('stays under a spike in the danger zone, and under a recovery verdict', () => {
+      const caution = read(log()).spike!.weight;
+      const danger = read(log(2));
+      expect(danger.state.load.zone, 'the fixture is not a danger-zone ratio').toBe('danger');
+      expect(caution).toBeLessThan(danger.spike!.weight);
+
+      // The same log, with a pulley: the verdict is recovery, and it leads.
+      const hurt = read(log(), { injuries: ['pulley'] });
+      expect(hurt.diagnosis.verdict).toBe('recovery-compromised');
+      expect(ids(hurt.list).slice(0, 2)).toEqual(['recovery', 'load-spike']);
+    });
+
+    it('keeps its place on a trip, as the danger-zone warning does', () => {
+      const trip: Objective = {
+        id: 'obj-trip', name: 'Céüse', kind: 'trip', status: 'training', targetDate: TODAY, requirements: [],
+        createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+      };
+      const home = read(log()).spike!;
+      const away = read(log(), { objectives: [trip] });
+      expect(away.spike!.signature, 'the trip version never fired').toBe('trip:obj-trip:caution');
+      expect(away.spike!.weight).toBe(home.weight);
+      expect(visibleTips(away.list, {})[0]!.id).toBe('load-spike');
+    });
+  });
+
   it('stays quiet while the ratio is healthy', () => {
     const state = deriveClimberState(steady(12), { today: TODAY });
     expect(state.load.acwr).toBeGreaterThanOrEqual(DETRAINING_ACWR);
@@ -395,6 +455,53 @@ describe('load drifting down', () => {
     const dropped = steady(12).filter((s) => s.date < back(14));
     const state = deriveClimberState(dropped, { today: TODAY, deloadDates: new Set([TODAY]) });
     expect(buildTips({ state, sessions: dropped, today: TODAY }).map((t) => t.id)).not.toContain('detraining');
+  });
+});
+
+/**
+ * A plateau set aside comes back as it lengthens (PLAN.md M338).
+ *
+ * It was signed with a constant — the verdict and the reset's four steps —
+ * while its sentence counted the weeks. One set-aside at eleven weeks hid
+ * it at forty-nine. It now steps on the same doubling as the burns.
+ */
+describe('a plateau, set aside', () => {
+  const flat = (sinceGrade: number | null): Diagnosis => ({
+    verdict: 'plateau', headline: 'Plateaued', explanation: 'flat', evidence: [], reasons: [],
+    reset: { steps: [{}, {}, {}, {}] } as never,
+    sinceGrade,
+  }) as Diagnosis;
+  const tipAt = (sinceGrade: number | null) =>
+    tips({ sessions: steady(10), diagnosis: flat(sinceGrade) }).find((t) => t.id === 'plateau')!;
+  const hidden = (setAsideAt: number | null, now: number | null) =>
+    visibleTips([tipAt(now)], { plateau: tipAt(setAsideAt).signature }).length === 0;
+
+  it('stays set aside until the line has been flat for the next rung', () => {
+    expect(PLATEAU_RUNGS[0] * 7, 'the first rung is not where a plateau starts').toBe(42);
+    expect(hidden(42, 83)).toBe(true);
+    for (const rung of PLATEAU_RUNGS.slice(1)) {
+      expect(hidden(rung * 7 - 1, rung * 7), `${rung} weeks did not bring it back`).toBe(false);
+      expect(hidden(rung * 7, rung * 7 + 6), `${rung} weeks came back within the week`).toBe(true);
+    }
+  });
+
+  it('holds at the last rung rather than counting on for ever', () => {
+    const last = PLATEAU_RUNGS.at(-1)! * 7;
+    expect(hidden(last, 1000)).toBe(true);
+  });
+
+  it('reads a climber with no grade yet as its own case, apart from every rung', () => {
+    expect(tipAt(null).signature).toMatch(/:never:/);
+    expect(hidden(null, null)).toBe(true);
+    for (const rung of PLATEAU_RUNGS) expect(hidden(rung * 7, null)).toBe(false);
+  });
+
+  it('still comes back when the reset changes shape', () => {
+    const three = tips({
+      sessions: steady(10),
+      diagnosis: { ...flat(90), reset: { steps: [{}, {}, {}] } } as never,
+    }).find((t) => t.id === 'plateau')!;
+    expect(visibleTips([three], { plateau: tipAt(90).signature })).toHaveLength(1);
   });
 });
 

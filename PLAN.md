@@ -15129,6 +15129,12 @@ its label is missing. None of these wants touching.
   against a ref, and the plain report says what the list costs: 157 files, 2.9KB gzipped of the
   129KB — about fifteen bytes a name, because hashes do not compress. Reproduced M334's case against
   the new report: *"+ pencil-line"*.
+- **M338 — the plateau's set-aside steps with it; a rising load leads Home.** M337a's first two
+  findings. The plateau was signed with a constant while its sentence counted the weeks, so setting
+  it aside at eleven weeks still hid it at forty-nine; it now comes back at 12, 24 and 48 weeks
+  without a new grade, the doubling the burns use. The caution-zone spike weighed 62, under the
+  plateau's 88, and led Home on none of the sample year's 36 caution days; at 90 it leads on 30, and
+  the recovery verdict (92) on the other 6. A plateau set aside before this comes back once.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -24332,3 +24338,104 @@ M321 is the precedent for a coach rule whose prose and code parted without anyon
 1 and 2 are one change about what leads the front door and when it may be set aside. 4 is a
 sentence and a comparison the rule already has the data for. 5 is a condition. 6 is tests. 3 is a
 question about `diagnose`, and the largest.
+
+## M338 — the plateau's set-aside steps with it; a rising load leads Home
+
+M337a's findings 1 and 2, which are one question: what leads the front door, and for how long a
+climber can wave it away.
+
+### A correction to M337a
+
+Finding 2 said that on *"36 of the 38 days the spike fired, Home showed the plateau instead"*.
+Re-sorting the replay at the old weight gives the plateau 29, the recovery verdict 6, a burns tip 1
+and the spike itself 2 — the two danger-zone days. So 36 was the days the spike did not lead, not the
+days the plateau did. Recovery and the plateau are two verdicts of one `diagnose`, so on the six
+recovery days there was no plateau to show. The finding stands: of the 36 caution days, the spike
+led on none.
+
+### The set-aside
+
+`Diagnosis` gains `sinceGrade`: the days since the last new grade, or `null` for none yet. Only a
+plateau carries it, and it is the number the explanation already rounds to weeks. The plateau tip's
+signature was `plateau:<reset steps>`; it is now `plateau:<rung>:<reset steps>`, where the rung is
+the largest of `PLATEAU_RUNGS = [6, 12, 24, 48]` at or under the weeks, or `never`. The first rung
+is `RULES.plateauDays`, 42 days, so every plateau reaches it. The `?? PLATEAU_RUNGS[0]` fallback is
+unreachable, and its mutant survives as it should.
+
+A replay of the sample year, for a climber who sets the plateau aside every time it reaches Home:
+before, it showed once, on 2025-09-25, and stayed hidden for the 271 days after. Now it shows five
+times:
+
+```
+2025-09-25   11 weeks   rung 6
+2025-10-03   12 weeks   rung 12
+2025-12-26   24 weeks   rung 24
+2026-06-12   48 weeks   rung 48
+2026-08-03    6 weeks   rung 6 — a new plateau, after a new grade
+```
+
+The last one is a separate fault that the constant also carried. A plateau that ended with a new
+grade and then came back had the same signature as the old one, so a set-aside from the year before
+still covered it.
+
+### The weight
+
+The caution-zone spike weighs 90 now, not 62, as `CAUTION_WEIGHT`. The trip variant uses the same
+constant, for M163's reason: a trip is where the pattern lands. That puts it above the plateau (88)
+and the other observations that are not about getting hurt, and below the danger-zone spike (93)
+and the recovery verdict (92). A rising load gets worse by waiting and a plateau is still true next
+week; M337a marked this as a judgement and the proposal was taken.
+
+It shares 90 with `finger-gap`, and `finger-gap` is built first, so when both fire the stable sort
+puts the finger gap first. Both are about tendons, so either order holds up, but the tie is decided
+by list order, not by an argument.
+
+```
+first on Home, the 38 spike days     before   after
+load-spike                                2      32
+plateau                                  29       0
+recovery                                  6       6
+burns                                     1       0
+```
+
+Across the whole year, Home led with the plateau on 243 days instead of 272, and with the spike on
+32 instead of 2. The replay passes no deload dates (M337a), so some of those 32 days might fall in a
+planned deload, where the app keeps the spike silent.
+
+### What it costs
+
+The stored `plateau:4` no longer matches `plateau:6:4`, so a climber who had the plateau set aside
+sees it one more time. This was checked in the browser by writing the old value into the profile. It
+is not migrated: the old value does not record when it was set aside, so a rung chosen for it would
+be a guess. Showing the card once more is the honest failure.
+
+### Held by
+
+- `coach.test.ts`, *ramping quickly* — three tests on a real log: ten steady weeks and one
+  150-minute day, which `deriveClimberState` reads at 1.41× and `diagnose` as a plateau, so the pair
+  is what the engine actually produces rather than a pair of fixtures. The spike comes first, stays
+  under the danger-zone spike and under a recovery verdict (the same log with a pulley), and keeps
+  its place on a trip.
+- `coach.test.ts`, *a plateau, set aside* — four tests. It stays hidden until the next rung, for
+  every rung. It holds at the last rung. `never` stands apart from every rung. It comes back when the
+  reset changes shape.
+- `plateau.test.ts` — `sinceGrade` is 84 on the twelve-week fixture, `null` on a log that never
+  sent, and present only on a plateau.
+
+Mutation battery: 15 of 15 killed, including the rung found first instead of last, `>` for `>=`,
+rounding instead of flooring, the rung or the reset left out of the signature, `never` read as six
+weeks, doubling without a cap, and the weight at 62, 92 or 93, home and trip separately. Three
+survive, as they should: a comment, the unreachable fallback, and 89, which is still above the
+plateau (nothing claims exactly 90). A fifth rung also survived, and that was right. The test reads
+`PLATEAU_RUNGS`, so adding a rung is a design change, not a bug; the cap is held by the uncapped
+doubling mutant instead.
+
+Browser (preview build, the same seeded log): Coach's Corner reads *Ramping quickly*, *The line has
+gone flat*, and then the rest. Home shows *Ramping quickly*. After *The line has gone flat* is set
+aside and the page reloaded, it stays hidden, and the profile stores `plateau:6:4`. With `plateau:4`
+written back in, it returns. There were no console errors. The layout harness passed.
+
+Still open from M337a: 4 (the burns tip asserting what it could check), 5 (the backup tip on sample
+data), 6 (three domain rules never run), 7 (*"+1 reps"*), and 3 (plateau beside detraining), which
+this change narrows but does not answer. The plateau still leads Home on 243 days, and on some of
+them the detraining tip beside it says to do more.

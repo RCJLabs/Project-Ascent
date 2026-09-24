@@ -178,6 +178,21 @@ describe('plateau', () => {
     expect(d.evidence).toContainEqual({ label: 'V6 conversion', value: '0 sent from 180 tries' });
   });
 
+  /**
+   * How long the line has been flat, for the coach tip to step its
+   * set-aside with (PLAN.md M338) — the same number the sentence rounds.
+   */
+  it('says how long since the last new grade, or that there has been none', () => {
+    const d = run(sessions);
+    expect(d.sinceGrade).toBe(84);
+    expect(d.explanation).toContain('no new grade in 12 weeks');
+
+    const neverSent = run(steadyHistory('V5', 12, { grades: [{ grade: 'V6', count: 5, result: 'attempt' }] }));
+    expect(neverSent.verdict).toBe('plateau');
+    expect(neverSent.sinceGrade).toBeNull();
+    expect(neverSent.explanation).toContain('no new grade yet');
+  });
+
   it('always carries a reset protocol, and it is seven days long', () => {
     const reset = run(sessions).reset!;
     expect(reset).toBeDefined();
@@ -273,11 +288,12 @@ describe('every verdict', () => {
     }
   });
 
-  it('only ever attaches a reset to a plateau', () => {
+  it('only ever attaches a reset, and the time since a grade, to a plateau', () => {
     for (const sessions of cases) {
       for (const injuries of [[], ['wrist' as const]]) {
         const d = run(sessions, { injuries });
         expect(d.reset === undefined).toBe(d.verdict !== 'plateau');
+        expect('sinceGrade' in d).toBe(d.verdict === 'plateau');
       }
     }
   });

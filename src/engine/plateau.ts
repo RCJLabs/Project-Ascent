@@ -96,6 +96,13 @@ export interface Diagnosis {
   reasons: RecoveryReason[];
   /** Only ever attached to a plateau — it is that verdict's prescription. */
   reset?: ResetProtocol;
+  /**
+   * Days since the last new grade, or `null` for none yet. Only on a plateau,
+   * whose coach tip steps its dismissal with it (PLAN.md M338): the sentence
+   * says *"no new grade in 11 weeks"* and then *"in 49"*, and a set-aside at
+   * eleven weeks must not still be hiding it at forty-nine.
+   */
+  sinceGrade?: number | null;
 }
 
 export interface DiagnosisInput {
@@ -233,6 +240,7 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
           : []),
       ],
       reset: buildReset(input, today, wall?.grade ?? null, scale),
+      sinceGrade: daysSincePr,
     };
   }
 

@@ -137,6 +137,12 @@ export interface CoachInput {
 
 /** Attempt counts that earn a word. Escalating, so it is not said twice. */
 export const BURN_RUNGS = [5, 10, 20, 40] as const;
+/**
+ * Weeks without a new grade at which a set-aside plateau comes back
+ * (PLAN.md M338), doubling from the six weeks `plateau.ts` calls one — the
+ * same shape as the burns above.
+ */
+export const PLATEAU_RUNGS = [6, 12, 24, 48] as const;
 
 /** Days away from rock before coming back deserves a different plan. */
 export const OUTDOOR_GAP_DAYS = 21;
@@ -408,9 +414,16 @@ function plateau({ diagnosis }: CoachInput, spike: Tip | null): Tip | null {
     };
   }
   if (diagnosis.verdict === 'plateau') {
+    // The length, stepped (PLAN.md M338). This was the one standing rule
+    // signed with a constant: the sentence went from *"no new grade in 11
+    // weeks"* to *"49 weeks"* over the sample climber's year, and one
+    // set-aside in the first week hid all of it — which is exactly what the
+    // `Tip` docblock and the page's own copy say a dismissal must not do.
+    const weeks = diagnosis.sinceGrade == null ? null : Math.floor(diagnosis.sinceGrade / 7);
+    const rung = weeks === null ? 'never' : ([...PLATEAU_RUNGS].reverse().find((r) => weeks >= r) ?? PLATEAU_RUNGS[0]);
     return {
       id: 'plateau',
-      signature: `${diagnosis.verdict}:${diagnosis.reset?.steps.length ?? 0}`,
+      signature: `${diagnosis.verdict}:${rung}:${diagnosis.reset?.steps.length ?? 0}`,
       tone: 'caution',
       weight: 88,
       headline: 'The line has gone flat',
@@ -835,6 +848,21 @@ function reliefLine(relief: LoadRelief | null | undefined): string {
   return ` ${left} ${left === 1 ? 'session' : 'sessions'} left in the week as planned, and ${day}'s ${session.name} is the biggest of them: the week ends at ${relief.asPlanned.toFixed(2)}× with it and ${without.toFixed(2)}× without.`;
 }
 
+/**
+ * A ratio climbing too fast, below the danger line (PLAN.md M338).
+ *
+ * This was 62, under the plateau's 88 — so of the 36 caution days in the
+ * sample climber's year, Home led with *"The line has gone flat"* on 29 and
+ * with *"Ramping quickly"* on none. M190 argued the two at 93 and 92, which is the danger
+ * zone; the caution zone was never argued. A load rising is the one thing on
+ * the board that gets worse by waiting, and a plateau is still true next
+ * week, so this goes with `fingerGap` at 90: above the observations that are
+ * not about getting hurt, below the danger-zone spike and the recovery
+ * verdict. The trip version moves with it, for M163's reason — a trip is where
+ * the pattern usually lands, so the warning keeps the weight it has at home.
+ */
+const CAUTION_WEIGHT = 90;
+
 function loadSpike({ state, objectives, relief }: CoachInput, today: string): Tip | null {
   const { acwr, zone, inPlannedDeload } = state.load;
   // A deload is a deliberate change of load in the other direction, and the
@@ -875,7 +903,7 @@ function loadSpike({ state, objectives, relief }: CoachInput, today: string): Ti
       id: 'load-spike',
       signature: `trip:${trip.id}:caution`,
       tone: 'caution',
-      weight: 62,
+      weight: CAUTION_WEIGHT,
       headline: 'Ramping quickly',
       body: `You are at ${ratio}× your own four-week baseline, which for a trip is a gentle start: if ${trip.name} has days left in it, most of the jump is still ahead. Nothing to change today — the day this matters is the one after two big days back to back.`,
     };
@@ -884,7 +912,7 @@ function loadSpike({ state, objectives, relief }: CoachInput, today: string): Ti
     id: 'load-spike',
     signature: 'caution',
     tone: 'caution',
-    weight: 62,
+    weight: CAUTION_WEIGHT,
     headline: 'Ramping quickly',
     body: `You are at ${ratio}× your own four-week baseline. That is a fine week and a bad month — the ratio is about the speed of the change, not the size of the load, so holding here for a while is how it becomes the new baseline safely.${reliefLine(relief)}`,
     action: { label: 'Plan the week', href: '/calendar' },
