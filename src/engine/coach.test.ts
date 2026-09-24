@@ -650,6 +650,55 @@ describe('backups', () => {
     const old = tips({ sessions: steady(10), lastExportAt: back(BACKUP_INTERVAL_DAYS + 1) });
     expect(ids(old)).toContain('backup');
   });
+
+  /**
+   * With the sample climber loaded (PLAN.md M340).
+   *
+   * An export with it in is saved as sample data and does not count
+   * (M110), so the tip asked for the one tap that could not clear it, every
+   * day of the sample year. What is at risk is what the climber logged, and
+   * the way to a backup of that is clearing the sample first.
+   */
+  describe('beside the sample climber', () => {
+    const sample = steady(10).map((s) => ({ ...s, demo: true as const }));
+    /** `n` sessions the climber logged themselves, on days the sample has too. */
+    const own = (n: number) => Array.from({ length: n }, (_, i) => session(back(i), { id: `${back(i)}#own` }));
+    const backup = (input: Partial<CoachInput> & { sessions: Session[] }) => tips(input).find((t) => t.id === 'backup');
+
+    it('is not asked of the sample climber, whose export cannot count', () => {
+      expect(sample.length).toBeGreaterThan(10);
+      expect(backup({ sessions: sample })).toBeUndefined();
+      expect(backup({ sessions: [...sample, ...own(9)] }), 'nine of their own is under the gate').toBeUndefined();
+    });
+
+    it('counts what the climber logged, and asks for the step that makes a backup possible', () => {
+      // And only finished ones, as `completedSessions` counts them.
+      const open = session(back(20), { id: `${back(20)}#open`, completed: false });
+      const tip = backup({ sessions: [...sample, ...own(12), open] })!;
+      expect(tip.headline).toBe('12 sessions of your own, and no backup of them');
+      expect(tip.body).toContain('saved as sample data rather than a backup');
+      expect(tip.body).not.toContain('The export is one tap');
+      expect(tip.action).toEqual({ label: 'Clear the sample data', href: '/settings' });
+    });
+
+    it('knows the sample by any of the three stores it is written to', () => {
+      const project: Project = {
+        id: 'demo-p', name: 'Sample', grade: 'V5', scale: 'V', setting: 'outdoor', status: 'active', beta: [],
+        createdAt: back(90), updatedAt: back(90), demo: true,
+      };
+      const metric = { metricId: 'dead_hang', date: back(30), value: 20, demo: true as const } as never;
+      expect(backup({ sessions: own(12), projects: [project] })?.action?.label).toBe('Clear the sample data');
+      expect(backup({ sessions: own(12), metrics: [metric] })?.action?.label).toBe('Clear the sample data');
+      expect(backup({ sessions: own(12) })?.action?.label).toBe('Export now');
+    });
+
+    it('becomes the ordinary tip once the sample is cleared, whatever was set aside', () => {
+      const before = backup({ sessions: [...sample, ...own(12)] })!;
+      const after = backup({ sessions: own(12) })!;
+      expect(after.headline).toBe('12 sessions logged and never exported');
+      expect(visibleTips([after], { backup: before.signature })).toEqual([after]);
+    });
+  });
 });
 
 /**

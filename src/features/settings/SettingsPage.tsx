@@ -241,7 +241,16 @@ export function SettingsPage() {
       `project-ascent-${sample ? 'sample-data' : 'backup'}-${file.exportedAt.slice(0, 10)}.zip`,
     );
     if (sample) {
-      setMessage('Exported as sample data — this is not a backup, because none of it is yours.');
+      // "None of it is yours" is true of the sample climber alone, and the
+      // wipe is by tag so that a climber who logs on top of it keeps what
+      // they logged (PLAN.md M340). Those sessions are in this file too, and
+      // the way to a backup of them is the card further down.
+      const own = (file.data.sessions as { demo?: true }[]).filter((s) => s.demo !== true).length;
+      setMessage(
+        own === 0
+          ? 'Exported as sample data — this is not a backup, because none of it is yours.'
+          : `Exported as sample data — this is not a backup, though ${own === 1 ? 'one session' : `${own} sessions`} in it ${own === 1 ? 'is' : 'are'} yours. Clear the sample data below and export again: your own sessions stay, and that file is a backup.`,
+      );
       void refreshStorage();
       return;
     }

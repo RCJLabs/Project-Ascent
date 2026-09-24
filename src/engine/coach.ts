@@ -1340,10 +1340,39 @@ function lateSessions({ sessions }: CoachInput): Tip | null {
   };
 }
 
-function backupNudge({ state, lastExportAt }: CoachInput, today: string): Tip | null {
-  if (state.completedSessions < 10) return null;
+/**
+ * Whether the sample climber is in the log, by the question `hasDemo` asks
+ * of the same three stores (PLAN.md M340).
+ */
+function sampleLoaded({ sessions, projects, metrics }: CoachInput): boolean {
+  return [sessions, projects ?? [], metrics ?? []].some((rows) => rows.some((row) => row.demo === true));
+}
+
+function backupNudge(input: CoachInput, today: string): Tip | null {
+  const { state, sessions, lastExportAt } = input;
+  // With the sample climber loaded, the export this tip asks for is saved as
+  // sample data and does not count (PLAN.md M110) — so on the sample year it
+  // fired all 365 days, asking for the one tap that could not clear it
+  // (PLAN.md M340). What is at risk is only what the climber logged, which
+  // is `completedSessions` without the sample's rows.
+  const sample = sampleLoaded(input);
+  const logged = sample ? sessions.filter((s) => s.completed && s.demo !== true).length : state.completedSessions;
+  if (logged < 10) return null;
   const days = lastExportAt ? daysBetween(lastExportAt, today) : null;
   if (days !== null && days < BACKUP_INTERVAL_DAYS) return null;
+  if (sample) {
+    return {
+      id: 'backup',
+      // Its own signature, so that clearing the sample data brings the
+      // ordinary tip back rather than leaving this one's dismissal on it.
+      signature: `sample:${Math.floor(logged / BACKUP_RETURN)}`,
+      tone: 'caution',
+      weight: 35,
+      headline: `${counted(logged, 'session')} of your own, and no backup of them`,
+      body: 'Everything lives on this device and nowhere else. While the sample climber is loaded, an export is saved as sample data rather than a backup, so the file that would protect these cannot be made yet. Clearing the sample data takes out only what it put in — your own sessions stay — and the export after that is a backup.',
+      action: { label: 'Clear the sample data', href: '/settings' },
+    };
+  }
   return {
     id: 'backup',
     // What is at risk, not only when it was last banked (PLAN.md M182).
@@ -1355,12 +1384,12 @@ function backupNudge({ state, lastExportAt }: CoachInput, today: string): Tip | 
     // through a decade of logging, on the one rule whose subject is total
     // loss. The session count is the fact that actually grows, so the
     // dismissal lasts a month of training rather than for ever.
-    signature: `${lastExportAt ?? 'never'}:${Math.floor(state.completedSessions / BACKUP_RETURN)}`,
+    signature: `${lastExportAt ?? 'never'}:${Math.floor(logged / BACKUP_RETURN)}`,
     tone: 'caution',
     weight: 35,
     headline:
       days === null
-        ? `${counted(state.completedSessions, 'session')} logged and never exported`
+        ? `${counted(logged, 'session')} logged and never exported`
         : `${days} days since your last backup`,
     body: 'Everything lives on this device and nowhere else. A cleared browser, a lost phone or a reinstalled app takes the lot with it, and there is no account to restore from. The export is one tap and one file.',
     action: { label: 'Export now', href: '/settings' },

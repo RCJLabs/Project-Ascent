@@ -15141,6 +15141,12 @@ its label is missing. None of these wants touching.
   the best before them, and says the goes are working, have stopped, or that there are too few
   sessions to tell. It also quoted the best of every burn where the project page it links to shows
   the best from the ground; the two disagreed on 31 of the 102 days it fired, and now agree on all.
+- **M340 — the backup tip stops asking the sample climber for a backup.** M337a's finding 5. With
+  sample data loaded an export is saved as sample data and not recorded (M110), so the tip fired
+  on all 365 days of the sample year, asking for the one tap that could not clear it. It now counts
+  only the sessions the climber logged. With none, it says nothing. With ten or more, it says the
+  export cannot be a backup yet and points to clearing the sample data, which keeps them. The
+  export message told that same climber *"none of it is yours"*; it now says how many are.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -24540,3 +24546,88 @@ layout harness passed.
 
 Still open from M337a: 5 (the backup tip on sample data), 6 (three domain rules never run), 7
 (*"+1 reps"*), and 3 (plateau beside detraining).
+
+## M340 — the backup tip stops asking the sample climber for a backup
+
+M337a's finding 5. `backup` fired on all 365 days of the sample year: *"195 sessions logged and
+never exported … The export is one tap and one file."* With the sample climber loaded, M110 names
+that export *sample-data* and deliberately does not call `markExported`, because the rule reads
+`lastExportAt` and a year of someone else's training is not what it is about. So the tip asked for
+the one tap that could not clear it. The only way to clear it was a set-aside, and that re-arms
+every ten sessions.
+
+### What the tip reads now
+
+Whether the sample climber is loaded, asked of the same three stores `hasDemo` counts (sessions,
+projects, metrics), from the records the board already has. It then counts **the climber's own**
+completed sessions: `completedSessions` without the sample's rows, and the same number when there
+is no sample.
+
+- **Sample only.** Nothing to lose, so no tip. The sample year now fires it on **0 of 365 days**.
+- **Sample plus ten or more of the climber's own.** This is the case M110's wipe-by-tag exists for:
+  a climber who loads the sample, likes it and starts logging. The tip says *"12 sessions of your
+  own, and no backup of them"*. Its body says an export is saved as sample data while the sample is
+  loaded, and that clearing it keeps their sessions. Its one action is **Clear the sample data**,
+  not *Export now*. Its signature is `sample:<n>`, so clearing the sample brings back the ordinary
+  tip whatever was set aside.
+- **No sample.** Unchanged.
+
+### The export said something false to the same climber
+
+*"Exported as sample data — this is not a backup, because none of it is yours."* is true of the
+sample alone. With the climber's own sessions in the file it is not. The message now counts them:
+*"… though 12 sessions in it are yours. Clear the sample data below and export again: your own
+sessions stay, and that file is a backup."* The count is every non-sample session in the file, open
+ones included, because that is what the file carries.
+
+### Not changed
+
+M110's rule that an export with sample data in it is not a backup. For the mixed climber, the
+alternative is to count it, since their sessions are in the file. But restoring that file would
+bring the sample climber back with them, which is the risk M110 was written against. Clearing
+first gives a file that restores cleanly, and the wipe already keeps what they logged.
+
+### Held by
+
+- `coach.test.ts`, *beside the sample climber* — four tests:
+  - Sample only is silent, and so is nine of their own.
+  - The count takes finished sessions of their own only, and the tip asks for the clear, not the
+    export.
+  - The sample is recognised from a project or a metric alone.
+  - The ordinary tip comes back after the clear, past a set-aside.
+- `demoClimber.test.tsx`, *exporting it* — three tests. Until now nothing held either half of M110's
+  export rule:
+  - The filename.
+  - `lastExportAt` staying null, for the sample alone and with a session of the climber's own.
+  - The message for each.
+  - The ordinary export once the sample is gone.
+
+  Run five times in a row, because this file has flaked on write races before (M207, M220): 33 of
+  33 each time.
+
+Mutation battery: 14 of 14 killed. These covered:
+- the sample never seen;
+- each store dropped from the check;
+- sample rows counted as the climber's, and unfinished sessions counted;
+- the gate at nine;
+- the sample signature equal to the ordinary one;
+- the sample branch removed, or asking for the export;
+- in Settings: sample rows counted, one session read as none, the sample export recorded as a
+  backup, and the sample file named as one.
+
+A comment mutant survived. The plural wording in the Settings message is not held by a test; the
+browser run below reads it.
+
+Browser (preview build), the whole path through the real buttons:
+- **Load a sample climber:** no backup tip. Export gives *project-ascent-sample-data-….zip* and
+  *"none of it is yours"*.
+- **Twelve sessions of their own written in:** *"12 sessions of your own, and no backup of them"*
+  with *Clear the sample data*. Export gives *"though 12 sessions in it are yours"*.
+- **Clear:** *"12 sessions logged and never exported"* with *Export now*. Export gives
+  *project-ascent-backup-….zip* and *"Backup exported."*.
+- **After that:** no tip.
+
+There were no console errors. The layout harness passed. The first load did not change (129.09KB).
+
+Still open from M337a: 6 (three domain rules never run), 7 (*"+1 reps"*), and 3 (plateau beside
+detraining).

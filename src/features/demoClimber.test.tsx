@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { canLoadDemo, demoAway, demoObjectives, demoProgram, loadDemo } from '@/db/demo';
@@ -146,6 +146,73 @@ describe('loading and clearing it', () => {
     await settings();
     fireEvent.click(await screen.findByText('Clear the sample data'));
     await waitFor(() => expect(screen.getByText(/records\. Anything you logged yourself/)).toBeTruthy());
+  });
+});
+
+/**
+ * Exporting it (PLAN.md M110, M340).
+ *
+ * M110 decided that sample data does not leave as a backup: the file is
+ * named for what it is and the export is not recorded, because the coach's
+ * backup rule reads that record. Nothing held either half until M340, which
+ * also found the message false for a climber who had logged on top of it.
+ */
+describe('exporting it', () => {
+  /** The name the last download was given, cleared before each export. */
+  let downloaded = '';
+  const name = () => downloaded;
+  const click = HTMLAnchorElement.prototype.click;
+  beforeEach(() => {
+    URL.createObjectURL = vi.fn(() => 'blob:export') as typeof URL.createObjectURL;
+    URL.revokeObjectURL = vi.fn();
+    HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+      downloaded = this.download;
+    };
+  });
+  afterEach(() => {
+    HTMLAnchorElement.prototype.click = click;
+  });
+
+  async function exported(): Promise<void> {
+    downloaded = '';
+    await settings();
+    fireEvent.click(await screen.findByText('Export backup'));
+    await waitFor(() => expect(name()).toMatch(/^project-ascent-/));
+  }
+
+  it('is named as sample data, and is not recorded as a backup', async () => {
+    await emptied();
+    await loadDemo();
+    await hydrate();
+    useProfile.setState({ lastExportAt: null });
+    await exported();
+    expect(name()).toMatch(/^project-ascent-sample-data-\d{4}-\d{2}-\d{2}\.zip$/);
+    expect(await screen.findByText(/because none of it is yours/)).toBeTruthy();
+    expect(useProfile.getState().lastExportAt).toBeNull();
+  });
+
+  it('says which of it is the climber\'s, and the way to a backup of that', async () => {
+    await emptied();
+    await loadDemo();
+    await putSession(newSession(today(), 1, { completed: true }) as never);
+    await hydrate();
+    await exported();
+    expect(name()).toMatch(/^project-ascent-sample-data-/);
+    expect(
+      await screen.findByText(
+        'Exported as sample data — this is not a backup, though one session in it is yours. Clear the sample data below and export again: your own sessions stay, and that file is a backup.',
+      ),
+    ).toBeTruthy();
+    expect(useProfile.getState().lastExportAt).toBeNull();
+  });
+
+  it('is a backup, and recorded as one, once the sample has gone', async () => {
+    await emptied();
+    await putSession(newSession(today(), 1, { completed: true }) as never);
+    await hydrate();
+    await exported();
+    expect(name()).toMatch(/^project-ascent-backup-/);
+    await waitFor(() => expect(useProfile.getState().lastExportAt).toBe(today()));
   });
 });
 
