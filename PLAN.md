@@ -15118,6 +15118,11 @@ its label is missing. None of these wants touching.
   length the climber runs it. A lucide icon shared by two lazy pages becomes its own chunk, and
   that chunk's name alone tipped the first load over its budget until the row used an icon already
   in a shared chunk.
+- **M335 — "Same as last time" means last time this session happened.** A finger day offered the
+  eleven boulders from Saturday's climbing session. M21 built the offer for a climber repeating a
+  program's sessions, then read whichever session last had climbs. A session of a program now reads
+  the latest earlier one of the same type in the same program that climbed; a free session still
+  reads any. Nothing had held which session it read — the one test checked that the logger mentions it.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -24089,3 +24094,57 @@ of each and a directory listing, which the tool could do itself.
 Battery: eight mutants killed and a sanity check survived — including `getProgram` in place of the
 catalogue on each page, which no M333 test could have caught: none of them ran an adaptation.
 7,386 tests over 440 files, from 7,381. Layout harness OK.
+
+
+## M335 — "Same as last time" means last time this session happened
+
+M324's notes left this *measured and left*: *"A hangboard day offers 'Same as last time' — eleven
+climbs from Saturday, onto a session with no climbing in it."* It was put down as a judgement about
+the logger rather than a defect. Read against what M21 wrote, it is a defect.
+
+### What M21 meant, and what it did
+
+M21's own comment, on `RepeatLast`: *"a climber training a program repeats sessions: the same four
+grades, most weeks. For them this is fifteen taps down to one."* The offer is **last time this
+session**. The code took the most recent completed session with any climbs in it, whatever it was.
+For a climber who only boulders, those are the same thing, which is presumably why it looked right.
+Iron Grip's finger day has no climbing, so "last time" became Saturday's climbing session, and one
+tap would have filed eleven boulders onto a day that was two hours on a hangboard.
+
+The Climbs card itself stays on every training day. A climber may well boulder on a finger day, and
+the card is how they say so. The question was only what one tap should repeat.
+
+### The rule
+
+- **A session of a program** reads the latest earlier completed session of the **same type in the
+  same program** that logged climbs. A finger day whose last finger days climbed nothing is offered
+  nothing, and reads *"Nothing logged yet."*
+- **Past one that logged none**, to the one before it that did. A climbing day the climber logged
+  without its climbs is not what they did last time.
+- **Not another program's**, because a type id is the program's own name for a session: `perf` in
+  one program is not `perf` in another.
+- **A free session with no type** keeps M21's reading, the last session that climbed, because it
+  has nothing else to be the same as.
+
+Still only completed sessions, still none after this day, still names dropped: M21's reason stands,
+a named climb is a piece of rock and copying it would claim a send.
+
+### Held, for the first time
+
+`entry.test.ts` checked that `LogPage` contains `<RepeatLast`, and that was all. Which session it
+read was never held. Any climber with a finger day could meet this from M21 on; the sample climber
+has since M319, when finger days stopped carrying climbs.
+`repeatLast.test.tsx` holds each clause above. A mutant restoring M21's rule fails the finger-day
+test, and so does a mutant taking the oldest session instead of the latest — which survived until a
+test had two earlier sessions that both climbed.
+
+In the built app, the sample climber's Thursday finger day now reads *"Nothing logged yet."* under
+Climbs, with no offer.
+
+On the first load, `LogPage` is in the entry, so this costs bytes. It reuses the session list the
+page already builds for last time's exercise numbers rather than flattening the store a second time.
+Two builds of it measured 129.085 and 129.071KB against 129.1 — at this margin, which chunk hashes a
+build happens to produce moves the number as much as the code does.
+
+Battery: eight mutants killed and a sanity check survived. 7,392 tests over 441 files, from 7,386.
+Layout harness OK.

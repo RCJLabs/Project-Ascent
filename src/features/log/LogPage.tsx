@@ -659,10 +659,22 @@ function SessionEditor({
     const point = lastLogged(allSessions, name, session.date);
     return point === null ? null : { date: point.date, entry: point.entry };
   };
+  // Last time *this* session happened, when it is one (PLAN.md M335). M21
+  // wrote this for "a climber training a program repeats sessions: the same
+  // four grades, most weeks", and then took whichever session last had
+  // climbs — so a finger day, which has none, offered Saturday's eleven.
+  // A free session with no type still takes the last one that climbed.
   const previousClimbs = useMemo(() => {
-    const before = Object.values(allByDate)
-      .flat()
-      .filter((s) => s.completed && s.id !== session.id && s.date <= session.date && s.climbs.length > 0)
+    const before = allSessions
+      .filter(
+        (s) =>
+          s.completed &&
+          s.id !== session.id &&
+          s.date <= session.date &&
+          s.climbs.length > 0 &&
+          (session.sessionTypeId === undefined ||
+            (s.sessionTypeId === session.sessionTypeId && s.programId === session.programId)),
+      )
       .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
     if (!before) return null;
     return {
@@ -670,7 +682,7 @@ function SessionEditor({
       climbs: before.climbs.map(({ name: _name, ...rest }) => rest),
       label: fromKey(before.date).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' }),
     };
-  }, [allByDate, session.id, session.date]);
+  }, [allSessions, session.id, session.date, session.sessionTypeId, session.programId]);
   const stale = isStale(session, now);
   useEffect(() => {
     if (!live) return;
