@@ -6,6 +6,7 @@ import { deriveClimberState } from './derive';
 import type { BlockAdherence, TypeAdherence } from './adherence';
 import type { Objective } from './objectives';
 import { diagnose, type Diagnosis } from './plateau';
+import { summariseProject } from './projects';
 import {
   BACKUP_INTERVAL_DAYS,
   BURN_RUNGS,
@@ -103,7 +104,68 @@ describe('project escalation', () => {
   it('says something different when no high point was recorded', () => {
     const worked = [session(back(3), { projectAttempts: [{ id: 'a1', projectId: 'p1', outcome: 'worked', count: 12 }] })];
     const tip = tips({ sessions: worked, projects: [project] }).find((t) => t.id === 'burns:p1');
-    expect(tip?.body).toContain('No high point recorded');
+    expect(tip?.body).toContain('No burn from the ground has a high point yet');
+  });
+
+  /**
+   * It reads the line instead of asking the climber to (PLAN.md M339).
+   *
+   * *"If it has not moved in three sessions, more goes is the one lever that
+   * has already failed"* was said to every project at every rung, and on
+   * every day of the sample climber's year that could be checked the high
+   * point had moved. A session here is a day with a burn from the ground.
+   */
+  describe('whether the goes are working', () => {
+    /** One day of three burns per `[days ago, high point, from]`. */
+    const days = (...line: [number, number, number?][]) =>
+      line.map(([ago, highPoint, from]) =>
+        session(back(ago), {
+          projectAttempts: [{ id: `a${ago}`, projectId: 'p1', outcome: 'fell-high', count: 3, highPoint, ...(from ? { from } : {}) }],
+        }),
+      );
+    const body = (sessions: Session[]) => tips({ sessions, projects: [project] }).find((t) => t.id === 'burns:p1')!.body;
+
+    it('says they are, and by how much, while the high point is still going up', () => {
+      const said = body(days([40, 50], [30, 60], [20, 65], [10, 70]));
+      expect(said).toContain('gone from 50% to 70% in your last three sessions');
+      expect(said).not.toMatch(/failed/);
+    });
+
+    it('says they have stopped only when three sessions have not beaten the best before them', () => {
+      const flat = body(days([40, 70], [30, 60], [20, 65], [10, 70]));
+      expect(flat).toContain('70% and has not moved in your last three sessions');
+      expect(flat).toContain('the one lever that has already failed');
+
+      // A new best three sessions ago is inside the window; four is not.
+      expect(body(days([40, 50], [30, 70], [20, 60], [10, 60]))).toContain('gone from 50% to 70%');
+      expect(body(days([50, 50], [40, 70], [30, 60], [20, 60], [10, 60]))).toContain('has not moved');
+    });
+
+    it('says three sessions are too few to tell, and does not guess', () => {
+      const few = body(days([20, 40], [10, 70]));
+      expect(few).toBe(
+        'Your high point from the ground is 70%, recorded in two sessions so far. That is too few to say whether more goes are working; it takes four sessions.',
+      );
+      expect(body(days([30, 40], [20, 50], [10, 70]))).toContain('recorded in three sessions so far');
+    });
+
+    it('reads the high point from the ground, as the project page does', () => {
+      // 88% on a burn begun at 30%, and 60% from the ground. The page
+      // shows 60, and the tip that links to it used to say 88.
+      const sessions = days([9, 88, 30], [2, 60]);
+      expect(summariseProject('p1', sessions, TODAY).highPoint).toBe(60);
+      expect(body(sessions)).toContain('from the ground is 60%');
+      expect(body(sessions)).not.toContain('88%');
+    });
+
+    it('comes back when the goes stop working, at the same count', () => {
+      const moving = tips({ sessions: days([40, 50], [30, 60], [20, 65], [10, 70]), projects: [project] })
+        .find((t) => t.id === 'burns:p1')!;
+      const flat = tips({ sessions: days([40, 70], [30, 60], [20, 65], [10, 70]), projects: [project] })
+        .find((t) => t.id === 'burns:p1')!;
+      expect(flat.headline).toBe(moving.headline);
+      expect(visibleTips([flat], { [moving.id]: moving.signature })).toEqual([flat]);
+    });
   });
 
   it('reports the best high point, not the last', () => {

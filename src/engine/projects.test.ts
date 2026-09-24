@@ -15,6 +15,7 @@ import {
   suggestProjects,
   summariseProject,
 } from './projects';
+import { FLAT_SESSIONS, highPointTrend } from './projectTrend';
 
 const TODAY = '2026-09-09';
 let counter = 0;
@@ -441,5 +442,39 @@ describe('how many burns a row is', () => {
      */
     expect(files('src').length, 'the walk stopped').toBeGreaterThan(200);
     expect(examined, 'the scan stopped looking').toBeGreaterThan(20);
+  });
+});
+
+/** Whether the line is still going up, read the way the coach reads it (PLAN.md M339). */
+describe('highPointTrend', () => {
+  const line = (...values: number[]) => values.map((value, i) => ({ date: `2026-01-${String(i + 10)}`, value }));
+
+  it('has nothing to read with no high point, and too little with three sessions', () => {
+    expect(FLAT_SESSIONS).toBe(3);
+    expect(highPointTrend([])).toEqual({ kind: 'none' });
+    expect(highPointTrend(line(40, 90, 60))).toEqual({ kind: 'few', sessions: 3, high: 90 });
+  });
+
+  it('compares the last three with the best before them, not the last before them', () => {
+    expect(highPointTrend(line(80, 40, 50, 60, 70))).toEqual({ kind: 'flat', high: 80 });
+    expect(highPointTrend(line(40, 80, 50, 60, 85))).toEqual({ kind: 'moving', from: 80, to: 85 });
+  });
+
+  it('does not call equalling the best a move', () => {
+    expect(highPointTrend(line(70, 50, 70, 60))).toEqual({ kind: 'flat', high: 70 });
+  });
+
+  it('reads the ground-up line the project page draws', () => {
+    // A burn begun partway up is left out of that line, so it cannot move it.
+    const sessions = [
+      session('2026-08-01', [burn({ highPoint: 60 })]),
+      session('2026-08-08', [burn({ highPoint: 55 })]),
+      session('2026-08-15', [burn({ highPoint: 58 })]),
+      session('2026-08-22', [burn({ highPoint: 95, from: 40 })]),
+      session('2026-08-29', [burn({ highPoint: 59 })]),
+    ];
+    const byDay = summariseProject('p1', sessions, TODAY).highPointByDay;
+    expect(byDay.map((d) => d.value)).toEqual([60, 55, 58, 59]);
+    expect(highPointTrend(byDay)).toEqual({ kind: 'flat', high: 60 });
   });
 });

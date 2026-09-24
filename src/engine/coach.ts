@@ -27,7 +27,8 @@ import { addDays, daysBetween, fromKey, shortLabel, today as todayKey } from './
 import { poorRun } from './conditions';
 import { MIN_CHRONIC_DAYS, MIN_RATIO_DAYS, type ClimberState } from './derive';
 import { recoverySentence, type Diagnosis } from './plateau';
-import { activeProjects, attemptsFor, burnsIn, highPointOf } from './projects';
+import { activeProjects, summariseProject } from './projects';
+import { FLAT_SESSIONS, highPointTrend, type HighPointTrend } from './projectTrend';
 import type { BlockAdherence } from './adherence';
 import type { LoadRelief } from './loadRelief';
 import type { Finding } from './planVsLog';
@@ -438,33 +439,51 @@ function projectBurns(input: CoachInput, today: string): Tip[] {
   const projects = activeProjects(input.projects ?? []);
   const out: Tip[] = [];
   for (const project of projects) {
-    const attempts = attemptsFor(project.id, input.sessions);
-    // `burnsIn` rather than a sum of its own (PLAN.md M309): this counted
-    // `count` with no floor, so an attempt row carrying a zero — which an
-    // import can produce — was a go this headline did not count.
-    const burns = burnsIn(attempts);
+    // `summary.burns` counts each row with `burnsOf` (PLAN.md M309): this
+    // once summed `count` with no floor, so an attempt row carrying a zero —
+    // which an import can produce — was a go this headline did not count.
+    const summary = summariseProject(project.id, input.sessions, today);
+    const burns = summary.burns;
     const rung = [...BURN_RUNGS].reverse().find((r) => burns >= r);
     if (rung === undefined) continue;
 
-    const high = attempts.reduce<number | null>((best, a) => {
-      const point = highPointOf(a);
-      return point === null ? best : Math.max(best ?? 0, point);
-    }, null);
+    // Read, not supposed (PLAN.md M339). The sentence used to be a
+    // conditional — *"if it has not moved in three sessions"* — about a
+    // number this rule has, and the sample climber's high point had moved
+    // on every day it could be checked. It also quoted the best of every
+    // burn, where the page this links to shows the best from the ground:
+    // 83% here, 75% there, on 31 of the 102 days it fired.
+    const trend = highPointTrend(summary.highPointByDay);
     out.push({
       id: `burns:${project.id}`,
-      signature: `${rung}`,
+      // The trend as well as the rung: *"the goes are working"* waved away
+      // must not also hide *"the goes have stopped working"*.
+      signature: `${rung}:${trend.kind}`,
       tone: 'neutral',
       weight: 80,
       headline: `${burns} burns on ${project.name}`,
-      body:
-        high === null
-          ? 'No high point recorded yet, so there is nothing to tell you whether the goes are working. Record where you fall and the next twenty will mean something.'
-          : `Your high point is ${high}%. If it has not moved in three sessions, more goes is the one lever that has already failed — take the crux to the ground, or take a week off it and come back fresh.`,
+      body: burnsBody(trend),
       action: { label: 'Open the project', href: `/projects/${project.id}` },
     });
   }
   // Quieten the noise: two loud projects at once is a to-do list, not advice.
   return out.slice(0, 2).map((t) => ({ ...t, signature: `${t.signature}:${today.slice(0, 7)}` }));
+}
+
+const COUNTED = ['no sessions', 'one session', 'two sessions', 'three sessions', 'four sessions'];
+const sessionsWord = (n: number): string => COUNTED[n] ?? `${n} sessions`;
+
+function burnsBody(trend: HighPointTrend): string {
+  switch (trend.kind) {
+    case 'none':
+      return 'No burn from the ground has a high point yet, so there is nothing to tell you whether the goes are working. Record where you fall on the next one and the ones after it will mean something.';
+    case 'few':
+      return `Your high point from the ground is ${trend.high}%, recorded in ${sessionsWord(trend.sessions)} so far. That is too few to say whether more goes are working; it takes ${sessionsWord(FLAT_SESSIONS + 1)}.`;
+    case 'moving':
+      return `Your high point from the ground has gone from ${trend.from}% to ${trend.to}% in your last ${sessionsWord(FLAT_SESSIONS)} on it, so the goes are working.`;
+    case 'flat':
+      return `Your high point from the ground is ${trend.high}% and has not moved in your last ${sessionsWord(FLAT_SESSIONS)} on it. More goes is the one lever that has already failed — take the crux to the ground, or take a week off it and come back fresh.`;
+  }
 }
 
 /**

@@ -15135,6 +15135,12 @@ its label is missing. None of these wants touching.
   without a new grade, the doubling the burns use. The caution-zone spike weighed 62, under the
   plateau's 88, and led Home on none of the sample year's 36 caution days; at 90 it leads on 30, and
   the recovery verdict (92) on the other 6. A plateau set aside before this comes back once.
+- **M339 — the burns tip reads the high point instead of asking about it.** M337a's finding 4.
+  *"If it has not moved in three sessions, more goes is the one lever that has already failed"* was
+  said to every project, and the rule never checked. It now compares the last three sessions with
+  the best before them, and says the goes are working, have stopped, or that there are too few
+  sessions to tell. It also quoted the best of every burn where the project page it links to shows
+  the best from the ground; the two disagreed on 31 of the 102 days it fired, and now agree on all.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -24439,3 +24445,98 @@ Still open from M337a: 4 (the burns tip asserting what it could check), 5 (the b
 data), 6 (three domain rules never run), 7 (*"+1 reps"*), and 3 (plateau beside detraining), which
 this change narrows but does not answer. The plateau still leads Home on 243 days, and on some of
 them the detraining tip beside it says to do more.
+
+## M339 — the burns tip reads the high point instead of asking about it
+
+M337a's finding 4: *"Your high point is 88%. If it has not moved in three sessions, more goes is the
+one lever that has already failed — take the crux to the ground, or take a week off it and come back
+fresh."* The rule holds every attempt and its high point, and put the question to the climber
+anyway. On the sample climber's year it had moved every time it could be checked.
+
+### A second fault in the same sentence
+
+The number was wrong too. The tip took the best high point of **every** burn, including those
+begun partway up. The project page, which the tip's one action opens, has shown the best **from
+the ground** since M102, because a burn from 30% to 88% says nothing about how far the climber gets
+from the bottom. The sample climber starts about three burns in ten partway up, so over the year the two
+disagreed on **31 of the 102 days** the tip fired: *"Your high point is 83%"* on the coach, and 75%
+on the page. They now agree on all 102.
+
+### What it says now
+
+`projectTrend.ts` has `highPointTrend(summary.highPointByDay)`: the ground-up line the page draws,
+one value per day with a burn from the bottom. A tie with the old best is not a move.
+
+```
+none    no burn from the ground has a high point      as before, reworded to say "from the ground"
+few     1–3 sessions with one                         the high point, and that four are needed to tell
+moving  a new best in the last three sessions         "has gone from 50% to 70% … so the goes are working"
+flat    nothing in the last three beat the best       the old advice, now as a finding
+```
+
+The signature takes the trend as well as the rung (`10:moving`, then the month as before). So a
+climber who set aside *"the goes are working"* still sees *"the goes have stopped working"* when it
+changes.
+
+The sample year, from the ground: **23** days rising, **79** too few to tell, and none flat. M337a
+counted 49 checkable days because it read every burn; from the ground, fewer days have a high point
+to read. So on the sample data the *"already failed"* sentence is now never said, which is right
+for a climber whose projects all progress. The flat branch is held by tests and the browser, not by
+the sample data.
+
+### Where it lives
+
+It was first written in `projects.ts`, beside `summariseProject`. That module is in the first load,
+for the send fold, and the function put the first load 0.09KB over the 129.1KB budget. `npm run
+bundle -- --against HEAD` named it: *"+0.10KB src/engine/projects.ts"*. Only the coach reads the
+trend, and the coach is lazy, so it moved to a module of its own and the first load is back to
+129.08KB. That leaves 0.02KB of headroom, which is the open budget question again.
+
+### Not changed
+
+The weekly review's `burning` note says a sibling of the old sentence: *"That is a lot of attempts.
+If the high point has not moved in three sessions, the block needs a different lever rather than
+more goes."* It is left alone for now. It fires on twenty burns a week across all projects, names
+none, and quotes no number, so it is general advice rather than a finding about a project. Checking
+it would mean choosing which project's line to read. The two can share a screen, because Home shows
+the review's note above the board's first tip. Whether they have yet is not measured; the replay
+does not build weekly reviews. If they do, the review's conditional beside the coach's *"the goes
+are working"* reads as a contradiction, and M104's guard on review subjects does not catch it,
+because the ids differ.
+
+### Held by
+
+- `coach.test.ts`, *whether the goes are working* — five tests:
+  - Rising, with the numbers.
+  - Flat, including both edges of the window: a new best three sessions ago counts, four does not.
+  - Too few, pinned word for word.
+  - Ground-up: a 30%→88% burn beside 60% from the ground quotes 60, and `summariseProject` agrees.
+  - A set-aside *moving* comes back as *flat* at the same burn count.
+- `projects.test.ts`, *highPointTrend* — four tests, including the best before the window rather
+  than the last, and a burn from partway up that cannot move the line.
+
+Mutation battery: 12 of 12 killed. These covered:
+- three sessions read as a trend;
+- a tie counted as a move;
+- the last before rather than the best before;
+- the high point taken from the window only;
+- *from* taken as the first value;
+- two sessions for *flat*;
+- burns counted by rows (M309);
+- the signature without the trend;
+- every burn rather than ground-up;
+- *moving* and *flat* swapped;
+- the *four* in the copy;
+- the verdict dropped.
+
+Three survive as they should: a comment, and two unreachable word forms.
+
+Browser (preview build, a seeded project): the flat line (70/60/65/70, plus a 30%→88% burn) reads
+*"Your high point from the ground is 70% and has not moved in your last three sessions on it. More
+goes is the one lever that has already failed …"*. The project page it opens shows *From the ground
+70%*, and 88% only as *30→88%* in the burn list. The rising line reads *"has gone from 50% to 70%
+in your last three sessions on it, so the goes are working."* There were no console errors. The
+layout harness passed.
+
+Still open from M337a: 5 (the backup tip on sample data), 6 (three domain rules never run), 7
+(*"+1 reps"*), and 3 (plateau beside detraining).
