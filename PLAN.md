@@ -24207,3 +24207,128 @@ said so: an artefact of the experiment, cleared by a build, and not a thing CI c
 
 Battery: seven mutants killed and a sanity check survived. 7,397 tests over 441 files, from 7,392.
 No app code changed; the first load is where M335 left it.
+
+
+## Seven, read off Coach's Corner (M337a)
+
+The brainstorm's seventh item: *"Audited so far: the logger (M294a) and Progress, Calendar and
+Projects (M307a). Not yet: Home, Coach, …. M318 and M321 both found defects in coach rules, and in
+M321 the comment described a narrower rule than the code ran for eleven milestones. Every tip there
+is a claim about the climber."* This is that pass, under M298a's rule — each entry names where it
+is true and says whether it is **measured**, **inferred** or **a proposal**. Nothing here is built.
+
+### How it was read
+
+`engine/coach.ts` is about twenty-five kinds of tip in 1,333 lines. Each rule was read against its own prose,
+and then the board was **replayed across the sample climber's year**: for every day from
+2025-09-25 to 2026-09-24, the input `useTips` builds, cut to what had happened by that day — the
+sessions, readings, projects, away markers and injuries up to it, and the block that was running
+then with the layout it was started with.
+
+Where the replay is not the app: it passes no deload dates, so a planned deload never suppresses the
+spike; equipment is the onboarding default; the display settings are defaults. Findings below that
+lean on the spike say so.
+
+**What the front door said.** Home shows one tip, the board's first. Over the 365 days:
+
+```
+tip                      fired   first on Home
+plateau                    272             272
+recovery                    51              49
+burns:<project>            102              37
+domain:drills              328               5
+load-spike                  38               2
+backup                     365               0
+streak                     262               0
+benchmark-gain             197               0
+detraining                  72               0
+plan-vs-log:effort          26               0
+```
+
+Fourteen kinds of tip never fired: `first-session` and `cold-start`, which is right for a year-old
+log, and twelve gates this climber never opened (below).
+
+### 1. The plateau is the front door for nine months, and one dismissal hides all of it
+
+`plateau` fired on **272 of 365 days** and was Home's card on every one of them. Its sentence moves
+— *"no new grade in 11 weeks"* on 2025-09-25, *"… in 49 weeks"* by June — and its signature does
+not: `plateau:${reset.steps.length}`, one value all year. The `Tip` interface states the rule it
+breaks: *"The triggering fact, at its current magnitude. Dismissing stores this; when the fact moves
+on, the tip comes back. Dismissing 'ten burns on this project' must not also hide the twentieth."*
+So does the page: *"Setting a card aside hides that exact fact, not the subject."* Set aside at
+eleven weeks, it stays hidden at forty-nine. `projectBurns` keeps the rule with rungs (5/10/20/40);
+the plateau is the one standing rule without them. *Measured.*
+
+### 2. A load that is climbing too fast never reaches Home
+
+`load-spike` in the caution zone — *"Ramping quickly … 1.42× your own four-week baseline"* — weighs
+62, and the plateau weighs 88. On **36 of the 38 days** the spike fired, Home showed the plateau
+instead. M190's comment reasons about the two at 93 and 92, which is the danger zone; the caution
+zone is where the ranking was never argued. A ratio rising is time-bound and a plateau is standing,
+which argues for the spike; whether caution load outranks a plateau is a judgement.
+*Measured (with no deload dates in the replay); the ranking is a proposal.*
+
+### 3. On 56 days the board gave opposite advice
+
+On **56 days** `plateau` and `detraining` fired together. 2025-10-03: *"Training has dropped off —
+you are at 0.42× your own baseline … the way back up is more sessions, not harder ones"*, and
+beside it *"15 sessions in the last month and no new grade in 12 weeks. That is the signature of a
+body that has adapted to what you keep asking of it. There is a seven-day reset written for exactly
+this."* Both numbers are true — the month was busy and the week was not — but one card says do
+more and the other offers a reset, and Home shows only the plateau. `diagnose` does not read the
+ratio's direction before calling a plateau. *The co-occurrence is measured; that the advice
+conflicts is inferred.*
+
+### 4. The project tip asks the climber to check what it could check itself
+
+*"Your high point is 88%. If it has not moved in three sessions, more goes is the one lever that has
+already failed — take the crux to the ground, or take a week off it and come back fresh."* The rule
+holds every attempt and its high point, and never looks. Measured on the replay: of the **49 days**
+a project tip fired with enough sessions to tell, the high point had risen in the last three
+sessions on **49** — The Long Reach at 36% → 57% → 71% → 75% was told the goes had failed. It was
+flat on none. The other 53 days had fewer than four sessions to compare. The sample climber's
+projects only ever progress, so a real log would stall more often — but the rule's sentence is the
+same whether they do or not. *Measured.*
+
+### 5. The backup tip asks a sample-data climber for an export that will not count
+
+`backup` fired on **all 365 days**: *"195 sessions logged and never exported … The export is one tap
+and one file."* With the sample climber loaded, that export is named *sample-data*, says *"this is
+not a backup, because none of it is yours"*, and deliberately does not record an export (M110). So
+the one action the tip asks for is the one that cannot clear it; only a dismissal can, and that
+re-arms every ten sessions. M110 settled what a backup of someone else's training is, and the coach
+never heard. *Measured, from the code and the replay.*
+
+### 6. Three rules have never run
+
+`domain:outdoor` (*"Everything so far is indoors"*), `domain:style` (*"Every send is a redpoint"*)
+and `domain:projects` (*"Nothing logged as an attempt"*) have **no test by id or by text**, and the
+sample year never fires them. Read against the state they use, each looks right — `totalAttempts`
+counts only unsent climbs, and an unmarked send counts as neither flash nor on-sight, which is fair
+while the logger offers *Sent* beside *Flash* and *On-sight*. But nothing has ever executed them, and
+M321 is the precedent for a coach rule whose prose and code parted without anyone running it.
+*Measured.*
+
+### 7. "+1 reps"
+
+`benchmark-gain`: *"Max Pull-Ups improved: +1 reps (11%)"*. *Measured; trivial.*
+
+### What was checked and is not a gap
+
+- **The recovery card's wording** depends on the spike card being present, and on the two danger
+  days both fired the spike led at 93, as M190 intends. Recovery's 49 days on Home are the elbow
+  injury in the optimal zone, which is the rule working.
+- **Detraining's dismissal** steps with the ratio (`shallow`, `deep`), so it does not have the
+  plateau's problem.
+- **The rock-rust and poor-conditions rules** have tests and read true to their prose; the sample
+  climber never goes three weeks off rock or logs three bad days in a row, which is a fixture gate,
+  not a fault. The same holds for `finger-gap`, `skipped-type`, `late-sessions` and the benchmark
+  staleness tips, each of which has tests.
+- **Cold start** sits where its comment says, below every rule that reads real data and above the
+  domain gaps.
+
+### Proposed order
+
+1 and 2 are one change about what leads the front door and when it may be set aside. 4 is a
+sentence and a comparison the rule already has the data for. 5 is a condition. 6 is tests. 3 is a
+question about `diagnose`, and the largest.
