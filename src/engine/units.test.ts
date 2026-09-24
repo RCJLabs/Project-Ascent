@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { METRICS } from '@/content/metrics';
 import { formatEntry, parseMetricInput } from './assessments';
-import { formatHeight, fromInput, heightValue, toDisplay, unitLabel } from './units';
+import { formatHeight, fromInput, heightValue, toDisplay, unitLabel, unitWord } from './units';
 
 /**
  * Weight and length in the units the climber uses (PLAN.md M48).
@@ -101,5 +101,30 @@ describe('entering a number in your own units', () => {
     expect(parsed.ok && formatEntry(metric, { metricId: metric.id, date: 'x', value: parsed.value }, undefined, 'metric')).toBe(
       '27.2 BW+kg',
     );
+  });
+});
+
+/** One of a count noun is not the plural of it (PLAN.md M341). */
+describe('unitWord', () => {
+  it('says one rep, and every other number of them', () => {
+    expect(unitWord('reps', 'imperial', 1)).toBe('rep');
+    expect(unitWord('reps', 'imperial', -1)).toBe('rep');
+    expect(unitWord('reps', 'imperial', 2)).toBe('reps');
+    expect(unitWord('reps', 'imperial', 0)).toBe('reps');
+    expect(unitWord('reps', 'imperial', 1.5)).toBe('reps');
+  });
+
+  it('does it for every count noun the catalogue measures in, and nothing else', () => {
+    const units = new Set(Object.values(METRICS).map((m) => m.unit));
+    const changed = [...units].filter((u) => unitWord(u, 'imperial', 1) !== unitLabel(u, 'imperial'));
+    expect(changed.sort()).toEqual(['days', 'laps', 'lbs', 'reps', 'sends']);
+    expect(unitWord('lbs', 'imperial', 1)).toBe('lb');
+    // A symbol has no singular, and neither does a unit that is not a noun.
+    for (const u of ['sec', 'mm', 'kg', 'BW+lbs', 'in']) expect(unitWord(u, 'imperial', 1)).toBe(u);
+  });
+
+  it('converts first, and asks about the number shown', () => {
+    expect(unitWord('lbs', 'metric', 1)).toBe('kg');
+    expect(unitWord('BW+lbs', 'metric', 1)).toBe('BW+kg');
   });
 });

@@ -77,7 +77,7 @@ const reading = (
     createdAt: `${addDays(DAY, -daysAgo)}T10:00:00.000Z`,
   }) as MetricEntry;
 
-function tipsFor(metrics: MetricEntry[], days = 60): Tip[] {
+function tipsFor(metrics: MetricEntry[], days = 60, units?: 'metric' | 'imperial'): Tip[] {
   const sessions = log(days);
   const state = deriveClimberState(sessions, { today: DAY });
   return buildTips({
@@ -88,11 +88,12 @@ function tipsFor(metrics: MetricEntry[], days = 60): Tip[] {
     metrics,
     programMetrics: [],
     today: DAY,
+    ...(units ? { units } : {}),
   } as never);
 }
 
-const gain = (metrics: MetricEntry[], days = 60): Tip | undefined =>
-  tipsFor(metrics, days).find((t) => t.id === 'benchmark-gain');
+const gain = (metrics: MetricEntry[], days = 60, units?: 'metric' | 'imperial'): Tip | undefined =>
+  tipsFor(metrics, days, units).find((t) => t.id === 'benchmark-gain');
 
 /**
  * +10% on the hang: 30 seconds eight weeks ago, 33 last week.
@@ -361,6 +362,19 @@ describe('a benchmark measured in added weight', () => {
       reading('weighted_pullup_3rm', 5, 30),
     ])!;
     expect(tip.headline).toBe('Weighted Pull-Ups 3RM improved: +10 BW+lbs');
+  });
+
+  /**
+   * In the climber's words (PLAN.md M341): M337a read *"Max Pull-Ups
+   * improved: +1 reps (11%)"* off this rule, and the same label printed the
+   * plate in pounds to a climber who reads kilograms.
+   */
+  it('says one rep, and says the plate in the units the climber reads', () => {
+    expect(gain([reading('max_pullups', 40, 9), reading('max_pullups', 5, 10)])!.headline).toBe(
+      'Max Pull-Ups improved: +1 rep (11%)',
+    );
+    const plate = [reading('weighted_pullup_3rm', 50, 20), reading('weighted_pullup_3rm', 5, 30)];
+    expect(gain(plate, 60, 'metric')!.headline).toBe('Weighted Pull-Ups 3RM improved: +4.5 BW+kg');
   });
 });
 

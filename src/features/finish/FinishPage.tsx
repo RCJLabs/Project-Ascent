@@ -600,8 +600,8 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
 
         {report !== null && report.comparable.length + report.results.length > 0 && (
           <Card title="What moved">
-            <BlockReportChart report={report} />
-            <BlockReportRest report={report} />
+            <BlockReportChart report={report} units={units} />
+            <BlockReportRest report={report} units={units} />
             <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeBlock(report)}</p>
             {/* Under the same guard as the card it sits in (PLAN.md M284):
                 a block with no battery has four zeroes to show, and a card of

@@ -17,7 +17,7 @@ import type { Session } from '@/db/sessions';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
 import { PageGrid, Wide } from '@/ui/PageGrid';
 import { useGradeLabel } from '@/ui/useGrade';
-import { assessmentBattery } from '@/engine/assessments';
+import { assessmentBattery } from '@/engine/assessmentStatus';
 import { buildJournal } from '@/engine/journal';
 import { deriveCareer } from '@/engine/career';
 import { buildHeatGrid, describeConsistency } from '@/engine/consistency';

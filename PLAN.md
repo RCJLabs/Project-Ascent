@@ -15147,6 +15147,16 @@ its label is missing. None of these wants touching.
   only the sessions the climber logged. With none, it says nothing. With ten or more, it says the
   export cannot be a backup yet and points to clearing the sample data, which keeps them. The
   export message told that same climber *"none of it is yours"*; it now says how many are.
+- **M341 — the three rules that had never run, and "+1 reps".** M337a's findings 6 and 7. Running
+  the three domain rules for the first time found:
+  - a bug: a climber forty burns into a project was told nothing was logged as an attempt, because
+    project burns are not climbs;
+  - two claims the log does not hold. *"Every send is a redpoint"* read the logger's default chip as
+    a choice, and *"Everything so far is indoors"* read the default mode the same way.
+
+  *"+1 reps"* is now *"+1 rep"*. The change label also printed the stored unit, so a climber reading
+  kilograms saw *"13.6 BW+kg"* above *"+10 BW+lbs"*; it now converts. The code that builds these
+  labels moved out of the first load, which dropped by 0.59KB.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -24631,3 +24641,113 @@ There were no console errors. The layout harness passed. The first load did not 
 
 Still open from M337a: 6 (three domain rules never run), 7 (*"+1 reps"*), and 3 (plateau beside
 detraining).
+
+## M341 — the three rules that had never run, and "+1 reps"
+
+M337a's findings 6 and 7. Finding 6 was a test gap: three rules with no test and no sample-year
+firing. Running them was the point. Two of the three were wrong, one in its logic and one in its
+claim, and the third had a milder version of the second's problem.
+
+### Why none of them had ever been seen
+
+`missingDomains` shows one gap at a time, in table order: rest, drills, outdoor, style, projects.
+Rest and drills are the two a logging climber is most likely to be missing, so the last three
+only speak to someone who logs rest days and does drills. The sample climber's drills gap stood on
+328 days of the year (M337a's table), and it has rock days, flashes and attempts, so none of the
+three was ever reached. Each test fixture below holds rest, drills and an attempt, and takes one
+away.
+
+### `domain:projects` — a bug
+
+`missing` read `totalAttempts`, which counts climbs marked Tried. **Project burns are not climbs.**
+They are `projectAttempts` on the session, logged from the project card. So a climber forty goes
+into a project, who logs their sends as sends, was told *"Nothing logged as an attempt"* and
+offered *Track a project*. It now asks both: no climb tried and no burn logged. `Domain.missing`
+takes the input as well as the state for this, because the state has never counted burns.
+
+The words changed with it. *"Nothing logged as tried"* uses the chip's own name. The body says
+the chip is on the same row as Sent, and that a named climb tried on two different days is
+offered as a project; `suggestProjects` does that, with `minSessions = 2`.
+
+### `domain:style` — a claim the log does not hold
+
+*"Every send is a redpoint"*. The logger's outcome chips are Sent, Flash, On-sight and Tried,
+**Sent is first and already lit**, and choosing it stores no style. A climber who never taps
+Flash has twenty-five sends of Sent whether or not any went first go, and was told every one was
+a redpoint. That is M100's fault, the layoff tip's *"since you trained"*, again: a conclusion the
+app would like, from a log that cannot tell. It now says *"No send marked as a flash or on-sight"*
+and gives both readings: if nothing has gone first go, the advice it gave before; if some have,
+the chips are on the same row and they count toward Technique.
+
+### `domain:outdoor` — a milder version of the same
+
+*"Everything so far is indoors"*. A session is indoors until the *On rock* chip says otherwise,
+so this was said to a climber who had been outside and never touched the chip. It is now
+*"Nothing logged on rock yet"*, and the body names the chip. The body also said days on rock are
+*"a quarter of the Mental stat"*. They are one of its four components, capped at 20 of 90, so it
+now says that.
+
+### "+1 reps", and the unit beside it
+
+`changeOf` built its label from the stored unit, so it said *"+1 reps"*, and `formatEntry` said
+*"1 reps"*. `unitWord` in `units.ts` gives the singular for the five count nouns the catalogue
+measures in (reps, days, laps, sends, lbs) and leaves symbols alone. A test pins that list
+against the catalogue.
+
+The same label had a larger fault: it never converted. M48 made readings follow the climber's
+units, with the rule *"the number and its label have to move together"*, and the change printed
+under each reading was left in pounds. A climber reading kilograms saw **13.6 BW+kg** and, one
+line below, **+10 BW+lbs**; the coach's headline said the second. The same was true of
+`movementLabel` on the block report. Both now convert the difference and say it in the climber's
+words, through one `signed()`. `CoachInput` carries `units`, and `useTips` passes the setting.
+
+### Where it lives, and what that paid
+
+`changeOf`, `assessmentStatus` and `assessmentBattery` were in `assessments.ts`, which is in the
+first load for its parser, its series and its test weeks. Nothing in the first load asked for a
+status: the coach, the benchmark pages and Progress do, and all of them are lazy. They now live in
+`assessmentStatus.ts`:
+
+```
+First load  129.08 → 128.49KB   (−0.59KB; assessments.ts −0.63KB, units.ts +0.05KB,
+                                 one more chunk name in the preload map)
+```
+
+The budget stays at 129.1. That leaves 0.61KB of headroom where M340 left 0.01KB. Whether to
+tighten it, raise it, or try the icon-chunk merge is still the open question.
+
+### Held by
+
+- `coach.test.ts`, *the three behind rest and drills* — five tests:
+  - The fixture's own premises.
+  - Each rule firing on its one gap, its new words, and silence once the gap closes: a rock day,
+    a flash or an on-sight, a burn or a tried climb.
+  - The two gates: fifteen sessions for outdoor, twenty-five sends for style.
+- `units.test.ts`, `assessments.test.ts`, `blockReport.test.ts`, `benchmarkGain.test.ts` — one
+  and minus one, the count nouns against the catalogue, conversion before the word, the status
+  carrying units, the block label, and the coach's *"+1 rep (11%)"* and *"+4.5 BW+kg"*.
+- `features/units.test.tsx` — a metric climber's benchmark page, benchmark list and Coach's Corner
+  all say *"+4.5 BW+kg"*, and none says *BW+lbs*.
+
+Mutation battery: 21 of 21 killed. The mutants were:
+- the burn check and the tried check each dropped, and the domains given no sessions;
+- each gate moved;
+- flash or on-sight each uncounted;
+- both old headlines restored;
+- minus one read as plural, and the singular map emptied;
+- the word taken from the stored unit, and the difference left unconverted;
+- units dropped at each of `changeOf`, the status, the coach, `formatEntry`'s word, the block
+  label, `useTips`, the list page and the detail page.
+
+The comment mutant survived. **Not held by a test:** the Finish page passing `units` to the block
+report chart. The prop and `movementLabel` are tested; the page's one line is not.
+
+Browser (preview build, sixteen indoor sessions with drills, a rest day, a tried climb and two
+benchmarks):
+- Coach's Corner shows *"Nothing logged on rock yet"* and *"Max Pull-Ups improved: +1 rep (11%)"*.
+- The benchmark list reads *"10 reps | +1 rep"*. In imperial it reads *"30 BW+lbs | +10 BW+lbs"*,
+  and in metric *"13.6 BW+kg | +4.5 BW+kg"*.
+
+There were no console errors. The layout harness passed.
+
+Still open from M337a: 3, the plateau beside the detraining tip.

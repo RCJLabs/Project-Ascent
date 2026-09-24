@@ -6,13 +6,8 @@ import { Check, ChevronRight, Plus, Timer, X } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { getMetric } from '@/content/metrics';
 import type { Metric, MetricId } from '@/content/types';
-import {
-  allMetrics,
-  assessmentBattery,
-  formatEntry,
-  parseMetricInput,
-  type AssessmentStatus,
-} from '@/engine/assessments';
+import { allMetrics, formatEntry, parseMetricInput } from '@/engine/assessments';
+import { assessmentBattery, type AssessmentStatus } from '@/engine/assessmentStatus';
 import { blockReport, describeBlock } from '@/engine/blockReport';
 import { testWeek } from '@/engine/testDays';
 import { dayOfWeek, shortLabel, today } from '@/engine/dates';
@@ -45,6 +40,9 @@ export function AssessmentsPage() {
   const startDates = useProfile((s) => s.startDates);
   const plans = useProfile((s) => s.plans);
   const weekOverrides = useProfile((s) => s.weekOverrides);
+  // The change beside each reading is said in these (PLAN.md M341), as the
+  // reading already was.
+  const units = useSettings((s) => s.units);
   const [open, setOpen] = useState<MetricId | null>(null);
   const [picking, setPicking] = useState(false);
 
@@ -67,8 +65,8 @@ export function AssessmentsPage() {
     return out;
   }, [program, startDate, plan, overrides]);
   const battery = useMemo(
-    () => assessmentBattery(entries, { program, startDate }),
-    [entries, program, startDate],
+    () => assessmentBattery(entries, { program, startDate, units }),
+    [entries, program, startDate, units],
   );
 
   // The block report is about the *program's* declared battery, so it is
@@ -127,8 +125,8 @@ export function AssessmentsPage() {
 
         {report !== null && (
           <Card title={report.finished ? 'What the block moved' : 'What the block is moving'}>
-            <BlockReportChart report={report} />
-            <BlockReportRest report={report} />
+            <BlockReportChart report={report} units={units} />
+            <BlockReportRest report={report} units={units} />
             <p className="text-sm text-ink-soft mt-3 leading-relaxed">{describeBlock(report)}</p>
             <p className="text-xs text-ink-soft mt-2 leading-relaxed">
               Against the first reading taken inside this block, not against your last test. Only

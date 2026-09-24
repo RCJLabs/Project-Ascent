@@ -40,6 +40,8 @@ import type { MetricEntry } from '@/db/metrics';
 import { addDays } from './dates';
 import { blockWindow } from './plan';
 import { seriesFor, testWeeks, type TestReason } from './assessments';
+import { signed } from './assessmentStatus';
+import type { UnitSystem } from './units';
 import { joinCapped } from './phrase';
 
 export type Movement = 'better' | 'worse' | 'flat';
@@ -189,8 +191,12 @@ function resultFor(
   };
 }
 
-/** "V5", "3 sec", "Pass" — the change in the metric's own terms. */
-export function movementLabel(result: AssessmentResult): string {
+/**
+ * "V5", "3 sec", "Pass" — the change in the metric's own terms, and in the
+ * climber's units (PLAN.md M341): it printed the stored unit, so a block's
+ * weighted pull-up read *"+10 BW+lbs"* to a climber reading in kilograms.
+ */
+export function movementLabel(result: AssessmentResult, units: UnitSystem = 'imperial'): string {
   const { metric, baseline, latest } = result;
   if (baseline === null || latest === null) return '—';
 
@@ -207,12 +213,7 @@ export function movementLabel(result: AssessmentResult): string {
   }
   const delta = latest.value - baseline.value;
   if (delta === 0) return 'no change';
-  const size = trim(Math.abs(delta));
-  return `${delta > 0 ? '+' : '−'}${size}${metric.unit ? ` ${metric.unit}` : ''}`;
-}
-
-function trim(n: number): string {
-  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+  return signed(delta, metric.unit, units);
 }
 
 /** "one", "two"… up to a point, because "1 of the 6" reads as a list index. */

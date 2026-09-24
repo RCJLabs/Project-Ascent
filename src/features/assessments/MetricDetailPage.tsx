@@ -6,7 +6,8 @@ import { useProfile } from '@/store/profile';
 import { Trash2 } from 'lucide-react';
 import { getMetric } from '@/content/metrics';
 import type { MetricId } from '@/content/types';
-import { changeOf, formatEntry, isChartable, seriesFor } from '@/engine/assessments';
+import { formatEntry, isChartable, seriesFor } from '@/engine/assessments';
+import { changeOf } from '@/engine/assessmentStatus';
 import { describePlacing, place } from '@/engine/standards';
 import { shortLabel } from '@/engine/dates';
 import { useMetrics } from '@/store/metrics';
@@ -49,7 +50,7 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
     );
   }
 
-  const change = changeOf(metric, series);
+  const change = changeOf(metric, series, units);
   const first = series[0];
   const latest = series.at(-1);
   /**

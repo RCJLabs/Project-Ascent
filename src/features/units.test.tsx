@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
+import { waitFor } from '@testing-library/react';
 import { METRICS } from '@/content/metrics';
 import { GUIDES } from '@/content/guides';
 import { PROGRAMS } from '@/content/programs';
@@ -9,6 +10,9 @@ import { useSettings } from '@/store/settings';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { AltimeterPage } from '@/features/altimeter/AltimeterPage';
 import { MetricDetailPage } from '@/features/assessments/MetricDetailPage';
+import { AssessmentsPage } from '@/features/assessments/AssessmentsPage';
+import { CoachPage } from '@/features/coach/CoachPage';
+import { addDays, today } from '@/engine/dates';
 
 /**
  * Reading in kilograms and metres (PLAN.md M48).
@@ -37,6 +41,31 @@ describe('a climber who works in kilograms', () => {
     await view.findByRole('heading', { level: 1 });
     expect(text(view.container), '60 lbs shown unconverted').toMatch(/27\.2 BW\+kg/);
     expect(text(view.container)).not.toMatch(/60 BW\+lbs/);
+  });
+
+  /**
+   * And the change beside it (PLAN.md M341). The reading was converted and
+   * the change under it was not, so the same row said *"13.6 BW+kg"* and
+   * *"+10 BW+lbs"* — and the coach said the second in its headline.
+   */
+  it('reads the change in kilograms too, on every screen that says it', async () => {
+    await inMetric();
+    await putMetricEntry({ metricId: 'weighted_pullup_3rm', date: addDays(today(), -40), value: 20 });
+    await putMetricEntry({ metricId: 'weighted_pullup_3rm', date: addDays(today(), -5), value: 30 });
+    await hydrate();
+
+    const detail = renderAt('/assessments/weighted_pullup_3rm', <MetricDetailPage params={{ id: 'weighted_pullup_3rm' }} />);
+    await detail.findByRole('heading', { level: 1 });
+    expect(text(detail.container)).toContain('+4.5 BW+kg');
+    expect(text(detail.container)).not.toContain('BW+lbs');
+
+    const list = renderAt('/assessments', <AssessmentsPage />);
+    await waitFor(() => expect(text(list.container)).toContain('13.6 BW+kg'));
+    expect(text(list.container)).toContain('+4.5 BW+kg');
+    expect(text(list.container)).not.toContain('BW+lbs');
+
+    const coach = renderAt('/coach', <CoachPage />);
+    expect(await coach.findByText('Weighted Pull-Ups 3RM improved: +4.5 BW+kg')).toBeTruthy();
   });
 
   it('reads the altimeter in metres', async () => {

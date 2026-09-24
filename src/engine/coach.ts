@@ -22,7 +22,7 @@ import type { Project } from '@/db/projects';
 import type { MetricEntry } from '@/db/metrics';
 import type { MetricId } from '@/content/types';
 import { METRICS } from '@/content/metrics';
-import { assessmentStatus } from './assessments';
+import { assessmentStatus } from './assessmentStatus';
 import { addDays, daysBetween, fromKey, shortLabel, today as todayKey } from './dates';
 import { poorRun } from './conditions';
 import { MIN_CHRONIC_DAYS, MIN_RATIO_DAYS, type ClimberState } from './derive';
@@ -38,7 +38,7 @@ import { tripNow } from './trip';
 import { comedownNow, type Comedown } from './comedown';
 import { type AwayPeriod, awayName, explainsGap, wasClimbing } from './away';
 import { isRestSession } from './rest';
-import { isAddedWeight } from './units';
+import { isAddedWeight, type UnitSystem } from './units';
 import { counted } from './phrase';
 
 export type TipTone = 'good' | 'neutral' | 'caution';
@@ -65,6 +65,8 @@ export interface CoachInput {
   sessions: Session[];
   projects?: Project[];
   metrics?: MetricEntry[];
+  /** What a benchmark's change is said in (PLAN.md M341). Imperial, as stored, when absent. */
+  units?: UnitSystem;
   diagnosis?: Diagnosis;
   /** Program assessment ids, so staleness is judged on what you were asked. */
   programMetrics?: MetricId[];
@@ -1148,14 +1150,14 @@ function benchmarks(input: CoachInput, today: string): Tip | null {
  * news rather than a standing fact: a gain happened on a day, and *no rest
  * days logged, ever* will still be true tomorrow.
  */
-function benchmarkGain({ metrics }: CoachInput, today: string): Tip | null {
+function benchmarkGain({ metrics, units }: CoachInput, today: string): Tip | null {
   const entries = metrics ?? [];
   // No registry filter: `assessmentStatus` already returns null for an id the
   // catalogue does not know, and the null filter below is the one that drops it.
   const ids = [...new Set(entries.map((entry) => entry.metricId))];
 
   const gains = ids
-    .map((id) => assessmentStatus(id, entries, { today }))
+    .map((id) => assessmentStatus(id, entries, { today, ...(units ? { units } : {}) }))
     .filter((status): status is NonNullable<typeof status> => status !== null)
     .flatMap((status) => {
       const { change, series, metric } = status;
@@ -1218,7 +1220,8 @@ interface Domain {
   id: string;
   /** Only worth saying once there is enough history for it to be a choice. */
   after: (s: ClimberState) => boolean;
-  missing: (s: ClimberState) => boolean;
+  /** The input as well, for the one gap the state cannot see (PLAN.md M341). */
+  missing: (s: ClimberState, input: CoachInput) => boolean;
   headline: string;
   /** A function where the advice depends on more than the climber's log. */
   body: string | ((input: CoachInput) => string);
@@ -1270,31 +1273,46 @@ const DOMAINS: Domain[] = [
     id: 'domain:outdoor',
     after: (s) => s.completedSessions >= 15,
     missing: (s) => s.outdoorDays === 0,
-    headline: 'Everything so far is indoors',
-    body: 'Rock asks different questions: reading a line with no colour to follow, feet you cannot see, and consequence. It is a quarter of the Mental stat for that reason.',
+    // What the log says, not what the climber did (PLAN.md M341, and M100
+    // before it). A session is indoors until the chip says otherwise, so
+    // *"Everything so far is indoors"* was also said to a climber who had
+    // been on rock and never touched the chip. And *"a quarter of the Mental
+    // stat"* was one of its four parts, worth 20 of 90.
+    headline: 'Nothing logged on rock yet',
+    body: 'Rock asks different questions: reading a line with no colour to follow, feet you cannot see, and consequence. Days on it are one of the four things the Mental stat is built from, for that reason. If some of these sessions were outside, the On rock chip on each one is what counts it.',
     action: { label: 'Log an outdoor day', href: '/today' },
   },
   {
     id: 'domain:style',
     after: (s) => s.boulder.totalSends + s.sport.totalSends >= 25,
     missing: (s) => s.styleSends.onsight + s.styleSends.flash === 0,
-    headline: 'Every send is a redpoint',
-    body: 'Nothing logged first go. Working a climb until it yields trains the body; reading one cold trains the part that actually transfers outdoors. Warm up on something unfamiliar and commit to the first go.',
+    // *"Every send is a redpoint"* read the logger's default as a choice
+    // (PLAN.md M341). Sent is the first chip and the one already lit, so a
+    // climber who never taps Flash has twenty-five sends of it whether or
+    // not any went first go. Both readings, as the layoff tip gives them.
+    headline: 'No send marked as a flash or on-sight',
+    body: 'Every send in the log is marked Sent, the logger\'s default. If nothing has gone first go, that is worth changing: working a climb until it yields trains the body, and reading one cold trains the part that transfers outdoors — warm up on something unfamiliar and commit to the first go. If some have, Flash and On-sight are on the same row, and they count toward Technique.',
     action: { label: 'Log a session', href: '/today' },
   },
   {
     id: 'domain:projects',
     after: (s) => s.completedSessions >= 15,
-    missing: (s) => s.boulder.totalAttempts + s.sport.totalAttempts === 0,
-    headline: 'Nothing logged as an attempt',
-    body: 'A log of only sends is a log of things that were never hard enough to fail on. The attempts are where the training is; record them and the project view has something to draw.',
+    // Burns on a project are attempts too (PLAN.md M341). They are logged
+    // on the session rather than as climbs, so `totalAttempts` never sees
+    // them, and a climber forty goes into a project was told nothing was
+    // logged as an attempt and offered *Track a project*.
+    missing: (s, input) =>
+      s.boulder.totalAttempts + s.sport.totalAttempts === 0 &&
+      !input.sessions.some((session) => (session.projectAttempts ?? []).length > 0),
+    headline: 'Nothing logged as tried',
+    body: 'A log of only sends is a log of things that were never hard enough to fail on. The attempts are where the training is: Tried is on the same row as Sent, and a named climb tried on two different days is offered as a project.',
     action: { label: 'Track a project', href: '/projects' },
   },
 ];
 
 function missingDomains(input: CoachInput): Tip[] {
   const { state } = input;
-  return DOMAINS.filter((d) => d.after(state) && d.missing(state))
+  return DOMAINS.filter((d) => d.after(state) && d.missing(state, input))
     // One gap at a time. A list of five things you are not doing reads as an
     // indictment, and nobody acts on an indictment.
     .slice(0, 1)

@@ -278,6 +278,17 @@ describe('the change in its own terms', () => {
     const r = report(program(), [entry('dead_hang', '2026-01-05', 30)])!;
     expect(movementLabel(r.results[0]!)).toBe('—');
   });
+
+  /** In the climber's units, and one rep as one (PLAN.md M341). */
+  it('says it in the units the climber reads, and one of a count as one', () => {
+    const plate = report(program({ assessments: ['weighted_pullup_3rm'] as never }), [
+      entry('weighted_pullup_3rm', '2026-01-05', 20),
+      entry('weighted_pullup_3rm', '2026-02-02', 30),
+    ])!.results[0]!;
+    expect(movementLabel(plate)).toBe('+10 BW+lbs');
+    expect(movementLabel(plate, 'metric')).toBe('+4.5 BW+kg');
+    expect(labelFor(['max_pullups'], 9, 10)).toBe('+1 rep');
+  });
 });
 
 describe('what it says out loud', () => {

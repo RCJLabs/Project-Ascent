@@ -45,6 +45,7 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
   const objectives = useObjectives((s) => s.objectives);
   const away = useAway((s) => s.periods);
   const display = useSettings((s) => s.display);
+  const units = useSettings((s) => s.units);
 
   const deloadDates = useDeloadDates();
   return useMemo(() => {
@@ -118,6 +119,8 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
       projects,
       relief,
       metrics,
+      // So a benchmark's gain is said in the units its reading is (PLAN.md M341).
+      units,
       adherence,
       findings,
       lastExportAt,
@@ -158,7 +161,7 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
     });
     const visible = visibleTips(all, dismissed);
     return { all, visible, hidden: all.length - visible.length };
-  }, [byDate, projects, metrics, injuries, equipment, activeProgramId, startDates, plans, weekOverrides, tracks, lastExportAt, dismissed, display, objectives, away, deloadDates]);
+  }, [byDate, projects, metrics, injuries, equipment, activeProgramId, startDates, plans, weekOverrides, tracks, lastExportAt, dismissed, display, units, objectives, away, deloadDates]);
 }
 
 /**

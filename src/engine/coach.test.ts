@@ -583,6 +583,86 @@ describe('gaps in the training', () => {
     const bare = steady(12).map((s) => ({ ...s, drillDone: false, climbs: [] }));
     expect(tips({ sessions: bare }).filter((t) => t.id.startsWith('domain:'))).toHaveLength(1);
   });
+
+  /**
+   * The three that had never run (PLAN.md M341).
+   *
+   * M337a found `domain:outdoor`, `domain:style` and `domain:projects` with
+   * no test by id or by text, and the sample year never reached them: the
+   * board says one gap at a time, and rest or drills is always first. So
+   * each fixture here has both of those, and one gap.
+   */
+  describe('the three behind rest and drills', () => {
+    const REST = session(back(1), {
+      id: `${back(1)}#rest`,
+      climbs: [],
+      restChecklist: { hydration: true, mobility: true, zone1: true, sleep: true },
+    });
+    const sends = (style?: 'flash' | 'onsight', result: 'send' | 'attempt' = 'send') => [
+      { id: 'c', grade: 'V4', scale: 'V' as const, count: 5, result, ...(style ? { style } : {}) },
+    ];
+    const TRIED = session(back(5), { id: `${back(5)}#tried`, climbs: sends(undefined, 'attempt') });
+    /** Ten weeks with rest, drills and one climb tried, so only the gap under test is one. */
+    const log = (patch: Partial<Session> = {}, extra: Session[] = []) => [...steady(10, patch), REST, TRIED, ...extra];
+    const onRock = session(back(2), { id: `${back(2)}#rock`, mode: 'outdoor', climbs: sends('flash') });
+    const gap = (sessions: Session[]) => tips({ sessions }).find((t) => t.id.startsWith('domain:'));
+
+    it('holds rest, drills and an attempt in the fixture, so the gap below is the one shown', () => {
+      const state = deriveClimberState(log(), { today: TODAY });
+      expect(state.restSessions).toBeGreaterThan(0);
+      expect(state.drillsCompleted).toBeGreaterThan(0);
+      expect(state.boulder.totalAttempts).toBeGreaterThan(0);
+      expect(state.completedSessions).toBeGreaterThanOrEqual(15);
+    });
+
+    it('says nothing is logged on rock, rather than that nothing happened there', () => {
+      const tip = gap(log())!;
+      expect(tip.id).toBe('domain:outdoor');
+      expect(tip.headline).toBe('Nothing logged on rock yet');
+      expect(tip.body).toContain('the On rock chip');
+      expect(tip.body).toContain('one of the four things the Mental stat is built from');
+      expect(gap(log({}, [onRock]))).toBeUndefined();
+      // And not before fifteen sessions, however indoors they are.
+      expect(ids(tips({ sessions: [...steady(3), REST] }))).not.toContain('domain:outdoor');
+    });
+
+    it('says no send is marked first go, rather than that every one was a redpoint', () => {
+      const unmarked = log({ climbs: sends() }, [{ ...onRock, climbs: sends() }]);
+      const tip = gap(unmarked)!;
+      expect(tip.id).toBe('domain:style');
+      expect(tip.headline).toBe('No send marked as a flash or on-sight');
+      expect(tip.headline).not.toMatch(/redpoint/i);
+      expect(tip.body).toContain("marked Sent, the logger's default");
+      // One flash anywhere is enough, and so is one on-sight.
+      expect(gap(log({ climbs: sends() }, [onRock]))).toBeUndefined();
+      expect(gap(log({ climbs: sends() }, [{ ...onRock, climbs: sends('onsight') }]))).toBeUndefined();
+    });
+
+    it('waits for twenty-five sends before it reads the style of them', () => {
+      // Fifteen sessions and a rest day, four sends in all.
+      const thin = [...steady(4, { climbs: [] }), REST, { ...onRock, climbs: [{ ...sends()[0]!, count: 4 }] }];
+      expect(deriveClimberState(thin, { today: TODAY }).completedSessions).toBeGreaterThanOrEqual(15);
+      expect(gap(thin)?.id).not.toBe('domain:style');
+    });
+
+    it('counts a burn on a project as an attempt', () => {
+      // Sends only, flash included, on rock once: the one gap is attempts.
+      const allSends = log({}, [onRock]).map((s) => (s.climbs.length ? { ...s, climbs: sends('flash') } : s));
+      expect(gap(allSends)?.id).toBe('domain:projects');
+      expect(gap(allSends)?.headline).toBe('Nothing logged as tried');
+
+      // A burn on a project, and no climb marked Tried: forty goes in, and
+      // this used to say nothing was logged as an attempt.
+      const burning = session(back(4), {
+        id: `${back(4)}#burn`,
+        projectAttempts: [{ id: 'b1', projectId: 'p1', outcome: 'fell-high', count: 4 }],
+      });
+      expect(gap([...allSends, burning])).toBeUndefined();
+
+      // And a climb marked Tried, with no project at all.
+      expect(gap([...allSends, TRIED])).toBeUndefined();
+    });
+  });
 });
 
 describe('late sessions', () => {

@@ -4,17 +4,8 @@ import { getMetric } from '@/content/metrics';
 import { METRICS } from '@/content/metrics';
 import type { MetricEntry } from '@/db/metrics';
 import type { MetricId } from '@/content/types';
-import {
-  allMetrics,
-  assessmentBattery,
-  assessmentStatus,
-  changeOf,
-  formatEntry,
-  isChartable,
-  parseMetricInput,
-  seriesFor,
-  STALE_DAYS,
-} from './assessments';
+import { allMetrics, formatEntry, isChartable, parseMetricInput, seriesFor, STALE_DAYS } from './assessments';
+import { assessmentBattery, assessmentStatus, changeOf } from './assessmentStatus';
 import { addDays } from './dates';
 import { isAddedWeight } from './units';
 
@@ -83,6 +74,45 @@ describe('formatEntry', () => {
 
   it('prefers the stored display when there is one', () => {
     expect(formatEntry(getMetric('max_boulder_grade')!, entry('max_boulder_grade', TODAY, 7, 'V7'))).toBe('V7');
+  });
+
+  it('says one of a count as one (PLAN.md M341)', () => {
+    expect(formatEntry(getMetric('max_pullups')!, entry('max_pullups', TODAY, 1))).toBe('1 rep');
+    expect(formatEntry(getMetric('max_pullups')!, entry('max_pullups', TODAY, 12))).toBe('12 reps');
+  });
+});
+
+/**
+ * The change, in the words and units the reading beside it is in
+ * (PLAN.md M341). It printed the stored unit: *"+1 reps"*, and *"+3 BW+lbs"*
+ * one line under *"13.6 BW+kg"* for a climber reading in kilograms.
+ */
+describe('changeOf, as it is read', () => {
+  const pair = (metricId: string, a: number, b: number) => [
+    entry(metricId, addDays(TODAY, -30), a),
+    entry(metricId, TODAY, b),
+  ];
+
+  it('says one rep, up or down', () => {
+    expect(changeOf(getMetric('max_pullups')!, pair('max_pullups', 9, 10))!.label).toBe('+1 rep');
+    expect(changeOf(getMetric('max_pullups')!, pair('max_pullups', 10, 9))!.label).toBe('−1 rep');
+    expect(changeOf(getMetric('max_pullups')!, pair('max_pullups', 9, 12))!.label).toBe('+3 reps');
+  });
+
+  it('converts the difference for a climber reading in metric, and leaves it for one who is not', () => {
+    const plate = getMetric('weighted_pullup_3rm')!;
+    expect(changeOf(plate, pair('weighted_pullup_3rm', 20, 30))!.label).toBe('+10 BW+lbs');
+    expect(changeOf(plate, pair('weighted_pullup_3rm', 20, 30), 'metric')!.label).toBe('+4.5 BW+kg');
+    // Beside the reading, which has always been converted.
+    expect(formatEntry(plate, entry('weighted_pullup_3rm', TODAY, 30), undefined, 'metric')).toBe('13.6 BW+kg');
+    // And a unit with nothing to convert is the same either way.
+    expect(changeOf(getMetric('dead_hang')!, pair('dead_hang', 30, 33), 'metric')!.label).toBe('+3 sec');
+  });
+
+  it('carries the units through a status', () => {
+    const entries = pair('weighted_pullup_3rm', 20, 30);
+    expect(assessmentStatus('weighted_pullup_3rm', entries, { today: TODAY, units: 'metric' })!.change!.label).toBe('+4.5 BW+kg');
+    expect(assessmentStatus('weighted_pullup_3rm', entries, { today: TODAY })!.change!.label).toBe('+10 BW+lbs');
   });
 });
 

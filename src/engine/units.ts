@@ -67,6 +67,19 @@ export function unitLabel(unit: string, system: UnitSystem): string {
   return CONVERSIONS[unit]?.label ?? unit;
 }
 
+/** The count nouns among the labels, for one of them (PLAN.md M341). */
+const ONE: Record<string, string> = { reps: 'rep', days: 'day', laps: 'lap', sends: 'send', lbs: 'lb' };
+
+/**
+ * What to call `amount` of this unit for a climber reading in `system`:
+ * *"1 rep"*, where it used to be *"+1 reps"* in the coach's headline and
+ * *"1 reps"* on the benchmark page (PLAN.md M341).
+ */
+export function unitWord(unit: string, system: UnitSystem, amount: number): string {
+  const label = unitLabel(unit, system);
+  return Math.abs(amount) === 1 ? (ONE[label] ?? label) : label;
+}
+
 /** A stored number, in the units it should be shown in. */
 export function toDisplay(value: number, unit: string, system: UnitSystem): number {
   const conversion = CONVERSIONS[unit];

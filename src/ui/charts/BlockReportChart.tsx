@@ -1,5 +1,6 @@
 import type { AssessmentResult, BlockReport } from '@/engine/blockReport';
 import { movementLabel } from '@/engine/blockReport';
+import type { UnitSystem } from '@/engine/units';
 
 /**
  * The block's assessments, on the one axis they honestly share (M84).
@@ -50,7 +51,7 @@ const FLOOR = 25;
 /** Widest the axis will grow. Past this the bars stop and the labels speak. */
 const CEILING = 200;
 
-export function BlockReportChart({ report }: { report: BlockReport }) {
+export function BlockReportChart({ report, units = 'imperial' }: { report: BlockReport; units?: UnitSystem }) {
   const rows = [...report.comparable].sort((a, b) => (b.percent ?? 0) - (a.percent ?? 0));
   if (rows.length === 0) return null;
 
@@ -69,7 +70,7 @@ export function BlockReportChart({ report }: { report: BlockReport }) {
         className="w-full h-auto block"
         role="img"
         aria-label={`Change from baseline for ${rows.length} assessments: ${rows
-          .map((r) => `${r.metric.label} ${movementLabel(r)}`)
+          .map((r) => `${r.metric.label} ${movementLabel(r, units)}`)
           .join(', ')}`}
       >
         {[-reach, reach].map((edge) => (
@@ -119,7 +120,7 @@ export function BlockReportChart({ report }: { report: BlockReport }) {
                 className={row.moved === 'worse' ? 'fill-danger' : 'fill-positive'}
                 opacity={row.moved === 'flat' ? 0.3 : 0.85}
               />
-              <title>{`${row.metric.label}: ${movementLabel(row)} (${percent > 0 ? '+' : ''}${percent.toFixed(0)}%)`}</title>
+              <title>{`${row.metric.label}: ${movementLabel(row, units)} (${percent > 0 ? '+' : ''}${percent.toFixed(0)}%)`}</title>
             </g>
           );
         })}
@@ -135,7 +136,7 @@ export function BlockReportChart({ report }: { report: BlockReport }) {
  * interesting line in most batteries, and leaving it off the report because
  * it has no percentage would be the chart deciding what counts as progress.
  */
-export function BlockReportRest({ report }: { report: BlockReport }) {
+export function BlockReportRest({ report, units = 'imperial' }: { report: BlockReport; units?: UnitSystem }) {
   const rest = report.results.filter((r) => r.percent === null);
   if (rest.length === 0) return null;
   return (
@@ -143,7 +144,7 @@ export function BlockReportRest({ report }: { report: BlockReport }) {
       {rest.map((row) => (
         <li key={row.metric.id} className="flex items-baseline justify-between gap-3">
           <span className="min-w-0 truncate">{row.metric.label}</span>
-          <span className={`shrink-0 tabular-nums font-semibold ${toneOf(row)}`}>{restLabel(row)}</span>
+          <span className={`shrink-0 tabular-nums font-semibold ${toneOf(row)}`}>{restLabel(row, units)}</span>
         </li>
       ))}
     </ul>
@@ -156,9 +157,9 @@ function toneOf(row: AssessmentResult): string {
   return 'text-ink-soft';
 }
 
-function restLabel(row: AssessmentResult): string {
+function restLabel(row: AssessmentResult, units: UnitSystem): string {
   if (row.gap === 'never-tested') return 'not taken';
   if (row.gap === 'once-only') return 'baseline only';
   if (row.gap === 'not-a-number') return 'not a number';
-  return movementLabel(row);
+  return movementLabel(row, units);
 }
