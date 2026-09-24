@@ -178,6 +178,63 @@ export function composition(code, map, name = sourceName) {
   return { rows, unclaimed, whole };
 }
 
+// ── The files the entry names ──────────────────────────────────────────────
+
+/**
+ * Every other file the entry names, once each (PLAN.md M336).
+ *
+ * Vite's preload map lists every lazy chunk and stylesheet the app may load,
+ * as `"assets/<name>-<hash>.js"`, and each dynamic import names its chunk
+ * again as `./<name>-<hash>.js`. None of it is any source file's, so the
+ * sourcemap attributes it to nothing — and M334's first version went over
+ * budget on nothing else. A lucide icon shared by two lazy pages became a
+ * chunk of its own, the list gained its name, and this tool reported *"No
+ * source file changed size in the entry chunk"*, which was true and useless.
+ */
+const NAMED = /"assets\/([\w.-]+?\.(?:js|css))"|\.\/([\w.-]+?-[\w-]{8}\.js)/g;
+/** The same, with the comma a list entry leaves behind, for costing them. */
+const NAMED_ENTRY = /"assets\/[\w.-]+?\.(?:js|css)",?|\.\/[\w.-]+?-[\w-]{8}\.js/g;
+
+export function namedFiles(code) {
+  const files = new Set();
+  for (const m of code.matchAll(NAMED)) files.add(m[1] ?? m[2]);
+  return [...files].sort();
+}
+
+/** `pencil-line-C0cmnosM.js` → `pencil-line`: the name, without the hash. */
+export function chunkName(file) {
+  return path.basename(file).replace(/-[\w-]{8}\.(?:js|css)$/, '');
+}
+
+/**
+ * Names the entry gained and lost between two builds.
+ *
+ * Counted rather than compared as sets: two chunks can share a name — the
+ * app has two called `skills` — and a third would be a new file in the list
+ * that a set would not see.
+ */
+export function chunkChanges(before, after) {
+  const count = (files) => {
+    const n = new Map();
+    for (const f of files) n.set(chunkName(f), (n.get(chunkName(f)) ?? 0) + 1);
+    return n;
+  };
+  const a = count(before);
+  const b = count(after);
+  const diff = (x, y) =>
+    [...x].flatMap(([name, k]) => Array.from({ length: Math.max(0, k - (y.get(name) ?? 0)) }, () => name)).sort();
+  return { added: diff(b, a), removed: diff(a, b) };
+}
+
+/**
+ * What the names cost the first load, gzipped: the entry with them and
+ * without. About 3KB when this was written, of 120 — content hashes do not
+ * compress, so a new name is roughly fifteen bytes whatever it is called.
+ */
+export function namesCost(code) {
+  return gz(code) - gz(code.replace(NAMED_ENTRY, ''));
+}
+
 // ── Builds ─────────────────────────────────────────────────────────────────
 
 function build(root, outDir) {
@@ -192,7 +249,7 @@ function build(root, outDir) {
   const assets = path.join(outDir, 'assets', map.sourceRoot ?? '');
   // Virtual modules are not paths, and resolving one makes it look like one.
   const name = (raw) => (raw.includes('\0') ? sourceName(raw) : sourceName(path.resolve(assets, raw), root));
-  return { load: firstLoad(outDir), ...composition(code, map, name) };
+  return { load: firstLoad(outDir), named: namedFiles(code), namesCost: namesCost(code), ...composition(code, map, name) };
 }
 
 /**
@@ -284,6 +341,10 @@ function main(argv) {
     const rest = here.rows.length - top;
     if (rest > 0) console.log(`  … and ${rest} more (--top ${here.rows.length} for all)`);
     console.log(`  ${String(here.unclaimed).padStart(16)}B  unattributed (bundler glue)`);
+    console.log(
+      `\nThe entry names ${here.named.length} other files it may load, and their names cost ` +
+        `${kb(here.namesCost)}KB of it gzipped.`,
+    );
     return;
   }
 
@@ -306,7 +367,26 @@ function main(argv) {
       console.log(`  ${signed(c.gzip / 1024).padStart(7)}KB  ${signed(c.bytes, 0).padStart(7)}B  ${c.name}${c.status === 'gone' ? '  (left)' : ''}`);
     }
   }
-  if (moved.length === 0) console.log('\nNo source file changed size in the entry chunk.');
+  const { added, removed } = chunkChanges(base.named, here.named);
+  if (added.length > 0 || removed.length > 0) {
+    console.log(`\nFiles the entry names — each a name in its preload list, and no source file's:`);
+    for (const name of added) console.log(`  + ${name}`);
+    for (const name of removed) console.log(`  − ${name}`);
+    console.log(
+      `  ${base.named.length} → ${here.named.length} files; the names cost ` +
+        `${kb(base.namesCost)} → ${kb(here.namesCost)}KB gzipped.`,
+    );
+  }
+  if (here.unclaimed !== base.unclaimed) {
+    console.log(`\nUnattributed (bundler glue): ${base.unclaimed} → ${here.unclaimed}B.`);
+  }
+  if (moved.length === 0) {
+    console.log(
+      added.length + removed.length > 0
+        ? '\nNo source file changed size in the entry chunk; what moved is the list of files it names, above.'
+        : '\nNo source file changed size in the entry chunk.',
+    );
+  }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -12,6 +12,10 @@ import {
   headline,
   sourceName,
   without,
+  chunkChanges,
+  chunkName,
+  namedFiles,
+  namesCost,
 } from '../scripts/bundle.mjs';
 import { BUDGET, entryName, firstLoad } from '../scripts/firstLoad.mjs';
 
@@ -202,5 +206,64 @@ describe('the first load it measures', () => {
     // read one byte light; checked against the real build at M328, the two
     // entries are now the same length to the byte.
     expect(firstLoad(mapped)).toEqual(firstLoad(shipped));
+  });
+});
+
+/**
+ * The files the entry names (PLAN.md M336). None of them is any source
+ * file's, so the comparison above never saw a new one — which is how M334's
+ * icon chunk put the first load over budget while this tool said no source
+ * had changed.
+ */
+describe('the files the entry names', () => {
+  const entry =
+    'const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/Page-AbCd1234.js",' +
+    '"assets/pencil-line-C0cmnosM.js","assets/Page-Zz9_-xY1.css"])))=>i.map(i=>d[i]);' +
+    'const P=()=>import("./Page-AbCd1234.js");const Q=()=>import("./skills-C_WSRQt3.js");' +
+    'const note="assets/are-not-files";';
+
+  it('reads the preload list and the dynamic imports, once each', () => {
+    expect(namedFiles(entry)).toEqual([
+      'Page-AbCd1234.js',
+      'Page-Zz9_-xY1.css',
+      'pencil-line-C0cmnosM.js',
+      'skills-C_WSRQt3.js',
+    ]);
+  });
+
+  it('names a file by what it is called, not by its hash', () => {
+    expect(chunkName('pencil-line-C0cmnosM.js')).toBe('pencil-line');
+    expect(chunkName('assets/skills-C_WSRQt3.js')).toBe('skills');
+    expect(chunkName('Page-Zz9_-xY1.css')).toBe('Page');
+    expect(chunkName('workbox-2fbc6a65.js')).toBe('workbox');
+  });
+
+  it('counts what arrived and what left, names that repeat included', () => {
+    const before = ['a-11111111.js', 'skills-22222222.js', 'skills-33333333.js', 'gone-44444444.js'];
+    const after = ['a-55555555.js', 'skills-22222222.js', 'skills-66666666.js', 'skills-77777777.js', 'new-88888888.js'];
+    // A rebuilt chunk with a new hash is the same name, not an arrival.
+    expect(chunkChanges(before, after)).toEqual({ added: ['new', 'skills'], removed: ['gone'] });
+    expect(chunkChanges(before, before)).toEqual({ added: [], removed: [] });
+  });
+
+  it('costs the names as what the entry would lose without them', () => {
+    expect(namesCost(entry)).toBeGreaterThan(0);
+    expect(namesCost('const nothing = "named here";'.repeat(20))).toBe(0);
+    // One more name costs more than none more.
+    const more = entry.replace('"assets/Page-AbCd1234.js",', '"assets/Page-AbCd1234.js","assets/extra-Q1w2E3r4.js",');
+    expect(namesCost(more)).toBeGreaterThan(namesCost(entry));
+  });
+
+  /**
+   * And the format the real build writes, which is the one that matters: a
+   * pattern that stopped matching Vite's output would report no names and no
+   * change, for ever, looking exactly like a build that added none.
+   */
+  it.skipIf(!existsSync('dist/index.html'))('reads the built entry, and every file it names exists', () => {
+    const code = readFileSync(path.join('dist', 'assets', entryName('dist')), 'utf8');
+    const named = namedFiles(code);
+    expect(named.length).toBeGreaterThan(100);
+    expect(named.filter((f) => !existsSync(path.join('dist', 'assets', f)))).toEqual([]);
+    expect(namesCost(code)).toBeGreaterThan(1000);
   });
 });

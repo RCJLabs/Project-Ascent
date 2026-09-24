@@ -15123,6 +15123,12 @@ its label is missing. None of these wants touching.
   program's sessions, then read whichever session last had climbs. A session of a program now reads
   the latest earlier one of the same type in the same program that climbed; a free session still
   reads any. Nothing had held which session it read — the one test checked that the logger mentions it.
+- **M336 — `npm run bundle` sees the files the entry names.** Vite's preload map names every lazy
+  chunk and stylesheet, and no source file owns those names, so M334's new icon chunk put the first
+  load over budget while the tool said no source had changed. It now lists names gained and lost
+  against a ref, and the plain report says what the list costs: 157 files, 2.9KB gzipped of the
+  129KB — about fifteen bytes a name, because hashes do not compress. Reproduced M334's case against
+  the new report: *"+ pencil-line"*.
 
 ## M229 — twenty-six achievements, and not one moment
 
@@ -24148,3 +24154,56 @@ build happens to produce moves the number as much as the code does.
 
 Battery: eight mutants killed and a sanity check survived. 7,392 tests over 441 files, from 7,386.
 Layout harness OK.
+
+
+## M336 — `npm run bundle` sees the files the entry names
+
+M334's own notes: *"`npm run bundle` does not list chunks added or removed against its ref. That is
+the change that decides a margin this small, and the tool is the place to see it."*
+
+### What the tool could not see
+
+M334's first version used a `PencilLine` icon on a second lazy page. A lucide icon used by one lazy
+page is inlined into it; used by two, Rollup gives it a chunk of its own. The entry chunk carries
+Vite's preload map — `"assets/<name>-<hash>.js"` for every lazy chunk and stylesheet the app may
+load — and each dynamic import names its chunk again. So `pencil-line-*.js` added a name to the
+entry, the first load went 0.0006KB over, and the tool said *"No source file changed size in the
+entry chunk"*. That was true: a name in a list belongs to no source file, so the sourcemap gives it
+to nothing. Finding it took two builds and a directory listing.
+
+### What it says now
+
+- **Against a ref**, the names gained and lost: *"+ pencil-line — 157 → 158 files; the names cost
+  2.95 → 2.96KB"*. Counted rather than compared as sets, because two chunks can share a name (the
+  app has two called `skills`) and a third would otherwise be invisible. A rebuilt chunk with a new
+  hash is the same name, not an arrival. When the bundler's unattributed bytes move, it says by how
+  much.
+- **On its own**, what the list costs: *"The entry names 157 other files it may load, and their
+  names cost 2.93KB of it gzipped."*
+
+Checked against M334's exact case, reintroduced on the working tree: the report named
+`pencil-line`, 157 → 158, and 33 more bytes of glue.
+
+### What the number says about the budget
+
+The names are about **2.9KB of a 129KB first load**, roughly fifteen bytes each, because a content
+hash does not compress however the chunk is named. Every lazy chunk the app adds costs the first
+load that much before it has any code. **29 of the 159 chunks are a single lucide icon each**, 300
+to 650 bytes, shared by two or more lazy pages. Folding them into one chunk would remove about
+twenty-eight names — on the order of 0.4KB, which is arithmetic from the average rather than a
+measurement, and it would change what the lazy pages download. It is a lever for the budget
+decision, not a change for this milestone.
+
+### Measured and left
+
+- **The entry's own icons are not in this count.** They are in the entry's code, where the source
+  table already shows them.
+- **The report's wording is not held by a test.** The four functions it is built from are, each by
+  fixtures and by a read of the real build — a pattern that stopped matching Vite's output would
+  report no names for ever and look exactly like a build that added none.
+
+My reproduction left `ProgramDetailPage.tsx` restored but newer than `dist`, and the staleness check
+said so: an artefact of the experiment, cleared by a build, and not a thing CI can meet.
+
+Battery: seven mutants killed and a sanity check survived. 7,397 tests over 441 files, from 7,392.
+No app code changed; the first load is where M335 left it.

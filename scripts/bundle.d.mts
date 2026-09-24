@@ -33,3 +33,7 @@ export function changes(
   before: { rows: Row[] },
   after: { rows: Row[] },
 ): { name: string; status: 'new' | 'gone' | 'changed'; bytes: number; gzip: number }[];
+export function namedFiles(code: string): string[];
+export function chunkName(file: string): string;
+export function chunkChanges(before: readonly string[], after: readonly string[]): { added: string[]; removed: string[] };
+export function namesCost(code: string): number;
