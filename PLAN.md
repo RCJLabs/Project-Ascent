@@ -15208,6 +15208,15 @@ its label is missing. None of these wants touching.
   answer identical to what's in memory keeps the same object. The coach computes once. Main-thread
   work over a warm launch fell from a median of 1,427ms to 1,000ms, with the ranges not
   overlapping.
+- **M351 — Home says nothing about the log before the log is in.** An audit recorded every line of
+  Home's text across 25 launches. On every warm launch of the sample climber — a block running, a
+  year of sessions — Home first said *"Nothing planned — no program is running"*, *"Moved from
+  another phone?"* and *"Pick a program"*, for up to 0.7s each. On one warm launch in seven the
+  daily task first named *"Rate the effort"*, an empty log's task, before the climber's own.
+  Today's card, the first-run cards and the board now wait for the stores they read, through one
+  hook, `useLoaded`. After it, 52 launches flashed nothing. The price is that today's card shows its
+  final content 150–220ms later by median at a quarter CPU speed. The cause of that delay is not
+  isolated.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -25730,3 +25739,141 @@ CPU speed, which is inside the 1,000.
 - **Full suite, layout harness, and the date matrix.**
 - **Sizes:** the first load is 114.27KB (+0.21, for the comparison on the boot path; the line is
   115.1). Home's cold load is 212.76KB (+0.17; the line is 213.5).
+
+## M351 — Home says nothing about the log before the log is in
+
+M349 found the coach reading a half-loaded log and fixed the coach. This asks the same question of
+the rest of Home, by measurement first.
+
+### The audit (M351a)
+
+A probe recorded every line of text inside Home's `<main>` across a launch, with when it appeared and
+when it left. A line that showed and was gone before the page settled is a flash. The loading
+skeletons carry their text as labels, not as visible text, so every line counted is real content
+that was replaced. Each launch ran at a quarter CPU speed; six launches were run in each scenario:
+
+```
+                          lines shown, then gone
+sample climber, warm      10, on 6 launches of 6
+sample climber, cold       0
+empty install, warm        1, on 6 of 6
+empty install, cold        0
+```
+
+For the sample climber, a block running and a year of sessions, every warm launch first said:
+
+- *"Nothing planned — no program is running"*, with *"Rest day"* and *"Log a session"*, for about
+  0.35s;
+- *"Moved from another phone? … Restore a backup"*, for up to 0.7s;
+- *"Pick a program … Find my program"*, for about 0.35s.
+
+The one-launch smoke run before the audit also caught the daily task naming *"Rate the effort"*
+for 0.7s before it became the climber's own. That is the task an empty log is given. It happened on
+one of the seven warm sample-climber launches; the audit's six did not repeat it.
+
+Cold launches did not flash. The catalogue gate (M78) holds the router until the chunk arrives over
+the network, and by then the stores have landed. A warm launch gets the catalogue from the worker's
+cache, so Home mounts before the stores.
+
+### The cause
+
+It is the same as M349's. Each card read its stores without asking whether they had been read:
+
+- **Today's card:** before the profile lands there is no running program, and before the log lands
+  there is no session today.
+- **The first-run cards:** they are about a climber who has not done something yet, and before the
+  stores land every climber looks like one. That includes the safety note, which is dismissed
+  against a phase read from the log, so it would come back for anyone who had set it aside.
+- **The daily task:** it had *"no hydration gate"* on purpose, on the reasoning that *"nothing here
+  reads wrong on an empty log"*. The daily's progress doesn't. The daily itself does: which task it
+  is depends on the tier the log puts the climber in.
+
+### The change
+
+- **`store/loaded.ts`: `useLoaded(...stores)`,** true once every store it is given has been read.
+  - It takes the store hooks themselves, not their names, so a component asks only about stores it
+    already imports and nothing new joins a chunk.
+  - Every store is read on every render, so the hook list never changes between renders.
+  - M349's coach gate is now one call to it.
+- **Today's card** waits for the log, the profile and the climber's own programs (the sample
+  climber's block is one of those). Meanwhile it draws a skeleton card the same size, so the layout
+  holds, which is the rule `polish.test.ts` keeps.
+- **The first-run cards** draw nothing until the same three are in. A placeholder would be the
+  wrong fix: most climbers see none of these cards, so a reserved box would be a flash of its own.
+  They sit at the foot of the rail, where arriving late moves nothing above them.
+- **`useBoard` returns `{ ready: false }`** until the log, the profile, the settings, custom programs
+  and the game ledger are in, and computes nothing before that. The daily card, the board page and
+  the Game tab's board card each draw a placeholder of their own shape.
+
+### After
+
+The same audit, repeated three times on the fixed build:
+
+```
+                          before          after
+sample climber, warm      10 lines, 6/6   0, on 6 + 12 + 4 launches
+sample climber, cold       0              0, on 6 + 4
+empty install, warm        1 line, 6/6    0, on 6 + 4
+empty install, cold        0              0, on 6 + 4
+```
+
+Fifty-two launches in all, with nothing shown and then withdrawn. The daily-task race was one in
+seven before. If it were still one in seven, 22 clean launches in a row would happen about 3% of the
+time by chance. That is evidence it is gone, not proof. The unit tests below pin the gate itself
+deterministically.
+
+### What it costs
+
+Today's card, timed from launch to the moment it first shows what it ends up showing. Each launch
+was warm, with the sample climber, at a quarter CPU speed; M350's build and this one alternated,
+six launches each:
+
+```
+                           M350 build            M351 build
+final content, median      1.51s                 1.66s
+range                      1.44–1.59s            1.36–1.82s
+anything else shown first  6 of 6                0 of 6
+```
+
+The later diagnostic runs repeated it. Each changed one thing in M351, and each put the medians
+between 170 and 220ms apart. The ranges overlap, but no run had M351's median ahead. **That is a real cost,
+and its cause is not isolated.** Three explanations were tested and ruled out:
+
+- **The store list:** today's card without the log in its gate was just as late.
+- **The order of the reads in `hydrateAll`:** custom programs read earlier, no change. Reverted.
+- **The coach and the board sharing today's render:** `useDeferredValue` on both, no change.
+  Reverted.
+
+The one left, untested: the card now *mounts* its subtree once the stores are in, where before it
+had mounted on the wrong data and only *updated*. How much of this a phone pays is not known. A
+quarter CPU speed is roughly how Lighthouse models a mid-range phone, so the cost may be close to
+this. It has not been measured on one.
+
+### Checked
+
+- **`homeWaitsForTheLog.test.tsx`, 15 tests.** Each puts one store back into its launch state (not
+  read, empty) and asks what is drawn:
+  - today's card, for the profile, the log and custom programs in turn;
+  - the first-run cards, for a climber whose log hasn't been read, and for an empty one once it has,
+    so the cards are not simply hidden for good;
+  - the daily task, for the log, the settings, the profile, custom programs and the ledger it loads
+    itself;
+  - the board page and the Game tab's board card;
+  - `useLoaded` in both orders, and asking nothing of a store it wasn't given.
+
+  A first run of one test sat for ten seconds and then failed. The card was right; the assertion
+  wanted *"Session logged"* as the whole text, and the line reads *"Session logged · 3 climbs, 3
+  sent."*.
+- **Mutation battery: 19 mutants, all killed; sanity survived.** The mutants covered:
+  - each of the five gates removed: today's card, the first-run cards, the daily card, the board
+    page and the board card;
+  - the board always ready, and the board computed before it is;
+  - each store dropped from today's card and from the board, and the log from the first-run cards;
+  - `useLoaded` reading only its last store, skipping its first, or always true.
+
+  M349's tests ran with it, on the shared hook.
+- **Full suite, layout harness, and the date matrix.** One date-matrix run overlapped the timing
+  diagnostics, which edited source files while it ran. It was stopped and run again on the final
+  code.
+- **Sizes:** the first load is 114.37KB (+0.10; the line is 115.1). Home's cold load is 212.96KB
+  (+0.20; the line is 213.5, with 0.54 left).

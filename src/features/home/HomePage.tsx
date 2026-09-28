@@ -8,7 +8,9 @@ import { gymSummary } from '@/engine/gym';
 import { DayNudges, PreSessionCard } from '@/features/log/PreSession';
 import { usePlannedDay } from '@/features/log/usePlannedDay';
 import { useWeekOutline } from '@/features/week/useWeekOutline';
+import { useLoaded } from '@/store/loaded';
 import { useProfile } from '@/store/profile';
+import { useCustomPrograms } from '@/store/programs';
 import { allSessions, useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { Button } from '@/ui/Button';
@@ -251,6 +253,25 @@ function TodayCard({ date }: { date: string }) {
     if (!hydrated) void load();
   }, [hydrated, load]);
 
+  /**
+   * Not before the log and the plan are in (PLAN.md M351).
+   *
+   * Before the profile lands there is no running program, and before the log
+   * lands there is no session today — so on every warm launch this card said
+   * *"Nothing planned — no program is running"* to a climber with a block
+   * running, for a third of a second at a quarter speed, and then changed
+   * its mind. A card the same size says it is loading instead; the layout
+   * holds, which is the rule `polish.test.ts` keeps.
+   */
+  const loaded = useLoaded(useSessions, useProfile, useCustomPrograms);
+  if (!loaded) {
+    return (
+      <div className="mt-3" aria-busy="true" aria-live="polite" aria-label="Loading today's session">
+        <SkeletonCard lines={3} />
+      </div>
+    );
+  }
+
   const sessions = byDate[date] ?? [];
   return (
     <div className="mt-3 grid grid-cols-1 gap-3">
@@ -384,7 +405,23 @@ function FirstRunCards() {
     () => (allSessions(byDate).some(loadsFingersDirectly) ? 'loading' : 'before'),
     [byDate],
   );
+  const loaded = useLoaded(useSessions, useProfile, useCustomPrograms);
   const gone = (id: string) => dismissed.includes(id);
+  /**
+   * Nothing, not a placeholder, until the log and the profile are in
+   * (PLAN.md M351).
+   *
+   * Every card here is about a climber who has not done something yet, and
+   * before the stores land every climber looks like one: *"Moved from
+   * another phone?"* and *"Pick a program"* were on Home for up to 0.7s of
+   * every warm launch of the sample climber — and the safety note, which is
+   * dismissed against a phase read from the log, would come back for anyone
+   * who had set it aside. A skeleton would be the wrong fix: most climbers
+   * see none of these cards, so a reserved box would be a flash of its own.
+   * They sit at the foot of the rail, where arriving a moment late moves
+   * nothing above them.
+   */
+  if (!loaded) return null;
   return (
     // `single`, because this grid is inside Home's rail since M240 and a
     // second split there gives a paragraph a column about 280px wide — the

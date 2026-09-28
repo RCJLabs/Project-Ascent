@@ -28,6 +28,7 @@ import { useSessions, allSessions } from '@/store/sessions';
 import { useDeloadDates } from '@/store/deload';
 import { useSettings } from '@/store/settings';
 import { useCustomPrograms } from '@/store/programs';
+import { useLoaded } from '@/store/loaded';
 
 export interface Tips {
   all: Tip[];
@@ -57,17 +58,16 @@ const NOT_READY: Tips = { all: [], visible: [], hidden: 0, ready: false };
  * reads as no block at all.
  */
 function useCoachInputsLoaded(): boolean {
-  const loaded = [
-    useSessions((s) => s.hydrated),
-    useProjects((s) => s.hydrated),
-    useMetrics((s) => s.hydrated),
-    useProfile((s) => s.hydrated),
-    useObjectives((s) => s.hydrated),
-    useAway((s) => s.hydrated),
-    useSettings((s) => s.hydrated),
-    useCustomPrograms((s) => s.hydrated),
-  ];
-  return loaded.every(Boolean);
+  return useLoaded(
+    useSessions,
+    useProjects,
+    useMetrics,
+    useProfile,
+    useObjectives,
+    useAway,
+    useSettings,
+    useCustomPrograms,
+  );
 }
 
 /** Everything the board needs, derived in one place. */

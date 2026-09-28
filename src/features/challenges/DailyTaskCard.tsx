@@ -2,6 +2,7 @@ import { Link } from 'wouter';
 import { Check, ChevronRight, Target } from 'lucide-react';
 import { Meter } from '@/ui/Meter';
 import { useBoard } from './useBoard';
+import { SkeletonCard } from '@/ui/Skeleton';
 
 /**
  * Today's task, on the screen the day starts on (PLAN.md M231).
@@ -41,7 +42,17 @@ import { useBoard } from './useBoard';
  * would make the first thing a climber sees a thing to press.
  */
 export function DailyTaskCard() {
-  const { board, claimed } = useBoard();
+  const reading = useBoard();
+  // The same placeholder Home shows while this chunk arrives, so the card
+  // holds its place until the board can be read (PLAN.md M351).
+  if (!reading.ready) {
+    return (
+      <div aria-busy="true" aria-live="polite" aria-label="Loading today's task">
+        <SkeletonCard lines={3} />
+      </div>
+    );
+  }
+  const { board, claimed } = reading;
   const daily = board.daily;
   const ready = [board.daily, ...board.weekly, ...board.bounties].filter(
     (c) => c.done && !claimed.has(c.id),
@@ -54,11 +65,13 @@ export function DailyTaskCard() {
      * and a section inside an anchor is two boxes and a landmark nobody
      * asked for. The heading is written in the same hand instead.
      *
-     * No hydration gate, and that is a rule rather than a preference
-     * (`polish.test.ts`): returning null while the stores load collapses the
-     * layout and snaps it back a frame later. Nothing here reads wrong on an
-     * empty log either — an unlogged day has a daily at zero, which is what
-     * an unlogged day has.
+     * Not null while the stores load, and that is a rule rather than a
+     * preference (`polish.test.ts`): returning null collapses the layout and
+     * snaps it back a frame later — so the gate above draws a card the same
+     * size instead. It had no gate at all until M351, on the reasoning that
+     * nothing here reads wrong on an empty log. The daily's *progress*
+     * doesn't; the daily itself does, because which task it is depends on
+     * the tier the log puts the climber in.
      */
     <Link href="/board" className="block bg-surface border border-line rounded-2xl p-4">
       <h2 className="text-xs font-bold uppercase tracking-widest text-ink-soft mb-3">

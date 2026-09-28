@@ -17,9 +17,28 @@ import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';
 import { allSessions, useSessions } from '@/store/sessions';
 import { useDeloadDates } from '@/store/deload';
+import { useLoaded } from '@/store/loaded';
+import { useCustomPrograms } from '@/store/programs';
+
+/**
+ * The board, or that it is not ready to be read (PLAN.md M351).
+ *
+ * A daily is picked by the climber's tier, and the tier comes from the log:
+ * derived before the log had landed, the board was an empty climber's, and
+ * on one warm launch in twenty-five the card on Home showed *"Rate the
+ * effort"* — tier zero's task — before changing to the climber's own. The
+ * board is a claim about the log, so it waits for the log, the profile the
+ * program and injuries come from, the settings it is written in, the
+ * climber's own programs, and the ledger that says what is claimed.
+ */
+export type BoardReading =
+  | { ready: false }
+  | { ready: true; board: ReturnType<typeof deriveBoard>; claimed: Set<string> };
+
+const NOT_READY: BoardReading = { ready: false };
 
 /** Everything the board shows comes from the log, so this hook is the board. */
-export function useBoard() {
+export function useBoard(): BoardReading {
   const byDate = useSessions((s) => s.byDate);
   const bounties = useGame((s) => s.bounties);
   const ledger = useGame((s) => s.ledger);
@@ -49,18 +68,21 @@ export function useBoard() {
   );
 
   const deloadDates = useDeloadDates();
-  return useMemo(() => {
+  const ready = useLoaded(useSessions, useProfile, useSettings, useCustomPrograms) && hydrated;
+  return useMemo((): BoardReading => {
+    if (!ready) return NOT_READY;
     const sessions = allSessions(byDate);
     const state = deriveClimberState(sessions, { deloadDates });
     const program = activeProgramId ? getProgram(activeProgramId) : undefined;
     const rule = program?.constraints.find((c) => c.kind === 'sessions-per-week');
     const weeklyTarget = rule && rule.kind === 'sessions-per-week' ? rule.min : 3;
     return {
+      ready: true,
       board: deriveBoard({
         sessions, state, accepted: bounties, weeklyTarget, claimed, display,
         injured: injuryPolicy(injuries).excluded,
       }),
       claimed: new Set(claimed),
     };
-  }, [byDate, bounties, activeProgramId, claimed, display, injuries, deloadDates]);
+  }, [ready, byDate, bounties, activeProgramId, claimed, display, injuries, deloadDates]);
 }

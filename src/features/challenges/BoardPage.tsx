@@ -19,10 +19,13 @@ import { Meter } from '@/ui/Meter';
 import { BackLink } from '@/ui/BackLink';
 import { PageHeader } from '@/ui/PageHeader';
 import { useBoard } from './useBoard';
+import { PageSkeleton } from '@/ui/PageSkeleton';
 
 export function BoardPage() {
   // The ledger is loaded by `useBoard` — it is the hook that reads it.
-  const { board, claimed } = useBoard();
+  const reading = useBoard();
+  if (!reading.ready) return <PageSkeleton title="Board" />;
+  const { board, claimed } = reading;
 
   const open = [board.daily, ...board.weekly, ...board.bounties].filter(
     (c) => c.done && !claimed.has(c.id),
@@ -204,7 +207,15 @@ function ChallengeRow({
 
 /** Compact Home entry: what is ready, or what is left. */
 export function BoardCard() {
-  const { board, claimed } = useBoard();
+  const reading = useBoard();
+  if (!reading.ready) {
+    return (
+      <div aria-busy="true" aria-label="Loading the board" className="flex items-center gap-3">
+        <div className="h-10 flex-1 rounded-lg bg-sunken" aria-hidden />
+      </div>
+    );
+  }
+  const { board, claimed } = reading;
   const all = [board.daily, ...board.weekly, ...board.bounties];
   const ready = all.filter((c) => c.done && !claimed.has(c.id)).length;
   const done = all.filter((c) => c.done).length;
