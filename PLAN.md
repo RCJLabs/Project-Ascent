@@ -15201,6 +15201,13 @@ its label is missing. None of these wants touching.
   rules now wait for all eight stores they read, and the Coach page shows a skeleton until then. The
   projects store's two reads now go together, so it no longer lands last. The right tip arrives about
   as soon as before (median 1.64s against 1.68s), never after a wrong one, from 3 computations.
+- **M350 — a reload that reads the same log keeps the same log.** M349 left the coach computing three
+  times per launch, because three things load the session log at launch and each read replaced
+  `byDate` with a new object that said nothing new. Every card on Home re-derived twice. Sharing
+  one read in flight was the obvious fix and is not safe (M220). So every load still reads, and an
+  answer identical to what's in memory keeps the same object. The coach computes once. Main-thread
+  work over a warm launch fell from a median of 1,427ms to 1,000ms, with the ranges not
+  overlapping.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -25635,3 +25642,91 @@ It needs its own milestone.
 - **Full suite, layout harness, and the date matrix.**
 - **`npm run homeload`:** 212.59KB, 0.13KB more for the gate's code, inside the line. The first load
   is 114.05KB.
+
+## M350 — a reload that reads the same log keeps the same log
+
+M349 found it and left it: after the coach was ready, the session log was replaced twice more,
+and the marks named `byDate` both times.
+
+### Why three loads
+
+`hydrateAll`, an effect in `HomePage` and another in `useWeekOutline` each call
+`useSessions.load()` at launch. The two effects run first, because a child's effects run before
+its parent's, and `hydrateAll` arrives through a dynamic import after the first paint (M320). Each
+load read the whole log and set `byDate` to a new object. Everything on Home that reads the log
+took that as a change:
+
+- the coach, whose extra computations M349 counted;
+- the stats, the daily task, the week strip.
+
+### Why not share the read
+
+The obvious fix is for a load that finds a read already in flight to wait for that read. It
+isn't safe. M220's rule is that a read which began before a write must not answer a load asked for
+after it, and nothing could tell a sharer whether that had happened:
+
+- `writes.ts` is a single promise chain, with no count of what has gone into it.
+- Loading the sample climber and importing a backup write straight to the database, outside that
+  queue, and then call `hydrateAll`.
+
+A shared read would sometimes hand those loads the log as it was before the write, which is the
+M220 bug again.
+
+### What was done instead
+
+Every load still reads the database. Only the *answer* is compared: if it is the same log as the
+one in memory, date by date and field by field, the store keeps the object it has. Nothing
+subscribed to `byDate` sees a change, and `allSessions`'s cache, keyed on that object, stays warm.
+A load never skips a read, so it can never serve a stale log. The worst a wrong comparison could do
+is replace a log that didn't need replacing.
+
+The comparison errs toward *different* wherever it's unsure:
+
+- a key on one side and not the other, even one holding `undefined`;
+- `null` against nothing;
+- any object that is not a plain one, such as a `Date`, which would otherwise have no keys to
+  compare.
+
+It uses `hasOwnProperty` rather than `Object.hasOwn`, which the browsers Vite builds for by default
+don't all have.
+
+### Measured
+
+Warm launches of the sample climber, the worker installed, the CPU at a quarter speed:
+
+```
+                                    M349 build            M350 build
+coach computed per launch           3                     1
+reads of the log per launch         3, each replacing     3; one replaces, two match
+main-thread long tasks, first 3.5s  median 1427ms         median 1000ms
+                                    (1269–1865)           (895–1125)
+```
+
+The ranges don't overlap. Comparing a year's log to a fresh read costs 12–25ms per match at that
+CPU speed, which is inside the 1,000.
+
+- **What is not claimed:** the coach card doesn't appear sooner (1.56–1.82s). The recomputes this
+  removes happened after the card was up. What's gone is the work behind it, which competes with
+  scrolling and the first tap.
+
+### Checked
+
+- **`sessionsReload.test.ts`, 13 tests:**
+  - **The same log keeps its object:** after a reload; after three loads at once, as at launch,
+    where the log changes exactly once; and on an empty log.
+  - **Anything new replaces it:** a session added, gone, moved to another day, a second on the
+    same day, and a change deep inside a session written straight to the database with its
+    `updatedAt` untouched, which a comparison that stopped at the timestamp would miss. Also a field
+    the database has and the copy in memory lacks, a key swapped for one holding `undefined`,
+    `null` against nothing, two different `Date`s, and a key holding `undefined` on one side only.
+- **Mutation battery: 11 mutants, all killed; sanity survived.** The first run left
+  loose-equality comparison alive: no test put `null` against `undefined`. It has one now. The
+  mutants covered:
+  - always the same log (stale), and always a new one (the old behaviour);
+  - arrays by length only, objects by keys only;
+  - no key count, no own-key check, no prototype check;
+  - dates by count only, and no date-count check;
+  - primitives compared loosely.
+- **Full suite, layout harness, and the date matrix.**
+- **Sizes:** the first load is 114.27KB (+0.21, for the comparison on the boot path; the line is
+  115.1). Home's cold load is 212.76KB (+0.17; the line is 213.5).

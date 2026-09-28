@@ -48,6 +48,55 @@ function index(sessions: Session[]): Record<string, Session[]> {
 }
 
 /**
+ * Whether two values read the same, all the way down (PLAN.md M350).
+ *
+ * For what IndexedDB hands back: plain objects, arrays, strings, numbers,
+ * booleans and null. Anything it cannot place — a key on one side and not
+ * the other, even one holding `undefined`, or a prototype it does not
+ * recognise — reads as different, which costs a replace and never a stale
+ * log.
+ */
+const has = (o: object, key: string): boolean => Object.prototype.hasOwnProperty.call(o, key);
+
+function sameData(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a)) {
+    const other = b as unknown[];
+    return a.length === other.length && a.every((value, i) => sameData(value, other[i]));
+  }
+  if (Object.getPrototypeOf(a) !== Object.prototype || Object.getPrototypeOf(b) !== Object.prototype) return false;
+  // `hasOwnProperty` rather than `Object.hasOwn`, which the browsers Vite
+  // builds for by default (Chrome 87, Safari 14) do not all have.
+  const left = Object.keys(a);
+  const right = Object.keys(b);
+  if (left.length !== right.length) return false;
+  const rec = b as Record<string, unknown>;
+  return left.every((key) => has(rec, key) && sameData((a as Record<string, unknown>)[key], rec[key]));
+}
+
+/**
+ * The log in memory, kept when a fresh read of the database says the same
+ * thing (PLAN.md M350).
+ *
+ * Three things load the log at launch — `hydrateAll`, Home's own effect and
+ * the week strip's — and each read replaced `byDate` with a new object that
+ * said nothing new. Every card that reads the log took that as a change and
+ * derived everything again, twice over, on every launch. Sharing one read
+ * between them would have been cheaper and is not safe: a read that began
+ * before a write must not answer a load asked for after it (PLAN.md M220),
+ * and loading the sample climber and importing a backup both write outside
+ * the queue that could have said so. So every load still reads, and only
+ * the *answer* is compared: the same log keeps the same object.
+ */
+function sameLog(current: Record<string, Session[]>, next: Record<string, Session[]>): boolean {
+  const dates = Object.keys(current);
+  if (dates.length !== Object.keys(next).length) return false;
+  return dates.every((date) => has(next, date) && sameData(current[date], next[date]));
+}
+
+/**
  * The whole log as one array, the same array every time (PLAN.md M157).
  *
  * Forty-three places wrote `Object.values(byDate).flat()`, and where it sat
@@ -86,7 +135,8 @@ export const useSessions = create<SessionsState>((set, get) => ({
 
   load: async () => {
     try {
-      set({ byDate: index(await listSessions()), hydrated: true });
+      const next = index(await listSessions());
+      set((state) => ({ byDate: sameLog(state.byDate, next) ? state.byDate : next, hydrated: true }));
     } catch (error) {
       // Hydrated, because the app has to render — but the reason is kept
       // rather than swallowed, so the shell can say why the log is empty
