@@ -15170,6 +15170,14 @@ its label is missing. None of these wants touching.
   only lazy pages use. The first load went from **128.49KB to 123.02KB**, and a cold Home load from
   229.4KB to 225.0KB. A new test fails on any export that arrives in the first load for lazy pages
   alone. The 82 left are listed there and can only shrink. The budget is now 124.1.
+- **M345 — the rest of the first load's lazy-only code, and what M344's check could not see.** M344's
+  rule stopped at the import, so the 7KB metric registry counted as needed only because a first-load
+  module imported it for a parser Home never calls. The rule now follows what the entry runs across
+  modules. Twenty-five modules were split and six left whole. The first load went from **123.01KB to
+  114.03KB**, and the budget is now 115.1. Home's own download barely moved, 225.0KB to 224.4KB in ten
+  more files: most of that code is still fetched right after the first paint, by Home's own lazy cards.
+  First paint and heading medians moved about 60ms sooner under throttling. The coach card didn't
+  move.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -25107,3 +25115,170 @@ gzip saving: that is the build's, above.
 The 82 in `PENDING`. The largest are `DRILL_CATEGORIES`, `parseMetricInput`, `applyTemplate` and
 `PageSkeleton` (12 importers, so it may belong in its own module). After that comes M343a's fourth
 item: a measure of the cold Home load, which this milestone took by hand.
+
+## M345 — the rest of it, and what M344's check could not see
+
+M344 left 82 exports on a list to move, about 12KB minified. Moving the first of them,
+`assessments.ts`, cut the first load by 2.53KB. That was twice what its exports weighed, and it
+showed the check was wrong.
+
+### What M344's check missed
+
+M344 followed what the first load needs *within* a module. It stopped at the import: if a first-load
+module imported a name, that name counted as needed, whether or not the code using it ever ran.
+`assessments.ts` imported the 7KB metric registry for a parser only lazy pages call. So the registry
+was "needed" and the check never named it. Moving the parser took `content/metrics.ts` and
+`units.ts` out of the first load with it.
+
+The rule now follows needs across modules:
+
+- a statement that runs when its module loads is needed;
+- a name a needed statement mentions makes the statement that declares it needed, in its own module
+  or, through the import, in the module that exports it.
+
+M344's claim, that it cannot flag something the entry uses, still holds. If it's wrong, `tsc` fails,
+because the calling code has to import the name from somewhere. Three smaller changes:
+
+- **Importers the app never loads no longer count.** `import()` is now followed. `themes.ts`'s two
+  palette lists were flagged because `paletteRules.ts` imports them, but only tests and a script use
+  that file, so Rollup drops them anyway.
+- **`export * as` is read.** Nothing uses it today; it was a gap.
+- **Bare-import rule dropped.** A bare `import './x'` loads a module that does something on load
+  through the side-effect rule anyway, and one that does nothing has nothing to need. The mutation
+  battery can't tell the two versions apart, so the rule went.
+
+Run over M344's own tree, the two rules differ:
+
+```
+old rule    87 exports in 37 modules   12.7KB minified
+new rule    98 exports in 36 modules   22.5KB minified
+```
+
+The new rule adds thirteen exports and drops the two false palette ones. The largest additions:
+
+- the metric registry, 6.9KB;
+- `validateWeek`, 2KB, whose only first-load caller was `previewMove`, itself lazy-only;
+- `units.ts`'s four converters;
+- the grade display.
+
+### One import that loaded a module for a type
+
+`reschedule.ts` wrote `import { type WeekPlan } from './scheduler'`. Under `verbatimModuleSyntax`
+that is emitted as `import {} from './scheduler'`, which loads the module. So after everything that
+called `validateWeek` had left, the scheduler's week validation still sat in the first load. A new
+sweep in `lazyOnly.test.ts` fails on any import that names only types but isn't written `import
+type`. The app had four; this was the only one that cost anything.
+
+### What moved
+
+Twenty-five modules were split into twenty-seven new ones. Where the first-load part was the smaller
+one, it was the part that moved:
+
+- `testWeeks.ts` out of `assessments.ts`
+- `awayPeriod.ts` out of `away.ts`
+- `avatarPalette.ts` out of `avatar.ts`
+- `logHref.ts` out of `routes.ts`
+
+That let the rest of each module go lazy whole. Six modules left the first load entirely: the metric
+registry, `units`, `assessments`, `away`, `avatar` and the route table. Two splits were undone:
+
+- **`avatar.ts`:** its figure was first split off lazily. Only then did it show that the palette was
+  all the first load wanted from it, so the direction was reversed.
+- **`routes.ts`:** `routeLinks.ts` was split off, then undone once the table itself went lazy,
+  because the split no longer separated anything from the first load.
+
+```
+first load (gzip)    123.01 → 114.03–114.05KB   −8.97
+JS files               167  → 187
+files the entry names  165  → 185, their names 2.95 → 3.23KB gzipped
+```
+
+The splits have a price, and it is already inside the −8.97. Every new chunk is another name in the
+entry's preload list, and the bundler's glue grew from 8,266 to 8,890 bytes minified. The largest
+single cuts, by `npm run bundle -- --against`, are the registry (−1.85KB), the route table (−1.65),
+the scheduler's validation (−0.64) and `assessments` (−0.54).
+
+### What stayed, and why
+
+The small ones were measured one at a time, against rebuild noise of about ±0.01KB:
+
+```
+MAX_LOGGED_HOURS into liveClock.ts   −0.024KB   no new file     moved
+the day names into days.ts           −0.040KB   one new file    moved
+the backup's store list              −0.049KB   no new file     moved
+startedAsRest                        +0.008KB   no new file     kept
+offerUndo                            +0.009KB   one new file    kept
+```
+
+`KEPT` now names nine exports, each with its reason:
+
+- two that read module-private state (`openedViewFor`, `readingProblems`);
+- two measured above;
+- one of twenty-seven bytes;
+- four of the five M344 kept; the fifth, the day names, moved.
+
+There's no pending list any more. Anything new that's lazy-only fails the sweep.
+
+### What it did not do for Home
+
+**Most of what left the entry is still fetched by Home, right after the first paint.** Home's coach
+card and its tips use the metric registry, `assessments`, `units`, the grade display and the away
+readings. The back link and the daily task card use the route table. So a cold Home load went from
+225.0KB in 35 files to 224.4KB in 45.
+
+What moved is *when* that code is parsed: after the first paint, not before it. That's what the
+first-load number measures, and what M320 showed is worth doing. Whether it also delays the coach
+card is a timing question, measured below.
+
+Timed the way M320 timed its cut: Chromium with no service worker and the cache off, 1.6Mbps at
+40ms, the CPU at a quarter speed. The sample climber was loaded, then Home was reloaded cold. Seven
+runs of each build, alternating which went first:
+
+```
+                median (range), ms
+                M344 build          M345 build
+first paint      908 (832–980)       848 (812–916)
+heading         1638 (1551–1678)    1571 (1523–1713)
+coach card      1841 (1737–1949)    1820 (1791–1920)
+last asset      1714 (1679–1814)    1723 (1696–1804)
+requests          37                  47–54
+```
+
+- **What's established:**
+  - the medians moved: first paint 60ms sooner, the heading 67ms sooner;
+  - the coach card and the last asset did not move beyond noise;
+  - ten to seventeen more requests did not make the card later here.
+- **What's not:** every range overlaps, so the paint and heading gains are likely rather than shown.
+  This was the preview server, which speaks HTTP/1.1. GitHub Pages serves HTTP/2, where more
+  requests should cost less, and that is untested.
+
+### Checked
+
+- **Mutation battery on the new rules:** 16 mutants, all killed; three sanity mutants survived. The
+  mutants covered:
+  - not following imports across modules;
+  - a loaded module running nothing;
+  - side effects not loading a module;
+  - the entry counting only what runs;
+  - a namespace import needing nothing;
+  - `export * as` not parsed, or not followed;
+  - counting every importer;
+  - not following `import()`;
+  - not following local names;
+  - the loose type import put back;
+  - the sweep reading a type-only list as mixed;
+  - the parser, and the route table, put back into the first load;
+  - dropping a kept entry, or keeping one that is no longer lazy-only.
+- **Budget:** 124.1 → 115.1, bounded both ways by running it (history in `perf.test.ts`).
+- **Tests that pinned the old layout were changed:**
+  - three entry-chunk checks whose control read the route table or the avatar's stage names now read
+    the router's path and the default palette;
+  - the one-`formatBytes` rule points at its new module;
+  - the skeleton's loading label is read from `PageSkeleton.tsx`;
+  - one private `ALL_DAYS` the splitter had exported, which the tuning test caught as a duplicate
+    name, is private again.
+- **No runtime import cycles anywhere in the app,** checked over the value-import graph.
+- **Layout harness,** all routes at four sizes: no thrown errors.
+- **Full suite, and the date matrix.**
+- **Found, not fixed:** `compareGrades` has no importers at all, and `metricLoads` only a test. Both
+  moved with the code they sit beside. Deleting dead code is its own change.
