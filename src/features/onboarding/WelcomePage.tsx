@@ -8,13 +8,8 @@ import { today } from '@/engine/dates';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
 import { useGradeOptions } from '@/ui/useGrade';
 import type { Experience, Goal } from '@/engine/finder';
-import {
-  EMPTY_BASELINE,
-  answeredCount,
-  baselineEntries,
-  benchmarksFor,
-  type BaselineAnswers,
-} from '@/engine/onboarding';
+import { EMPTY_BASELINE, type BaselineAnswers } from '@/engine/onboarding';
+import { answeredCount, baselineEntries, benchmarksFor } from '@/engine/baselineBattery';
 import { deriveClimberState } from '@/engine/derive';
 import { deriveStats, STAT_LABELS, type StatId } from '@/engine/stats';
 import { useMetrics } from '@/store/metrics';

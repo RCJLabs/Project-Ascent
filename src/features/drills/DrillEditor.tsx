@@ -4,7 +4,7 @@ import { Trash2 } from 'lucide-react';
 import { DRILL_CATEGORIES } from '@/content/drills';
 import type { Discipline, Drill, DrillCategory, Equipment } from '@/content/types';
 import { EQUIPMENT_LABELS } from '@/engine/customProgram';
-import { DRILL_DISCIPLINES, drillIssues, tidyDrill } from '@/engine/customDrill';
+import { DRILL_DISCIPLINES, drillIssues, tidyDrill } from '@/engine/drillWriting';
 import { useCustomDrills } from '@/store/drills';
 import { offerUndo } from '@/store/undo';
 import { Button } from '@/ui/Button';

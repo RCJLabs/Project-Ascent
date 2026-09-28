@@ -1,14 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { PROGRAMS, loadPrograms } from '@/content/programs';
 import type { SetOutcome } from '@/db/sessions';
-import {
-  OUTCOME_MEANING,
-  OUTCOME_WORD,
-  SET_OUTCOMES,
-  describeEntry,
-  exerciseSeries,
-  hasNumbers,
-} from './exerciseLog';
+import { hasNumbers } from './exerciseLog';
+import { OUTCOME_MEANING, OUTCOME_WORD, SET_OUTCOMES, describeEntry, exerciseSeries } from './exerciseReadings';
 
 /**
  * How the sets went (PLAN.md M238).

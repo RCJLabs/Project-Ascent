@@ -21,7 +21,7 @@ import { APP_VERSION } from '@/version';
 import { DRILLS } from '@/content/drills';
 import { FIELDS } from '@/content/fields';
 import { METRICS } from '@/content/metrics';
-import { PLANNED_PROGRAM_IDS } from '@/content/programs';
+import { PLANNED_PROGRAM_IDS } from '@/content/programs/shelves';
 import { PROTOCOLS } from '@/content/protocols';
 import { SCHEMA_VERSION } from '@/db/schema';
 import {

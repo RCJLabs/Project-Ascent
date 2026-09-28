@@ -56,7 +56,8 @@ import { createRng, next, type Rng } from './ascent/rng';
 import { addDays, startOfWeek } from './dates';
 import { getProgram } from '@/content/programs';
 import type { SessionType } from '@/content/types';
-import { layoutsFor, planFromLayout, type WeekPlan } from './scheduler';
+import type { WeekPlan } from './scheduler';
+import { layoutsFor, planFromLayout } from './weekLayouts';
 import type { Exercise } from '@/content/types';
 import type { LoggedExercise, SetOutcome } from '@/db/sessions';
 import { plannedDay, prescriptionFor, weekInPhase, type PlannedDay } from './plan';
@@ -67,7 +68,7 @@ import { metricConflict } from './bodyLoad';
 import { gradeOrdinal, V_GRADES } from './grades';
 import { onTheWall } from './climbing';
 import { takenIn, testWeek, testsOn } from './testDays';
-import { doseRange } from './exerciseLog';
+import { doseRange } from './exerciseReadings';
 import { restStart, trainingStart } from './sessionStart';
 
 /** One climber, so a screenshot taken today matches one taken in a year. */

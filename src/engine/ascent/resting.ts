@@ -32,7 +32,7 @@
 import type { Project } from '@/db/projects';
 import type { Session } from '@/db/sessions';
 import { displayGrade, type GradeDisplay } from '../grades';
-import { activeProjects, summariseProject } from '../projects';
+import { activeProjects, summariseProject } from '../projectSummary';
 
 export interface RestingFor {
   id: string;

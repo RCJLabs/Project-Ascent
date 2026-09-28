@@ -1005,6 +1005,8 @@ const TEST_ONLY: Record<string, string> = {
     'the broken streak M299 shared out of the two copies that each had it, imported only by tests',
   'src/test/lateWrites.ts':
     'the rule M332 sweeps the app with, a pure function so each of its rules can be shown to fire',
+  'src/test/lazyOnly.ts':
+    'the rule M344 holds the first load to, read by its test and by `npm run bundle`, never by the app',
   'src/ui/paletteRules.ts': 'moved out of a script at M61 so the tool could itself be tested',
 };
 

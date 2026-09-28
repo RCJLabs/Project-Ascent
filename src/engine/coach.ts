@@ -27,7 +27,7 @@ import { addDays, daysBetween, fromKey, shortLabel, today as todayKey } from './
 import { poorRun } from './conditions';
 import { MIN_CHRONIC_DAYS, MIN_RATIO_DAYS, type ClimberState } from './derive';
 import { recoverySentence, type Diagnosis } from './plateau';
-import { activeProjects, summariseProject } from './projects';
+import { activeProjects, summariseProject } from './projectSummary';
 import { FLAT_SESSIONS, highPointTrend, type HighPointTrend } from './projectTrend';
 import type { BlockAdherence } from './adherence';
 import type { LoadRelief } from './loadRelief';

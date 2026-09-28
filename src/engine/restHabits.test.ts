@@ -1,14 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { RestChecklist, Session } from '@/db/sessions';
 import { addDays } from './dates';
-import {
-  ENOUGH_REST,
-  REST_DAYS,
-  REST_ITEMS,
-  describeRestHabits,
-  restHabits,
-  type RestItem,
-} from './restHabits';
+import { REST_ITEMS, type RestItem } from './restHabits';
+import { ENOUGH_REST, REST_DAYS, describeRestHabits, restHabits } from './restReading';
 
 /**
  * What the rest day was spent on (PLAN.md M94).

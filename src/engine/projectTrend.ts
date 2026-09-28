@@ -7,7 +7,7 @@
  * less than that to spare.
  */
 
-import type { DayHighPoint } from './projects';
+import type { DayHighPoint } from './projectSummary';
 
 /** Sessions without a new high point before a project counts as flat (PLAN.md M339). */
 export const FLAT_SESSIONS = 3;

@@ -18,7 +18,8 @@
 import type { Session } from '@/db/sessions';
 import { getProgram } from '@/content/programs';
 import { blockAdherence } from './adherence';
-import { outcomeOf, rowWindow, sortBlocks, type BlockRecord } from './blocks';
+import { rowWindow, type BlockRecord } from './blocks';
+import { outcomeOf, sortBlocks } from './blockOutcome';
 import { daysBetween } from './dates';
 import type { FinderHistory } from './finder';
 

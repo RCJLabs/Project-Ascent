@@ -2,7 +2,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { getDb } from '@/db/db';
-import { MAX_PER_OWNER, addMedia, listMedia, projectOwner, sessionOwner } from '@/db/media';
+import { projectOwner, sessionOwner } from '@/db/media';
+import { MAX_PER_OWNER, addMedia, listMedia } from '@/db/mediaRecords';
 import { newProject, putProject } from '@/db/projects';
 import { newSession, putSession, type Session } from '@/db/sessions';
 import { today } from '@/engine/dates';

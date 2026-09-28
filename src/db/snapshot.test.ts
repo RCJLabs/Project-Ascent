@@ -186,7 +186,8 @@ describe('undoing an import and the photos', () => {
     await importAll(incoming, 'replace', { photos: 'keep' });
     expect(await restoreSnapshot()).toBe(true);
 
-    const { listMedia, sweepOrphanMedia } = await import('./media');
+    const { listMedia } = await import('./mediaRecords');
+    const { sweepOrphanMedia } = await import('./media');
     expect(await listMedia('session:2026-01-01#0')).toHaveLength(1);
     // And the sweep does not take it, because its owner is back.
     expect(await sweepOrphanMedia()).toBe(0);

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
-import { addMedia, listMedia, projectOwner, sessionOwner, sweepOrphanMedia } from '@/db/media';
+import { projectOwner, sessionOwner, sweepOrphanMedia } from '@/db/media';
+import { addMedia, listMedia } from '@/db/mediaRecords';
 import { resetDbForTests } from '@/db/db';
 import { newProject } from '@/db/projects';
 import { useProjects } from './projects';

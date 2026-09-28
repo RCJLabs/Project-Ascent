@@ -27,10 +27,11 @@
  * one a climber hunts for.
  */
 
-import { MAX_PER_OWNER, projectOwner, sessionOwner } from '@/db/media';
+import { projectOwner, sessionOwner } from '@/db/media';
+import { MAX_PER_OWNER } from '@/db/mediaRecords';
 import type { Session } from '@/db/sessions';
 import type { Project } from '@/db/projects';
-import { activeProjects } from '@/engine/projects';
+import { activeProjects } from '@/engine/projectSummary';
 
 /** How many past days are worth scrolling. */
 export const RECENT_DAYS = 14;

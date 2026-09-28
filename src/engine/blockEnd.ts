@@ -25,7 +25,8 @@
 import { getProgram, writtenProgram } from '@/content/programs';
 import { adaptProgram } from './adapt';
 import type { Program } from '@/content/types';
-import { outcomeOf, weeksRun, type BlockOutcome, type BlockRecord } from './blocks';
+import type { BlockRecord } from './blocks';
+import { outcomeOf, weeksRun, type BlockOutcome } from './blockOutcome';
 import type { MetricEntry } from '@/db/metrics';
 import { blockReport, type AssessmentResult, type BlockReport } from './blockReport';
 import { blockStatus, type BlockStatus } from './plan';

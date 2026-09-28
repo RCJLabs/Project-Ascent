@@ -11,7 +11,7 @@ import { secondsRange, sessionMinutes } from '@/engine/sessionLength';
 import { getDrill } from './drills';
 import { getMetric } from './metrics';
 import { getProtocol } from './protocols';
-import { PLANNED_PROGRAM_IDS } from './programs';
+import { PLANNED_PROGRAM_IDS } from './programs/shelves';
 import { atLeastAsHard, type Program } from './types';
 
 export function validateProgram(program: Program): string[] {

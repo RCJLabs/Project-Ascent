@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { mediaByIds, mediaOwners } from '@/db/media';
+import { mediaByIds, mediaOwners } from '@/db/mediaRecords';
 import type { MediaRecord } from '@/db/schema';
 
 /**

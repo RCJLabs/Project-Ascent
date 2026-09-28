@@ -14,7 +14,7 @@
  */
 
 import { FIELDS, type FieldSpec } from '@/content/fields';
-import { PLANNED_PROGRAM_IDS } from '@/content/programs';
+import { PLANNED_PROGRAM_IDS } from '@/content/programs/shelves';
 import { APP_VERSION } from '@/version';
 import type {
   Constraint,

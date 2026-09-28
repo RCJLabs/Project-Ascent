@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, Camera, Circle, Eraser, Pen, PenLine, Trash2, Undo2, X } from 'lucide-react';
-import { MAX_PER_OWNER, addMedia, deleteMedia, listMedia, updateMedia } from '@/db/media';
+import { MAX_PER_OWNER, addMedia, deleteMedia, listMedia, updateMedia } from '@/db/mediaRecords';
 import type { MediaRecord } from '@/db/schema';
 import { formatBytes } from '@/engine/offline';
 import { ACCEPTED, ImageError, prepareImage } from '@/lib/image';

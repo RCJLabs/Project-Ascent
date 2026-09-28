@@ -68,10 +68,10 @@ describe('readOr', () => {
 const READS: [string, () => Promise<unknown>, unknown][] = [
   ['hasDemo', async () => (await import('./demoFlag')).hasDemo(), false],
   ['canLoadDemo', async () => (await import('./demo')).canLoadDemo(), false],
-  ['mediaBytes', async () => (await import('./media')).mediaBytes(), 0],
-  ['mediaByIds', async () => (await import('./media')).mediaByIds(['a']), []],
-  ['mediaOwners', async () => (await import('./media')).mediaOwners(), new Map()],
-  ['listMedia', async () => (await import('./media')).listMedia('session:1'), []],
+  ['mediaBytes', async () => (await import('./mediaRecords')).mediaBytes(), 0],
+  ['mediaByIds', async () => (await import('./mediaRecords')).mediaByIds(['a']), []],
+  ['mediaOwners', async () => (await import('./mediaRecords')).mediaOwners(), new Map()],
+  ['listMedia', async () => (await import('./mediaRecords')).listMedia('session:1'), []],
   ['readSnapshot', async () => (await import('./snapshot')).readSnapshot(), null],
 ];
 

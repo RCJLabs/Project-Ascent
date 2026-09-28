@@ -1,17 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newSession, type LoggedExercise, type Session } from '@/db/sessions';
-import {
-  againstPrescription,
-  describeChange,
-  describeEntry,
-  describeLoad,
-  exerciseKey,
-  exerciseMovement,
-  doseRange,
-  exerciseSeries,
-  hasNumbers,
-  lastLogged,
-} from './exerciseLog';
+import { exerciseKey, hasNumbers } from './exerciseLog';
+import { againstPrescription, describeChange, describeEntry, describeLoad, exerciseMovement, doseRange, exerciseSeries, lastLogged } from './exerciseReadings';
 
 /**
  * What you actually lifted (PLAN.md M98).

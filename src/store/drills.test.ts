@@ -6,7 +6,7 @@ import { loadDrills, drillsByCategory, filterDrills, getDrill } from '@/content/
 import { drillText } from '@/content/drillText';
 import { exportAll, importAll } from '@/db/exportImport';
 import type { Drill, DrillId } from '@/content/types';
-import { blankDrill } from '@/engine/customDrill';
+import { blankDrill } from '@/engine/drillWriting';
 import { useCustomDrills } from './drills';
 
 /**

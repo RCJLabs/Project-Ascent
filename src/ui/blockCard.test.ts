@@ -65,10 +65,11 @@ describe('what the card says about the block', () => {
   /**
    * The page's own words. Two copies would drift the moment one was reworded,
    * and a card saying "abandoned" beside a screen saying "left early" is the
-   * shape M169 named — which is why `BLOCK_OUTCOME_WORD` moved to `blocks.ts`.
+   * shape M169 named — which is why `BLOCK_OUTCOME_WORD` moved to `blocks.ts`,
+   * and on to `blockOutcome.ts` with the rest of how a block ended (M344).
    */
   it('uses the same words the block list does', async () => {
-    const { BLOCK_OUTCOME_WORD } = await import('@/engine/blocks');
+    const { BLOCK_OUTCOME_WORD } = await import('@/engine/blockOutcome');
     for (const [outcome, word] of Object.entries(BLOCK_OUTCOME_WORD)) {
       expect(card({ outcome: outcome as never, weeksRun: 12 }).eyebrow).toContain(word);
     }

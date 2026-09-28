@@ -20,7 +20,7 @@ import { describeTrend, loadTrend } from './loadTrend';
 import { diagnose } from './plateau';
 import { projectGrade, pyramid, weeklyProgression } from './progress';
 import { describePyramid, readPyramid } from './pyramidShape';
-import { describeRestHabits, restHabits } from './restHabits';
+import { describeRestHabits, restHabits } from './restReading';
 import { describeRopeSplit, ropeSplit } from './ropeStyle';
 import { describeTissue, tissueLoad } from './tissueLoad';
 import { describeYear, reviewYear } from './yearReview';

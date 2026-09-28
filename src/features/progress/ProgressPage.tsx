@@ -27,7 +27,7 @@ import { describeTrend, loadTrend } from '@/engine/loadTrend';
 import { describeTissue, tissueLoad } from '@/engine/tissueLoad';
 import { compareBlocks, describeBlocks } from '@/engine/blockCompare';
 import { checkInHistory, describeCheckIns, type CheckInHistory } from '@/engine/checkIns';
-import { describeRestHabits, restHabits } from '@/engine/restHabits';
+import { describeRestHabits, restHabits } from '@/engine/restReading';
 import { conversionTrend, describeConversion, drawable } from '@/engine/conversion';
 import { FIELD_DAYS, fieldSeries } from '@/engine/sessionFields';
 import { addDays, fromKey, today } from '@/engine/dates';

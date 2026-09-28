@@ -7,7 +7,7 @@ import { loadPrograms, getProgram } from '@/content/programs';
 import { IRON_GRIP } from '@/content/programs/catalogue';
 import { newSession, putSession } from '@/db/sessions';
 import { addDays, dayOfWeek, startOfWeek, today } from '@/engine/dates';
-import { planFromLayout } from '@/engine/scheduler';
+import { planFromLayout } from '@/engine/weekLayouts';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { DayBody } from '@/features/log/LogPage';

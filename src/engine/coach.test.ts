@@ -6,7 +6,7 @@ import { deriveClimberState } from './derive';
 import type { BlockAdherence, TypeAdherence } from './adherence';
 import type { Objective } from './objectives';
 import { diagnose, type Diagnosis } from './plateau';
-import { summariseProject } from './projects';
+import { summariseProject } from './projectSummary';
 import {
   BACKUP_INTERVAL_DAYS,
   BURN_RUNGS,

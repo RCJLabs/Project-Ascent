@@ -3,7 +3,8 @@ import { PROGRAMS } from '@/content/programs';
 import { PEAK_PERFORMANCE, THE_CRUISER } from '@/content/programs/catalogue';
 import { validateProgram } from '@/content/validate';
 import { atLeastAsHard, INTENSITY_ORDER, type Program } from '@/content/types';
-import { intensityOf, sessionPriority, sessionsForDays, validateWeek, type WeekPlan } from './scheduler';
+import { intensityOf, validateWeek, type WeekPlan } from './scheduler';
+import { sessionPriority, sessionsForDays } from './weekLayouts';
 
 /**
  * Hardness in the model (PLAN.md M131).

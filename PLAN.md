@@ -15165,6 +15165,11 @@ its label is missing. None of these wants touching.
   and dates the rest from today, and the two cards point one way. A coaching judgement, marked as
   one.
 
+- **M344 — lazy-only code out of the first load, and a rule that keeps it out.** M343a's first
+  recommendation. Ten entry modules were each split into the part the first load uses and the part
+  only lazy pages use. The first load went from **128.49KB to 123.02KB**, and a cold Home load from
+  229.4KB to 225.0KB. A new test fails on any export that arrives in the first load for lazy pages
+  alone. The 82 left are listed there and can only shrink. The budget is now 124.1.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -24995,3 +25000,110 @@ creep will be spent the same way.
 - **Minimum chunk size:** experimental, and it merges lazy code into the entry by rules that shift
   from build to build.
 - **Raising the budget:** nothing needs it. There is 0.6KB of headroom.
+
+## M344 — lazy-only code out of the first load, and a rule that keeps it out
+
+M343a found the first load carrying code that nothing in it uses. A module is placed whole, so an
+entry module that Home needs for one small export brings the rest of its file with it, whatever
+imports that. The recommendation had three parts: move the code out, largest modules first; turn
+the analysis into a guard; set the budget to the new size. This milestone does all three for the
+ten largest modules.
+
+### The ten splits
+
+Each module kept what the first load uses. The rest went to a new module beside it, which only lazy
+pages import:
+
+| Kept in the first load | New, lazy | What moved |
+|---|---|---|
+| `engine/exerciseLog` | `exerciseReadings` | series, dose verdicts, change and movement readings |
+| `engine/restHabits` | `restReading` | the habit reading and its description |
+| `engine/projects` | `projectSummary` | summaries, burns, high points, suggestions |
+| `engine/onboarding` | `baselineBattery` | benchmark prompts, baseline entries, the finder's input |
+| `lib/cues` | `cueSounds` | the audio context and all eleven cues |
+| `engine/scheduler` | `weekLayouts` | the layout search and its costs |
+| `db/media` | `mediaRecords` | listing, adding, updating and sizing photos |
+| `content/programs/index` | `shelves` | planned ids and the stage shelves |
+| `engine/customDrill` | `drillWriting` | the drill editor's rules |
+| `engine/blocks` | `blockOutcome` | sorting, outcomes, weeks run |
+
+What stayed is the part something in the first load calls: the logger's keys, the rest item list,
+the project reconciler, the baseline reader, the cue switch, week validation, the owner-key
+namespace and the orphan sweep, the registry, the custom-drill prefix, and the block rows and writes.
+None of the new modules is in the first load, so none of the originals can reach its new half, and
+no import cycle was introduced. That was checked, not assumed.
+
+```
+first load (gzip)    128.49 → 123.02KB   −5.47
+cold Home load       229.4  → 225.0KB    −4.4   (34 → 35 files)
+```
+
+The two numbers differ because part of `projectSummary` is used by Home's own lazy cards. That part
+moved from the entry into a 1.03KB chunk Home still fetches at boot: off the first load, but not
+off Home's download. M343a named this case (19 of its 126); the rule below does not tell it apart
+from the rest.
+
+### The rule
+
+`src/test/lazyOnly.ts` finds the first load from the source rather than from a build. With one
+entry and no manual chunks, a module is in the entry chunk exactly when `src/main.tsx` reaches it
+through static imports. On this tree the result matched the modules in the built entry chunk
+exactly: 94 each way.
+
+An export is **lazy-only** when a module outside the first load imports it and nothing in the first
+load needs it. *Needs* is followed through the module, using:
+
+- the exports first-load files import;
+- top-level statements that run;
+- whatever those refer to by name.
+
+It errs toward *needed*: a reference is matched by name, so a shadowing local can hide an export
+from the check. It cannot flag one the entry uses.
+
+`src/test/lazyOnly.test.ts` holds the app to it. Anything new fails with its name and its
+importers. Anything listed that has since moved also fails, so the list only shrinks. `KEPT` names
+five exports that stay on purpose, each with its reason. `npm run bundle` now ends with the same
+list, largest first, each declaration minified on its own.
+
+Measured by the rule, before and after the splits:
+
+```
+before   148 exports in 43 modules   25.1KB minified
+after     87 exports in 37 modules   12.7KB minified   (82 pending, 5 kept)
+```
+
+This does not match M343a's 173, which counted by chunk in a build and included exports their own
+module uses. This rule leaves those out when the use is from something needed. Neither count is the
+gzip saving: that is the build's, above.
+
+### Checked
+
+- **Mutation battery on the analyzer and the guard: 20 mutants, all killed; two sanity mutants
+  survived.** The mutants covered:
+  - treating `import type` as an edge, or `import { type }` as none;
+  - dropping barrel, rename or `export *` following;
+  - dropping namespace imports, propagation, or statements that run;
+  - reporting unimported exports, or taking a key or property read for a reference;
+  - losing the alias or the directory index;
+  - stopping the closure at the entry;
+  - letting tests or `src/test` in as importers;
+  - editing either list.
+
+  The first run left two alive: barrel following and the property read. Both were fixture gaps.
+  In neither fixture did the answer depend on the path the mutant removed. Both fixtures were
+  rewritten, two more mutants were added beside them (the rename, the object key), and all four
+  now die.
+- **The budget, bounded by running it against 123.0137:** 123.0 fails, 124.52 reads 1.51 of slack
+  and fails the guard, 124.51 passes. It is 124.1, which leaves 1.09 of slack. The history is in
+  `perf.test.ts`.
+- **Layout harness:** all routes at four sizes, the empty passes and the file-opened screens, with
+  no thrown errors. The harness renders pages; it does not press buttons. The rest timer's sounds,
+  the drill editor's save and the onboarding battery are covered by their jsdom tests, not by a
+  browser.
+- **Full suite and the date matrix.**
+
+### Next
+
+The 82 in `PENDING`. The largest are `DRILL_CATEGORIES`, `parseMetricInput`, `applyTemplate` and
+`PageSkeleton` (12 importers, so it may belong in its own module). After that comes M343a's fourth
+item: a measure of the cold Home load, which this milestone took by hand.

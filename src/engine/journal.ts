@@ -21,7 +21,7 @@ import type { MetricEntry } from '@/db/metrics';
 import type { Project } from '@/db/projects';
 import type { Session } from '@/db/sessions';
 import { formatEntry } from './assessments';
-import { OUTCOME_LABEL } from './projects';
+import { OUTCOME_LABEL } from './projectSummary';
 
 export type JournalKind = 'session' | 'beta' | 'attempt' | 'assessment';
 

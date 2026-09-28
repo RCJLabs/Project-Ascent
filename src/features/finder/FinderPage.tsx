@@ -7,7 +7,8 @@ import { useGradeOptions } from '@/ui/useGrade';
 import { PageSkeleton } from '@/ui/Skeleton';
 import { findProgram, type Experience, type FinderHistory, type FinderInput, type FinderResult, type Goal, type Recommendation } from '@/engine/finder';
 import { lastBlockFor } from '@/engine/finderHistory';
-import { finderInputFrom, gradesFromLog, type BaselineAnswers } from '@/engine/onboarding';
+import type { BaselineAnswers } from '@/engine/onboarding';
+import { finderInputFrom, gradesFromLog } from '@/engine/baselineBattery';
 import {
   baselineDrift,
   describeDaysDrift,

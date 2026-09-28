@@ -6,7 +6,7 @@ import { formatStopwatch, holdValue, marksBy, type HoldTest } from '@/engine/hol
 import { announce } from '@/ui/Announce';
 import { IconButton } from '@/ui/IconButton';
 import { useDialog } from '@/ui/useDialog';
-import { cueCountdown, cueDone, cueRest, cueWork, unlock } from '@/lib/cues';
+import { cueCountdown, cueDone, cueRest, cueWork, unlock } from '@/lib/cueSounds';
 import { keepAwake, releaseAwake } from '@/lib/wakeLock';
 
 /**

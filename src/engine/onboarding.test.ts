@@ -1,17 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { deriveClimberState } from './derive';
 import { deriveStats } from './stats';
-import {
-  BENCHMARKS,
-  EMPTY_BASELINE,
-  answeredCount,
-  baselineEntries,
-  benchmarksFor,
-  finderInputFrom,
-  gradesFromLog,
-  readBaseline,
-  type BaselineAnswers,
-} from './onboarding';
+import { EMPTY_BASELINE, readBaseline, type BaselineAnswers } from './onboarding';
+import { BENCHMARKS, answeredCount, baselineEntries, benchmarksFor, finderInputFrom, gradesFromLog } from './baselineBattery';
 
 const DATE = '2026-03-01';
 

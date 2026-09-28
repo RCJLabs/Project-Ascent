@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { METRICS } from '@/content/metrics';
 import { CATALOGUE } from '@/content/programs/catalogue';
 import type { Metric } from '@/content/types';
-import { BENCHMARKS } from './onboarding';
+import { BENCHMARKS } from './baselineBattery';
 import { formatStopwatch, holdTest, holdValue, marksBy } from './holdTest';
 
 /**

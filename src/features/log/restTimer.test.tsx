@@ -8,20 +8,20 @@ import { RestTimer } from './RestTimer';
 /**
  * The rest between burns, driven (PLAN.md M266).
  *
- * `engine/gym.ts` proves `restRemaining` and `restLabel`, and `lib/cues.ts`
+ * `engine/gym.ts` proves `restRemaining` and `restLabel`, and `lib/cueSounds.ts`
  * and `lib/timerState.ts` have their own files — but nothing had ever
  * rendered the card that puts them together, which is where the number a
  * climber actually reads is decided.
  */
 
-vi.mock('@/lib/cues', () => ({
+vi.mock('@/lib/cueSounds', () => ({
   cueCountdown: vi.fn(),
   cueDone: vi.fn(),
   unlock: vi.fn(),
 }));
 vi.mock('@/ui/Announce', () => ({ announce: vi.fn() }));
 
-const { cueCountdown, cueDone } = await import('@/lib/cues');
+const { cueCountdown, cueDone } = await import('@/lib/cueSounds');
 const { announce } = await import('@/ui/Announce');
 
 const SESSION = 'session-1';

@@ -5,7 +5,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { resetDbForTests } from '@/db/db';
 import { loadDrills, registerCustomDrills } from '@/content/drills';
 import type { Drill, DrillId } from '@/content/types';
-import { blankDrill } from '@/engine/customDrill';
+import { blankDrill } from '@/engine/drillWriting';
 import { useCustomDrills } from '@/store/drills';
 import { useUndo } from '@/store/undo';
 import { hydrate, renderAt, reset } from '@/test/render';

@@ -14,11 +14,11 @@
 import type { Project } from '@/db/projects';
 import { DEFAULT_DISPLAY, displayGrade, type GradeDisplay } from '@/engine/grades';
 import type { AltimeterState } from '@/engine/altimeter';
-import { BLOCK_OUTCOME_WORD, type BlockOutcome } from '@/engine/blocks';
+import { BLOCK_OUTCOME_WORD, type BlockOutcome } from '@/engine/blockOutcome';
 import type { BlockReport } from '@/engine/blockReport';
 import type { AvatarConfig } from '@/engine/avatar';
 import { fromKey, shortLabel } from '@/engine/dates';
-import type { ProjectSummary } from '@/engine/projects';
+import type { ProjectSummary } from '@/engine/projectSummary';
 import type { WeekReview } from '@/engine/review';
 import type { YearReview } from '@/engine/yearReview';
 import type { XpState } from '@/engine/xp';

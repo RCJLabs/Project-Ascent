@@ -6,7 +6,7 @@ import type { Session } from '@/db/sessions';
 import { V_GRADES, YDS_GRADES, displayGrade, type GradeScale } from '@/engine/grades';
 import { PageGrid } from '@/ui/PageGrid';
 import { useGradeLabel, useGradeOptions } from '@/ui/useGrade';
-import { suggestProjects, summariseProject, type ProjectSuggestion } from '@/engine/projects';
+import { suggestProjects, summariseProject, type ProjectSuggestion } from '@/engine/projectSummary';
 import { ENOUGH_AT_GRADE, projectHistory } from '@/engine/projectHistory';
 import { useSettings } from '@/store/settings';
 import { VENUE_LIST_ID, VenueOptions, useVenues } from '@/features/venues/useVenues';

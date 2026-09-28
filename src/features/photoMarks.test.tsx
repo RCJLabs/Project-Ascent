@@ -2,7 +2,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { getDb } from '@/db/db';
-import { addMedia, listMedia, projectOwner } from '@/db/media';
+import { projectOwner } from '@/db/media';
+import { addMedia, listMedia } from '@/db/mediaRecords';
 import type { MediaRecord } from '@/db/schema';
 import { MARK_HALO, MAX_MARKS, type Mark } from '@/lib/marks';
 import { renderAt, reset } from '@/test/render';

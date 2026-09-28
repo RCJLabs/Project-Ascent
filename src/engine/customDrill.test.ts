@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Drill } from '@/content/types';
-import {
-  blankDrill,
-  CUSTOM_DRILL_PREFIX,
-  drillIssues,
-  isCustomDrill,
-  newDrillId,
-  tidyDrill,
-} from './customDrill';
+import { CUSTOM_DRILL_PREFIX, isCustomDrill } from './customDrill';
+import { blankDrill, drillIssues, newDrillId, tidyDrill } from './drillWriting';
 
 /**
  * Writing your own drill (PLAN.md M286).

@@ -3,14 +3,8 @@ import { useLocation } from 'wouter';
 import { AlertTriangle, Check } from 'lucide-react';
 import { writtenProgram } from '@/content/programs';
 import { adaptProgram, lengthsFor } from '@/engine/adapt';
-import {
-  DAY_NAMES,
-  DAY_SHORT,
-  layoutsFor,
-  planFromLayout,
-  validateWeek,
-  type WeekPlan,
-} from '@/engine/scheduler';
+import { DAY_NAMES, DAY_SHORT, validateWeek, type WeekPlan } from '@/engine/scheduler';
+import { layoutsFor, planFromLayout } from '@/engine/weekLayouts';
 import type { DayOfWeek } from '@/content/types';
 import { useProfile } from '@/store/profile';
 import { useIntent } from '@/store/intent';

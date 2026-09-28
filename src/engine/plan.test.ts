@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BASE_CAMP, IRON_GRIP, PEAK_PERFORMANCE } from '@/content/programs/catalogue';
-import { planFromLayout } from './scheduler';
+import { planFromLayout } from './weekLayouts';
 import { blockStatus, blockWindow, deloadDose, easedDose, easesAnything, plannedDay } from './plan';
 import { addDays } from './dates';
 

@@ -52,7 +52,7 @@ import type { MetricEntry } from '@/db/metrics';
 import type { Equipment, MetricId, Program } from '@/content/types';
 import { getMetric } from '@/content/metrics';
 import { getDrill } from '@/content/drills/index';
-import { BENCHMARKS } from './onboarding';
+import { BENCHMARKS } from './baselineBattery';
 import { shortLabel } from './dates';
 
 /**

@@ -9,7 +9,7 @@ import { loadPrograms } from '@/content/programs';
 import { IRON_GRIP } from '@/content/programs/catalogue';
 import { addDays, daysBetween, fromKey, startOfWeek, today } from '@/engine/dates';
 import { blockWindow } from '@/engine/plan';
-import { planFromLayout } from '@/engine/scheduler';
+import { planFromLayout } from '@/engine/weekLayouts';
 import { useProfile } from '@/store/profile';
 import type { BlockRecord } from '@/engine/blocks';
 import { hydrate, renderAt, reset } from '@/test/render';

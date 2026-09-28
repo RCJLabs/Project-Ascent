@@ -11,7 +11,8 @@ import {
   type SegmentKind,
   type TimerSubject,
 } from '@/engine/timer';
-import { cueCountdown, cueDone, cueRest, cueSetRest, cueWork, cuesEnabled, setCuesEnabled, unlock } from '@/lib/cues';
+import { cuesEnabled, setCuesEnabled } from '@/lib/cues';
+import { cueCountdown, cueDone, cueRest, cueSetRest, cueWork, unlock } from '@/lib/cueSounds';
 import { keepAwake, releaseAwake } from '@/lib/wakeLock';
 
 const TONE: Record<SegmentKind, string> = {

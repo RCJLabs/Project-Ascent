@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import { Link } from 'wouter';
 import { Activity, ChevronRight, Dumbbell, Flag, History, PenLine, Sparkles, Target, TriangleAlert } from 'lucide-react';
-import { PROGRAMS, STAGE_META, STAGE_ORDER } from '@/content/programs';
+import { PROGRAMS } from '@/content/programs';
+import { STAGE_META, STAGE_ORDER } from '@/content/programs/shelves';
 import { canRun } from '@/engine/customProgram';
-import { sortBlocks } from '@/engine/blocks';
+import { sortBlocks } from '@/engine/blockOutcome';
 import { today } from '@/engine/dates';
 import { activeObjectives } from '@/engine/objectives';
-import { activeProjects } from '@/engine/projects';
+import { activeProjects } from '@/engine/projectSummary';
 import { usePlannedDay } from '@/features/log/usePlannedDay';
 import { useObjectives } from '@/store/objectives';
 import { useProfile } from '@/store/profile';

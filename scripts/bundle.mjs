@@ -321,7 +321,49 @@ export function changes(before, after) {
     .sort((x, y) => Math.abs(y.gzip) - Math.abs(x.gzip) || Math.abs(y.bytes) - Math.abs(x.bytes));
 }
 
-function main(argv) {
+/**
+ * What the entry carries that only lazy pages use (PLAN.md M344).
+ *
+ * The rule is `src/test/lazyOnly.ts`, which the suite holds the app to; this
+ * lists what it finds, largest first, so the next cut starts from the
+ * biggest. Sizes are each declaration minified on its own — near what it
+ * costs the entry chunk, not exact, since gzip does not add up by piece.
+ * Loaded here rather than at the top: the rule parses with TypeScript, and
+ * the other two modes do not need it.
+ */
+async function lazyOnlyReport(top) {
+  const { KEPT, lazyOnly, readSources } = await import('../src/test/lazyOnly.ts');
+  const { transformWithEsbuild } = await import('vite');
+  const sources = readSources(ROOT);
+  const text = new Map(sources.map((s) => [s.path, s.source]));
+  const found = lazyOnly(sources).filter((f) => !(`${f.module}#${f.name}` in KEPT));
+  const sized = await Promise.all(
+    found.map(async (f) => {
+      const snippet = text.get(f.module).slice(f.start, f.end);
+      const { code } = await transformWithEsbuild(snippet, f.module, { minify: true });
+      return { ...f, bytes: Buffer.byteLength(code) };
+    }),
+  );
+  if (sized.length === 0) {
+    console.log('\nNothing in the entry is used only by lazy pages.');
+    return;
+  }
+  // One declaration can hold two exports; count its bytes once.
+  const spans = new Map(sized.map((f) => [`${f.module}@${f.start}`, f.bytes]));
+  const total = [...spans.values()].reduce((a, b) => a + b, 0);
+  const modules = new Set(sized.map((f) => f.module)).size;
+  console.log(
+    `\nUsed only by lazy pages — ${sized.length} exports in ${modules} modules, about ${total}B minified. ` +
+      'Each can move to a module those pages import:',
+  );
+  sized.sort((a, b) => b.bytes - a.bytes || (a.module < b.module ? -1 : 1));
+  for (const f of sized.slice(0, top)) {
+    console.log(`  ${String(f.bytes).padStart(7)}B  ${f.module}#${f.name}  ← ${f.importers.length} lazy`);
+  }
+  if (sized.length > top) console.log(`  … and ${sized.length - top} more`);
+}
+
+async function main(argv) {
   const at = (flag) => {
     const i = argv.indexOf(flag);
     return i === -1 ? undefined : argv[i + 1];
@@ -345,6 +387,7 @@ function main(argv) {
       `\nThe entry names ${here.named.length} other files it may load, and their names cost ` +
         `${kb(here.namesCost)}KB of it gzipped.`,
     );
+    await lazyOnlyReport(top);
     return;
   }
 
@@ -390,5 +433,5 @@ function main(argv) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main(process.argv.slice(2));
+  await main(process.argv.slice(2));
 }

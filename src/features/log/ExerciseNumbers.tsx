@@ -3,14 +3,8 @@ import { RotateCcw } from 'lucide-react';
 
 import type { Exercise } from '@/content/types';
 import type { LoggedExercise } from '@/db/sessions';
-import {
-  OUTCOME_MEANING,
-  OUTCOME_WORD,
-  SET_OUTCOMES,
-  describeEntry,
-  hasNumbers,
-  type Dimension,
-} from '@/engine/exerciseLog';
+import { hasNumbers, type Dimension } from '@/engine/exerciseLog';
+import { OUTCOME_MEANING, OUTCOME_WORD, SET_OUTCOMES, describeEntry } from '@/engine/exerciseReadings';
 import { fromInput, toDisplay, unitLabel, type UnitSystem } from '@/engine/units';
 import { shortLabel } from '@/engine/dates';
 import { Chip } from '@/ui/Chip';

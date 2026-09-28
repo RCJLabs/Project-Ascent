@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_PER_OWNER } from '@/db/media';
+import { MAX_PER_OWNER } from '@/db/mediaRecords';
 import { newSession, type Session } from '@/db/sessions';
 import { newProject, type Project } from '@/db/projects';
 import { RECENT_DAYS, attachTargets, describeEmpty } from './attach';

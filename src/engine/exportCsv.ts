@@ -41,7 +41,7 @@ import { getField } from '@/content/fields';
 import type { FieldId } from '@/content/types';
 import { METRICS } from '@/content/metrics';
 import { toCsv } from './csv';
-import { OUTCOME_WORD } from './exerciseLog';
+import { OUTCOME_WORD } from './exerciseReadings';
 import { isRestSession } from './rest';
 
 /** What `importCsv` reads, in the order its header guesser expects. */

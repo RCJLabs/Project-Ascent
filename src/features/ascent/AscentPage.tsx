@@ -36,15 +36,7 @@ import { addDays, daysBetween, today as todayKey } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { deriveStats } from '@/engine/stats';
 import { deriveVitality } from '@/engine/vitality';
-import {
-  cueCoin,
-  cueGameOver,
-  cueHit,
-  cueNewBest,
-  cuePowerup,
-  cueSave,
-  unlock,
-} from '@/lib/cues';
+import { cueCoin, cueGameOver, cueHit, cueNewBest, cuePowerup, cueSave, unlock } from '@/lib/cueSounds';
 import { useChosenWall, useCurrency, useGame, useOwned, useOwnedWalls, useXp } from '@/store/game';
 import { coinLine, unbought } from '@/engine/shop';
 import { useMetrics } from '@/store/metrics';

@@ -17,7 +17,8 @@
 import type { Project } from '@/db/projects';
 import type { Session } from '@/db/sessions';
 import { daysBetween } from './dates';
-import { attemptsFor, burnsIn } from './projects';
+import { attemptsFor } from './projects';
+import { burnsIn } from './projectSummary';
 import type { GradeScale } from './grades';
 
 /** Below this many sends at a grade, a number is an anecdote. */

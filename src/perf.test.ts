@@ -601,6 +601,24 @@ describe('the bundle stays small', () => {
    * And the floor drops with it: at 129.1 a rebuild measuring under 127.6
    * now fails for being too small, so the next cut of more than half a
    * kilobyte moves this line in its own commit.
+   *
+   * ## 129.1 → 124.1 at M344, measured 128.49 → 123.01
+   *
+   * The second move down, and not from one edge this time: ten modules each
+   * split in two, the half the entry uses and the half only lazy pages do.
+   * `exerciseLog`, `restHabits`, `projects`, `onboarding`, `cues`,
+   * `scheduler`, `media`, the program registry, `customDrill` and `blocks`
+   * — each was in the entry for one or two small exports, and carried the
+   * rest of its file with it, because Rollup places a module whole.
+   *
+   * What stops it coming back is `src/test/lazyOnly.test.ts`, which fails
+   * on any new export in the first load that only lazy pages import. What
+   * is left — 82 exports, about 12KB minified — is listed there and shrinks.
+   *
+   * 1.09KB of slack, the same 1.00 target, bounded both ways by running it
+   * against 123.0137: **123.0 fails the budget and the guard's lower bound
+   * together, 124.52 reads 1.51 of slack and fails the guard, 124.51
+   * passes.** The floor drops again: at 124.1 a rebuild under 122.6 fails.
    */
   //
   // **The number itself is in `scripts/firstLoad.mjs` since M328**, with the

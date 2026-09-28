@@ -5,7 +5,7 @@ import { CLIMBS_TO_EVEREST } from './altimeter';
 import { feetFromMetres } from './units';
 import { addDays, daysBetween, startOfWeek } from './dates';
 import { gradeOrdinal, type GradeScale } from './grades';
-import { burnsOf } from './projects';
+import { burnsOf } from './projectSummary';
 import { isRestSession } from './rest';
 
 /**

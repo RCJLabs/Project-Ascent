@@ -1,7 +1,8 @@
 import { APP_VERSION } from '@/version';
 import { getDb, readOr } from './db';
 import { readingProblems } from './sound';
-import { findOrphanMedia, mediaBytes } from './media';
+import { findOrphanMedia } from './media';
+import { mediaBytes } from './mediaRecords';
 import { SNAPSHOT_KEY } from './schema';
 import { HEALTH_STORES, type DataHealthInput, type HealthStore } from '@/engine/dataHealth';
 

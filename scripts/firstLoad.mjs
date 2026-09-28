@@ -12,7 +12,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 
 /** Kilobytes, gzipped. See `perf.test.ts` for why it is where it is. */
-export const BUDGET = 129.1;
+export const BUDGET = 124.1;
 
 /**
  * A sourcemap build appends this, and the shipped build does not. Only the

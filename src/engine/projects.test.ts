@@ -3,18 +3,8 @@ import { newProject, type Project } from '@/db/projects';
 import { newSession, type ProjectAttempt, type Session } from '@/db/sessions';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import {
-  applyPatch,
-  attemptsFor,
-  burnsIn,
-  burnsOf,
-  highPointOf,
-  linkOf,
-  reconcileProjects,
-  startOf,
-  suggestProjects,
-  summariseProject,
-} from './projects';
+import { applyPatch, attemptsFor, reconcileProjects } from './projects';
+import { burnsIn, burnsOf, highPointOf, linkOf, startOf, suggestProjects, summariseProject } from './projectSummary';
 import { FLAT_SESSIONS, highPointTrend } from './projectTrend';
 
 const TODAY = '2026-09-09';
@@ -402,8 +392,9 @@ describe('how many burns a row is', () => {
    *
    * A property over the source rather than a fourth fixture, because both
    * faults were a module reaching for `.count` or `.length` on its own
-   * instead of asking. `projects.ts` is where the question is answered, so it
-   * is the one file allowed to mention a burn beside either.
+   * instead of asking. `projectSummary.ts` is where the question is answered
+   * — `projects.ts` until M344 moved the derived half out of the first load —
+   * so it is the one file allowed to mention a burn beside either.
    */
   it('is the only place a burn is counted', () => {
     const files = (dir: string): string[] =>
@@ -415,7 +406,7 @@ describe('how many burns a row is', () => {
     const offenders: string[] = [];
     let examined = 0;
     for (const path of files('src')) {
-      if (path === 'src/engine/projects.ts') continue;
+      if (path === 'src/engine/projectSummary.ts') continue;
       const source = readFileSync(path, 'utf8');
       source.split('\n').forEach((line, i) => {
         // Comments out, and string literals with them: `planVsLog.ts` has

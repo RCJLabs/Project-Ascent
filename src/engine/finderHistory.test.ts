@@ -11,7 +11,7 @@ import {
   type FinderInput,
 } from './finder';
 import { lastBlockFor } from './finderHistory';
-import { planFromLayout } from './scheduler';
+import { planFromLayout } from './weekLayouts';
 
 /**
  * The finder reads the block just run (PLAN.md M101).

@@ -2,20 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Program } from '@/content/types';
 import { blockWindow } from './plan';
 import { addDays, blockStart, programWeek } from './dates';
-import {
-  activeBlock,
-  blockId,
-  closeBlock,
-  findBlock,
-  openBlock,
-  outcomeOf,
-  reconstructBlocks,
-  rowWindow,
-  sortBlocks,
-  weeksRun,
-  moveBlockStart,
-  type BlockRecord,
-} from './blocks';
+import { activeBlock, blockId, closeBlock, openBlock, reconstructBlocks, rowWindow, moveBlockStart, type BlockRecord } from './blocks';
+import { findBlock, outcomeOf, sortBlocks, weeksRun } from './blockOutcome';
 
 /**
  * The history the app did not keep (PLAN.md M87).

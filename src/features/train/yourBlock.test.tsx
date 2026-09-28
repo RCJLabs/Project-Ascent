@@ -7,7 +7,7 @@ import { loadPrograms } from '@/content/programs';
 import { IRON_GRIP } from '@/content/programs/catalogue';
 import { addDays, startOfWeek, today } from '@/engine/dates';
 import type { BlockRecord } from '@/engine/blocks';
-import { planFromLayout } from '@/engine/scheduler';
+import { planFromLayout } from '@/engine/weekLayouts';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { FinishPage } from '@/features/finish/FinishPage';

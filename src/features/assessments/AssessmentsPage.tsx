@@ -13,7 +13,7 @@ import { testWeek } from '@/engine/testDays';
 import { dayOfWeek, shortLabel, today } from '@/engine/dates';
 import { DAY_NAMES } from '@/engine/scheduler';
 import { holdTest } from '@/engine/holdTest';
-import { entryNote } from '@/engine/onboarding';
+import { entryNote } from '@/engine/baselineBattery';
 import { HoldTimer } from './HoldTimer';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
 import { PageGrid } from '@/ui/PageGrid';

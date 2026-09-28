@@ -107,7 +107,7 @@ describe('photos', () => {
   it('finds photos by owner and not by anyone else', async () => {
     await seedPhoto('project:p1', 'crux');
     await seedPhoto('project:p2', 'line');
-    const { listMedia } = await import('./media');
+    const { listMedia } = await import('./mediaRecords');
     expect(await listMedia('project:p1')).toHaveLength(1);
     expect((await listMedia('project:p1'))[0]!.caption).toBe('crux');
     expect(await listMedia('project:nope')).toEqual([]);
@@ -117,7 +117,8 @@ describe('photos', () => {
     await seedPhoto('project:p1', 'a');
     await seedPhoto('project:p1', 'b');
     await seedPhoto('project:p2', 'c');
-    const { deleteMediaFor, listMedia } = await import('./media');
+    const { listMedia } = await import('./mediaRecords');
+    const { deleteMediaFor } = await import('./media');
     expect(await deleteMediaFor('project:p1')).toBe(2);
     expect(await listMedia('project:p1')).toEqual([]);
     expect(await listMedia('project:p2')).toHaveLength(1);
@@ -144,7 +145,7 @@ describe('photos', () => {
     resetDbForTests();
     await importAll(backup.file, 'replace', { blobs: backup.blobs });
 
-    const { listMedia } = await import('./media');
+    const { listMedia } = await import('./mediaRecords');
     expect((await listMedia('project:p1'))[0]!.marks).toEqual(marks);
   });
 
@@ -170,7 +171,7 @@ describe('photos', () => {
     resetDbForTests();
     await importAll(backup.file, 'replace', { blobs: backup.blobs });
 
-    const { listMedia } = await import('./media');
+    const { listMedia } = await import('./mediaRecords');
     const restored = await listMedia('project:p1');
     expect(restored).toHaveLength(1);
     expect(restored[0]!.caption).toBe('the crux');
@@ -237,7 +238,7 @@ describe('photos', () => {
     globalThis.indexedDB = new IDBFactory();
     resetDbForTests();
     await importAll(backup.file, 'replace', { blobs: backup.blobs });
-    const { listMedia } = await import('./media');
+    const { listMedia } = await import('./mediaRecords');
     expect((await listMedia('project:p1')).map((m) => m.id).sort()).toEqual(['a b', 'a/b', 'a?b']);
   });
 
@@ -264,7 +265,7 @@ describe('photos', () => {
     globalThis.indexedDB = new IDBFactory();
     resetDbForTests();
     await importAll(backup.file, 'replace', { blobs: backup.blobs });
-    const { listMedia } = await import('./media');
+    const { listMedia } = await import('./mediaRecords');
     expect((await listMedia('project:p1'))[0]!.id).toBe('../../backup.json');
   });
 
@@ -281,7 +282,8 @@ describe('photos', () => {
     resetDbForTests();
     await importAll(backup.file, 'replace', { blobs: backup.blobs });
 
-    const { listMedia, sweepOrphanMedia } = await import('./media');
+    const { listMedia } = await import('./mediaRecords');
+    const { sweepOrphanMedia } = await import('./media');
     const restored = await listMedia('session:2026-03-01#0');
     expect(restored).toHaveLength(1);
     expect(restored[0]!.caption).toBe('the board I set');
@@ -413,7 +415,7 @@ describe('photos', () => {
     await seedPhoto('project:p1', 'old');
     const empty = await exportAll();
     await importAll(empty, 'replace');
-    const { listMedia } = await import('./media');
+    const { listMedia } = await import('./mediaRecords');
     expect(await listMedia('project:p1')).toEqual([]);
   });
 
@@ -421,7 +423,7 @@ describe('photos', () => {
     await seedPhoto('project:p1', 'kept');
     const empty = await exportAll();
     await importAll(empty, 'merge');
-    const { listMedia } = await import('./media');
+    const { listMedia } = await import('./mediaRecords');
     expect(await listMedia('project:p1')).toHaveLength(1);
   });
 });
@@ -467,7 +469,7 @@ describe('a backup from before the archive', () => {
   it('restores its photos, base64 and all', async () => {
     const backup = readBackupFile(legacy([inline]));
     await importAll(backup.file, 'replace', { blobs: backup.blobs });
-    const { listMedia } = await import('./media');
+    const { listMedia } = await import('./mediaRecords');
     const restored = await listMedia('project:p1');
     expect(restored).toHaveLength(1);
     expect(restored[0]!.caption).toBe('from the old format');
@@ -523,7 +525,7 @@ describe('an archive that is not right', () => {
     expect(backup.file.media).toHaveLength(1);
 
     await importAll(backup.file, 'replace', { blobs: backup.blobs });
-    const { listMedia } = await import('./media');
+    const { listMedia } = await import('./mediaRecords');
     expect(await listMedia('project:p1')).toHaveLength(1);
   });
 

@@ -1,18 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { getDb, resetDbForTests } from './db';
-import {
-  addMedia,
-  deleteMediaFor,
-  listMedia,
-  moveMediaOwner,
-  projectOwner,
-  sessionOwner,
-  findOrphanMedia,
-  mediaByIds,
-  mediaOwners,
-  sweepOrphanMedia,
-} from './media';
+import { deleteMediaFor, moveMediaOwner, projectOwner, sessionOwner, findOrphanMedia, sweepOrphanMedia } from './media';
+import { addMedia, listMedia, mediaByIds, mediaOwners } from './mediaRecords';
 
 /**
  * Photos have to survive the things that happen to their owner (PLAN.md M30).

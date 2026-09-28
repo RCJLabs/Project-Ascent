@@ -3,19 +3,13 @@ import { Link } from 'wouter';
 import { ChevronRight, CircleStop, FileText, Ruler, Search } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { blockEnd, describeBlockEnd, programForRecord } from '@/engine/blockEnd';
-import {
-  BLOCK_OUTCOME_WORD,
-  findBlock,
-  outcomeOf,
-  rowWindow,
-  sortBlocks,
-  weeksRun,
-  type BlockRecord,
-} from '@/engine/blocks';
+import { rowWindow, type BlockRecord } from '@/engine/blocks';
+import { BLOCK_OUTCOME_WORD, findBlock, outcomeOf, sortBlocks, weeksRun } from '@/engine/blockOutcome';
 import { blockFileName, buildBlockFile } from '@/engine/blockFile';
 import { downloadJson } from '@/lib/download';
 import { describeBlock } from '@/engine/blockReport';
-import { describeChange, describeLoad, exerciseMovement, exerciseSeries, type LoggedPoint } from '@/engine/exerciseLog';
+import type { LoggedPoint } from '@/engine/exerciseLog';
+import { describeChange, describeLoad, exerciseMovement, exerciseSeries } from '@/engine/exerciseReadings';
 import { formatEntry } from '@/engine/assessments';
 import { fromKey, today } from '@/engine/dates';
 import { ProgressionLine } from '@/ui/charts/Charts';

@@ -70,7 +70,7 @@ import { mergeInto, replaceRow } from '@/engine/climbRows';
 import { V_GRADES, YDS_GRADES, displayGrade, type GradeScale } from '@/engine/grades';
 import type { Climb, LoggedExercise, ProjectAttempt, RopeStyle, Session, WallAngle } from '@/db/sessions';
 import type { AttemptOutcome } from '@/db/projects';
-import { OUTCOME_HIGH_POINT, OUTCOME_LABEL } from '@/engine/projects';
+import { OUTCOME_HIGH_POINT, OUTCOME_LABEL } from '@/engine/projectSummary';
 import { useGame, useXp } from '@/store/game';
 import { useProjects } from '@/store/projects';
 import { useSkillEffects } from '@/store/skills';
@@ -84,7 +84,7 @@ import {
   withPartner,
   withoutPartner,
 } from '@/engine/partners';
-import { againstPrescription, lastLogged } from '@/engine/exerciseLog';
+import { againstPrescription, lastLogged } from '@/engine/exerciseReadings';
 import { circuitPlan } from '@/engine/circuit';
 import { circuitSubject, protocolSubject, type TimerSubject } from '@/engine/timer';
 import { protocolsIn, SafetyNote } from './SafetyNote';

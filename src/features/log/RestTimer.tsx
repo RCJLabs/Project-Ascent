@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { REST_PRESETS, restLabel, restRemaining } from '@/engine/gym';
 import { formatCountdown } from '@/engine/live';
-import { cueCountdown, cueDone, unlock } from '@/lib/cues';
+import { cueCountdown, cueDone, unlock } from '@/lib/cueSounds';
 import { clearRest, loadRest, saveRest } from '@/lib/timerState';
 import { announce } from '@/ui/Announce';
 import { Button } from '@/ui/Button';

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { addMedia, mediaOwners } from '@/db/media';
+import { addMedia, mediaOwners } from '@/db/mediaRecords';
 import { ACCEPTED, ImageError, prepareImage, type PreparedImage } from '@/lib/image';
 import { attachTargets, describeEmpty, type Target } from '@/engine/attach';
 import { takeSharedPhoto } from '@/lib/sharedPhoto';

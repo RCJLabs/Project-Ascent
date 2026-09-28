@@ -3,7 +3,7 @@ import { newProject } from '@/db/projects';
 import { newSession, type Session } from '@/db/sessions';
 import { deriveAltimeter } from '@/engine/altimeter';
 import { deriveAvatar } from '@/engine/avatar';
-import { summariseProject } from '@/engine/projects';
+import { summariseProject } from '@/engine/projectSummary';
 import { buildReview } from '@/engine/review';
 import { deriveXp } from '@/engine/xp';
 import { STANDING } from './climberShapes';

@@ -2,7 +2,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { getDb } from '@/db/db';
-import { addMedia, listMedia, projectOwner } from '@/db/media';
+import { projectOwner } from '@/db/media';
+import { addMedia, listMedia } from '@/db/mediaRecords';
 import { newProject, putProject } from '@/db/projects';
 import { getSession, newSession, putSession } from '@/db/sessions';
 import { today } from '@/engine/dates';

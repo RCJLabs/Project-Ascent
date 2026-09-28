@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Check, Plus, Trash2 } from 'lucide-react';
 import type { Project } from '@/db/projects';
-import { OUTCOME_LABEL, highPointOf, summariseProject } from '@/engine/projects';
+import { OUTCOME_LABEL, highPointOf, summariseProject } from '@/engine/projectSummary';
 import { fromKey, today } from '@/engine/dates';
 import { useProjects } from '@/store/projects';
 import { offerUndo } from '@/store/undo';

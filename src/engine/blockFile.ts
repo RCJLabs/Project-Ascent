@@ -46,7 +46,7 @@ import { APP_VERSION } from '@/version';
 import { getMetric } from '@/content/metrics';
 import type { MetricId } from '@/content/types';
 import { SCHEMA_VERSION } from '@/db/schema';
-import { BLOCK_OUTCOME_WORD, type BlockOutcome } from './blocks';
+import { BLOCK_OUTCOME_WORD, type BlockOutcome } from './blockOutcome';
 import type { BlockReport, Gap, Movement } from './blockReport';
 
 /** Caps, so a hand-edited file is a sentence rather than a frozen tab. */

@@ -4,7 +4,8 @@ import { IDBFactory } from 'fake-indexeddb';
 import { writesSettled } from './writes';
 import { getDb, resetDbForTests } from '@/db/db';
 import { loadPrograms } from '@/content/programs';
-import { activeBlock, outcomeOf, sortBlocks } from '@/engine/blocks';
+import { activeBlock } from '@/engine/blocks';
+import { outcomeOf, sortBlocks } from '@/engine/blockOutcome';
 import { today } from '@/engine/dates';
 import { hydrateProfile, useProfile } from './profile';
 

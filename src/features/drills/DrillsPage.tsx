@@ -4,7 +4,7 @@ import { ChevronRight, Plus, Search } from 'lucide-react';
 import { DRILL_CATEGORIES, DRILLS, filterDrills } from '@/content/drills';
 import { DRILL_TEXT } from '@/content/drillText';
 import type { DrillCategory } from '@/content/types';
-import { blankDrill } from '@/engine/customDrill';
+import { blankDrill } from '@/engine/drillWriting';
 import { drillHistory } from '@/engine/drillHistory';
 import { today } from '@/engine/dates';
 import { useSessions, allSessions } from '@/store/sessions';
