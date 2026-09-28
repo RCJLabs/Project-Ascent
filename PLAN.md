@@ -24861,3 +24861,137 @@ There were no console errors. The layout harness passed. The first load did not 
 
 **M337a is closed.** Its seven findings shipped as M338 (1 and 2), M339 (4), M340 (5), M341 (6 and
 7) and M342 (3).
+
+## What the budget measures, and what would move it (M343a)
+
+The first-load budget has been the tightest constraint on the last dozen milestones. M334 went
+over by a chunk name, M339 by 0.09KB, and M340 left 0.01KB. The standing question was whether to
+raise it or to merge the icon chunks (*"~0.4KB, speculative"*). This entry measures before
+choosing. Every number below comes from a trial build, unless it is marked as an estimate.
+
+### The method
+
+Trial builds inherit `vite.config.ts` and change one thing each. They write outside `dist`, and
+each is read by the same `firstLoad()` the budget test uses. Each trial also records whether
+`index.html` starts loading anything besides the entry: a change that moves bytes into a chunk
+loaded at startup would pass the budget while loading the same bytes. That guard caught one
+variant below. The baseline trial reproduces the real number, **128.49KB** (entry 119.4 + CSS
+9.1).
+
+### What the number does not count
+
+A cold load of Home (service worker blocked, both a fresh profile and the sample climber)
+fetches **34 files, 229.4KB gzipped**. The budget counts about 128KB of that: the entry and the
+stylesheet. The rest arrives within about 100ms of the entry, from Home's own lazy cards and the
+boot-time loads:
+- `catalogue`: 41.8KB, every program's body, all thirteen of them, for a climber running one or
+  none;
+- `useTips`: 10.1KB;
+- `library`: 5.3KB;
+- `game`: 5.3KB;
+- `planVsLog`, `plateau`, `skills`, `derive`, `challenges`, `BoardPage` and others.
+
+**So a change can pass the entry budget by moving code into one of those chunks, and Home
+downloads exactly as much as before.** Loading programs one at a time would be the largest
+first-screen saving available, roughly 38KB. That is an estimate: `getProgram` is synchronous
+everywhere, so it is a design change, not a budget fix.
+
+### The options, measured
+
+```
+variant                              first load   Δ        what it costs
+baseline                             128.49KB
+lazy-only exports out of the entry   121.18KB   −7.31    36 modules split (below)
+preload map off (modulePreload)      124.75KB   −3.74    waterfalls; see the timing below
+file names without the chunk name    127.40KB   −1.09    M336's name reporting; opaque network logs
+experimentalMinChunkSize 1000        128.18KB   −0.31    pulled Disclosure and useGrade into the entry
+experimentalMinChunkSize 2000/4000   +0.14 / +2.78       merges lazy code into the entry
+icons via manualChunks               122.18KB   invalid  moved React and lucide's base into a chunk
+                                                         index.html loads at startup
+```
+
+**The icon merge, as tried, is not a saving.** Rollup puts a manual chunk's dependencies into it.
+That took React and lucide's base out of the entry and into an *icons* chunk that `index.html`
+preloads, so the metric fell 6.3KB while the startup load did not. The startup-load check caught
+it. The ~0.4KB estimate stays unmeasured. It would need a barrel module the lazy pages import
+icons through, and 29 names at about 20B each is the most it could return.
+
+### Lazy-only code in the entry — the M341 finding, measured across the app
+
+M341 found `changeOf`, `assessmentStatus` and `assessmentBattery` in the entry because their
+module was, although only lazy code used them. An import analysis, using the TypeScript AST over
+`src/` together with the build's chunk map, looked for the same thing everywhere:
+
+- **173 exports** of entry modules are used only by lazy chunks.
+- **126 of them** are not referenced inside their own module, so they can move without taking
+  entry code with them.
+- A trial build **deletes those 126** and shims the now-missing exports. The unminified output
+  shows no entry code touching a shim: one declaration and 39 export aliases, nothing else. The
+  entry fell by **8.68KB**, more than the declarations' own size, because private helpers only
+  they used go with them.
+- **19** of the 126 are used by chunks Home loads at boot, so moving them only shifts bytes from
+  the entry into Home's other files. The other **107, across 36 modules, are used only by pages
+  Home never loads. Deleting just those measured −7.31KB.**
+- **What a real move gives back (estimate):**
+  - 13 of the 36 lazy halves have one importer and merge into its page for nothing.
+  - 23 are shared, so each could become a chunk with a name in the preload map, at about 20B
+    each, 0.5KB at most.
+  - Net about **−6.8KB**, and every byte of it is also off Home's download.
+- **The largest (minified bytes of the moved declarations):**
+  - `exerciseLog` 1,934;
+  - `restHabits` 1,358;
+  - `projects` 1,045;
+  - `cues` 1,020;
+  - `scheduler` 1,006, which freed 5.7KB unminified with its helpers in the trial;
+  - `media` 908;
+  - `programs/index` 865;
+  - `customDrill` 842;
+  - `onboarding` 821;
+  - `blocks` 739.
+
+### The preload map, timed
+
+Vite's preload map lets the browser fetch a lazy chunk's dependencies alongside it. Without it,
+they wait for the chunk: a waterfall, on exactly the 30 chunks Home loads at boot. A cold Home
+load, three runs each, through the preview server (HTTP/1.1) with Chromium's network emulation:
+
+```
+                     shell    heading    last asset
+Slow 4G   baseline   1.03s    1.90s      2.40s
+          no map     0.99s    1.84s      2.44s   (+0.04s)
+Fast 3G   baseline   1.90s    3.27s      5.75s
+          no map     1.88s    3.24s      5.83s   (+0.08s)
+```
+
+The heading appears slightly sooner, and the last asset arrives up to 80ms later: near neutral.
+**Untested:** GitHub Pages serves HTTP/2, which has no six-connection queue to hide a waterfall
+in. There the lost preloading could cost up to a round trip on the deepest chain.
+
+### Why the headroom will always be small
+
+`perf.test.ts` holds the slack under 1.5KB (*"the budget has to sit just above what was actually
+measured, so the next regression hits it"*). Any saving therefore lowers the line with it. At best
+it buys up to 1.5KB of room, and the margin is meant to be fought over. What made that fight
+constant was **creep**: 107 lazy-only exports did not arrive at once. They collected in entry
+modules one feature at a time, each too small to notice. A saving without something to stop the
+creep will be spent the same way.
+
+### Recommendation (pending the decision)
+
+1. **Move the lazy-only code out, largest modules first, in two or three milestones.** It is the
+   only option that is real bytes off both the entry and Home, with no latency trade and nothing
+   hidden from the metric. About −6.8KB net.
+2. **Turn the analysis into a guard.** An `npm run bundle` section and a test fail when an entry
+   module carries an export only lazy chunks use, with an allowlist for deliberate cases. That
+   stops the creep, which is the actual cause.
+3. **Set the budget to the new size plus the slack the rule allows,** so the saving is kept.
+4. **Add a second measure: what a cold Home load fetches in total** (229KB today), so a change
+   that moves code into Home's boot chunks, or grows the catalogue, is seen.
+
+**Not recommended:**
+- **Preload off:** −3.7KB, a waterfall cost that is untested on HTTP/2, and it hides dependency
+  structure.
+- **Hash-only names:** −1.1KB, and it loses M336's name reporting.
+- **Minimum chunk size:** experimental, and it merges lazy code into the entry by rules that shift
+  from build to build.
+- **Raising the budget:** nothing needs it. There is 0.6KB of headroom.
