@@ -44,8 +44,13 @@ export const useProjects = create<ProjectsState>((set, get) => ({
 
   load: async () => {
     try {
-      const [projects, db] = await Promise.all([listProjects(), getDb()]);
-      const record = await db.get('profile', DISMISSED_KEY);
+      // Both reads at once (PLAN.md M349). The second used to wait for the
+      // first, which queued it behind every other store's read at boot and
+      // made this the last store to land — and the coach waits for it.
+      const [projects, record] = await Promise.all([
+        listProjects(),
+        getDb().then((db) => db.get('profile', DISMISSED_KEY)),
+      ]);
       set({ projects, dismissed: (record?.value as string[] | undefined) ?? [], hydrated: true });
       await get().reconcile();
     } catch (error) {

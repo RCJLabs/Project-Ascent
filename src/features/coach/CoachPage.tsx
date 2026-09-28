@@ -9,6 +9,7 @@ import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { IconButton } from '@/ui/IconButton';
 import { PageHeader } from '@/ui/PageHeader';
+import { PageSkeleton } from '@/ui/PageSkeleton';
 
 const TONE: Record<TipTone, { icon: typeof Info; className: string }> = {
   good: { icon: CircleCheck, className: 'text-positive' },
@@ -17,9 +18,13 @@ const TONE: Record<TipTone, { icon: typeof Info; className: string }> = {
 };
 
 export function CoachPage() {
-  const { visible, hidden } = useTips();
+  const { visible, hidden, ready } = useTips();
   const dismissTip = useProfile((s) => s.dismissTip);
   const restoreTips = useProfile((s) => s.restoreTips);
+
+  // Not "nothing to flag" before the rules have seen the log (PLAN.md M349):
+  // opened cold, that sentence was the page's first claim, and a false one.
+  if (!ready) return <PageSkeleton title="Coach's Corner" />;
 
   return (
     <>

@@ -27,9 +27,52 @@ import { useAway } from '@/store/away';
 import { useSessions, allSessions } from '@/store/sessions';
 import { useDeloadDates } from '@/store/deload';
 import { useSettings } from '@/store/settings';
+import { useCustomPrograms } from '@/store/programs';
+
+export interface Tips {
+  all: Tip[];
+  visible: Tip[];
+  hidden: number;
+  /** False until every store the rules read has loaded. Nothing is computed before. */
+  ready: boolean;
+}
+
+const NOT_READY: Tips = { all: [], visible: [], hidden: 0, ready: false };
+
+/**
+ * Whether every store the coach reads has loaded (PLAN.md M349).
+ *
+ * The stores hydrate one by one at launch — thirteen reads in parallel, each
+ * landing in its own task — and this hook recomputed the whole coach as
+ * each one did: six to eleven times on a warm launch of the sample climber,
+ * measured, the heaviest engine in the app every time. And the first of
+ * those ran on an empty log. In two warm launches of eight, the card on
+ * Home told a climber with a year of sessions *"Nothing logged yet"*, and
+ * changed its mind half a second later; the Coach page, opened cold, said
+ * every rule had looked at the log and found nothing. A tip is a claim
+ * about the log, so it waits for the log.
+ *
+ * Custom programs are here because `getProgram` finds a climber's own
+ * program only once they are registered: before that, a block run from one
+ * reads as no block at all.
+ */
+function useCoachInputsLoaded(): boolean {
+  const loaded = [
+    useSessions((s) => s.hydrated),
+    useProjects((s) => s.hydrated),
+    useMetrics((s) => s.hydrated),
+    useProfile((s) => s.hydrated),
+    useObjectives((s) => s.hydrated),
+    useAway((s) => s.hydrated),
+    useSettings((s) => s.hydrated),
+    useCustomPrograms((s) => s.hydrated),
+  ];
+  return loaded.every(Boolean);
+}
 
 /** Everything the board needs, derived in one place. */
-export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
+export function useTips(): Tips {
+  const ready = useCoachInputsLoaded();
   const byDate = useSessions((s) => s.byDate);
   const projects = useProjects((s) => s.projects);
   const metrics = useMetrics((s) => s.entries);
@@ -49,6 +92,7 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
 
   const deloadDates = useDeloadDates();
   return useMemo(() => {
+    if (!ready) return NOT_READY;
     const sessions = allSessions(byDate);
     const state = deriveClimberState(sessions, { deloadDates });
     const program = activeProgramId ? getProgram(activeProgramId) : undefined;
@@ -160,8 +204,8 @@ export function useTips(): { all: Tip[]; visible: Tip[]; hidden: number } {
       }),
     });
     const visible = visibleTips(all, dismissed);
-    return { all, visible, hidden: all.length - visible.length };
-  }, [byDate, projects, metrics, injuries, equipment, activeProgramId, startDates, plans, weekOverrides, tracks, lastExportAt, dismissed, display, units, objectives, away, deloadDates]);
+    return { all, visible, hidden: all.length - visible.length, ready: true };
+  }, [ready, byDate, projects, metrics, injuries, equipment, activeProgramId, startDates, plans, weekOverrides, tracks, lastExportAt, dismissed, display, units, objectives, away, deloadDates]);
 }
 
 /**

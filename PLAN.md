@@ -15194,6 +15194,13 @@ its label is missing. None of these wants touching.
   at a time would cost 32% more bytes whenever all of them are needed, and a refactor across 66
   synchronous call sites. Fetching it at startup makes it arrive ~120ms sooner, but Home's heading and
   coach card moved within the noise, cold and warm. Neither change was made.
+- **M349 — the coach waits for the log.** M348a found the coach card bimodal on a warm launch, at about
+  1.3s or 2.2s. It was the app. `useTips` ran on whatever stores had hydrated so far: 6–11 full
+  computations per launch. In 2 of 8 launches the first one, on an empty log, put *"Nothing logged
+  yet"* on Home in front of a year of sessions; the fast mode was the wrong advice, shown sooner. The
+  rules now wait for all eight stores they read, and the Coach page shows a skeleton until then. The
+  projects store's two reads now go together, so it no longer lands last. The right tip arrives about
+  as soon as before (median 1.64s against 1.68s), never after a wrong one, from 3 computations.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -25537,3 +25544,94 @@ between. Nothing in the card or its hook defers itself. One guess, not tested, i
 writes its compiled-code cache for worker-served scripts asynchronously, and some rounds may launch
 before it exists. If it's the app, it's worth more than anything the catalogue could buy, because
 it's on every launch of the installed app. It's the next thing to measure.
+
+## M349 — the coach waits for the log
+
+M348a ended on an unexplained finding. On a warm launch of the installed app the coach card showed at
+about 1.3s or about 2.2s, in two builds, with little in between. The guess on record was the
+harness. It was not the harness.
+
+### Measured first
+
+The same warm launch as M348a (the worker installed, every file from its cache, CPU at a quarter
+speed, the sample climber), probed from inside the page. A `MutationObserver` noted when the card
+appeared and every headline it showed, and every long task was recorded:
+
+```
+                     card appears    long tasks before it     its chunks arrive
+fast rounds          1.19–1.39s      4–6, 566–782ms           0.80–0.97s
+slow rounds          1.66–1.78s      8–10, 944–1062ms         0.82–0.92s
+```
+
+The chunks arrived at the same time either way; the slow rounds did about 300ms more work. A copy
+of the app with marks around `useTips` and around each store's hydration said where:
+
+- **The coach was computed 6–11 times per launch,** once for each store that landed while the card
+  was mounted. `hydrateAll` reads thirteen stores in parallel, each landing in its own task, from
+  about 1.1s to 2.7s.
+- **The first computation ran on an empty log.** In 2 warm launches of 8 its answer was the
+  cold-start tip, *"Nothing logged yet"*, shown to a climber with a year of sessions. Half a second
+  later the log landed and the card changed to *"Recovery is the blocker"*. Those were the fast
+  rounds. The bimodality was whether the first tip computed was a wrong one.
+- **The Coach page had the same fault.** Opened cold, before the log landed, it said *"Nothing to
+  flag. Every rule here has looked at your log and found nothing"*.
+
+### The change
+
+- **`useTips` waits for every store its rules read:** sessions, projects, metrics, profile,
+  objectives, away, settings and custom programs. It reads each one's `hydrated` flag, which the
+  error paths set too, so a failed read cannot hold it forever. It computes nothing until all eight
+  are in, and says so with a new `ready` field.
+  - Custom programs are on the list because `getProgram` finds a climber's own program only once
+    it's registered. Before that, a block run from one reads as no block at all.
+- **The Coach page shows its skeleton until `ready`,** not its all-clear.
+- **The projects store's two reads go out together.** It read its list, then the suggestions set
+  aside, one after the other. The second read queued behind every other store's, so projects landed
+  last, about 500ms after sessions. With the gate the card waits for the last store, and gating
+  alone moved the right tip *later*, to 1.82–2.22s. With both reads together, projects lands just
+  after metrics.
+
+### Afterwards
+
+Ten warm launches of the final build, and six of an instrumented copy:
+
+```
+                            before                          after
+first headline shown        "Nothing logged yet" in 2 of 8  the right tip, 10 of 10
+right tip on screen         ~1.55–1.98s, median ~1.68       1.53–1.85s, median ~1.64
+coach computed per launch   6–11                            3
+```
+
+**Why 3 and not 1.** After the coach is ready, the sessions log is replaced twice more, and the marks
+name `byDate` both times. Three things load the log at launch: `hydrateAll`, an effect in
+`HomePage` and another in `useWeekOutline`. The load shares no read that is already in flight. So
+the whole log is read three times, and everything on Home derived from it runs twice more — not
+only the coach.
+
+That's the next finding, and it wasn't fixed here on purpose. The obvious fix, sharing the read in
+flight, is exactly what M220 warns against: a read that began before a write must not answer for a
+load asked for after it. Loading the sample climber and importing a backup are both that sequence.
+It needs its own milestone.
+
+### Checked
+
+- **Tests,** in `tipsWaitForTheLog.test.tsx`:
+  - Home's card draws nothing, rather than *"Nothing logged yet"*, while the log is loading, then
+    the right tip once it lands.
+  - The Coach page shows its skeleton, not its all-clear.
+  - For each of the eight stores, nothing is computed until that store is in.
+  - A launch-shaped sequence computes the coach exactly once.
+
+  The Home test renders the card directly, not Home's lazy wrapper around it. A first version waited
+  50ms for the chunk, and M304's sweep refused it: a sleep is a guess about the machine.
+- **`projectsLoad.test.ts` holds what the projects store reads back,** including the suggestions
+  set aside. Nothing held that line before, and it's the line this changed.
+- **Mutation battery:**
+  - on the gate, 12 mutants, all killed, sanity survived: the gate removed (the bug as it was),
+    the gate always open, `ready` dropped from the memo's dependencies, the Coach page not waiting,
+    and each of the eight stores dropped from the list in turn;
+  - on the projects load, 3 mutants, all killed;
+  - the rewritten Home test, rerun against the two gate mutants: both killed.
+- **Full suite, layout harness, and the date matrix.**
+- **`npm run homeload`:** 212.59KB, 0.13KB more for the gate's code, inside the line. The first load
+  is 114.05KB.
