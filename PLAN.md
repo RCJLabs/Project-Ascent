@@ -15178,6 +15178,11 @@ its label is missing. None of these wants touching.
   more files: most of that code is still fetched right after the first paint, by Home's own lazy cards.
   First paint and heading medians moved about 60ms sooner under throttling. The coach card didn't
   move.
+- **M346 — what a cold Home load fetches, held under its own line.** M345 cut the first load by 9KB and
+  Home's download by 0.6, and nothing could have said so. `npm run homeload` records a cold Home load
+  in Chromium, empty and with the sample climber, and totals what it fetched: 45 files, 224.4KB
+  gzipped. CI runs it beside the layout harness, before the upload. It is held under 225.4KB with the
+  first load's ratchet: over the line fails, and so does more than 1.5KB under it.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -25282,3 +25287,106 @@ requests          37                  47–54
 - **Full suite, and the date matrix.**
 - **Found, not fixed:** `compareGrades` has no importers at all, and `metricLoads` only a test. Both
   moved with the code they sit beside. Deleting dead code is its own change.
+
+## M346 — what a cold Home load fetches, held under its own line
+
+M343a's fourth recommendation, and M345 is why it matters. The first-load budget measures the entry
+chunk and the stylesheet: what is parsed before the first paint. M345 took 9KB out of it. A cold
+Home load fell by 0.6KB, into ten more files, because Home's own cards fetch most of that code a
+moment after the paint. That was measured by hand, twice, and nothing would have noticed a third
+time.
+
+### The measure
+
+`scripts/homeLoad.mjs` opens `#/` in Chromium with a fresh profile, the service worker blocked and
+the cache off, and leaves it until the network is idle. Everything it asked for under `assets/` is
+then sized from `dist/`, gzipped the way `firstLoad.mjs` gzips. It does this twice, empty and with
+the sample climber, and holds the line against the larger.
+
+Before it was trusted, it was checked for determinism:
+
+- **Five runs of each profile fetched the same 45 files every time.**
+- **Nothing more was requested in the three seconds after the network went idle.**
+- **The two profiles fetch identical sets today.** A card that draws only with data would show up
+  as a difference, and the script prints one if it appears.
+
+```
+a cold Home load     45 files   224.40KB gzipped   (line 225.4, 1.00 under)
+```
+
+### The line
+
+`HOME_BUDGET` is 225.4, with the same ratchet as the first load: at or over it fails, and so does
+1.5KB or more under it, so a saving lowers the line in the commit that makes it. Both failures were
+run end to end against the preview: at 224.0 the script exits 1 as over the line, at 226.0 as too
+far under it, and at 225.4 it exits 0.
+
+### Where it runs, and where it does not
+
+It needs a browser, so it isn't part of `npm test`. CI runs it in the layout step, on the preview
+server that step already has up, after the build and before the upload. A check in `privacy.test.ts`
+fails if it's dropped from the workflow or moved after the upload, as the layout harness's check
+does. Locally it is `npm run homeload` with the preview running. `src/homeLoadTool.test.ts` tests
+everything after the browser:
+
+- the sizing;
+- a file fetched twice counting once;
+- a file the build doesn't have being refused, since it means the server is serving some other
+  build;
+- both edges of the line;
+- the line sitting above the first load's;
+- Playwright being loaded only when the script runs. CI runs the suite before it installs
+  Playwright, so a require at the top would fail there and pass on any machine that has it.
+
+### What it cannot see
+
+- **Only two states of Home.** An empty install and the sample climber fetch the same 45 files, but
+  a climber in some other state — injured, away, between blocks — could draw a card that fetches a
+  chunk neither of these does.
+- **Bytes, not time.** Whether ten more files cost anything was M345's timing question, and it stays
+  one.
+
+### What it shows about Home
+
+Largest first, gzipped, these are the findings. None of them is fixed here.
+
+```
+104.96KB  the entry chunk
+ 41.68KB  catalogue — all thirteen programs, for a Home that shows one
+ 10.14KB  useTips — the coach's rules
+  9.09KB  the stylesheet
+  5.33KB  library
+  5.29KB  game — the game store, hydrated after the first paint since M320
+  4.55KB  planVsLog
+  4.28KB  plateau
+  3.80KB  skills
+  2.87KB  derive
+  2.70KB  challenges
+  2.42KB  BoardPage — the whole board page
+```
+
+Two are the shape M344 fixed in the entry, one level down:
+
+- **`BoardPage`:** the daily task card imports `useBoard` from `BoardPage.tsx`, so the page comes
+  with the hook.
+- **The catalogue:** 41.7KB is every program's content, for a Home that draws one. Loading programs
+  one at a time is the open design question M343a raised, and it is the largest thing left to decide.
+
+### Checked
+
+- **Mutation battery: 14 mutants, all killed; the sanity mutant survived.** The mutants covered:
+  - the line off by its inclusive edge, or gone;
+  - the slack edge moved, widened, or gone;
+  - a missing file not refused;
+  - a repeat counted twice;
+  - the list unsorted;
+  - sizes not gzipped;
+  - the comparison ignoring one side;
+  - the line set under the first load;
+  - Playwright required at the top;
+  - CI not running it, or running it only after the upload.
+
+  The first try at the last one survived: it added a second run after the upload and left the first
+  in place, which is not a move. Built as a move, it dies.
+- **The script against the preview, both failures and the pass, as above.**
+- **Full suite.**

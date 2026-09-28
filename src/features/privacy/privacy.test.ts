@@ -294,6 +294,28 @@ describe('the workflow that ships it', () => {
   });
 
   /**
+   * And holds what a cold Home load fetches, in the same browser (PLAN.md
+   * M346).
+   *
+   * The first-load budget above cannot see it: M345 took 9KB out of the
+   * entry chunk and 0.6KB out of Home's download, because Home's own cards
+   * fetch the rest a moment later. `scripts/homeLoad.mjs` is the only check
+   * on that number, and a check that runs after the upload stops nothing.
+   */
+  it('measures what Home fetches before it ships the app', () => {
+    const lines = configOf(WORKFLOW).split('\n').map((l) => l.trim());
+    const at = (needle: string) => lines.findIndex((l) => l.includes(needle));
+    const build = at('npm run build');
+    const preview = at('npm run preview');
+    const home = at('npm run homeload');
+    const upload = at('upload-pages-artifact');
+    expect(home, 'no step measures what Home fetches').toBeGreaterThanOrEqual(0);
+    expect(build, 'it sizes the files in dist/, so they have to exist').toBeLessThan(home);
+    expect(preview, 'it records what a served app fetches').toBeLessThan(home);
+    expect(home, 'a failure after the upload stops nothing').toBeLessThan(upload);
+  });
+
+  /**
    * And ships the one file whose name starts with a dot (PLAN.md M329).
    *
    * `upload-pages-artifact` has left out every dot-named path since v4 —

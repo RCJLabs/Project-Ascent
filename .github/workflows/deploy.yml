@@ -61,7 +61,12 @@ jobs:
       # for the person publishing."* CI is the person publishing.
       - run: npm i --no-save playwright-core
       - run: npx playwright-core install --with-deps chromium
-      - name: Layout
+      # And what a cold Home load fetches, held under its own line (PLAN.md
+      # M346). The first-load budget in `perf.test.ts` sees the entry chunk
+      # and nothing Home asks for a moment later, which is where M345's
+      # saving went; this needs a browser, so it runs here, on the server
+      # the layout harness already has up.
+      - name: Layout, and what Home fetches
         run: |
           npm run preview -- --port 4173 &
           for i in $(seq 1 60); do
@@ -70,6 +75,7 @@ jobs:
             sleep 1
           done
           npm run layout
+          npm run homeload
       - id: entry
         run: |
           name=$(grep -oP 'assets/\Kindex-[A-Za-z0-9_-]+\.js' dist/index.html | head -1)
