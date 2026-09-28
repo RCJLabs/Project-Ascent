@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PALETTE, GEAR_STAGE_LEVELS, SKIN_TONES } from './avatar';
+import { GEAR_STAGE_LEVELS, SKIN_TONES } from './avatar';
+import { DEFAULT_PALETTE } from './avatarPalette';
 import {
   FIGURES,
   HAIR_TONES,

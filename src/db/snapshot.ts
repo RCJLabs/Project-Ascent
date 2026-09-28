@@ -1,6 +1,6 @@
 import { getDb, readOr } from './db';
 import { exportAll, importAll, type ExportFile } from './exportImport';
-import { SNAPSHOT_KEY } from './schema';
+import { SNAPSHOT_KEY } from './exportStores';
 
 /**
  * A restore point, taken automatically before an import (PLAN.md M20).

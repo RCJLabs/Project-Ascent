@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { act, cleanup, render, fireEvent, type RenderResult } from '@testing-library/react';
-import { REST_PRESETS, restLabel } from '@/engine/gym';
+import { REST_PRESETS, restLabel } from '@/engine/gymWords';
 import { loadRest, saveRest } from '@/lib/timerState';
 import { RestTimer } from './RestTimer';
 

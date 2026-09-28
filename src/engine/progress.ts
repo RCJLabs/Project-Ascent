@@ -7,15 +7,8 @@
  */
 
 import type { Session } from '@/db/sessions';
-import {
-  DEFAULT_DISPLAY,
-  V_GRADES,
-  YDS_GRADES,
-  displayGrade,
-  gradeOrdinal,
-  type GradeDisplay,
-  type GradeScale,
-} from './grades';
+import { DEFAULT_DISPLAY, V_GRADES, YDS_GRADES, type GradeDisplay, type GradeScale } from './grades';
+import { displayGrade, gradeOrdinal } from './gradeReading';
 import { addDays, startOfWeek, today as todayKey } from './dates';
 import type { GradeTally } from './derive';
 

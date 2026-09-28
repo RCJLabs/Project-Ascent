@@ -2,7 +2,6 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ROUTES, browsable, matchRoute, parentOf } from './routes';
-
 /**
  * The route table is only worth having if it cannot drift from the router.
  *

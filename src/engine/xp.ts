@@ -36,7 +36,8 @@ import {
   type SessionReward,
 } from './economy';
 import { buildLoadIndex, zonesFor, type AcwrZone } from './derive';
-import { gradeOrdinal, type GradeDisplay, type GradeScale } from './grades';
+import type { GradeDisplay, GradeScale } from './grades';
+import { gradeOrdinal } from './gradeReading';
 import { isRestSession } from './rest';
 
 export interface XpLine {

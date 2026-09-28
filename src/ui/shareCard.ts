@@ -12,7 +12,8 @@
  */
 
 import type { Project } from '@/db/projects';
-import { DEFAULT_DISPLAY, displayGrade, type GradeDisplay } from '@/engine/grades';
+import { DEFAULT_DISPLAY, type GradeDisplay } from '@/engine/grades';
+import { displayGrade } from '@/engine/gradeReading';
 import type { AltimeterState } from '@/engine/altimeter';
 import { BLOCK_OUTCOME_WORD, type BlockOutcome } from '@/engine/blockOutcome';
 import type { BlockReport } from '@/engine/blockReport';

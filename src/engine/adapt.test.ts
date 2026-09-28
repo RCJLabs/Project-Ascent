@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { PROGRAMS } from '@/content/programs';
 import { GRAVITY_DEFIED, THE_LONG_GAME } from '@/content/programs/catalogue';
-import { adaptProgram, apportion, lengthsFor, MIN_ADAPTED_WEEKS, MIN_DELOAD_GAP } from './adapt';
+import { adaptProgram, apportion, MIN_DELOAD_GAP } from './adapt';
+import { lengthsFor, MIN_ADAPTED_WEEKS } from './adaptLengths';
 
 /**
  * A program over fewer weeks (PLAN.md M56).

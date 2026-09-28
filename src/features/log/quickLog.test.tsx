@@ -4,7 +4,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { Session } from '@/db/sessions';
 import { getSession, newSession, putSession } from '@/db/sessions';
 import { startOfWeek, today } from '@/engine/dates';
-import { REST_PRESETS, restLabel } from '@/engine/gym';
+import { REST_PRESETS, restLabel } from '@/engine/gymWords';
 import { loadRest } from '@/lib/timerState';
 import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';

@@ -50,7 +50,7 @@
  * and never enough to take the tip away.
  */
 
-import { daysBetween, isDateKey } from './dates';
+import { daysBetween } from './dates';
 
 /**
  * Why the log is quiet.
@@ -61,8 +61,6 @@ import { daysBetween, isDateKey } from './dates';
  * a climber filing a work trip under `rest` and telling the app they recovered.
  */
 export type AwayKind = 'trip' | 'rest' | 'injured' | 'life';
-
-export const AWAY_KINDS: readonly AwayKind[] = ['trip', 'rest', 'injured', 'life'];
 
 /** How each kind reads on a screen. */
 export const AWAY_LABELS: Record<AwayKind, string> = {
@@ -101,27 +99,6 @@ export interface AwayPeriod {
  */
 export function wasClimbing(kind: AwayKind): boolean {
   return kind === 'trip';
-}
-
-/**
- * Whether a stored value is a usable period.
- *
- * Guarded rather than trusted because this comes back out of IndexedDB, where
- * an older schema or a hand-edited backup can put anything. `isDateKey` before
- * the comparison for the reason `trip.ts` gives: a half-typed date reaches the
- * store from a text field, and its arithmetic is NaN — so a malformed range
- * would silently read as covering nothing, or everything.
- */
-export function isAwayPeriod(value: unknown): value is AwayPeriod {
-  if (typeof value !== 'object' || value === null) return false;
-  const period = value as Partial<AwayPeriod>;
-  if (typeof period.id !== 'string' || period.id === '') return false;
-  if (typeof period.from !== 'string' || !isDateKey(period.from)) return false;
-  if (typeof period.to !== 'string' || !isDateKey(period.to)) return false;
-  if (period.to < period.from) return false;
-  if (!AWAY_KINDS.includes(period.kind as AwayKind)) return false;
-  if (period.note !== undefined && typeof period.note !== 'string') return false;
-  return true;
 }
 
 /** A typed note, cleaned, or undefined when there is nothing in it. */

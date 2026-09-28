@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { firstLoadModules, KEPT, lazyOnly, readSources, type Source } from './lazyOnly';
 
 /**
- * Code in the first load that only lazy pages use (PLAN.md M344).
+ * Code in the first load that only lazy pages use (PLAN.md M344, M345).
  *
  * The rule and its reasons are in `lazyOnly.ts`. This is the rule held both
- * ways over small fixtures, and then the sweep over the app, which fails on
- * anything new — and on anything listed that has since been fixed, so the
- * lists below only shrink.
+ * ways over small fixtures, and then the sweep over the app. Since M345 the
+ * app has nothing lazy-only in its first load except what `KEPT` names with
+ * a reason, so the sweep fails on anything new, and on anything kept that
+ * has since moved.
  */
 
 const files = (spec: Record<string, string>): Source[] =>
@@ -64,6 +65,15 @@ describe('what counts as lazy-only', () => {
     expect(app('export const used = 1;\nexport const unused = 2;', 'export const p = 1;')).toEqual([]);
   });
 
+  it('does not count an importer the app never loads, such as a script or a test helper', () => {
+    // `tool.ts` is reached by nothing, not even `import()`, so no chunk
+    // holds what it uses and Rollup drops `forTools` either way.
+    const found = app('export const used = 1;\nexport const forTools = 2;', 'export const p = 1;', {
+      'src/tool.ts': "import { forTools } from './a';\nexport const t = forTools;",
+    });
+    expect(found).toEqual([]);
+  });
+
   it('follows what the first load needs through the module', () => {
     // `used` calls `helper`, so `helper` is in the first load for a reason
     // even though the only file that imports it is lazy.
@@ -117,6 +127,48 @@ describe('what counts as lazy-only', () => {
     expect(keys(found)).toEqual(['src/a.ts#lazy', 'src/b.ts#viaStar']);
   });
 
+  it('follows what is needed into the modules it imports, and no further than is used', () => {
+    // `t.ts` is in the first load because `a.ts` imports it, and only for
+    // `lazy`, which nothing the entry runs calls. So `TABLE` is lazy-only
+    // too, though every file that imports it is in the first load.
+    const found = lazyOnly(
+      files({
+        'src/main.tsx': "import { used } from './a';\nvoid import('./page');\nexport const x = used;",
+        'src/a.ts': "import { TABLE, other } from './t';\nexport const used = other;\nexport function lazy() { return TABLE; }",
+        'src/t.ts': 'export const TABLE = [1, 2];\nexport const other = 3;',
+        'src/page.tsx': "import { lazy } from './a';\nexport const p = lazy();",
+      }),
+    );
+    expect(keys(found)).toEqual(['src/a.ts#lazy', 'src/t.ts#TABLE']);
+    expect(found[1]!.importers).toEqual(['src/a.ts']);
+  });
+
+  it('runs what a module does on load when any loaded module imports it', () => {
+    // Nothing needed names `TABLE`, but `t.ts` hands it to `register` when
+    // it loads, and it loads because `a.ts` imports it.
+    const found = lazyOnly(
+      files({
+        'src/main.tsx': "import { used } from './a';\nvoid import('./page');\nexport const x = used;",
+        'src/a.ts': "import { TABLE } from './t';\nexport const used = 1;\nexport function lazy() { return TABLE; }",
+        'src/t.ts': 'export const TABLE = [1, 2];\nregister(TABLE);\ndeclare function register(t: number[]): void;',
+        'src/page.tsx': "import { lazy } from './a';\nexport const p = lazy();",
+      }),
+    );
+    expect(keys(found)).toEqual(['src/a.ts#lazy']);
+  });
+
+  it('reads `export * as` through a barrel as all of the module', () => {
+    const found = lazyOnly(
+      files({
+        'src/main.tsx': "import { A } from './barrel';\nvoid import('./page');\nexport const x = A;",
+        'src/barrel.ts': "export * as A from './a';",
+        'src/a.ts': 'export function lazy() { return 1; }',
+        'src/page.tsx': "import { lazy } from './a';\nexport const p = lazy();",
+      }),
+    );
+    expect(found).toEqual([]);
+  });
+
   it('reads `import * as` in the first load as using all of it', () => {
     const found = lazyOnly(
       files({
@@ -140,97 +192,6 @@ describe('what counts as lazy-only', () => {
   });
 });
 
-/**
- * Still to move (PLAN.md M343a): what was left after M344 took the ten
- * largest modules' lazy code out, and what taking it out uncovered.
- * **This list only shrinks.** Something new arriving in the first load for
- * lazy pages alone fails below, with its name.
- */
-const PENDING: readonly string[] = [
-  'src/content/drills/index.ts#DRILL_CATEGORIES',
-  'src/content/drills/index.ts#drillsByCategory',
-  'src/content/metrics.ts#getMetric',
-  'src/content/types.ts#parseCount',
-  'src/db/projects.ts#ACTIVE_CAP',
-  'src/db/schema.ts#EXPORTABLE_STORES',
-  'src/db/schema.ts#SNAPSHOT_KEY',
-  'src/db/sound.ts#readingProblems',
-  'src/engine/adapt.ts#MIN_ADAPTED_WEEKS',
-  'src/engine/adapt.ts#lengthsFor',
-  'src/engine/assessments.ts#STALE_DAYS',
-  'src/engine/assessments.ts#allMetrics',
-  'src/engine/assessments.ts#formatEntry',
-  'src/engine/assessments.ts#isChartable',
-  'src/engine/assessments.ts#parseMetricInput',
-  'src/engine/assessments.ts#seriesFor',
-  'src/engine/avatar.ts#SKIN_TONES',
-  'src/engine/avatar.ts#deriveAvatar',
-  'src/engine/away.ts#AWAY_LABELS',
-  'src/engine/away.ts#NOTE_LIMIT',
-  'src/engine/away.ts#awayLength',
-  'src/engine/away.ts#awayName',
-  'src/engine/away.ts#awayOn',
-  'src/engine/away.ts#awayOverlapping',
-  'src/engine/away.ts#cleanNote',
-  'src/engine/away.ts#explainsGap',
-  'src/engine/away.ts#newAwayId',
-  'src/engine/away.ts#wasClimbing',
-  'src/engine/bodyLoad.ts#drillLoads',
-  'src/engine/bodyLoad.ts#exerciseLoads',
-  'src/engine/bodyLoad.ts#metricConflict',
-  'src/engine/bodyLoad.ts#partsInText',
-  'src/engine/bodyLoad.ts#protocolSafety',
-  'src/engine/bodyLoad.ts#unspokenFor',
-  'src/engine/dates.ts#isThisMonth',
-  'src/engine/dates.ts#isThisWeek',
-  'src/engine/dates.ts#isYearKey',
-  'src/engine/dates.ts#monthGrid',
-  'src/engine/dates.ts#monthLabel',
-  'src/engine/fingerGap.ts#FINGER_GAP_HOURS',
-  'src/engine/fingerGap.ts#fingerGaps',
-  'src/engine/grades.ts#displayRange',
-  'src/engine/grades.ts#maxGrade',
-  'src/engine/grades.ts#parseGrade',
-  'src/engine/gym.ts#REST_PRESETS',
-  'src/engine/gym.ts#climbOutcome',
-  'src/engine/gym.ts#restLabel',
-  'src/engine/gym.ts#restRemaining',
-  'src/engine/injury.ts#describeInjury',
-  'src/engine/injury.ts#summarise',
-  'src/engine/injury.ts#vitalityCost',
-  'src/engine/live.ts#durationFromSpan',
-  'src/engine/live.ts#formatCountdown',
-  'src/engine/offline.ts#formatBytes',
-  'src/engine/plan.ts#blockStatus',
-  'src/engine/plan.ts#deloadLightens',
-  'src/engine/plan.ts#easesAnything',
-  'src/engine/reschedule.ts#previewMove',
-  'src/engine/rest.ts#startedAsRest',
-  'src/engine/sessionEdit.ts#canMerge',
-  'src/engine/sessionEdit.ts#describeSession',
-  'src/engine/sessionLength.ts#programSessionLengths',
-  'src/engine/templates.ts#alreadySaved',
-  'src/engine/templates.ts#applyTemplate',
-  'src/engine/units.ts#feetFromMetres',
-  'src/engine/units.ts#formatHeight',
-  'src/engine/units.ts#heightValue',
-  'src/engine/units.ts#isAddedWeight',
-  'src/engine/weekTally.ts#tallied',
-  'src/engine/weekTally.ts#weekTense',
-  'src/lib/openedView.ts#openedViewFor',
-  'src/store/profile.ts#SEVERITY_LABEL',
-  'src/store/profile.ts#STATUS_LABEL',
-  'src/store/undo.ts#offerUndo',
-  'src/ui/PageGrid.tsx#Wide',
-  'src/ui/Skeleton.tsx#PageSkeleton',
-  'src/ui/routes.ts#browsable',
-  'src/ui/routes.ts#parentOf',
-  'src/ui/routes.ts#venueHref',
-  'src/ui/routes.ts#weekHref',
-  'src/ui/themes.ts#FOREGROUNDS',
-  'src/ui/themes.ts#SURFACES',
-];
-
 describe('the app', () => {
   const sources = readSources();
   const found = lazyOnly(sources);
@@ -246,7 +207,7 @@ describe('the app', () => {
   });
 
   it('puts nothing new in the first load that only lazy pages use', () => {
-    const known = new Set([...Object.keys(KEPT), ...PENDING]);
+    const known = new Set(Object.keys(KEPT));
     const fresh = found.filter((f) => !known.has(`${f.module}#${f.name}`));
     expect(
       fresh.map((f) => `${f.module}#${f.name} — used only by ${f.importers.join(', ')}`),
@@ -254,16 +215,28 @@ describe('the app', () => {
     ).toEqual([]);
   });
 
+  it('writes an import that names only types as `import type`', () => {
+    // `import { type A }` is emitted as `import {} from`, which loads the
+    // module for nothing. One in `reschedule.ts` held the scheduler's week
+    // validation in the first load after everything that called it had
+    // gone (PLAN.md M345).
+    const loose = sources.flatMap(({ path, source }) =>
+      [...source.matchAll(/^import \{([^}]*)\} from '([^']+)';/gm)]
+        .filter((m) => m[1]!.split(',').filter((s) => s.trim()).every((s) => /^\s*type\s/.test(s)))
+        .map((m) => `${path}: ${m[0].replace(/\s+/g, ' ')}`),
+    );
+    expect(loose, 'write these as `import type { … }`').toEqual([]);
+  });
+
   it('lists nothing that has since been moved', () => {
     const now = new Set(keys(found));
     expect(
-      [...Object.keys(KEPT), ...PENDING].filter((k) => !now.has(k)),
+      Object.keys(KEPT).filter((k) => !now.has(k)),
       'no longer lazy-only: take it off the list',
     ).toEqual([]);
   });
 
   it('gives every kept one its reason', () => {
     for (const [key, reason] of Object.entries(KEPT)) expect(reason.length, key).toBeGreaterThan(20);
-    expect(PENDING.filter((k) => k in KEPT)).toEqual([]);
   });
 });

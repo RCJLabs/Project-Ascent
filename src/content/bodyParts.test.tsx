@@ -7,7 +7,7 @@ import { FinderPage } from '@/features/finder/FinderPage';
 import { COOLDOWN_EXERCISES } from './cooldowns';
 import { PART_STEPS, defaultSteps } from './returnToClimbing';
 import { WARMUP_EXERCISES } from './warmups';
-import { PART_WORDS, partsNamedIn } from '@/engine/bodyLoad';
+import { PART_WORDS, partsNamedIn } from '@/engine/bodyLoadChecks';
 import {
   BODY_PARTS,
   REGIONS,

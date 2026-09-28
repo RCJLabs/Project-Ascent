@@ -619,6 +619,27 @@ describe('the bundle stays small', () => {
    * against 123.0137: **123.0 fails the budget and the guard's lower bound
    * together, 124.52 reads 1.51 of slack and fails the guard, 124.51
    * passes.** The floor drops again: at 124.1 a rebuild under 122.6 fails.
+   *
+   * ## 124.1 → 115.1 at M345, measured 123.01 → 114.03
+   *
+   * The rest of it, and more than M344 thought was there. M344's check
+   * stopped at the import: a first-load module importing a name made it
+   * needed, whether or not the code that used it ever ran. Following what
+   * the entry runs across modules found the rest — the 7KB metric registry
+   * was in the first load only because `assessments.ts` imported it for a
+   * parser Home never calls, and the 5KB route table only because
+   * `routes.ts` also held `logHref`. Twenty-five modules split into
+   * twenty-seven new ones, six whole modules out of the first load — the
+   * registry, `units`, `assessments`, `away`, `avatar` and the route table —
+   * and one `import { type }` that loaded the scheduler for a type.
+   *
+   * About 1.06KB of slack, the same 1.00 target, bounded both ways by
+   * running it: **114.0 fails the budget and the guard's lower bound
+   * together; against a build measuring 114.0342, 115.54 read 1.51 of slack
+   * and failed the guard and 115.53 passed.** Rebuilds of this tree measure
+   * 114.03 to 114.05 — wider than the hundredth quoted at M320 — so that
+   * upper edge moves by as much from one build to the next; 115.1 is well
+   * inside it on every one. At 115.1 a rebuild under 113.6 fails.
    */
   //
   // **The number itself is in `scripts/firstLoad.mjs` since M328**, with the
@@ -1528,10 +1549,12 @@ describe('the bundle stays small', () => {
     for (const marker of ['arrivalWindowRatio', 'rampSeconds', 'maxRampReduction', 'laneChangeMs', 'freeSoloMultiplier']) {
       expect(entry.includes(marker), `${marker} is in the entry chunk`).toBe(false);
     }
-    // The control: the Ascent's *route* is eager — the shell needs every
-    // path for search and the nav — so this sweep finding nothing at all
-    // would mean it was reading the wrong file rather than passing.
-    expect(entry.includes('minigame'), 'the route table is not in the entry either').toBe(true);
+    // The control: the Ascent's *route* is eager — the router in `App.tsx`
+    // names every path — so this sweep finding nothing at all would mean it
+    // was reading the wrong file rather than passing. It was the route
+    // table's `minigame` keyword until M345 took the table off the boot
+    // path, where only search and the back link read it.
+    expect(entry.includes('"/ascent"'), "the Ascent's route is not in the entry either").toBe(true);
   });
 
   it.runIf(built)('keeps the kit table out of the entry chunk', () => {
@@ -1568,9 +1591,12 @@ describe('the bundle stays small', () => {
     ]) {
       expect(entry.includes(marker), `${marker} is in the entry chunk`).toBe(false);
     }
-    // The control: `avatar.ts` itself is still on the boot path, and the
-    // stage names are the proof this is reading the right file.
-    expect(entry.includes('Rental shoes'), 'the figure itself is in the entry').toBe(true);
+    // The control: the default palette is on the boot path — the profile
+    // store fills it in when it hydrates — and its colours are the proof
+    // this is reading the right file. It was the stage names until M345,
+    // when the palette moved to `avatarPalette.ts` and `avatar.ts` itself,
+    // stages and all, went lazy with the figure.
+    expect(entry.includes('skin:"#c68a5e",hair:"#3b2a1e"'), 'the default palette is in the entry').toBe(true);
   });
 
   it.runIf(built)('keeps the board out of the entry chunk', () => {
@@ -1647,7 +1673,8 @@ describe('the bundle stays small', () => {
     }
     // The control: the game's *route* is eager, so a sweep finding nothing
     // at all would mean it was reading the wrong file rather than passing.
-    expect(entry.includes('minigame'), 'the route table is in the entry').toBe(true);
+    // The router's path since M345, as in the arcade check above.
+    expect(entry.includes('"/ascent"'), "the Ascent's route is in the entry").toBe(true);
   });
 
   it.runIf(built)('keeps the drill text out of the entry chunk', () => {

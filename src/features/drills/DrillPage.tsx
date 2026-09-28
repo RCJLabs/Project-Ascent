@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { CalendarPlus, Check, Pencil } from 'lucide-react';
-import { DRILL_CATEGORIES, getDrill } from '@/content/drills';
+import { getDrill } from '@/content/drills';
+import { DRILL_CATEGORIES } from '@/content/drills/categories';
 import { drillCoaching } from '@/content/drillCoaching';
 import { drillText } from '@/content/drillText';
 import { PROTOCOLS } from '@/content/protocols';
@@ -19,7 +20,7 @@ import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
 import { RecordNotFound } from '@/ui/RecordNotFound';
 import { DrillEditor } from './DrillEditor';
-import { PageSkeleton } from '@/ui/Skeleton';
+import { PageSkeleton } from '@/ui/PageSkeleton';
 
 /**
  * A bulleted list of short coaching lines.

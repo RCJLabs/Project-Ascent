@@ -1,6 +1,6 @@
 import type { Session, SessionMode } from '@/db/sessions';
-import type { GradeScale } from './grades';
-import { displayGrade, type GradeDisplay } from './grades';
+import type { GradeDisplay, GradeScale } from './grades';
+import { displayGrade } from './gradeReading';
 import type { PersonalRecord } from './derive';
 
 /**

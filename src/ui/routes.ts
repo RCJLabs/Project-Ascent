@@ -157,19 +157,6 @@ export function browsable(): RouteMeta[] {
   return ROUTES.filter((route) => route.group !== undefined);
 }
 
-/**
- * Where a day's log lives.
- *
- * Every day, including today (PLAN.md M124). It took a `todayKey` from
- * M117 to M123, when today's log was Home and this was the one place that
- * knew; Home shows the card and the log is a page again, so there is one
- * address per day and no rule left to encode. The helper stays because the
- * shape of the address is still worth writing once.
- */
-export function logHref(date: string): string {
-  return `/log/${date}`;
-}
-
 /** Where a week lives. Any date in it will do; the page snaps to its Sunday. */
 /**
  * A place, by the key `venueKey` produced (PLAN.md M192).

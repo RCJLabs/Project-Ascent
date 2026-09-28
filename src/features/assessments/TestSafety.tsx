@@ -1,7 +1,8 @@
 import { AlertTriangle } from 'lucide-react';
 import type { Metric } from '@/content/types';
 import type { BodyPart } from '@/content/bodyParts';
-import { describeParts, metricConflict } from '@/engine/bodyLoad';
+import { describeParts } from '@/engine/bodyLoad';
+import { metricConflict } from '@/engine/bodyLoadChecks';
 
 /**
  * The one prescription the app never warned about (PLAN.md M161).

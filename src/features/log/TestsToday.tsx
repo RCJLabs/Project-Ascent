@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { dayOfWeek, today } from '@/engine/dates';
 import { concerning, injuryPolicy } from '@/engine/injury';
 import { joinList } from '@/engine/phrase';
-import { DAY_NAMES } from '@/engine/scheduler';
+import { DAY_NAMES } from '@/engine/days';
 import { stillToTake, takenIn, testsOn } from '@/engine/testDays';
 import { TestSafety } from '@/features/assessments/TestSafety';
 import { useMetrics } from '@/store/metrics';

@@ -28,15 +28,8 @@
 import type { Session } from '@/db/sessions';
 import { addDays } from './dates';
 import { joinCapped, joinList } from './phrase';
-import {
-  DEFAULT_DISPLAY,
-  V_GRADES,
-  YDS_GRADES,
-  displayGrade,
-  gradeOrdinal,
-  type GradeDisplay,
-  type GradeScale,
-} from './grades';
+import { DEFAULT_DISPLAY, V_GRADES, YDS_GRADES, type GradeDisplay, type GradeScale } from './grades';
+import { displayGrade, gradeOrdinal } from './gradeReading';
 
 /**
  * Days in a block — M28's, re-exported rather than re-typed (PLAN.md M198).

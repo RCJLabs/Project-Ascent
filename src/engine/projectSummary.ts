@@ -12,7 +12,8 @@
 
 import type { Project, AttemptOutcome } from '@/db/projects';
 import type { ProjectAttempt, Session } from '@/db/sessions';
-import { canonicalGrade, gradeOrdinal, type GradeScale } from './grades';
+import { canonicalGrade, type GradeScale } from './grades';
+import { gradeOrdinal } from './gradeReading';
 import { daysBetween, today as todayKey } from './dates';
 import { attemptsFor, ordered, type AttemptRecord } from './projects';
 

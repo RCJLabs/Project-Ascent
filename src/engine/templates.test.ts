@@ -1,18 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { newSession, type Session } from '@/db/sessions';
 import { today } from './dates';
-import {
-  MAX_NAME,
-  alreadySaved,
-  applyTemplate,
-  bodyFrom,
-  cleanName,
-  createTemplate,
-  markUsed,
-  rankTemplates,
-  suggestName,
-  type Template,
-} from './templates';
+import { MAX_NAME, bodyFrom, cleanName, createTemplate, markUsed, rankTemplates, suggestName, type Template } from './templates';
+import { alreadySaved, applyTemplate } from './templateApply';
 import { isRestSession } from './rest';
 
 const NOW = '2026-03-01T10:00:00.000Z';

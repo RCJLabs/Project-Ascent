@@ -1,22 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ArrowRight, CircleCheck, FileText, Info, Plus, Share2, Trash2, TriangleAlert } from 'lucide-react';
-import {
-  INTENSITY_LABEL,
-  INTENSITY_ORDER,
-  type Constraint,
-  type DayOfWeek,
-  type Equipment,
-  type Intensity,
-  type Phase,
-  type Program,
-  type SessionType,
-} from '@/content/types';
+import { INTENSITY_LABEL, type Constraint, type DayOfWeek, type Equipment, type Intensity, type Phase, type Program, type SessionType } from '@/content/types';
+import { INTENSITY_ORDER } from '@/content/intensity';
 import { downloadJson, downloadText } from '@/lib/download';
 import { PROGRAMS, getProgram } from '@/content/programs';
 import { allMetrics } from '@/engine/assessments';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
-import { DAY_SHORT } from '@/engine/scheduler';
+import { DAY_SHORT } from '@/engine/days';
 import { EQUIPMENT_LABELS, MAX_WEEKS, canRun, nextPhaseId, removeSessionType, removeTrack, retile, sessionTypeId, trackIdFor, validateProgram, type Issue, ISSUE_RANK } from '@/engine/customProgram';
 import { contentIssues, reconcileProgramPhases, trimDrills } from '@/engine/prescription';
 import { safetyIssues } from '@/engine/programSafety';
@@ -28,7 +19,7 @@ import { APP_VERSION } from '@/version';
 import { useCustomPrograms } from '@/store/programs';
 import { clearWritingFor, writingFor } from '@/lib/writingFor';
 import { BackLink } from '@/ui/BackLink';
-import { PageSkeleton } from '@/ui/Skeleton';
+import { PageSkeleton } from '@/ui/PageSkeleton';
 import { useGradeOptions } from '@/ui/useGrade';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';

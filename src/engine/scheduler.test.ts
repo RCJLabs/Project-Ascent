@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { PROGRAMS } from '@/content/programs';
 import { BASE_CAMP, IRON_GRIP, LOCKDOWN, THE_LONG_GAME } from '@/content/programs/catalogue';
-import { gapHours, validateWeek, type WeekPlan } from './scheduler';
+import type { WeekPlan } from './scheduler';
+import { gapHours, validateWeek } from './weekRules';
 import { assignSessions, describeDays, layoutsFor, planFromLayout, sessionPriority, sessionsForDays } from './weekLayouts';
 import type { Program, SessionType } from '@/content/types';
 

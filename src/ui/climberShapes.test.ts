@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PALETTE, SKIN_TONES, deriveAvatar, type AvatarFigure } from '@/engine/avatar';
+import { SKIN_TONES, deriveAvatar, type AvatarFigure } from '@/engine/avatar';
+import { DEFAULT_PALETTE } from '@/engine/avatarPalette';
 import { HAIR_TONES } from '@/engine/kits';
 import { contrast } from './contrast';
 import {

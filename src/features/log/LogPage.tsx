@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { logHref } from '@/ui/routes';
+import { logHref } from '@/ui/logHref';
 import {
   AlertTriangle,
   Award,
@@ -54,20 +54,16 @@ import {
   type Achievement,
 } from '@/engine/achievements';
 import { ShareButton } from '@/features/share/ShareSheet';
-import {
-  describeSpan,
-  durationFromSpan,
-  elapsedMs,
-  formatClock,
-  isLive,
-  isStale,
-} from '@/engine/live';
-import { DELOAD_STEP, easedDose, easesAnything, prescriptionFor, type PlannedDay } from '@/engine/plan';
+import { describeSpan, elapsedMs, formatClock, isLive, isStale } from '@/engine/live';
+import { durationFromSpan } from '@/engine/liveClock';
+import { DELOAD_STEP, easedDose, prescriptionFor, type PlannedDay } from '@/engine/plan';
+import { easesAnything } from '@/engine/planReading';
 import { prescriptionLine } from '@/engine/prescription';
 import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
 import type { CooldownPlan } from '@/engine/cooldown';
 import { mergeInto, replaceRow } from '@/engine/climbRows';
-import { V_GRADES, YDS_GRADES, displayGrade, type GradeScale } from '@/engine/grades';
+import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
+import { displayGrade } from '@/engine/gradeReading';
 import type { Climb, LoggedExercise, ProjectAttempt, RopeStyle, Session, WallAngle } from '@/db/sessions';
 import type { AttemptOutcome } from '@/db/projects';
 import { OUTCOME_HIGH_POINT, OUTCOME_LABEL } from '@/engine/projectSummary';
@@ -93,7 +89,7 @@ import { RestTimer } from './RestTimer';
 import { TallyRow } from './TallyRow';
 import { keepAwake, releaseAwake } from '@/lib/wakeLock';
 import { useTemplates } from '@/store/templates';
-import { parseCount } from '@/content/types';
+import { parseCount } from '@/content/parseCount';
 import { BackLink } from '@/ui/BackLink';
 import { DisclosureButton } from '@/ui/Disclosure';
 import { Button } from '@/ui/Button';
@@ -106,10 +102,12 @@ import { Term } from '@/ui/Term';
 import { TimerSheet } from '@/ui/TimerSheet';
 import {useGradeLabel} from '@/ui/useGrade';
 import { derivedField, gradeDisagreements } from '@/engine/sessionFields';
-import { alreadySaved, applyTemplate, rankTemplates, suggestName } from '@/engine/templates';
-import { canMerge, describeSession } from '@/engine/sessionEdit';
+import { rankTemplates, suggestName } from '@/engine/templates';
+import { alreadySaved, applyTemplate } from '@/engine/templateApply';
+import { canMerge, describeSession } from '@/engine/mergeCheck';
 import { concerning, injuryPolicy } from '@/engine/injury';
-import { climbOutcome, gymSummary } from '@/engine/gym';
+import { gymSummary } from '@/engine/gym';
+import { climbOutcome } from '@/engine/gymWords';
 import {
   ASKED_BY_FINGERS,
   FINGER_ANSWERS,
@@ -124,7 +122,8 @@ import {
   type ReadinessCall,
   type TissueFeel,
 } from '@/engine/readiness';
-import { describeParts, drillConflict, exerciseConflict, unspokenFor } from '@/engine/bodyLoad';
+import { describeParts, drillConflict, exerciseConflict } from '@/engine/bodyLoad';
+import { unspokenFor } from '@/engine/bodyLoadChecks';
 import { sessionLoads } from '@/engine/sessionLoads';
 import { REST_ITEMS } from '@/engine/restHabits';
 import { startedAsRest } from '@/engine/rest';

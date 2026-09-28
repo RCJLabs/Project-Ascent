@@ -30,7 +30,8 @@
 
 import type { Program, SessionType } from '@/content/types';
 import type { Issue } from './customProgram';
-import { FINGER_GAP_HOURS, directFingerWork } from './fingerGap';
+import { directFingerWork } from './fingerGap';
+import { FINGER_GAP_HOURS } from './fingerGapCheck';
 import { joinList } from './phrase';
 
 /**

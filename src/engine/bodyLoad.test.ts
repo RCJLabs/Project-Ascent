@@ -3,24 +3,8 @@ import { DRILLS } from '@/content/drills';
 import { PROTOCOLS } from '@/content/protocols';
 import { PROGRAMS } from '@/content/programs';
 import type { Drill, Exercise, SessionType } from '@/content/types';
-import {
-  LOAD_RULES,
-  describeParts,
-  drillConflict,
-  exerciseConflict,
-  exerciseLoads,
-  dayLoad,
-  describeDayLoad,
-  partsInText,
-  partsNamedIn,
-  protocolSafety,
-  unspokenFor,
-  drillFindings,
-  drillLoads,
-  rulesInText,
-  scanText,
-  sessionConflicts,
-} from './bodyLoad';
+import { LOAD_RULES, describeParts, drillConflict, exerciseConflict, dayLoad, describeDayLoad, drillFindings, rulesInText, scanText, sessionConflicts } from './bodyLoad';
+import { drillLoads, exerciseLoads, partsInText, partsNamedIn, protocolSafety, unspokenFor } from './bodyLoadChecks';
 import { sessionLoads } from './sessionLoads';
 import { onTheWall } from './climbing';
 import { readinessFor } from './readiness';

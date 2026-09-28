@@ -21,7 +21,7 @@ import { addDays, daysBetween } from './dates';
 import { blockWindow, plannedDay } from './plan';
 import type { WeekOverrides } from './reschedule';
 import type { WeekPlan } from './scheduler';
-import { TEST_REASON_LABEL } from './assessments';
+import { TEST_REASON_LABEL } from './testWeeks';
 
 /** 6pm, used only when the log cannot say otherwise. */
 export const DEFAULT_START = 18 * 60;

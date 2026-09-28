@@ -5,7 +5,7 @@ import { addDays, today } from '@/engine/dates';
 import { useSessions } from '@/store/sessions';
 import { useSettings } from '@/store/settings';
 import { hydrate, renderAt, reset } from '@/test/render';
-import { logHref } from '@/ui/routes';
+import { logHref } from '@/ui/logHref';
 import { DayHeading } from './DayHeading';
 import { LogPage } from './LogPage';
 

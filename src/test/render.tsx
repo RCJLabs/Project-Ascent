@@ -6,7 +6,7 @@ import { afterEach } from 'vitest';
 import type { ReactElement } from 'react';
 import { forgetOpenedView } from '@/lib/openedView';
 import { getDb } from '@/db/db';
-import { EXPORTABLE_STORES } from '@/db/schema';
+import { EXPORTABLE_STORES } from '@/db/exportStores';
 import { hydrateAll } from '@/store';
 import { writesSettled } from '@/store/writes';
 

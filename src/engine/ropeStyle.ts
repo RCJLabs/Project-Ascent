@@ -36,7 +36,8 @@
 
 import type { Climb, RopeStyle, Session } from '@/db/sessions';
 import { addClimb, emptyTally, type GradeTally } from './derive';
-import { DEFAULT_DISPLAY, displayGrade, gradeOrdinal, type GradeDisplay } from './grades';
+import { DEFAULT_DISPLAY, type GradeDisplay } from './grades';
+import { displayGrade, gradeOrdinal } from './gradeReading';
 
 /** Lead first: it is the harder question and the one a climber sorts on. */
 export const ROPE_ORDER: RopeStyle[] = ['lead', 'toprope'];

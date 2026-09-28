@@ -1,16 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { getProgram } from '@/content/programs';
 import { startOfWeek } from './dates';
-import {
-  effectivePlan,
-  movePlan,
-  previewMove,
-  pruneOverrides,
-  samePlan,
-  targetsFor,
-  withOverride,
-  type WeekOverrides,
-} from './reschedule';
+import { effectivePlan, pruneOverrides, samePlan, withOverride, type WeekOverrides } from './reschedule';
+import { movePlan, previewMove, targetsFor } from './movePreview';
 import type { WeekPlan } from './scheduler';
 
 const program = getProgram('iron_grip')!;

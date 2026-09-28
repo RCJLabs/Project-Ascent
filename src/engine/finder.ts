@@ -16,12 +16,14 @@
  *    top pick but still show, so the climber learns what to work toward.
  */
 
-import { DEFAULT_DISPLAY, displayRange, gradeOrdinal, type GradeDisplay, type GradeScale } from '@/engine/grades';
+import { DEFAULT_DISPLAY, type GradeDisplay, type GradeScale } from '@/engine/grades';
+import { displayRange, gradeOrdinal } from '@/engine/gradeReading';
 import { PROGRAMS } from '@/content/programs';
 import { getMetric } from '@/content/metrics';
-import { MIN_ADAPTED_WEEKS } from './adapt';
+import { MIN_ADAPTED_WEEKS } from './adaptLengths';
 import { KIT_NAMES, kitList, missingKit } from './kit';
-import { describeWork, programSessionLengths, type WorkEstimate } from './sessionLength';
+import { describeWork, type WorkEstimate } from './sessionLength';
+import { programSessionLengths } from './programLengths';
 import type { Discipline, Equipment, MetricId, Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import { seriesFor } from './assessments';

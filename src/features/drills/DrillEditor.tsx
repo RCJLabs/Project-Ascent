@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { Trash2 } from 'lucide-react';
-import { DRILL_CATEGORIES } from '@/content/drills';
+import { DRILL_CATEGORIES } from '@/content/drills/categories';
 import type { Discipline, Drill, DrillCategory, Equipment } from '@/content/types';
 import { EQUIPMENT_LABELS } from '@/engine/customProgram';
 import { DRILL_DISCIPLINES, drillIssues, tidyDrill } from '@/engine/drillWriting';

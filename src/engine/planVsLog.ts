@@ -47,12 +47,8 @@
  * Pure — sessions and a program in, readings out. Nothing is stored.
  */
 
-import {
-  INTENSITY_ORDER,
-  type Exercise,
-  type Program,
-  type SessionType,
-} from '@/content/types';
+import type { Exercise, Program, SessionType } from '@/content/types';
+import { INTENSITY_ORDER } from '@/content/intensity';
 import type { Session } from '@/db/sessions';
 import { addDays, daysBetween, programWeek } from './dates';
 import { sessionLoad } from './derive';

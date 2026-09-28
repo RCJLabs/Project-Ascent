@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ChevronRight, CircleAlert } from 'lucide-react';
 import { fromKey } from '@/engine/dates';
-import { logHref } from './routes';
+import { logHref } from './logHref';
 import { describeSpan, elapsedMs, formatClock, runningSession, staleSessions } from '@/engine/live';
 import type { Session } from '@/db/sessions';
 import { useAllSessions } from '@/store/sessions';

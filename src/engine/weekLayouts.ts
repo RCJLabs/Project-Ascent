@@ -11,14 +11,11 @@
  * Pure functions over plain data — no React, no storage.
  */
 
-import {
-  INTENSITY_ORDER,
-  type DayOfWeek,
-  type Program,
-  type SessionTypeId,
-  type WeeklyLayout,
-} from '@/content/types';
-import { ALL_DAYS, DAY_SHORT, gapHours, intensityOf, validateWeek, type WeekPlan } from './scheduler';
+import type { DayOfWeek, Program, SessionTypeId, WeeklyLayout } from '@/content/types';
+import { INTENSITY_ORDER } from '@/content/intensity';
+import { intensityOf, type WeekPlan } from './scheduler';
+import { ALL_DAYS, DAY_SHORT } from './days';
+import { gapHours, validateWeek } from './weekRules';
 
 export function planFromLayout(layout: WeeklyLayout): WeekPlan {
   return { ...layout.slots };

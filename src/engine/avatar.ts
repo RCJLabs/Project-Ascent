@@ -13,6 +13,7 @@
  */
 
 import type { VitalityState } from './vitality';
+import { DEFAULT_PALETTE } from './avatarPalette';
 
 export interface AvatarPalette {
   skin: string;
@@ -22,15 +23,6 @@ export interface AvatarPalette {
   shoes: string;
   gear: string;
 }
-
-export const DEFAULT_PALETTE: AvatarPalette = {
-  skin: '#c68a5e',
-  hair: '#3b2a1e',
-  top: '#2f7bb0',
-  shorts: '#35434e',
-  shoes: '#eb6834',
-  gear: '#5b6b78',
-};
 
 /**
  * Which build the figure has (PLAN.md M225).

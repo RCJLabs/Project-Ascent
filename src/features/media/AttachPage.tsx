@@ -13,7 +13,7 @@ import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Input } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
-import { PageSkeleton } from '@/ui/Skeleton';
+import { PageSkeleton } from '@/ui/PageSkeleton';
 
 /**
  * A photo, and the question of where it belongs (PLAN.md M111b).

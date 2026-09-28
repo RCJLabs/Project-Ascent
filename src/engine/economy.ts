@@ -13,7 +13,8 @@
 
 import type { Session } from '@/db/sessions';
 import type { AcwrZone } from './derive';
-import { DEFAULT_DISPLAY, displayGrade, vEquivalent, type GradeDisplay, type GradeScale } from './grades';
+import { DEFAULT_DISPLAY, vEquivalent, type GradeDisplay, type GradeScale } from './grades';
+import { displayGrade } from './gradeReading';
 import { isRestSession } from './rest';
 
 // ── Levels ────────────────────────────────────────────────────────────────

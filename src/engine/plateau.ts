@@ -15,18 +15,19 @@
  * Pure: state in, verdict out.
  */
 
-import { DRILL_CATEGORIES, filterDrills } from '@/content/drills';
+import { filterDrills, getDrill } from '@/content/drills';
+import { DRILL_CATEGORIES } from '@/content/drills/categories';
 import type { DrillCategory, Equipment, MetricId, Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import type { Session } from '@/db/sessions';
 import type { BodyPart } from '@/content/bodyParts';
-import { getDrill } from '@/content/drills';
 import { getMetric } from '@/content/metrics';
 import { article } from './phrase';
 import { seriesFor } from './assessments';
 import { addDays, daysBetween, shortLabel, today as todayKey } from './dates';
 import type { ClimberState } from './derive';
-import { DEFAULT_DISPLAY, V_GRADES, YDS_GRADES, displayGrade, type GradeDisplay, type GradeScale } from './grades';
+import { DEFAULT_DISPLAY, V_GRADES, YDS_GRADES, type GradeDisplay, type GradeScale } from './grades';
+import { displayGrade } from './gradeReading';
 import { pyramid } from './progress';
 
 export type Verdict =

@@ -7,7 +7,7 @@ import { getDrill } from '@/content/drills';
 import { loadPrograms } from '@/content/programs';
 import { IRON_GRIP } from '@/content/programs/catalogue';
 import { newSession, putSession } from '@/db/sessions';
-import { TEST_REASON_LABEL } from '@/engine/assessments';
+import { TEST_REASON_LABEL } from '@/engine/testWeeks';
 import { addDays, dayOfWeek, shortLabel, startOfWeek, today } from '@/engine/dates';
 import { DELOAD_STEP } from '@/engine/plan';
 import type { WeekPlan } from '@/engine/scheduler';

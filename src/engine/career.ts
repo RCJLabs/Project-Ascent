@@ -45,7 +45,8 @@ import type { DayRecord } from '@/db/game';
 import { CLIMBS_TO_EVEREST, LADDER_TOP, MILESTONES, sessionHeight } from './altimeter';
 import { feetFromMetres } from './units';
 import { daysBetween, fromKey, toKey, today as todayKey } from './dates';
-import { DEFAULT_DISPLAY, displayGrade, type GradeDisplay } from './grades';
+import { DEFAULT_DISPLAY, type GradeDisplay } from './grades';
+import { displayGrade } from './gradeReading';
 import type { PersonalRecord } from './derive';
 
 export type CareerCategory =

@@ -17,7 +17,8 @@ import { loadDrills, DRILLS } from '@/content/drills';
 import type { SessionType } from '@/content/types';
 import { newSession, type Session } from '@/db/sessions';
 import { LOAD_RULES, rulesInText } from './bodyLoad';
-import { DIRECT_FINGER_RULES, directFingerWork, drillOnTheBoard, fingerGaps, loadsFingersDirectly } from './fingerGap';
+import { DIRECT_FINGER_RULES, directFingerWork, drillOnTheBoard, loadsFingersDirectly } from './fingerGap';
+import { fingerGaps } from './fingerGapCheck';
 import { demoClimber } from './demoClimber';
 import { addDays } from './dates';
 

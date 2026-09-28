@@ -12,7 +12,8 @@ import { getDrill } from './drills';
 import { getMetric } from './metrics';
 import { getProtocol } from './protocols';
 import { PLANNED_PROGRAM_IDS } from './programs/shelves';
-import { atLeastAsHard, type Program } from './types';
+import type { Program } from './types';
+import { atLeastAsHard } from './intensity';
 
 export function validateProgram(program: Program): string[] {
   const errors: string[] = [];

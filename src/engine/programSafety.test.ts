@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { CATALOGUE } from '@/content/programs/catalogue';
 import type { Program, SessionType } from '@/content/types';
 import { ISSUE_RANK, blankProgram, canRun, validateProgram } from './customProgram';
-import { partsInText } from './bodyLoad';
-import { FINGER_GAP_HOURS } from './fingerGap';
+import { partsInText } from './bodyLoadChecks';
+import { FINGER_GAP_HOURS } from './fingerGapCheck';
 import { DELOAD_FROM_WEEKS, NO_REST_DAY_AT, fingerTypes, safetyIssues } from './programSafety';
 
 /**

@@ -15,7 +15,7 @@ import { useCustomPrograms } from '@/store/programs';
 import { useProjects } from '@/store/projects';
 import { PickItUp } from './PickItUp';
 import { PageHeader } from '@/ui/PageHeader';
-import { displayRange } from '@/engine/grades';
+import { displayRange } from '@/engine/gradeReading';
 import { useSettings } from '@/store/settings';
 
 const HERO = 'bg-accent text-accent-ink rounded-2xl p-4 flex items-center gap-3 hover:bg-accent-strong transition-colors';

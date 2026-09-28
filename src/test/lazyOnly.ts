@@ -20,18 +20,32 @@
  *
  * ## What counts as lazy-only
  *
- * An exported value of a first-load module that at least one module outside
- * the first load imports, and that nothing in the first load needs. *Needs*
- * is followed through the module itself: an export another file in the
- * entry imports is needed, so is a top-level statement that is not a
- * declaration (it runs), and so is any top-level declaration a needed one
- * refers to by name. An import through a barrel's `export … from` is counted
- * against the module that declares the name; `import * as` counts as all of
- * them.
+ * An exported value of a first-load module that some module the app loads
+ * imports — at boot or later, through `import()` — and that nothing the entry
+ * runs ever reaches. *Reaches* is followed from
+ * `src/main.tsx`, statement by statement and across modules: a top-level
+ * statement that is not a declaration runs when its module loads; a name a
+ * needed statement mentions makes the statement that declares it needed, in
+ * its own module or, through the import, in the module that exports it. An
+ * import through a barrel is counted against the module that declares the
+ * name, and `import * as` against all of them.
  *
- * It errs toward *needed*: a reference is matched by name, so a local that
- * shadows a top-level name keeps the top-level one in. That can hide an
- * export from this check. It cannot flag one the entry uses.
+ * Across modules, not only within one, because that is how the code hides
+ * (PLAN.md M345). M344's version stopped at the import: a first-load module
+ * importing a name made it needed, whether or not the code that used it
+ * ran. So the 7KB metric registry was *needed* — `assessments.ts` imported it
+ * for a function only lazy pages call — and the check never named it.
+ *
+ * A module that runs something when it loads is loaded with any module that
+ * imports it, used or not, which is what Rollup does with side effects. A
+ * declaration's initialiser is taken to run nothing worth keeping: `const x =
+ * f()` that nothing reads is not needed, even if `f` writes somewhere.
+ *
+ * It errs toward *needed* on names: a reference is matched by name, so a
+ * local that shadows a top-level or imported name keeps the other in. That
+ * can hide an export from this check. What it flags, the entry does not call
+ * — and moving one it is wrong about fails `tsc`, not a climber, because the
+ * code that calls it has to import it from somewhere.
  */
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -71,6 +85,10 @@ interface Parsed {
   stars: string[];
   /** Exported name → the local top-level name that holds it. */
   exported: Map<string, string>;
+  /** Local name → the value it imports: `import { a as b }` is b → x#a. */
+  bindings: Map<string, Use>;
+  /** `import('./x')`: loaded later, when the code that asks runs. */
+  dynamic: string[];
 }
 
 function normalize(parts: string[]): string {
@@ -125,18 +143,42 @@ function parse(file: Source, resolve: (from: string, spec: string) => string | n
     true,
     file.path.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
-  const parsed: Parsed = { sf, deps: [], uses: [], reexports: new Map(), stars: [], exported: new Map() };
+  const parsed: Parsed = {
+    sf,
+    deps: [],
+    uses: [],
+    reexports: new Map(),
+    stars: [],
+    exported: new Map(),
+    bindings: new Map(),
+    dynamic: [],
+  };
+  const later = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      const [spec] = node.arguments;
+      const target = spec && ts.isStringLiteral(spec) ? resolve(file.path, spec.text) : null;
+      if (target !== null) parsed.dynamic.push(target);
+    }
+    ts.forEachChild(node, later);
+  };
+  later(sf);
   for (const statement of sf.statements) {
     if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)) {
       const target = resolve(file.path, statement.moduleSpecifier.text);
       const clause = statement.importClause;
       if (target === null || clause?.isTypeOnly) continue;
       parsed.deps.push(target);
-      if (clause?.name) parsed.uses.push({ from: target, name: 'default' });
+      const bind = (local: string, use: Use): void => {
+        parsed.uses.push(use);
+        parsed.bindings.set(local, use);
+      };
+      if (clause?.name) bind(clause.name.text, { from: target, name: 'default' });
       const bindings = clause?.namedBindings;
-      if (bindings && ts.isNamespaceImport(bindings)) parsed.uses.push({ from: target, name: '*' });
+      if (bindings && ts.isNamespaceImport(bindings)) bind(bindings.name.text, { from: target, name: '*' });
       if (bindings && ts.isNamedImports(bindings)) {
-        for (const el of bindings.elements) if (!el.isTypeOnly) parsed.uses.push({ from: target, name: (el.propertyName ?? el.name).text });
+        for (const el of bindings.elements) {
+          if (!el.isTypeOnly) bind(el.name.text, { from: target, name: (el.propertyName ?? el.name).text });
+        }
       }
       continue;
     }
@@ -148,7 +190,9 @@ function parse(file: Source, resolve: (from: string, spec: string) => string | n
         if (target === null) continue;
         parsed.deps.push(target);
         if (!statement.exportClause) parsed.stars.push(target);
-        else if (ts.isNamedExports(statement.exportClause)) {
+        else if (ts.isNamespaceExport(statement.exportClause)) {
+          parsed.reexports.set(statement.exportClause.name.text, { from: target, name: '*' });
+        } else if (ts.isNamedExports(statement.exportClause)) {
           for (const el of statement.exportClause.elements) {
             if (el.isTypeOnly) continue;
             parsed.reexports.set(el.name.text, { from: target, name: (el.propertyName ?? el.name).text });
@@ -208,12 +252,25 @@ function closure(parsed: ReadonlyMap<string, Parsed>, entry: string): Set<string
   return seen;
 }
 
+/** Every module the app can load, now or later: static imports and `import()`. */
+function reachable(parsed: ReadonlyMap<string, Parsed>, entry: string): Set<string> {
+  const seen = new Set<string>();
+  const queue = [entry];
+  while (queue.length > 0) {
+    const next = queue.pop()!;
+    if (seen.has(next) || !parsed.has(next)) continue;
+    seen.add(next);
+    queue.push(...parsed.get(next)!.deps, ...parsed.get(next)!.dynamic);
+  }
+  return seen;
+}
+
 /** The module that declares `name`, through any barrels between. */
 function origin(parsed: ReadonlyMap<string, Parsed>, file: string, name: string, depth = 0): { file: string; name: string } {
   const p = parsed.get(file);
   if (!p || depth > 20 || p.exported.has(name)) return { file, name };
   const re = p.reexports.get(name);
-  if (re) return origin(parsed, re.from, re.name, depth + 1);
+  if (re) return re.name === '*' ? { file: re.from, name: '*' } : origin(parsed, re.from, re.name, depth + 1);
   for (const star of p.stars) {
     const found = origin(parsed, star, name, depth + 1);
     if (parsed.get(found.file)?.exported.has(found.name)) return found;
@@ -241,14 +298,100 @@ function references(sf: ts.SourceFile, names: ReadonlySet<string>): Set<string>[
   });
 }
 
+/** Whether a top-level statement runs something when its module loads. */
+function runs(statement: ts.Statement): boolean {
+  return !(
+    declared(statement).length > 0 ||
+    ts.isImportDeclaration(statement) ||
+    ts.isExportDeclaration(statement) ||
+    ts.isInterfaceDeclaration(statement) ||
+    ts.isTypeAliasDeclaration(statement) ||
+    ts.isEnumDeclaration(statement) ||
+    ts.isModuleDeclaration(statement)
+  );
+}
+
 export function lazyOnly(files: readonly Source[], entry = 'src/main.tsx'): LazyOnly[] {
   const resolve = resolver(new Set(files.map((f) => f.path)));
   const parsed = new Map(files.map((f) => [f.path, parse(f, resolve)]));
   const first = closure(parsed, entry);
 
-  // Who imports what, by the module that declares it.
+  // Each module's top-level statements: who declares what, and what each
+  // one mentions — its own module's names and the names it imports.
+  const owners = new Map<string, Map<string, number>>();
+  const refs = new Map<string, Set<string>[]>();
+  const effects = new Map<string, boolean>();
+  for (const [path, p] of parsed) {
+    const owner = new Map<string, number>();
+    p.sf.statements.forEach((s, i) => declared(s).forEach((name) => owner.set(name, i)));
+    owners.set(path, owner);
+    refs.set(path, references(p.sf, new Set([...owner.keys(), ...p.bindings.keys()])));
+    effects.set(path, p.sf.statements.some(runs));
+  }
+
+  // What the first load needs, followed across modules: from the entry,
+  // through every name a needed statement mentions, to the statement that
+  // declares it — in its own module or the one it is imported from.
+  const loaded = new Set<string>();
+  const needed = new Map<string, Set<number>>();
+  const queue: [string, number][] = [];
+  const need = (file: string, i: number | undefined): void => {
+    if (i === undefined) return;
+    let set = needed.get(file);
+    if (!set) needed.set(file, (set = new Set()));
+    if (set.has(i)) return;
+    set.add(i);
+    queue.push([file, i]);
+  };
+  const load = (file: string): void => {
+    const p = parsed.get(file);
+    if (!p || loaded.has(file)) return;
+    loaded.add(file);
+    p.sf.statements.forEach((s, i) => {
+      if (file === entry || runs(s)) need(file, i);
+    });
+    // A module that does something when it loads is loaded with its
+    // importer, whether the import names anything or is a bare `import
+    // './x'`: Rollup keeps a module's side effects whether or not a name
+    // from it is used.
+    for (const dep of p.deps) if (effects.get(dep)) load(dep);
+  };
+  const needExport = (file: string, name: string): void => {
+    if (name === '*') {
+      load(file);
+      const p = parsed.get(file);
+      for (const exported of p?.exported.keys() ?? []) needExport(file, exported);
+      for (const exported of p?.reexports.keys() ?? []) needExport(file, exported);
+      for (const star of p?.stars ?? []) needExport(star, '*');
+      return;
+    }
+    const at = origin(parsed, file, name);
+    if (at.name === '*') return needExport(at.file, '*');
+    load(at.file);
+    const local = parsed.get(at.file)?.exported.get(at.name);
+    if (local !== undefined) need(at.file, owners.get(at.file)!.get(local));
+  };
+  load(entry);
+  while (queue.length > 0) {
+    const [file, i] = queue.pop()!;
+    const p = parsed.get(file)!;
+    for (const name of refs.get(file)![i]!) {
+      const own = owners.get(file)!.get(name);
+      if (own !== undefined) need(file, own);
+      else {
+        const use = p.bindings.get(name);
+        if (use) needExport(use.from, use.name);
+      }
+    }
+  }
+
+  // Who imports what, by the module that declares it — counting only the
+  // modules the app can load. A test helper or a script that imports an
+  // export does not put it in any chunk, and Rollup drops what only they use.
+  const app = reachable(parsed, entry);
   const importers = new Map<string, Map<string, Set<string>>>();
   for (const [path, p] of parsed) {
+    if (!app.has(path)) continue;
     for (const use of p.uses) {
       const at = use.name === '*' ? { file: use.from, name: '*' } : origin(parsed, use.from, use.name);
       let byName = importers.get(at.file);
@@ -264,42 +407,14 @@ export function lazyOnly(files: readonly Source[], entry = 'src/main.tsx'): Lazy
     const p = parsed.get(module)!;
     const byName = importers.get(module);
     if (!byName) continue;
-    const statements = p.sf.statements;
-    const owner = new Map<string, number>();
-    statements.forEach((s, i) => declared(s).forEach((name) => owner.set(name, i)));
-    const refs = references(p.sf, new Set(owner.keys()));
-
-    // What the first load needs from this module, followed through it.
-    const needed = new Set<number>();
-    const queue: number[] = [];
-    const need = (i: number | undefined): void => {
-      if (i !== undefined && !needed.has(i)) {
-        needed.add(i);
-        queue.push(i);
-      }
-    };
-    statements.forEach((s, i) => {
-      const isDeclaration =
-        declared(s).length > 0 ||
-        ts.isImportDeclaration(s) ||
-        ts.isExportDeclaration(s) ||
-        ts.isInterfaceDeclaration(s) ||
-        ts.isTypeAliasDeclaration(s) ||
-        ts.isEnumDeclaration(s) ||
-        ts.isModuleDeclaration(s);
-      if (!isDeclaration) need(i);
-    });
-    const firstImports = (name: string) => [...(byName.get(name) ?? []), ...(byName.get('*') ?? [])].some((f) => first.has(f));
-    for (const [name, local] of p.exported) if (firstImports(name)) need(owner.get(local));
-    while (queue.length > 0) for (const name of refs[queue.pop()!]!) need(owner.get(name));
-
+    const keep = needed.get(module) ?? new Set<number>();
     for (const [name, local] of p.exported) {
-      const i = owner.get(local);
-      if (i === undefined || needed.has(i)) continue;
-      const lazy = [...(byName.get(name) ?? [])].filter((f) => !first.has(f));
-      if (lazy.length === 0) continue;
-      const statement = statements[i]!;
-      out.push({ module, name, importers: lazy.sort(), start: statement.getStart(p.sf), end: statement.getEnd() });
+      const i = owners.get(module)!.get(local);
+      if (i === undefined || keep.has(i)) continue;
+      const users = [...(byName.get(name) ?? []), ...(byName.get('*') ?? [])];
+      if (users.length === 0) continue;
+      const statement = p.sf.statements[i]!;
+      out.push({ module, name, importers: [...new Set(users)].sort(), start: statement.getStart(p.sf), end: statement.getEnd() });
     }
   }
   return out.sort((a, b) => (a.module === b.module ? (a.name < b.name ? -1 : 1) : a.module < b.module ? -1 : 1));
@@ -319,6 +434,13 @@ export const KEPT: Record<string, string> = {
     'reads the switch the settings store sets at boot; moving it means moving the switch',
   'src/content/programs/index.ts#allPrograms': "reads the registry's private maps",
   'src/content/programs/index.ts#writtenProgram': "reads the registry's private maps",
-  'src/engine/scheduler.ts#DAY_NAMES':
-    'seventy bytes beside `DAY_SHORT`, which `validateWeek` needs; a module of its own costs a chunk name worth as much',
+  'src/lib/openedView.ts#openedViewFor':
+    'reads the slot `openAt` writes, which is private to the module; moving it means exporting the slot',
+  'src/db/sound.ts#readingProblems':
+    'reads the counts `recordReading` keeps, which are private to the module; moving it means exporting them',
+  'src/engine/rest.ts#startedAsRest':
+    'moved and measured at M345: 114.141 → 114.149KB, inside rebuild noise, so not worth a module',
+  'src/store/undo.ts#offerUndo':
+    'moved and measured at M345: 114.149 → 114.158KB and one more chunk, since thirteen pages share it',
+  'src/db/projects.ts#ACTIVE_CAP': 'twenty-seven bytes, a constant beside the project rows it limits',
 };

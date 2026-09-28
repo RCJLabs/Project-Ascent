@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Climb } from '@/db/sessions';
-import { REST_PRESETS, bump, climbOutcome, gymSummary, restLabel, restRemaining } from './gym';
+import { bump, gymSummary } from './gym';
+import { REST_PRESETS, climbOutcome, restLabel, restRemaining } from './gymWords';
 
 /**
  * Gym mode's arithmetic (PLAN.md M74).

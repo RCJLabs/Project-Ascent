@@ -3,7 +3,7 @@ import { getDb, readOr } from './db';
 import { readingProblems } from './sound';
 import { findOrphanMedia } from './media';
 import { mediaBytes } from './mediaRecords';
-import { SNAPSHOT_KEY } from './schema';
+import { SNAPSHOT_KEY } from './exportStores';
 import { HEALTH_STORES, type DataHealthInput, type HealthStore } from '@/engine/dataHealth';
 
 /**

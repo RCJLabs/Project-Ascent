@@ -23,7 +23,8 @@
 
 import type { Session } from '@/db/sessions';
 import { daysBetween } from './dates';
-import { gradeOrdinal, type GradeScale } from './grades';
+import type { GradeScale } from './grades';
+import { gradeOrdinal } from './gradeReading';
 import { venueKey } from './venues';
 import { joinCapped } from './phrase';
 

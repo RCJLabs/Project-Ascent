@@ -4,7 +4,8 @@ import { BASE_CAMP, IRON_GRIP, OUTDOOR_CLIMBING, THE_CRUISER, TRIP_PREP } from '
 import type { Drill, Exercise } from '@/content/types';
 import type { BlockPrescription } from './plan';
 import { prescriptionFor } from './plan';
-import { describeWork, programSessionLengths, secondsRange, sessionMinutes, workMinutes } from './sessionLength';
+import { describeWork, secondsRange, sessionMinutes, workMinutes } from './sessionLength';
+import { programSessionLengths } from './programLengths';
 
 /**
  * How long the prescribed work takes (PLAN.md M131).

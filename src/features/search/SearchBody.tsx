@@ -8,7 +8,7 @@ import { sectionText, snippet } from '@/engine/guideText';
 import { METRICS } from '@/content/metrics';
 import { allPrograms } from '@/content/programs';
 import { fromKey } from '@/engine/dates';
-import { displayGrade } from '@/engine/grades';
+import { displayGrade } from '@/engine/gradeReading';
 import { groupResults, search, type SearchItem } from '@/engine/search';
 import { useCustomPrograms } from '@/store/programs';
 import { useObjectives } from '@/store/objectives';

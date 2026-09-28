@@ -5,7 +5,8 @@ import { render } from '@testing-library/react';
 import type { Climb, Session } from '@/db/sessions';
 import { BLOCKS, BLOCK_DAYS, ENOUGH_TRIES, conversionTrend } from '@/engine/conversion';
 import { addDays } from '@/engine/dates';
-import { displayGrade, type GradeScale } from '@/engine/grades';
+import type { GradeScale } from '@/engine/grades';
+import { displayGrade } from '@/engine/gradeReading';
 import { ConversionGrid } from './ConversionGrid';
 
 /**

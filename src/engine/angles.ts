@@ -33,7 +33,8 @@
 
 import type { Climb, Session, WallAngle } from '@/db/sessions';
 import { addClimb, emptyTally, type GradeTally } from './derive';
-import { DEFAULT_DISPLAY, displayGrade, gradeOrdinal, type GradeDisplay, type GradeScale } from './grades';
+import { DEFAULT_DISPLAY, type GradeDisplay, type GradeScale } from './grades';
+import { displayGrade, gradeOrdinal } from './gradeReading';
 
 /** In the order a wall leans, which is how a climber thinks about it. */
 export const ANGLE_ORDER: WallAngle[] = ['slab', 'vertical', 'overhang', 'roof'];

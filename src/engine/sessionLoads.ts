@@ -7,7 +7,7 @@
 
 import type { BodyPart } from '@/content/bodyParts';
 import type { Drill, Exercise, SessionType } from '@/content/types';
-import { drillLoads, exerciseLoads } from './bodyLoad';
+import { drillLoads, exerciseLoads } from './bodyLoadChecks';
 import { CLIMBING_PARTS, onTheWall } from './climbing';
 
 /**

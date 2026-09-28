@@ -22,13 +22,6 @@
 import type { LoggedExercise, Session } from '@/db/sessions';
 import { exerciseKey, hasNumbers } from './exerciseLog';
 import { sessionId } from '@/db/sessions';
-import { isRestSession } from './rest';
-
-export interface MergeCheck {
-  ok: boolean;
-  /** Why not, in words the UI can show. */
-  reason?: string;
-}
 
 /** The same session on another date, with the clock dropped. */
 export function moveSession(session: Session, toDate: string, index: number): Session {
@@ -39,20 +32,6 @@ export function moveSession(session: Session, toDate: string, index: number): Se
     date: toDate,
     updatedAt: new Date().toISOString(),
   };
-}
-
-/**
- * Whether two sessions describe the same day's training closely enough to be
- * one entry. A rest day and a training day are different claims about a day,
- * not two halves of one.
- */
-export function canMerge(a: Session, b: Session): MergeCheck {
-  if (a.id === b.id) return { ok: false, reason: 'That is the same session.' };
-  if (a.date !== b.date) return { ok: false, reason: 'Only sessions on the same day can be merged.' };
-  if (isRestSession(a) !== isRestSession(b)) {
-    return { ok: false, reason: 'A rest day and a training session cannot be merged — they say different things about the day.' };
-  }
-  return { ok: true };
 }
 
 /**
@@ -146,15 +125,4 @@ function mergedRpe(a: Session, b: Session): number | undefined {
 export function loadOf(session: Session): number {
   if (session.rpe === undefined || session.durationMin === undefined) return 0;
   return session.rpe * (session.durationMin / 60);
-}
-
-/** A short description of a session, for a picker that lists several. */
-export function describeSession(session: Session, typeName?: string): string {
-  if (isRestSession(session)) return 'Rest day';
-  const parts: string[] = [];
-  if (typeName) parts.push(typeName);
-  const sends = session.climbs.reduce((n, c) => n + (c.result === 'send' ? c.count : 0), 0);
-  if (sends > 0) parts.push(`${sends} send${sends === 1 ? '' : 's'}`);
-  if (session.durationMin !== undefined) parts.push(`${session.durationMin} min`);
-  return parts.length ? parts.join(' · ') : 'Session';
 }

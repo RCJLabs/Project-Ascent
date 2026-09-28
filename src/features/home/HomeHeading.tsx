@@ -4,7 +4,7 @@ import type { Program } from '@/content/types';
 import { fromKey } from '@/engine/dates';
 import { describeWeekDays, nextLimitDay } from '@/engine/week';
 import type { DayStatus, WeekDay, WeekOutline } from '@/engine/week';
-import { logHref } from '@/ui/routes';
+import { logHref } from '@/ui/logHref';
 
 /**
  * The day, and where it sits in the week (PLAN.md M241).

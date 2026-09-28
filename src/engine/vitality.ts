@@ -13,7 +13,7 @@
 
 import type { ClimberState } from './derive';
 import type { Injury } from '@/store/profile';
-import { summarise, vitalityCost } from './injury';
+import { summarise, vitalityCost } from './injuryReading';
 import type { Stat } from './stats';
 
 /** END scales the ceiling from 100 to 500, as the prototype had it. */

@@ -1,5 +1,6 @@
 import { fireEvent, screen } from '@testing-library/react';
-import { monthLabel, today } from '@/engine/dates';
+import { today } from '@/engine/dates';
+import { monthLabel } from '@/engine/calendarDates';
 
 /**
  * Put the month holding a date on screen (PLAN.md M299).

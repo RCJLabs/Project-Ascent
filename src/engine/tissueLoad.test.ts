@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Session } from '@/db/sessions';
-import { partsInText } from './bodyLoad';
+import { partsInText } from './bodyLoadChecks';
 import { addDays } from './dates';
 import { CLIMBING_PARTS } from './climbing';
 import {

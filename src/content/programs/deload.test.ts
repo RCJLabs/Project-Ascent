@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { PROGRAMS } from './index';
 import { IRON_GRIP } from './catalogue';
-import { DELOAD_STEP, deloadDose, deloadLightens, prescriptionFor } from '@/engine/plan';
+import { DELOAD_STEP, deloadDose, prescriptionFor } from '@/engine/plan';
+import { deloadLightens } from '@/engine/planReading';
 import { phaseForWeek, type Program } from '@/content/types';
 
 /**

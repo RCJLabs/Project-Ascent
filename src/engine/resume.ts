@@ -59,7 +59,8 @@
 import { phaseForWeek, type Program } from '@/content/types';
 import type { Session } from '@/db/sessions';
 import { addDays, programWeek } from './dates';
-import { blockStatus, blockWindow } from './plan';
+import { blockWindow } from './plan';
+import { blockStatus } from './planReading';
 import { isRestSession } from './rest';
 
 /** Why the climber was away. The app cannot derive this and does not try. */

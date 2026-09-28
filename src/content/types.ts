@@ -9,9 +9,10 @@
  *
  * Dosage fields are strings on purpose: real programming is full of ranges
  * ("3-5 sets", "8-10 reps"). They follow a documented shape so
- * `parseCount()` can turn them into numbers where the app needs one (set
- * rows to prefill, volume math). The win over the old model is that name,
- * dosage, and rationale are separate fields instead of one prose blob.
+ * `parseCount()` in `parseCount.ts` can turn them into numbers where the app
+ * needs one (set rows to prefill, volume math). The win over the old model
+ * is that name, dosage, and rationale are separate fields instead of one
+ * prose blob.
  */
 
 import type { GradeScale } from '@/engine/grades';
@@ -345,9 +346,6 @@ export type FieldId =
  */
 export type Intensity = 'max' | 'hard' | 'moderate' | 'easy';
 
-/** Easiest first, so "at or above hard" is a comparison rather than a set. */
-export const INTENSITY_ORDER: readonly Intensity[] = ['easy', 'moderate', 'hard', 'max'];
-
 /** How the four read on screen. */
 export const INTENSITY_LABEL: Record<Intensity, string> = {
   max: 'Limit day',
@@ -355,11 +353,6 @@ export const INTENSITY_LABEL: Record<Intensity, string> = {
   moderate: 'Moderate day',
   easy: 'Easy day',
 };
-
-/** True when `a` is as demanding as `b`, or more so. */
-export function atLeastAsHard(a: Intensity, b: Intensity): boolean {
-  return INTENSITY_ORDER.indexOf(a) >= INTENSITY_ORDER.indexOf(b);
-}
 
 export interface SessionType {
   id: SessionTypeId;
@@ -623,18 +616,6 @@ export interface Program {
      */
     soft?: boolean;
   };
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────
-
-/** Lowest number in a dosage string: '3' → 3, '3-5' → 3, '12 per arm' → 12.
- *  Returns null when there is no leading count (e.g. '1-2-3-4-5 matched'
- *  is a ladder pattern, not a count). */
-export function parseCount(value: string | undefined): number | null {
-  if (!value) return null;
-  const match = /^(\d+)(?:\s*[-–]\s*(\d+))?/.exec(value.trim());
-  if (!match?.[1]) return null;
-  return Number(match[1]);
 }
 
 export function phaseForWeek(program: Program, week: number): Phase | undefined {

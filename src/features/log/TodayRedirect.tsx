@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { today } from '@/engine/dates';
-import { logHref } from '@/ui/routes';
+import { logHref } from '@/ui/logHref';
 
 /**
  * `/today` → today's log, which is Home (PLAN.md M115, M117).

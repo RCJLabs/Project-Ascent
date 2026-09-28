@@ -6,7 +6,8 @@ import { PROTOCOLS } from './protocols';
 import { PROGRAMS } from './programs';
 import { PLANNED_PROGRAM_IDS } from './programs/shelves';
 import { BASE_CAMP, GRAVITY_DEFIED, GROUND_ZERO, IRON_GRIP, LOCKDOWN, OUTDOOR_CLIMBING, THE_CRUISER, THE_SIEGE } from './programs/catalogue';
-import { parseCount, phaseForWeek } from './types';
+import { phaseForWeek } from './types';
+import { parseCount } from './parseCount';
 import { validateCatalog, validateProgram } from './validate';
 
 describe('catalog integrity', () => {

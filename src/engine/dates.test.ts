@@ -1,22 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newSession } from '@/db/sessions';
-import {
-  addDays,
-  blockStart,
-  dayOfWeek,
-  daysBetween,
-  isThisMonth,
-  isThisWeek,
-  fromKey,
-  isDateKey,
-  isYearKey,
-  today,
-  monthGrid,
-  programWeek,
-  startOfWeek,
-  toKey,
-  weekDays,
-} from './dates';
+import { addDays, blockStart, dayOfWeek, daysBetween, fromKey, isDateKey, today, programWeek, startOfWeek, toKey, weekDays } from './dates';
+import { isThisMonth, isThisWeek, isYearKey, monthGrid } from './calendarDates';
 
 describe('date keys', () => {
   it('round-trips through local time, not UTC', () => {

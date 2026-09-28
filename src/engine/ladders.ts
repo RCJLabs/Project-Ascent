@@ -33,7 +33,8 @@
 
 import type { Session } from '@/db/sessions';
 import { addClimb, emptyTally, type GradeTally } from './derive';
-import { DEFAULT_DISPLAY, displayGrade, gradeOrdinal, type GradeDisplay, type GradeScale } from './grades';
+import { DEFAULT_DISPLAY, type GradeDisplay, type GradeScale } from './grades';
+import { displayGrade, gradeOrdinal } from './gradeReading';
 
 /** Sends below which a best is a coincidence rather than a level. */
 export const THIN_SENDS = 5;

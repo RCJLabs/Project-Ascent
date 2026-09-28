@@ -24,25 +24,8 @@ import { METRICS } from '@/content/metrics';
 import { PLANNED_PROGRAM_IDS } from '@/content/programs/shelves';
 import { PROTOCOLS } from '@/content/protocols';
 import { SCHEMA_VERSION } from '@/db/schema';
-import {
-  INTENSITY_ORDER,
-  type Constraint,
-  type Discipline,
-  type Dose,
-  type Equipment,
-  type Exercise,
-  type ExerciseBlock,
-  type FieldId,
-  type Intensity,
-  type Phase,
-  type PhasePrescription,
-  type Program,
-  type ProgramStage,
-  type SessionType,
-  type Track,
-  type WeekStep,
-  type WeeklyLayout,
-} from '@/content/types';
+import type { Constraint, Discipline, Dose, Equipment, Exercise, ExerciseBlock, FieldId, Intensity, Phase, PhasePrescription, Program, ProgramStage, SessionType, Track, WeekStep, WeeklyLayout } from '@/content/types';
+import { INTENSITY_ORDER } from '@/content/intensity';
 import { DOSE_FIELDS } from './prescription';
 import { secondsRange } from './sessionLength';
 import type { GradeScale } from './grades';

@@ -31,7 +31,8 @@
 
 import type { Project } from '@/db/projects';
 import type { Session } from '@/db/sessions';
-import { displayGrade, type GradeDisplay } from '../grades';
+import type { GradeDisplay } from '../grades';
+import { displayGrade } from '../gradeReading';
 import { activeProjects, summariseProject } from '../projectSummary';
 
 export interface RestingFor {

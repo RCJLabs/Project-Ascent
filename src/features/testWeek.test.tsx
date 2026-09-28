@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import { getProgram } from '@/content/programs';
-import { testWeeks } from '@/engine/assessments';
+import { testWeeks } from '@/engine/testWeeks';
 import { addDays, startOfWeek, today } from '@/engine/dates';
 import { putSession, newSession } from '@/db/sessions';
 import { useProfile } from '@/store/profile';

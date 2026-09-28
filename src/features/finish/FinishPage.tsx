@@ -31,7 +31,7 @@ import { Card } from '@/ui/Card';
 import { EmptyState } from '@/ui/EmptyState';
 import { PageGrid } from '@/ui/PageGrid';
 import { PageHeader } from '@/ui/PageHeader';
-import { PageSkeleton } from '@/ui/Skeleton';
+import { PageSkeleton } from '@/ui/PageSkeleton';
 import { activeObjectives } from '@/engine/objectives';
 import { nextInSeason, season, soonestSeason } from '@/engine/season';
 import { useObjectives } from '@/store/objectives';

@@ -5,12 +5,8 @@ import { newSession, type Session } from '@/db/sessions';
 import { buildTips } from './coach';
 import { deriveClimberState } from './derive';
 import { addDays } from './dates';
-import {
-  DIRECT_FINGER_RULES,
-  FINGER_GAP_HOURS,
-  fingerGaps,
-  loadsFingersDirectly,
-} from './fingerGap';
+import { DIRECT_FINGER_RULES, loadsFingersDirectly } from './fingerGap';
+import { FINGER_GAP_HOURS, fingerGaps } from './fingerGapCheck';
 
 /**
  * The 48-hour rule, for the climbers the program rules cannot reach

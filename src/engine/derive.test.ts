@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newSession, type Session } from '@/db/sessions';
 import { addDays, startOfWeek } from './dates';
 import { deriveClimberState } from './derive';
-import { gradeOrdinal } from './grades';
+import { gradeOrdinal } from './gradeReading';
 
 const TODAY = '2026-09-13'; // a Sunday
 

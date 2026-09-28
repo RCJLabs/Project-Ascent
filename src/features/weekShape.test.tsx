@@ -5,7 +5,7 @@ import { renderAt, reset } from '@/test/render';
 import { StartProgramPage } from '@/features/plan/StartProgramPage';
 import { FinderPage } from '@/features/finder/FinderPage';
 import { useIntent } from '@/store/intent';
-import { DAY_NAMES } from '@/engine/scheduler';
+import { DAY_NAMES } from '@/engine/days';
 
 /**
  * The week a climber can actually train (PLAN.md M55).

@@ -1,6 +1,6 @@
 import { Minus, Plus } from 'lucide-react';
 import type { Climb } from '@/db/sessions';
-import { climbOutcome } from '@/engine/gym';
+import { climbOutcome } from '@/engine/gymWords';
 import { IconButton } from '@/ui/IconButton';
 
 /**

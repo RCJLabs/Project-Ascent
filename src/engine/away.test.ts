@@ -1,20 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  AWAY_KINDS,
-  AWAY_LABELS,
-  type AwayPeriod,
-  awayLength,
-  awayName,
-  awayOn,
-  awayOverlapping,
-  cleanNote,
-  EXPLAINS_FRACTION,
-  explainsGap,
-  isAwayPeriod,
-  newAwayId,
-  NOTE_LIMIT,
-  wasClimbing,
-} from './away';
+import { AWAY_LABELS, type AwayPeriod, awayLength, awayName, awayOn, awayOverlapping, cleanNote, EXPLAINS_FRACTION, explainsGap, newAwayId, NOTE_LIMIT, wasClimbing } from './away';
+import { AWAY_KINDS, isAwayPeriod } from './awayPeriod';
 
 function period(from: string, to: string, over: Partial<AwayPeriod> = {}): AwayPeriod {
   return {

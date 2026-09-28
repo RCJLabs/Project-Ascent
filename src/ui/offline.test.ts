@@ -119,7 +119,9 @@ describe('bytes are formatted in one place', () => {
     const implementations = walk('src')
       .filter((p) => /\.tsx?$/.test(p) && !p.endsWith('.test.ts'))
       .filter((p) => /function formatBytes\b/.test(read(p)));
-    expect(implementations).toEqual(['src/engine/offline.ts']);
+    // In a module of its own since M345, out of the update checks that run
+    // at boot; still exactly one.
+    expect(implementations).toEqual(['src/engine/formatBytes.ts']);
   });
 });
 

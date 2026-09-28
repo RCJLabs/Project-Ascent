@@ -29,7 +29,7 @@ import type { BlockRecord } from './blocks';
 import { outcomeOf, weeksRun, type BlockOutcome } from './blockOutcome';
 import type { MetricEntry } from '@/db/metrics';
 import { blockReport, type AssessmentResult, type BlockReport } from './blockReport';
-import { blockStatus, type BlockStatus } from './plan';
+import { blockStatus, type BlockStatus } from './planReading';
 
 export interface NextStep {
   program: Program;

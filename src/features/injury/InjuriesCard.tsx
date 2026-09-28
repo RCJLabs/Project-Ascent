@@ -13,14 +13,8 @@ import {
 } from '@/content/bodyParts';
 import { today } from '@/engine/dates';
 import { recurrenceFor } from '@/engine/injuryLog';
-import {
-  SEVERITY_LABEL,
-  STATUS_LABEL,
-  useProfile,
-  type InjurySeverity,
-  type InjurySide,
-  type InjuryStatus,
-} from '@/store/profile';
+import { useProfile, type InjurySeverity, type InjurySide, type InjuryStatus } from '@/store/profile';
+import { SEVERITY_LABEL, STATUS_LABEL } from '@/features/injury/labels';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';

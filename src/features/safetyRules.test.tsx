@@ -7,7 +7,7 @@ import { newSession, putSession } from '@/db/sessions';
 import { loadPrograms } from '@/content/programs';
 import { DRILLS } from '@/content/drills';
 import { PROTOCOLS } from '@/content/protocols';
-import { partsNamedIn } from '@/engine/bodyLoad';
+import { partsNamedIn } from '@/engine/bodyLoadChecks';
 import { addDays, dayOfWeek, startOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { hydrate, renderAt, reset } from '@/test/render';

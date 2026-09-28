@@ -24,7 +24,9 @@ describe('a loading page holds its shape', () => {
   });
 
   it('says it is loading rather than only drawing grey boxes', () => {
-    const skeleton = read('src/ui/Skeleton.tsx');
+    // The page's skeleton, which is its own module since M345: the cards stay
+    // in `Skeleton.tsx`, where Home draws them at boot.
+    const skeleton = read('src/ui/PageSkeleton.tsx');
     expect(skeleton).toContain('aria-busy');
     expect(skeleton).toContain('aria-label');
   });

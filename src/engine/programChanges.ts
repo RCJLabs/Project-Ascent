@@ -37,7 +37,7 @@ import type {
 } from '@/content/types';
 import { EQUIPMENT_LABELS } from './customProgram';
 import { DOSE_FIELDS } from './prescription';
-import { DAY_NAMES } from './scheduler';
+import { DAY_NAMES } from './days';
 
 export interface ChangeGroup {
   /** Where in the program: "Length", "The week", or a session's name. */

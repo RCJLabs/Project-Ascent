@@ -62,7 +62,8 @@ import type { FieldId } from '@/content/types';
 import { FIELDS, type FieldSpec } from '@/content/fields';
 import type { Session } from '@/db/sessions';
 import { addDays } from './dates';
-import { canonicalGrade, gradeOrdinal, type GradeScale } from './grades';
+import { canonicalGrade, type GradeScale } from './grades';
+import { gradeOrdinal } from './gradeReading';
 
 /** Ninety days, to match the other series on the Progress page. */
 export const FIELD_DAYS = 90;

@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { PROGRAMS } from '.';
 import { TRIP_PREP, TWO_DAY_WEEK } from './catalogue';
 import { validateProgram } from '@/engine/customProgram';
-import { validateWeek } from '@/engine/scheduler';
+import { validateWeek } from '@/engine/weekRules';
 import { layoutsFor, planFromLayout, sessionPriority } from '@/engine/weekLayouts';
-import { adaptProgram, lengthsFor } from '@/engine/adapt';
+import { adaptProgram } from '@/engine/adapt';
+import { lengthsFor } from '@/engine/adaptLengths';
 import { getMetric } from '@/content/metrics';
 import { guideFor } from '@/content/guides';
 

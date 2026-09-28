@@ -1,6 +1,6 @@
 import { getDb } from './db';
 import type { ExportFile } from './exportImport';
-import { EXPORTABLE_STORES, SNAPSHOT_KEY, type ExportableStore } from './schema';
+import { EXPORTABLE_STORES, SNAPSHOT_KEY, type ExportableStore } from './exportStores';
 
 /**
  * What an import is about to do, before it does it (PLAN.md M20).

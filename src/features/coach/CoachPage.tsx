@@ -1,6 +1,6 @@
 import { Link } from 'wouter';
 import { ArrowRight, CircleCheck, Info, RotateCcw, TriangleAlert, X } from 'lucide-react';
-import { type Tip, type TipTone } from '@/engine/coach';
+import type { Tip, TipTone } from '@/engine/coach';
 import { useTips } from './useTips';
 import { useProfile } from '@/store/profile';
 import { PageGrid } from '@/ui/PageGrid';

@@ -15,13 +15,8 @@ import type { MetricEntry } from './metrics';
 import type { Project } from './projects';
 import type { Session } from './sessions';
 import { withDeclaredMode } from '@/engine/sessionMode';
-import {
-  EXPORTABLE_STORES,
-  SCHEMA_VERSION,
-  SNAPSHOT_KEY,
-  type ExportableStore,
-  type MediaRecord,
-} from './schema';
+import { SCHEMA_VERSION, type MediaRecord } from './schema';
+import { EXPORTABLE_STORES, SNAPSHOT_KEY, type ExportableStore } from './exportStores';
 
 /**
  * A photo's description. The bytes live beside it in the archive.

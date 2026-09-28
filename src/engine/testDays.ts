@@ -48,9 +48,10 @@
  */
 
 import { getMetric } from '@/content/metrics';
-import { INTENSITY_ORDER, type Metric, type MetricId, type Program, type SessionType, type TestPlace } from '@/content/types';
+import type { Metric, MetricId, Program, SessionType, TestPlace } from '@/content/types';
+import { INTENSITY_ORDER } from '@/content/intensity';
 import type { MetricEntry } from '@/db/metrics';
-import type { TestReason } from './assessments';
+import type { TestReason } from './testWeeks';
 import { onTheWall } from './climbing';
 import { addDays, startOfWeek } from './dates';
 import { directFingerWork, typeWords } from './fingerGap';

@@ -4,7 +4,8 @@ import type { DayRecord } from '@/db/game';
 import { CLIMBS_TO_EVEREST } from './altimeter';
 import { feetFromMetres } from './units';
 import { addDays, daysBetween, startOfWeek } from './dates';
-import { gradeOrdinal, type GradeScale } from './grades';
+import type { GradeScale } from './grades';
+import { gradeOrdinal } from './gradeReading';
 import { burnsOf } from './projectSummary';
 import { isRestSession } from './rest';
 

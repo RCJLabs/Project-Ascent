@@ -3,7 +3,7 @@ import { BASE_CAMP, CATALOGUE, GRAVITY_DEFIED, IRON_GRIP, LOCKDOWN, THE_SIEGE, T
 import { METRICS } from '@/content/metrics';
 import type { Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
-import { testWeeks } from './assessments';
+import { testWeeks } from './testWeeks';
 import { addDays } from './dates';
 import type { WeekPlan } from './scheduler';
 import { layoutsFor, planFromLayout } from './weekLayouts';

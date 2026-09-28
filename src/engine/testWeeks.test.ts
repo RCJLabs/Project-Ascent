@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PROGRAMS, getProgram } from '@/content/programs';
 import { adaptProgram } from './adapt';
-import { TEST_REASON_LABEL, testWeeks } from './assessments';
+import { TEST_REASON_LABEL, testWeeks } from './testWeeks';
 import { assessmentBattery } from './assessmentStatus';
 import { plannedDay } from './plan';
 import type { Program } from '@/content/types';

@@ -25,7 +25,8 @@ import { loadRelief, MIN_HISTORY } from './loadRelief';
 import { isRestSession } from './rest';
 import { getProgram } from '@/content/programs';
 import { addDays, dayOfWeek, daysBetween } from './dates';
-import { FINGER_GAP_HOURS, loadsFingersDirectly } from './fingerGap';
+import { loadsFingersDirectly } from './fingerGap';
+import { FINGER_GAP_HOURS } from './fingerGapCheck';
 import type { DayOfWeek } from '@/content/types';
 
 /** A Sunday through the Saturday after it, so every weekday is a `today`. */

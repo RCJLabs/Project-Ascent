@@ -13,7 +13,8 @@
 
 import { getDrill } from '@/content/drills';
 import type { Climb, Session, SessionMode } from '@/db/sessions';
-import { gradeOrdinal, maxGrade, type GradeScale } from './grades';
+import type { GradeScale } from './grades';
+import { gradeOrdinal, maxGrade } from './gradeReading';
 import { addDays, daysBetween, startOfWeek, today as todayKey } from './dates';
 import { isRestSession } from './rest';
 

@@ -13,15 +13,10 @@ import {
 import { useSessions, allSessions } from '@/store/sessions';
 import { PROGRAMS as programs } from '@/content/programs';
 import type { TissueFeel } from '@/engine/readiness';
-import { describeInjury } from '@/engine/injury';
+import { describeInjury } from '@/engine/injuryReading';
 import { addStep, progress, removeStep, stepsFor, toggleStep } from '@/engine/returnPlan';
-import {
-  SEVERITY_LABEL,
-  STATUS_LABEL,
-  useProfile,
-  type InjurySeverity,
-  type InjuryStatus,
-} from '@/store/profile';
+import { useProfile, type InjurySeverity, type InjuryStatus } from '@/store/profile';
+import { SEVERITY_LABEL, STATUS_LABEL } from '@/features/injury/labels';
 import { offerUndo } from '@/store/undo';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
@@ -31,7 +26,7 @@ import { IconButton } from '@/ui/IconButton';
 import { Checkbox, Input, TextArea } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
 import { RecordNotFound } from '@/ui/RecordNotFound';
-import { PageSkeleton } from '@/ui/Skeleton';
+import { PageSkeleton } from '@/ui/PageSkeleton';
 
 /**
  * One injury, and the climber's own record of coming back from it.

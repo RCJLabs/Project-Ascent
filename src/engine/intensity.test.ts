@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { PROGRAMS } from '@/content/programs';
 import { PEAK_PERFORMANCE, THE_CRUISER } from '@/content/programs/catalogue';
 import { validateProgram } from '@/content/validate';
-import { atLeastAsHard, INTENSITY_ORDER, type Program } from '@/content/types';
-import { intensityOf, validateWeek, type WeekPlan } from './scheduler';
+import type { Program } from '@/content/types';
+import { atLeastAsHard, INTENSITY_ORDER } from '@/content/intensity';
+import { intensityOf, type WeekPlan } from './scheduler';
+import { validateWeek } from './weekRules';
 import { sessionPriority, sessionsForDays } from './weekLayouts';
 
 /**

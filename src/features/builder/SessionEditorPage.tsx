@@ -35,7 +35,7 @@ import {
 } from '@/engine/prescription';
 import { useCustomPrograms } from '@/store/programs';
 import { BackLink } from '@/ui/BackLink';
-import { PageSkeleton } from '@/ui/Skeleton';
+import { PageSkeleton } from '@/ui/PageSkeleton';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Chip, OptionCard } from '@/ui/Chip';

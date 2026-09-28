@@ -12,22 +12,6 @@
 
 import type { Discipline, Drill, DrillCategory, DrillId, Equipment } from '../types';
 
-export const DRILL_CATEGORIES: Record<DrillCategory, { label: string; description: string }> = {
-  technique: { label: 'Technique', description: 'Movement quality, footwork, body position.' },
-  power: { label: 'Power', description: 'Maximal force and explosive movement.' },
-  'finger-strength': { label: 'Finger Strength', description: 'Hangboard, crimp, and contact strength.' },
-  endurance: { label: 'Endurance', description: 'Aerobic capacity and time on the wall.' },
-  'power-endurance': {
-    label: 'Power Endurance',
-    description: 'Repeated hard efforts under accumulating pump.',
-  },
-  performance: { label: 'Performance', description: 'Send-focused sessions and peak expression.' },
-  strategy: { label: 'Strategy', description: 'Beta reading, tactics, and projecting process.' },
-  mental: { label: 'Mental', description: 'Fear, focus, and pressure management.' },
-  recovery: { label: 'Recovery', description: 'Deloads, active rest, and tissue care.' },
-  assessment: { label: 'Assessment', description: 'Benchmark testing and retests.' },
-};
-
 /**
  * The library, in provenance order.
  *
@@ -115,10 +99,6 @@ export function offWallDrills(): Drill[] {
 
 export function getDrill(id: DrillId): Drill | undefined {
   return BY_ID.get(id) ?? CUSTOM.get(id);
-}
-
-export function drillsByCategory(category: DrillCategory): Drill[] {
-  return allDrills().filter((d) => d.category === category);
 }
 
 export interface DrillFilter {

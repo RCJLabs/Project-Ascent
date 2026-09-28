@@ -1,20 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { newSession, type Session } from '@/db/sessions';
 import { addDays, today } from './dates';
-import {
-  MAX_LOGGED_HOURS,
-  STALE_HOURS,
-  describeSpan,
-  durationFromSpan,
-  elapsedMs,
-  formatClock,
-  formatCountdown,
-  isLive,
-  isStale,
-  runningSession,
-  staleSessions,
-} from './live';
-
+import { STALE_HOURS, describeSpan, elapsedMs, formatClock, isLive, isStale, runningSession, staleSessions } from './live';
+import { MAX_LOGGED_HOURS, durationFromSpan, formatCountdown } from './liveClock';
 const H = 3600_000;
 const M = 60_000;
 const NOW = Date.parse(`${today()}T19:00:00.000Z`);

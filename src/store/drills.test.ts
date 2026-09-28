@@ -2,7 +2,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { getDb, resetDbForTests } from '@/db/db';
-import { loadDrills, drillsByCategory, filterDrills, getDrill } from '@/content/drills';
+import { loadDrills, filterDrills, getDrill } from '@/content/drills';
+import { drillsByCategory } from '@/content/drills/categories';
 import { drillText } from '@/content/drillText';
 import { exportAll, importAll } from '@/db/exportImport';
 import type { Drill, DrillId } from '@/content/types';

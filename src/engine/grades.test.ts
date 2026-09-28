@@ -1,18 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_DISPLAY,
-  canonicalGrade,
-  compareGrades,
-  displayGrade,
-  displayRange,
-  gradeOrdinal,
-  isValidGrade,
-  maxGrade,
-  parseGrade,
-  V_GRADES,
-  YDS_GRADES,
-  type GradeDisplay,
-} from './grades';
+import { DEFAULT_DISPLAY, canonicalGrade, isValidGrade, V_GRADES, YDS_GRADES, type GradeDisplay } from './grades';
+import { compareGrades, displayGrade, displayRange, gradeOrdinal, maxGrade, parseGrade } from './gradeReading';
 
 describe('grade ladders', () => {
   it('has the expected ladder sizes', () => {

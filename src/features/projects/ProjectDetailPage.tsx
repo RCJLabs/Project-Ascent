@@ -8,7 +8,7 @@ import { useProjects } from '@/store/projects';
 import { offerUndo } from '@/store/undo';
 import { useSettings } from '@/store/settings';
 import { BackLink } from '@/ui/BackLink';
-import { PageSkeleton } from '@/ui/Skeleton';
+import { PageSkeleton } from '@/ui/PageSkeleton';
 import { projectCard } from '@/ui/shareCard';
 import { useAllSessions } from '@/store/sessions';
 import { Button } from '@/ui/Button';

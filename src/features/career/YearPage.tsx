@@ -1,9 +1,10 @@
 import { useEffect, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { ChevronLeft, ChevronRight, Minus, TrendingDown, TrendingUp } from 'lucide-react';
-import { fromKey, isYearKey, today as todayKey } from '@/engine/dates';
+import { fromKey, today as todayKey } from '@/engine/dates';
+import { isYearKey } from '@/engine/calendarDates';
 import { deriveClimberState } from '@/engine/derive';
-import { displayGrade } from '@/engine/grades';
+import { displayGrade } from '@/engine/gradeReading';
 import {
   availableYears,
   changes,

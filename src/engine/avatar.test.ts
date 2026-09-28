@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_PALETTE,
-  SKIN_TONES,
-  STAGES,
-  deriveAvatar,
-  gearForLevel,
-  groundForHeight,
-  nextStage,
-  poseForVitality,
-  stageForLevel,
-} from './avatar';
+import { SKIN_TONES, STAGES, deriveAvatar, gearForLevel, groundForHeight, nextStage, poseForVitality, stageForLevel } from './avatar';
+import { DEFAULT_PALETTE } from './avatarPalette';
 
 describe('stages', () => {
   it('rise without repeating and start at level zero', () => {

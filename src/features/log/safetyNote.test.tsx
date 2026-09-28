@@ -4,7 +4,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { PROTOCOLS, getProtocol } from '@/content/protocols';
 import { DRILLS } from '@/content/drills';
 import type { BodyPart } from '@/content/bodyParts';
-import { exerciseLoads, partsNamedIn, unspokenFor } from '@/engine/bodyLoad';
+import { exerciseLoads, partsNamedIn, unspokenFor } from '@/engine/bodyLoadChecks';
 import { PROGRAMS, loadPrograms } from '@/content/programs';
 import { newSession, putSession } from '@/db/sessions';
 import { addDays, dayOfWeek, startOfWeek, today } from '@/engine/dates';

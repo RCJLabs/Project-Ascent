@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newSession, type Session } from '@/db/sessions';
-import { tallied, trained, weekTally, weekTense, type TalliedDay } from './weekTally';
+import { trained, weekTally, type TalliedDay } from './weekTally';
+import { tallied, weekTense } from './weekTense';
 
 /**
  * How a week went, counted once (PLAN.md M146).

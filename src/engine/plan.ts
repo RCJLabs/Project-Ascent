@@ -18,8 +18,8 @@ import {
   type Program,
   type SessionType,
 } from '@/content/types';
-import { testWeeks, type TestReason } from './assessments';
-import { blockSpan, dayOfWeek, daysBetween, programWeek } from './dates';
+import { testWeeks, type TestReason } from './testWeeks';
+import { blockSpan, dayOfWeek, programWeek } from './dates';
 import { effectivePlan, type WeekOverrides } from './reschedule';
 import type { WeekPlan } from './scheduler';
 
@@ -82,32 +82,6 @@ export function blockWindow(program: Program, startDate: string): { from: string
 }
 
 export type BlockState = 'before' | 'running' | 'ended';
-
-export interface BlockStatus {
-  state: BlockState;
-  from: string;
-  to: string;
-  /** Days since the block's last day. Zero or negative while it runs. */
-  daysSince: number;
-}
-
-/**
- * Where the climber is in the block.
- *
- * `programWeek` cannot answer this: it clamps, so a date a year past a
- * twelve-week block still reports week twelve, and every screen that asked
- * it was repeating the last week forever — sessions, phase, and the "final
- * test week" banner alike.
- */
-export function blockStatus(program: Program, startDate: string, today: string): BlockStatus {
-  const { from, to } = blockWindow(program, startDate);
-  return {
-    state: today < from ? 'before' : today > to ? 'ended' : 'running',
-    from,
-    to,
-    daysSince: daysBetween(to, today),
-  };
-}
 
 export function plannedDay(
   program: Program,
@@ -212,7 +186,7 @@ export function easedDose(exercise: Exercise, notches: number): Dose | null {
 }
 
 /** One notch off a count, or null when there is no notch to take. */
-function lighter(value: string | undefined): string | null {
+export function lighter(value: string | undefined): string | null {
   if (value === undefined) return null;
   const range = /^(\d+)\s*-\s*(\d+)$/.exec(value.trim());
   if (range) {
@@ -227,29 +201,6 @@ function lighter(value: string | undefined): string | null {
   // 'AMRAP', '1 per arm', 'to failure' — a count this cannot read is a count
   // it must not guess at.
   return null;
-}
-
-/**
- * Whether a check-in of this depth would take anything off the session
- * (PLAN.md M129).
- *
- * Here rather than in the logger, because it is the same question the
- * screen must not answer by eye: saying "less of it today" over a
- * prescription that has not moved is the fault M128 met with the deload
- * marker, one screen along.
- *
- * A full day falls out of this rather than being checked for. `easedDose`
- * at zero notches never moves anything, so the answer is already false and
- * an early return for it was a line no test could reach — which a mutation
- * duly showed by surviving.
- */
-export function easesAnything(blocks: readonly BlockPrescription[], notches: number): boolean {
-  return blocks.some((b) => b.entry.exercises.some((e) => easedDose(e, notches) !== null));
-}
-
-/** Whether a deload would take anything off this prescription at all. */
-export function deloadLightens(entry: PhasePrescription): boolean {
-  return entry.exercises.some((e) => deloadDose(e) !== null) || lighter(entry.circuit?.rounds) !== null;
 }
 
 /** What the climber is told when the week was lightened rather than authored. */

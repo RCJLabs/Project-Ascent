@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newSession, type Session } from '@/db/sessions';
-import {
-  canMerge,
-  describeSession,
-  loadOf,
-  mergeSessions,
-  moveSession,
-} from './sessionEdit';
+import { loadOf, mergeSessions, moveSession } from './sessionEdit';
+import { canMerge, describeSession } from './mergeCheck';
 import { isRestSession } from './rest';
 
 function session(patch: Partial<Session> = {}): Session {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { DEFAULT_PALETTE } from '@/engine/avatar';
+import { DEFAULT_PALETTE } from '@/engine/avatarPalette';
 import { FIGURES, HAIR_TONES, freeOutfits } from '@/engine/kits';
 import { hydrateProfile, useProfile } from '@/store/profile';
 import { writesSettled } from '@/store/writes';

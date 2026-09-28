@@ -32,7 +32,7 @@ import { FLAT_SESSIONS, highPointTrend, type HighPointTrend } from './projectTre
 import type { BlockAdherence } from './adherence';
 import type { LoadRelief } from './loadRelief';
 import type { Finding } from './planVsLog';
-import { FINGER_GAP_HOURS, fingerGaps } from './fingerGap';
+import { FINGER_GAP_HOURS, fingerGaps } from './fingerGapCheck';
 import type { Objective } from './objectives';
 import { tripNow } from './trip';
 import { comedownNow, type Comedown } from './comedown';

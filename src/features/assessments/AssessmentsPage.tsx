@@ -11,7 +11,7 @@ import { assessmentBattery, type AssessmentStatus } from '@/engine/assessmentSta
 import { blockReport, describeBlock } from '@/engine/blockReport';
 import { testWeek } from '@/engine/testDays';
 import { dayOfWeek, shortLabel, today } from '@/engine/dates';
-import { DAY_NAMES } from '@/engine/scheduler';
+import { DAY_NAMES } from '@/engine/days';
 import { holdTest } from '@/engine/holdTest';
 import { entryNote } from '@/engine/baselineBattery';
 import { HoldTimer } from './HoldTimer';

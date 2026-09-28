@@ -30,14 +30,16 @@
  * Not built, and not to be proposed again without an answer to that.
  */
 
-import { DRILL_CATEGORIES, drillsByCategory, getDrill } from '@/content/drills';
+import { getDrill } from '@/content/drills';
+import { DRILL_CATEGORIES, drillsByCategory } from '@/content/drills/categories';
 import type { DrillCategory } from '@/content/types';
 import type { Session } from '@/db/sessions';
 import { addDays, daysBetween, startOfWeek, today as todayKey } from './dates';
 import type { ClimberState } from './derive';
-import { DEFAULT_DISPLAY, V_GRADES, YDS_GRADES, displayGrade, gradeOrdinal, type GradeDisplay, type GradeScale } from './grades';
+import { DEFAULT_DISPLAY, V_GRADES, YDS_GRADES, type GradeDisplay, type GradeScale } from './grades';
+import { displayGrade, gradeOrdinal } from './gradeReading';
 import type { BodyPart } from '@/content/bodyParts';
-import { drillLoads } from './bodyLoad';
+import { drillLoads } from './bodyLoadChecks';
 import { isRestSession } from './rest';
 
 export type ChallengeKind = 'daily' | 'weekly' | 'bounty';

@@ -73,7 +73,8 @@ import { newSession, sessionId } from '@/db/sessions';
 import { parseMetricInput } from './assessments';
 import { isDateKey, toKey } from './dates';
 import { CSV_FILES } from './exportCsv';
-import { parseGrade, type GradeScale } from './grades';
+import type { GradeScale } from './grades';
+import { parseGrade } from './gradeReading';
 import { unitLabel, type UnitSystem } from './units';
 
 export type Discipline = 'boulder' | 'route';

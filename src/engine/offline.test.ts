@@ -1,17 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DEFER_MS,
-  FULL_RATIO,
-  TIGHT_RATIO,
-  UPDATE_CHECK_MS,
-  deferralExpired,
-  formatBytes,
-  pressureIsUrgent,
-  shouldCheckForUpdate,
-  storagePressure,
-  updateHold,
-  updateVisible,
-} from './offline';
+import { DEFER_MS, FULL_RATIO, TIGHT_RATIO, UPDATE_CHECK_MS, deferralExpired, pressureIsUrgent, shouldCheckForUpdate, storagePressure, updateHold, updateVisible } from './offline';
+import { formatBytes } from './formatBytes';
 
 const gate = (patch: Partial<Parameters<typeof updateHold>[0]> = {}) => ({
   ready: true,

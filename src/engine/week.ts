@@ -34,7 +34,7 @@
 import type { Drill, Phase, Program, SessionType } from '@/content/types';
 import type { BodyPart } from '@/content/bodyParts';
 import type { Session } from '@/db/sessions';
-import type { TestReason } from './assessments';
+import type { TestReason } from './testWeeks';
 import { dayLoad, type DayLoad } from './bodyLoad';
 import { weekDays } from './dates';
 import { DELOAD_STEP, plannedDay, prescriptionFor, type PlannedDay } from './plan';

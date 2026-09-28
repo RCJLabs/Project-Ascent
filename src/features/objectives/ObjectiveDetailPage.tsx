@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ArrowRight, CircleCheck, Plus, Target, Trash2 } from 'lucide-react';
-import { DRILL_CATEGORIES } from '@/content/drills';
+import { DRILL_CATEGORIES } from '@/content/drills/categories';
 import { METRICS } from '@/content/metrics';
 import type { MetricId } from '@/content/types';
 import { benchmarkFor } from '@/engine/objectives';
@@ -41,7 +41,7 @@ import { PageHeader } from '@/ui/PageHeader';
 import { useGradeOptions } from '@/ui/useGrade';
 import { useSkillInput } from './ObjectivesPage';
 import { RecordNotFound } from '@/ui/RecordNotFound';
-import { PageSkeleton } from '@/ui/Skeleton';
+import { PageSkeleton } from '@/ui/PageSkeleton';
 
 /**
  * The linked project went, and this objective did not notice (PLAN.md M133).

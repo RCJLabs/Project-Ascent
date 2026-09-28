@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
-import { displayGrade, type GradeScale } from '@/engine/grades';
+import type { GradeScale } from '@/engine/grades';
+import { displayGrade } from '@/engine/gradeReading';
 import { useSettings } from '@/store/settings';
 
 /**

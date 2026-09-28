@@ -1,7 +1,7 @@
 import type { Session } from '@/db/sessions';
 import type { BodyPart } from '@/content/bodyParts';
 import { addDays, daysBetween } from './dates';
-import { partsInText } from './bodyLoad';
+import { partsInText } from './bodyLoadChecks';
 import { CLIMBING_PARTS } from './climbing';
 import { loadOrZero } from './derive';
 import { counted } from './phrase';

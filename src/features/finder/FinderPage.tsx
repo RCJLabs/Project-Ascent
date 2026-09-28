@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { AlertTriangle, ArrowLeft, Check, Lock, Sparkles } from 'lucide-react';
-import { V_GRADES, YDS_GRADES, displayRange } from '@/engine/grades';
+import { V_GRADES, YDS_GRADES } from '@/engine/grades';
+import { displayRange } from '@/engine/gradeReading';
 import { scrollPageToTop } from '@/ui/mainScroll';
 import { useGradeOptions } from '@/ui/useGrade';
-import { PageSkeleton } from '@/ui/Skeleton';
+import { PageSkeleton } from '@/ui/PageSkeleton';
 import { findProgram, type Experience, type FinderHistory, type FinderInput, type FinderResult, type Goal, type Recommendation } from '@/engine/finder';
 import { lastBlockFor } from '@/engine/finderHistory';
 import type { BaselineAnswers } from '@/engine/onboarding';

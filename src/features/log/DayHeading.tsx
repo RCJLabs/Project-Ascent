@@ -2,7 +2,7 @@ import { useLocation } from 'wouter';
 import { ArrowLeft } from 'lucide-react';
 import { addDays, fromKey } from '@/engine/dates';
 import { IconButton } from '@/ui/IconButton';
-import { logHref } from '@/ui/routes';
+import { logHref } from '@/ui/logHref';
 import { usePlannedDay } from './usePlannedDay';
 
 /**

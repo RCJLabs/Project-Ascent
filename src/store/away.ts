@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { getDb, reportDbError } from '@/db/db';
-import { type AwayPeriod, isAwayPeriod } from '@/engine/away';
+import type { AwayPeriod } from '@/engine/away';
+import { isAwayPeriod } from '@/engine/awayPeriod';
 
 /**
  * Stretches the climber was away, under one key in the `profile` store — the

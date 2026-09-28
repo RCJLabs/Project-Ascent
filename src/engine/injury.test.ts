@@ -1,15 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Injury } from '@/store/profile';
-import {
-  RETURNING_RELIEF,
-  SEVERITY_COST,
-  concerning,
-  describeInjury,
-  injuryPolicy,
-  summarise,
-  vitalityCost,
-} from './injury';
-
+import { concerning, injuryPolicy } from './injury';
+import { RETURNING_RELIEF, SEVERITY_COST, describeInjury, summarise, vitalityCost } from './injuryReading';
 const injury = (patch: Partial<Injury> & Pick<Injury, 'part'>): Injury => ({
   id: `${patch.part}-1`,
   since: '2026-01-01',

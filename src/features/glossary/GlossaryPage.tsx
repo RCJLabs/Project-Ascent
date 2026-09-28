@@ -8,7 +8,8 @@ import {
   searchGlossary,
   type GlossaryCategory,
 } from '@/content/glossary';
-import { PageGrid, Wide } from '@/ui/PageGrid';
+import { PageGrid } from '@/ui/PageGrid';
+import { Wide } from '@/ui/Wide';
 import { BackLink } from '@/ui/BackLink';
 import { Chip as UiChip } from '@/ui/Chip';
 import { Input } from '@/ui/Field';

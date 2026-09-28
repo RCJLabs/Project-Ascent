@@ -15,7 +15,8 @@ import type { Equipment, MetricId } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import { parseMetricInput } from './assessments';
 import type { FinderInput } from './finder';
-import { gradeOrdinal, type GradeScale } from './grades';
+import type { GradeScale } from './grades';
+import { gradeOrdinal } from './gradeReading';
 import type { BaselineAnswers } from './onboarding';
 
 export interface BenchmarkPrompt {

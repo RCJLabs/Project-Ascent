@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PROTOCOLS } from './protocols';
 import { PROGRAMS } from './programs';
 import type { Program } from './types';
-import { displayGrade } from '@/engine/grades';
+import { displayGrade } from '@/engine/gradeReading';
 import {
   CATEGORY_BLURB,
   CATEGORY_ORDER,

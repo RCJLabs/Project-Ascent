@@ -5,16 +5,8 @@ import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
 import { Field, Input } from '@/ui/Field';
 import { IconButton } from '@/ui/IconButton';
-import {
-  AWAY_KINDS,
-  AWAY_LABELS,
-  type AwayKind,
-  type AwayPeriod,
-  awayLength,
-  cleanNote,
-  newAwayId,
-  NOTE_LIMIT,
-} from '@/engine/away';
+import { AWAY_LABELS, type AwayKind, type AwayPeriod, awayLength, cleanNote, newAwayId, NOTE_LIMIT } from '@/engine/away';
+import { AWAY_KINDS } from '@/engine/awayPeriod';
 import { fromKey } from '@/engine/dates';
 import { useAway } from '@/store/away';
 import { offerUndo } from '@/store/undo';

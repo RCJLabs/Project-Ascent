@@ -18,7 +18,8 @@ import type { MetricEntry } from '@/db/metrics';
 import type { Project } from '@/db/projects';
 import { seriesFor } from './assessments';
 import type { ClimberState } from './derive';
-import { DEFAULT_DISPLAY, displayGrade, gradeOrdinal, type GradeDisplay, type GradeScale } from './grades';
+import { DEFAULT_DISPLAY, type GradeDisplay, type GradeScale } from './grades';
+import { displayGrade, gradeOrdinal } from './gradeReading';
 import type { Stat, StatId } from './stats';
 import { plural } from './phrase';
 

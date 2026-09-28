@@ -64,8 +64,9 @@ import { plannedDay, prescriptionFor, weekInPhase, type PlannedDay } from './pla
 import { restDayDrill } from './restDrill';
 import { concerning, injuryPolicy } from './injury';
 import { directFingerWork } from './fingerGap';
-import { metricConflict } from './bodyLoad';
-import { gradeOrdinal, V_GRADES } from './grades';
+import { metricConflict } from './bodyLoadChecks';
+import { V_GRADES } from './grades';
+import { gradeOrdinal } from './gradeReading';
 import { onTheWall } from './climbing';
 import { takenIn, testWeek, testsOn } from './testDays';
 import { doseRange } from './exerciseReadings';

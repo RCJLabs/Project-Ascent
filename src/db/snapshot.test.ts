@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { getDb, resetDbForTests } from './db';
 import { exportAll, importAll, parseExportFile } from './exportImport';
-import { SNAPSHOT_KEY } from './schema';
+import { SNAPSHOT_KEY } from './exportStores';
 import { clearSnapshot, readSnapshot, restoreSnapshot, takeSnapshot } from './snapshot';
 
 /**

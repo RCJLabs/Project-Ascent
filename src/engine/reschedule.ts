@@ -21,9 +21,9 @@
  * a gesture nobody can trust.
  */
 
-import type { DayOfWeek, Program } from '@/content/types';
+import type { DayOfWeek } from '@/content/types';
 import { startOfWeek } from './dates';
-import { validateWeek, type Violation, type WeekPlan } from './scheduler';
+import type { WeekPlan } from './scheduler';
 
 const ALL_DAYS: DayOfWeek[] = [0, 1, 2, 3, 4, 5, 6];
 
@@ -33,79 +33,6 @@ export type WeekOverrides = Record<string, WeekPlan>;
 /** The plan in force for a given date: its week's override, or the default. */
 export function effectivePlan(plan: WeekPlan, overrides: WeekOverrides | undefined, date: string): WeekPlan {
   return overrides?.[startOfWeek(date)] ?? plan;
-}
-
-/**
- * The plan after moving whatever sits on `from` to `to`. An occupied target
- * swaps; an empty one leaves `from` empty.
- */
-export function movePlan(plan: WeekPlan, from: DayOfWeek, to: DayOfWeek): WeekPlan {
-  if (from === to) return { ...plan };
-  const next: WeekPlan = { ...plan };
-  const moving = plan[from];
-  const displaced = plan[to];
-
-  if (moving === undefined) return next;
-  next[to] = moving;
-  if (displaced === undefined) delete next[from];
-  else next[from] = displaced;
-  return next;
-}
-
-export interface MovePreview {
-  /** The week as it would be. */
-  plan: WeekPlan;
-  /** Everything wrong with the resulting week, including what already was. */
-  violations: Violation[];
-  /** Only what this move would cause. See `previewMove`. */
-  introduced: Violation[];
-  /** Introduced problems that make the week unsafe rather than untidy. */
-  blocking: Violation[];
-  /** True when the target already holds a session, so this is a swap. */
-  swaps: boolean;
-}
-
-/**
- * What moving `from` to `to` would produce, and what it would break.
- *
- * Only violations the move *introduces* are reported as its fault. A plan
- * can already be in breach — three finger days in a program that allows two,
- * say — and blaming every candidate landing for a problem that was there
- * before means the grid marks all seven days unsafe and the climber learns
- * to ignore it.
- */
-export function previewMove(
-  program: Program,
-  plan: WeekPlan,
-  from: DayOfWeek,
-  to: DayOfWeek,
-): MovePreview {
-  const next = movePlan(plan, from, to);
-  const violations = validateWeek(program, next);
-  const before = new Set(validateWeek(program, plan).map(signature));
-  const introduced = violations.filter((v) => !before.has(signature(v)));
-  return {
-    plan: next,
-    violations,
-    introduced,
-    blocking: introduced.filter((v) => v.severity === 'error'),
-    swaps: plan[to] !== undefined && from !== to,
-  };
-}
-
-/** Identity of a violation, so "the same problem" survives a reordering. */
-function signature(v: Violation): string {
-  return `${v.kind}:${v.severity}:${v.message}`;
-}
-
-/**
- * How every day of the week would fare as a target, so the grid can say
- * which landings are fine before a finger goes near them.
- */
-export function targetsFor(program: Program, plan: WeekPlan, from: DayOfWeek): Record<DayOfWeek, MovePreview> {
-  const out = {} as Record<DayOfWeek, MovePreview>;
-  for (const d of ALL_DAYS) out[d] = previewMove(program, plan, from, d);
-  return out;
 }
 
 /** Store a week's override, dropping it again when it matches the plan. */

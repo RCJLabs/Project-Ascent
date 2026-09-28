@@ -8,24 +8,17 @@
  *
  * Pure: registry and records in, verdicts out.
  *
- * What is due and what changed are in `assessmentStatus.ts` (PLAN.md M341):
- * this module is in the first load, for the parser and the test weeks, and
- * only lazy pages and the coach ever ask for a status.
+ * What is due and what changed are in `assessmentStatus.ts` (PLAN.md M341),
+ * and the weeks a program tests in are in `testWeeks.ts` (PLAN.md M345): the
+ * calendar needs those at boot, and nothing here runs before a lazy page.
  */
 
 import { METRICS } from '@/content/metrics';
-import type { Metric, MetricId, Program } from '@/content/types';
+import type { Metric, MetricId } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import { fromInput, toDisplay, unitWord, type UnitSystem } from './units';
-import {
-  DEFAULT_DISPLAY,
-  V_GRADES,
-  YDS_GRADES,
-  canonicalGrade,
-  displayGrade,
-  gradeOrdinal,
-  type GradeDisplay,
-} from './grades';
+import { DEFAULT_DISPLAY, V_GRADES, YDS_GRADES, canonicalGrade, type GradeDisplay } from './grades';
+import { displayGrade, gradeOrdinal } from './gradeReading';
 
 /** How long a result stands before it is worth retesting off-program. */
 export const STALE_DAYS = 56;
@@ -98,53 +91,6 @@ export function isChartable(metric: Metric): boolean {
 export function seriesFor(entries: MetricEntry[], metricId: MetricId): MetricEntry[] {
   return entries.filter((e) => e.metricId === metricId).sort((a, b) => (a.date < b.date ? -1 : 1));
 }
-
-/**
- * The weeks a program expects you to test in (PLAN.md M67).
- *
- * Every program declares `assessments` and nothing ever put one on a date.
- * The app already knew when a test was *due* — no baseline, a new phase
- * since the last one, or eight weeks stale — but a climber only found out by
- * visiting the assessments page, or afterwards, from the coach saying they
- * were late.
- *
- * The weeks are the ones the existing rules already key off, so the calendar
- * and the assessments page cannot disagree: **week one**, because a block
- * without a before has no after; **the first week of every later phase**,
- * which is exactly when `assessmentStatus` starts reporting `phase`; and
- * **the last week**, which is the after.
- *
- * Logging modes are left alone. They have no periodisation and no finish
- * line, so a test week in one would be a date chosen by nothing.
- */
-export type TestReason = 'baseline' | 'phase' | 'final';
-
-export function testWeeks(program: Program): { week: number; why: TestReason }[] {
-  if (program.kind === 'mode' || program.assessments.length === 0) return [];
-
-  const weeks = new Map<number, TestReason>();
-  // Later writes lose to earlier ones: a week that is both the start of a
-  // phase and the end of the block is the phase test, which is the one with
-  // something to compare against.
-  const claim = (week: number, why: TestReason) => {
-    if (week >= 1 && week <= program.weeks && !weeks.has(week)) weeks.set(week, why);
-  };
-
-  claim(1, 'baseline');
-  for (const phase of program.phases) claim(phase.weekStart, 'phase');
-  claim(program.weeks, 'final');
-
-  return [...weeks.entries()]
-    .map(([week, why]) => ({ week, why }))
-    .sort((a, b) => a.week - b.week);
-}
-
-/** What to call a test week, in the climber's words. */
-export const TEST_REASON_LABEL: Record<TestReason, string> = {
-  baseline: 'Baseline week — measure before the block starts moving.',
-  phase: 'Test week — a new phase, so the numbers are worth taking again.',
-  final: 'Final week — the after, to put beside the before.',
-};
 
 /** Every metric in the registry, for adding one outside your program. */
 export function allMetrics(): Metric[] {

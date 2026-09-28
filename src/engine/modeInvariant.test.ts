@@ -3,7 +3,8 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadPrograms } from '@/content/programs';
 import { newSession, type Session } from '@/db/sessions';
-import { applyTemplate, bodyFrom, createTemplate } from './templates';
+import { bodyFrom, createTemplate } from './templates';
+import { applyTemplate } from './templateApply';
 import { outdoorRepairs, typeIsOutdoor, withDeclaredMode } from './sessionMode';
 
 /**

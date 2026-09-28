@@ -11,7 +11,8 @@ import { closeBlock, openBlock, reconstructBlocks, type BlockRecord, moveBlockSt
 import { getProgram } from '@/content/programs';
 import { pruneOverrides, withOverride, type WeekOverrides } from '@/engine/reschedule';
 import type { WeekPlan } from '@/engine/scheduler';
-import { DEFAULT_PALETTE, type AvatarFigure, type AvatarPalette } from '@/engine/avatar';
+import type { AvatarFigure, AvatarPalette } from '@/engine/avatar';
+import { DEFAULT_PALETTE } from '@/engine/avatarPalette';
 
 /** How much it changes what you can do, not how much it hurts. */
 export type InjurySeverity = 'niggle' | 'managing' | 'serious';
@@ -53,17 +54,6 @@ export interface Injury {
   clinicalNote?: string;
   note?: string;
 }
-
-export const SEVERITY_LABEL: Record<InjurySeverity, { label: string; blurb: string }> = {
-  niggle: { label: 'A niggle', blurb: 'Noticeable, not stopping you' },
-  managing: { label: 'Managing it', blurb: 'Training around it deliberately' },
-  serious: { label: 'Serious', blurb: 'Off it entirely for now' },
-};
-
-export const STATUS_LABEL: Record<InjuryStatus, { label: string; blurb: string }> = {
-  active: { label: 'Healing', blurb: 'Keep load off it' },
-  returning: { label: 'Coming back', blurb: 'Loading it again, carefully' },
-};
 
 /**
  * The climber's active plan. Start dates are kept per program so switching

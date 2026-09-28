@@ -15,7 +15,7 @@
 import { describe, expect, it } from 'vitest';
 import { getMetric } from '@/content/metrics';
 import { getProgram } from '@/content/programs';
-import { metricConflict } from './bodyLoad';
+import { metricConflict } from './bodyLoadChecks';
 import { blockReport } from './blockReport';
 import { demoClimber } from './demoClimber';
 import { concerning, injuryPolicy } from './injury';

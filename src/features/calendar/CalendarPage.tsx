@@ -3,24 +3,18 @@ import { Link } from 'wouter';
 import { BookOpen, CalendarDays, CheckCheck, ChevronLeft, ChevronRight, Plane, Rows3 } from 'lucide-react';
 import { AwayCard } from './AwayCard';
 import { getProgram } from '@/content/programs';
-import {
-  fromKey,
-  isThisMonth,
-  monthGrid,
-  monthLabel,
-  shortLabel,
-  toKey,
-  today,
-} from '@/engine/dates';
+import { fromKey, shortLabel, toKey, today } from '@/engine/dates';
+import { isThisMonth, monthGrid, monthLabel } from '@/engine/calendarDates';
 import { blockWindow, plannedDay } from '@/engine/plan';
 import { activeObjectives } from '@/engine/objectives';
 import { blockOn, season, soonestSeason } from '@/engine/season';
 import { useObjectives } from '@/store/objectives';
-import { summarise } from '@/engine/injury';
+import { summarise } from '@/engine/injuryReading';
 import { INTENSITY_LABEL } from '@/content/types';
 import { effortOfDay } from '@/engine/effort';
 import { monthMarks, worthExplaining } from '@/engine/monthMarks';
-import { tallied, weekTally, weekTense, type WeekTally } from '@/engine/weekTally';
+import { weekTally, type WeekTally } from '@/engine/weekTally';
+import { tallied, weekTense } from '@/engine/weekTense';
 import { intensityOf } from '@/engine/scheduler';
 import { useProfile } from '@/store/profile';
 import type { Session } from '@/db/sessions';

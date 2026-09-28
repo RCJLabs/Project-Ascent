@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ChevronRight, Plus, Search } from 'lucide-react';
-import { DRILL_CATEGORIES, DRILLS, filterDrills } from '@/content/drills';
+import { DRILLS, filterDrills } from '@/content/drills';
+import { DRILL_CATEGORIES } from '@/content/drills/categories';
 import { DRILL_TEXT } from '@/content/drillText';
 import type { DrillCategory } from '@/content/types';
 import { blankDrill } from '@/engine/drillWriting';
@@ -15,7 +16,7 @@ import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
 import { Input } from '@/ui/Field';
 import { PageHeader } from '@/ui/PageHeader';
-import { PageSkeleton } from '@/ui/Skeleton';
+import { PageSkeleton } from '@/ui/PageSkeleton';
 
 /**
  * The drill library, browsable (PLAN.md M107).

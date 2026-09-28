@@ -15,20 +15,13 @@ import {
 } from 'lucide-react';
 import { getProgram } from '@/content/programs';
 import { INTENSITY_LABEL, type DayOfWeek, type Metric } from '@/content/types';
-import { TEST_REASON_LABEL } from '@/engine/assessments';
+import { TEST_REASON_LABEL } from '@/engine/testWeeks';
 import { describeDayLoad, describeParts } from '@/engine/bodyLoad';
-import {
-  addDays,
-  dayOfWeek,
-  fromKey,
-  isDateKey,
-  isThisWeek,
-  shortLabel,
-  startOfWeek,
-  today,
-} from '@/engine/dates';
+import { addDays, dayOfWeek, fromKey, isDateKey, shortLabel, startOfWeek, today } from '@/engine/dates';
+import { isThisWeek } from '@/engine/calendarDates';
 import { blockWindow, DELOAD_STEP } from '@/engine/plan';
-import { effectivePlan, previewMove, type MovePreview } from '@/engine/reschedule';
+import { effectivePlan } from '@/engine/reschedule';
+import { previewMove, type MovePreview } from '@/engine/movePreview';
 import { intensityOf } from '@/engine/scheduler';
 import { testsOn } from '@/engine/testDays';
 import { describeWeekDays, type WeekDay, type WeekOutline } from '@/engine/week';
@@ -37,7 +30,8 @@ import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { IconButton } from '@/ui/IconButton';
-import { logHref, weekHref } from '@/ui/routes';
+import { logHref } from '@/ui/logHref';
+import { weekHref } from '@/ui/routes';
 import { useWeekOutline } from './useWeekOutline';
 import { useTestWeek } from '@/features/log/useTestWeek';
 

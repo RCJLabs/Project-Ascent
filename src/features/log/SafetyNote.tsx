@@ -1,7 +1,7 @@
 import { AlertTriangle } from 'lucide-react';
 import type { Protocol } from '@/content/types';
 import type { BodyPart } from '@/content/bodyParts';
-import { protocolSafety } from '@/engine/bodyLoad';
+import { protocolSafety } from '@/engine/bodyLoadChecks';
 
 /**
  * What the protocol's author wrote about not getting hurt (PLAN.md M153).

@@ -4,7 +4,7 @@ import { useProjects } from '@/store/projects';
 import { BackLink } from '@/ui/BackLink';
 import { PageGrid } from '@/ui/PageGrid';
 import { PageHeader } from '@/ui/PageHeader';
-import { PageSkeleton } from '@/ui/Skeleton';
+import { PageSkeleton } from '@/ui/PageSkeleton';
 import { ACHIEVEMENT_COUNT } from '@/engine/achievements';
 import { AchievementList, useAchievements } from './AchievementsCard';
 

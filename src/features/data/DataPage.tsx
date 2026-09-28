@@ -5,7 +5,7 @@ import { readDbHealth, type DbHealth } from '@/db/health';
 import { sweepOrphanMedia } from '@/db/media';
 import { fromKey } from '@/engine/dates';
 import { elapsedMs, staleSessions } from '@/engine/live';
-import { formatBytes } from '@/engine/offline';
+import { formatBytes } from '@/engine/formatBytes';
 import {
   countOf,
   dataHealth,
@@ -20,7 +20,7 @@ import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
-import { PageSkeleton } from '@/ui/Skeleton';
+import { PageSkeleton } from '@/ui/PageSkeleton';
 import { useStoragePressure } from '@/ui/StorageWarning';
 
 /**

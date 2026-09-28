@@ -21,9 +21,6 @@ import type { Session } from '@/db/sessions';
 /** Past this, an open session is assumed to have been left open. */
 export const STALE_HOURS = 5;
 
-/** Nobody's session is eight hours long; the clock stops claiming otherwise. */
-export const MAX_LOGGED_HOURS = 8;
-
 export function isLive(session: Session): boolean {
   return Boolean(session.startedAt) && !session.completed;
 }
@@ -36,7 +33,7 @@ export function elapsedMs(session: Session, now = Date.now()): number {
 
 /** h:mm:ss once past an hour, m:ss before it. The shape only; the two
  *  exports below decide which second a part-second belongs to. */
-function clockOf(total: number): string {
+export function clockOf(total: number): string {
   const s = total % 60;
   const m = Math.floor(total / 60) % 60;
   const h = Math.floor(total / 3600);
@@ -57,28 +54,6 @@ export function formatClock(ms: number): string {
   return clockOf(Math.floor(ms / 1000));
 }
 
-/**
- * A clock counting **down**: 0:00 only when the time is actually gone
- * (PLAN.md M266).
- *
- * The rest timer read `formatClock`, which floors. A page that re-renders
- * once a second lands each reading on a fresh clock, so most of the ladder
- * was right — but the last tick before the end is not. Whatever is left at
- * that tick floors to nothing, so the card reads `0:00` for the tail of a
- * rest that is still running: between zero and a full second of it,
- * depending only on where the tap fell against the page's tick grid.
- *
- * Ceiling is the countdown convention and the rule the interval timer
- * already follows — `engine/timer.ts` computes its own remaining seconds
- * with `Math.ceil` for both the ring and the three-second cue. `0:01` then
- * means *up to* one second, and `0:00` is reached only by arriving, which
- * for the rest timer means the card is gone. The clamp is for a clock read
- * past the end, which is a zero rather than a negative.
- */
-export function formatCountdown(ms: number): string {
-  return clockOf(Math.max(0, Math.ceil(ms / 1000)));
-}
-
 /** The same span in the words a summary wants. */
 export function describeSpan(ms: number): string {
   const minutes = Math.round(ms / 60000);
@@ -86,17 +61,6 @@ export function describeSpan(ms: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return m === 0 ? `${h} h` : `${h} h ${m} min`;
-}
-
-/**
- * Minutes to write onto the session, or undefined when the span is not
- * believable. A session left open overnight would otherwise report a
- * fourteen-hour effort straight into the training-load maths.
- */
-export function durationFromSpan(ms: number): number | undefined {
-  const minutes = Math.round(ms / 60000);
-  if (minutes < 1 || minutes > MAX_LOGGED_HOURS * 60) return undefined;
-  return minutes;
 }
 
 export function isStale(session: Session, now = Date.now()): boolean {

@@ -4,7 +4,7 @@ import { newProject } from '@/db/projects';
 import { newSession, type Session } from '@/db/sessions';
 import type { BodyPart } from '@/content/bodyParts';
 import type { Injury, InjurySeverity } from '@/store/profile';
-import { SEVERITY_COST } from './injury';
+import { SEVERITY_COST } from './injuryReading';
 import { addDays, startOfWeek } from './dates';
 import { deriveClimberState } from './derive';
 import {
