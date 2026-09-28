@@ -15188,6 +15188,12 @@ its label is missing. None of these wants touching.
   the whole board page, and through it the back link, the route table, the skills store and the
   stats. The hook is its own module now. A cold Home load went from **224.40KB in 45 files to
   212.46KB in 38**, and the line is now 213.5. The first load didn't move.
+- **M348a — the program catalogue on Home: measured, and left alone.** The 41.7KB catalogue sits on
+  Home's critical path for a cold first visit. It is requested only after the first render and takes
+  ~370ms to arrive under throttling, but compiling and evaluating it costs ~26ms. Loading programs one
+  at a time would cost 32% more bytes whenever all of them are needed, and a refactor across 66
+  synchronous call sites. Fetching it at startup makes it arrive ~120ms sooner, but Home's heading and
+  coach card moved within the noise, cold and warm. Neither change was made.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -25447,3 +25453,87 @@ the headline said *"−10.90KB under it"*; it now says how far over.
 - **What it cannot say:** whether 11.94KB less on Home's load changes a climber's wait. Every one
   of these files arrived after the first paint. The timing that would say so is M345's, and was not
   rerun.
+
+## M348a — the program catalogue on Home: measured, and left alone
+
+M346's measure put the catalogue second on Home's list, at 41.68KB gzipped: all thirteen programs,
+for a Home that shows one. M343a left per-program loading as an open design question. This measures
+what the catalogue costs Home before anything is decided about it.
+
+### What it is, and how it is read
+
+`content/programs/index.ts` fills a synchronous registry from one `import('./catalogue')`. The router
+waits for it, and for the drill library, before it mounts any page (M78). That gate is there because
+twenty-two call sites read a program at render.
+
+- **Reads of the registry outside it:** 41 `getProgram` calls and 25 references to `PROGRAMS`.
+- **Each program on its own, gzipped:** 1.30KB (outdoor climbing) to 6.23KB (the Cruiser). The
+  sample climber's program would be about 5KB of the 41.7.
+- **All thirteen gzipped separately come to 55.14KB,** against 41.68 as one chunk, because they
+  share vocabulary. So per-program chunks cost 32% more whenever every program is needed: Train,
+  the finder, search.
+
+### Where it sits in a cold Home load
+
+Chromium, a cold profile, M320's throttling (1.6Mbps at 40ms, CPU at a quarter speed), the sample
+climber loaded first. Resource timings, five runs:
+
+```
+entry chunk done       ~680ms
+first paint            ~1000ms
+catalogue requested    ~1000ms   (by the router's effect, after the first render)
+catalogue arrives      ~1385ms
+drill library arrives  ~1160ms
+Home's heading         ~1840ms   (about 460ms after the catalogue)
+```
+
+The catalogue's download is on the critical path, and it starts late. It is not most of the wait,
+though. Compiling and evaluating it, timed in the page at the same CPU slowdown with no network, took
+20–33ms (median 26); the drill library took 12. The ~460ms between its arrival and the heading is
+Home rendering and the stores hydrating, not the catalogue.
+
+### The two changes considered
+
+**Loading programs one at a time: not made.** It could save ~35KB on a first visit and at most
+~24ms of CPU per launch. After the first visit the service worker has every chunk precached, so on
+an installed app it is the CPU figure that repeats. Against that:
+
+- a synchronous registry read at 66 places becomes a partly loaded one;
+- the active program's id is only known after the profile store hydrates, which makes a waterfall
+  (or a new copy of the id kept somewhere synchronous);
+- all programs cost 32% more whenever they are all needed.
+
+**Fetching the catalogue at startup: tried, measured, not shipped.** Two lines in `main.tsx` called
+`loadPrograms()` and `loadDrills()` before the first render. That is the same registry and the same
+gate, fetched earlier. Built in a separate worktree and timed against the current build:
+
+```
+cold, resource timings (3 runs each)
+  catalogue requested        ~1000 → ~850ms
+  catalogue arrives          ~1385 → ~1235ms
+  heading                    1805–1878 → 1710–1798ms
+
+cold, 7 rounds each, alternating      now: median (range)   early: median (range)
+  first paint                          808 (804–908)          792 (780–860)
+  heading                             1596 (1525–1679)       1565 (1518–1649)
+  coach card                          1799 (1674–1868)       1680 (1645–1766)
+
+warm launch — the worker installed, every file from its cache, CPU at a quarter, 8 rounds each
+  first paint                          516 (460–548)          524 (440–556)
+  heading                             1018 (900–1119)         975 (853–1102)
+  coach card                          2204 (1440–2314)       2132 (1246–2267)
+```
+
+- **What's established:** the catalogue arrives ~120ms sooner, and first paint is no later.
+- **What's not:** the heading and the coach card move 31–119ms by median on a cold load and not at
+  all on a warm one, with every range overlapping. By the rule M345 kept for moves that measured
+  inside the noise, it isn't made. An installed app launches warm almost every time, and there it
+  changed nothing measurable.
+
+### Found, not explained
+
+On a warm launch the coach card is bimodal in both builds: about 1.3s or about 2.2s, with little in
+between. Nothing in the card or its hook defers itself. One guess, not tested, is the harness: V8
+writes its compiled-code cache for worker-served scripts asynchronously, and some rounds may launch
+before it exists. If it's the app, it's worth more than anything the catalogue could buy, because
+it's on every launch of the installed app. It's the next thing to measure.
