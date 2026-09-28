@@ -15183,6 +15183,11 @@ its label is missing. None of these wants touching.
   in Chromium, empty and with the sample climber, and totals what it fetched: 45 files, 224.4KB
   gzipped. CI runs it beside the layout harness, before the upload. It is held under 225.4KB with the
   first load's ratchet: over the line fails, and so does more than 1.5KB under it.
+- **M347 — the daily card's hook out of the board page.** The first thing `npm run homeload` named:
+  Home's daily task card imported `useBoard` from `BoardPage.tsx`, so every cold Home load fetched
+  the whole board page, and through it the back link, the route table, the skills store and the
+  stats. The hook is its own module now. A cold Home load went from **224.40KB in 45 files to
+  212.46KB in 38**, and the line is now 213.5. The first load didn't move.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -25390,3 +25395,55 @@ Two are the shape M344 fixed in the entry, one level down:
   in place, which is not a move. Built as a move, it dies.
 - **The script against the preview, both failures and the pass, as above.**
 - **Full suite.**
+
+## M347 — the daily card's hook out of the board page
+
+M346's first measurement listed `BoardPage` among the files a cold Home load fetches: a whole lazy
+page, 2.42KB, on the screen the day starts on.
+
+### Why it was there
+
+`DailyTaskCard`, the one board card M231 put back on Home, imported `useBoard` from `BoardPage.tsx`.
+A module loads whole, so the card brought the page with it:
+
+- the page's bounty list, its offer and challenge rows, and `BoardCard`;
+- everything the page imports that Home had no other reason to fetch.
+
+The second half was most of it. The page's back link carries the 5KB route table, and its skill
+effects carry the skills store. M345 recorded that Home still fetched the route table, and credited
+it to the back link and the daily card. This was the same edge.
+
+### The change
+
+`useBoard` moved, unchanged, to `features/challenges/useBoard.ts`. The card and the page both import
+it from there, and the page is lazy again for everyone but its own route and the Game tab.
+
+```
+                     before              after
+cold Home load       224.40KB, 45 files  212.46KB, 38 files   −11.94
+first load           114.05KB            114.05KB
+```
+
+Seven files left Home's load and one arrived:
+
+- **left:** `BoardPage`, the skills and stats chunks, `BackLink`, the route table and two icons;
+- **arrived:** `useBoard`, 0.52KB.
+
+`HOME_BUDGET` goes from 225.4 to 213.5, 1.04KB above the measurement, and the move is recorded in
+`scripts/homeLoad.mjs` beside the number.
+
+### The line, shown to catch it
+
+The split was undone from a snapshot and the app rebuilt. `npm run homeload` then read 224.40KB in
+45 files and exited 1, *"over the 213.5KB line"*. That run also exposed a wording fault. When over,
+the headline said *"−10.90KB under it"*; it now says how far over.
+
+### Checked
+
+- **Full suite.**
+- **Layout harness,** all routes at four sizes, with no thrown errors. The board page and Home's
+  daily card are both on it.
+- **`npm run homeload`** against the preview: 212.46 and, on a rebuild, 212.49.
+- **What it cannot say:** whether 11.94KB less on Home's load changes a climber's wait. Every one
+  of these files arrived after the first paint. The timing that would say so is M345's, and was not
+  rerun.

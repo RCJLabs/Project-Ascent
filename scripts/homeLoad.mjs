@@ -19,15 +19,24 @@
  * a chunk only one of them sees. Today they fetch the same files, and the
  * line is held against whichever is larger.
  *
- * It was measured to be deterministic before it was trusted: five runs of
- * each, the same 45 files every time, and nothing more requested in the
- * three seconds after the network went idle.
+ * It was measured to be deterministic before it was trusted, at M346: five
+ * runs of each, the same 45 files every time, and nothing more requested in
+ * the three seconds after the network went idle.
  *
  * ## The line
  *
  * The same ratchet as the first load's: over `HOME_BUDGET` fails, and so
  * does more than `HOME_SLACK` under it, so a saving has to lower the line
  * in the commit that makes it.
+ *
+ * ## Where it has been
+ *
+ * - **225.4 at M346**, measured 224.40 in 45 files.
+ * - **213.5 at M347**, measured 212.46 in 38. The daily task card on Home
+ *   imported its hook from `BoardPage.tsx`, so every cold Home load fetched
+ *   the whole board page, and through it the back link, the route table,
+ *   the skills store and the stats — seven files, 11.94KB, for a card that
+ *   draws one line. The first measurement this script printed named it.
  *
  * Run:  npm run build && npm run preview &
  *       npm run homeload [-- --port 4173]
@@ -44,7 +53,7 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
 /** Kilobytes, gzipped, for everything a cold Home load fetches. */
-export const HOME_BUDGET = 225.4;
+export const HOME_BUDGET = 213.5;
 
 /** How far under the line a measurement may sit before the line has to come down. */
 export const HOME_SLACK = 1.5;
@@ -156,7 +165,8 @@ async function main(argv) {
   console.log(
     `A cold Home load fetches ${files.length} files, ${kb.toFixed(2)}KB gzipped ` +
       `(empty ${measured[0].kb.toFixed(2)}, with the sample climber ${measured[1].kb.toFixed(2)}); ` +
-      `line ${HOME_BUDGET}KB, ${(HOME_BUDGET - kb).toFixed(2)}KB under it.`,
+      `line ${HOME_BUDGET}KB, ` +
+      (kb < HOME_BUDGET ? `${(HOME_BUDGET - kb).toFixed(2)}KB under it.` : `${(kb - HOME_BUDGET).toFixed(2)}KB OVER it.`),
   );
   const { onlyA, onlyB } = differ(empty, sample);
   if (onlyA.length + onlyB.length > 0) {

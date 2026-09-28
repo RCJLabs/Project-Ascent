@@ -1,7 +1,7 @@
 import { Link } from 'wouter';
 import { Check, ChevronRight, Target } from 'lucide-react';
 import { Meter } from '@/ui/Meter';
-import { useBoard } from './BoardPage';
+import { useBoard } from './useBoard';
 
 /**
  * Today's task, on the screen the day starts on (PLAN.md M231).
