@@ -25,8 +25,8 @@ import { useCustomPrograms } from '@/store/programs';
  *
  * A daily is picked by the climber's tier, and the tier comes from the log:
  * derived before the log had landed, the board was an empty climber's, and
- * on one warm launch in twenty-five the card on Home showed *"Rate the
- * effort"* — tier zero's task — before changing to the climber's own. The
+ * on one warm launch in seven the card on Home showed *"Rate the effort"*
+ * — tier zero's task — before changing to the climber's own. The
  * board is a claim about the log, so it waits for the log, the profile the
  * program and injuries come from, the settings it is written in, the
  * climber's own programs, and the ledger that says what is claimed.

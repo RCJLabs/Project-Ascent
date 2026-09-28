@@ -23,10 +23,10 @@ import { HomePage } from './HomePage';
  * Measured in the browser first: on six warm launches of six, the sample
  * climber — a block running, a year of sessions — was told *"Nothing planned
  * — no program is running"*, *"Moved from another phone?"* and *"Pick a
- * program"* for up to 0.7s each, and once in twenty-five the daily task was
- * tier zero's *"Rate the effort"* before it became the climber's own. Each
- * test here puts one store back into the state it is in at launch — not yet
- * read, its data empty — and asks what Home draws.
+ * program"* for up to 0.7s each, and on one warm launch in seven the daily
+ * task was tier zero's *"Rate the effort"* before it became the climber's
+ * own. Each test here puts one store back into the state it is in at
+ * launch — not yet read, its data empty — and asks what Home draws.
  */
 
 const DAY = today();
