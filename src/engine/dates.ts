@@ -139,5 +139,29 @@ export function programWeek(startDate: string, date: string, totalWeeks: number)
 }
 
 export function shortLabel(key: string): string {
-  return fromKey(key).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return formatDate(fromKey(key), { month: 'short', day: 'numeric' });
+}
+
+const FORMATTERS = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * A date in the climber's locale, through one formatter per set of options
+ * (PLAN.md M355).
+ *
+ * `toLocaleDateString` with options builds a new `Intl.DateTimeFormat` on
+ * every call, and the pages that label a day per cell called it hundreds of
+ * times a render. Progress spent up to 1.2 seconds of its launch at a
+ * quarter CPU speed in the heat grid's tooltips, and Journal and Week lost
+ * 80 to 150ms to `shortLabel`. The text is the same, because a formatter
+ * built with `undefined` locale and date options is exactly what
+ * `toLocaleDateString` builds, just not thrown away.
+ */
+export function formatDate(date: Date, options: Intl.DateTimeFormatOptions): string {
+  const key = JSON.stringify(options);
+  let formatter = FORMATTERS.get(key);
+  if (formatter === undefined) {
+    formatter = new Intl.DateTimeFormat(undefined, options);
+    FORMATTERS.set(key, formatter);
+  }
+  return formatter.format(date);
 }

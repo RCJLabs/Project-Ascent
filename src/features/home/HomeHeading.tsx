@@ -1,7 +1,7 @@
 import { Link } from 'wouter';
 import { CalendarDays, Check, Flag } from 'lucide-react';
 import type { Program } from '@/content/types';
-import { fromKey } from '@/engine/dates';
+import { formatDate, fromKey } from '@/engine/dates';
 import { describeWeekDays, nextLimitDay } from '@/engine/week';
 import type { DayStatus, WeekDay, WeekOutline } from '@/engine/week';
 import { logHref } from '@/ui/logHref';
@@ -64,7 +64,7 @@ export function HomeHeading({
   outline: WeekOutline;
   program: Program | undefined;
 }) {
-  const heading = fromKey(date).toLocaleDateString(undefined, {
+  const heading = formatDate(fromKey(date), {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -115,7 +115,7 @@ export function HomeHeading({
                   <>
                     {' · '}
                     limit day{' '}
-                    {fromKey(limit.date).toLocaleDateString(undefined, { weekday: 'long' })}
+                    {formatDate(fromKey(limit.date), { weekday: 'long' })}
                   </>
                 )}
               </p>
@@ -148,7 +148,7 @@ function DayMark({
 }) {
   const done = day.status === 'done';
   const started = day.status === 'started';
-  const name = fromKey(day.date).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric' });
+  const name = formatDate(fromKey(day.date), { weekday: 'long', day: 'numeric' });
   const label = `${name} — ${isToday ? 'today, ' : ''}${STATE[day.status]}${isLimit ? ', the limit day' : ''}`;
 
   return (

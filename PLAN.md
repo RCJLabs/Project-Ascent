@@ -15244,6 +15244,15 @@ its label is missing. None of these wants touching.
   now, and the avatar is asked for only when there is a record to draw it on. Five adds to an
   acknowledged session went from 1,538 to 1,115ms, with the ranges not overlapping. Live logging is
   unchanged, because it never had the card.
+- **M355 — not incremental XP; a date formatter built per cell.** M354 left incremental XP as the
+  next item, and the profile says no. After M354, `deriveXp` costs about 16ms per edit at a quarter
+  CPU speed, roughly 4ms at full speed, and making it incremental means rewriting a fold where every
+  session's XP depends on the ones before. Profiling warm launches of twelve pages found the larger
+  cost elsewhere. `toLocaleDateString` with options builds a new formatter every call, and the
+  Progress heat grid called it twice per day for a year of days: up to 1.2 seconds of its launch.
+  One cached formatter per option set gives the same text, checked day by day in three zones. Launch
+  main-thread time: Progress 1,861 to 1,443ms with the ranges apart, Journal 1,254 to 1,072ms, and
+  the rest noise.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -26290,3 +26299,107 @@ Incremental XP would be its own milestone and is not started.
 - **Layout harness, the date matrix.**
 - **Sizes:** the first load is 114.39KB (−0.02, noise; the line is 115.1). Home's cold load is
   212.98KB (−0.04; the line is 213.5).
+
+## M355 — not incremental XP; a date formatter built per cell
+
+M354 ended on *"making XP update incrementally would be its own milestone"*, and this was meant to
+be that milestone. The premise was checked first, and it did not hold.
+
+### Why not incremental XP (M355a)
+
+The same five-add profiles as M354, on its build, with the time under each derivation broken out:
+
+```
+acknowledged session    React 313ms    deriveXp 78ms    no other derivation
+card showing            React 658ms    deriveXp 83ms    achievements 347ms
+live                    React 180ms    nothing derived
+```
+
+After M354, `deriveXp` is about 16ms per edit at a quarter CPU speed. That is roughly 4ms at full
+speed, if the throttle scales evenly. Making it incremental means folding from the edited session
+forward. Each session's XP depends on the ones before it: streaks, the high-load brake, the drill
+multiplier, first times. So a wrong fold is a wrong number on every later session. That is a lot of
+risk for 4ms, and it is not being done.
+
+The profiles did point at something shared. `fromKey`, the date-key parser, was 144ms of the fresh
+card's 347ms of achievements. So the next question was whether date handling costs as much
+elsewhere.
+
+### Where launch time goes
+
+Warm launches of twelve pages were profiled: the sample climber, the worker installed, the CPU at
+a quarter speed, the first 5 seconds, self time by function. `fromKey` turned out small at launch,
+2.1% of Home's script time and 1.4% of Progress's. What was not small:
+
+```
+/progress   title (the heat grid's tooltip)     450ms, 1,180ms in an earlier run
+            buildHeatGrid                        116–212ms
+/journal    shortLabel                           150ms
+            monthTitle                           109ms
+/week       shortLabel                            83ms
+/review     shortLabel                            73ms
+/calendar   monthLabel                            70ms, shortLabel 51ms
+/           HomeHeading                           53ms
+```
+
+A native call's time is counted as its caller's self time. Every one of these calls
+`toLocaleDateString(undefined, { … })`. With options, that builds a new `Intl.DateTimeFormat` on
+every call and throws it away. `title` is called twice per day of the heat grid, once for the
+square's tooltip and once for the table screen readers get, over a year of days.
+
+Two other hotspots are not formatting and are left for later: `saysItDoes` (83ms on Home) and the
+skill trees' `trim` (62–85ms on Game and Body).
+
+### The change
+
+- **`formatDate(date, options)` in `engine/dates.ts`** keeps one formatter per set of options,
+  keyed on the options as JSON, and formats through it. The locale is `undefined`, the climber's
+  own, exactly as before.
+- **It is used at the call sites the profile named:**
+  - `shortLabel`;
+  - the heat grid's `title`;
+  - Calendar's `monthLabel`;
+  - Journal's `monthTitle`;
+  - the three labels in `HomeHeading`.
+- **The other 45 calls with options are left alone.** They run once per render, where a formatter
+  costs nothing anyone could measure.
+
+### After
+
+Main-thread time over a warm launch, M354's build against this one alternating, five runs each:
+
+```
+            M354 median (range)       M355 median (range)
+/progress   1,861ms (1,703–1,973)     1,443ms (1,275–1,534)
+/journal    1,254ms (1,163–1,474)     1,072ms (976–1,217)
+/week         850ms (817–929)           871ms (776–888)
+/calendar     829ms (632–1,064)         827ms (751–964)
+/           1,118ms (1,072–1,239)     1,087ms (1,041–1,301)
+```
+
+- **Progress:** 22% less, with the ranges apart.
+- **Journal:** 15% less, with the ranges touching.
+- **Week, Calendar and Home:** noise. The profile's 50–80ms for `shortLabel` and `HomeHeading` does
+  not show in the total there, and this does not claim it does.
+
+### Checked
+
+- **`formatDate.test.ts`, 27 tests:**
+  - **Identical text.** Every option set now routed through `formatDate` says what
+    `toLocaleDateString` says, for 900 consecutive days. That runs in the default zone, and again
+    in New York and Sydney. The suite runs in UTC, which has no clock change to cross; the named
+    zones do, and a leap day is in the range.
+  - **One formatter** is built for fifty calls with the same options, and different options are kept
+    apart.
+  - **The call sites:** each of the four per-cell functions formats through `formatDate` and not
+    `toLocaleDateString`, and `HomeHeading` has three `formatDate` calls and no formatter of its own.
+- **Mutation battery: 5 mutants, all killed; sanity survived:**
+  - the formatter never kept;
+  - every option set sharing one formatter;
+  - a fixed locale instead of the climber's;
+  - the heat grid, and Home's week strip, back to a formatter per day.
+- **Full suite:** 7,550 passing, M354's 7,523 plus 27, and the one pinned-clock skip.
+- **Layout harness, the entry guards, the date matrix.**
+- **Sizes:** the first load is 114.49KB (+0.10; the line is 115.1, with 0.61 left). Home's cold
+  load is 213.09KB (+0.11; the line is 213.5). The helper sits in `dates.ts`, which is in the entry
+  chunk.

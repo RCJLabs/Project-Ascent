@@ -9,7 +9,7 @@ import {
   type JournalEntry,
   type JournalKind,
 } from '@/engine/journal';
-import { fromKey, shortLabel } from '@/engine/dates';
+import { formatDate, fromKey, shortLabel } from '@/engine/dates';
 import { projectOwner, sessionOwner } from '@/db/media';
 import { PhotoStrip, useMediaOwners } from '@/features/media/Thumbnails';
 import { useMetrics } from '@/store/metrics';
@@ -182,7 +182,7 @@ export function JournalPage() {
 }
 
 function monthTitle(month: string): string {
-  return fromKey(`${month}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  return formatDate(fromKey(`${month}-01`), { month: 'long', year: 'numeric' });
 }
 
 const KIND_ICON: Record<JournalKind, typeof BookOpen> = {

@@ -6,7 +6,7 @@
  * the pages that draw them.
  */
 
-import { addDays, fromKey, startOfWeek, toKey } from './dates';
+import { addDays, formatDate, fromKey, startOfWeek, toKey } from './dates';
 
 /**
  * Whether a string names a year this app could hold sessions for.
@@ -62,5 +62,5 @@ export function isThisWeek(date: string, on: string): boolean {
 }
 
 export function monthLabel(year: number, month: number): string {
-  return new Date(year, month, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  return formatDate(new Date(year, month, 1), { month: 'long', year: 'numeric' });
 }

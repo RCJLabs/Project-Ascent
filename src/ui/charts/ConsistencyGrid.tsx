@@ -1,7 +1,7 @@
 import { Link } from 'wouter';
 import { awayName } from '@/engine/away';
 import type { HeatDay, HeatGrid } from '@/engine/consistency';
-import { fromKey } from '@/engine/dates';
+import { formatDate, fromKey } from '@/engine/dates';
 
 /**
  * A year of days, as a grid (PLAN.md M23).
@@ -58,7 +58,7 @@ function stroke(day: HeatDay): string | undefined {
 }
 
 function title(day: HeatDay): string {
-  const when = fromKey(day.date).toLocaleDateString(undefined, {
+  const when = formatDate(fromKey(day.date), {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
