@@ -3,9 +3,9 @@
  *
  * Out of `grades.ts`, whose default notation the settings store and whose
  * V-scale equivalents Home's tally need at boot: where a grade sits on its
- * ladder, how two compare, the hardest of several, how a climber reads one
- * in their own notation and how what they type becomes one — none of that
- * runs before a lazy page.
+ * ladder, the hardest of several, how a climber reads one in their own
+ * notation and how what they type becomes one — none of that runs before a
+ * lazy page.
  */
 
 import { canonicalGrade, type GradeDisplay, type GradeScale, LADDERS, V_GRADES, YDS_GRADES } from './grades';
@@ -14,16 +14,6 @@ import { canonicalGrade, type GradeDisplay, type GradeScale, LADDERS, V_GRADES, 
 export function gradeOrdinal(scale: GradeScale, grade: string): number {
   const canon = canonicalGrade(scale, grade);
   return canon === null ? -1 : LADDERS[scale].indexOf(canon);
-}
-
-/** Positive when a > b, on the same ladder. Throws on mixed scales —
- *  cross-scale comparison is a deliberate non-feature (AUDIT.md: PRs are
- *  partitioned per ladder so a boulderer's first 5.12a is a real PR). */
-export function compareGrades(scale: GradeScale, a: string, b: string): number {
-  const oa = gradeOrdinal(scale, a);
-  const ob = gradeOrdinal(scale, b);
-  if (oa < 0 || ob < 0) throw new Error(`Unknown ${scale} grade: ${oa < 0 ? a : b}`);
-  return oa - ob;
 }
 
 /** The highest grade in a list, per ladder; null when none valid. */

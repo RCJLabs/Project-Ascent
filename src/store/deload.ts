@@ -17,7 +17,3 @@ export function useDeloadDates(): ReadonlySet<string> {
   return deloadDatesFor(useProfile((s) => s.blocks));
 }
 
-/** The same answer outside React, for the stores and the engines. */
-export function deloadDates(): ReadonlySet<string> {
-  return deloadDatesFor(useProfile.getState().blocks);
-}

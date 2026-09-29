@@ -58,7 +58,7 @@
 
 import { phaseForWeek, type Program } from '@/content/types';
 import type { Session } from '@/db/sessions';
-import { addDays, programWeek } from './dates';
+import { programWeek } from './dates';
 import { blockWindow } from './plan';
 import { blockStatus } from './planReading';
 import { isRestSession } from './rest';
@@ -240,11 +240,6 @@ export function interruption(input: ResumeInput): Interruption | null {
     missedWeeks,
     options,
   };
-}
-
-/** The start date a chosen option would move the block to. */
-export function shiftedStart(startDate: string, option: ResumeOption): string {
-  return addDays(startDate, option.shiftWeeks * 7);
 }
 
 /** What the gap itself says, before any choice is made. */

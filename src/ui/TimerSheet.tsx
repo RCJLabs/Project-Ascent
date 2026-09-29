@@ -12,6 +12,7 @@ import {
   type TimerSubject,
 } from '@/engine/timer';
 import { cuesEnabled, setCuesEnabled } from '@/lib/cues';
+import { elapsedFrom } from '@/lib/timerState';
 import { cueCountdown, cueDone, cueRest, cueSetRest, cueWork, unlock } from '@/lib/cueSounds';
 import { keepAwake, releaseAwake } from '@/lib/wakeLock';
 
@@ -57,13 +58,7 @@ export function TimerSheet({
   const setWord = subject.setWord.toLowerCase();
 
   const [running, setRunning] = useState(resume?.startedAt != null);
-  const [elapsed, setElapsed] = useState(() =>
-    resume === undefined
-      ? 0
-      : resume.startedAt === null
-        ? resume.baseElapsed
-        : resume.baseElapsed + Math.max(0, Date.now() - resume.startedAt),
-  );
+  const [elapsed, setElapsed] = useState(() => (resume === undefined ? 0 : elapsedFrom(resume)));
   const [sound, setSound] = useState(cuesEnabled());
   const startedAt = useRef<number | null>(resume?.startedAt ?? null);
   const baseElapsed = useRef(resume?.baseElapsed ?? 0);

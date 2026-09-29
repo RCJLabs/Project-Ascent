@@ -84,13 +84,6 @@ export function drillHistory(input: DrillHistoryInput): Map<DrillId, DrillRecord
   return out;
 }
 
-export function recordFor(
-  history: ReadonlyMap<DrillId, DrillRecord>,
-  drillId: DrillId,
-): DrillRecord | null {
-  return history.get(drillId) ?? null;
-}
-
 /**
  * The climber's record with one drill, in a sentence.
  *

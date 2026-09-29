@@ -6,7 +6,6 @@ import {
   MIN_MISSED_WEEKS,
   describeInterruption,
   interruption,
-  shiftedStart,
   type AwayReason,
 } from './resume';
 
@@ -141,7 +140,8 @@ describe('what it offers', () => {
   it('moves the start date so today really is that week', () => {
     const gap = found(6, 9)!;
     for (const option of gap.options) {
-      const moved = shiftedStart(START, option);
+      // What `resumeBlock` in the profile store does with the option.
+      const moved = addDays(START, option.shiftWeeks * 7);
       expect(programWeek(moved, day(9, 3), IRON_GRIP.weeks), option.kind).toBe(option.week);
     }
   });

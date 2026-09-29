@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_DISPLAY, canonicalGrade, isValidGrade, V_GRADES, YDS_GRADES, type GradeDisplay } from './grades';
-import { compareGrades, displayGrade, displayRange, gradeOrdinal, maxGrade, parseGrade } from './gradeReading';
+import { DEFAULT_DISPLAY, canonicalGrade, V_GRADES, YDS_GRADES, type GradeDisplay } from './grades';
+import { displayGrade, displayRange, gradeOrdinal, maxGrade, parseGrade } from './gradeReading';
 
 describe('grade ladders', () => {
   it('has the expected ladder sizes', () => {
@@ -18,15 +18,15 @@ describe('grade ladders', () => {
     expect(gradeOrdinal('V', 'V0')).toBe(0);
     expect(gradeOrdinal('V', 'V17')).toBe(17);
     expect(gradeOrdinal('YDS', '5.10a')).toBe(6);
-    expect(compareGrades('V', 'V7', 'V4')).toBeGreaterThan(0);
-    expect(compareGrades('YDS', '5.11d', '5.12a')).toBeLessThan(0);
-    expect(compareGrades('V', 'v3', 'V3')).toBe(0);
+    expect(gradeOrdinal('V', 'V7')).toBeGreaterThan(gradeOrdinal('V', 'V4'));
+    expect(gradeOrdinal('YDS', '5.11d')).toBeLessThan(gradeOrdinal('YDS', '5.12a'));
+    expect(gradeOrdinal('V', 'v3')).toBe(gradeOrdinal('V', 'V3'));
   });
 
   it('rejects unknown grades', () => {
-    expect(isValidGrade('V', 'V18')).toBe(false);
+    expect(canonicalGrade('V', 'V18')).toBeNull();
     expect(gradeOrdinal('YDS', '5.16a')).toBe(-1);
-    expect(() => compareGrades('V', 'V5', 'nope')).toThrow();
+    expect(gradeOrdinal('V', 'nope')).toBe(-1);
   });
 
   it('finds the max grade and ignores junk', () => {

@@ -25,11 +25,6 @@ function joinMetric(metric: Pick<Metric, 'label' | 'description'>): string {
   return [metric.label, metric.description].filter(Boolean).join(' ');
 }
 
-/** Every part an assessment loads, by its own words (PLAN.md M161). */
-export function metricLoads(metric: Pick<Metric, 'label' | 'description'>): BodyPart[] {
-  return partsInText(joinMetric(metric));
-}
-
 /**
  * Whether taking a test would load something the climber says is hurt.
  *

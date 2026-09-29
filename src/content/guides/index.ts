@@ -45,19 +45,14 @@ export const GUIDES: Guide[] = [
 
 const BY_ID = new Map(GUIDES.map((guide) => [guide.id, guide]));
 
+/**
+ * A guide by its id. A program's guide has the program's id, so the link is
+ * derived rather than stored on either side: a program that gains a guide
+ * gains the link by being written, and one that loses it loses the link the
+ * same way.
+ */
 export function getGuide(id: string): Guide | undefined {
   return BY_ID.get(id);
-}
-
-/**
- * The guide for a program, if it has one.
- *
- * Derived from the shared id rather than stored on either side: a program
- * that gains a guide gains the link by being written, and one that loses it
- * loses the link the same way.
- */
-export function guideFor(programId: string): Guide | undefined {
-  return BY_ID.get(programId);
 }
 
 /** How long a guide is, for a "twelve sections" style line. */

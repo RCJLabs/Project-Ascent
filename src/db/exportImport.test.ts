@@ -113,17 +113,6 @@ describe('photos', () => {
     expect(await listMedia('project:nope')).toEqual([]);
   });
 
-  it('deletes an owner’s photos together', async () => {
-    await seedPhoto('project:p1', 'a');
-    await seedPhoto('project:p1', 'b');
-    await seedPhoto('project:p2', 'c');
-    const { listMedia } = await import('./mediaRecords');
-    const { deleteMediaFor } = await import('./media');
-    expect(await deleteMediaFor('project:p1')).toBe(2);
-    expect(await listMedia('project:p1')).toEqual([]);
-    expect(await listMedia('project:p2')).toHaveLength(1);
-  });
-
   // The drawn beta is geometry on the photo's record, and both sides of the
   // archive list their fields by hand — so a field added to one and not the
   // other disappears on the round trip with nothing to notice it (M71).

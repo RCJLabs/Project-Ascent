@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { GameXpEntry } from '@/db/game';
+import type { LedgerEntry } from '@/db/game';
 import { newProject, type Project } from '@/db/projects';
 import { newSession, type Session } from '@/db/sessions';
 import { addDays } from './dates';
@@ -175,7 +175,7 @@ describe('project sends', () => {
 });
 
 describe('the game lane', () => {
-  const entry = (patch: Partial<GameXpEntry> = {}): GameXpEntry => ({
+  const entry = (patch: Partial<LedgerEntry> = {}): LedgerEntry => ({
     id: 'g1',
     date: TODAY,
     label: 'Ascent run',

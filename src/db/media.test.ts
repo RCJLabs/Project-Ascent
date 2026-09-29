@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { getDb, resetDbForTests } from './db';
-import { deleteMediaFor, moveMediaOwner, projectOwner, sessionOwner, findOrphanMedia, sweepOrphanMedia } from './media';
+import { moveMediaOwner, projectOwner, sessionOwner, findOrphanMedia, sweepOrphanMedia } from './media';
 import { addMedia, listMedia, mediaByIds, mediaOwners } from './mediaRecords';
 
 /**
@@ -180,13 +180,6 @@ describe('the owner keys themselves', () => {
     await photo(projectOwner('x'));
     expect(await listMedia(sessionOwner('x'))).toHaveLength(1);
     expect(await listMedia(projectOwner('x'))).toHaveLength(1);
-  });
-
-  it('still take everything with them on an explicit delete', async () => {
-    await photo(sessionOwner('a'));
-    await photo(sessionOwner('a'));
-    expect(await deleteMediaFor(sessionOwner('a'))).toBe(2);
-    expect(await listMedia(sessionOwner('a'))).toEqual([]);
   });
 });
 

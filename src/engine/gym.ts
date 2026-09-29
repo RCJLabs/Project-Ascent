@@ -29,28 +29,6 @@
 import type { Climb } from '@/db/sessions';
 import { vEquivalent } from './grades';
 
-/**
- * Change a row's count. A row taken to zero goes.
- *
- * **The list is deliberately not sorted, here or on screen.** Hardest-first
- * reads better on a page you are looking at; it is the wrong rule for a
- * control you tap without looking, because inserting a harder grade shifts
- * every row under your thumb. Insertion order never moves an existing row,
- * and a new one appears at the bottom — which is where you were.
- */
-export function bump(climbs: readonly Climb[], id: string, by: number): Climb[] {
-  const out: Climb[] = [];
-  for (const climb of climbs) {
-    if (climb.id !== id) {
-      out.push(climb);
-      continue;
-    }
-    const count = climb.count + by;
-    if (count > 0) out.push({ ...climb, count });
-  }
-  return out;
-}
-
 export interface GymSummary {
   /** Every climb logged, counting repeats. */
   total: number;

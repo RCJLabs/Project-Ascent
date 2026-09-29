@@ -191,9 +191,6 @@ export const GAIN_WINDOW_DAYS = 120;
 export const DOMAIN_RETURN = 10;
 export const BACKUP_RETURN = 10;
 
-/** Below this ACWR the body is losing what it built, deload aside. */
-export const DETRAINING_ACWR = 0.8;
-
 /** Past this the spike tip changes its signature, so a dismissal does not
  *  cover a ratio that has gone on climbing. */
 export const STEEP_ACWR = 1.8;
@@ -714,7 +711,7 @@ function detraining({ state, sessions, objectives, away: marked }: CoachInput, t
 
   // The **zone**, not the raw ratio (PLAN.md M162).
   //
-  // Unscored sessions pull the ratio down, so `acwr < DETRAINING_ACWR` was
+  // Unscored sessions pull the ratio down, so a raw `acwr < 0.8` was
   // the one reading this data could produce without the training having
   // dropped off at all. The zone is the answer that survives the missing
   // sessions: `derive.ts` reports 'detraining' only when the ratio lands

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Climb } from '@/db/sessions';
-import { mergeInto, replaceRow, sameRow } from './climbRows';
+import { bump, mergeInto, replaceRow, sameRow } from './climbRows';
 
 /**
  * What makes two tally rows one row (PLAN.md M298).
@@ -103,5 +103,53 @@ describe('correcting a row', () => {
   it('leaves a list alone when the id is not in it', () => {
     const list = replaceRow([climb({ id: 'x' })], 'nope', climb({ id: 'nope', grade: 'V9' }));
     expect(list.map((c) => c.grade)).toEqual(['V4', 'V9']);
+  });
+});
+
+/**
+ * The tally's plus and minus (PLAN.md M74; here since M352, when the logger
+ * started calling this rather than its own copy).
+ *
+ * The one control the climber uses without looking at it, and a tally that
+ * miscounts is worse than no tally. Each row needs its own id here, so these
+ * have their own factory.
+ */
+let n = 0;
+const row = (over: Partial<Climb> = {}): Climb => climb({ id: `r${(n += 1)}`, ...over });
+
+describe('the tally', () => {
+  it('counts up', () => {
+    const one = row();
+    expect(bump([one], one.id, 1)[0]!.count).toBe(2);
+  });
+
+  it('counts down, and a row taken to zero goes', () => {
+    const one = row({ count: 1 });
+    expect(bump([one], one.id, -1)).toEqual([]);
+  });
+
+  it('never leaves a row at zero', () => {
+    const one = row({ count: 2 });
+    const twice = bump(bump([one], one.id, -1), one.id, -1);
+    expect(twice).toEqual([]);
+  });
+
+  it('leaves the other rows exactly where they were', () => {
+    // The rule the whole control rests on: this is tapped without looking,
+    // and a list that reorders itself under a thumb is a list that logs the
+    // wrong grade.
+    const rows = [row({ grade: 'V2' }), row({ grade: 'V6' }), row({ grade: 'V4' })];
+    const after = bump(rows, rows[1]!.id, 1);
+    expect(after.map((c) => c.grade)).toEqual(['V2', 'V6', 'V4']);
+  });
+
+  it('keeps the order when a row is removed, minus the row', () => {
+    const rows = [row({ grade: 'V2' }), row({ grade: 'V6', count: 1 }), row({ grade: 'V4' })];
+    expect(bump(rows, rows[1]!.id, -1).map((c) => c.grade)).toEqual(['V2', 'V4']);
+  });
+
+  it('does nothing to an id it does not have', () => {
+    const rows = [row()];
+    expect(bump(rows, 'nope', 1)).toEqual(rows);
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newSession, type Session } from '@/db/sessions';
-import { loadOf, mergeSessions, moveSession } from './sessionEdit';
+import { mergeSessions, moveSession } from './sessionEdit';
+import { sessionLoad } from './derive';
 import { canMerge, describeSession } from './mergeCheck';
 import { isRestSession } from './rest';
 
@@ -101,7 +102,19 @@ describe('merging', () => {
   // that changed training load would quietly rewrite the ACWR behind it.
   it('preserves training load exactly', () => {
     const merged = mergeSessions(a, b);
-    expect(loadOf(merged)).toBeCloseTo(loadOf(a) + loadOf(b), 6);
+    expect(sessionLoad(merged)).toBeCloseTo(sessionLoad(a)! + sessionLoad(b)!, 6);
+  });
+
+  // The two above ran an hour each, where a plain mean of the effort gives
+  // the same answer, so they could not tell the weighting was there at all
+  // (PLAN.md M352). An RPE 8 for 90 minutes and an RPE 4 for 30 are 14
+  // RPE-hours; the plain mean, 6 over two hours, would be 12.
+  it('weights the effort by how long each session ran', () => {
+    const long = session({ id: '2026-03-04#0', rpe: 8, durationMin: 90 });
+    const short = session({ id: '2026-03-04#1', rpe: 4, durationMin: 30 });
+    const joined = mergeSessions(long, short);
+    expect(joined.rpe).toBe(7);
+    expect(sessionLoad(joined)).toBeCloseTo(sessionLoad(long)! + sessionLoad(short)!, 6);
   });
 
   it('falls back to a plain mean when nothing has a duration', () => {

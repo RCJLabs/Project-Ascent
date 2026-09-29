@@ -143,14 +143,14 @@ describe('keeping a timer across a reload', () => {
 
 describe('how far in a restored timer is', () => {
   it('resumes a paused one exactly where it stopped', () => {
-    expect(elapsedFrom({ ...base, startedAt: null, savedAt: 0 }, 999_999)).toBe(42_000);
+    expect(elapsedFrom({ ...base, startedAt: null }, 999_999)).toBe(42_000);
   });
 
   it('keeps a running one running through the reload', () => {
     // The rest interval did not pause because the page did, and neither did
     // the climber's fingers.
     const now = 100_000;
-    expect(elapsedFrom({ ...base, startedAt: now - 8_000, savedAt: 0 }, now)).toBe(50_000);
+    expect(elapsedFrom({ ...base, startedAt: now - 8_000 }, now)).toBe(50_000);
   });
 
   it('never goes backwards on a clock that moved', () => {

@@ -7,7 +7,6 @@ import {
   RUN_MARKS,
   markCrossed,
   marksBetween,
-  nextMark,
   secondsToClimb,
 } from './marks';
 
@@ -224,12 +223,6 @@ describe('the marks a run climbs past', () => {
 
       const far = marksBetween(0, RUN_MARKS[0]!.px - 1);
       expect(far).toEqual([]);
-    });
-
-    it('names the next one to aim at, and nothing past the last', () => {
-      expect(nextMark(0)).toEqual(RUN_MARKS[0]);
-      expect(nextMark(RUN_MARKS[0]!.px)).toEqual(RUN_MARKS[1]);
-      expect(nextMark(RUN_MARKS.at(-1)!.px + 1)).toBeNull();
     });
   });
 

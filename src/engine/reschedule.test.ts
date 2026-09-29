@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { getProgram } from '@/content/programs';
 import { startOfWeek } from './dates';
 import { effectivePlan, pruneOverrides, samePlan, withOverride, type WeekOverrides } from './reschedule';
-import { movePlan, previewMove, targetsFor } from './movePreview';
+import { movePlan, previewMove } from './movePreview';
 import type { WeekPlan } from './scheduler';
 
 const program = getProgram('iron_grip')!;
@@ -74,12 +74,10 @@ describe('what a move would break', () => {
     expect(previewMove(program, PLAN, 1, 2).swaps).toBe(false);
   });
 
-  it('scores every day so the grid can show landings before a tap', () => {
-    const targets = targetsFor(program, PLAN, 1);
-    expect(Object.keys(targets)).toHaveLength(7);
+  it('scores a landing before a tap', () => {
     // Wednesday puts the two finger days 24h apart; Sunday is clear.
-    expect(targets[3]!.blocking.length).toBeGreaterThan(0);
-    expect(targets[0]!.blocking).toEqual([]);
+    expect(previewMove(program, PLAN, 1, 3).blocking.length).toBeGreaterThan(0);
+    expect(previewMove(program, PLAN, 1, 0).blocking).toEqual([]);
   });
 });
 

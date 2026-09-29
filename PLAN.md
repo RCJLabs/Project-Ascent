@@ -15217,6 +15217,14 @@ its label is missing. None of these wants touching.
   hook, `useLoaded`. After it, 52 launches flashed nothing. The price is that today's card shows its
   final content 150–220ms later by median at a quarter CPU speed. The cause of that delay is not
   isolated.
+- **M352 — code only tests used, and the copies the app ran instead.** A sweep asked the compiler
+  which exports no app file outside their own module uses. It found 2 used by nothing and 37 used
+  only by tests. Seventeen of those are test hooks and stay. Nineteen are deleted. Three turned out
+  to have copies written out in the app, so the tested one was not the one that ran. The logger's
+  tally, the timer's restore and the shop's wall count now call the tested helpers. One deleted
+  function, `loadOf`, still returned 0 for a session with no effort, the arithmetic M162 had
+  removed, and a test was keeping it alive. The first load and Home's cold load are unchanged,
+  because the bundler had already dropped all of it.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -25877,3 +25885,123 @@ this. It has not been measured on one.
   code.
 - **Sizes:** the first load is 114.37KB (+0.10; the line is 115.1). Home's cold load is 212.96KB
   (+0.20; the line is 213.5, with 0.54 left).
+
+## M352 — code only tests used, and the copies the app ran instead
+
+M345 found two functions nothing in the app called, `compareGrades` and `metricLoads`, and left them:
+*"deleting dead code is its own change."* This is that change. It starts by asking whether those two
+are all there is.
+
+### The sweep
+
+The TypeScript language service, asked about every export under `src/`: who refers to it, from
+which file. An app file is one under `src/` that is not a test and not in `src/test/`.
+
+```
+exports no one refers to at all                  2
+exports only tests refer to, and their own
+  module does not use either                    37
+```
+
+Another 301 are imported by tests and used inside their own module too. That is a helper exported
+so it can be tested, which is normal. And 339 are used only inside their own module, so their
+`export` is unneeded. Neither group is dead code, and neither is touched here.
+
+Each of the 39 was read against the app. They fell into three kinds.
+
+### Seventeen are test hooks, and stay
+
+These are exported so a test can reach them, and most of them say so:
+
+- **Cache resets:** `clearClimberStateCache`, `clearDeloadCache`, `clearXpCache`,
+  `forgetOpenedView`, `clearReadingProblems`.
+- **Readers a test asks the database or the catalogue through:** `getSession`, `storeNames`,
+  `ERASED_STORES`, `validateCatalog`, `glossaryKeys`.
+- **Rules written as functions so a test can hold the content to them:** `boardRewardCeiling`,
+  `purchaseLadder`, `staysInBand`, `GEAR_STAGE_LEVELS`, `SHARE_ACTION`, `checkTheme`, `failed`.
+
+### Nineteen are deleted
+
+| Export | What it was | Its tests |
+|---|---|---|
+| `compareGrades` | `gradeOrdinal` subtracted | now ask `gradeOrdinal` |
+| `isValidGrade` | `canonicalGrade(...) !== null` | now ask `canonicalGrade` |
+| `metricLoads` | a metric's parts, which only `metricConflict` reads | now read through `metricConflict` |
+| `loadOf` | a second `sessionLoad`, with the old semantics (below) | now ask `sessionLoad` |
+| `deleteMediaFor` | superseded: see below | two removed |
+| `DETRAINING_ACWR` | 0.8, a copy of `ACWR_BOUNDS.optimalFrom` | now read the bound |
+| `guideFor` | `getGuide` under another name | now ask `getGuide` |
+| `hasTerm` | `lookup(...) !== undefined` | its two glossary contracts ask `lookup`; one removed |
+| `targetsFor` | a week of `previewMove`; the week grid builds its own, by date | now ask `previewMove` |
+| `shiftedStart` | the arithmetic `resumeBlock` in the profile store does | written out, as the store does |
+| `freeWalls` | a filter only tests asked | the filter lives in the test |
+| `recordFor` | `history.get(id) ?? null` | now ask the map |
+| `nextMark`, `recentMilestones`, `getTree`, `photoCount` | nothing asked | five removed |
+| `deloadDates` | nothing asked, not even a test | — |
+| `VolumePoint` | a type nothing named | — |
+| `GameXpEntry` | an alias marked `@deprecated` | now name `LedgerEntry` |
+
+Two of these had more to say than *"unused"*:
+
+- **`loadOf` returned 0 for a session with no RPE.** M162 changed `sessionLoad` to return null there,
+  because *"a session that recorded no effort has no load; a rest day has a load of zero"*. `loadOf`
+  was the pre-M162 version, still exported, and the merge test measured load through it. The test
+  now measures through the function the load ratio uses.
+- **`deleteMediaFor` was superseded by design.** Deleting a session or a project deliberately leaves
+  its photos, so that the undo can bring them back. The orphan sweep, which runs at launch and from
+  the data page, collects them after that. Nothing was leaking. The function was the older plan.
+
+Two notes lived only on deleted functions and were moved to what they describe. That the run marks
+stop at the fourteenth eight-thousander, and why, now sits on `RUN_MARKS`. That a program's guide
+has the program's id, so the link is derived and never stored, now sits on `getGuide`.
+
+### Three had copies in the app, and the app now calls the tested one
+
+This is the finding worth the milestone. In each case a helper with tests existed, and the app had
+written the same thing out again, so the tests were testing code that did not run.
+
+- **The tally's plus and minus.** `bump` in `gym.ts` had six tests, including the rule the control
+  rests on, that no row ever moves under a thumb. M74 wrote it for gym mode's page. M120 deleted that
+  page, moved its tally rows into the logger, and wrote that *"M74's tests are the quick view's
+  tests now"*. For the tally they were not. The logger kept the `bump` it already had, with M79's
+  undo, and the tested one lost its only caller. The logger now does the row arithmetic through it
+  and keeps the undo. It moved to `climbRows.ts` on the way, beside the logger's other row edits.
+  In `gym.ts`, which Home loads, it put 50 bytes of lazy-only code into the entry chunk. **M344's
+  guard failed on it by name**, which is what the guard is for.
+- **The timer's restore.** `elapsedFrom` had three tests: a paused timer resumes where it stopped,
+  a running one kept running through the reload, and a clock that moved backwards does not run it
+  backwards. `TimerSheet` had the same sum written out in its state initialiser, and nothing tested
+  that copy. It calls `elapsedFrom` now. The only check on the sheet's side reads the source, as
+  the rest of `entry.test.ts` does. It now also asks for `elapsedFrom(resume)`. A render test of a
+  restored clock would be stronger. That is noted, not done.
+- **The shop's walls.** `shopWalls()` had tests. `shop.ts` wrote the same filter out twice, once in
+  the purchase ladder and once in `unbought`, which the Game tab asks whether anything is left to
+  buy. Both call it now.
+
+### Checked
+
+- **The sweep again, after:** nothing unreferenced, and the 17 hooks are the only exports tests
+  alone use. No deletion left another export stranded.
+- **Mutation battery: 12 mutants, all killed; sanity survived.** The mutants:
+  - the tally doing nothing, offering the undo on every tap, never offering it, or leaving a row
+    at zero;
+  - the sheet ignoring the time a running timer kept;
+  - the timer running backwards on a clock that moved;
+  - the shop counting walls already bought, or calling the unpriced walls the shop's;
+  - a metric read by its label alone, which the moved `metricLoads` tests still catch through
+    `metricConflict`;
+  - a merge taking the plain mean of the two efforts, or weighting each by the other's length.
+
+  The plain-mean mutant **survived the first run**. Both merge fixtures ran an hour each, and
+  there a plain mean and a weighted one agree, so *"preserves training load exactly"* could not
+  tell whether the weighting was there. That was true before this milestone too. A case with a
+  90-minute and a 30-minute session now can.
+- **Tests:** 8 removed with the functions they tested. The rest were moved to the live function.
+  The full suite is 7,511 passing and the one skip, which is M299's pinned-clock test and runs only
+  when a date is given.
+- **Layout harness, the date matrix.**
+- **Sizes:** the first load is 114.36KB (−0.01, noise; the line is 115.1). Home's cold load is
+  212.97KB (+0.01, noise; the line is 213.5). The bundler had already dropped everything deleted
+  here, so the source got smaller and the download did not. After the move the entry chunk is 14
+  bytes over M351's at maximum gzip. I did not trace which bytes; that is inside what a rebuild
+  alone moves.

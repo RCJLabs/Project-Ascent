@@ -7,7 +7,7 @@ import { layoutsFor, planFromLayout, sessionPriority } from '@/engine/weekLayout
 import { adaptProgram } from '@/engine/adapt';
 import { lengthsFor } from '@/engine/adaptLengths';
 import { getMetric } from '@/content/metrics';
-import { guideFor } from '@/content/guides';
+import { getGuide } from '@/content/guides';
 
 /**
  * The two programs M58 drafted and M95 shipped.
@@ -30,7 +30,7 @@ describe('both are shipped', () => {
   });
 
   it('has the guide a shipped program needs', () => {
-    for (const draft of NEW) expect(guideFor(draft.id), draft.id).toBeDefined();
+    for (const draft of NEW) expect(getGuide(draft.id), draft.id).toBeDefined();
   });
 
   it('uses an id no other program uses', () => {

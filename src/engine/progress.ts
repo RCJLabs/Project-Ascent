@@ -219,8 +219,3 @@ export function projectGrade(
   };
 }
 
-export interface VolumePoint {
-  week: string;
-  minutes: number;
-  sessions: number;
-}

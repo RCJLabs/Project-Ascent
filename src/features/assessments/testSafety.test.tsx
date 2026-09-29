@@ -11,8 +11,17 @@ import { MetricDetailPage } from './MetricDetailPage';
 import { METRICS } from '@/content/metrics';
 import { CATALOGUE } from '@/content/programs/catalogue';
 import type { Metric, MetricId } from '@/content/types';
-import { metricConflict, metricLoads } from '@/engine/bodyLoadChecks';
+import { BODY_PARTS, type BodyPart } from '@/content/bodyParts';
+import { metricConflict } from '@/engine/bodyLoadChecks';
 import { TestSafety } from './TestSafety';
+
+/**
+ * The parts a metric loads, asked the way the app asks: `metricConflict`,
+ * one part at a time. That is the only reader of a metric's parts, so a
+ * scan these tests pass is the scan the warning uses (PLAN.md M352).
+ */
+const metricLoads = (metric: Pick<Metric, 'label' | 'description'>): BodyPart[] =>
+  BODY_PARTS.map((p) => p.id).filter((part) => metricConflict(metric, [part]) !== null);
 
 /**
  * A maximal test, taken on a hurt finger, with nothing said (PLAN.md M161).

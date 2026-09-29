@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { getMetric } from '../metrics';
 import { PROGRAMS } from '../programs';
-import { guideFor } from './index';
+import { getGuide } from './index';
 import type { Exercise } from '../types';
 import type { Guide, GuideBlock } from './types';
 
@@ -55,7 +55,7 @@ function strings(block: GuideBlock): string[] {
 
 /** Every program that has a guide, paired with it. */
 const PAIRS = PROGRAMS.flatMap((program) => {
-  const guide = guideFor(program.id);
+  const guide = getGuide(program.id);
   return guide ? [{ program, guide }] : [];
 });
 
@@ -68,7 +68,7 @@ describe('a program guide and its program', () => {
    */
   it('covers every program in the catalogue', () => {
     expect(PAIRS.length).toBe(PROGRAMS.length);
-    const uncovered = PROGRAMS.filter((p) => guideFor(p.id) === undefined).map((p) => p.id);
+    const uncovered = PROGRAMS.filter((p) => getGuide(p.id) === undefined).map((p) => p.id);
     expect(uncovered).toEqual([]);
   });
 
@@ -502,7 +502,7 @@ describe('entry standards', () => {
       let seen = 0;
       let skipped = 0;
       for (const program of PROGRAMS) {
-        const guide = guideFor(program.id);
+        const guide = getGuide(program.id);
         if (!guide) continue;
         const byName = new Map<string, Exercise[]>();
         for (const session of program.sessionTypes) {

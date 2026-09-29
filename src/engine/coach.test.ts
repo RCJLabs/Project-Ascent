@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Project } from '@/db/projects';
 import type { Session } from '@/db/sessions';
 import { addDays, today } from './dates';
-import { deriveClimberState } from './derive';
+import { ACWR_BOUNDS, deriveClimberState } from './derive';
 import type { BlockAdherence, TypeAdherence } from './adherence';
 import type { Objective } from './objectives';
 import { diagnose, type Diagnosis } from './plateau';
@@ -12,7 +12,6 @@ import {
   BURN_RUNGS,
   SKIPPED_TYPE_PLANNED,
   SKIPPED_TYPE_RATE,
-  DETRAINING_ACWR,
   LAYOFF_DAYS,
   STEEP_ACWR,
   OUTDOOR_GAP_DAYS,
@@ -330,7 +329,7 @@ describe('load drifting down', () => {
     const thin = [...steady(12).filter((s) => s.date < back(9)), session(back(2))];
     const state = deriveClimberState(thin, { today: TODAY });
     expect(state.load.acwr).not.toBeNull();
-    expect(state.load.acwr!).toBeLessThan(DETRAINING_ACWR);
+    expect(state.load.acwr!).toBeLessThan(ACWR_BOUNDS.optimalFrom);
 
     const tip = tips({ sessions: thin }).find((t) => t.id === 'detraining');
     expect(tip?.headline).toBe('Training has dropped off');
@@ -509,7 +508,7 @@ describe('load drifting down', () => {
 
   it('stays quiet while the ratio is healthy', () => {
     const state = deriveClimberState(steady(12), { today: TODAY });
-    expect(state.load.acwr).toBeGreaterThanOrEqual(DETRAINING_ACWR);
+    expect(state.load.acwr).toBeGreaterThanOrEqual(ACWR_BOUNDS.optimalFrom);
     expect(ids(tips({ sessions: steady(12) }))).not.toContain('detraining');
   });
 

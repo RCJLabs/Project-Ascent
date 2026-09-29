@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newSession, type Session } from '@/db/sessions';
 import type { DrillId, ProgramId } from '@/content/types';
-import { describeRecord, drillHistory, prescribedBy, recordFor } from './drillHistory';
+import { describeRecord, drillHistory, prescribedBy } from './drillHistory';
 
 /**
  * Your own history with a drill (PLAN.md M107).
@@ -23,7 +23,7 @@ const day = (date: string, drillId?: string, drillDone?: boolean, patch: Partial
   });
 
 const read = (sessions: Session[]) => drillHistory({ sessions, today: TODAY });
-const of = (sessions: Session[], id: string) => recordFor(read(sessions), id as DrillId);
+const of = (sessions: Session[], id: string) => read(sessions).get(id as DrillId) ?? null;
 
 describe('what came up and what got done', () => {
   it('counts the times it was given, not only the times it was done', () => {
@@ -55,8 +55,8 @@ describe('what came up and what got done', () => {
 
   it('keeps drills apart', () => {
     const history = read([day('2026-02-01', 'flagging', true), day('2026-02-02', 'sticky_feet', false)]);
-    expect(recordFor(history, 'flagging' as DrillId)!.done).toBe(1);
-    expect(recordFor(history, 'sticky_feet' as DrillId)!.done).toBe(0);
+    expect(history.get('flagging' as DrillId)!.done).toBe(1);
+    expect(history.get('sticky_feet' as DrillId)!.done).toBe(0);
   });
 
   it('says nothing about a drill never prescribed', () => {

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { PROGRAMS, loadPrograms } from '@/content/programs';
 import { CATALOGUE } from '@/content/programs/catalogue';
-import { GUIDES, guideFor, guideLength } from '@/content/guides';
+import { GUIDES, getGuide, guideLength } from '@/content/guides';
 import { guideSummaryFor } from '@/content/guides/summary';
 import { safetyIssues } from '@/engine/programSafety';
 
@@ -115,14 +115,14 @@ describe('the rule General Training stated and never declared', () => {
 
 describe('the guide the catalogue was missing', () => {
   it('exists, and is the last one the catalogue was short of', () => {
-    expect(guideFor('general_training')).toBeDefined();
-    expect(PROGRAMS.filter((p) => guideFor(p.id) === undefined)).toEqual([]);
+    expect(getGuide('general_training')).toBeDefined();
+    expect(PROGRAMS.filter((p) => getGuide(p.id) === undefined)).toEqual([]);
   });
 
   it('is reachable from the program page, which reads the summary list', () => {
     const summary = guideSummaryFor('general_training');
     expect(summary, 'a guide missing from the summary list is a guide nobody reaches').toBeTruthy();
-    expect(summary!.sections).toBe(guideFor('general_training')!.sections.length);
+    expect(summary!.sections).toBe(getGuide('general_training')!.sections.length);
   });
 
   /**
@@ -131,7 +131,7 @@ describe('the guide the catalogue was missing', () => {
    * shortest thing in the folder.
    */
   it('is not a stub', () => {
-    const guide = guideFor('general_training')!;
+    const guide = getGuide('general_training')!;
     const shortest = Math.min(...GUIDES.map((g) => g.sections.length));
     expect(guide.sections.length).toBeGreaterThanOrEqual(6);
     expect(guide.sections.length).toBeGreaterThan(shortest);
@@ -150,7 +150,7 @@ describe('the guide the catalogue was missing', () => {
     [/pull-dominant/, 'why push work is not bodybuilding'],
     [/skip entirely on climbing-heavy days/, 'the mistake the menus invite'],
   ])('lifts %s out of the block rationales — %s', (pattern) => {
-    const text = JSON.stringify(guideFor('general_training'));
+    const text = JSON.stringify(getGuide('general_training'));
     expect(text).toMatch(pattern);
   });
 
@@ -163,7 +163,7 @@ describe('the guide the catalogue was missing', () => {
    * to itself: the battery showed that by retitling a section and surviving.
    */
   it('sets the two non-optional rules apart as warnings', () => {
-    const guide = guideFor('general_training')!;
+    const guide = getGuide('general_training')!;
     const warns = guide.sections
       .flatMap((s) => s.content)
       .flatMap((b) => (b.kind === 'warn' ? [b] : []));
@@ -180,7 +180,7 @@ describe('the guide the catalogue was missing', () => {
    * same reason as above.
    */
   it('gives what open-ended training is worse at its own section', () => {
-    const guide = guideFor('general_training')!;
+    const guide = getGuide('general_training')!;
     expect(guide.sections.map((s) => s.title)).toContain('What this is bad at');
     const section = guide.sections.find((s) => s.title === 'What this is bad at')!;
     const text = JSON.stringify(section);
@@ -199,7 +199,7 @@ describe('the guide the catalogue was missing', () => {
    * has to resolve to one.
    */
   it('names no program the catalogue does not ship', () => {
-    const text = JSON.stringify(guideFor('general_training'));
+    const text = JSON.stringify(getGuide('general_training'));
     const shouted = [...new Set(text.match(/\b[A-Z]{3,}(?: [A-Z]{3,})+\b/g) ?? [])];
     expect(shouted.length, 'nothing shouted, so this proves nothing').toBeGreaterThanOrEqual(5);
     const titles = new Set(PROGRAMS.map((p) => p.name.toUpperCase()));

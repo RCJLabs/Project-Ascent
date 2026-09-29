@@ -129,6 +129,9 @@ function buildMarks(): Mark[] {
  * Built once at module load: it depends on nothing but the tuning tables, and
  * a run that derived its own would be a run whose marks could differ from
  * another run's on the same wall.
+ *
+ * It ends at the fourteenth eight-thousander stacked, around six minutes of
+ * perfect play. Rungs past it would be invented mountains.
  */
 export const RUN_MARKS: readonly Mark[] = buildMarks();
 
@@ -163,12 +166,3 @@ export function marksBetween(from: number, to: number): Mark[] {
   return RUN_MARKS.filter((m) => m.px >= from && m.px <= to);
 }
 
-/**
- * The next mark above a run, as something to aim at. Null past the last rung.
- *
- * The ladder ends at fourteen eight-thousanders stacked — around six minutes
- * of perfect play — and inventing rungs past it would be inventing mountains.
- */
-export function nextMark(px: number): Mark | null {
-  return RUN_MARKS.find((m) => m.px > px) ?? null;
-}

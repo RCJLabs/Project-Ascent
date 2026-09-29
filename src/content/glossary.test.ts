@@ -8,7 +8,6 @@ import {
   CATEGORY_ORDER,
   GLOSSARY,
   groupByCategory,
-  hasTerm,
   lookup,
   searchGlossary,
   type GlossaryEntry,
@@ -100,11 +99,6 @@ describe('lookup', () => {
     expect(lookup('Dead')).toBeUndefined();
     expect(lookup('crimping technique')).toBeUndefined();
   });
-
-  it('reports whether a term exists without returning it', () => {
-    expect(hasTerm('Beta')).toBe(true);
-    expect(hasTerm('Not A Real Term')).toBe(false);
-  });
 });
 
 describe('search', () => {
@@ -159,7 +153,7 @@ describe('coverage of authored content names', () => {
   const allNames = [...new Set(PROGRAMS.flatMap(exerciseNames))];
 
   it('defines a meaningful share of the exercise names the programs prescribe', () => {
-    const covered = allNames.filter((name) => hasTerm(name));
+    const covered = allNames.filter((name) => lookup(name) !== undefined);
     // 60 is a floor, not a target: it is well under today's coverage, so a
     // handful of renames is fine and a wholesale break is not.
     expect(covered.length).toBeGreaterThanOrEqual(60);
@@ -170,7 +164,7 @@ describe('coverage of authored content names', () => {
     // cues and a countdown, must be able to find out what it actually is.
     const missing = Object.values(PROTOCOLS)
       .map((protocol) => protocol.name)
-      .filter((name) => !hasTerm(name));
+      .filter((name) => lookup(name) === undefined);
     expect(missing).toEqual([]);
   });
 });

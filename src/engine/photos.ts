@@ -103,7 +103,3 @@ export function pickPhotos(input: PickInput): PhotoRef[] {
   return out;
 }
 
-/** How many photos are filed on a thing, without reading any of them. */
-export function photoCount(owners: ReadonlyMap<string, readonly string[]>, ownerId: string): number {
-  return owners.get(ownerId)?.length ?? 0;
-}

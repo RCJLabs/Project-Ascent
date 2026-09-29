@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Climb } from '@/db/sessions';
-import { bump, gymSummary } from './gym';
+import { gymSummary } from './gym';
 import { REST_PRESETS, climbOutcome, restLabel, restRemaining } from './gymWords';
 
 /**
@@ -33,43 +33,6 @@ describe('how a climb went', () => {
     // A stored style on an attempt is a leftover from an edit, not a claim
     // that the climber flashed something they fell off.
     expect(climbOutcome(climb({ result: 'attempt', style: 'flash' }))).toBe('tried');
-  });
-});
-
-describe('the tally', () => {
-  it('counts up', () => {
-    const one = climb();
-    expect(bump([one], one.id, 1)[0]!.count).toBe(2);
-  });
-
-  it('counts down, and a row taken to zero goes', () => {
-    const one = climb({ count: 1 });
-    expect(bump([one], one.id, -1)).toEqual([]);
-  });
-
-  it('never leaves a row at zero', () => {
-    const one = climb({ count: 2 });
-    const twice = bump(bump([one], one.id, -1), one.id, -1);
-    expect(twice).toEqual([]);
-  });
-
-  it('leaves the other rows exactly where they were', () => {
-    // The rule the whole control rests on: this is tapped without looking,
-    // and a list that reorders itself under a thumb is a list that logs the
-    // wrong grade.
-    const rows = [climb({ grade: 'V2' }), climb({ grade: 'V6' }), climb({ grade: 'V4' })];
-    const after = bump(rows, rows[1]!.id, 1);
-    expect(after.map((c) => c.grade)).toEqual(['V2', 'V6', 'V4']);
-  });
-
-  it('keeps the order when a row is removed, minus the row', () => {
-    const rows = [climb({ grade: 'V2' }), climb({ grade: 'V6', count: 1 }), climb({ grade: 'V4' })];
-    expect(bump(rows, rows[1]!.id, -1).map((c) => c.grade)).toEqual(['V2', 'V4']);
-  });
-
-  it('does nothing to an id it does not have', () => {
-    const rows = [climb()];
-    expect(bump(rows, 'nope', 1)).toEqual(rows);
   });
 });
 

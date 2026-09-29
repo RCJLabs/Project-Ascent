@@ -41,16 +41,6 @@ export function sessionOwner(sessionId: string): string {
  */
 const OWNER_STORES = { project: 'projects', session: 'sessions' } as const;
 
-/** Everything belonging to an owner, for when the owner goes. */
-export async function deleteMediaFor(ownerId: string): Promise<number> {
-  const db = await getDb();
-  const keys = await db.getAllKeysFromIndex('media', 'by-owner', ownerId);
-  const tx = db.transaction('media', 'readwrite');
-  await Promise.all(keys.map((key) => tx.store.delete(key)));
-  await tx.done;
-  return keys.length;
-}
-
 /**
  * Re-point everything an owner holds. Returns how many moved.
  *

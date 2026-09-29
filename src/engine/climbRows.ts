@@ -52,3 +52,26 @@ export function mergeInto(climbs: readonly Climb[], climb: Climb): Climb[] {
 export function replaceRow(climbs: readonly Climb[], id: string, edited: Climb): Climb[] {
   return mergeInto(climbs.filter((c) => c.id !== id), edited);
 }
+
+/**
+ * Change a row's count. A row taken to zero goes (PLAN.md M352: moved from
+ * `gym.ts`, which Home loads, when the logger started using it).
+ *
+ * **The list is deliberately not sorted, here or on screen.** Hardest-first
+ * reads better on a page you are looking at; it is the wrong rule for a
+ * control you tap without looking, because inserting a harder grade shifts
+ * every row under your thumb. Insertion order never moves an existing row,
+ * and a new one appears at the bottom — which is where you were.
+ */
+export function bump(climbs: readonly Climb[], id: string, by: number): Climb[] {
+  const out: Climb[] = [];
+  for (const climb of climbs) {
+    if (climb.id !== id) {
+      out.push(climb);
+      continue;
+    }
+    const count = climb.count + by;
+    if (count > 0) out.push({ ...climb, count });
+  }
+  return out;
+}

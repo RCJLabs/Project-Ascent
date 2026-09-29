@@ -61,7 +61,7 @@ import { easesAnything } from '@/engine/planReading';
 import { prescriptionLine } from '@/engine/prescription';
 import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
 import type { CooldownPlan } from '@/engine/cooldown';
-import { mergeInto, replaceRow } from '@/engine/climbRows';
+import { bump as bumpRow, mergeInto, replaceRow } from '@/engine/climbRows';
 import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
 import { displayGrade } from '@/engine/gradeReading';
 import type { Climb, LoggedExercise, ProjectAttempt, RopeStyle, Session, WallAngle } from '@/db/sessions';
@@ -828,18 +828,16 @@ function SessionEditor({
   }
 
   function bump(climb: Climb, by: number) {
-    const next = climb.count + by;
-    if (next <= 0) {
-      // The row goes, and a mis-tap on the minus should not cost a re-entry
+    const before = session.climbs;
+    const after = bumpRow(before, climb.id, by);
+    patch({ climbs: after });
+    if (after.length < before.length) {
+      // The row went, and a mis-tap on the minus should not cost a re-entry
       // through the grade picker (PLAN.md M79).
-      const before = session.climbs;
-      patch({ climbs: before.filter((c) => c.id !== climb.id) });
       offerUndo(`${gradeLabel(climb.scale, climb.grade)} ${climbOutcome(climb)}`, async () =>
         patch({ climbs: before }),
       );
-      return;
     }
-    patch({ climbs: session.climbs.map((c) => (c.id === climb.id ? { ...c, count: next } : c)) });
   }
 
   const summary = gymSummary(session.climbs);

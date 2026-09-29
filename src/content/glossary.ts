@@ -328,10 +328,6 @@ export function lookup(term: string): GlossaryEntry | undefined {
   return BY_KEY.get(key(term));
 }
 
-export function hasTerm(term: string): boolean {
-  return BY_KEY.has(key(term));
-}
-
 /** Free-text search across terms and definitions, optionally within one category. */
 export function searchGlossary(
   query: string,

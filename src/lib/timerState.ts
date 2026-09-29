@@ -101,7 +101,7 @@ export function clearTimerState(): void {
  * the climber's fingers did — the rest interval did not pause because the
  * page did.
  */
-export function elapsedFrom(state: TimerState, now = Date.now()): number {
+export function elapsedFrom(state: Pick<TimerState, 'baseElapsed' | 'startedAt'>, now = Date.now()): number {
   return state.startedAt === null
     ? state.baseElapsed
     : state.baseElapsed + Math.max(0, now - state.startedAt);

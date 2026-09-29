@@ -45,7 +45,7 @@
  */
 
 import { shopOutfits } from './kits';
-import { WALLS } from './ascent/walls';
+import { shopWalls } from './ascent/walls';
 import { levelFor } from './economy';
 import { CURRENCY_RATE } from './xp';
 
@@ -71,7 +71,7 @@ export interface Purchase {
 export function purchaseLadder(): Purchase[] {
   const items: { name: string; kind: 'kit' | 'wall'; price: number }[] = [
     ...shopOutfits().map((o) => ({ name: o.name, kind: 'kit' as const, price: o.price ?? 0 })),
-    ...WALLS.filter((w) => w.price !== undefined).map((w) => ({
+    ...shopWalls().map((w) => ({
       name: w.name,
       kind: 'wall' as const,
       price: w.price ?? 0,
@@ -97,7 +97,7 @@ export function unbought(kits: readonly string[], walls: readonly string[]): num
   const haveWalls = new Set(walls);
   return (
     shopOutfits().filter((o) => !haveKits.has(o.name)).length +
-    WALLS.filter((w) => w.price !== undefined && !haveWalls.has(w.id)).length
+    shopWalls().filter((w) => !haveWalls.has(w.id)).length
   );
 }
 

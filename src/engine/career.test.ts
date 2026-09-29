@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Session } from '@/db/sessions';
 import type { PersonalRecord } from './derive';
 import { LADDER_TOP, MILESTONES } from './altimeter';
-import { byYear, counterLadder, deriveCareer, recentMilestones } from './career';
+import { byYear, counterLadder, deriveCareer } from './career';
 
 function session(date: string, patch: Partial<Session> = {}): Session {
   return {
@@ -266,15 +266,6 @@ describe('next milestones', () => {
 });
 
 describe('grouping', () => {
-  it('takes the most recent few', () => {
-    const state = deriveCareer({
-      sessions: run('2026-01-01', 30),
-      records: NO_RECORDS,
-      today: '2026-02-01',
-    });
-    expect(recentMilestones(state, 2)).toHaveLength(2);
-    expect(recentMilestones(state, 2)[0]).toEqual(state.achieved[0]);
-  });
 
   it('groups by the year each one happened, newest year first', () => {
     const state = deriveCareer({

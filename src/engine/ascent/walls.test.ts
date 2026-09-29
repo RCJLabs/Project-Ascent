@@ -4,7 +4,6 @@ import { OUTFITS } from '@/engine/kits';
 import {
   WALLS,
   earnedWalls,
-  freeWalls,
   lockNote,
   shopWalls,
   unlocked,
@@ -13,6 +12,9 @@ import {
   type Wall,
   type WallAccess,
 } from './walls';
+
+/** Free from the first run: neither earned nor bought, and not the rest-day weather. */
+const freeWalls = () => WALLS.filter((w) => w.feet === undefined && w.price === undefined && w.rest !== true);
 
 const ACCESS = (over: Partial<WallAccess> = {}): WallAccess => ({
   feet: 0,

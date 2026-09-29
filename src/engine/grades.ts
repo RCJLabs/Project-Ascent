@@ -35,10 +35,6 @@ export function canonicalGrade(scale: GradeScale, grade: string): string | null 
   return hit ?? null;
 }
 
-export function isValidGrade(scale: GradeScale, grade: string): boolean {
-  return canonicalGrade(scale, grade) !== null;
-}
-
 /**
  * Rough V-equivalent of a route grade, for reward scaling only.
  *

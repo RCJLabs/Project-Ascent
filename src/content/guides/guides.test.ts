@@ -8,7 +8,7 @@ import { MAX_ACTIVE } from '@/engine/objectives';
 import { STAT_LABELS } from '@/engine/stats';
 import { SKILL_TREES } from '../skills';
 import { PROGRAMS, getProgram } from '../programs';
-import { GUIDES, getGuide, guideFor, guideLength } from './index';
+import { GUIDES, getGuide, guideLength } from './index';
 import { GUIDE_SUMMARIES, guideSummaryFor } from './summary';
 import type { Guide, GuideBlock } from './types';
 
@@ -174,7 +174,7 @@ describe('guides describe this app', () => {
 
 describe('guides and programs', () => {
   it('links a guide to its program by shared id, without either storing the other', () => {
-    expect(guideFor('iron_grip')?.id).toBe('iron_grip');
+    expect(getGuide('iron_grip')?.id).toBe('iron_grip');
     expect(getProgram('iron_grip')).toBeDefined();
   });
 
@@ -188,14 +188,14 @@ describe('guides and programs', () => {
    * session forever, which is the harder half and now has six sections.
    */
   it('has a guide for every program', () => {
-    const without = PROGRAMS.filter((p) => guideFor(p.id) === undefined).map((p) => p.id);
+    const without = PROGRAMS.filter((p) => getGuide(p.id) === undefined).map((p) => p.id);
     expect(without).toEqual([]);
     expect(PROGRAMS.length).toBe(13);
   });
 
   it('returns nothing for an unknown id rather than throwing', () => {
     expect(getGuide('not_a_guide')).toBeUndefined();
-    expect(guideFor('not_a_program')).toBeUndefined();
+    expect(getGuide('not_a_program')).toBeUndefined();
   });
 
   it('keeps the standalone guides out of the program mapping', () => {

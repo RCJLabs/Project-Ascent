@@ -200,11 +200,6 @@ export function wall(id: string): Wall | undefined {
   return byId.get(id);
 }
 
-/** Free from the first run, rest-day weather aside. */
-export function freeWalls(): Wall[] {
-  return WALLS.filter((w) => w.feet === undefined && w.price === undefined && w.rest !== true);
-}
-
 /** Opened by the altimeter, and never for sale. */
 export function earnedWalls(): Wall[] {
   return WALLS.filter((w) => w.feet !== undefined);

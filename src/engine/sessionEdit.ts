@@ -121,8 +121,3 @@ function mergedRpe(a: Session, b: Session): number | undefined {
   return Math.round((a.rpe * wa + b.rpe * wb) / (wa + wb));
 }
 
-/** Session load in the units engine/derive.ts uses: RPE × hours. */
-export function loadOf(session: Session): number {
-  if (session.rpe === undefined || session.durationMin === undefined) return 0;
-  return session.rpe * (session.durationMin / 60);
-}

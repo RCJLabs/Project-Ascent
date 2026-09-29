@@ -9,7 +9,6 @@
 import type { DayOfWeek, Program } from '@/content/types';
 import type { Violation, WeekPlan } from './scheduler';
 import { validateWeek } from './weekRules';
-import { ALL_DAYS } from './days';
 
 export interface MovePreview {
   /** The week as it would be. */
@@ -55,16 +54,6 @@ export function previewMove(
 /** Identity of a violation, so "the same problem" survives a reordering. */
 function signature(v: Violation): string {
   return `${v.kind}:${v.severity}:${v.message}`;
-}
-
-/**
- * How every day of the week would fare as a target, so the grid can say
- * which landings are fine before a finger goes near them.
- */
-export function targetsFor(program: Program, plan: WeekPlan, from: DayOfWeek): Record<DayOfWeek, MovePreview> {
-  const out = {} as Record<DayOfWeek, MovePreview>;
-  for (const d of ALL_DAYS) out[d] = previewMove(program, plan, from, d);
-  return out;
 }
 
 /**

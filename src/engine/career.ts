@@ -478,11 +478,6 @@ function format(n: number): string {
   return `${Number.isInteger(thousands) ? thousands : thousands.toFixed(1)}k`;
 }
 
-/** The most recent milestones, for a summary card. */
-export function recentMilestones(state: CareerState, count = 5): CareerMilestone[] {
-  return state.achieved.slice(0, count);
-}
-
 /** Achieved milestones grouped by the year they happened, most recent first. */
 export function byYear(state: CareerState): { year: number; milestones: CareerMilestone[] }[] {
   const groups = new Map<number, CareerMilestone[]>();

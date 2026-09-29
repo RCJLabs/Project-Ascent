@@ -340,6 +340,3 @@ const GRIT: SkillTree = {
 
 export const SKILL_TREES: SkillTree[] = [POWER, TENSION, ENDURANCE, TECHNIQUE, GRIT];
 
-export function getTree(id: TreeId): SkillTree | undefined {
-  return SKILL_TREES.find((t) => t.id === id);
-}

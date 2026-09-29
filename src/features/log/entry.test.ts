@@ -79,5 +79,9 @@ describe('a running timer survives the page going away', () => {
   it('hands the sheet somewhere to resume from', () => {
     expect(LOG).toContain('resume={resume}');
     expect(read('src/ui/TimerSheet.tsx')).toContain('resume?.startedAt');
+    // And restores the clock through `elapsedFrom`, whose tests say a running
+    // timer kept running through the reload (PLAN.md M352: the sheet had its
+    // own copy of the sum until then, and nothing tested that one).
+    expect(read('src/ui/TimerSheet.tsx')).toContain('elapsedFrom(resume)');
   });
 });

@@ -31,9 +31,6 @@ export interface LedgerEntry {
   source?: LedgerSource;
 }
 
-/** @deprecated Kept as an alias so older call sites keep type-checking. */
-export type GameXpEntry = LedgerEntry;
-
 export interface Wallet {
   /** Soft currency already spent. Earned is derived from total XP. */
   spent: number;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SKILL_TREES, getTree } from '@/content/skills';
+import { SKILL_TREES } from '@/content/skills';
 import type { MetricEntry } from '@/db/metrics';
 import { newProject } from '@/db/projects';
 import { newSession, type Session } from '@/db/sessions';
@@ -99,11 +99,6 @@ describe('the trees themselves', () => {
       expect(cap.effect).toBeDefined();
       expect(cap.tier).toBe(6);
     }
-  });
-
-  it('finds a tree by id', () => {
-    expect(getTree('grit')!.name).toBe('Mental Grit');
-    expect(getTree('nope' as never)).toBeUndefined();
   });
 });
 

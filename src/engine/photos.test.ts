@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Project } from '@/db/projects';
 import type { Session } from '@/db/sessions';
 import { projectOwner, sessionOwner } from '@/db/media';
-import { photoCount, pickPhotos, type PickInput } from './photos';
+import { pickPhotos, type PickInput } from './photos';
 
 /**
  * Which pictures a retrospective shows (PLAN.md M92).
@@ -144,15 +144,5 @@ describe('a project’s photos', () => {
       'A session',
       'Project a',
     ]);
-  });
-});
-
-describe('counting without reading', () => {
-  it('says how many are filed on a thing', () => {
-    expect(photoCount(index([['session:a', 3]]), 'session:a')).toBe(3);
-  });
-
-  it('says none for a thing with none', () => {
-    expect(photoCount(new Map(), 'session:a')).toBe(0);
   });
 });
