@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { noteDemo, tagged } from './demoPresence';
 import { reportDbError } from '@/db/db';
 import type { MetricId } from '@/content/types';
 import {
@@ -50,3 +51,8 @@ export const useMetrics = create<MetricsState>((set, get) => ({
     set({ entries: get().entries.filter((e) => !(e.metricId === metricId && e.date === date)) });
   },
 }));
+
+/** Whether the metrics hold the sample climber's, for the banner (PLAN.md M353). */
+useMetrics.subscribe((state, prev) => {
+  if (state.entries !== prev.entries) noteDemo('metrics', tagged(state.entries));
+});

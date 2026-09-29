@@ -1,22 +1,26 @@
 /**
  * Is the sample climber loaded? (PLAN.md M110)
  *
- * Its own module, and this small, because `DemoBanner` asks it on every
+ * Its own module, and this small, because `DemoBanner` asked it on every
  * page and the banner lives in `AppShell`, which is eager. Importing it
  * from `db/demo.ts` pulled the generator — the RNG, the year of sessions,
  * the programs it reads — into the entry chunk, and cost **4.3KB of first
  * load to every climber who never touches sample data.**
  *
- * Nothing here but a count over three stores.
+ * It reads every row of the three stores until it finds a tagged one, so it
+ * is for asking once and not on every change. Since M353 the banner answers
+ * from the stores instead (`store/demoPresence.ts`), and this is Settings'
+ * question: whether to offer the wipe, and what to call an export.
  */
 
-import { getDb, readOr } from './db';
+import { getDb } from './db';
+import { readOr } from './readOr';
 
 /**
  * True when anything in the database is tagged as sample data.
  *
  * False when the database will not open, rather than a rejection nobody
- * catches: `DemoBanner` asks this in an effect on **every page**, so this
+ * catches: `DemoBanner` asked this in an effect on **every page**, so this
  * was the one that fired on the boot screen of a `VersionError` (PLAN.md
  * M158). A log that cannot be read is not sample data, and the climber is
  * already being told why it cannot be read.

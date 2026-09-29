@@ -55,6 +55,11 @@ export function useBoard(): BoardReading {
    * nothing else touches the game store — and an unloaded ledger there does
    * not read as missing, it reads as *nothing claimed*: a task taken this
    * morning shown as still open, counted again in what is ready.
+   *
+   * `hydrateAll` loads the game store at launch now too, so at launch on
+   * Home this read races that one and the board is derived twice, about
+   * 12ms at a quarter CPU speed (PLAN.md M353: measured, and left). The
+   * effect stays for a card mounted before or without it.
    */
   useEffect(() => {
     if (!hydrated) void load();

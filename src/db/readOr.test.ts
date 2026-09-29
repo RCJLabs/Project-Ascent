@@ -2,7 +2,8 @@ import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
-import { dbFault, readOr, resetDbForTests } from './db';
+import { dbFault, resetDbForTests } from './db';
+import { readOr } from './readOr';
 
 /**
  * Reads that rejected into nothing (PLAN.md M158).

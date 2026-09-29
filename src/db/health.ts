@@ -1,5 +1,6 @@
 import { APP_VERSION } from '@/version';
-import { getDb, readOr } from './db';
+import { getDb } from './db';
+import { readOr } from './readOr';
 import { readingProblems } from './sound';
 import { findOrphanMedia } from './media';
 import { mediaBytes } from './mediaRecords';

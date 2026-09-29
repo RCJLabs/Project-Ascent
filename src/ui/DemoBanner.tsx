@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { FlaskConical } from 'lucide-react';
-import { hasDemo } from '@/db/demoFlag';
-import { useSessions } from '@/store/sessions';
+import { useHasDemo } from '@/store/demoPresence';
 
 /**
  * A standing reminder that none of this happened (PLAN.md M110).
@@ -12,23 +10,15 @@ import { useSessions } from '@/store/sessions';
  * closes the app and comes back a week later has no other way to tell. It
  * is small, it is not dismissible, and it goes when the data does.
  *
- * Re-read when the session store changes rather than subscribed to: the
- * answer only moves when something is written, and this is a `count` over
- * three stores.
+ * Answered from the stores, not the database (PLAN.md M353). This used to
+ * call `hasDemo` whenever the session log changed, and that reads every row
+ * of the log, then every project and every metric when none is tagged. The
+ * log changes on every write, so each climb added to a session read it all
+ * back, 20 to 45ms a time at a quarter CPU speed on the sample climber's
+ * year.
  */
 export function DemoBanner() {
-  const byDate = useSessions((s) => s.byDate);
-  const [demo, setDemo] = useState(false);
-
-  useEffect(() => {
-    let live = true;
-    void hasDemo().then((found) => {
-      if (live) setDemo(found);
-    });
-    return () => {
-      live = false;
-    };
-  }, [byDate]);
+  const demo = useHasDemo();
 
   if (!demo) return null;
 

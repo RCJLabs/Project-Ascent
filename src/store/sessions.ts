@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { noteDemo, tagged } from './demoPresence';
 import { getDb, reportDbError } from '@/db/db';
 import {
   deleteSession,
@@ -243,3 +244,8 @@ export const useSessions = create<SessionsState>((set, get) => ({
     return merged;
   },
 }));
+
+/** Whether the log holds the sample climber, for the banner (PLAN.md M353). */
+useSessions.subscribe((state, prev) => {
+  if (state.byDate !== prev.byDate) noteDemo('sessions', Object.values(state.byDate).some(tagged));
+});

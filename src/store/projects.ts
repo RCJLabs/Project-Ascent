@@ -9,6 +9,7 @@ import {
   type Project,
 } from '@/db/projects';
 import { applyPatch, reconcileProjects } from '@/engine/projects';
+import { noteDemo, tagged } from './demoPresence';
 import { hydrationInProgress } from './hydrating';
 import { useSessions } from './sessions';
 
@@ -134,4 +135,9 @@ useSessions.subscribe((state, prev) => {
   if (state.byDate !== prev.byDate && useProjects.getState().hydrated) {
     void useProjects.getState().reconcile();
   }
+});
+
+/** Whether the projects hold the sample climber's, for the banner (PLAN.md M353). */
+useProjects.subscribe((state, prev) => {
+  if (state.projects !== prev.projects) noteDemo('projects', tagged(state.projects));
 });

@@ -15225,6 +15225,16 @@ its label is missing. None of these wants touching.
   function, `loadOf`, still returned 0 for a session with no effort, the arithmetic M162 had
   removed, and a test was keeping it alive. The first load and Home's cold load are unchanged,
   because the bundler had already dropped all of it.
+- **M353 — the banner that read the whole log on every write.** A probe counted IndexedDB reads per
+  store while opening each of 33 routes and moving between them. Moving read nothing extra. At
+  launch, every route read the whole session log twice beyond the store's own read, and both reads
+  came from the sample-data banner. It re-asked the database whenever the log changed, which is also
+  on every write, so each climb added read the log back, and for a climber with no sample data every
+  project and metric as well. It now answers from the stores: no reads per write, none at launch.
+  The time saved is small, a median 120ms over five adds for the sample climber and noise for the
+  untagged one. Those same runs showed each added climb costs about 330ms of main-thread work at a
+  quarter CPU speed, which the banner was only a small part of. The smaller duplicates are measured
+  and left.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -26005,3 +26015,159 @@ written the same thing out again, so the tests were testing code that did not ru
   here, so the source got smaller and the download did not. After the move the entry chunk is 14
   bytes over M351's at maximum gzip. I did not trace which bytes; that is inside what a rebuild
   alone moves.
+
+## M353 — the banner that read the whole log on every write
+
+M350 found the session log read three times at launch on Home and made the repeats keep the same
+object. This asks the same question of every store and every page, by counting reads, before
+deciding anything.
+
+### The probe (M353a)
+
+The probe wraps every read method on `IDBObjectStore` and `IDBIndex` in the page and counts reads by
+store. It ran on the sample climber, with the worker installed and the CPU at a quarter speed. Two
+scenarios, on each of the 33 routes that take no parameter (read from `routes.ts`):
+
+- **opened straight onto the route**, from launch to 4 seconds;
+- **reached from Home**, counting only after Home had settled.
+
+Moving between pages read nothing it should not. Every page's own `load()` is behind
+`if (!hydrated)`, so once `hydrateAll` has run a page reads only what is its own: the photo index on
+Journal, Year and Attach, and the storage figures on Settings and Data.
+
+Launch was different. On every route:
+
+```
+sessions, whole store (getAll)          2      3 on /settings
+sessions, by date (the store's load)    1      3 on Home: M350's three, kept by design
+sessions, keys only                     1      the orphan-photo sweep
+game ledger, one load (4 gets)          1      2 on Home, /board and /ascent
+projects, metrics                       1      2 on /projects and /achievements, and metrics on /finish
+```
+
+### The two whole-log reads
+
+Nothing in the stores reads the log with `getAll`; the store's load goes through the date index.
+The two reads were `DemoBanner`, which sits in the shell on every page. It called `hasDemo()` in an
+effect keyed on the log's object, `byDate`:
+
+- at launch, once for the empty log and once for the loaded one;
+- and after every write, because every write gives the log a new object.
+
+`hasDemo` was documented as *"nothing here but a count over three stores"*. It reads every row of
+the log, then every project and every metric, until it finds one tagged as sample data. On the
+sample climber it stops after the log. A climber with no sample data has nothing to stop it, so it
+reads all three stores in full.
+
+Measured on today's log page, adding five climbs:
+
+```
+                        reads per add                       each log read, wall time
+sample climber          the whole log                       21–47ms
+the same log, untagged  the whole log, projects, metrics    23–36ms for the log
+```
+
+The untagged case is the sample climber with the tag deleted from all 448 records. As far as the
+database can tell, that is a real climber with a year of training.
+
+### The change
+
+The banner answers from the stores, which already hold every record: all sessions, all projects,
+all metrics.
+
+- **`store/demoPresence.ts`** holds one flag per store and a `useHasDemo()` the banner reads.
+- **The sessions, projects and metrics stores each subscribe to their own changes** and report
+  whether they hold a tagged record. `projects.ts` already had a module-level subscription of this
+  shape, for reconciling.
+- **Why not have the banner read the three stores directly:** the banner is in the eager shell, and
+  the projects and metrics stores are not in the entry chunk. Importing them there would move both
+  into the first load, which had 0.75KB of headroom.
+- **`hasDemo` stays** for Settings. Settings asks it on opening, and again if the log changes while
+  it is open, to decide whether to offer the wipe. It also asks once per export to name the file. Its
+  docblock now says what it reads.
+
+### A knock-on the guard caught
+
+`readOr` in `db/db.ts` had been in the entry only because `demoFlag.ts` was, through the banner.
+With the banner no longer importing it, M344's guard failed: *"src/db/db.ts#readOr — used only by
+demo.ts, demoFlag.ts, health.ts, mediaRecords.ts, snapshot.ts"*. It moved to `db/readOr.ts`, and the
+first load went from 114.44 to 114.41KB.
+
+### After
+
+The same probes, on the new build:
+
+```
+                                   before                  after
+whole-log reads at launch          2 on every route        0 (1 on /settings: its own hasDemo)
+                                   3 on /settings
+reads per climb added              1 log (sample)          0
+                                   3 stores (untagged)     0
+```
+
+And the main-thread time, five adds, M352's build against this one alternating, five runs each:
+
+```
+                        M352 median (range)     M353 median (range)
+sample climber          1,797ms (1,565–1,858)   1,677ms (1,428–1,722)
+untagged                1,617ms (1,529–1,831)   1,599ms (1,399–1,636)
+```
+
+**The reads are gone, but the time saved is small.** For the sample climber the medians are 120ms
+apart over five adds, and the ranges overlap. For the untagged climber the difference is noise. The
+likely reason is that the database reads off the main thread and hands over a year of sessions more
+cheaply than the wall times above suggest. That is inferred from these numbers, not measured on its
+own.
+
+**What the same numbers show instead:** one added climb costs about 330ms of main-thread work at a
+quarter CPU speed, roughly 80ms at full speed if the throttle scales evenly. That is the page's own
+work, not the banner's. It was
+not looked at here, and it is the larger thing on this screen.
+
+### Measured, and left
+
+- **The game ledger loads twice at launch on Home, `/board` and `/ascent`.** `useBoard` loads it
+  itself, and `hydrateAll` does too. `useBoard`'s comment said nothing else on Home touches the game
+  store, which stopped being true when `hydrateAll` took the game on. The second load gives the
+  board a new ledger, so the board is derived twice. `deriveBoard` on the sample climber's year
+  takes 2.9ms at full speed, so about 12ms at a quarter, once per launch. The comment now says so.
+- **Projects twice on `/projects` and `/achievements`, and metrics twice on `/finish`,** only when
+  the app opens straight onto those pages. That is M350's race, a page's effect against
+  `hydrateAll`, on stores without M350's comparison. Each replaces its array once: 6 projects and 36
+  metric entries on the sample climber.
+- **M350's three reads of the log on Home** remain, by design. M350 explains why a read cannot be
+  shared.
+
+### A false alarm
+
+The browser check of the banner once showed it back on Home after *"Clear the sample data"*. The
+database still held all 448 records. It reproduced identically on M352's build, which ruled out this
+change. The cause was the harness: a second click, meant as a confirmation, waited for the disabled
+button to come back, and by then the clear had finished and the same place held *"Load a sample
+climber"*. Settings said *"Sample data loaded"*. The app did what it was told.
+
+### Checked
+
+- **`demoBanner.test.tsx`, 7 tests:**
+  - a tagged session, project or metric each shows the banner on its own, because the wipe is by tag
+    and any one store can be the last to hold the sample;
+  - a log with nothing tagged shows nothing;
+  - it comes with the sample climber and goes with it, without a reload;
+  - writing a session reads none of the three stores in full;
+  - the banner does not import from `db/`.
+- **Mutation battery: 8 mutants, all killed; sanity survived.** The mutants:
+  - the banner put back as it was, asking the database on every change. That this one dies is what
+    shows the read-counting spy sees reads at all;
+  - each store never reporting;
+  - a report never landing, or never landing when the sample goes;
+  - the banner hearing the log alone;
+  - every record having to be tagged.
+- **In a browser, both themes:** no banner on an empty install. It appears with the sample climber
+  on Settings and Home, is still there after a reload, and is gone after the clear on both pages.
+  No page errors.
+- **Full suite:** 7,519 passing and the one pinned-clock skip. That is M352's 7,512 plus 7. M352's
+  entry says 7,511 because its count was taken before its last test was added.
+- **Layout harness, the date matrix.**
+- **Sizes:** the first load is 114.41KB (+0.05; the line is 115.1). Home's cold load is 213.02KB
+  (+0.05; the line is 213.5). The presence store costs a little more in the entry than the database
+  check it replaced there.

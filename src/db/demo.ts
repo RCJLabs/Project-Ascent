@@ -45,7 +45,8 @@
  * The per-program state is what has to go, and the row with it.
  */
 
-import { getDb, readOr } from './db';
+import { getDb } from './db';
+import { readOr } from './readOr';
 import { hasRealData } from './exportImport';
 import { demoClimber, DEMO_SEED } from '@/engine/demoClimber';
 import { today as todayKey } from '@/engine/dates';

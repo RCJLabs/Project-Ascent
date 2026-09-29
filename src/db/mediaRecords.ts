@@ -8,7 +8,8 @@
  */
 
 import type { MediaRecord } from './schema';
-import { getDb, readOr } from './db';
+import { getDb } from './db';
+import { readOr } from './readOr';
 import { sizeOf } from './media';
 
 /** Per owner. Storage is finite and this app has no cloud behind it. */
