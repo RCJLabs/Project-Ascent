@@ -19,14 +19,13 @@ import { useXp } from '@/store/game';
  * three copies is three chances for the avatar on one screen to disagree
  * with the avatar on another.
  *
- * `enabled` exists for the third caller. A record card is a rare moment and
- * the derivation walks the whole log; running it on every reward card, most
- * of which show no record at all, would be a full climber-state derivation
- * per logged session for nothing.
+ * A record card is a rare moment and the derivation walks the whole log, so
+ * the reward card mounts its caller only when there is a record to share
+ * (`RecordShare`, PLAN.md M354). It used to call this with `enabled`, which
+ * skipped the memo below but not `useSkillEffects` above it: the skill trees
+ * were evaluated on every reward card, for an avatar nobody drew.
  */
-export function useClimberAvatar(): AvatarConfig;
-export function useClimberAvatar(enabled: boolean): AvatarConfig | undefined;
-export function useClimberAvatar(enabled = true): AvatarConfig | undefined {
+export function useClimberAvatar(): AvatarConfig {
   const xp = useXp();
   const byDate = useSessions((s) => s.byDate);
   const injuries = useProfile((s) => s.injuries);
@@ -36,7 +35,6 @@ export function useClimberAvatar(enabled = true): AvatarConfig | undefined {
 
   const deloadDates = useDeloadDates();
   return useMemo(() => {
-    if (!enabled) return undefined;
     const sessions = allSessions(byDate);
     const state = deriveClimberState(sessions, { deloadDates });
     const vitality = deriveVitality({
@@ -52,5 +50,5 @@ export function useClimberAvatar(enabled = true): AvatarConfig | undefined {
       palette,
       figure,
     });
-  }, [enabled, byDate, figure, injuries, palette, restBonus, xp.progress.level, deloadDates]);
+  }, [byDate, figure, injuries, palette, restBonus, xp.progress.level, deloadDates]);
 }

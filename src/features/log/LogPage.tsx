@@ -35,7 +35,7 @@ import { offerUndo } from '@/store/undo';
 import { rankFor, rankLabel } from '@/engine/economy';
 import { openAt, openedViewFor } from '@/lib/openedView';
 import { useSettings, type LogView } from '@/store/settings';
-import type { SessionXp } from '@/engine/xp';
+import type { SessionXp, XpState } from '@/engine/xp';
 import {
   announcementFor,
   headlineMilestone,
@@ -62,7 +62,8 @@ import { prescriptionLine } from '@/engine/prescription';
 import { DEFAULT_TARGET_SECONDS, focusFor, generateWarmup, type WarmupPlan } from '@/engine/warmup';
 import type { CooldownPlan } from '@/engine/cooldown';
 import { bump as bumpRow, mergeInto, replaceRow } from '@/engine/climbRows';
-import { V_GRADES, YDS_GRADES, type GradeScale } from '@/engine/grades';
+import { V_GRADES, YDS_GRADES, type GradeDisplay, type GradeScale } from '@/engine/grades';
+import type { PersonalRecord } from '@/engine/derive';
 import { displayGrade } from '@/engine/gradeReading';
 import type { Climb, LoggedExercise, ProjectAttempt, RopeStyle, Session, WallAngle } from '@/db/sessions';
 import type { AttemptOutcome } from '@/db/projects';
@@ -2308,31 +2309,19 @@ function useNewAchievements(session: Session): { earned: Achievement[]; total: n
   }, [byDate, projects, ascent, session.date, session.id]);
 }
 
+/**
+ * What the session earned: one line once acknowledged, the card before.
+ *
+ * Split in two (PLAN.md M354). An acknowledged session shows *"Earned +N
+ * XP"* and nothing else, but the card's hooks ran above that return anyway:
+ * the achievements twice over the whole log, the milestones, and the skill
+ * trees under the avatar. They ran again on every edit, because every edit
+ * is a new log. Correcting a finished session cost about 130ms of that per
+ * change at a quarter CPU speed, for a line that needed only the XP.
+ */
 function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledge: () => void }) {
   const xp = useXp();
   const detail = xp.bySession[session.id];
-  const levelled = detail !== undefined && detail.levelAfter > detail.levelBefore;
-  const milestones = useSessionMilestones(session, detail);
-  const lead = headlineMilestone(milestones);
-  const { earned: unlocked, total: totalEarned } = useNewAchievements(session);
-  /** An achievement carries the card when no milestone does — it is a shape
-   *  in the log, which is more than "Session logged." */
-  const achievementLead = lead === null ? (unlocked[0] ?? null) : null;
-  const display = useSettings((s) => s.display);
-  const [counting, setCounting] = useState(false);
-  // Only derived when there is actually a card to put it on — see the hook.
-  const avatar = useClimberAvatar(Boolean(lead?.shareable && lead.record));
-
-  // The card appearing is the whole feedback for logging a session, and it
-  // arrives without a navigation — so on screen it is unmissable and to a
-  // screen reader it was, until this, completely silent. The record leads,
-  // because "412 XP earned" says nothing about having just climbed the
-  // hardest thing you ever have.
-  useEffect(() => {
-    if (detail === undefined || session.rewarded) return;
-    announce(announcementFor(milestones, detail.xp, unlocked.map((a) => a.name)));
-  }, [detail?.xp, session.rewarded, detail, session.id, milestones, unlocked]);
-
   if (!detail) return null;
 
   if (session.rewarded) {
@@ -2342,6 +2331,39 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
       </p>
     );
   }
+
+  return <FreshReward session={session} detail={detail} rank={xp.rank} onAcknowledge={onAcknowledge} />;
+}
+
+function FreshReward({
+  session,
+  detail,
+  rank,
+  onAcknowledge,
+}: {
+  session: Session;
+  detail: SessionXp;
+  rank: XpState['rank'];
+  onAcknowledge: () => void;
+}) {
+  const levelled = detail.levelAfter > detail.levelBefore;
+  const milestones = useSessionMilestones(session, detail);
+  const lead = headlineMilestone(milestones);
+  const { earned: unlocked, total: totalEarned } = useNewAchievements(session);
+  /** An achievement carries the card when no milestone does — it is a shape
+   *  in the log, which is more than "Session logged." */
+  const achievementLead = lead === null ? (unlocked[0] ?? null) : null;
+  const display = useSettings((s) => s.display);
+  const [counting, setCounting] = useState(false);
+
+  // The card appearing is the whole feedback for logging a session, and it
+  // arrives without a navigation — so on screen it is unmissable and to a
+  // screen reader it was, until this, completely silent. The record leads,
+  // because "412 XP earned" says nothing about having just climbed the
+  // hardest thing you ever have.
+  useEffect(() => {
+    announce(announcementFor(milestones, detail.xp, unlocked.map((a) => a.name)));
+  }, [detail.xp, detail, session.id, milestones, unlocked]);
 
   return (
     <Card>
@@ -2399,7 +2421,7 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
       <p className="text-sm text-ink-soft text-center mb-3 tabular-nums">
         +{detail.xp.toLocaleString()} XP
         {levelled && !lead && (
-          <span className="text-accent font-semibold"> · level {detail.levelAfter}, {rankLabel(xp.rank)}</span>
+          <span className="text-accent font-semibold"> · level {detail.levelAfter}, {rankLabel(rank)}</span>
         )}
       </p>
 
@@ -2458,12 +2480,7 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
         {/* The card for exactly this was written in M13 and reachable from
             nowhere until now. */}
         {lead?.shareable && lead.record ? (
-          <ShareButton
-            content={recordCard(lead.record.grade, lead.record.date, avatar, lead.record.scale, display)}
-            filename={`personal-record-${lead.record.grade}`}
-            label="Share this"
-            className="w-full justify-center"
-          />
+          <RecordShare record={lead.record} display={display} />
         ) : (
           // One button, not two: a grade record is a thing you did and it
           // wins. An achievement takes the slot when there is no record in
@@ -2488,6 +2505,26 @@ function RewardCard({ session, onAcknowledge }: { session: Session; onAcknowledg
         </Button>
       </div>
     </Card>
+  );
+}
+
+/**
+ * The record's share button, which draws the avatar on the card.
+ *
+ * Its own component so the avatar, a walk of the whole log, is derived only
+ * when there is a record to put it on. It was the avatar hook with `enabled`,
+ * which skipped the avatar's own derivation but still evaluated the skill
+ * trees underneath it on every reward card (PLAN.md M354).
+ */
+function RecordShare({ record, display }: { record: PersonalRecord; display: GradeDisplay }) {
+  const avatar = useClimberAvatar();
+  return (
+    <ShareButton
+      content={recordCard(record.grade, record.date, avatar, record.scale, display)}
+      filename={`personal-record-${record.grade}`}
+      label="Share this"
+      className="w-full justify-center"
+    />
   );
 }
 

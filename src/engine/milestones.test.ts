@@ -290,8 +290,12 @@ describe('the card actually uses this', () => {
 
   it('does not derive an avatar for every ordinary session', () => {
     // The derivation walks the whole log; a record is rare and the rest of
-    // the time there is no card to put one on.
-    expect(LOG).toContain('useClimberAvatar(Boolean(lead?.shareable');
+    // the time there is no card to put one on. The avatar is asked for only
+    // inside the record's share button, which mounts only with a record
+    // (PLAN.md M354).
+    expect(LOG).toMatch(/lead\?\.shareable && lead\.record \? \(\s*<RecordShare /);
+    expect(LOG.match(/useClimberAvatar\(/g)).toHaveLength(1);
+    expect(LOG).toMatch(/function RecordShare[^]*?useClimberAvatar\(\)/);
   });
 });
 

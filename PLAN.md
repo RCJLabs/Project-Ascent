@@ -15235,6 +15235,15 @@ its label is missing. None of these wants touching.
   untagged one. Those same runs showed each added climb costs about 330ms of main-thread work at a
   quarter CPU speed, which the banner was only a small part of. The smaller duplicates are measured
   and left.
+- **M354 — the reward card that worked out a whole card to print one line.** M353 found each
+  added climb cost about 330ms of main-thread work at a quarter CPU speed. A CPU profile showed that
+  was a finished session. On a live one, the in-gym case, the page's own work is about 50ms an add.
+  On a finished session the reward card took 70% of it. It recomputed the achievements twice over
+  the whole log, the milestones, XP, and the skill trees under an avatar, on every edit. Once the
+  session is acknowledged the card shows *"Earned +N XP"* and nothing else. It is two components
+  now, and the avatar is asked for only when there is a record to draw it on. Five adds to an
+  acknowledged session went from 1,538 to 1,115ms, with the ranges not overlapping. Live logging is
+  unchanged, because it never had the card.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -26171,3 +26180,113 @@ climber"*. Settings said *"Sample data loaded"*. The app did what it was told.
 - **Sizes:** the first load is 114.41KB (+0.05; the line is 115.1). Home's cold load is 213.02KB
   (+0.05; the line is 213.5). The presence store costs a little more in the entry than the database
   check it replaced there.
+
+## M354 — the reward card that worked out a whole card to print one line
+
+M353 measured 1.6–1.8 seconds of main-thread work over five climbs added at a quarter CPU speed,
+and the banner it fixed was a small share of that. This finds the rest.
+
+### The profile (M354a)
+
+The profile ran on an unminified build, so functions keep their names. It used the sample
+climber, the CPU at a quarter speed, and Chromium's sampling profiler over five climbs added to
+today's session. Playwright's own locator work shows in the profile and is left out below. It ran
+in three states, because the log page is a different page in each:
+
+```
+                                        React's work, five adds    of which the reward card
+live (not yet marked complete)          251ms                      not mounted
+complete, reward card showing           991ms                      691ms
+complete and acknowledged               905ms                      636ms
+```
+
+M353's number was the third state: the sample climber's day is finished and acknowledged. **The
+in-gym case, a live session, was never slow.** It costs about 50ms an add here. What is slow is
+correcting a session after it is finished. That means logging after the fact, fixing a grade, or
+adding the climb you forgot.
+
+Inside the reward card, over the five adds:
+
+```
+useNewAchievements → deriveAchievements, twice over the log      303ms
+useClimberAvatar → useSkillEffects → evaluateSkills (130 nodes)  188ms
+useXp → deriveXp                                                 132ms
+```
+
+### Why it ran
+
+- **The acknowledged card is one line.** `RewardCard` returned *"Earned +N XP"* for a session with
+  `rewarded` set, but only after its hooks had run: the milestones, the achievements before and
+  after this session, and the avatar. Each is memoised on the log, and an edit is a new log, so
+  every edit ran them all again.
+- **The avatar's `enabled` switch did not switch the expensive part off.** It stopped the memo that
+  derives the avatar itself, but `useSkillEffects()` sits above that memo as a hook. So the skill
+  trees were evaluated for every reward card, for an avatar drawn only on a personal record.
+- **`useSkills` claimed its callers share one evaluation.** They do not: `useMemo` is per
+  component, the same mistake M157 found in `useXp`'s. The docblock now says so.
+
+### The change
+
+- **`RewardCard` asks only for the XP.** It returns the line for an acknowledged session, and
+  otherwise mounts `FreshReward`, which holds everything the full card needs. Nothing it computes
+  runs for a session whose card is already one line.
+- **`RecordShare`** is the record's share button. It calls `useClimberAvatar()`, and is mounted
+  only when the lead milestone is a shareable record. The hook's `enabled` switch had no caller
+  left and is gone.
+
+The full card still recomputes its achievements on each edit while it is showing. That is correct:
+the card shows what the session earned, and an edit can change it.
+
+### After
+
+The same profile, each state on the new build:
+
+```
+                                        before     after
+complete and acknowledged               905ms      432ms   the card: useXp alone, 120ms
+complete, reward card showing           991ms      744ms   the skill trees gone; the achievements stay
+live                                    251ms      354ms   unchanged code; one profile each is noisy
+```
+
+A profile per state is not enough to trust, as the live row shows. Main-thread time over five adds,
+M353's build against this one alternating, six runs each:
+
+```
+                          M353 median (range)       M354 median (range)
+acknowledged              1,538ms (1,392–1,744)     1,115ms (945–1,172)
+card showing              1,456ms (1,264–1,516)     1,231ms (1,135–1,352)
+live                        788ms (737–837)           801ms (731–858)
+```
+
+- **Acknowledged:** 28% less, and the ranges do not overlap.
+- **Card showing:** the medians are 225ms apart, with the ranges touching.
+- **Live:** noise, as it should be. That path did not change.
+
+### What is left
+
+On an acknowledged session an add still costs about 220ms at a quarter speed, against about 160ms
+live. The difference is mostly `deriveXp`, about 25ms an add, which the one line does need, and the
+completed session's own cards. `deriveXp` walks the whole log for one session's number.
+Incremental XP would be its own milestone and is not started.
+
+### Checked
+
+- **`rewardCost.test.tsx`, 4 tests.** The achievements and skills engines are wrapped, as
+  `oneDerivation.test.tsx` wraps `deriveClimberState`, so the counts are of real calls:
+  - an acknowledged session shows its line through two edits and derives neither;
+  - a card not yet acknowledged still derives its achievements, and again after an edit;
+  - with no record it evaluates no skills;
+  - with a record it draws the avatar.
+- **The source check in `milestones.test.ts`** asked for `useClimberAvatar(Boolean(lead?.shareable`.
+  It now asks that the avatar is called once in the file, inside `RecordShare`, and that
+  `RecordShare` is mounted only on a shareable record.
+- **Mutation battery: 5 mutants, all killed; sanity survived:**
+  - the achievements derived before the acknowledged line, as they were;
+  - the avatar derived on every fresh card;
+  - the record's share button never mounted;
+  - the acknowledged session shown the whole card;
+  - the fresh card blind to edits.
+- **Full suite:** 7,523 passing, M353's 7,519 plus 4, and the one pinned-clock skip.
+- **Layout harness, the date matrix.**
+- **Sizes:** the first load is 114.39KB (−0.02, noise; the line is 115.1). Home's cold load is
+  212.98KB (−0.04; the line is 213.5).

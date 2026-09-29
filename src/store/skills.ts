@@ -42,8 +42,10 @@ export function useSkills(): SkillState {
 /**
  * The one thing closest to unlocking, for the screens that show a prompt.
  *
- * `useSkills` is memoised on the log, so the three callers share one
- * evaluation of 130 nodes rather than each running their own.
+ * `useSkills` is memoised per component, not shared: each component that
+ * calls it evaluates the 130 nodes once per change to the log (PLAN.md
+ * M354 found one caller that never used the answer). Call it where the
+ * answer is drawn.
  */
 export function useNextUnlock(): NextUnlock | null {
   const skills = useSkills();
