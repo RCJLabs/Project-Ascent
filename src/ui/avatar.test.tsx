@@ -23,18 +23,16 @@ describe('the climber portrait', () => {
   };
 
   it('draws a face, which the climbing figure does not have', () => {
-    const eyes = [...svg(0).querySelectorAll('circle')].filter(
-      (c) => Number(c.getAttribute('r')) < 5,
-    );
+    const eyes = [...svg(0).querySelectorAll('ellipse[data-part="eye"]')];
     expect(eyes).toHaveLength(2);
     expect(eyes[0]!.getAttribute('cx')).not.toBe(eyes[1]!.getAttribute('cx'));
+    expect(svg(0).querySelector('[data-part="mouth"]')).not.toBeNull();
   });
 
   it('stands, rather than hanging off a hold', () => {
-    const head = [...svg(0).querySelectorAll('circle')].find(
-      (c) => c.getAttribute('r') === '15',
-    )!;
-    expect(Number(head.getAttribute('cy'))).toBe(STANDING.steady.head[1]);
+    // The eyes sit on the standing table's head, not the climbing one's.
+    const eye = svg(0).querySelector('ellipse[data-part="eye"]')!;
+    expect(Number(eye.getAttribute('cy'))).toBeCloseTo(STANDING.steady.head[1] + 1.6, 6);
   });
 
   it('keeps its label, which is what a screen reader has to go on', () => {

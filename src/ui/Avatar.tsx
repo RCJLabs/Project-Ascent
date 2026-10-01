@@ -20,22 +20,32 @@ const THEME_COLORS = {
 };
 
 function Piece({ shape }: { shape: Shape }) {
+  // What the shape is part of, for anyone reading the drawn figure — the
+  // tests ask for the eyes and the head by name (PLAN.md M357).
+  const part = shape.part ? { 'data-part': shape.part } : {};
   switch (shape.kind) {
     case 'circle':
-      return <circle cx={shape.cx} cy={shape.cy} r={shape.r} fill={shape.fill} />;
+      return <circle cx={shape.cx} cy={shape.cy} r={shape.r} fill={shape.fill} {...part} />;
     case 'ellipse':
-      return <ellipse cx={shape.cx} cy={shape.cy} rx={shape.rx} ry={shape.ry} fill={shape.fill} />;
+      return <ellipse cx={shape.cx} cy={shape.cy} rx={shape.rx} ry={shape.ry} fill={shape.fill} {...part} />;
     case 'rect':
       return (
-        <rect x={shape.x} y={shape.y} width={shape.w} height={shape.h} rx={shape.rx} fill={shape.fill} />
+        <rect x={shape.x} y={shape.y} width={shape.w} height={shape.h} rx={shape.rx} fill={shape.fill} {...part} />
       );
     case 'path':
       return (
         <path
           d={shape.d}
           fill={shape.fill ?? 'none'}
+          {...part}
           {...(shape.stroke
-            ? { stroke: shape.stroke, strokeWidth: shape.width ?? 2, strokeLinecap: 'round' as const }
+            ? {
+                stroke: shape.stroke,
+                strokeWidth: shape.width ?? 2,
+                strokeLinecap: 'round' as const,
+                strokeLinejoin: 'round' as const,
+                ...(shape.dash ? { strokeDasharray: shape.dash.join(' ') } : {}),
+              }
             : {})}
         />
       );
@@ -48,6 +58,7 @@ function Piece({ shape }: { shape: Shape }) {
           strokeWidth={shape.width}
           strokeLinecap="round"
           strokeLinejoin="round"
+          {...part}
         />
       );
   }

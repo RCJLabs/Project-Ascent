@@ -15260,6 +15260,18 @@ its label is missing. None of these wants touching.
   compiled a pattern per rule. The scan depends on nothing but its text, so `rulesInText` now
   remembers the answer by text, bounded and frozen. Time under the scan at Home's launch went from
   68–97ms to 22–31ms, with the ranges apart. The whole launch moved within noise.
+- **M357 — the climber drawn as a person.** Asked for in those words: *"more detailed and look
+  like a person"*, on the profile and in the Ascent. The skeleton, the three stances and the
+  climbing cycle are unchanged, so the posture reads training exactly as before. The body around
+  them is new. Limbs are tapered outlines with a calf, a forearm and a shoulder, and hands are
+  hands. The head has a jaw, ears and a face: eyes with whites, brows, a nose drawn as shadow, and
+  a mouth that reads vitality like the stance does. That reverses M209's *"two eyes and nothing
+  else"*. One light from the upper left shades the far side of everything. The new figure cost
+  0.79ms to build against the old one's 0.017ms, and the game, which builds it every frame, fell to
+  30fps at a quarter CPU speed. The game now builds each of 64 steps of the cycle once, parses each
+  path once, leaves out lines under a pixel and merges neighbouring fills of one colour. Steady
+  frame pacing is back level with the old figure. Shapes are tagged with the part they are, and the
+  tests find the chalk bag and the brim by name instead of by size.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -26528,3 +26540,194 @@ past, 1 February and 1 March 2026, the only failures are those four `finishPage`
 legend file alone also passes for 1 February 2037 and 2015. The full matrix then ran on its ten
 days.
 
+
+## M357 — the climber drawn as a person
+
+Asked for in these words: *"enhance and improve the climber avatar profile and in the Ascent game.
+Making him more detailed and look like a person."* One geometry draws the figure in three places: the
+profile on the Game tab, the share card and the Ascent's canvas. So one change reaches all three.
+
+### What it was
+
+A pictogram. Every limb was one width of round-capped tube, the head a circle, the face two dots,
+and nothing was shaded. At level 90 it was 28 shapes from behind and 39 facing you. It read as a
+figure. It did not read as a person, and next to the rest of the app it looked like a placeholder.
+
+### What it is now
+
+The skeleton did not change. The joint tables, the three vitality stances and the climbing cycle
+are the same, so the posture still says what training said. The body drawn around the joints is
+new:
+
+- **Limbs are outlines, not tubes.** Each segment has a width profile along its length. The thigh
+  is widest at the hip, the calf swells below the knee and narrows to the ankle, and the forearm is
+  thickest just past the elbow. The two builds differ by a limb factor as well as by shoulders and
+  hips.
+- **Hands are hands.** An open hand standing, a grip on the wall, with the thumb on the side toward
+  the body's centre line. The test measures the thumb across the forearm rather than across the
+  screen, which is the only measure that means the same on a raised arm and a hanging one.
+- **The head has a jaw, ears and a neck that reaches the collar.** Hair is drawn in three layers:
+  behind the head, over it, and the loose locks. A test checks that nothing drawn over the face
+  covers the eyes, the nose or the mouth.
+- **The face.** Eyes with whites and a dark iris, brows, lids, a nose drawn as shadow, and a mouth
+  a line deeper than the skin. Only the iris is ink. The expression reads vitality the way the
+  stance does: fresh smiles with the brows up, worked is level, and spent has heavy lids, tipped
+  brows and the corners down.
+- **Clothes and gear have edges.** Collars, hems and cuffs, a waistband, a jacket zip, shoes with a
+  rubber rand. The harness has a buckle, leg loops and quickdraws.
+- **One light from the upper left,** the direction the Ascent already lights its rock from. A
+  shadow runs down the far side of every limb, the torso and the jaw.
+
+At level 90 the figure is now 80 shapes from behind and 122 facing you.
+
+### Reversing M209's face
+
+M209 decided *"the face is two eyes and there is nothing else on it"*, because a nose and a mouth
+fifteen units across would be three smudges. Drawn in ink they would be. The decision now is that
+nothing on the face is ink except the iris. Everything else is a shade or two off the skin, so at
+96 pixels it recedes into a face, and on a share card it is one.
+
+The eye colour changed for a reason of its own. M209's `eyeColor` gave each skin tone either a dark
+dot or a pale one, and on the darkest tones the pale dots read as two glowing points. A white with a
+dark iris works on every tone, because one of the two always stands off the skin. `eyeColor` is
+gone. The tests assert the contrast between `SCLERA` and `IRIS` instead.
+
+### Shapes say what they are
+
+Every shape carries a `part`: `'eye'`, `'brim'`, `'chalk'`, `'hips'` and so on. Nothing is drawn
+differently because of it. Before this, the rules about the figure found things by size: *the rect
+16 wide is the chalk bag*. Every redraw then meant rewriting the rules as well as the picture. The
+React `Avatar` writes the part as `data-part`, so the component tests ask for
+`ellipse[data-part="eye"]`.
+
+A second flag, `detail`, marks shading, seams and features: anything the figure reads without. The
+game uses it, below.
+
+### The game fell to 30fps, and what brought it back
+
+The Ascent built the figure from scratch every frame, twice when a ghost was on screen. That was
+cheap for the pictogram and is not cheap now. One build, measured under vitest at full speed:
+
+```
+old    28 shapes   0.017ms
+new    80 shapes   0.786ms
+```
+
+At a quarter CPU speed that is about 3ms a figure, before a single draw call. The first frame-pacing
+comparison confirmed it. Production builds, the sample climber, CPU at a quarter speed, rAF gaps
+over a few seconds of climbing:
+
+```
+old    p50 16.7ms in 4 of 4 runs        0–6 slow frames
+new    p50 33.3ms in 3 of 4 runs       5–16 slow frames
+```
+
+Five changes, all in the game's renderer or the geometry's internals:
+
+1. **Each step of the cycle is built once.** The cycle repeats, so `climberFrame` keeps 64 steps
+   per avatar and wall. Sixty-four steps moves a hand about one viewBox unit between neighbours,
+   half a pixel at the game's size. The cache is keyed on the avatar object, and `AscentPage`
+   memoises that, so it hits.
+2. **Each path is parsed once.** `new Path2D(d)` parses the string every call. A WeakMap keeps the
+   parsed path with its shape.
+3. **The shading colours are mixed once.** Every shade is a mix of two hex colours, and the mix is
+   remembered.
+4. **Lines under a pixel are left out of the game.** The game draws the figure at 0.44 of its
+   viewBox, so a one-unit seam or knuckle line is under half a pixel. The shading stays, because it
+   is filled area and it is what makes the figure round.
+5. **Neighbouring fills of one colour are one path.** Limbs push all their fills before any of
+   their shadows, so the four leg segments sit next to each other. Only neighbours merge, so the
+   painting order is untouched. Merging needs every outline wound the same way, or under the
+   nonzero rule a clockwise thigh and an anticlockwise calf would leave the knee hollow. `smooth`
+   now normalises the winding.
+
+Draws per climber in the game: 24, 34 and 40 at levels 0, 40 and 90, against the pictogram's 28 to
+36. Steady-state pacing after the changes, six runs each, after three seconds of warm-up:
+
+```
+old    p50 16.7ms in 6 of 6       0–5 slow frames of 179–206
+new    p50 16.7ms in 5, 16.8 in 1  0–6 slow frames of 172–198
+```
+
+Level with the old figure, within the spread of either.
+
+**The ghost became a silhouette.** It was the figure drawn shape by shape in one ink at 38% alpha,
+so every overlap came out darker. With a shadow band on every limb that made it a mottled second
+climber. It now draws only shapes without `detail`, merged, and comes to 1, 4 and 9 draws at levels
+0, 40 and 90.
+
+### Not measured
+
+- **The first cycle.** The numbers above start after three seconds of climbing. In the first cycle
+  each new step is a fresh build, about 3ms at a quarter speed, or 6ms with a ghost. That is spread
+  over the cycle's frames, not taken at once, but it was not measured.
+- **A real phone.** The CPU throttle stands in for one, as it has for every milestone.
+- **How much of the detail survives in the game.** The figure there is about 75 CSS pixels tall
+  and seen from behind, so it shows the limbs, shading, hair and gear, and no face. The profile and
+  the share card are where the change shows.
+
+### Checked
+
+- **Visually,** on contact sheets of both builds, all three stances and the gear levels, front and
+  back, before and after. The same in the app on the Game tab and the appearance sheet, light and
+  dark, and cropped from the Ascent's canvas. No page errors. The sheets caught the faults the tests
+  did not:
+  - the torso's shadow band hooked around the collar, because it took the neckline's points;
+  - the nose, the hair's shine, the back of long hair, the helmet strap, the chest lines, the axe,
+    the jaw shade and the shoes' heel rand all needed a second pass.
+- **`climberShapes.test.ts`, 52 tests** (was 45). The tail was rewritten around parts:
+  - every shape is named, has no arcs, and is wound positively;
+  - the two views: no face on a back;
+  - the eyes are legible on every skin tone;
+  - the face reads vitality;
+  - the limbs follow their profiles, taper, put their shadow on the side away from the light, and
+    end in a hand at the joint with the thumb turned in;
+  - below the waist: hips, shorts or trousers, shoes;
+  - the two builds: broader shoulders on one, broader hips on the other, big enough to see, on one
+    skeleton;
+  - hair on every head in both views, past the jaw on one build only, never over the face, and
+    visible on every skin tone.
+- **`render.test.ts`, 40 tests** (was 34):
+  - each step is built once and wraps;
+  - it is the climbing pose for its step;
+  - at most 44 draws a climber at every level and both builds;
+  - the painting order is kept;
+  - fills merge and strokes never do;
+  - the ghost is one ink with no detail.
+- **`avatar.test.tsx` and `shareCard.test.ts`** find the eyes by part, and by the sclera's colour
+  on the card.
+- **Mutation battery: 19 mutants, all killed in the end; sanity survived.** The first round left
+  two standing, and both were holes in the tests:
+  - **Strokes merged into fills.** The figure today has no stroke beside a fill of its colour, so
+    nothing drawn could catch it. `merged` now has a unit test of its own.
+  - **The neck stopping short of the collar.** The test drew a figure in a jacket, whose collar
+    and hood stand up round the neck and hid the gap. It now draws a plain shirt and checks the neck
+    reaches past the torso's top edge.
+
+  The other seventeen were killed in the first round:
+  - the game turned to face you;
+  - the ghost keeps the shading;
+  - the game keeps the sub-pixel lines;
+  - every step drawn as the first;
+  - outlines wound either way;
+  - limbs of one width;
+  - the shadow on the lit side;
+  - the thumb turned outward;
+  - eye whites the colour of skin;
+  - the spent climber smiles;
+  - heavy lids on everyone;
+  - a lock of hair across the mouth;
+  - the helmet down over the eyes;
+  - the chalk bag on the thigh;
+  - the rope from the middle;
+  - the hips with no part;
+  - short hair past the jaw.
+- **Full suite:** 7,568 passing, M356's 7,555 plus 13, and the one pinned-clock skip.
+- **Layout harness and the entry guards:** clean.
+- **Sizes:**
+  - The first load is 114.54KB (+0.01; the line is 115.1).
+  - Home's cold load is 213.14KB, unchanged.
+  - The figure's code lives in the lazy chunk Vite names after the share sheet. It went from 7,885
+    to 12,334 bytes gzipped, which is the cost of the drawing. Ten pages load that chunk, among them
+    Game, the Ascent, Log, Review and Year, so each of them pays about 4.4KB more on its first
+    visit. None of it is in the first load.

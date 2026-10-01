@@ -5,7 +5,8 @@ import { createRun, type RunState } from '@/engine/ascent/game';
 import { RUN_MARKS } from '@/engine/ascent/marks';
 import { deriveAvatar } from '@/engine/avatar';
 import { wall } from '@/engine/ascent/walls';
-import { buildWall, edgeProfile, facetLight, render, rockOutline } from './render';
+import { POSES, climberShapes, climbingPose } from '@/ui/climberShapes';
+import { POSE_STEPS, buildWall, climberFrame, edgeProfile, facetLight, merged, render, rockOutline } from './render';
 
 // The wall palettes and the rules for having one moved to
 // `engine/ascent/walls.ts` at M227, and so did the tests that were here.
@@ -297,28 +298,27 @@ describe('which way the climber faces', () => {
     scale: 1,
   };
 
-  /** How many circles one climber costs, isolated from the rest of the scene. */
-  const arcsPerClimber = (): number => {
-    const one = stubCtx();
-    render(one.ctx, createRun({ seed: 9 }), options);
-    const ghost = createRun({ seed: 9 });
-    ghost.distance = 60;
-    const two = stubCtx();
-    render(two.ctx, createRun({ seed: 9 }), { ...options, ghost });
-    return (two.calls.arc ?? 0) - (one.calls.arc ?? 0);
+  /** How many ellipses one climber costs, isolated from the rest of the scene. */
+  const ellipsesPerClimber = (): number => {
+    const live = createRun({ seed: 9 });
+    live.distance = 190 * 3;
+    const before = stubCtx();
+    render(before.ctx, live, options);
+    return before.calls.ellipse ?? 0;
   };
 
-  it('draws a back, and a back has no face on it (PLAN.md M209, M226)', () => {
-    // A head, the hair over it and two hands. The portrait and the share
-    // card turned around at M209 and this one did not, because a climber on
-    // a wall is a back — `facing: 'front'` here would add two eyes and this
-    // count would be six.
-    //
-    // Three until M226, which gave the back of the head hair: from behind
-    // that is the whole head rather than a cap cut out of it, so it is a
-    // circle and it costs an arc. The number moved; what the rule is
-    // watching for did not.
-    expect(arcsPerClimber()).toBe(4);
+  it('draws a back, and a back has no face on it (PLAN.md M209, M226, M357)', () => {
+    // The portrait and the share card turned around at M209 and this one did
+    // not, because a climber on a wall is a back. A face is two eye-whites,
+    // and they are the only ellipses a front adds; from behind, the ellipses
+    // are the ears and the helmet's vents, and the count is exactly the back
+    // view's.
+    const back = climberFrame(options.avatar, options.palette, 3).filter((s) => s.kind === 'ellipse').length;
+    expect(ellipsesPerClimber()).toBe(back);
+    const frame = climberFrame(options.avatar, options.palette, 3);
+    for (const part of ['eye', 'brow', 'mouth', 'face'] as const) {
+      expect(frame.filter((s) => s.part === part), part).toEqual([]);
+    }
   });
 });
 
@@ -433,3 +433,81 @@ describe('the climbs marked on the wall', () => {
     expect(horizontals(run)).not.toContain(CLIMBER.y - (first.px - run.distance));
   });
 });
+
+/**
+ * The figure in the game, frame by frame (PLAN.md M357).
+ *
+ * Since M357 the climber is a person rather than a pictogram, and building
+ * one costs about 0.8ms at full speed. The game draws it every frame, twice
+ * with a ghost on screen, so it is built once per step of the climbing cycle
+ * and kept, and drawn with neighbouring fills of one colour merged.
+ */
+describe('the figure in the game', () => {
+  const palette = wall('granite')!.palette;
+  const avatar = deriveAvatar({ level: 90, vitality: 'worked', feet: 0 });
+
+  it('builds each step of the cycle once', () => {
+    expect(climberFrame(avatar, palette, 0.25)).toBe(climberFrame(avatar, palette, 0.25));
+    expect(climberFrame(avatar, palette, 0.25)).not.toBe(climberFrame(avatar, palette, 0.5));
+    // The cycle wraps, and a phase within half a step is the same step.
+    expect(climberFrame(avatar, palette, 1.25)).toBe(climberFrame(avatar, palette, 0.25));
+    expect(climberFrame(avatar, palette, 0.25 + 0.4 / POSE_STEPS)).toBe(climberFrame(avatar, palette, 0.25));
+  });
+
+  it('is the climbing pose for its step, not a fixed one', () => {
+    const head = (phase: number) => {
+      const shapes = climberShapes(avatar, { facing: 'back', showGround: false, colors: { ground: '#000000', surface: '#000000', accentGround: '#000000' }, joints: climbingPose(POSES[avatar.pose], phase) });
+      return shapes.find((s) => s.part === 'head');
+    };
+    const drawn = climberFrame(avatar, palette, 0.5).find((s) => s.part === 'head');
+    expect(drawn).toEqual(head(0.5));
+  });
+
+  it('draws few enough shapes to hold sixty frames a second', () => {
+    // The old pictogram was 28 to 36; the person is 80-odd before the game
+    // leaves out what is under a pixel and merges what shares a colour.
+    for (const level of [0, 8, 20, 40, 60, 90]) {
+      for (const figure of ['male', 'female'] as const) {
+        const frame = climberFrame(deriveAvatar({ level, figure, vitality: 'worked', feet: 0 }), palette, 0.3);
+        expect(frame.length, `${figure} L${level}`).toBeLessThanOrEqual(44);
+      }
+    }
+  });
+
+  it('keeps the painting order: only neighbours are merged', () => {
+    // Merging two fills of one colour with something painted between them
+    // would lift the lower one over it.
+    const full = climberShapes(avatar, { facing: 'back', showGround: false, colors: { ground: palette.rockNear, surface: palette.sky, accentGround: palette.strata }, joints: climbingPose(POSES[avatar.pose], 0.3125) });
+    const paints = (shapes: typeof full) =>
+      shapes
+        .filter((s) => !(s.detail && s.kind === 'path' && s.fill === undefined))
+        .map((s) => (s.kind === 'path' ? `${s.fill ?? ''}/${s.stroke ?? ''}` : s.kind === 'polyline' ? `/${s.stroke}` : s.fill))
+        .filter((paint, i, all) => i === 0 || paint !== all[i - 1]);
+    const drawn = climberFrame(avatar, palette, 0.3125);
+    expect(paints(drawn)).toEqual(paints(full));
+  });
+
+  it('merges fills, and never a stroke into anything', () => {
+    // The figure today has no stroke beside a fill of its colour, so this is
+    // the one place the rule is asked: a stroke merged into a fill would be
+    // filled instead of drawn, and two strokes merged would draw the second
+    // in the first one's colour.
+    const fill = (d: string, colour: string) => ({ kind: 'path' as const, d, fill: colour });
+    const stroke = (d: string, colour: string) => ({ kind: 'path' as const, d, stroke: colour, width: 2 });
+    expect(merged([fill('M 0 0 Z', '#111111'), fill('M 1 1 Z', '#111111')])).toHaveLength(1);
+    expect(merged([fill('M 0 0 Z', '#111111'), fill('M 1 1 Z', '#222222')])).toHaveLength(2);
+    expect(merged([fill('M 0 0 Z', '#111111'), { ...stroke('M 1 1 L 2 2', '#111111'), fill: '#111111' }])).toHaveLength(2);
+    expect(merged([stroke('M 0 0 L 1 1', '#111111'), stroke('M 1 1 L 2 2', '#222222')])).toHaveLength(2);
+    expect(merged([fill('M 0 0 Z', '#111111'), fill('M 1 1 Z', '#222222'), fill('M 2 2 Z', '#111111')])).toHaveLength(3);
+  });
+
+  it('draws the ghost as a silhouette: one ink, no shading or seams', () => {
+    const ghost = climberFrame(avatar, palette, 0.3, palette.ink);
+    expect(ghost.some((s) => s.detail)).toBe(false);
+    for (const shape of ghost) {
+      const paints = shape.kind === 'path' ? [shape.fill, shape.stroke].filter(Boolean) : shape.kind === 'polyline' ? [shape.stroke] : [shape.fill];
+      expect(paints.every((p) => p === palette.ink), shape.part).toBe(true);
+    }
+  });
+});
+

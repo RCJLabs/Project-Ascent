@@ -112,6 +112,24 @@ function drawEdge(
   ctx.fill();
 }
 
+/**
+ * Parsed paths, kept with the shape they came from (PLAN.md M357).
+ *
+ * The figure is eighty-odd shapes and most are paths, and `new Path2D(d)`
+ * parses the string every time. The poses below are cached, so the same
+ * shape objects come round every cycle and their paths are parsed once.
+ */
+const PARSED = new WeakMap<Shape, Path2D>();
+
+function pathOf(shape: Shape & { kind: 'path' }): Path2D {
+  let path = PARSED.get(shape);
+  if (path === undefined) {
+    path = new Path2D(shape.d);
+    PARSED.set(shape, path);
+  }
+  return path;
+}
+
 function drawShape(ctx: CanvasRenderingContext2D, shape: Shape): void {
   switch (shape.kind) {
     case 'circle':
@@ -133,7 +151,7 @@ function drawShape(ctx: CanvasRenderingContext2D, shape: Shape): void {
       ctx.fill();
       break;
     case 'path': {
-      const path = new Path2D(shape.d);
+      const path = pathOf(shape);
       if (shape.fill && shape.fill !== 'none') {
         ctx.fillStyle = shape.fill;
         ctx.fill(path);
@@ -142,7 +160,10 @@ function drawShape(ctx: CanvasRenderingContext2D, shape: Shape): void {
         ctx.strokeStyle = shape.stroke;
         ctx.lineWidth = shape.width ?? 2;
         ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        if (shape.dash) ctx.setLineDash([...shape.dash]);
         ctx.stroke(path);
+        if (shape.dash) ctx.setLineDash([]);
       }
       break;
     }
@@ -342,7 +363,14 @@ export interface RenderOptions {
  */
 const GHOST_ALPHA = 0.38;
 
-/** One colour for every shape, which is what makes it read as a shadow. */
+/**
+ * One colour for every shape, which is what makes it read as a shadow.
+ *
+ * Only the shapes the figure reads without — no shading, seams or face
+ * (PLAN.md M357). Each shape is painted at the ghost's alpha on its own, so
+ * every overlap comes out darker than the shapes either side of it, and a
+ * shadow band over every limb made the ghost a mottled second climber.
+ */
 function flatten(shape: Shape, ink: string): Shape {
   if (shape.kind === 'polyline') return { ...shape, stroke: ink };
   if (shape.kind === 'path') {
@@ -353,6 +381,92 @@ function flatten(shape: Shape, ink: string): Shape {
     };
   }
   return { ...shape, fill: ink };
+}
+
+/**
+ * How many poses one climbing cycle is drawn in (PLAN.md M357).
+ *
+ * The figure is built from joints the cycle generates, and since M357 it is
+ * a person rather than a pictogram: eighty-odd shapes, about 0.8ms to build
+ * at full speed, which is a twentieth of a frame at a quarter CPU speed —
+ * twice over with a ghost on screen. The cycle repeats every turn, so it is
+ * built once per step and kept. Sixty-four steps moves a hand about one
+ * viewBox unit between neighbours, half a pixel at the size the game draws.
+ */
+export const POSE_STEPS = 64;
+
+type Frames = Map<string, Shape[]>;
+const POSED = new WeakMap<AvatarConfig, WeakMap<Palette, Frames>>();
+
+/** The shapes for one step of the cycle, built once per avatar and wall. */
+export function climberFrame(avatar: AvatarConfig, palette: Palette, phase: number, ink?: string): Shape[] {
+  const step = ((Math.round(phase * POSE_STEPS) % POSE_STEPS) + POSE_STEPS) % POSE_STEPS;
+  let byWall = POSED.get(avatar);
+  if (byWall === undefined) {
+    byWall = new WeakMap();
+    POSED.set(avatar, byWall);
+  }
+  let frames = byWall.get(palette);
+  if (frames === undefined) {
+    frames = new Map();
+    byWall.set(palette, frames);
+  }
+  const key = `${step}${ink ?? ''}`;
+  let shapes = frames.get(key);
+  if (shapes === undefined) {
+    const all = climberShapes(avatar, {
+      showGround: false,
+      // The one place the figure is a back: that is what you see watching
+      // somebody climb, and it is why this head has no face on it.
+      facing: 'back',
+      colors: { ground: palette.rockNear, surface: palette.sky, accentGround: palette.strata },
+      joints: climbingPose(POSES[avatar.pose], step / POSE_STEPS),
+    });
+    shapes = merged(
+      ink === undefined
+        ? all.filter(drawnInGame)
+        : all.filter((shape) => !shape.detail).map((shape) => flatten(shape, ink)),
+    );
+    frames.set(key, shapes);
+  }
+  return shapes;
+}
+
+/**
+ * What the game leaves out: the lines under a pixel at its size.
+ *
+ * The game draws the figure at 0.44 of its viewBox, so a seam, a knuckle or
+ * a strand of hair one unit wide is under half a pixel — antialiased into a
+ * faint smear, at the cost of a draw call each. The shading stays: it is
+ * filled area, and it is what makes the figure round rather than flat.
+ */
+function drawnInGame(shape: Shape): boolean {
+  return !(shape.detail && shape.kind === 'path' && shape.fill === undefined);
+}
+
+/**
+ * Neighbouring fills of one colour, drawn as one path.
+ *
+ * Only neighbours, so the order the figure is painted in is untouched: two
+ * shapes can share a draw call only if nothing is painted between them.
+ * Every outline is wound the same way round (`smooth` sees to it), so where
+ * the merged pieces overlap they fill rather than cancel.
+ */
+export function merged(shapes: Shape[]): Shape[] {
+  const out: Shape[] = [];
+  for (const shape of shapes) {
+    const last = out.at(-1);
+    if (
+      shape.kind === 'path' && last?.kind === 'path' &&
+      shape.fill !== undefined && shape.stroke === undefined &&
+      last.fill === shape.fill && last.stroke === undefined
+    ) {
+      out[out.length - 1] = { ...last, d: `${last.d} ${shape.d}` };
+    } else {
+      out.push(shape);
+    }
+  }
+  return out;
 }
 
 function drawClimber(
@@ -366,23 +480,11 @@ function drawClimber(
   ctx.translate(climberX(state) - (180 * scale) / 2, at.y - (250 * scale) / 2);
   ctx.scale(scale, scale);
   ctx.globalAlpha = at.alpha;
-  for (const shape of climberShapes(options.avatar, {
-    showGround: false,
-    // The one place the figure is a back: that is what you see watching
-    // somebody climb, and it is why this head has no face on it.
-    facing: 'back',
-    colors: {
-      ground: options.palette.rockNear,
-      surface: options.palette.sky,
-      accentGround: options.palette.strata,
-    },
-    // Driven by distance rather than time, so the cadence rises with the
-    // climber's speed and a paused run holds a pose instead of running on
-    // the spot.
-    joints: climbingPose(POSES[options.avatar.pose], state.distance / CLIMB_CYCLE_PX),
-  })) {
-    drawShape(ctx, at.ink === undefined ? shape : flatten(shape, at.ink));
-  }
+  // Driven by distance rather than time, so the cadence rises with the
+  // climber's speed and a paused run holds a pose instead of running on
+  // the spot.
+  const phase = state.distance / CLIMB_CYCLE_PX;
+  for (const shape of climberFrame(options.avatar, options.palette, phase, at.ink)) drawShape(ctx, shape);
   ctx.restore();
 }
 

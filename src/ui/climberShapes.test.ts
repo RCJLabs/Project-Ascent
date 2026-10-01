@@ -7,14 +7,18 @@ import {
   BUILDS,
   CLIMBER_VIEWBOX,
   HEAD,
+  IRIS,
   POSES,
+  SCLERA,
   STANDING,
   climberShapes,
   climbingPose,
-  eyeColor,
-  scalp,
+  limbOutline,
+  limbShadow,
   type Joints,
+  type Part,
   type Point,
+  type Profile,
   type Shape,
 } from './climberShapes';
 
@@ -252,240 +256,419 @@ describe('the standing figure', () => {
   });
 });
 
+
+// ── The drawn figure (PLAN.md M209, M225, M357) ─────────────────────────
+//
+// Everything below finds the parts of the figure by what they are, not by
+// their size. Until M357 the chalk bag was "the rect 16 wide" and the head
+// "the circle of radius 15", so redrawing the climber meant rewriting the
+// rules about it too — and a rule rewritten alongside the picture it checks
+// is a rule that can be rewritten to pass.
+
 const COLORS = { ground: '#dddddd', surface: '#ffffff', accentGround: '#999999' };
 const KITTED = deriveAvatar({ level: 90, vitality: 'worked', feet: 0 });
-const circles = (shapes: Shape[]) => shapes.filter((s) => s.kind === 'circle');
-const rects = (shapes: Shape[]) => shapes.filter((s) => s.kind === 'rect');
+const LEVELS = [0, 8, 20, 40, 60, 90];
+const FIGURES: AvatarFigure[] = ['male', 'female'];
+const kitted = (figure: AvatarFigure, level = 90) =>
+  deriveAvatar({ level, vitality: 'worked', feet: 0, figure });
+const draw = (config: ReturnType<typeof deriveAvatar>, facing: 'front' | 'back') =>
+  climberShapes(config, { colors: COLORS, facing });
 
-describe('the two views', () => {
-  const front = climberShapes(KITTED, { colors: COLORS, facing: 'front' });
-  const back = climberShapes(KITTED, { colors: COLORS, facing: 'back' });
+/** The shapes of one part; by default without the shading and seams on it. */
+const of = (shapes: Shape[], part: Part, withDetail = false) =>
+  shapes.filter((s) => s.part === part && (withDetail || !s.detail));
 
-  it('takes the standing table in front and the climbing one behind', () => {
-    const head = (shapes: Shape[]) => circles(shapes).find((s) => s.r === 15)!;
-    expect(head(front).cy).toBe(STANDING.steady.head[1]);
-    expect(head(back).cy).toBe(POSES.steady.head[1]);
+/**
+ * The points a shape is drawn through.
+ *
+ * For a path that is every coordinate in it — its corners and the control
+ * points its curves bend toward — which is the outline near enough to say
+ * what it covers. Relative commands are followed, so the rope's `q` lands
+ * where the rope does.
+ */
+function points(shape: Shape): Point[] {
+  switch (shape.kind) {
+    case 'circle':
+      return [[shape.cx - shape.r, shape.cy - shape.r], [shape.cx + shape.r, shape.cy + shape.r]];
+    case 'ellipse':
+      return [[shape.cx - shape.rx, shape.cy - shape.ry], [shape.cx + shape.rx, shape.cy + shape.ry]];
+    case 'rect':
+      return [[shape.x, shape.y], [shape.x + shape.w, shape.y + shape.h]];
+    case 'polyline':
+      return shape.points;
+    case 'path': {
+      const out: Point[] = [];
+      let at: Point = [0, 0];
+      for (const [, command, args] of shape.d.matchAll(/([MLQCZmlqcz])([^MLQCZmlqcz]*)/g)) {
+        const nums = (args ?? '').trim().split(/[\s,]+/).filter(Boolean).map(Number);
+        for (let i = 0; i + 1 < nums.length; i += 2) {
+          const p: Point = command === command!.toLowerCase()
+            ? [at[0] + nums[i]!, at[1] + nums[i + 1]!]
+            : [nums[i]!, nums[i + 1]!];
+          out.push(p);
+          // Relative curves are relative to where the segment started, not
+          // to their own control point.
+          const last = command === 'q' ? i + 2 >= nums.length - 1 : command === 'c' ? i + 2 >= nums.length - 1 : true;
+          if (last || command === command!.toUpperCase()) at = p;
+        }
+        expect(command, 'an arc, which is the flag M225 got wrong').not.toMatch(/[Aa]/);
+      }
+      return out;
+    }
+  }
+}
+
+function box(shapes: Shape[]) {
+  const all = shapes.flatMap(points);
+  const xs = all.map((p) => p[0]);
+  const ys = all.map((p) => p[1]);
+  return { left: Math.min(...xs), right: Math.max(...xs), top: Math.min(...ys), bottom: Math.max(...ys) };
+}
+
+const centreOf = (shapes: Shape[]): Point => {
+  const b = box(shapes);
+  return [(b.left + b.right) / 2, (b.top + b.bottom) / 2];
+};
+
+/** Whether a point is inside a shape's outline (paths and polylines only). */
+function covers(shape: Shape, [x, y]: Point): boolean {
+  if (shape.kind !== 'path' || shape.fill === undefined) return false;
+  const poly = points(shape);
+  let inside = false;
+  for (let i = 0, k = poly.length - 1; i < poly.length; k = i, i += 1) {
+    const [xi, yi] = poly[i]!;
+    const [xk, yk] = poly[k]!;
+    if (yi > y !== yk > y && x < ((xk - xi) * (y - yi)) / (yk - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/** How wide a filled outline is across one height. */
+function widthAt(shape: Shape, y: number): number {
+  const poly = points(shape);
+  const xs: number[] = [];
+  for (let i = 0, k = poly.length - 1; i < poly.length; k = i, i += 1) {
+    const [xi, yi] = poly[i]!;
+    const [xk, yk] = poly[k]!;
+    if (yi > y !== yk > y) xs.push(((xk - xi) * (y - yi)) / (yk - yi) + xi);
+  }
+  return xs.length < 2 ? 0 : Math.max(...xs) - Math.min(...xs);
+}
+
+describe('every shape', () => {
+  it('says what it is part of', () => {
+    for (const figure of FIGURES) {
+      for (const level of LEVELS) {
+        for (const facing of ['front', 'back'] as const) {
+          const unnamed = draw(kitted(figure, level), facing).filter((s) => s.part === undefined);
+          expect(unnamed, `${figure} L${level} ${facing}`).toEqual([]);
+        }
+      }
+    }
   });
 
-  it('puts eyes on the face and nothing on the back of the head', () => {
-    // "No nose or mouth, just eyes" — two of them, below the middle of the
-    // head so a helmet brim does not sit on top of them.
-    const head = circles(front).find((s) => s.r === 15)!;
-    const eyes = circles(front).filter((s) => s.r < 5);
-    expect(eyes).toHaveLength(2);
-    for (const eye of eyes) {
-      expect(eye.cy).toBeGreaterThan(head.cy);
-      expect(eye.cy).toBeLessThan(head.cy + 15);
-      expect(Math.abs(eye.cx - head.cx)).toBeLessThan(15);
+  it('is drawn without a single arc', () => {
+    // `points` refuses one. M225 drew the back of the head with an arc whose
+    // flag picked the other of its two possible circles, and shipped a
+    // moustache; the outlines here are curves through midpoints instead, and
+    // have no flag to get wrong.
+    for (const facing of ['front', 'back'] as const) {
+      for (const shape of draw(KITTED, facing)) points(shape);
     }
-    expect(eyes[0]!.cx).not.toBe(eyes[1]!.cx);
-    expect(circles(back).filter((s) => s.r < 5)).toHaveLength(0);
+  });
+
+  it('is wound one way round, so shapes of one colour can be drawn as one', () => {
+    // The game draws neighbouring shapes of one colour as a single path. Under
+    // the nonzero rule two outlines wound opposite ways cancel where they
+    // overlap, and a thigh and a calf would leave a hole at the knee.
+    for (const facing of ['front', 'back'] as const) {
+      for (const shape of draw(KITTED, facing)) {
+        if (shape.kind !== 'path' || shape.fill === undefined || !shape.d.includes(' Q ')) continue;
+        const poly = points(shape);
+        let area = 0;
+        for (let i = 0; i < poly.length; i += 1) {
+          const [x0, y0] = poly[i]!;
+          const [x1, y1] = poly[(i + 1) % poly.length]!;
+          area += x0 * y1 - x1 * y0;
+        }
+        expect(area, `${shape.part} ${facing}`).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
+describe('the two views', () => {
+  const front = draw(KITTED, 'front');
+  const back = draw(KITTED, 'back');
+
+  it('takes the standing table in front and the climbing one behind', () => {
+    expect(centreOf(of(front, 'head'))[1]).toBeCloseTo(STANDING.steady.head[1], 0);
+    expect(centreOf(of(back, 'head'))[1]).toBeCloseTo(POSES.steady.head[1], 0);
+  });
+
+  it('puts a face on the front and none on the back of the head', () => {
+    const head = centreOf(of(front, 'head'));
+    const whites = of(front, 'eye').filter((s) => s.kind === 'ellipse' && s.fill === SCLERA);
+    expect(whites).toHaveLength(2);
+    for (const eye of whites) {
+      if (eye.kind !== 'ellipse') throw new Error('an eye white is an ellipse');
+      // Just below the middle of the head, so a helmet brim clears them.
+      expect(eye.cy).toBeGreaterThan(head[1]);
+      expect(eye.cy).toBeLessThan(head[1] + 8);
+      expect(Math.abs(eye.cx - head[0])).toBeLessThan(10);
+    }
+    for (const part of ['eye', 'brow', 'mouth', 'face'] as const) {
+      expect(of(back, part, true), part).toEqual([]);
+      expect(of(front, part, true).length, part).toBeGreaterThan(0);
+    }
   });
 
   it('keeps the eyes out from under the helmet brim', () => {
-    // The brim is drawn after the head and would cover them. Level 40 is
-    // where a helmet arrives, so this is the case that breaks.
-    // By its corner radius, not its width: the harness belt is 38 wide too.
-    const brim = rects(front).find((s) => s.rx === 2.5)!;
-    for (const eye of circles(front).filter((s) => s.r < 5)) {
-      expect(eye.cy - eye.r).toBeGreaterThan(brim.y + brim.h);
+    const brim = box(of(front, 'brim'));
+    for (const eye of of(front, 'eye').filter((s) => s.kind === 'ellipse')) {
+      if (eye.kind !== 'ellipse') throw new Error('an eye white is an ellipse');
+      expect(eye.cy - eye.ry).toBeGreaterThan(brim.bottom);
     }
   });
 
   it('stands the climber on a floor rather than on four holds', () => {
-    const ground = front.filter((s) => s.kind === 'ellipse' && s.fill === COLORS.ground);
-    expect(ground).toHaveLength(1);
-    expect(back.filter((s) => s.kind === 'ellipse' && s.fill === COLORS.ground)).toHaveLength(4);
+    expect(of(front, 'ground').filter((s) => s.kind === 'ellipse')).toHaveLength(1);
+    expect(of(back, 'ground').filter((s) => s.kind === 'ellipse')).toHaveLength(4);
   });
 
-  it('turns the pack into straps and the chalk bag onto a hip', () => {
-    // A pack drawn on the front of a climber is a pack worn on the chest,
-    // and a chalk bag centred on the spine is one you cannot see at all.
-    const gear = KITTED.palette.gear;
-    expect(rects(back).some((s) => s.w === 34)).toBe(true);
-    expect(rects(front).some((s) => s.w === 34)).toBe(false);
-    expect(front.filter((s) => s.kind === 'polyline' && s.stroke === gear)).toHaveLength(2);
+  it('wears the pack on the back: straps in front, the pack itself behind', () => {
+    // A pack drawn on the front of a climber is a pack worn on the chest.
+    const { shoulderL, shoulderR } = STANDING.steady;
+    for (const piece of of(front, 'pack')) {
+      const b = box([piece]);
+      expect(b.right <= shoulderL[0] || b.left >= shoulderR[0], 'a pack on the chest').toBe(true);
+    }
+    expect(of(front, 'pack')).toHaveLength(2);
+    expect(of(front, 'strap').filter((s) => s.kind === 'polyline')).toHaveLength(2);
+    const behind = box(of(back, 'pack'));
+    expect(behind.right - behind.left).toBeGreaterThanOrEqual(30);
+  });
 
-    const waist = (STANDING.steady.hipL[0] + STANDING.steady.hipR[0]) / 2;
-    const bag = rects(front).find((s) => s.w === 16)!;
-    expect(bag.x).toBeGreaterThan(waist);
-    expect(rects(back).find((s) => s.w === 22)!.x).toBeLessThan(POSES.steady.head[0]);
-    expect(rects(back).some((s) => s.w === 38 && s.h === 5)).toBe(true);
+  it('hangs one chalk bag: at the hip in front, at the small of the back behind', () => {
+    // A bag centred on the spine is one you cannot see from the front, and
+    // the hip bag replaces it rather than joining it.
+    const hips = box(of(front, 'hips'));
+    expect(of(front, 'chalk')).toHaveLength(1);
+    expect(box(of(front, 'chalk')).left).toBeGreaterThanOrEqual(hips.right);
+    const spine = (POSES.steady.hipL[0] + POSES.steady.hipR[0]) / 2;
+    const bag = box(of(back, 'chalk'));
+    expect(bag.left).toBeLessThan(spine);
+    expect(bag.right).toBeGreaterThan(spine);
   });
 
   it('puts the harness on the thighs and nothing down the middle', () => {
-    // Two leg loops facing you, and none behind: from the back the belt is
-    // the whole harness at the size the game draws this.
-    const loops = rects(front).filter((s) => s.w === 20 && s.h === 6);
+    // Two leg loops facing you, one either side of the centre line, and none
+    // behind: from the back the belt is the whole harness at game size.
+    const loops = of(front, 'loop');
     expect(loops).toHaveLength(2);
-    expect(rects(back).filter((s) => s.w === 20 && s.h === 6)).toHaveLength(0);
-    // One either side of the centre line, which is the entire point.
+    expect(of(back, 'loop')).toHaveLength(0);
     const centre = (STANDING.steady.hipL[0] + STANDING.steady.hipR[0]) / 2;
-    const sides = loops.map((s) => Math.sign(s.x + s.w / 2 - centre)).sort();
-    expect(sides).toEqual([-1, 1]);
+    expect(loops.map((s) => Math.sign(centreOf([s])[0] - centre)).sort()).toEqual([-1, 1]);
+    expect(of(back, 'harness').length).toBeGreaterThan(0);
   });
 
   it('joins the head to the shoulders', () => {
-    // Nothing drew the `neck` joint until M209 and the head floated over the
-    // collar. One skin-coloured limb starts inside the head — the arms all
-    // start at a shoulder.
-    const head = circles(front).find((s) => s.r === 15)!;
-    const inHead = (p: readonly [number, number]) =>
-      Math.hypot(p[0] - head.cx, p[1] - head.cy) < 15;
-    const neck = front.filter(
-      (s) => s.kind === 'polyline' && s.stroke === KITTED.palette.skin && inHead(s.points[0]!),
-    );
-    expect(neck).toHaveLength(1);
-    const drawn = neck[0]!;
-    if (drawn.kind !== 'polyline') throw new Error('the neck is a polyline');
-    expect(drawn.points[1]![1]).toBeGreaterThan(STANDING.steady.shoulderL[1]);
-  });
-
-  it('shows the pack past the shoulders and nothing on the chest', () => {
-    // The straps go over the front; the body of the pack is behind, and what
-    // shows of it either side of the shoulders is the only part that says
-    // pack rather than braces.
-    const slivers = rects(front).filter((s) => s.w === 13);
-    expect(slivers).toHaveLength(2);
-    expect(Math.min(...slivers.map((s) => s.x + s.w))).toBeLessThanOrEqual(
-      STANDING.steady.shoulderL[0],
-    );
-    expect(Math.max(...slivers.map((s) => s.x))).toBeGreaterThanOrEqual(
-      STANDING.steady.shoulderR[0],
-    );
-  });
-
-  it('hangs one chalk bag, not two', () => {
-    // The hip bag replaces the spine bag rather than joining it.
-    expect(rects(front).some((s) => s.w === 22)).toBe(false);
+    // Nothing drew the neck until M209 and the head floated over the collar.
+    // In a plain shirt, because a jacket's collar and hood stand up round
+    // the neck and would hide a neck that stopped short.
+    for (const figure of FIGURES) {
+      const plain = draw(kitted(figure, 0), 'front');
+      const neck = box(of(plain, 'neck'));
+      expect(neck.top, figure).toBeLessThan(box(of(plain, 'head')).bottom);
+      expect(neck.bottom, figure).toBeGreaterThan(box(of(plain, 'torso')).top + 3);
+    }
   });
 
   it('drops the rope off a hip rather than out of the middle', () => {
-    // It used to be tied into the belay loop, which was the right detail and
-    // the wrong place: the loop is gone and a rope leaving the centre line
-    // is the same shape wearing a different name.
-    const rope = front.find((s) => s.kind === 'path' && s.stroke === KITTED.palette.gear)!;
-    if (rope.kind !== 'path') throw new Error('the rope is a path');
-    const [, x, y] = /^M (-?[\d.]+) (-?[\d.]+)/.exec(rope.d)!;
+    const [start] = points(of(front, 'rope')[0]!);
     const { hipL, hipR } = STANDING.steady;
     const centre = (hipL[0] + hipR[0]) / 2;
-    expect(Math.abs(Number(x) - centre)).toBeGreaterThan((hipR[0] - hipL[0]) / 2);
-    expect(Number(y)).toBeGreaterThan(hipL[1]);
+    expect(Math.abs(start![0] - centre)).toBeGreaterThan((hipR[0] - hipL[0]) / 2);
+    expect(start![1]).toBeGreaterThan(hipL[1]);
   });
 
   it('still lets the game drive the joints', () => {
     // The Ascent animates the figure, so its override has to beat the table.
     const driven = climbingPose(POSES.strong, 0.25);
     const shapes = climberShapes(KITTED, { colors: COLORS, facing: 'back', joints: driven });
-    expect(circles(shapes).find((s) => s.r === 15)!.cy).toBeCloseTo(driven.head[1], 6);
+    const head = centreOf(of(shapes, 'head'));
+    expect(head[0]).toBeCloseTo(driven.head[0], 0);
+    expect(head[1]).toBeCloseTo(driven.head[1], 0);
   });
 });
 
 describe('the eyes', () => {
-  it('picks whichever colour the skin tone can actually show', () => {
-    // Six tones from #f2d3b8 to #4d2f1c. One fixed eye colour disappears at
-    // one end of that range or the other.
+  /**
+   * A white with a dark iris on it, on every skin (PLAN.md M357).
+   *
+   * Until M357 an eye was one dot, dark or pale by whichever the skin could
+   * show — and the pale dot the darker tones got read as two points of
+   * light. A white and an iris need no choosing: one of the two always
+   * stands off the skin, whichever skin it is.
+   */
+  it('are an eye on every skin tone the app offers', () => {
     for (const skin of SKIN_TONES) {
-      const chosen = eyeColor(skin);
-      const other = chosen === '#14181d' ? '#f3f6f8' : '#14181d';
-      expect(contrast(chosen, skin), skin).toBeGreaterThanOrEqual(contrast(other, skin));
+      expect(Math.max(contrast(SCLERA, skin), contrast(IRIS, skin)), skin).toBeGreaterThan(3);
     }
-    expect(eyeColor('#f2d3b8')).toBe('#14181d');
-    expect(eyeColor('#4d2f1c')).toBe('#f3f6f8');
   });
 
-  it('stays legible on every tone the app offers', () => {
-    for (const skin of SKIN_TONES) {
-      expect(contrast(eyeColor(skin), skin), skin).toBeGreaterThan(3);
-    }
+  it('have an iris that stands off its white', () => {
+    expect(contrast(SCLERA, IRIS)).toBeGreaterThan(7);
   });
 });
 
-// ── The body under the kit (PLAN.md M225) ────────────────────────────────
+describe('the face reads vitality, like the stance does', () => {
+  const face = (vitality: 'fresh' | 'tired') =>
+    draw(deriveAvatar({ level: 0, vitality, feet: 0 }), 'front');
+  /** A curve's ends and its middle: `M a Q control b`. */
+  const bend = (shape: Shape) => {
+    const [a, control, b] = points(shape);
+    return { a: a!, control: control!, b: b! };
+  };
 
-const FIGURES: AvatarFigure[] = ['male', 'female'];
-const kitted = (figure: AvatarFigure, level = 90) =>
-  deriveAvatar({ level, vitality: 'worked', feet: 0, figure });
+  it('smiles fresh and turns the mouth down spent', () => {
+    const fresh = bend(of(face('fresh'), 'mouth', true)[0]!);
+    const spent = bend(of(face('tired'), 'mouth', true)[0]!);
+    // Canvas y grows downward: a smile's middle is below its corners.
+    expect(fresh.control[1]).toBeGreaterThan(Math.max(fresh.a[1], fresh.b[1]));
+    expect(spent.control[1]).toBeLessThan(Math.min(spent.a[1], spent.b[1]));
+  });
+
+  it('drops the outer end of each brow when spent', () => {
+    const head = centreOf(of(face('tired'), 'head'));
+    for (const brow of of(face('tired'), 'brow', true)) {
+      const { a, b } = bend(brow);
+      const [inner, outer] = Math.abs(a[0] - head[0]) < Math.abs(b[0] - head[0]) ? [a, b] : [b, a];
+      expect(outer[1]).toBeGreaterThan(inner[1]);
+    }
+  });
+
+  it('draws heavy lids only on a spent climber', () => {
+    const lids = (vitality: 'fresh' | 'tired') => of(face(vitality), 'eye', true).filter((s) => s.kind === 'path' && s.fill !== undefined);
+    expect(lids('fresh')).toHaveLength(0);
+    expect(lids('tired')).toHaveLength(2);
+  });
+});
+
+describe('limbs, drawn as limbs (PLAN.md M357)', () => {
+  it('follow their profile: as wide at each end as the profile says', () => {
+    const profile: Profile = [[0, 8], [1, 4]];
+    const outline = limbOutline([0, 0], [0, 60], profile);
+    // The first side runs from the start to the end, one point per step.
+    const side = outline.slice(0, 7);
+    expect(Math.abs(side[0]![0])).toBeCloseTo(8, 6);
+    expect(Math.abs(side[3]![0])).toBeCloseTo(6, 6);
+    expect(Math.abs(side[6]![0])).toBeCloseTo(4, 6);
+  });
+
+  it('taper the way a body does: the thigh from the hip, the calf with a bulge', () => {
+    // A tube of one width is a pictogram; these few changes of width are
+    // most of what reads as a leg.
+    const legs = of(draw(kitted('male', 0), 'front'), 'leg');
+    const { hipL, kneeL, footL } = STANDING.steady;
+    const thigh = legs[0]!;
+    const calf = legs[1]!;
+    expect(widthAt(thigh, hipL[1] + 6)).toBeGreaterThan(widthAt(thigh, kneeL[1] - 4) + 2);
+    const span = footL[1] - kneeL[1];
+    const bulge = widthAt(calf, kneeL[1] + span * 0.3);
+    expect(bulge).toBeGreaterThan(widthAt(calf, kneeL[1] + 3));
+    expect(bulge).toBeGreaterThan(widthAt(calf, footL[1] - 3) + 3);
+  });
+
+  it('are shaded down the side away from the light, whichever way they point', () => {
+    const profile: Profile = [[0, 6], [1, 6]];
+    // The light is upper left: a limb hanging down is shaded on its right…
+    for (const [x] of limbShadow([50, 0], [50, 60], profile)) expect(x).toBeGreaterThanOrEqual(50);
+    // …and one reaching out to the right is shaded underneath.
+    for (const [, y] of limbShadow([0, 50], [60, 50], profile)) expect(y).toBeGreaterThanOrEqual(50);
+    // Inside the limb either way.
+    for (const [x] of limbShadow([50, 0], [50, 60], profile)) expect(x).toBeLessThanOrEqual(56);
+  });
+
+  it('end in a hand at the end of each arm, with the thumb toward the body', () => {
+    // A relaxed thumb points in, and a gripping one wraps from the inside.
+    for (const facing of ['front', 'back'] as const) {
+      const table = facing === 'front' ? STANDING.steady : POSES.steady;
+      const hands = of(draw(KITTED, facing), 'hand');
+      expect(hands, facing).toHaveLength(2);
+      const centre = (table.hipL[0] + table.hipR[0]) / 2;
+      for (const [hand, joint] of [[hands[0]!, table.handL], [hands[1]!, table.handR]] as const) {
+        const b = box([hand]);
+        expect(b.left <= joint[0] && joint[0] <= b.right && b.top <= joint[1] && joint[1] <= b.bottom, `${facing} hand at its joint`).toBe(true);
+        // Measured across the forearm, not across the screen: a hand on a
+        // hip points down and in, and its fingers would count as thumb.
+        const elbow = joint === table.handL ? table.elbowL : table.elbowR;
+        const length = Math.hypot(joint[0] - elbow[0], joint[1] - elbow[1]);
+        let across: Point = [-(joint[1] - elbow[1]) / length, (joint[0] - elbow[0]) / length];
+        if (Math.sign(across[0]) !== Math.sign(centre - joint[0])) across = [-across[0], -across[1]];
+        const reach = points(hand).map(([x, y]) => (x - joint[0]) * across[0] + (y - joint[1]) * across[1]);
+        expect(Math.max(...reach), `${facing} thumb`).toBeGreaterThan(-Math.min(...reach));
+      }
+    }
+  });
+});
 
 describe('the figure below the waist', () => {
   /**
    * The report was one sentence long and it was not about equipment: a
    * six-by-ten rounded rect hanging from the middle of the waist, into the
    * gap between two leg-shaped tubes that started at the hip joints with
-   * nothing between them. Both halves of that are rules now.
+   * nothing between them. Both halves of that are rules now — for every
+   * shape, since M357, not only the rects.
    */
   it('draws nothing narrow on the centre line below the waist', () => {
     for (const figure of FIGURES) {
-      for (const level of [0, 8, 20, 40, 60, 90]) {
-        const config = kitted(figure, level);
-        const shapes = climberShapes(config, { colors: COLORS, facing: 'front' });
+      for (const level of LEVELS) {
+        const shapes = draw(kitted(figure, level), 'front').filter((s) => !s.detail);
         const { hipL, hipR } = STANDING.steady;
         const centre = (hipL[0] + hipR[0]) / 2;
         const span = hipR[0] - hipL[0];
-        for (const shape of rects(shapes)) {
-          // Wide things on the centre line are the hips and the waist belt,
-          // and both of them are meant to be there. It is the narrow ones
-          // that read as anatomy.
-          const onCentre = Math.abs(shape.x + shape.w / 2 - centre) < 4;
-          const narrow = shape.w < span;
-          const belowWaist = shape.y >= hipL[1];
-          expect(
-            onCentre && narrow && belowWaist,
-            `${figure} L${level}: a ${shape.w}×${shape.h} rect at ${shape.x},${shape.y}`,
-          ).toBe(false);
+        for (const shape of shapes) {
+          const b = box([shape]);
+          const onCentre = Math.abs((b.left + b.right) / 2 - centre) < 4;
+          const narrow = b.right - b.left < span;
+          const belowWaist = b.top >= hipL[1];
+          expect(onCentre && narrow && belowWaist, `${figure} L${level}: a ${shape.part} at ${b.left},${b.top}`).toBe(false);
         }
       }
     }
   });
 
   it('closes the gap between the thighs with one block of hips', () => {
-    // Without this the background ran up between the legs to the shirt hem.
-    // The block has to be at least as wide as the hips and reach from the
-    // waist down past where the two legs have separated.
     for (const figure of FIGURES) {
-      const shapes = climberShapes(kitted(figure, 0), { colors: COLORS, facing: 'front' });
+      const hips = box(of(draw(kitted(figure, 0), 'front'), 'hips'));
       const { hipL, hipR } = STANDING.steady;
-      const hips = rects(shapes).find((s) => s.fill === DEFAULT_PALETTE.shorts);
-      expect(hips, `${figure} has hips`).toBeDefined();
-      expect(hips!.x).toBeLessThanOrEqual(hipL[0]);
-      expect(hips!.x + hips!.w).toBeGreaterThanOrEqual(hipR[0]);
-      expect(hips!.y).toBeLessThanOrEqual(hipL[1]);
-      expect(hips!.y + hips!.h).toBeGreaterThan(hipL[1] + 16);
+      expect(hips.left).toBeLessThanOrEqual(hipL[0]);
+      expect(hips.right).toBeGreaterThanOrEqual(hipR[0]);
+      expect(hips.top).toBeLessThanOrEqual(hipL[1]);
+      expect(hips.bottom).toBeGreaterThan(hipL[1] + 16);
     }
   });
 
   it('stops the shorts above the knee, and only the jacket wears trousers', () => {
-    // They were drawn in the shorts colour from hip to ankle with skin
-    // painted back over the shin, which put the hem past the knee: a figure
-    // in shorts that read as baggy trousers.
-    const shortsOf = (level: number) => {
-      const shapes = climberShapes(kitted('male', level), { colors: COLORS, facing: 'front' });
-      return shapes.filter((s) => s.kind === 'polyline' && s.stroke === DEFAULT_PALETTE.shorts);
-    };
-    const { hipL, kneeL, footL } = STANDING.steady;
-    for (const leg of shortsOf(20)) {
-      if (leg.kind !== 'polyline') throw new Error('a leg is a polyline');
-      expect(leg.points).toHaveLength(2);
-      expect(leg.points[1]![1]).toBeLessThan(kneeL[1]);
-    }
-    for (const leg of shortsOf(90)) {
-      if (leg.kind !== 'polyline') throw new Error('a leg is a polyline');
-      expect(leg.points.at(-1)![1]).toBeGreaterThanOrEqual(footL[1]);
-    }
-    // And the leg itself is skin underneath either one, rather than being
-    // the clothing with skin painted back over part of it.
-    const skin = climberShapes(kitted('male', 90), { colors: COLORS, facing: 'front' }).filter(
-      (s) => s.kind === 'polyline' && s.stroke === DEFAULT_PALETTE.skin && s.points[0]?.[1] === hipL[1],
-    );
-    expect(skin).toHaveLength(2);
+    const { kneeL, footL } = STANDING.steady;
+    const at20 = draw(kitted('male', 20), 'front');
+    expect(of(at20, 'shorts')).toHaveLength(2);
+    for (const leg of of(at20, 'shorts')) expect(box([leg]).bottom).toBeLessThan(kneeL[1]);
+    expect(of(at20, 'trousers')).toHaveLength(0);
+    const at90 = draw(kitted('male', 90), 'front');
+    expect(of(at90, 'shorts')).toHaveLength(0);
+    expect(box(of(at90, 'trousers')).bottom).toBeGreaterThanOrEqual(footL[1]);
+    // And the leg is skin underneath either one, rather than the clothing
+    // with skin painted back over part of it.
+    expect(of(at90, 'leg').every((s) => s.kind === 'path' && s.fill === DEFAULT_PALETTE.skin)).toBe(true);
+    expect(of(at90, 'leg')).toHaveLength(4);
   });
 
   it('hangs the chalk bag beside the hips rather than on a thigh', () => {
     for (const figure of FIGURES) {
-      const shapes = climberShapes(kitted(figure, 20), { colors: COLORS, facing: 'front' });
-      const hips = rects(shapes).find((s) => s.fill === DEFAULT_PALETTE.shorts)!;
-      const bag = rects(shapes).find((s) => s.w === 16 && s.h === 19)!;
-      expect(bag.x, figure).toBeGreaterThanOrEqual(hips.x + hips.w);
+      const shapes = draw(kitted(figure, 20), 'front');
+      expect(box(of(shapes, 'chalk')).left, figure).toBeGreaterThanOrEqual(box(of(shapes, 'hips')).right);
     }
   });
 });
@@ -496,32 +679,18 @@ describe('the two builds', () => {
    * is about half a pixel. A difference smaller than a few units is a
    * setting that does nothing, which is worse than not offering it.
    */
-  const torso = (figure: AvatarFigure) => {
-    const shapes = climberShapes(kitted(figure, 0), { colors: COLORS, facing: 'front' });
-    const path = shapes.find((s) => s.kind === 'path' && s.fill === DEFAULT_PALETTE.top)!;
-    if (path.kind !== 'path') throw new Error('the torso is a path');
-    const xs = [...path.d.matchAll(/(-?[\d.]+) (-?[\d.]+)/g)].map((m) => Number(m[1]));
-    return { min: Math.min(...xs), max: Math.max(...xs) };
+  const width = (figure: AvatarFigure, part: Part) => {
+    const b = box(of(draw(kitted(figure, 0), 'front'), part));
+    return b.right - b.left;
   };
 
   it('gives one broader shoulders and the other broader hips', () => {
-    const male = torso('male');
-    const female = torso('female');
-    expect(male.max - male.min).toBeGreaterThan(female.max - female.min);
-
-    const hipsOf = (figure: AvatarFigure) => {
-      const shapes = climberShapes(kitted(figure, 0), { colors: COLORS, facing: 'front' });
-      return rects(shapes).find((s) => s.fill === DEFAULT_PALETTE.shorts)!.w;
-    };
-    expect(hipsOf('female')).toBeGreaterThan(hipsOf('male'));
+    expect(width('male', 'torso')).toBeGreaterThan(width('female', 'torso'));
+    expect(width('female', 'hips')).toBeGreaterThan(width('male', 'hips'));
   });
 
   it('makes both differences big enough to see at the size this is drawn', () => {
-    // Four units is roughly two pixels at 96 wide. Anything less and the
-    // picker would be a control with no visible effect.
-    const male = torso('male');
-    const female = torso('female');
-    expect(male.max - male.min - (female.max - female.min)).toBeGreaterThanOrEqual(4);
+    expect(width('male', 'torso') - width('female', 'torso')).toBeGreaterThanOrEqual(4);
     expect(BUILDS.female.hip - BUILDS.male.hip).toBeGreaterThanOrEqual(2);
   });
 
@@ -529,26 +698,18 @@ describe('the two builds', () => {
     // The posture is the one number the game reads from training. A build is
     // paint; it must not reach the vitality gradient.
     for (const level of [0, 40, 90]) {
-      const male = climberShapes(kitted('male', level), { colors: COLORS, facing: 'front' });
-      const female = climberShapes(kitted('female', level), { colors: COLORS, facing: 'front' });
-      const feet = (shapes: Shape[]) =>
-        shapes.filter((s) => s.kind === 'ellipse' && s.fill === DEFAULT_PALETTE.shoes);
-      expect(feet(female)).toEqual(feet(male));
+      const shoes = (figure: AvatarFigure) => of(draw(kitted(figure, level), 'front'), 'shoe', true);
+      expect(shoes('female')).toEqual(shoes('male'));
     }
   });
 });
 
 describe('hair', () => {
-  const hairOf = (figure: AvatarFigure, facing: 'front' | 'back') =>
-    climberShapes(kitted(figure, 0), { colors: COLORS, facing }).filter(
-      (s) => s.kind !== 'polyline' && s.fill === DEFAULT_PALETTE.hair,
-    );
+  const hairOf = (figure: AvatarFigure, facing: 'front' | 'back') => of(draw(kitted(figure, 0), facing), 'hair');
 
   it('puts some on every head, in both views', () => {
-    // The two builds are a few units apart in the shoulders and the hips,
-    // which is a pixel or two. Hair is what makes the choice legible, and a
-    // bald climber on the wall would be a different person from the one on
-    // the profile.
+    // Hair is what makes the choice of build legible, and a bald climber on
+    // the wall would be a different person from the one on the profile.
     for (const figure of FIGURES) {
       for (const facing of ['front', 'back'] as const) {
         expect(hairOf(figure, facing).length, `${figure} ${facing}`).toBeGreaterThan(0);
@@ -557,20 +718,27 @@ describe('hair', () => {
   });
 
   it('gives only one build hair past the jaw', () => {
-    expect(hairOf('male', 'front').filter((s) => s.kind === 'rect')).toHaveLength(0);
-    expect(hairOf('female', 'front').filter((s) => s.kind === 'rect')).toHaveLength(2);
+    const chin = (figure: AvatarFigure) => box(of(draw(kitted(figure, 0), 'front'), 'head')).bottom;
+    expect(box(hairOf('male', 'front')).bottom).toBeLessThan(chin('male'));
+    expect(box(hairOf('female', 'front')).bottom).toBeGreaterThan(chin('female') + 10);
   });
 
-  it('leaves a gap down the middle for the neck', () => {
-    // One rounded rect behind the head was the first version, and everything
-    // of it below the chin showed across the jaw: the figure came out with a
-    // full beard.
-    const head = STANDING.steady.head;
-    const lobes = hairOf('female', 'front').filter((s) => s.kind === 'rect');
-    for (const lobe of lobes) {
-      if (lobe.kind !== 'rect') throw new Error('a lobe is a rect');
-      const nearEdge = lobe.x + lobe.w / 2 < head[0] ? lobe.x + lobe.w : lobe.x;
-      expect(Math.abs(nearEdge - head[0])).toBeGreaterThanOrEqual(5);
+  it('keeps the face clear: nothing in front of it covers the eyes, the nose or the mouth', () => {
+    // M225's first long hair was one block behind the head, and everything
+    // of it below the chin showed across the jaw: a full beard.
+    for (const figure of FIGURES) {
+      for (const level of [0, 40]) {
+        const shapes = draw(kitted(figure, level), 'front');
+        const head = shapes.findIndex((s) => s.part === 'head');
+        const [hx, hy] = STANDING.steady.head;
+        const face: Point[] = [[hx - 5.6, hy + 1.6], [hx + 5.6, hy + 1.6], [hx, hy + 6], [hx, hy + 11], [hx - 4, hy + 11], [hx + 4, hy + 11], [hx, hy + 14]];
+        for (const shape of shapes.slice(head + 1)) {
+          if (shape.part !== 'hair' && shape.part !== 'helmet' && shape.part !== 'brim') continue;
+          for (const point of face) {
+            expect(covers(shape, point), `${figure} L${level}: ${shape.part} over ${point}`).toBe(false);
+          }
+        }
+      }
     }
   });
 
@@ -578,65 +746,16 @@ describe('hair', () => {
     /**
      * There is no face back there to keep clear of, so hair from behind is
      * the whole head rather than a cap cut out of it — and drawn *over* the
-     * head rather than under it.
-     *
-     * M225 cut a cap eleven units **below** the centre and shipped a
-     * moustache (see `scalp`). Reported as "there's like a mustache on the
-     * back of the head during the Ascent game", which is exactly what it
-     * was, on the one view of the figure that has no face at all.
+     * head rather than under it. M225 cut a cap below the centre and shipped
+     * a moustache, on the one view of the figure that has no face at all.
      */
     for (const figure of FIGURES) {
-      const back = climberShapes(kitted(figure, 0), { colors: COLORS, facing: 'back' });
-      const skull = back.findIndex(
-        (s) => s.kind === 'circle' && s.r === HEAD && s.fill === DEFAULT_PALETTE.skin,
-      );
-      const hair = back.findIndex(
-        (s) => s.kind !== 'polyline' && s.fill === DEFAULT_PALETTE.hair,
-      );
+      const back = draw(kitted(figure, 0), 'back');
+      const skull = back.findIndex((s) => s.part === 'head');
+      const hair = back.findIndex((s, i) => i > skull && s.part === 'hair' && !s.detail);
       expect(skull, `${figure} has a head`).toBeGreaterThanOrEqual(0);
       expect(hair, `${figure} has hair behind`).toBeGreaterThan(skull);
-      // Whatever shape it is, it reaches the crown: a band across the middle
-      // of the head is the failure this rule exists for.
-      const shape = back[hair]!;
-      const top =
-        shape.kind === 'circle' ? shape.cy - shape.r
-        : shape.kind === 'rect' ? shape.y
-        : Number.NaN;
-      expect(top, `${figure} hair top`).toBeLessThanOrEqual(POSES.steady.head[1] - HEAD);
-    }
-  });
-
-  it('cuts the fringe above the head, whatever number it is handed', () => {
-    /**
-     * `A 15 15 0 0 1` between two points at the same height has two
-     * candidate centres, and picks the one that makes the arc minor and
-     * clockwise. Above the centre that is the cap over the crown. **Below
-     * it, the minor arc is the shallow one between the two points** — a lens
-     * four units tall sitting low on the face.
-     *
-     * So the helper takes a distance *above* the centre and takes its
-     * absolute value, which makes the wrong shape unreachable rather than
-     * one sign away from the right one.
-     */
-    for (const above of [0, 3, 7, 11, 14, -11]) {
-      const cap = scalp([90, 60], above, '#000000');
-      if (cap.kind !== 'path') throw new Error('a scalp is a path');
-      const [, y0, y1] = /^M [-\d.]+ ([-\d.]+) A [\d.]+ [\d.]+ 0 0 1 [-\d.]+ ([-\d.]+) Z$/
-        .exec(cap.d)!;
-      expect(Number(y0), `above ${above}`).toBeLessThanOrEqual(60);
-      expect(Number(y1), `above ${above}`).toBe(Number(y0));
-    }
-  });
-
-  it('keeps the fringe off the eyes', () => {
-    for (const figure of FIGURES) {
-      const shapes = climberShapes(kitted(figure, 0), { colors: COLORS, facing: 'front' });
-      const fringe = shapes.find((s) => s.kind === 'path' && s.fill === DEFAULT_PALETTE.hair)!;
-      if (fringe.kind !== 'path') throw new Error('the fringe is a path');
-      const brow = Number(/^M [-\d.]+ (-?[\d.]+)/.exec(fringe.d)![1]);
-      for (const eye of circles(shapes).filter((s) => s.r < 5)) {
-        expect(eye.cy - eye.r, figure).toBeGreaterThan(brow);
-      }
+      expect(box([back[hair]!]).top, `${figure} hair top`).toBeLessThanOrEqual(POSES.steady.head[1] - HEAD);
     }
   });
 

@@ -6,7 +6,7 @@ import { deriveAvatar } from '@/engine/avatar';
 import { summariseProject } from '@/engine/projectSummary';
 import { buildReview } from '@/engine/review';
 import { deriveXp } from '@/engine/xp';
-import { STANDING } from './climberShapes';
+import { SCLERA, STANDING } from './climberShapes';
 import {
   CARD,
   DARK_CARD,
@@ -99,13 +99,15 @@ describe('the card', () => {
   });
 
   it('draws the climber when given one, and the mountain when given a level', () => {
+    // The climber's skin is the one colour on a card that only the figure
+    // uses.
     const avatar = deriveAvatar({ level: 40, feet: 20_000 });
-    expect(buildCardSvg(recordCard('V7', TODAY, avatar))).toContain('<polyline');
+    expect(buildCardSvg(recordCard('V7', TODAY, avatar))).toContain(`fill="${avatar.palette.skin}"`);
 
     const alt = altimeterCard(deriveAltimeter([session(TODAY, [{ grade: 'V4', count: 40 }])], { today: TODAY }));
     const svg = buildCardSvg(alt);
     expect(svg).toContain('clipPath');
-    expect(svg).not.toContain('<polyline');
+    expect(svg).not.toContain(`fill="${avatar.palette.skin}"`);
   });
 
   it('steps a long stat value down so it stays in its column', () => {
@@ -211,8 +213,9 @@ describe('the climber on a card', () => {
     // sites pass `facing` and both have to pass the same one.
     const avatar = deriveAvatar({ level: 60, vitality: 'worked', feet: 9_000 });
     const svg = buildCardSvg({ eyebrow: 'PR', headline: 'V7', stats: [], avatar });
-    const eyes = [...svg.matchAll(/<circle[^>]*r="2\.6"[^>]*\/>/g)];
+    // The whites of two eyes, on the steady stance's head (PLAN.md M357).
+    const eyes = [...svg.matchAll(new RegExp(`<ellipse cx="[-\\d.]+" cy="([-\\d.]+)"[^>]*fill="${SCLERA}"`, 'g'))];
     expect(eyes).toHaveLength(2);
-    expect(svg).toContain(`cy="${STANDING.steady.head[1]}"`);
+    for (const [, cy] of eyes) expect(Number(cy)).toBeCloseTo(STANDING.steady.head[1] + 1.6, 6);
   });
 });
