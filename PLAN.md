@@ -15253,6 +15253,13 @@ its label is missing. None of these wants touching.
   One cached formatter per option set gives the same text, checked day by day in three zones. Launch
   main-thread time: Progress 1,861 to 1,443ms with the ranges apart, Journal 1,254 to 1,072ms, and
   the rest noise.
+- **M356 — the body-load scan, remembered by text.** M355's profile put `saysItDoes` at 83ms of
+  Home's launch at a quarter CPU speed. A counter found one render of Home with the sample climber
+  scanning 804 texts, only 117 of them distinct. A session's words are its type's name and
+  everything the type prescribes, so every session of one type is the same string. Each scan also
+  compiled a pattern per rule. The scan depends on nothing but its text, so `rulesInText` now
+  remembers the answer by text, bounded and frozen. Time under the scan at Home's launch went from
+  68–97ms to 22–31ms, with the ranges apart. The whole launch moved within noise.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -26403,3 +26410,91 @@ Main-thread time over a warm launch, M354's build against this one alternating, 
 - **Sizes:** the first load is 114.49KB (+0.10; the line is 115.1, with 0.61 left). Home's cold
   load is 213.09KB (+0.11; the line is 213.5). The helper sits in `dates.ts`, which is in the entry
   chunk.
+
+## M356 — the body-load scan, remembered by text
+
+M355's launch profiles left two hotspots that were not date formatting. This is the first one:
+`saysItDoes`, 83ms of self time on a warm launch of Home at a quarter CPU speed, 45ms in another
+run.
+
+### Who scans, and how much (M356a)
+
+`saysItDoes` is one rule tested against one text. `rulesInText` runs every rule in the body-load
+table, and it builds a new `RegExp` for each one on every call. In the launch profile, the time under
+it came from four callers:
+
+```
+the first-run cards, "has the log any direct finger work"   17ms
+the board's bounty loads                                    13ms
+the week outline's day loads                                 9ms
+the coach's finger-gap tip                                   9ms
+```
+
+A temporary counter in `rulesInText`, on a jsdom render of Home with the sample climber, settled
+how much of that is repeated:
+
+```
+texts scanned       804
+distinct texts      117
+replaying all 804   9.9ms at full speed
+```
+
+The repeats come from `words(session)` in `fingerGap.ts`. It is the session type's name joined
+with every exercise that type prescribes in every phase, so every session of one type is the same
+string, scanned once per session across a year of the log.
+
+### The change
+
+`rulesInText` remembers its answer by text.
+
+- **The key is the whole text.** The answer depends on nothing else: the rule table is a constant.
+- **The answers are frozen,** because every caller now shares one array per text. The return type
+  is `readonly DrillLoad[]`, and nothing failed to compile against it, so no caller was writing to
+  it.
+- **It is bounded.** Past 2,000 distinct texts it clears and starts again. A climber's own
+  exercise names are the only open-ended source, and 2,000 is several times the catalogue.
+
+Building the pattern once per rule as well was considered and left. With the cache, Home's launch
+builds them for 117 texts instead of 804, and what is left is not on any list.
+
+### After
+
+Time spent under `rulesInText` on a warm launch of Home: unminified builds, sample climber, CPU at
+a quarter speed, M355's build and this one alternating, four runs each:
+
+```
+before    80.9   96.9   74.5   68.0ms
+after     23.8   30.9   22.3   26.7ms
+```
+
+About 70% less, with the ranges well apart. The whole launch's main-thread time moved from a median
+of 1,344 to 1,278ms over seven runs, with the ranges overlapping. That is the same size as the
+saving, and smaller than the spread of a whole launch, so the claim is the scan's own number. Week
+and Game, which share the week outline and the board, were noise.
+
+### Checked
+
+- **`scanCache.test.ts`, 5 tests:**
+  - the same text hands back the same array, so it was not scanned again;
+  - *"Finger day: hangboard"* and *"Finger day: no hangboard"* keep their opposite answers, read in
+    either order, so the key cannot be anything shorter than the text;
+  - the answer is frozen;
+  - the findings built from a cached answer match;
+  - past the limit, an old answer is let go and found again equal, so the cache cannot grow without
+    end.
+
+  A sixth test was written and removed. It checked two texts that differ only in case, and it would
+  have passed with a case-folding key, which would not be wrong anyway, so it pinned nothing.
+- **Mutation battery: 4 mutants, all killed; sanity survived:**
+  - keyed on the first twelve characters;
+  - never remembered;
+  - not frozen;
+  - never let go.
+- **The scan's existing tests** (body load, assessments, the finger gap, the board, injuries), 263
+  of them, unchanged and passing.
+- **Full suite:** 7,555 passing, M355's 7,550 plus 5, and the one pinned-clock skip.
+- **Layout harness, the entry guards, the date matrix.**
+- **Sizes:** the first load is 114.53KB (+0.04; the line is 115.1, with 0.57 left). Home's cold
+  load is 213.14KB (+0.05; the line is 213.5, with 0.36 left). Both lines have lost a little to
+  each of the last three milestones, and the next one that adds to the entry should expect to move
+  a line or pay for it.

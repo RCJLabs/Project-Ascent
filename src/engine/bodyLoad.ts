@@ -215,9 +215,31 @@ function saysItDoes(rule: LoadRule, text: string): boolean {
   return false;
 }
 
-/** The rules some text matches, by name, hardest first (PLAN.md M137). */
-export function rulesInText(text: string): DrillLoad[] {
-  return LOAD_RULES.filter((rule) => saysItDoes(rule, text)).map((rule) => rule.id);
+const SCANNED = new Map<string, readonly DrillLoad[]>();
+
+/** Past this many distinct texts the answers are dropped and found again. */
+const SCANNED_LIMIT = 2000;
+
+/**
+ * The rules some text matches, by name, hardest first (PLAN.md M137).
+ *
+ * Remembered by text (PLAN.md M356). The answer depends on nothing but the
+ * text and the table above, and the same texts come round constantly: a
+ * session's words are its type's name and everything that type prescribes,
+ * so every session of one type is the same string. One render of Home with
+ * the sample climber scanned 804 texts, 117 of them distinct, and every
+ * scan compiles a pattern per rule.
+ *
+ * Frozen, because every caller now shares one array per text.
+ */
+export function rulesInText(text: string): readonly DrillLoad[] {
+  let found = SCANNED.get(text);
+  if (found === undefined) {
+    found = Object.freeze(LOAD_RULES.filter((rule) => saysItDoes(rule, text)).map((rule) => rule.id));
+    if (SCANNED.size >= SCANNED_LIMIT) SCANNED.clear();
+    SCANNED.set(text, found);
+  }
+  return found;
 }
 
 /** The findings for a set of rule names, in the rules' own order. */
