@@ -26493,8 +26493,38 @@ and Game, which share the week outline and the board, were noise.
 - **The scan's existing tests** (body load, assessments, the finger gap, the board, injuries), 263
   of them, unchanged and passing.
 - **Full suite:** 7,555 passing, M355's 7,550 plus 5, and the one pinned-clock skip.
-- **Layout harness, the entry guards, the date matrix.**
+- **Layout harness, the entry guards, the date matrix:** see below for what the matrix found.
 - **Sizes:** the first load is 114.53KB (+0.04; the line is 115.1, with 0.57 left). Home's cold
   load is 213.14KB (+0.05; the line is 213.5, with 0.36 left). Both lines have lost a little to
   each of the last three milestones, and the next one that adds to the entry should expect to move
   a line or pay for it.
+
+### What the date matrix found on the way
+
+The clock had moved to 1 October, so the matrix's days moved with it, and for the first time they
+included **1 November 2026**. One test failed there:
+`calendarLegend.test.tsx > with no program running > shows a key for the logged days`. It failed
+the same way with M355's code, so this change did not cause it. CI picks its days the same way, so
+main would have gone red at its next push.
+
+- **The app was right.** Weeks start on Sunday, and 1 November 2026 is a Sunday, so November's grid
+  starts on the 1st and 31 October is not drawn at all. The test logged a session *yesterday* and
+  expected a key for it. With nothing logged in view, the card rightly said nothing. The test now
+  logs today, which is on this month's grid whatever the day.
+- **The same probe found a second.** A sweep of the 57 test files that touch the calendar grid or
+  week starts, pinned to eight awkward days, found that February 2026 borrows no days at all. It
+  starts on a Sunday and has 28 days, so its grid is exactly four weeks. *"Puts no week marker on a
+  day borrowed from the month either side"* rightly refused to pass with nothing to check
+  (*"the month borrows no days to check"*). It now steps to the next month when this one borrows
+  none. Two such months cannot come in a row. February 2037 has the same shape, as did February 2015.
+- **Four `finishPage` failures in the same sweep are not bugs.** Its fixtures are fixed dates in
+  early 2026, a block running to 28 March, which are in the past for every real today from now on.
+  They failed only because the probe pinned the clock back to 1 February and 1 March. The matrix
+  never pins a day before the real one, so they are left.
+
+After the two fixes, the 57 files pass on the six probe days still to come: 1 November and 31
+December 2026, 1 January and 1 August 2027, and 29 February and 1 March 2028. On the two in the
+past, 1 February and 1 March 2026, the only failures are those four `finishPage` fixtures. The
+legend file alone also passes for 1 February 2037 and 2015. The full matrix then ran on its ten
+days.
+

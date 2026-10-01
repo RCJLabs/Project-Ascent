@@ -271,9 +271,15 @@ describe('the markers, only where the month carries them', () => {
       injuries: [],
     });
     await calendar();
-    const outside = [
-      ...document.querySelectorAll('a[href^="#/log/"], button[aria-pressed]'),
-    ].filter((cell) => cell.className.includes('opacity-40'));
+    const borrowed = () =>
+      [...document.querySelectorAll('a[href^="#/log/"], button[aria-pressed]')].filter((cell) =>
+        cell.className.includes('opacity-40'),
+      );
+    // A month that starts on a Sunday and has exactly 28 days borrows none:
+    // February 2026 is one, and the date matrix found it (PLAN.md M356).
+    // The month after cannot also be one, so that is the month checked then.
+    if (borrowed().length === 0) fireEvent.click(screen.getByLabelText('Next month'));
+    const outside = borrowed();
     expect(outside.length, 'the month borrows no days to check').toBeGreaterThan(0);
     for (const cell of outside) {
       const words = [...cell.querySelectorAll('span')].map((s) => s.textContent?.trim());
@@ -303,7 +309,12 @@ describe('the logged row', () => {
 describe('with no program running', () => {
   it('shows a key for the logged days and nothing else', async () => {
     await hydrate();
-    await putSession(newSession(addDays(TODAY, -1), 0, { completed: true, rpe: 5 }));
+    // Today, not yesterday (PLAN.md M356). Yesterday is on this month's grid
+    // on every day but one shape: the 1st falling on a Sunday, when the grid
+    // starts on the 1st and the day before is not drawn at all. The app was
+    // right to show no key for a mark it had not drawn; the date matrix
+    // found it the first time its days included 1 November 2026.
+    await putSession(newSession(TODAY, 0, { completed: true, rpe: 5 }));
     await hydrate();
     await calendar();
     expect(legendText()).toContain('Logged');

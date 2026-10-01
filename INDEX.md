@@ -928,7 +928,7 @@ left out: they change with every milestone by construction.
 - `src/features/calendar/AwayCard.tsx` — M275, M345
 - `src/features/calendar/CalendarPage.tsx` — M100, M112b, M122, M131, M135, M144, M145, M146, M147, M275, M310, M345 *(+7 earlier)*
 - `src/features/calendarExport.test.tsx` — M75, M122, M198
-- `src/features/calendarLegend.test.tsx` — M145, M299
+- `src/features/calendarLegend.test.tsx` — M145, M299, M356
 - `src/features/career/CareerPage.tsx` — M16, M17, M32, M63, M88b, M112f, M118, M157, M192, M212, M258, M306 *(+1 earlier)*
 - `src/features/career/YearPage.tsx` — M16, M17, M22, M42, M87, M88c, M92, M157, M237, M303, M306, M345 *(+1 earlier)*
 - `src/features/career/comingUp.test.tsx` — M258, M261
