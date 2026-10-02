@@ -118,8 +118,38 @@ export function blockEnd(input: BlockEndInput): BlockEnd {
  * week six and let the calendar run out also arrives here, and telling them
  * they finished something would be the app making it up.
  */
-export function describeBlockEnd(end: BlockEnd): string {
+/**
+ * What the page shows under the sentence (PLAN.md M366).
+ *
+ * The sentence names only these. It promised all three whatever followed,
+ * and a custom block — no benchmarks, nothing written about what comes
+ * next — got *"Below is which of its sessions happened, which of the
+ * numbers moved, and what it has written down about what comes next"* over
+ * one card, or none.
+ */
+export interface Below {
+  /** Which of its sessions happened. */
+  sessions: boolean;
+  /** Which of the numbers moved: the benchmarks, or the lines lifted. */
+  numbers: boolean;
+  /**
+   * What the program wrote down about what follows it: the successors it
+   * names, each with its author's reason. Not the graduation card, which is
+   * what the block was for.
+   */
+  next: boolean;
+}
+
+/** "a", "a, and b", "a, b, and c" — the commas the sentences always had. */
+function listed(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? '';
+  return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
+}
+
+export function describeBlockEnd(end: BlockEnd, below: Below): string {
   const { status, program } = end;
+  const sessions = below.sessions ? ['which of its sessions happened'] : [];
+  const numbers = below.numbers ? ['which of the numbers moved'] : [];
   // A block the climber walked away from did not "run out" on them, and one
   // reconstructed from the old shape is a block the app knows the start of
   // and nothing else (PLAN.md M87). Before the calendar's state, because a
@@ -128,7 +158,10 @@ export function describeBlockEnd(end: BlockEnd): string {
   // (PLAN.md M365).
   if (end.outcome === 'left' && end.record) {
     const weeks = weeksRun(end.record, end.record.endedAt ?? status.to);
-    return `You left ${program.name} after ${weeks} of its ${end.record.weeks} weeks. That is a fact about the calendar and not a verdict — below is which of its sessions happened, and which of the numbers moved while you were on it.`;
+    const shown = [...sessions, ...numbers];
+    return `You left ${program.name} after ${weeks} of its ${end.record.weeks} weeks. That is a fact about the calendar and not a verdict${
+      shown.length > 0 ? ` — below is ${listed(shown)} while you were on it` : ''
+    }.`;
   }
   if (status.state === 'before') {
     return `${program.name} has not started yet.`;
@@ -146,7 +179,10 @@ export function describeBlockEnd(end: BlockEnd): string {
           : `${Math.round(status.daysSince / 7)} weeks ago`;
 
   if (end.outcome === 'unknown') {
-    return `${program.name} started ${status.from}, and the app has no record of how it ended — it was already running before this version kept a history. The numbers below are whatever was measured inside its weeks.`;
+    return `${program.name} started ${status.from}, and the app has no record of how it ended — it was already running before this version kept a history.${
+      below.numbers ? ' The numbers below are whatever was measured inside its weeks.' : ''
+    }`;
   }
-  return `${program.name} ran out ${when}. Below is which of its sessions happened, which of the numbers moved, and what it has written down about what comes next.`;
+  const shown = [...sessions, ...numbers, ...(below.next ? ['what it has written down about what comes next'] : [])];
+  return `${program.name} ran out ${when}.${shown.length > 0 ? ` Below is ${listed(shown)}.` : ''}`;
 }

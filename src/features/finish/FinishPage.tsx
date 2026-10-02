@@ -7,7 +7,7 @@ import { rowWindow, type BlockRecord } from '@/engine/blocks';
 import { BLOCK_OUTCOME_WORD, findBlock, outcomeOf, sortBlocks, weeksRun } from '@/engine/blockOutcome';
 import { blockFileName, buildBlockFile } from '@/engine/blockFile';
 import { downloadJson } from '@/lib/download';
-import { describeBlock } from '@/engine/blockReport';
+import { describeBlock, retestWhen } from '@/engine/blockReport';
 import type { LoggedPoint } from '@/engine/exerciseLog';
 import { describeChange, describeLoad, exerciseMovement, exerciseSeries } from '@/engine/exerciseReadings';
 import { formatEntry } from '@/engine/assessments';
@@ -426,6 +426,21 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
   const { status, report, graduation, owed } = end;
 
   /**
+   * Which sections follow, for the sentence that introduces them (PLAN.md
+   * M366). The same conditions the cards below are drawn under.
+   */
+  const sessionsShown = adherence !== null && describeAdherence(adherence.measured) !== null;
+  const reportShown = report !== null && report.comparable.length + report.results.length > 0;
+  const below = {
+    sessions: sessionsShown,
+    numbers: reportShown || movement.length > 0,
+    next: choices.length > 0,
+  };
+
+  /** When the retests this block is owed can be taken (PLAN.md M366). */
+  const retest = report === null ? null : retestWhen(report, today());
+
+  /**
    * Whether the block on screen is the one the climber is on.
    *
    * `chosen === null` is the fallback path above, where there is no history
@@ -494,10 +509,10 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
 
       <PageGrid>
         <Card>
-          <p className="text-sm leading-relaxed">{describeBlockEnd(end)}</p>
+          <p className="text-sm leading-relaxed">{describeBlockEnd(end, below)}</p>
         </Card>
 
-        {adherence !== null && describeAdherence(adherence.measured) !== null && (
+        {adherence !== null && sessionsShown && (
           <Card title="Did you do the work?">
             <p className="text-sm leading-relaxed mb-3">{describeAdherence(adherence.measured)}</p>
             <dl className="grid grid-cols-1 gap-1.5">
@@ -610,7 +625,7 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
           </Card>
         )}
 
-        {report !== null && report.comparable.length + report.results.length > 0 && (
+        {report !== null && reportShown && (
           <Card title="What moved">
             <BlockReportChart report={report} units={units} />
             <BlockReportRest report={report} units={units} />
@@ -689,13 +704,35 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
         )}
 
         {/* The reason the final test week exists. Named rather than counted:
-            "you owe three retests" is not a thing anyone can act on. */}
-        {owed.length > 0 && (
-          <Card title={owed.length === 1 ? 'The retest you owe' : 'The retests you owe'}>
+            "you owe three retests" is not a thing anyone can act on.
+
+            Worded by when a retest can still count (PLAN.md M366). It said
+            "taking them now is what turns the block into a measurement"
+            whatever the block's state: on one that had ended a reading now
+            falls outside it and changes nothing, and in week two it sat
+            under the sentence saying the test weeks are when to take them. */}
+        {owed.length > 0 && retest !== null && (
+          <Card
+            title={
+              retest.when === 'over'
+                ? 'Never retested'
+                : retest.when === 'later'
+                  ? owed.length === 1
+                    ? 'The retest to come'
+                    : 'The retests to come'
+                  : owed.length === 1
+                    ? 'The retest you owe'
+                    : 'The retests you owe'
+            }
+          >
             <p className="text-sm text-ink-soft mb-3 leading-relaxed">
               {owed.length === 1 ? 'This one has' : 'These have'} a baseline from the start of the
-              block and nothing to put beside it. Taking{' '}
-              {owed.length === 1 ? 'it' : 'them'} now is what turns the block into a measurement.
+              block and nothing to put beside it.{' '}
+              {retest.when === 'over'
+                ? `The block is over, so a reading taken now would be the next block's rather than this one's. Taken at the start of whatever you run next, ${owed.length === 1 ? 'it is' : 'they are'} its baseline.`
+                : retest.when === 'later'
+                  ? `Week ${retest.window.week} is the next test week, from ${formatDate(fromKey(retest.window.from), { weekday: 'long', month: 'short', day: 'numeric' })}. That is when to take ${owed.length === 1 ? 'it' : 'them'}.`
+                  : `${retest.window ? `This is a test week, so taking` : 'Taking'} ${owed.length === 1 ? 'it' : 'them'} now is what turns the block into a measurement.`}
             </p>
             <ul className="grid grid-cols-1 gap-2">
               {owed.map((row) => (

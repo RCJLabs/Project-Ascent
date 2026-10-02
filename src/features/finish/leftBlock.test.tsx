@@ -95,7 +95,9 @@ describe('the review of a block left in week six', () => {
   it("does not report the next block's baselines as its retests", async () => {
     await leftInWeekSix(20, 'peak_performance');
     expect(text()).not.toMatch(/retested numbers? improved|went the other way/);
-    expect(screen.getByRole('heading', { name: 'The retests you owe' })).toBeTruthy();
+    // Owed, and over: the card says so rather than asking for them now
+    // (PLAN.md M366).
+    expect(screen.getByRole('heading', { name: 'Never retested' })).toBeTruthy();
   });
 
   it('counts the same for a climber who stopped rather than switched', async () => {

@@ -5,7 +5,10 @@ import type { Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import { addDays } from './dates';
 import { blockWindow } from './plan';
-import { blockEnd, describeBlockEnd, programForRecord } from './blockEnd';
+import { blockEnd, describeBlockEnd, programForRecord, type Below } from './blockEnd';
+
+/** Every section below the sentence, as the page shows for a full block (PLAN.md M366). */
+const ALL: Below = { sessions: true, numbers: true, next: true };
 import type { BlockRecord } from './blocks';
 
 /**
@@ -30,26 +33,26 @@ const end = (entries: MetricEntry[] = [], today = addDays(LAST, 1), program: Pro
 describe('where the block is', () => {
   it('knows it has not started', () => {
     expect(end([], '2026-01-01').status.state).toBe('before');
-    expect(describeBlockEnd(end([], '2026-01-01'))).toContain('has not started yet');
+    expect(describeBlockEnd(end([], '2026-01-01'), ALL)).toContain('has not started yet');
   });
 
   it('knows it is running, and says when it runs to', () => {
     const running = end([], addDays(LAST, -7));
     expect(running.status.state).toBe('running');
-    expect(describeBlockEnd(running)).toContain(LAST);
+    expect(describeBlockEnd(running, ALL)).toContain(LAST);
   });
 
   it('knows it has ended, and how long ago', () => {
     expect(end([], addDays(LAST, 1)).status.state).toBe('ended');
-    expect(describeBlockEnd(end([], addDays(LAST, 1)))).toContain('yesterday');
-    expect(describeBlockEnd(end([], LAST))).toContain('runs to');
-    expect(describeBlockEnd(end([], addDays(LAST, 40)))).toContain('6 weeks ago');
+    expect(describeBlockEnd(end([], addDays(LAST, 1)), ALL)).toContain('yesterday');
+    expect(describeBlockEnd(end([], LAST), ALL)).toContain('runs to');
+    expect(describeBlockEnd(end([], addDays(LAST, 40)), ALL)).toContain('6 weeks ago');
   });
 
   it('does not congratulate a block nobody trained', () => {
     // A climber who stopped in week six and let the calendar run out
     // arrives here too. Saying they finished it would be making it up.
-    const text = describeBlockEnd(end([], addDays(LAST, 1)));
+    const text = describeBlockEnd(end([], addDays(LAST, 1)), ALL);
     expect(text).not.toMatch(/congratulat|well done|nice work|finished it/i);
     // It used to say "whether you trained every week of it is between you
     // and the log", which stopped being true the moment M91 counted the
@@ -148,7 +151,7 @@ describe('describing a past block (PLAN.md M87)', () => {
   });
 
   it('does not tell a climber who walked away that it ran out on them', () => {
-    const text = describeBlockEnd(forRow(row({ endedAt: addDays(START, 21) })));
+    const text = describeBlockEnd(forRow(row({ endedAt: addDays(START, 21) })), ALL);
     // Twenty-one days past the block's first Sunday is day 22, which is the
     // start of week four.
     expect(text).toContain('You left Iron Grip after 4 of its 12 weeks');
@@ -157,13 +160,13 @@ describe('describing a past block (PLAN.md M87)', () => {
   });
 
   it('admits it does not know how a reconstructed block ended', () => {
-    const text = describeBlockEnd(forRow(row({ reconstructed: true })));
+    const text = describeBlockEnd(forRow(row({ reconstructed: true })), ALL);
     expect(text).toContain('no record of how it ended');
     expect(text).not.toContain('ran out');
   });
 
   it('still says it ran out when the climber was on it at the end', () => {
-    expect(describeBlockEnd(forRow(row()))).toContain('ran out');
+    expect(describeBlockEnd(forRow(row()), ALL)).toContain('ran out');
   });
 
   it('assumes the live block ran out rather than was left', () => {

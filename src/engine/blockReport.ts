@@ -84,6 +84,12 @@ export interface BlockReport {
   /** The last day the report covers — the block's end, or today if sooner. */
   through: string;
   finished: boolean;
+  /**
+   * Whether a reading taken today can still count (PLAN.md M366): false
+   * once the block has ended or the climber has left it, because `through`
+   * is then behind today and a new reading falls outside it.
+   */
+  closed: boolean;
   tests: TestWindow[];
   results: AssessmentResult[];
   /** Those whose change can share the percent axis. */
@@ -136,6 +142,7 @@ export function blockReport(input: BlockInput): BlockReport | null {
     to,
     through,
     finished: input.today > to,
+    closed: through < input.today,
     tests: windows,
     results,
     comparable: results.filter((r) => r.percent !== null),
@@ -194,6 +201,32 @@ function resultFor(
   };
 }
 
+/** When a baseline with no retest can still get one (PLAN.md M366). */
+export type RetestWhen =
+  /** In a test week now, or with none left before the block ends. */
+  | { when: 'now'; window: TestWindow | null }
+  /** At the next test week, which has not come yet. */
+  | { when: 'later'; window: TestWindow }
+  /** Never, for this block: it has ended or been left. */
+  | { when: 'over' };
+
+/**
+ * When the retests a block is owed can be taken (PLAN.md M366).
+ *
+ * The card under the report said *"Taking them now is what turns the block
+ * into a measurement"* whatever the block's state. On a block that had
+ * ended, a reading taken now falls outside it and changes nothing; in week
+ * two of twelve, it sat under the sentence saying the test weeks are when
+ * to take them. Any test week after the baseline is a retest — a phase
+ * test is compared like the final one.
+ */
+export function retestWhen(report: BlockReport, today: string): RetestWhen {
+  if (report.closed) return { when: 'over' };
+  const next = report.tests.find((t) => t.why !== 'baseline' && t.to >= today);
+  if (next === undefined) return { when: 'now', window: null };
+  return next.from <= today ? { when: 'now', window: next } : { when: 'later', window: next };
+}
+
 /**
  * "V5", "3 sec", "Pass" — the change in the metric's own terms, and in the
  * climber's units (PLAN.md M341): it printed the stored unit, so a block's
@@ -242,7 +275,12 @@ export function describeBlock(report: BlockReport): string {
   if (compared === 0) {
     const once = report.results.filter((r) => r.gap === 'once-only').length;
     if (once > 0) {
-      return `Nothing to compare yet: ${count(once)} of the ${total} ${report.program.name} assessments have a baseline and no retest. The block's test weeks are the ones to take them in.`;
+      const has = `${count(once)} of the ${total} ${report.program.name} assessments ${once === 1 ? 'has' : 'have'} a baseline and no retest`;
+      // Its test weeks are behind it once it is over (PLAN.md M366): this
+      // said to take them there on a block that ended months ago.
+      return report.closed
+        ? `Nothing to compare: ${has}, and the block is over.`
+        : `Nothing to compare yet: ${has}. The block's test weeks are the ones to take ${once === 1 ? 'it' : 'them'} in.`;
     }
     /**
      * `never === total` was the wrong test (PLAN.md M253).

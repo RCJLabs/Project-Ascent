@@ -102,8 +102,10 @@ describe('the finish page', () => {
     running(start);
     renderAt('/finish', <FinishPage />);
     // Scoped to the card: the block report above lists every assessment by
-    // name too, which is what a bare getByText found first.
-    const card = screen.getByText('The retest you owe').closest('section, div')!;
+    // name too, which is what a bare getByText found first. The block ended
+    // a week ago, so the card says it was never retested rather than asking
+    // for a reading that can no longer count (PLAN.md M366).
+    const card = screen.getByText('Never retested').closest('section, div')!;
     const link = [...card.querySelectorAll('a')].find((a) => a.textContent?.includes('Dead Hang'));
     expect(link?.getAttribute('href')).toContain('/assessments');
     expect(link?.textContent).toContain('Baseline 40 sec');
@@ -113,7 +115,7 @@ describe('the finish page', () => {
     await hydrate();
     running(endedBlock(1).start);
     renderAt('/finish', <FinishPage />);
-    expect(screen.queryByText(/retest you owe|retests you owe/)).toBeNull();
+    expect(screen.queryByText(/retests? you owe|retests? to come|Never retested/)).toBeNull();
   });
 });
 

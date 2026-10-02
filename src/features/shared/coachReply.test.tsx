@@ -32,6 +32,7 @@ function file(name = 'Iron Grip'): BlockFile {
       to: '2026-08-29',
       through: '2026-08-29',
       finished: true,
+      closed: true,
       tests: [],
       results: [],
       comparable: [],

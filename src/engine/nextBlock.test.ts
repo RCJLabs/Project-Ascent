@@ -42,6 +42,7 @@ const report = (results: AssessmentResult[]): BlockReport =>
     to: '2026-03-26',
     through: '2026-03-26',
     finished: true,
+    closed: true,
     tests: [],
     results,
     comparable: [],
