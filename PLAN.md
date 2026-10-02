@@ -15333,6 +15333,17 @@ its label is missing. None of these wants touching.
   on Fast 3G. The bytes still arrive, because the service worker precaches every chunk after that
   first visit. Home's launch also reads more than the running program: the finger-gap check looks
   up the program of every session in the log. Written up as a decision, not built.
+- **M364 — a new climber's first launch stops waiting for the catalogue.** M364a's option 2, which
+  the user chose. The router held every page until the shipped programs and the drill library had
+  downloaded (M78). On a launch the service worker did not serve, it now waits for the profile and
+  the log instead. It lets Home through if the climber has no program and nothing logged, and Home's
+  cards wait for the catalogue only when there is something in it to look up. On a cold first
+  visit the first-session card lands sooner: 1,804 → 1,362ms on Slow 4G, 4,042 → 2,848ms on Fast
+  3G. Warm launches and climbers with a log behave as before. Two versions were built and measured
+  first, and both were worse:
+  - letting Home through on every launch made warm launches 170ms slower;
+  - letting it through on every first visit drew the heading sooner but the first-session card
+    0.7–2.9s later. The trial had timed only the heading, which was the wrong measure.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -27622,3 +27633,218 @@ catalogue (and the drill library) before it mounts, so on a slow first visit the
 
 **Recommendation: 2, measured first, or 3.** Option 1 spends the most for a gain that only
 appears once per device, and the bytes it was chosen for do not leave.
+
+## M364 — a new climber's first launch stops waiting for the catalogue
+
+M364a measured what loading one program at a time would buy: nothing on a warm launch, and
+185–388ms before Home's heading on a cold first visit, because the router waits for the catalogue
+before it draws anything. It put three options to the user. The user chose the narrow one: stop
+holding the router for the catalogue, and let the screens that read programs wait for it
+themselves.
+
+This entry is mostly about two versions of that which were built, measured and dropped, and why.
+The first measure chosen was wrong.
+
+### The trial, and what it measured
+
+A build whose router let Home through without the catalogue. Cold first visit: no worker, network
+emulated, CPU at a quarter speed. **Home's heading** went 1,775 → 1,217ms on Slow 4G and 4,137 →
+2,740ms on Fast 3G. That looked like more than one-program loading would have bought, because it
+also skipped the drill library's wait.
+
+It timed the `<h1>`. On main the heading and the cards arrive in the same commit, so the heading
+had stood for the whole page in M364a's measurements, and it was carried over without checking
+whether it still did.
+
+### Version 1: Home let through on every launch
+
+Each card on Home that reads a program or a drill was made to wait for a new `useCatalogue` store.
+The cards were found by counting, not by listing (see *Checked*). Warm launch of the installed app,
+sample climber, CPU at a quarter speed, eight runs each, alternating:
+
+```
+                       shell drawn       today's card final   main thread
+main                   241 (219–327)ms   664 (530–723)        951 (815–1,086)
+version 1              381 (284–470)ms   833 (698–955)        1,015 (913–1,181)
+```
+
+**Worse on every launch after the first.** Home is not a lazy route, so the shell and Home commit
+together. Behind the gate, the first commit was the shell and a busy placeholder. The catalogue
+arrived from the worker's cache within milliseconds, and Home then rendered once, with its stores
+mostly in. Let through, the first commit carried Home's whole first render with every card waiting,
+and a second render followed when the data came. That the extra render explains all of the 140ms
+and 170ms is inferred, not traced.
+
+### Version 2: Home let through only on a launch the worker did not serve
+
+`SERVED_BY_WORKER` is `navigator.serviceWorker.controller != null`, read once as the module
+evaluates. A controlled page is one the precache answered, so the catalogue is on the device. The
+worker never claims a page it did not serve, so the value cannot change while a page is open:
+`registerType: 'prompt'`, no `clientsClaim` in the generated `sw.js`, and `skipWaiting` only on the
+update prompt's message. Warm launches went back inside the spread: 274 against 256ms for the
+shell, and 663 against 675ms for the card. The cold heading kept its gain.
+
+Then the first-session card was timed. That is the card a new climber needs, and the one the
+heading had stood for:
+
+```
+                   heading                first-session card
+Slow 4G  main      1,766 (1,737–1,796)ms  1,766 (1,737–1,799)ms
+         v2        1,189 (1,129–1,211)    2,492 (2,434–2,498)
+Fast 3G  main      4,006 (3,966–4,010)    4,007 (3,967–4,011)
+         v2        2,707 (2,645–2,799)    6,948 (6,845–7,003)
+```
+
+**The heading came sooner and the page came later.** The cards still waited for the catalogue, and
+it now arrived later than it had. The likely reason, not traced, is that Home drawn early fetched
+its own lazy cards' chunks alongside it.
+
+Two findings showed the way out:
+
+- **An empty climber's Home reads nothing from either registry.** It was rendered with the
+  registries emptied and the cards' gates forced open, and the counters stayed at zero.
+- **The ceiling:** a build where nothing on Home waited for the catalogue. For an empty climber the
+  first-session card landed at 1,365ms on Slow 4G and 2,866ms on Fast 3G.
+
+These numbers went back to the user with two options: the router decides from the stores, or drop
+M364. The user chose the first.
+
+### What shipped: the router decides from the stores
+
+- **`nothingToLookUp(activeProgramId, byDate)`:** no program running and no session logged. Home
+  reads a program for the running block and for each logged session's own, and a drill only
+  through those. In practice this is a new climber on their first launch, which is the only launch
+  the worker has not served.
+- **`useHoldsForCatalogue(location)` in the router:**
+  - any route but Home, and every page the worker served, waits for the catalogue as before;
+  - on Home, an unserved launch waits until the profile and the log have read the database;
+  - Home is let through only if there is nothing to look up. A climber with a log is held, as on
+    main, so Home is not drawn early and nothing competes with the catalogue.
+  - **Once let in, Home stays in.** A first session logged before the catalogue lands would
+    otherwise swap Home, and the reward card it shows, for the busy placeholder.
+- **`useCatalogueIfNeeded`:** shaped like a store so `useLoaded` takes it. It reports ready when the
+  catalogue is in or there is nothing to look up. It is used by:
+  - the heading's week line, today's card and the safety note on Home;
+  - the coach's inputs;
+  - the board.
+
+  If that first session is logged before the catalogue, these cards go back to waiting until it
+  lands.
+- **`usePlannedDay` and `useWeekOutline`** do not look up the running program before the
+  catalogue. **`fingerPhase` on Home** is computed only once loaded.
+- **`store/contentLoaded.ts`** holds the `useCatalogue` store, `loadCatalogue` (called by
+  `hydrateAll` and the router) and the rules above. It is not called `catalogue.ts`, because
+  `wired.test.ts` finds static importers of the programs' own `catalogue.ts` by a path ending in
+  `catalogue'`, and the first name matched every file that imported the store.
+
+### After
+
+Cold first visit, five runs each, alternating, with the ceiling build alongside:
+
+```
+                   heading                first-session card
+Slow 4G  main      1,804 (1,712–1,824)ms  1,804 (1,713–1,825)ms
+         M364      1,362 (1,326–1,418)    1,362 (1,326–1,419)
+         ceiling   1,194                  1,376 (1,245–1,443)
+Fast 3G  main      4,042 (3,979–4,053)    4,042 (3,979–4,053)
+         M364      2,848 (2,765–2,886)    2,848 (2,765–2,886)
+         ceiling   2,725                  2,867 (2,826–2,908)
+```
+
+The heading and the card arrive together again, at the ceiling's card time. The heading is
+120–170ms later than the ceiling's, which is the wait for the stores.
+
+Warm launch, fourteen runs each:
+
+```
+           shell drawn       today's card final   main thread
+main       267 (241–325)ms   698 (611–839)        1,016 (891–1,262)
+M364       267 (204–302)ms   697 (611–738)        1,034 (881–1,223)
+```
+
+An eight-run pass had read +78ms of main-thread time at the median. The fourteen-run pass puts it
+inside the spread.
+
+Sizes:
+
+- **first load** 113.31 → 113.58KB, against 114.4;
+- **Home's cold load** 211.94 → 212.20KB, against 213.0.
+
+Home still fetches the catalogue, because `hydrateAll` asks for it at launch. Only the wait moved.
+
+Home's text during launch was read from every mutation inside `<main>`: sample and empty climbers,
+warm and cold, six runs each. No line was shown and then withdrawn.
+
+### Not done, and the limits
+
+- **Only a new climber, only on Home.** A first visit that opens a shared link to `#/train` gains
+  nothing, and nor does a climber with a log whose worker is gone. Those pages read programs at
+  render, and gating them one by one is M78's twenty-two chances to miss one.
+- **What the gain is worth.** It is one launch per install, on a slow network. That launch is the
+  Play Store build's first, since the TWA's worker is not installed until it has run. The network
+  profiles are Chrome's emulation against `vite preview` over HTTP/1.1. The site is served over
+  HTTP/2 by GitHub Pages, where requests are not queued six to a host, so the absolute numbers are
+  this harness's own. The ordering between builds is what was measured.
+- **The rule is checked for two climbers:** one with nothing saved, and one with only an injury.
+  The test renders each with the catalogue and without it, and requires the same text. A climber
+  with saved projects, metrics or templates but no program and no log was not rendered. They would
+  have to be on a launch the worker did not serve for it to matter.
+- **The counters see only lookups that miss.** A climber's own program is answered from the
+  database copy and is not counted. That is right, because it does not wait for the catalogue. A
+  card that read the `PROGRAMS` or `DRILLS` arrays directly would not be counted either. The
+  with-and-without comparison is what covers that, and only for the climbers it renders.
+
+### Checked
+
+- **`homeWaitsForTheCatalogue.test.tsx`, 14 tests:**
+  - **A climber two weeks into Iron Grip,** with the catalogue forgotten and Home's lazy cards
+    loaded:
+    - no program and no drill is read before they arrive;
+    - the date is drawn at once, and the week strip and today's card only once the catalogue is in;
+    - *"no program is running"* is never shown;
+    - both counters move on a read made too soon.
+  - **A climber with nothing to look up:**
+    - nothing waits, and Home reads the same with the catalogue as without it;
+    - the same with an injury saved;
+    - a session logged before the catalogue lands sends today's card back to waiting, with no read
+      made.
+  - **The router:**
+    - the rule as a truth table;
+    - `nothingToLookUp`, including a day emptied by a delete;
+    - the hook holds Home until the stores are read, lets a new climber through, holds `#/train`,
+      and keeps Home once a session is logged;
+    - it waits for both stores, the profile and the log, not whichever reads first. An unread
+      profile has no program and an unread log has no sessions, so either alone says *nothing to
+      look up*;
+    - a climber with a log is held until the catalogue is in;
+    - `App.tsx` asks the hook;
+    - `SERVED_BY_WORKER` is true for a controlled page, and false for an uncontrolled one or a
+      browser with no workers, read from fresh modules.
+- **`loading.test.ts`:** the guard that the router closes the window now reads the gate from
+  `store/contentLoaded.ts`.
+- **Mutation battery: 30 mutants, all killed; sanity survived.**
+  - **The first pass on the shipped version** left two alive: the profile's and the log's hydration
+    checks in `useNothingToLookUp`. The test had unloaded both stores together, so each check
+    covered for the other. A test of each store alone was added.
+  - **The battery on version 2** found two more:
+    - the heading's gate, whose test looked for the planned count but not the strip of days, which
+      draws without a program;
+    - the drill counter, whose self-test moved only the program counter.
+  - **The mutants:**
+    - each card's gate dropped: the heading, today's card, the safety note, the coach and the
+      board;
+    - `fingerPhase` ungated;
+    - `usePlannedDay` and `useWeekOutline` reading before the catalogue;
+    - either counter never moving;
+    - `loadCatalogue` never saying it is in, and the store starting ready;
+    - the cards always waiting, or never waiting;
+    - `nothingToLookUp` ignoring the program or the log, or counting an emptied day as a session;
+    - either store answering before it is read;
+    - Home let through on a warm launch, before the stores say so, or not kept once let in;
+    - every route let through for a new climber, the router always holding, and the router
+      ignoring the catalogue;
+    - the worker ignored, or a registered worker read as serving;
+    - `App.tsx` ignoring the rule;
+    - `hydrateAll` no longer loading the catalogue.
+- **Full suite:** 7,677 passing, M363's 7,663 plus 14, and the one pinned-clock skip.
+- **Layout harness:** clean.
