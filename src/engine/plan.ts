@@ -81,6 +81,30 @@ export function blockWindow(program: Program, startDate: string): { from: string
   return blockSpan(startDate, program.weeks);
 }
 
+/**
+ * The last day a reading of a block covers (PLAN.md M365): today, the
+ * block's own last day, or the day the climber left it, whichever came
+ * first.
+ *
+ * The window stays the calendar's (`blocks.ts` says why), but what is
+ * counted inside it stops where the climber did. Without the third term a
+ * block left in week six was measured to week twelve: six perfect weeks
+ * read as *"36 of 48 sessions"*, the next program's sessions counted as
+ * this one's wherever their ids matched, and its baseline tests became this
+ * block's retests — under a sentence that said they moved *"while you were
+ * on it"*. A reading the day after leaving is the next block's, not this
+ * one's: the cutoff is hard, which is the coach's call.
+ *
+ * In the first load although only lazy pages read it: in a module of its
+ * own it was one more chunk on every cold Home load, for a few bytes
+ * (`test/lazyOnly.ts`, `KEPT`).
+ */
+export function blockThrough(to: string, today: string, until?: string | null): string {
+  let through = today < to ? today : to;
+  if (until && until < through) through = until;
+  return through;
+}
+
 export type BlockState = 'before' | 'running' | 'ended';
 
 export function plannedDay(

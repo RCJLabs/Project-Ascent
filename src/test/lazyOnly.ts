@@ -443,4 +443,6 @@ export const KEPT: Record<string, string> = {
   'src/store/undo.ts#offerUndo':
     'moved and measured at M345: 114.149 → 114.158KB and one more chunk, since thirteen pages share it',
   'src/db/projects.ts#ACTIVE_CAP': 'twenty-seven bytes, a constant beside the project rows it limits',
+  'src/engine/plan.ts#blockThrough':
+    'moved and measured at M365: in its own module it was one more chunk on a cold Home load (38 → 39 files) for 0.1KB, since the coach, Finish and the assessments share it',
 };

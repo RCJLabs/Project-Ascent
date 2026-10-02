@@ -12,7 +12,7 @@ import type { LoggedPoint } from '@/engine/exerciseLog';
 import { describeChange, describeLoad, exerciseMovement, exerciseSeries } from '@/engine/exerciseReadings';
 import { formatEntry } from '@/engine/assessments';
 import { formatDate, fromKey, today } from '@/engine/dates';
-import { blockThrough } from '@/engine/blockThrough';
+import { blockThrough } from '@/engine/plan';
 import { ProgressionLine } from '@/ui/charts/Charts';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
