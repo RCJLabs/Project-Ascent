@@ -15359,6 +15359,15 @@ its label is missing. None of these wants touching.
 
   Two coaching questions go to the user: whether a small change should count as a change, and
   whether added-load benchmarks need a bodyweight beside them.
+- **M365 — a block you left is measured up to the day you left.** M365a's first finding, with the
+  user's answer that the cutoff is hard. Every measure on the block review stops at the day the
+  climber left: the sessions done, the numbers that moved, where it drifted from the plan, the
+  lines lifted. So does the finder's reading of the last block. Six perfect weeks of Iron Grip
+  followed by Peak Performance now read *"You did every session the plan placed — all 24 of
+  them"*, not *"36 of 48"*. Peak Performance's baselines are no longer Iron Grip's retests. A left
+  block whose weeks are still on the calendar is headed *Ran to* the day it was left, not *Runs
+  to*. The helper went into a module of its own first, which cost Home's cold load one more
+  file, so it went back beside `blockWindow` and is named in `lazyOnly`'s `KEPT`.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -28049,3 +28058,107 @@ settle.
 6. **The fixture (8),** alongside 1, so the sample climber has a block left early.
 
 A and B wait on the user.
+
+## M365 — a block you left is measured up to the day you left
+
+### The user's answers to M365a
+
+M365a left four questions for the user, who coaches. The answers, which set the next milestones:
+
+1. **Readings after leaving: a hard cutoff.** A test taken the day after leaving belongs to the next
+   block, even if a coach would often run one block's end test as the next one's baseline.
+2. **Resume picks up where the climber left off,** not the calendar's week (finding 2).
+3. **Small changes read as *held*** (question A). The band per kind of test is still to be set.
+4. **Bodyweight is taken at test weeks** (question B).
+
+### The change
+
+`blockThrough(to, today, until)` in `plan.ts`, beside `blockWindow`, returns the earliest of
+today, the block's last day, and the day the climber left. The window is still the calendar's,
+for the reason `blocks.ts` gives, but nothing after that day is counted inside it:
+
+- **`blockReport`** takes `until` and drops readings after it. `blockEnd` passes the record's
+  `endedAt`.
+- **`blockAdherence` and `planVsLog`** take `until` the same way.
+- **The Finish page** passes `cutoff = chosen.endedAt` to adherence and drift, and uses
+  `blockThrough` for the lifted lines and their charts.
+- **`finderHistory.lastBlockFor`** passes the row's `endedAt`. The finder had read a block left
+  in week six as a third done, which it treats as a block not worth following.
+- **Rows that are not affected:**
+  - a block run to its end has `endedAt` on or after its last day, so nothing changes;
+  - a reconstructed row's `endedAt` is the day before the next program began, a fact rather
+    than a guess about how it went, so cutting there is right;
+  - a running block has none.
+
+**A left block whose weeks are still on the calendar.** Left in week six of twelve, a block is
+`running` by the calendar for six more weeks. `describeBlockEnd` checked the calendar first, and
+the header used the calendar's state, so such a block read *"Runs to"* the day it was left. The
+left-block sentence now comes before the calendar's state, and the header says *Ran to* for a
+block left early.
+
+### Where the helper lives
+
+In a module of its own it was one more chunk on every cold Home load: 38 → 39 files, 212.40KB.
+The coach, the block review and the assessments page all import it, and Home loads the coach. It
+went back into `plan.ts`, which is in the first load, and `lazyOnly`'s `KEPT` names it with that
+measurement, as it names `offerUndo` for the same reason.
+
+```
+                 first load            Home, cold
+before M365      113.58KB              212.20KB, 38 files
+own module       113.58KB              212.40KB, 39 files
+beside blockWindow  113.60KB           212.25KB, 38 files
+```
+
+### Checked
+
+- **`engine/leftBlock.test.ts`, 7 tests,** on Iron Grip run to the letter for six weeks and then
+  left for Peak Performance:
+  - `blockThrough` as a table, including that a cutoff after the block's last day, or after
+    today, moves nothing;
+  - adherence: 24 of 24 with the cutoff, against 48 planned without it;
+  - the report keeps Peak Performance's baselines out, and keeps a retest taken on the day of
+    leaving;
+  - drift read with the cutoff equals drift read over the six weeks alone, and differs without
+    it;
+  - the finder hears 24 of 24;
+  - a block run to its end is unchanged.
+- **`features/finish/leftBlock.test.tsx`, 6 tests,** the page rendered for M365a's climbers:
+  - *"all 24 of them"* for a switch and for a stop, with no sessions *"the plan did not place"*;
+  - no retested numbers, and both retests listed as owed;
+  - the lifted lines show Iron Grip's +25 lbs and not the next block's +40;
+  - drift names week 4 and never week 8. Iron Grip deloads in weeks 4 and 8, and week 8 was the
+    next program's. Without the cutoff the card read *"Week 8 · a lighter week → 2.39× the weeks
+    before it"*. The first version of this test gave the sessions no duration, so no load, and it
+    passed with the cutoff removed. It was caught by running it against that mutant before the
+    battery.
+  - a block left two weeks ago in week six is headed *Ran to* the day it was left, and never says
+    *runs to*.
+- **Mutation battery: 14 mutants, all killed; sanity survived.** Three were run again after the
+  helper moved into `plan.ts`. The mutants:
+  - the cutoff ignored, honoured after the last day, or today ignored;
+  - each engine ignoring it;
+  - `blockEnd` passing none, and the finder hearing the whole window;
+  - the page counting sessions, drift or lines past it, or having no cutoff at all;
+  - a left block still on the calendar read as running, and the header ignoring that it was left.
+- **Full suite:** 7,690 passing, M364's 7,677 plus 13, and the one pinned-clock skip.
+- **Layout harness:** clean.
+
+### Not done
+
+- **The fixture (M365a finding 8).** The sample climber still has no block left early. Adding one
+  means re-attributing months of its log to a program, which moves pinned numbers across the
+  suite. It is listed below rather than folded in here.
+- **The next block's side.** Blocks start on their first whole week (M259), so nothing before a
+  block's start is counted in it. That was checked, and needed nothing.
+
+### The queue this sets
+
+- **M366:** *"The retests you owe"* and the opening sentence, worded by the block's state
+  (M365a 3 and 4).
+- **M367:** a band for noise, so small changes read as held (answer 3); a decline no longer
+  called *"left where it was"*; no verdict on a block half run (M365a 5 and 6).
+- **M368:** the copy sweep (M365a 7).
+- **M369:** resume picks up the week the climber left (answer 2, M365a 2).
+- **M370:** bodyweight at test weeks (answer 4).
+- **And the fixture,** a block left early in the sample climber.
