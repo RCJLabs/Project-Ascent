@@ -15309,6 +15309,13 @@ its label is missing. None of these wants touching.
   is now begun before the database is handed over and is not waited for. The flash audit then
   caught Home's week line saying *"0 of 4 training days done"* before the log landed, on main as
   well; it now waits for all three stores too.
+- **M362 — an athlete's blocks side by side, held in memory only.** The coach view across blocks
+  had waited on one question: may a coach's copy of the app keep an athlete's data? Asked, the
+  answer was no. Instead, compare open files and keep nothing. The shared-block screen now takes
+  several block files at once and adds to what is already open. It names a file it could not read
+  or a block already open, and holds at most twelve. With two or more open, a table shows what each
+  block ended on, test by test, oldest first. No change between blocks is worked out. *"Nothing on
+  this screen is saved"* is still true, and the page now says the files do not say whose they are.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -27265,3 +27272,125 @@ no part is not proven either.
 
 The test is left as it is. Loosening it on a guess would hide a real regression as easily as a
 stall. If it fails again, the run should keep the assertion and the line.
+
+## M362 — an athlete's blocks side by side, held in memory only
+
+*"Coach view across blocks"* came out of the coaching brainstorm and stayed on the list behind a
+question that was not the code's to answer: may a coach's copy of the app keep an athlete's data?
+M292's screen opens one athlete's block and says *"Nothing on this screen is saved: it is here
+while the tab is."* A view across blocks either keeps that promise or replaces it.
+
+### The decision
+
+Three options were put to the user:
+
+- **Compare in memory.** Open two or more block files at once and see them together. Nothing is
+  saved, so the screen and the privacy page stay true. The cost is that a coach opens the files
+  again each time.
+- **Keep, opt-in per athlete.** Save an athlete's block summaries in the coach's app, under the
+  athlete's name, deletable, and covered by backup and erase. This changes the screen's promise and
+  the privacy page, and needs a new store and consent wording.
+- **Drop it.**
+
+**Compare in memory** was chosen. A coach already has the files, in whatever message they arrived
+in, so the comparison needs nothing the app does not already hold for as long as the tab is open.
+
+### What the screen does now
+
+- **Several files at once,** from the picker, and *Add another block* adds to what is open rather
+  than replacing it. A launched file joins the same way.
+- **Nothing dropped in silence:**
+  - a file that cannot be read is named and the others still open;
+  - a block already open (same program, same days) says so;
+  - past twelve, the ones left out are named.
+
+  With a single file, the sentence is the parser's own, as before.
+- **A bad file no longer closes what is open.** Before, a failed read cleared the one block on
+  screen.
+- **"Across N blocks", once two are open.** First a line per block, oldest first: when it ended, the
+  program, how many weeks, how it ended. Then a table of what each block ended on, test by test.
+  Each block's own card follows, newest first. *Write them one back* answers the newest block, which
+  is the one a coach is replying to.
+- **Start again** forgets them all. The test checks this by opening another athlete's block
+  afterwards and finding it alone.
+- **The page says the files do not say whose they are.** They carry no name by design (M292), so the
+  app cannot check that four blocks belong to one athlete. The coach is told to keep each athlete's
+  together.
+
+### What a row says, and what it does not
+
+`engine/blockSeries.ts` holds the rule:
+
+- **A row per test measured in at least two of the open blocks.** One reading is not a comparison.
+- **Each block's reading is what it ended on.** That is its own app's words where it gave some (V6,
+  not 6), and a gap where it measured nothing. Untested, baseline-only and listed-only all count as
+  nothing measured. A gap stays a gap; closing it would put one block's number under another
+  block's date.
+- **Oldest first,** by the day a block ran to and then the day it began, whatever order the files
+  were picked in. Tests are listed in the order they first appear.
+- **Nothing is worked out between blocks.** `blockReport.ts` gives four reasons not to compute a
+  change within a block on most metrics. A fifth applies across blocks: two programs test under
+  their own conditions, so a percentage from one to the next is a number nobody should act on. The
+  readings sit next to each other, and the card says the coach reads them.
+
+### The layout found by hand
+
+The harness opens `/shared` with a block file the app itself saved, and the sample climber has one
+block, so the harness cannot reach the comparison card. It was opened by hand with three blocks at
+360px and 430px, light and dark, and at the largest text.
+
+At the largest text on a 360px phone, the first version did not fit. The test names in the first
+column wrapped to four lines (*"Max / Hang / 20mm / 7s"*) and pushed the third block's column off
+the card, behind a sideways scroll. That was the newest block, the one being answered. Each test's
+name is now a row of its own above its readings, and each test is its own row group, so a screen
+reader still says which test a number belongs to. Measured afterwards, the table is exactly the
+card's width at the largest text (275px of 275), and there is no page scroll at any size.
+
+### A file overwritten, and put back
+
+The helper was first written to `src/engine/blockCompare.ts` without checking the name was free.
+It was not: that is the Progress page's four-weeks-against-four comparison from M28. `git status`
+showed the file modified, not added, before anything ran against it. It was restored from git
+unchanged, and the helper went to `blockSeries.ts`. Its header says it is not `blockCompare.ts`.
+
+### Checked
+
+- **`blockSeries.test.ts`, 12 tests:**
+  - oldest first, whatever order the files came in, with ties put in the order they began;
+  - the same block only with the same program and the same days;
+  - the readings side by side in the blocks' order, in the block's own words;
+  - a gap kept where a block measured nothing or did not list the test, and where a test was only
+    a baseline;
+  - no row for a test only one block measured;
+  - tests in the order they first appear;
+  - this app's name for a test it knows, and the sender's for one it does not;
+  - nothing for one block.
+- **`sharedBlock.test.tsx`, 9 more (22 in all):**
+  - two files opened together come out side by side, oldest first, under their dates;
+  - a block opened later adds to what is open;
+  - a block opened twice is said and not doubled;
+  - a bad file among good ones is named and the rest open;
+  - a bad file later leaves what is open;
+  - the write-back answers the newest block;
+  - *Start again* forgets, not just hides;
+  - with two open, the database still holds no sessions, metrics or programs, and the promise is
+    still on screen;
+  - thirteen files open twelve and name the one left.
+
+  The thirteen M292 tests pass unchanged. One file with one problem reads exactly as it did.
+- **Mutation battery: 18 mutants, all killed in the end; sanity survived.**
+  - *"Start again forgets nothing"* survived the first round, because the test looked only at the
+    screen after the tap. It now opens another block afterwards.
+  - The rest were killed in the first round: newest first; ties left as opened; gaps closed up; a
+    baseline-only test read as a reading; their words ignored; one reading kept as a row; rows in
+    the newest block's order; the sender's name for a known test; the same block whatever day it
+    began; a block opened twice; a bad file closing what is open; no limit; the write-back from the
+    oldest; the failing file not named; only the first file read; the comparison for one block; a
+    second pick replacing the first.
+- **Full suite:** 7,652 passing, M361's 7,631 plus 21, and the one pinned-clock skip.
+- **Layout harness:** clean. Its door for `/shared` follows the button's new name, *Open block
+  files*. `privacy.test.ts` found the stale name before the harness ran.
+- **Sizes:**
+  - The page's chunk is 3,584 bytes gzipped.
+  - The first load is 114.70KB and Home's cold load 213.35KB, each +0.02 from the shared CSS for
+    the new classes. Home has 0.15KB left under its line.
