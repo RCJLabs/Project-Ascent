@@ -7,7 +7,7 @@ import type { BodyPart } from '@/content/bodyParts';
 import type { Equipment } from '@/content/types';
 import { addDays, today, isDateKey } from '@/engine/dates';
 import { EMPTY_BASELINE, readBaseline, type BaselineAnswers } from '@/engine/onboarding';
-import { closeBlock, openBlock, reconstructBlocks, type BlockRecord, moveBlockStart } from '@/engine/blocks';
+import { closeBlock, openBlock, pickUp, reconstructBlocks, type BlockRecord, moveBlockStart } from '@/engine/blocks';
 import { getProgram } from '@/content/programs';
 import { pruneOverrides, withOverride, type WeekOverrides } from '@/engine/reschedule';
 import type { WeekPlan } from '@/engine/scheduler';
@@ -378,7 +378,7 @@ export const useProfile = create<ProfileState>((set, get) => ({
     const startDate = addDays(from, shiftWeeks * 7);
     set({
       startDates: { ...s.startDates, [programId]: startDate },
-      blocks: moveBlockStart(s.blocks, programId, startDate),
+      blocks: moveBlockStart(s.blocks, programId, startDate, today()),
       // A shift is a translation and cannot close the gap it was asked
       // about, so the answer is recorded rather than re-derived (M149).
       resumedAt: { ...s.resumedAt, [programId]: today() },
@@ -389,8 +389,19 @@ export const useProfile = create<ProfileState>((set, get) => ({
   startProgram: (programId, plan, trackId, restart = false) => {
     const s = get();
     const keepStart = !restart && s.startDates[programId];
-    const startDate = keepStart ? s.startDates[programId]! : today();
     const program = getProgram(programId);
+    /**
+     * Resuming a block that was stopped picks it up at the week the climber
+     * was on (PLAN.md M369): the start moves by the gap and the row records
+     * it, so the review still measures the run from its first week. Kept
+     * as it was when there is nothing to move — resumed in the week it
+     * stopped, or a block that had already run its course.
+     */
+    const left = keepStart
+      ? s.blocks.find((r) => r.programId === programId && r.startDate === s.startDates[programId] && r.endedAt !== null)
+      : undefined;
+    const picked = left && program ? pickUp(left, today()) : null;
+    const startDate = picked ? picked.startDate : keepStart ? s.startDates[programId]! : today();
     set({
       activeProgramId: programId,
       startDates: { ...s.startDates, [programId]: startDate },
@@ -398,7 +409,14 @@ export const useProfile = create<ProfileState>((set, get) => ({
       // again mid-run re-opens the same row rather than adding a second
       // (PLAN.md M87). Without a resolvable program there is nothing to
       // write down — name and length are snapshots taken here.
-      blocks: program ? openBlock(s.blocks, { program, startDate, plan, trackId }, today()) : s.blocks,
+      blocks: picked
+        ? [
+            ...closeBlock(s.blocks.filter((r) => r.id !== left!.id), today(), 'switched'),
+            { ...picked, ...(plan ? { plan } : {}), ...(trackId ? { trackId } : {}) },
+          ]
+        : program
+          ? openBlock(s.blocks, { program, startDate, plan, trackId }, today())
+          : s.blocks,
       tracks: trackId ? { ...s.tracks, [programId]: trackId } : s.tracks,
       plans: { ...s.plans, [programId]: plan },
     });

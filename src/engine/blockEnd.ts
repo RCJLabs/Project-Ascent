@@ -31,6 +31,7 @@ import type { MetricEntry } from '@/db/metrics';
 import { blockReport, type AssessmentResult, type BlockReport } from './blockReport';
 import { blockStatus, type BlockStatus } from './planReading';
 import { formatDate, fromKey } from './dates';
+import { pausedOn, pauses, runSince } from './blockRun';
 
 /**
  * A day as the page's header writes it (PLAN.md M368): *"Iron Grip runs to
@@ -98,8 +99,16 @@ export function programForRecord(record: BlockRecord): Program | null {
 
 export function blockEnd(input: BlockEndInput): BlockEnd {
   const status = blockStatus(input.program, input.startDate, input.today);
-  // Measured to the day the climber left, if they did (PLAN.md M365).
-  const report = blockReport({ ...input, until: input.record?.endedAt ?? null });
+  // Measured to the day the climber left, if they did (PLAN.md M365), and
+  // from the run's first week if it was picked up again since (M369) — with
+  // nothing read in a pause, which belongs to no block.
+  const record = input.record;
+  const report = blockReport({
+    ...input,
+    until: record?.endedAt ?? null,
+    ...(record?.resumed?.length ? { since: runSince(record) } : {}),
+    entries: record ? input.entries.filter((e) => !pausedOn(record, e.date)) : input.entries,
+  });
   return {
     status,
     program: input.program,
@@ -156,6 +165,20 @@ function listed(items: string[]): string {
 }
 
 export function describeBlockEnd(end: BlockEnd, below: Below): string {
+  /**
+   * And the pauses, said, because they change what the numbers count
+   * (PLAN.md M369): a stretch between a stop and a resume is not this
+   * block's, and a review that left them out without saying so would be a
+   * sessions count nobody could reconcile with their calendar.
+   */
+  const paused = end.record ? pauses(end.record) : [];
+  const said = paused
+    .map((p) => ` It was paused for ${p.weeks} week${p.weeks === 1 ? '' : 's'} from ${blockDay(p.after)}, and ${p.weeks === 1 ? 'that week is' : 'those weeks are'} not counted.`)
+    .join('');
+  return sentenceFor(end, below) + said;
+}
+
+function sentenceFor(end: BlockEnd, below: Below): string {
   const { status, program } = end;
   const sessions = below.sessions ? ['which of its sessions happened'] : [];
   const numbers = below.numbers ? ['which of the numbers moved'] : [];

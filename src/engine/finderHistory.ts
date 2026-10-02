@@ -17,7 +17,7 @@
 
 import type { Session } from '@/db/sessions';
 import { getProgram } from '@/content/programs';
-import { blockAdherence } from './adherence';
+import { runAdherence } from './blockRun';
 import { rowWindow, type BlockRecord } from './blocks';
 import { outcomeOf, sortBlocks } from './blockOutcome';
 import { daysBetween } from './dates';
@@ -43,17 +43,11 @@ export function lastBlockFor(
   const program = getProgram(row.programId);
   const measured =
     program && row.plan
-      ? blockAdherence({
-          program,
-          startDate: row.startDate,
-          plan: row.plan,
-          sessions: [...sessions],
-          today,
-          // Only the weeks the climber was on it (PLAN.md M365): a block left
-          // in week six read as a third done, and the finder takes that as a
-          // block not worth following.
-          until: row.endedAt,
-        })
+      ? // Only the weeks the climber was on it (PLAN.md M365): a block left
+        // in week six read as a third done, and the finder takes that as a
+        // block not worth following. And the whole run, if it was picked up
+        // again (M369), each stretch against its own weeks.
+        runAdherence({ program, plan: row.plan, sessions: [...sessions], today }, row)
       : null;
 
   return {

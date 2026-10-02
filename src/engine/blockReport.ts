@@ -109,6 +109,12 @@ export interface BlockInput {
   today: string;
   /** The day the climber left it, if they did; nothing after counts (PLAN.md M365). */
   until?: string | null | undefined;
+  /**
+   * The first day it covers, when that is not its window's (PLAN.md M369):
+   * a run picked up again moved its start, and its first weeks — the
+   * baseline among them — are before its window now.
+   */
+  since?: string | undefined;
 }
 
 /**
@@ -123,12 +129,15 @@ export function blockReport(input: BlockInput): BlockReport | null {
   const tests = testWeeks(input.program);
   if (tests.length === 0) return null;
 
-  const { from, to } = blockWindow(input.program, input.startDate);
+  const { from: first, to } = blockWindow(input.program, input.startDate);
+  const from = input.since ?? first;
   const through = blockThrough(to, input.today, input.until);
   if (through < from) return null;
 
   const windows: TestWindow[] = tests.map((test) => {
-    const start = addDays(from, (test.week - 1) * 7);
+    // The window's own weeks: a run picked up again counts its test weeks
+    // from where its start is now, not from the first week it covers.
+    const start = addDays(first, (test.week - 1) * 7);
     return { week: test.week, why: test.why, from: start, to: addDays(start, 6) };
   });
 

@@ -13,6 +13,7 @@ import { describeChange, describeLoad, exerciseMovement, exerciseSeries } from '
 import { formatEntry } from '@/engine/assessments';
 import { formatDate, fromKey, today } from '@/engine/dates';
 import { blockThrough } from '@/engine/plan';
+import { runAdherence, runDrift, runSessions, runSince } from '@/engine/blockRun';
 import { ProgressionLine } from '@/ui/charts/Charts';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
@@ -95,7 +96,8 @@ function BlockHistory({ history, current }: { history: BlockRecord[]; current: B
       <ul className="grid grid-cols-1 gap-2">
         {history.map((row) => {
           const outcome = outcomeOf(row, today());
-          const { from } = rowWindow(row);
+          // A run picked up again is dated from its first week (PLAN.md M369).
+          const from = row.resumed?.length ? runSince(row) : rowWindow(row).from;
           const here = row.id === current?.id;
           return (
             <li key={row.id}>
@@ -303,9 +305,8 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
     const startDate = chosen?.startDate ?? startDates[programId];
     const plan = chosen?.plan ?? plans[programId];
     if (!startDate || !plan) return null;
-    const measured = blockAdherence({
+    const common = {
       program: end.program,
-      startDate,
       plan,
       overrides: weekOverrides[programId],
       sessions: allSessions(byDate),
@@ -314,8 +315,10 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
       // once and stops trusting.
       away,
       today: today(),
-      until: cutoff,
-    });
+    };
+    // A history row is measured as the run it was, every stretch of it
+    // against its own weeks and none of its pauses (PLAN.md M369).
+    const measured = chosen ? runAdherence(common, chosen) : blockAdherence({ ...common, startDate, until: cutoff });
     return measured === null ? null : { measured, ownLayout: chosen?.plan !== undefined };
   }, [end, chosen, activeProgramId, startDates, plans, weekOverrides, byDate, away, cutoff]);
 
@@ -334,14 +337,13 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
     if (end === null || !programId) return [];
     const startDate = chosen?.startDate ?? startDates[programId];
     if (!startDate) return [];
-    return planVsLog({
+    const common = {
       program: end.program,
-      startDate,
       sessions: allSessions(byDate),
       trackId: chosen?.trackId ?? tracks[programId],
       today: today(),
-      until: cutoff,
-    });
+    };
+    return chosen ? runDrift(common, chosen) : planVsLog({ ...common, startDate, until: cutoff });
   }, [end, chosen, activeProgramId, startDates, tracks, byDate, cutoff]);
 
   // The same window the report covers, read off the block rather than the
@@ -368,19 +370,27 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
   /** Which line's history is open, if any. One at a time (PLAN.md M130). */
   const [openLine, setOpenLine] = useState<string | null>(null);
 
+  /**
+   * The lines lifted over the run: from its first week if it was picked up
+   * again, and nothing logged in a pause (PLAN.md M369).
+   */
+  const runFrom = (fallback: string) => (chosen?.resumed?.length ? runSince(chosen) : fallback);
+  const runLog = () => (chosen ? runSessions(chosen, allSessions(byDate)) : allSessions(byDate));
+
   const movement = useMemo(() => {
     if (end === null) return [];
     const through = blockThrough(end.status.to, today(), cutoff);
-    return exerciseMovement(allSessions(byDate), end.status.from, through);
-  }, [end, byDate, cutoff]);
+    const from = chosen?.resumed?.length ? runSince(chosen) : end.status.from;
+    const log = chosen ? runSessions(chosen, allSessions(byDate)) : allSessions(byDate);
+    return exerciseMovement(log, from, through);
+  }, [end, byDate, cutoff, chosen]);
 
   /** Every reading for one line inside the block's own window. */
   const seriesFor = (name: string) => {
     if (end === null) return [];
     const through = blockThrough(end.status.to, today(), cutoff);
-    return exerciseSeries(allSessions(byDate), name).filter(
-      (p) => p.date >= end.status.from && p.date <= through,
-    );
+    const from = runFrom(end.status.from);
+    return exerciseSeries(runLog(), name).filter((p) => p.date >= from && p.date <= through);
   };
 
   if (!metricsReady || !profileReady || !sessionsReady) return <PageSkeleton />;

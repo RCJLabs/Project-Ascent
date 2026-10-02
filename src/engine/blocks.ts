@@ -34,7 +34,7 @@
  */
 
 import type { Program } from '@/content/types';
-import { addDays, blockSpan } from './dates';
+import { addDays, blockSpan, blockStart, daysBetween } from './dates';
 import type { WeekPlan } from './scheduler';
 
 /** Why a block stopped being the one you are running. */
@@ -72,6 +72,32 @@ export interface BlockRecord {
    * it through, so no screen should imply that it does.
    */
   reconstructed?: boolean;
+  /**
+   * Each time the run was picked up again (PLAN.md M369), oldest first.
+   *
+   * Picking up moves the start date — every week in the app is derived from
+   * it, so that is what makes today the week the climber was on — and the
+   * move took the block's first weeks out of its own window: a resumed
+   * block lost its week-one baseline and the sessions before the gap. This
+   * keeps what moved and when, so the review can measure the whole run.
+   */
+  resumed?: Resumption[];
+}
+
+/** One picking-up of a run (PLAN.md M369). */
+export interface Resumption {
+  /** The day it was picked up again. */
+  on: string;
+  /** How many weeks its start moved, so the week it was on is the week it resumed at. */
+  weeks: number;
+  /**
+   * The day it was stopped, when it was. The days between are a pause and
+   * belong to no block — the coach's call: a climber who pressed Stop chose
+   * to, and the plan's sessions in those weeks are not misses. A run picked
+   * up without a stop (M149's *pick it up*) has none, and its gap stays in
+   * the block, missed, as M149 always counted it.
+   */
+  stoppedOn?: string;
 }
 
 export function blockId(programId: string, startDate: string): string {
@@ -107,11 +133,53 @@ export function moveBlockStart(
   rows: readonly BlockRecord[],
   programId: string,
   startDate: string,
+  /** The day it was picked up, recorded so the review keeps the whole run (PLAN.md M369). */
+  on?: string,
 ): BlockRecord[] {
   const open = activeBlock(rows);
   if (open === null || open.programId !== programId) return [...rows];
-  const moved: BlockRecord = { ...open, id: blockId(programId, startDate), startDate };
+  const weeks = Math.round(daysBetween(open.startDate, startDate) / 7);
+  const moved: BlockRecord = {
+    ...open,
+    id: blockId(programId, startDate),
+    startDate,
+    ...(on !== undefined && weeks > 0 ? { resumed: [...(open.resumed ?? []), { on, weeks }] } : {}),
+  };
   return rows.map((row) => (row.id === open.id ? moved : row));
+}
+
+/**
+ * A stopped block, picked up at the week the climber was on (PLAN.md M369).
+ *
+ * *"Starting Iron Grip again later resumes the week you were on"* was the
+ * promise, and resuming kept the start date: stopped at the end of week six
+ * and resumed four weeks later, the block was in week ten. Now the start
+ * moves by the gap, so today is the first week not yet finished — the week
+ * of the stop, or the next one if the stop came on that week's last day.
+ *
+ * Null when there is nothing to pick up: a row still open, one that ran to
+ * its end, one reconstructed from the old shape (whose end is a guess), or
+ * one resumed in the same week it stopped, where nothing needs to move and
+ * reopening the row as it was is the right answer.
+ */
+export function pickUp(row: BlockRecord, today: string): BlockRecord | null {
+  if (row.endedAt === null || row.reconstructed === true) return null;
+  const from = blockStart(row.startDate);
+  const finished = Math.max(0, Math.floor((daysBetween(from, row.endedAt) + 1) / 7));
+  const week = finished + 1;
+  if (week > row.weeks) return null;
+  const now = Math.floor(daysBetween(from, today) / 7) + 1;
+  const weeks = now - week;
+  if (weeks <= 0) return null;
+  const startDate = addDays(row.startDate, weeks * 7);
+  const { reason: _reason, ...rest } = row;
+  return {
+    ...rest,
+    id: blockId(row.programId, startDate),
+    startDate,
+    endedAt: null,
+    resumed: [...(row.resumed ?? []), { on: today, weeks, stoppedOn: row.endedAt }],
+  };
 }
 
 /**

@@ -112,6 +112,12 @@ export interface PlanVsLogInput {
   today: string;
   /** The day the climber left the block, if they did (PLAN.md M365). */
   until?: string | null | undefined;
+  /**
+   * Counts from this day instead of its window's first (PLAN.md M369): a
+   * run picked up again is measured in segments, one per stretch of the
+   * plan, each with the start its weeks were counted from.
+   */
+  since?: string | undefined;
 }
 
 /** Sessions of one type before a reading of it is a pattern. */
@@ -633,7 +639,8 @@ function worst(findings: Finding[]): Finding | null {
  * the facts move, which is what makes a dismissal mean anything.
  */
 export function planVsLog(input: PlanVsLogInput): Finding[] {
-  const { from, to } = blockWindow(input.program, input.startDate);
+  const { from: first, to } = blockWindow(input.program, input.startDate);
+  const from = input.since ?? first;
   // No guard for `through < from` — a block that has not started yet has
   // every session filtered out by the same window, and every join comes
   // back empty on its own. An explicit check here survived every mutation,

@@ -90,6 +90,12 @@ export interface AdherenceInput {
   today: string;
   /** The day the climber left the block, if they did (PLAN.md M365). */
   until?: string | null | undefined;
+  /**
+   * Counts from this day instead of its window's first (PLAN.md M369): a
+   * run picked up again is measured in segments, one per stretch of the
+   * plan, each with the start its weeks were counted from.
+   */
+  since?: string | undefined;
 }
 
 /** Every date from `from` to `to`, inclusive. */
@@ -100,7 +106,8 @@ function daysIn(from: string, to: string): string[] {
 }
 
 export function blockAdherence(input: AdherenceInput): BlockAdherence | null {
-  const { from, to } = blockWindow(input.program, input.startDate);
+  const { from: first, to } = blockWindow(input.program, input.startDate);
+  const from = input.since ?? first;
   const through = blockThrough(to, input.today, input.until);
   if (through < from) return null;
 
@@ -129,12 +136,15 @@ export function blockAdherence(input: AdherenceInput): BlockAdherence | null {
 
   let away = 0;
   let weeks = 0;
-  for (let start = from; start <= through; start = addDays(start, 7)) {
-    weeks++;
+  // Whole weeks from the window's own Sunday, so a segment that begins
+  // mid-week still counts in the weeks its plan is laid out in.
+  for (let start = first < from ? first : from; start <= through; start = addDays(start, 7)) {
     const end = addDays(start, 6) < through ? addDays(start, 6) : through;
+    if (end < from) continue;
+    weeks++;
 
     const placed = new Map<string, number>();
-    for (const date of daysIn(start, end)) {
+    for (const date of daysIn(start < from ? from : start, end)) {
       const day = plannedDay(input.program, input.startDate, input.plan, date, input.overrides);
       if (!day.sessionType || day.isRest) continue;
       // A day the climber said they were away, and did not train on anyway.
