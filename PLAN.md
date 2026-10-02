@@ -15393,6 +15393,15 @@ its label is missing. None of these wants touching.
 
   The edge of the band is inside it, and the sample climber's own max hang (+5 lbs) is exactly on
   it, so it now reads as held.
+- **M368 — the block review's copy, swept.** M365a's seventh finding. Each fault was fixed, and
+  each rule is now held over every shape of its sentence:
+  - the empty review drew *"Coaching somebody?"* twice;
+  - three sentences printed a stored date, one of them under a header that formats it;
+  - the report's summary started sentences in lower case;
+  - a session type's name was used as the counted noun: *"You did 9 of 11 Climbing Session"*. The
+    sweep found the same fault in the coach's headline on Home: *"3 of 8 Climbing Session
+    sessions"*. The name now labels the count, as *"Climbing Session (9 of 11)"* and *"Climbing
+    Session: 3 of 8 done"*.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -28362,3 +28371,52 @@ now asserts that something improved and that the max hang is held. The generator
   change (`changeOf`) and the coach's benchmark tip read their own comparisons and do not use the
   band. Whether they should is the same question, asked of a different page. It was not asked
   here.
+
+## M368 — the block review's copy, swept
+
+M365a's seventh finding listed five copy faults on the block review. M366 fixed the agreement
+(*"one … has"*), because it was rewriting that sentence. This fixes the rest. Each was found
+once, in one sentence, so each is now tested over every shape of its sentence, not just the one
+that was seen.
+
+### What changed
+
+- **The empty review's second coaching card.** `<OpenTheirBlock />` was on two consecutive lines.
+  One is gone.
+- **Stored dates in sentences.** `blockDay(key)` in `blockEnd.ts` writes a day the way the header
+  does, as *Nov 14, 2026*. Four places now use it:
+  - *"Iron Grip runs to …"*;
+  - *"… started …"*, for a block with no record of how it ended;
+  - *"… ran from …"*, on the review of a block whose program is gone;
+  - the header itself, which had its own copy of the same format.
+- **Sentences in lower case.** `describeBlock` spells counts out, as *"seven of the 9"*, and the
+  sentences that began with one began in lower case. `opening()` capitalises them.
+- **A type's name used as a plural noun.** `describeAdherence` said *"You did 9 of 11 Climbing
+  Session and 18 of 24 Finger Protocol + Engine"*. The sweep for the same pattern found the coach's
+  skipped-type headline, which Home shows: *"3 of 8 Climbing Session sessions"*. Five session types
+  end in *Session*: Iron Grip's and General Training's *Climbing Session*, *Endurance Session*,
+  *Project Session* and *Specific Session*. The name now labels its count in both:
+  - *"Short of the plan: Climbing Session (9 of 11) and Finger Protocol + Engine (18 of 24). That
+    is 27 of 35 sessions the plan placed."* Past two types the rest are counted: *"… and 2 other
+    types."*
+  - *"Climbing Session: 3 of 8 done"*.
+
+### Checked
+
+- **`engine/blockCopy.test.ts`, 4 tests, over every shape:**
+  - `describeBlock`'s sentences all start in capitals, across six sets of readings (improved,
+    held, fallen, untested, one and many), on a running block and an ended one;
+  - `describeBlockEnd` prints no stored date for a running, ended, unknown or left block;
+  - the adherence sentence names each short type as a label on its count, never as *of N Name*;
+  - past two types, the rest are counted.
+- **`features/finish/blockState.test.tsx`, 2 more,** on the rendered page:
+  - no ISO date anywhere in the text, while a block runs, once it is over, and for a program that
+    is gone;
+  - one coaching card in each of those, and on the empty review.
+- **Changed tests:**
+  - six that pinned the lower-case starts, the raw date and the old adherence shape;
+  - the coach's headline test.
+- **Mutation battery: 11 mutants, all killed on the first pass; sanity survived.**
+- **Full suite:** 7,730 passing, M367's 7,724 plus 6, and the one pinned-clock skip.
+- **Layout harness:** clean.
+- **Sizes:** first load 113.58KB. Home is unchanged at 212.30KB.
