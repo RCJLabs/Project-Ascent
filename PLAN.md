@@ -15368,6 +15368,17 @@ its label is missing. None of these wants touching.
   block whose weeks are still on the calendar is headed *Ran to* the day it was left, not *Runs
   to*. The helper went into a module of its own first, which cost Home's cold load one more
   file, so it went back beside `blockWindow` and is named in `lazyOnly`'s `KEPT`.
+- **M366 — the retest card and the opening sentence say what is true of the block.** M365a's third
+  and fourth findings. The retest card told a climber *"taking them now is what turns the block
+  into a measurement"* in every state. On a block that had ended, a reading taken now falls
+  outside it; in week two, the card sat under the sentence saying the test weeks are the time. It
+  now says one of three things:
+  - *Never retested*, once the block is over or left;
+  - *the retests to come*, naming the next test week by number and date;
+  - *now*, only inside a test week.
+
+  The sentence at the top of the review names only the sections the page draws, so a custom
+  block with none of them is promised none.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -28162,3 +28173,82 @@ beside blockWindow  113.60KB           212.25KB, 38 files
 - **M369:** resume picks up the week the climber left (answer 2, M365a 2).
 - **M370:** bodyweight at test weeks (answer 4).
 - **And the fixture,** a block left early in the sample climber.
+
+## M366 — the retest card and the opening sentence say what is true of the block
+
+M365a's findings 3 and 4. Both were one sentence said regardless of the block it was said about.
+
+### The retest card
+
+`retestWhen(report, today)` in `blockReport.ts` decides when a baseline with no retest can still
+get one. It reads `report.closed`, a new field: whether `through` is behind today, which is true
+once the block has ended or been left. A reading taken then falls outside the window.
+
+```
+state                                   title                   says
+over (ended, or left)                   Never retested          a reading now would be the next block's;
+                                                                taken at its start it is its baseline
+running, a test week ahead              The retests to come     Week N is the next test week, from <day>
+running, in a test week (or none left)  The retests you owe     this is a test week, so now
+```
+
+Any test week after the baseline counts as a retest, because a phase test is compared like the
+final one. The baseline week does not count, even while it is running.
+
+**The report's own sentence** reads the same flag. On a closed block it says *"Nothing to compare:
+… and the block is over"*. While the block runs it still points at the test weeks. It now agrees
+with one: *"one of the 9 … **has** a baseline"*, and *"take **it** in"*. That was M365a finding
+7's first item, done here because the sentence was being rewritten anyway.
+
+### The opening sentence
+
+`describeBlockEnd(end, below)` takes `Below`: `{ sessions, numbers, next }`, the sections the page
+will draw. It is required, so a later caller cannot promise by default. Each section has a phrase:
+
+- **`sessions`** is the adherence card;
+- **`numbers`** is the benchmark report or the lifted lines;
+- **`next`** is *"What comes next"*, the successors the program names with its author's reasons.
+
+The first draft also counted the graduation card toward `next`. The battery found that no fixture
+could tell the two apart. The phrase, *"what it has written down about what comes next"*,
+describes the successors and not *"What this block was for"*, so `next` reads that card alone.
+
+The left-block sentence and the one for a block of unknown ending build their clauses the same
+way. With nothing below, the sentence ends after its first clause.
+
+### Checked
+
+- **`engine/blockState.test.ts`, 12 tests:**
+  - `closed`, including on the last day, which still takes a reading, and for a left block;
+  - `retestWhen`:
+    - the next test week ahead;
+    - the baseline week not counted;
+    - a test week already passed skipped for the following one;
+    - now inside a test week and in the final one;
+    - over once ended or left;
+  - `describeBlock` by state and with one assessment;
+  - `describeBlockEnd`:
+    - every section, as before, word for word;
+    - none, one, and two of the sections;
+    - the left block's sentence;
+    - the unknown block's numbers clause.
+- **`features/finish/blockState.test.tsx`, 7 tests:**
+  - **the card in each state on a rendered page:**
+    - *Never retested* on a block over two weeks, with the report's sentence;
+    - *The retests to come* in week two, with the week and its date;
+    - *The retests you owe* in a test week;
+  - **the sentence checked against the cards drawn under it**, each phrase present exactly when
+    its section is, for:
+    - the sample's custom block, which has none;
+    - the same block given a plan;
+    - the same block with lifted lines;
+    - a full Iron Grip block.
+- **Changed tests:** three tests that asked for *"The retest you owe"* on an ended block, and two
+  fixtures that build a report by hand, which now carry `closed`.
+- **Mutation battery: 22 mutants, all killed; sanity survived.** The first pass left four alive:
+  - the baseline week and a passed test week, both untested;
+  - the lifted lines, which no fixture had without benchmarks;
+  - the graduation, which became the wording change above.
+- **Full suite:** 7,709 passing, M365's 7,690 plus 19, and the one pinned-clock skip.
+- **Layout harness:** clean.
+- **Sizes:** unchanged. First load 113.60KB; Home 212.24KB in 38 files.
