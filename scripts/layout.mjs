@@ -193,7 +193,7 @@ const DOORS = [
   {
     name: 'a block somebody sent',
     path: '/shared',
-    button: 'Open a block file',
+    button: 'Open block files',
     file: 'block',
     landed: { text: 'Write them one back' },
   },

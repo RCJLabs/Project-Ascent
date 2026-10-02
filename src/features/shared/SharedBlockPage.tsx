@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
-import { PencilLine, Upload } from 'lucide-react';
+import { PencilLine, Upload, X } from 'lucide-react';
 import { PROGRAMS } from '@/content/programs';
 import { blankProgram, forkProgram } from '@/engine/customProgram';
 import { holdWritingFor } from '@/lib/writingFor';
@@ -13,6 +13,7 @@ import {
   type SharedBlock,
   type SharedResult,
 } from '@/engine/blockFile';
+import { MAX_OPEN_BLOCKS, blockSeries, sameBlock, type BlockSeries } from '@/engine/blockSeries';
 import { shortLabel } from '@/engine/dates';
 import { takeLaunchFile } from '@/lib/launchFile';
 import { PageGrid } from '@/ui/PageGrid';
@@ -39,11 +40,18 @@ import { PageHeader } from '@/ui/PageHeader';
  *
  * So the page holds it in state for as long as the tab is open, and says so
  * where a coach can read it rather than in a comment.
+ *
+ * **Several at once since M362**, so a coach can see an athlete across
+ * blocks. They are held exactly as one was, which is what was decided:
+ * the comparison is of open files, and nothing about it is kept.
  */
 export function SharedBlockPage() {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [block, setBlock] = useState<SharedBlock | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [blocks, setBlocks] = useState<SharedBlock[]>([]);
+  // Mirrored, so a read that finishes after another can add to what that one
+  // opened rather than to what was open when it started.
+  const open = useRef<SharedBlock[]>([]);
+  const [problems, setProblems] = useState<string[]>([]);
   // Whether the page is still here when a file read finishes (PLAN.md M332).
   // Set in the setup as well as cleared: `StrictMode` runs the cleanup on mount.
   const onScreen = useRef(true);
@@ -55,34 +63,63 @@ export function SharedBlockPage() {
   /** A block file the app was opened with, the same path as the picker. */
   useEffect(() => {
     const opened = takeLaunchFile();
-    if (opened) void read(opened);
+    if (opened) void read([opened]);
     // Once, on mount: `takeLaunchFile` clears as it returns.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function read(file: File): Promise<void> {
-    try {
-      const opened = parseBlockFile(await file.text());
-      // A launched file is read on mount, after which the page may be gone
-      // (PLAN.md M332).
-      if (!onScreen.current) return;
-      setBlock(opened);
-      setProblem(null);
-    } catch (e) {
-      if (!onScreen.current) return;
-      setBlock(null);
-      setProblem(e instanceof BlockFileError ? e.message : 'That file could not be read.');
-    } finally {
-      if (fileRef.current) fileRef.current.value = '';
+  /**
+   * Every file picked, added to what is open (PLAN.md M362).
+   *
+   * A file that cannot be read is named and the rest still open; one that
+   * is already open, or one past the limit, is said rather than dropped in
+   * silence. With a single file the sentence is the parser's own, as it was.
+   */
+  async function read(files: readonly File[]): Promise<void> {
+    const said: string[] = [];
+    const parsed: SharedBlock[] = [];
+    for (const file of files) {
+      try {
+        parsed.push(parseBlockFile(await file.text()));
+      } catch (e) {
+        const why = e instanceof BlockFileError ? e.message : 'That file could not be read.';
+        said.push(files.length > 1 ? `${file.name}: ${why}` : why);
+      }
     }
+    if (fileRef.current) fileRef.current.value = '';
+    // A launched file is read on mount, after which the page may be gone
+    // (PLAN.md M332).
+    if (!onScreen.current) return;
+    const next = [...open.current];
+    for (const block of parsed) {
+      if (next.some((b) => sameBlock(b, block))) {
+        said.push(`${block.program} to ${shortLabel(block.through)} is already open.`);
+      } else if (next.length >= MAX_OPEN_BLOCKS) {
+        said.push(`${block.program} to ${shortLabel(block.through)} was not opened: ${MAX_OPEN_BLOCKS} blocks at once is the most this shows.`);
+      } else {
+        next.push(block);
+      }
+    }
+    open.current = next;
+    setBlocks(next);
+    setProblems(said);
   }
+
+  function startAgain(): void {
+    open.current = [];
+    setBlocks([]);
+    setProblems([]);
+  }
+
+  const series = blockSeries(blocks);
+  const newest = series.blocks.at(-1);
 
   return (
     <>
       <BackLink />
       <PageHeader
         title="A block somebody sent you"
-        subtitle="Open the file an athlete saved from their own Block review."
+        subtitle="Open the files an athlete saved from their own Block review."
       />
 
       <PageGrid>
@@ -92,24 +129,44 @@ export function SharedBlockPage() {
             partners, no notes, no photos. Nothing on this screen is saved: it is here while the
             tab is, and none of it touches your own grades, your log or your numbers.
           </p>
-          <Button variant="outline" onClick={() => fileRef.current?.click()}>
-            <Upload size={15} /> Open a block file
-          </Button>
+          <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+            Open several from one athlete to see their blocks side by side. The files do not say
+            whose they are, so keep each athlete's together.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => fileRef.current?.click()}>
+              <Upload size={15} /> {blocks.length === 0 ? 'Open block files' : 'Add another block'}
+            </Button>
+            {blocks.length > 0 && (
+              <Button variant="ghost" onClick={startAgain}>
+                <X size={15} /> Start again
+              </Button>
+            )}
+          </div>
           <Input
             ref={fileRef}
             type="file"
             accept="application/json,.json"
+            multiple
             hidden
             onChange={(e) => {
-              const picked = e.target.files?.[0];
-              if (picked) void read(picked);
+              const picked = [...(e.target.files ?? [])];
+              if (picked.length > 0) void read(picked);
             }}
           />
-          {problem && <p className="text-sm text-danger mt-3">{problem}</p>}
+          {problems.map((problem) => (
+            <p key={problem} className="text-sm text-danger mt-3">
+              {problem}
+            </p>
+          ))}
         </Card>
 
-        {block && <BlockView block={block} />}
-        {block && <WriteBack block={block} />}
+        {series.blocks.length > 1 && <SeriesCard series={series} />}
+        {/* Newest first: the block a coach is answering is the last one. */}
+        {[...series.blocks].reverse().map((block) => (
+          <BlockView key={`${block.program}|${block.from}|${block.through}`} block={block} />
+        ))}
+        {newest && <WriteBack block={newest} />}
       </PageGrid>
     </>
   );
@@ -179,6 +236,85 @@ function WriteBack({ block }: { block: SharedBlock }) {
       <p className="text-2xs text-ink-soft mt-3 leading-relaxed">
         The program is yours and is saved with your own. Their block is not: it goes when this tab
         does, exactly as it says above.
+      </p>
+    </Card>
+  );
+}
+
+/**
+ * The blocks against each other (PLAN.md M362).
+ *
+ * What each ended on, oldest first, and nothing worked out between them —
+ * `engine/blockSeries.ts` says why. A table, because the question is read
+ * down a column and along a row at once, and a reader is told what each
+ * column is rather than left with a date.
+ *
+ * **A test's name is a row of its own, above its readings.** Beside them,
+ * at the largest text on a 360px phone, the names wrapped to four lines and
+ * pushed the third block's column off the card — the newest block, which is
+ * the one being answered. Each test is its own row group, so a screen reader
+ * still says which test a number belongs to.
+ */
+function SeriesCard({ series }: { series: BlockSeries }) {
+  return (
+    <Card title={`Across ${series.blocks.length} blocks`}>
+      <ol className="grid grid-cols-1 gap-1 text-sm text-ink-soft">
+        {series.blocks.map((block) => (
+          <li key={`${block.program}|${block.from}|${block.through}`}>
+            <span className="font-bold text-ink">{shortLabel(block.through)}</span>{' '}
+            {[block.program, `${block.weeksRun} ${block.weeksRun === 1 ? 'week' : 'weeks'}`, outcomeWord(block.outcome)].join(' · ')}
+          </li>
+        ))}
+      </ol>
+      {series.rows.length === 0 ? (
+        <p className="text-sm text-ink-soft mt-3">
+          No test was measured in two of these blocks, so there is nothing to put side by side.
+        </p>
+      ) : (
+        <div className="overflow-x-auto mt-3">
+          <table className="w-full text-sm">
+            <caption className="sr-only">What each block ended on, oldest first</caption>
+            <thead>
+              <tr className="text-2xs uppercase tracking-widest text-ink-soft">
+                {series.blocks.map((block) => (
+                  <th
+                    key={`${block.program}|${block.from}|${block.through}`}
+                    scope="col"
+                    className="text-right font-bold pb-1 pl-3 first:pl-0 whitespace-nowrap"
+                  >
+                    {shortLabel(block.through)}
+                    <span className="sr-only">, {block.program}</span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            {series.rows.map((row) => (
+              <tbody key={row.metricId} className="border-t border-line">
+                <tr>
+                  <th scope="rowgroup" colSpan={series.blocks.length} className="text-left font-bold pt-1.5">
+                    {row.label}
+                  </th>
+                </tr>
+                <tr>
+                  {row.readings.map((reading, i) => (
+                    <td key={i} className="text-right tabular-nums pb-1.5 pl-3 first:pl-0 whitespace-nowrap">
+                      {reading ?? (
+                        <span className="text-ink-soft">
+                          <span aria-hidden>—</span>
+                          <span className="sr-only">not measured</span>
+                        </span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            ))}
+          </table>
+        </div>
+      )}
+      <p className="text-2xs text-ink-soft mt-3 leading-relaxed">
+        What each block ended on. Nothing is worked out between them: two programs test in their own
+        conditions, and a grade moves in steps, not percent.
       </p>
     </Card>
   );

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { getDb, resetDbForTests } from '@/db/db';
 import { buildBlockFile, type BlockFile } from '@/engine/blockFile';
 import type { BlockReport } from '@/engine/blockReport';
@@ -218,3 +218,131 @@ describe('opening one by hand', () => {
     expect(await screen.findByText('Iron Grip')).toBeTruthy();
   });
 });
+
+describe('across blocks (PLAN.md M362)', () => {
+  /** The same athlete's block, run to another day, with the hang ending on `hang`. */
+  function another(through: string, hang: number, program = 'Iron Grip'): BlockFile {
+    const body = file();
+    body.block.program = program;
+    body.block.from = `${through.slice(0, 7)}-01`;
+    body.block.through = through;
+    body.block.results[0]!.latest = hang;
+    return body;
+  }
+
+  const named = (body: unknown, name: string) =>
+    new File([typeof body === 'string' ? body : JSON.stringify(body)], name, { type: 'application/json' });
+
+  /** Files from the picker, several at once, as a coach selects them. */
+  function pick(...files: File[]): void {
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    Object.defineProperty(input, 'files', { value: files, configurable: true });
+    fireEvent.change(input);
+  }
+
+  async function empty(): Promise<void> {
+    globalThis.indexedDB = new IDBFactory();
+    resetDbForTests();
+    await reset();
+    renderAt('/shared', <SharedBlockPage />);
+  }
+
+  const table = () => screen.getByRole('table');
+  /** A test's readings: its name heads a row group of its own (PLAN.md M362). */
+  const group = (label: string) =>
+    within(table())
+      .getAllByRole('rowgroup')
+      .find((g) => within(g).queryByRole('rowheader')?.textContent === label);
+  const cells = (label: string) => within(group(label)!).getAllByRole('cell').map((c) => c.textContent);
+
+  it('puts two blocks opened together side by side, oldest first', async () => {
+    await empty();
+    // Picked newest first, which is not the order they ran in.
+    pick(named(another('2026-11-28', 18), 'autumn.json'), named(file(), 'summer.json'));
+    expect(await screen.findByText('Across 2 blocks')).toBeTruthy();
+    // file() ran to 29 August and ended the hang on 15.
+    expect(cells('Max Hang 20mm 7s')).toEqual(['15', '18']);
+    const heads = within(table()).getAllByRole('columnheader').map((h) => h.textContent);
+    expect(heads[0]).toMatch(/^Aug 29/);
+    expect(heads[1]).toMatch(/^Nov 28/);
+  });
+
+  it('adds a block opened later to the ones already open', async () => {
+    await empty();
+    pick(named(file(), 'summer.json'));
+    await screen.findByText('Iron Grip');
+    expect(screen.queryByText(/^Across/)).toBeNull();
+    pick(named(another('2026-11-28', 18), 'autumn.json'));
+    expect(await screen.findByText('Across 2 blocks')).toBeTruthy();
+  });
+
+  it('says a block is already open, and does not open it twice', async () => {
+    await empty();
+    pick(named(file(), 'summer.json'));
+    await screen.findByText('Iron Grip');
+    pick(named(file(), 'summer copy.json'));
+    expect(await screen.findByText(/already open/)).toBeTruthy();
+    expect(screen.queryByText(/^Across/)).toBeNull();
+  });
+
+  it('names the file it could not read, and opens the rest', async () => {
+    await empty();
+    pick(named('not json', 'broken.json'), named(file(), 'summer.json'));
+    expect(await screen.findByText('broken.json: That file is not readable JSON.')).toBeTruthy();
+    expect(screen.getByText('Iron Grip')).toBeTruthy();
+  });
+
+  it('keeps what is open when a later file cannot be read', async () => {
+    await empty();
+    pick(named(file(), 'summer.json'));
+    await screen.findByText('Iron Grip');
+    pick(named('not json', 'broken.json'));
+    expect(await screen.findByText('That file is not readable JSON.')).toBeTruthy();
+    expect(screen.getByText('Iron Grip')).toBeTruthy();
+  });
+
+  it('writes back from the newest block, which is the one being answered', async () => {
+    await empty();
+    pick(named(another('2026-11-28', 18, 'A block of their own'), 'autumn.json'), named(file(), 'summer.json'));
+    await screen.findByText('Across 2 blocks');
+    const said = document.body.textContent ?? '';
+    expect(said).toContain('A block of their own is not a program this app ships');
+    expect(said).not.toContain('They ran Iron Grip');
+  });
+
+  it('starts again with nothing open', async () => {
+    await empty();
+    pick(named(file(), 'summer.json'), named(another('2026-11-28', 18), 'autumn.json'));
+    await screen.findByText('Across 2 blocks');
+    fireEvent.click(screen.getByRole('button', { name: /Start again/ }));
+    expect(screen.queryByText('Iron Grip')).toBeNull();
+    expect(screen.getByRole('button', { name: /Open block files/ })).toBeTruthy();
+    // And forgotten, not just hidden: the next athlete's block opens alone.
+    pick(named(another('2027-02-27', 21, 'Somebody else'), 'theirs.json'));
+    expect(await screen.findByText('Somebody else')).toBeTruthy();
+    expect(screen.queryByText(/^Across/)).toBeNull();
+    expect(screen.queryByText('Iron Grip')).toBeNull();
+  });
+
+  it('keeps none of them, however many are open', async () => {
+    await empty();
+    pick(named(file(), 'summer.json'), named(another('2026-11-28', 18), 'autumn.json'));
+    await screen.findByText('Across 2 blocks');
+    const db = await getDb();
+    expect(await db.count('sessions')).toBe(0);
+    expect(await db.count('metrics')).toBe(0);
+    expect(await db.count('programs')).toBe(0);
+    expect(document.body.textContent).toContain('Nothing on this screen is saved');
+  });
+
+  it('opens twelve at most, and says which it left', async () => {
+    await empty();
+    const thirteen = Array.from({ length: 13 }, (_, i) =>
+      named(another(`2027-${String(i + 1).padStart(2, '0')}-28`, 12 + i), `block-${i}.json`),
+    );
+    pick(...thirteen);
+    expect(await screen.findByText('Across 12 blocks')).toBeTruthy();
+    expect(screen.getByText(/was not opened: 12 blocks at once/)).toBeTruthy();
+  });
+});
+
