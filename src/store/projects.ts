@@ -11,6 +11,7 @@ import {
 import { applyPatch, reconcileProjects } from '@/engine/projects';
 import { noteDemo, tagged } from './demoPresence';
 import { hydrationInProgress } from './hydrating';
+import { kept } from './sameData';
 import { useSessions } from './sessions';
 
 const DISMISSED_KEY = 'project-suggestions';
@@ -52,7 +53,13 @@ export const useProjects = create<ProjectsState>((set, get) => ({
         listProjects(),
         getDb().then((db) => db.get('profile', DISMISSED_KEY)),
       ]);
-      set({ projects, dismissed: (record?.value as string[] | undefined) ?? [], hydrated: true });
+      const dismissed = (record?.value as string[] | undefined) ?? [];
+      // The same answer keeps the same arrays (PLAN.md M360).
+      set((state) => ({
+        projects: kept(state.projects, projects),
+        dismissed: kept(state.dismissed, dismissed),
+        hydrated: true,
+      }));
       await get().reconcile();
     } catch (error) {
       // Hydrated, because the app has to render — but the reason is kept

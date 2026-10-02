@@ -27,6 +27,7 @@ import type { BountySpec, Challenge, AcceptedBounty } from '@/engine/challenges'
 import { today } from '@/engine/dates';
 import { deriveXp, type XpState } from '@/engine/xp';
 import { useProjects } from './projects';
+import { kept } from './sameData';
 import { useAllSessions } from './sessions';
 import { useSettings } from './settings';
 
@@ -110,7 +111,16 @@ export const useGame = create<GameState>((set, get) => ({
       const days = recoverDays(ascent.days, ledger);
       const recovered = days.length === ascent.days.length ? ascent : { ...ascent, days };
       if (recovered !== ascent) await putAscent(recovered);
-      set({ ledger, wallet, bounties, ascent: recovered, hydrated: true });
+      // The same answer keeps the same objects (PLAN.md M360): `hydrateAll`
+      // and the board both load this at launch, and a second equal ledger
+      // derived the board again.
+      set((state) => ({
+        ledger: kept(state.ledger, ledger),
+        wallet: kept(state.wallet, wallet),
+        bounties: kept(state.bounties, bounties),
+        ascent: kept(state.ascent, recovered),
+        hydrated: true,
+      }));
     } catch (error) {
       // Hydrated, because the app has to render — but the reason is kept
       // rather than swallowed, so the shell can say why the log is empty

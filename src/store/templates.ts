@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { reportDbError } from '@/db/db';
 import { getDb } from '@/db/db';
 import type { Session } from '@/db/sessions';
+import { kept } from './sameData';
 import {
   MAX_TEMPLATES,
   cleanName,
@@ -45,7 +46,9 @@ export const useTemplates = create<TemplatesState>((set, get) => ({
       const db = await getDb();
       const record = await db.get('profile', KEY);
       const value = record?.value;
-      set({ templates: Array.isArray(value) ? (value as Template[]) : [], hydrated: true });
+      const templates = Array.isArray(value) ? (value as Template[]) : [];
+      // The same answer keeps the same array (PLAN.md M360).
+      set((state) => ({ templates: kept(state.templates, templates), hydrated: true }));
     } catch (error) {
       // Hydrated, because the app has to render — but the reason is kept
       // rather than swallowed, so the shell can say why the log is empty

@@ -3,6 +3,7 @@ import { reportDbError } from '@/db/db';
 import { registerCustomPrograms } from '@/content/programs';
 import type { Program, ProgramId } from '@/content/types';
 import { deleteCustomProgram, listCustomPrograms, putCustomProgram } from '@/db/customPrograms';
+import { kept } from './sameData';
 
 /**
  * Programs the climber wrote.
@@ -32,7 +33,10 @@ export const useCustomPrograms = create<ProgramsState>((set, get) => ({
 
   load: async () => {
     try {
-      set({ custom: sync(await listCustomPrograms()), hydrated: true });
+      const custom = await listCustomPrograms();
+      // The same answer keeps the same array, and the registry keeps it too
+      // (PLAN.md M360).
+      set((state) => ({ custom: sync(kept(state.custom, custom)), hydrated: true }));
     } catch (error) {
       // Hydrated, because the app has to render — but the reason is kept
       // rather than swallowed, so the shell can say why the log is empty

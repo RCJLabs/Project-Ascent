@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { getDb } from '@/db/db';
 import { reportDbError } from '@/db/db';
 import type { Objective } from '@/engine/objectives';
+import { kept } from './sameData';
 
 /**
  * Season-scale goals, under one key in the `profile` store — the same shape
@@ -31,7 +32,9 @@ export const useObjectives = create<ObjectivesState>((set, get) => ({
       const db = await getDb();
       const record = await db.get('profile', KEY);
       const value = record?.value;
-      set({ objectives: Array.isArray(value) ? (value as Objective[]) : [], hydrated: true });
+      const objectives = Array.isArray(value) ? (value as Objective[]) : [];
+      // The same answer keeps the same array (PLAN.md M360).
+      set((state) => ({ objectives: kept(state.objectives, objectives), hydrated: true }));
     } catch (error) {
       // Hydrated, because the app has to render — but the reason is kept
       // rather than swallowed, so the shell can say why the log is empty

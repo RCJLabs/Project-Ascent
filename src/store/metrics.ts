@@ -8,6 +8,7 @@ import {
   putMetricEntry,
   type MetricEntry,
 } from '@/db/metrics';
+import { kept } from './sameData';
 
 /**
  * Assessment results. Flat and small — a few hundred rows over years — so
@@ -28,7 +29,9 @@ export const useMetrics = create<MetricsState>((set, get) => ({
 
   load: async () => {
     try {
-      set({ entries: await listMetricEntries(), hydrated: true });
+      const entries = await listMetricEntries();
+      // The same answer keeps the same array (PLAN.md M360).
+      set((state) => ({ entries: kept(state.entries, entries), hydrated: true }));
     } catch (error) {
       // Hydrated, because the app has to render — but the reason is kept
       // rather than swallowed, so the shell can say why the log is empty
