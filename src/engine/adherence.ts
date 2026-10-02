@@ -36,6 +36,7 @@ import type { Session } from '@/db/sessions';
 import { type AwayPeriod, awayOn } from './away';
 import { addDays, daysBetween } from './dates';
 import { blockWindow, plannedDay } from './plan';
+import { blockThrough } from './blockThrough';
 import type { WeekOverrides } from './reschedule';
 import type { WeekPlan } from './scheduler';
 import { isRestSession } from './rest';
@@ -88,6 +89,8 @@ export interface AdherenceInput {
   /** Stretches the climber marked away, so their days leave the denominator. */
   away?: readonly AwayPeriod[];
   today: string;
+  /** The day the climber left the block, if they did (PLAN.md M365). */
+  until?: string | null | undefined;
 }
 
 /** Every date from `from` to `to`, inclusive. */
@@ -99,7 +102,7 @@ function daysIn(from: string, to: string): string[] {
 
 export function blockAdherence(input: AdherenceInput): BlockAdherence | null {
   const { from, to } = blockWindow(input.program, input.startDate);
-  const through = input.today < to ? input.today : to;
+  const through = blockThrough(to, input.today, input.until);
   if (through < from) return null;
 
   const known = new Map(input.program.sessionTypes.map((t) => [t.id, t]));

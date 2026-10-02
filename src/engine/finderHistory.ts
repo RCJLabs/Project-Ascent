@@ -49,6 +49,10 @@ export function lastBlockFor(
           plan: row.plan,
           sessions: [...sessions],
           today,
+          // Only the weeks the climber was on it (PLAN.md M365): a block left
+          // in week six read as a third done, and the finder takes that as a
+          // block not worth following.
+          until: row.endedAt,
         })
       : null;
 

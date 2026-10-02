@@ -12,6 +12,7 @@ import type { LoggedPoint } from '@/engine/exerciseLog';
 import { describeChange, describeLoad, exerciseMovement, exerciseSeries } from '@/engine/exerciseReadings';
 import { formatEntry } from '@/engine/assessments';
 import { formatDate, fromKey, today } from '@/engine/dates';
+import { blockThrough } from '@/engine/blockThrough';
 import { ProgressionLine } from '@/ui/charts/Charts';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
@@ -262,6 +263,18 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
     [history, asked],
   );
 
+  /**
+   * The day the climber left this block, if they did (PLAN.md M365).
+   *
+   * Every measure below stops there. The window is the calendar's, and
+   * without this a block left in week six was counted to week twelve —
+   * missed weeks it was never running for, the next program's sessions
+   * wherever their ids matched, and that program's baselines as this
+   * block's retests. Null for a block still open; for one that ran its
+   * course `endedAt` is on or after its last day, and changes nothing.
+   */
+  const cutoff = chosen?.endedAt ?? null;
+
   const end = useMemo(() => {
     if (chosen === null) {
       // No history at all: fall back to the live program, which is what a
@@ -301,9 +314,10 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
       // once and stops trusting.
       away,
       today: today(),
+      until: cutoff,
     });
     return measured === null ? null : { measured, ownLayout: chosen?.plan !== undefined };
-  }, [end, chosen, activeProgramId, startDates, plans, weekOverrides, byDate, away]);
+  }, [end, chosen, activeProgramId, startDates, plans, weekOverrides, byDate, away, cutoff]);
 
   /**
    * Where the block diverged from the program that wrote it (PLAN.md M148).
@@ -326,8 +340,9 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
       sessions: allSessions(byDate),
       trackId: chosen?.trackId ?? tracks[programId],
       today: today(),
+      until: cutoff,
     });
-  }, [end, chosen, activeProgramId, startDates, tracks, byDate]);
+  }, [end, chosen, activeProgramId, startDates, tracks, byDate, cutoff]);
 
   // The same window the report covers, read off the block rather than the
   // report: a block still running has a window and no finished report.
@@ -353,14 +368,14 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
 
   const movement = useMemo(() => {
     if (end === null) return [];
-    const through = today() < end.status.to ? today() : end.status.to;
+    const through = blockThrough(end.status.to, today(), cutoff);
     return exerciseMovement(allSessions(byDate), end.status.from, through);
-  }, [end, byDate]);
+  }, [end, byDate, cutoff]);
 
   /** Every reading for one line inside the block's own window. */
   const seriesFor = (name: string) => {
     if (end === null) return [];
-    const through = today() < end.status.to ? today() : end.status.to;
+    const through = blockThrough(end.status.to, today(), cutoff);
     return exerciseSeries(allSessions(byDate), name).filter(
       (p) => p.date >= end.status.from && p.date <= through,
     );
@@ -471,7 +486,10 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
       <BackLink />
       <PageHeader
         title={end.program.name}
-        subtitle={status.state === 'ended' ? `Ran to ${when}` : `Runs to ${when}`}
+        // A block left early is over whatever the calendar says (PLAN.md
+        // M365): left in week six of twelve, it was headed "Runs to" the day
+        // it was left for the six weeks its window still had to run.
+        subtitle={status.state === 'ended' || end.outcome === 'left' ? `Ran to ${when}` : `Runs to ${when}`}
       />
 
       <PageGrid>

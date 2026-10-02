@@ -89,7 +89,8 @@ export function programForRecord(record: BlockRecord): Program | null {
 
 export function blockEnd(input: BlockEndInput): BlockEnd {
   const status = blockStatus(input.program, input.startDate, input.today);
-  const report = blockReport(input);
+  // Measured to the day the climber left, if they did (PLAN.md M365).
+  const report = blockReport({ ...input, until: input.record?.endedAt ?? null });
   return {
     status,
     program: input.program,
@@ -119,6 +120,16 @@ export function blockEnd(input: BlockEndInput): BlockEnd {
  */
 export function describeBlockEnd(end: BlockEnd): string {
   const { status, program } = end;
+  // A block the climber walked away from did not "run out" on them, and one
+  // reconstructed from the old shape is a block the app knows the start of
+  // and nothing else (PLAN.md M87). Before the calendar's state, because a
+  // block left in week six of twelve is still `running` by the calendar for
+  // six more weeks, and was described as running to a day it never reached
+  // (PLAN.md M365).
+  if (end.outcome === 'left' && end.record) {
+    const weeks = weeksRun(end.record, end.record.endedAt ?? status.to);
+    return `You left ${program.name} after ${weeks} of its ${end.record.weeks} weeks. That is a fact about the calendar and not a verdict — below is which of its sessions happened, and which of the numbers moved while you were on it.`;
+  }
   if (status.state === 'before') {
     return `${program.name} has not started yet.`;
   }
@@ -134,13 +145,6 @@ export function describeBlockEnd(end: BlockEnd): string {
           ? `${status.daysSince} days ago`
           : `${Math.round(status.daysSince / 7)} weeks ago`;
 
-  // A block the climber walked away from did not "run out" on them, and one
-  // reconstructed from the old shape is a block the app knows the start of
-  // and nothing else (PLAN.md M87).
-  if (end.outcome === 'left' && end.record) {
-    const weeks = weeksRun(end.record, end.record.endedAt ?? status.to);
-    return `You left ${program.name} after ${weeks} of its ${end.record.weeks} weeks. That is a fact about the calendar and not a verdict — below is which of its sessions happened, and which of the numbers moved while you were on it.`;
-  }
   if (end.outcome === 'unknown') {
     return `${program.name} started ${status.from}, and the app has no record of how it ended — it was already running before this version kept a history. The numbers below are whatever was measured inside its weeks.`;
   }

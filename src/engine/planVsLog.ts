@@ -55,6 +55,7 @@ import { sessionLoad } from './derive';
 import { effortOfRpe } from './effort';
 import { exerciseKey, hasNumbers, DIMENSIONS } from './exerciseLog';
 import { blockWindow } from './plan';
+import { blockThrough } from './blockThrough';
 import { joinList } from './phrase';
 import { isRestSession } from './rest';
 import { intensityOf } from './scheduler';
@@ -110,6 +111,8 @@ export interface PlanVsLogInput {
   /** The climber's track, so a menu is the menu they were shown. */
   trackId?: string | undefined;
   today: string;
+  /** The day the climber left the block, if they did (PLAN.md M365). */
+  until?: string | null | undefined;
 }
 
 /** Sessions of one type before a reading of it is a pattern. */
@@ -636,7 +639,7 @@ export function planVsLog(input: PlanVsLogInput): Finding[] {
   // every session filtered out by the same window, and every join comes
   // back empty on its own. An explicit check here survived every mutation,
   // which is how it was found to be saying nothing.
-  const through = input.today < to ? input.today : to;
+  const through = blockThrough(to, input.today, input.until);
   const days = loggedDays(input, from, through);
 
   return [

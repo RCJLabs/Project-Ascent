@@ -39,6 +39,7 @@ import type { Metric, MetricId, Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import { addDays } from './dates';
 import { blockWindow } from './plan';
+import { blockThrough } from './blockThrough';
 import { seriesFor } from './assessments';
 import { testWeeks, type TestReason } from './testWeeks';
 import { signed } from './assessmentStatus';
@@ -101,6 +102,8 @@ export interface BlockInput {
   startDate: string;
   entries: readonly MetricEntry[];
   today: string;
+  /** The day the climber left it, if they did; nothing after counts (PLAN.md M365). */
+  until?: string | null | undefined;
 }
 
 /**
@@ -116,7 +119,7 @@ export function blockReport(input: BlockInput): BlockReport | null {
   if (tests.length === 0) return null;
 
   const { from, to } = blockWindow(input.program, input.startDate);
-  const through = input.today < to ? input.today : to;
+  const through = blockThrough(to, input.today, input.until);
   if (through < from) return null;
 
   const windows: TestWindow[] = tests.map((test) => {
