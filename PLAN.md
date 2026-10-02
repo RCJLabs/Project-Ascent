@@ -15316,6 +15316,15 @@ its label is missing. None of these wants touching.
   or a block already open, and holds at most twelve. With two or more open, a table shows what each
   block ended on, test by test, oldest first. No change between blocks is worked out. *"Nothing on
   this screen is saved"* is still true, and the page now says the files do not say whose they are.
+- **M363 — one palette in the first load, and the device's choices on frame one.** The budget had
+  0.40KB left on the first load and 0.15KB on Home. Asked how to spend effort on it, the user chose
+  two cuts and no raise: this one, and loading one program at a time (M364a onward). Alpine and High
+  Contrast stay in `ui/themes.ts`. The other eight palettes move to `ui/palettes.ts`, which loads
+  only for a climber who picked one. First load 114.70 → 113.31KB, Home 213.35 → 211.94KB, and both
+  lines come down, to 114.4 and 213.0. Measuring it found an older fault: a climber on a dark or
+  non-default theme, or the largest text, saw three or four frames of Home in light Alpine at
+  normal size on every launch, because the store learned the device's choices only after the
+  database opened. The store now starts from `localStorage`, and the first frame is theirs.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -27394,3 +27403,122 @@ unchanged, and the helper went to `blockSeries.ts`. Its header says it is not `b
   - The page's chunk is 3,584 bytes gzipped.
   - The first load is 114.70KB and Home's cold load 213.35KB, each +0.02 from the shared CSS for
     the new classes. Home has 0.15KB left under its line.
+
+## M363 — one palette in the first load, and the device's choices on frame one
+
+### Where the budget stood, and what was decided
+
+M362 left the first load at 114.70KB against a 115.1 line and Home's cold load at 213.35 against
+213.5. The lines are ratchets about a kilobyte above the measurement. M345's kilobyte had gone in
+seventeen milestones, about 0.04KB each, none of it large. M343a had already measured the big
+levers, and M344–M345 used the largest. The guard reports no lazy-only code left in the entry.
+
+Four options were put to the user:
+
+- **Raise both lines,** as M273, M285 and M291 did. One commit, and nothing bought back.
+- **Lazy palettes:** up to −1.6KB on both, measured with a trial build that deleted eight
+  palettes.
+- **One program at a time:** about −30 to −36KB on Home, nothing on the first load. This is an
+  estimate. The catalogue chunk is 41.7KB and each program is 1.3–6.4KB gzipped alone.
+- **Preload map off:** −3.7KB, already turned down in M343a.
+
+The user chose **lazy palettes and one program at a time**, and no raise. This is the first.
+
+### The split
+
+- **`ui/themes.ts` keeps two palettes.** Alpine is what `index.css` paints before any script
+  runs. High Contrast is what the system can ask for on any launch, through
+  `prefers-contrast: more`, or what a climber can pick. It also keeps the types, the variable
+  names, the heat ramp and `applyPalette`.
+- **`ui/palettes.ts` has the other eight,** the list of all ten in their old order, and
+  `getTheme`. The palette sheet and Settings import it, and both are lazy already. The settings
+  store reaches it only through `import()`.
+
+### The fault found on the way
+
+Measuring how a lazy palette would arrive meant checking when the current one did. A climber on
+Midnight in dark mode, warm launch, frames counted in the page:
+
+```
+                     app drawn    theme on    frames drawn without it
+main, full speed     57–78ms      102–178ms   3–5
+main, quarter        276–301ms    529–566ms   4
+```
+
+The store started on the defaults, so `system`, Alpine and normal text. It learned the device's
+choices only in `hydrateSettings`, after the database had opened. Those choices are in
+`localStorage`, which is synchronous. The text size had the same fault. On the largest text and
+explicit dark mode, main drew 3–4 frames at normal size and 3–4 in light on every launch.
+
+### The change
+
+- **The store starts from the device's settings.** `deviceFrom` makes a stored record sound. It is
+  shared with `hydrateSettings` so the two cannot read one record two ways.
+- **`main.tsx` paints the mode and the text size before the first render,** with
+  `paintDeviceSettings()`.
+- **A snapshot of the last non-default palette applied** is kept in `localStorage`. A palette
+  outside the first load is painted from it at once, and then from itself when the chunk arrives.
+  The real palette wins if the two differ, and it refreshes the snapshot. A snapshot of another
+  palette is ignored.
+- **A late palette cannot undo a later choice.** Each `applyTheme` takes a ticket, and a palette
+  that arrives for an older one is dropped.
+
+### After
+
+Sizes:
+
+```
+first load    114.70 → 113.31KB   (a trial that deleted the palettes outright: −1.61)
+Home, cold    213.35 → 211.94KB   38 files, the same 38: the palette chunk is not fetched
+```
+
+The 0.22KB between the trial and the real cut is the loader and the snapshot. The lines come down
+by the ratchet's own rule:
+
+- **first load 115.1 → 114.4,** 1.09 of slack, recorded in `perf.test.ts`;
+- **Home 213.5 → 213.0,** 1.06 of slack, recorded in `homeLoad.mjs`.
+
+Frames, counted the same way:
+
+```
+                                     main     this change
+Midnight, dark, frames without it    3–5      0, and 3 on the very first launch (no snapshot yet)
+largest text, frames at normal size  3–4      0
+dark chosen, frames drawn light      3–4      0
+```
+
+Picking Midnight in Settings applies it, writes the snapshot, and renames the button. After a
+reload the first animation frame already has Midnight's background. No page errors.
+
+### Not done
+
+- **The frame before any script runs.** The page's own first paint, the blank background before
+  the entry executes, is still `index.css`: Alpine, light or dark by the system. A climber who
+  chose dark on a light system still gets that one blank frame. An inline script in `index.html`
+  could close it. It was not measured on its own and not done.
+- **Offline with the chunk not cached.** The worker precaches every chunk, so this should not
+  happen. If it did, the snapshot stays up, or Alpine if there is none.
+
+### Checked
+
+- **`deviceAtBoot.test.ts`, 11 tests:**
+  - the store starts from the device's choices, and on the defaults with none or with nonsense;
+  - the mode and the text size are painted at once;
+  - `main.tsx` paints before it renders;
+  - a snapshot is painted at once and replaced by the palette, which rewrites it;
+  - a snapshot is kept for the next launch, and another palette's snapshot is ignored;
+  - a late palette does not undo a later choice;
+  - High Contrast and Alpine are immediate;
+  - `themes.ts` defines exactly two palettes, and the store reaches the rest only by `import()`.
+- **`contrastMode.test.ts`:** *"does not overrule a theme the climber picked"* now waits for
+  Gritstone to arrive. What it asserts is unchanged.
+- **Mutation battery: 11 mutants, all killed; sanity survived:**
+  - the store starting on the default mode, on the default palette, or at the normal size;
+  - the text size not painted before render;
+  - `main.tsx` painting nothing first;
+  - the snapshot ignored, another palette's snapshot used, or the snapshot never written;
+  - a late palette undoing a later choice;
+  - High Contrast loaded lazily;
+  - any text size kept.
+- **Full suite:** 7,663 passing, M362's 7,652 plus 11, and the one pinned-clock skip.
+- **Layout harness:** clean, which seeds the largest text through the same device key.
