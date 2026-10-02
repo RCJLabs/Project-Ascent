@@ -15402,6 +15402,20 @@ its label is missing. None of these wants touching.
     sweep found the same fault in the coach's headline on Home: *"3 of 8 Climbing Session
     sessions"*. The name now labels the count, as *"Climbing Session (9 of 11)"* and *"Climbing
     Session: 3 of 8 done"*.
+- **M369 — resume picks up where you left off, and a resumed block is one run.** M365a's second
+  finding, with the user's three answers:
+  - resume picks up the week the climber was on;
+  - a stop and a resume make a pause that counts for nothing;
+  - a gap with no stop, picked up through M149's card, stays a miss.
+
+  Resuming had kept the start date, so a block stopped in week six was in week ten a month later.
+  It now moves the start by the gap. Moving the start was already how M149 picked a block up, and
+  measured, it took the block's first weeks out of its own window. A resumed block lost its
+  week-one baseline, and six perfect weeks read as *"16 of 24"*. The row now records each pick-up,
+  and the review measures it as one run:
+  - its first segment is read from the original start, the rest from each moved one;
+  - the pause belongs to no segment;
+  - the review names it: *"It was paused for 4 weeks from …"*.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -28420,3 +28434,126 @@ that was seen.
 - **Full suite:** 7,730 passing, M367's 7,724 plus 6, and the one pinned-clock skip.
 - **Layout harness:** clean.
 - **Sizes:** first load 113.58KB. Home is unchanged at 212.30KB.
+
+## M369 — resume picks up where you left off, and a resumed block is one run
+
+### The finding, and what it led to
+
+M365a's second finding: the Stop card says *"starting Iron Grip again later resumes the week you
+were on"*, and the start page says *"Resume keeps your place"*. `startProgram` kept the original
+start date. Every week in the app is derived from it, so a block stopped at the end of week six and
+resumed four weeks later was in week ten. The user's answer was that resume picks up where the
+climber left off.
+
+M149 already does that for a block left idle without a stop: *pick it up* moves the start date by
+the gap. Measured before reusing it, the move broke the block's own review. Six weeks done as
+placed, two away, and a two-week shift:
+
+- **The week-one baseline drops out.** The dead hang reads *never tested*: the moved window starts
+  after the baseline was taken.
+- **The first two weeks drop out.** On the day of resuming, adherence reads *16 of 24*. The first
+  two weeks fall before the moved window, and the two weeks away are counted inside it.
+
+So the user was asked how the time between should count, and answered:
+
+- **Stopped, then resumed:** the weeks between are a pause and count for nothing, like days marked
+  away. The review says so.
+- **Picked up without a stop** (M149): the gap stays a miss, as M149 counts it. Only the lost
+  baseline and the lost early weeks are fixed.
+
+### One row, read as segments
+
+M149 keeps a resumed block on one history row: *"a second row would tell the history otherwise"*.
+That holds. The row now records each pick-up, and the review reads it as segments:
+
+- **`BlockRecord.resumed`** is `{ on, weeks, stoppedOn? }[]`: the day the block was picked up, how
+  far its start moved, and, for a stop and a resume, the day it was stopped.
+- **`engine/blockRun.ts`** splits a row into segments, one per start it has had:
+  - **the segments:** each segment is read with the start its weeks were counted from;
+  - **the pause:** a stop and a resume end the first segment on the stop day, so the pause lies
+    in none;
+  - **M149's gap:** a pick-up without a stop ends the first segment the day before the pick-up,
+    so the gap stays inside it.
+  - `runAdherence` and `runDrift` sum the segments. `runSince` is the run's first day.
+    `pausedOn` and `runSessions` leave out what happened in a pause, which belongs to no block.
+- **`since`** on `blockAdherence`, `planVsLog` and `blockReport` tells each where to count from,
+  instead of its window's first day.
+- **The report** covers the run from its first week, so the baseline stays in. Test weeks are still
+  counted from the window's own weeks, which is the plan from here. The first draft counted them
+  from the run's first day, and the battery was written to catch that.
+- **Where it is read:** the block review reads adherence, drift and lifted lines for the run, and
+  dates a history row from its first week. The finder reads the run's adherence.
+- **The opening sentence names each pause:** *"It was paused for 4 weeks from Aug 1, 2026, and
+  those weeks are not counted."*
+
+### Picking up
+
+- **`pickUp(row, today)` in `engine/blocks.ts`** resumes a stopped row at the first week not yet
+  finished. That is the stop's own week, or the next one if the stop came on that week's last day.
+  It moves the start by the difference and records the pick-up. It returns null where there is
+  nothing to move:
+  - the row is still open;
+  - it ran its course;
+  - it is reconstructed, so its end is a guess;
+  - it is resumed in the week it stopped. The row then reopens as it always did.
+- **`startProgram`'s resume path** uses it, closing whatever else was running. Restart still
+  starts over.
+- **`moveBlockStart`**, which is M149's shift, now records the pick-up without a stop.
+
+### Checked
+
+- **`engine/blockRun.test.ts`, 16 tests:**
+  - `pickUp`: mid-week, on the last day of a week, and the four cases where nothing moves;
+  - **stopped and resumed:**
+    - two segments with the pause in neither;
+    - adherence counts every session placed and none of the climbing done in the pause, against
+      a single read from the moved start that loses some;
+    - the baseline kept, with a reading taken in the pause left out;
+    - a reading from the pause not taken for a retest when it is the only one;
+    - the final test week dated by the moved start;
+    - the pause named;
+    - the finder;
+  - **M149's pick-up:**
+    - recorded with no stop;
+    - the gap counted missed and the weeks before it kept;
+    - the baseline kept;
+    - no pause named;
+    - drift read per segment. Iron Grip's week-4 deload, taken light, reads as skipped when read
+      from the moved start, because program week four is then calendar week six, and does not
+      when read per segment. The first version of this test only checked that an array came
+      back, and was rewritten before the battery.
+  - a row never picked up, measured exactly as before.
+- **`store/pickUp.test.ts`, 5 tests:**
+  - Resume puts today at the week the climber was on, on the same row;
+  - it closes what else was running;
+  - it keeps the start in the same week;
+  - Restart starts over;
+  - pick it up records its shift.
+- **`features/finish/pickUp.test.tsx`, 2 tests:**
+  - the review of a stopped-and-resumed Iron Grip names a six-week pause, says *"every session
+    the plan placed — all 35 of them"*, leaves the climbing done in the pause out, and compares
+    the week-one baseline;
+  - the history dates the run from its first week.
+- **Mutation battery: 25 mutants, all killed; sanity survived.** The first pass left two alive,
+  and a test was added for each:
+  - a reading taken in the pause, which the fixture's later retest hid;
+  - test weeks dated from the run's first day.
+- **Full suite:** 7,753 passing, M368's 7,730 plus 23, and the one pinned-clock skip.
+- **Layout harness:** clean.
+- **Sizes:**
+  - **first load** 113.58 → 113.80KB, against 114.4. The pick-up arithmetic is in `blocks.ts`,
+    which the profile store loads at start, and the store is what calls it.
+  - **Home's cold load** 212.30 → 212.21KB in 37 files, one fewer, as the chunks regrouped around
+    the new run module.
+
+### Not done
+
+- **Pick-ups made before this.** M149 shifts made before M369 recorded no distance, so those
+  blocks are still measured from the moved start. Nothing in the data says how far they moved.
+- **The calendar and week pages on past days.** These read the live start, which a pick-up moves.
+  Days before the pick-up are numbered from the moved start there. That has been true since M149,
+  and only the review was in scope here.
+- **One layout per row.** If the climber changes the week layout when resuming, the weeks before
+  are measured against the new one.
+- **Resumed in the week it stopped.** Nothing moves and the row reopens as it always did, so the
+  days between are not a pause. It is at most six days.
