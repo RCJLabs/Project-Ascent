@@ -15325,6 +15325,14 @@ its label is missing. None of these wants touching.
   non-default theme, or the largest text, saw three or four frames of Home in light Alpine at
   normal size on every launch, because the store learned the device's choices only after the
   database opened. The store now starts from `localStorage`, and the first frame is theirs.
+- **M364a — what loading one program at a time would buy, measured before building.** A trial
+  build with a one-program catalogue (6.2KB against 42.6KB) changed nothing measurable on a warm
+  launch of the installed app: the router mounts at 294 against 278ms and today's card lands at
+  628 against 696ms, both inside the spread. It helps only a cold first visit, where the router
+  waits for the catalogue to download: Home's heading came 185ms sooner on Slow 4G and 388ms sooner
+  on Fast 3G. The bytes still arrive, because the service worker precaches every chunk after that
+  first visit. Home's launch also reads more than the running program: the finger-gap check looks
+  up the program of every session in the log. Written up as a decision, not built.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -27522,3 +27530,95 @@ reload the first animation frame already has Midnight's background. No page erro
   - any text size kept.
 - **Full suite:** 7,663 passing, M362's 7,652 plus 11, and the one pinned-clock skip.
 - **Layout harness:** clean, which seeds the largest text through the same device key.
+
+## What one program at a time would buy (M364a)
+
+M363's budget decision chose two cuts. This is the second, and it was estimated rather than
+measured: the catalogue chunk is 41.7KB of Home's 213KB cold load, and each program is 1.3–6.4KB
+gzipped on its own, so loading only the running one looked like −30 to −36KB. This entry measures
+what that would buy before anything is built.
+
+### Who reads the catalogue
+
+- **`getProgram` in 30 files,** in four kinds:
+  - **The running program only:** fifteen files, including the planned day, the week outline, the
+    board, the coach, Review, Progress, Calendar, Settings' calendar export and *Pick it up*.
+  - **Any program the log refers to:**
+    - `fingerGap` and `sessionMode` look up every session's own program;
+    - `journal`, `deload`, `finderHistory`, `blockEnd` and `drillHistory` read past blocks;
+    - Progress reads past sessions' fields, the achievements card and the log page read program
+      lengths, and the profile store names past blocks.
+  - **Fixed ids:** the sample climber's Iron Grip, the program and start pages, guides, and the
+    next-block suggestions.
+- **The whole list:** in ten places:
+  - the finder;
+  - `standards`;
+  - Train;
+  - the builder (twice);
+  - search;
+  - the season card;
+  - the shared-block page;
+  - the program page's origin;
+  - the backup export.
+
+**Home's launch reads more than the running program.** Its first-run cards, and the coach through
+`fingerGapCheck`, run `loadsFingersDirectly` over the log. That looks up the program of every
+session. So Home's set is the running program plus every program the climber has logged under. For
+the sample climber that is one catalogue program, Iron Grip, beside a program of their own that
+lives in the database. For a climber with a few blocks behind them it is several.
+
+### What it would buy
+
+The ceiling was measured directly: a trial build whose catalogue held only Iron Grip, against the
+real one.
+
+**Warm launch of the installed app:** sample climber, worker installed, CPU at a quarter speed, six
+runs each, alternating.
+
+```
+                 router mounts       today's card final   main thread
+13 programs      294 (204–308)ms     628 (549–698)        988 (904–1,050)
+one program      278 (261–339)ms     696 (606–824)        1,019 (932–1,189)
+```
+
+**Nothing measurable.** From the worker's cache, the 42KB chunk costs nothing a launch can see.
+
+**Cold first visit:** no worker, network emulated, CPU at a quarter speed, three runs each.
+
+```
+               first paint    Home's heading
+Slow 4G   13   1,112ms        1,735ms (1,728–1,753)
+          one  1,136ms        1,550ms (1,511–1,595)
+Fast 3G   13   2,648ms        4,025ms (4,011–4,034)
+          one  2,684ms        3,637ms (3,621–3,648)
+```
+
+185ms on Slow 4G and 388ms on Fast 3G, with the ranges apart. The router waits for the
+catalogue (and the drill library) before it mounts, so on a slow first visit the heading waits for
+42KB that a climber with no program does not read at all.
+
+### What it would not buy
+
+- **Bytes.** The service worker precaches every chunk after the first visit, so the catalogue
+  arrives either way. Only *when* it arrives changes, and only on that first visit.
+- **Warm launches,** which is every launch after the first.
+- **The budget line.** `npm run homeload` counts what a cold Home load fetches. Splitting the
+  catalogue would move it by however much of the log's programs Home needs, as above. That is the
+  number the estimate was about, and it does not match a cost a climber sees.
+
+### The options
+
+1. **Build it as estimated:** per-program chunks, an index of names, and every one of the 30 files
+   made to cope with a program that has not arrived. Without that, each becomes a candidate for
+   M351's fault: showing something false, *"no program is running"*, until it lands. This is
+   several milestones, for 185–388ms on one launch per device, on slow networks.
+2. **The narrow version:** stop holding the router for the catalogue. Let the screens that read
+   programs wait for it the way Home's cards already wait for their stores (M351's `useLoaded`).
+   A first visit, which has no program to look up, would get most of the measured gain: its Home
+   reads nothing from the catalogue. One milestone, and a smaller surface for that fault. **This
+   is an estimate.** It needs its own trial, since the drill library is held by the same wait.
+3. **Leave it.** The measured cost is first-visit-only, and M363 already brought both lines back
+   under with a kilobyte to spare.
+
+**Recommendation: 2, measured first, or 3.** Option 1 spends the most for a gain that only
+appears once per device, and the bytes it was chosen for do not leave.
