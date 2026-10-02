@@ -15272,6 +15272,14 @@ its label is missing. None of these wants touching.
   path once, leaves out lines under a pixel and merges neighbouring fills of one colour. Steady
   frame pacing is back level with the old figure. Shapes are tagged with the part they are, and the
   tests find the chalk bag and the brim by name instead of by size.
+- **M358 — the skill trees' `trim` was the locale's first call.** M355 left `trim` in
+  `engine/skills.ts` at 62–85ms of launch self time, and the profile now puts it at 175–195ms on
+  Game. A clock around the call says otherwise. At full speed, the first `trim` on a page takes
+  13–15ms and the next 80 to 377 together take about a millisecond. In a blank page, the first
+  locale-aware call of any kind, a number or a date, costs about 14ms. After one date, the first
+  number costs 2ms. A build with `String` in place of `toLocaleString` moved the cost into
+  `measure`, and an A/B of six launches on each page saved nothing that held: Game 1,727 to 1,611ms
+  with the ranges overlapping, Body 1,166 to 1,184ms. Nothing changed but a comment at `trim`.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -26731,3 +26739,106 @@ climber. It now draws only shapes without `detail`, merged, and comes to 1, 4 an
     to 12,334 bytes gzipped, which is the cost of the drawing. Ten pages load that chunk, among them
     Game, the Ascent, Log, Review and Year, so each of them pays about 4.4KB more on its first
     visit. None of it is in the first load.
+
+## M358 — the skill trees' `trim` was the locale's first call
+
+M355's launch profiles left two hotspots that were not date formatting. M356 took `saysItDoes`.
+This was the other one: `trim` in `engine/skills.ts`, at 62–85ms of self time on Game and Body. It
+turned out not to be a hotspot.
+
+### The premise, checked
+
+`trim` turns a metric value into text for a skill node's *"N more on max hang"*. Integers go
+through `toLocaleString()`, and decimals through `toFixed(1)`. A fresh profile on M357's build
+agreed with M355 and went further. Unminified, sample climber, CPU at a quarter speed, warm launch:
+
+```
+/game    trim  195, 175ms    the largest self time on the page
+/body    trim   71,  90ms    second only to fromKey
+```
+
+All of it came through `evaluateSkills → measure → done → remaining`.
+
+### What the time is
+
+A build that counted calls showed nothing in the call volume that could cost that much. At full
+speed:
+
+```
+/game    8 evaluations    1,040 measures    328–377 trims    18ms in evaluateSkills, all 8
+/body    2 evaluations      260 measures         82 trims    26ms
+```
+
+A build that timed each call found where the time goes:
+
+```
+                      first trim    every trim together
+full speed   /game    13.5–15.4ms   13.9–15.9ms
+             /body    13.6–14.6ms   13.6–14.7ms
+quarter      /game    60.3–66.7ms   61.3–68.7ms
+             /body    67.2–70.6ms   72.3–72.9ms
+```
+
+So it is the first call alone. A blank page, at full speed, three fresh pages each:
+
+```
+                                   first call     second
+(5).toLocaleString()               14.4–18.6ms    ≤0.1ms
+new Intl.NumberFormat().format     13.4–14.3ms    ≤0.2ms
+the same, 'en-US' named            14.5–16.2ms    ≤0.1ms
+a date with options                15.8–24.8ms    ≤0.2ms
+a number, after one date            1.4–2.5ms
+```
+
+The first locale-aware call on a page loads the locale's formatting data, and numbers and dates
+share most of it. Whatever formats first pays. On Game and Body, that is the skill trees. Home and
+Progress never call `trim` at all.
+
+### The test that settles it
+
+A build with `String(value)` in place of `toLocaleString()`:
+
+- **In the profile, the cost moved.** `measure` went from under the top twelve to 81–133ms on both
+  pages. Its altimeter nodes format feet with `toLocaleString()`, and they were now first.
+- **On the clock, nothing that held.** Main-thread time over the first five seconds, the two builds
+  alternating, six runs each:
+
+```
+         as it is              String in trim
+/game    1,727 (1,469–1,874)   1,611 (1,518–1,724)
+/body    1,166 (1,123–1,329)   1,184 (1,123–1,221)
+```
+
+The ranges overlap on both pages, and Game's difference in medians is inside the spread of either
+build.
+
+### What was not done, and why
+
+- **Keeping `String`.** It saves nothing, as above. It would also drop the grouping separator
+  from a value over a thousand, and the climber's own digits in a locale that has them.
+- **Formatting numbers without the locale everywhere on launch.** Dates need it, and the dates are
+  on every page. The cost would land on the first date instead.
+- **Warming the locale data early.** It is the same work on the same thread. Done before the
+  first render, it delays the first paint by as much. Done after, it is too late, because the first
+  render already formats.
+
+### What it says about the profiles
+
+The sampling profile put 175–195ms on the first call at a quarter speed. A clock around it, also
+at a quarter speed, measured 60–70ms. These were separate runs, so the numbers are not directly
+comparable. Even so, the sampler appears to charge a native call that does a lot of one-time work at
+about three times its cost. I don't know how much of that is the profiler's own overhead.
+Two of M355's other rows, Home's `HomeHeading` at 53ms and Calendar's `monthLabel` at 70ms, were
+each the first date on their page. They likely carried the same first-call cost under the same
+inflation. That is a guess, not measured.
+
+From here on, a profile row that is one native call gets a clock around it before it gets a
+milestone.
+
+### Checked
+
+- **Only a comment changed in source**, at `trim`, so the next profile that lands there finds this
+  entry. Typecheck, build and the skill tests pass. The full suite and the date matrix were left to
+  CI, since a comment changes nothing they test.
+- **Not measured on a phone.** The 14ms is this container's Chromium at full speed. A real phone's
+  first call could be longer or shorter, and it is paid once a launch either way.

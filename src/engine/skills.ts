@@ -141,6 +141,15 @@ function metricLabel(id: MetricId): string {
   return getMetric(id)?.label ?? id.replace(/_/g, ' ');
 }
 
+/**
+ * A metric value as a climber reads it: grouped when whole, one place when not.
+ *
+ * Launch profiles of Game and Body put this near the top of self time
+ * (PLAN.md M358). It is not this function. The first locale-aware call on a
+ * page loads the locale's formatting data, about 14ms at full speed, and on
+ * those two pages this is the first. A build without `toLocaleString` here
+ * moved the same cost into `measure` and saved nothing.
+ */
 function trim(value: number): string {
   return Number.isInteger(value) ? value.toLocaleString() : value.toFixed(1);
 }
