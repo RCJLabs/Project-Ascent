@@ -27243,3 +27243,25 @@ true.
   - Home's cold load is 213.32KB (+0.05; 0.18 left under 213.5), the least headroom yet.
 - **Not measured on a phone.** IndexedDB on a real device may be slower or faster to answer, which
   changes how much the order matters, but not which order is right.
+
+### One failure the date matrix found, and could not find again
+
+The first full matrix run on this code failed one test on one day:
+`quickLog.test.tsx > the rest timer > counts down once started`, on 6 October. The run did not keep
+which assertion failed. It did not come back:
+
+- 5 runs of that file alone, pinned to that day;
+- 8 copies run at once, for load;
+- 2 runs of that day's 113 files;
+- a second full matrix, all ten days.
+
+That makes one failure in 26 runs, and none in 25 since.
+
+The test runs its fake clock with `shouldAdvanceTime: true`, so real time leaks into it. It allows
+one frame of slack (*0:49 or 0:50*). With 113 files running at once, a stall of a second or more
+between the tap and the reading would exceed that. That is a plausible mechanism, not a confirmed
+one. Nothing in this change touches the rest timer, but that the timing shift from `open()` played
+no part is not proven either.
+
+The test is left as it is. Loosening it on a guess would hide a real regression as easily as a
+stall. If it fails again, the run should keep the assertion and the line.
