@@ -138,7 +138,8 @@ describe('a block that left something where it was', () => {
   it('says one of them in the singular', () => {
     const one = report([result('arc_duration', 'flat')]);
     const long = chooseNext({ candidates: CANDIDATES, report: one }).choices[0]!;
-    expect(long.because).toContain('This block left your arc duration where it was, and this trains it.');
+    // ARC keeps its capitals mid-sentence (PLAN.md M367).
+    expect(long.because).toContain('This block left your ARC duration where it was, and this trains it.');
   });
 
   it('counts a benchmark that went backwards as one that did not move', () => {
@@ -224,5 +225,73 @@ describe('a block that was barely run', () => {
     const few = { planned: 7, done: 3 } as BlockAdherence;
     const { note } = chooseNext({ candidates: CANDIDATES, report: mixed, adherence: few });
     expect(note).not.toMatch(/You did 3 of the 7/);
+  });
+});
+
+/**
+ * A decline named as one, and nothing said about a block still running
+ * (PLAN.md M367).
+ *
+ * M365a found *"This block left your weighted pull-ups 3rm where it was"*
+ * under a pull-up that went from 30 to 25 lbs, and the same sentence about a
+ * block in week six of twelve.
+ */
+describe('what the sentence says about what did not improve', () => {
+  const peak = (r: BlockReport) => chooseNext({ candidates: CANDIDATES, report: r }).choices.find((c) => c.program.id === 'peak_performance')!;
+
+  it('says a benchmark that fell went the other way', () => {
+    expect(peak(report([result('weighted_pullup_3rm', 'worse')])).because).toBe(
+      'Your weighted pull-ups 3RM went the other way this block, and this trains it.',
+    );
+  });
+
+  it('keeps "left where it was" for the ones that held', () => {
+    expect(peak(report([result('max_boulder_grade', 'flat')])).because).toBe(
+      'This block left your max boulder grade where it was, and this trains it.',
+    );
+  });
+
+  it('names both when there are both', () => {
+    expect(peak(report([result('max_boulder_grade', 'flat'), result('weighted_pullup_3rm', 'worse')])).because).toBe(
+      'This block left your max boulder grade where it was and your weighted pull-ups 3RM went the other way, and this trains them.',
+    );
+  });
+
+  it('still orders a fallen benchmark with the ones that did not move', () => {
+    // The ordering is unchanged: anything that did not improve is a reason
+    // to train it next.
+    const fell = report([result('weighted_pullup_3rm', 'worse')]);
+    expect(names({ candidates: CANDIDATES, report: fell })[0]).toBe('peak_performance');
+  });
+
+  it('keeps the capitals a label is written in, and nothing else', () => {
+    const said = (id: MetricId) =>
+      chooseNext({ candidates: [{ program: { ...PEAK_PERFORMANCE, assessments: [id] }, reason: '' }], report: report([result(id, 'flat')]) })
+        .choices[0]!.because;
+    expect(said('arc_duration')).toContain('your ARC duration');
+    expect(said('weighted_pullup_3rm')).toContain('your weighted pull-ups 3RM');
+    expect(said('density_hang_bw_20mm')).toContain('your density hang BW 20mm');
+    expect(said('onsight_grade')).toContain('your on-sight grade');
+    expect(said('lock_off_90')).toContain('your lock-off 90°');
+    expect(said('capacity_4x4_quality')).toContain('your 4x4 completion');
+  });
+});
+
+describe('a block still running', () => {
+  const sofar = report([result('max_boulder_grade', 'flat'), result('dead_hang', 'better'), result('max_pullups', 'worse')]);
+
+  it('is not read for a verdict: the authored order, and nothing said about each', () => {
+    const next = chooseNext({ candidates: CANDIDATES, report: sofar, running: true });
+    expect(next.choices.map((c) => c.program.id)).toEqual(['peak_performance', 'the_long_game', 'the_cruiser']);
+    expect(next.choices.every((c) => c.because === null && c.addresses.length === 0)).toBe(true);
+    expect(next.note).toBe(
+      'In the order the program wrote them, each with its author’s reason. Once the block is over, this list is ordered by what it moved.',
+    );
+  });
+
+  it('is not told to run it again on the sessions so far', () => {
+    const low: BlockAdherence = { planned: 30, done: 3, unplanned: 0, away: 0, types: [] } as unknown as BlockAdherence;
+    expect(chooseNext({ candidates: CANDIDATES, report: sofar, adherence: low, running: true }).note).not.toMatch(/did not run/);
+    expect(chooseNext({ candidates: CANDIDATES, report: sofar, adherence: low }).note, 'the fixture is not low enough').toMatch(/did not run/);
   });
 });

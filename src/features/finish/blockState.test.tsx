@@ -84,6 +84,17 @@ describe('the retests a block is owed', () => {
   });
 });
 
+describe('what comes next, while the block runs', () => {
+  it('is the authored list with nothing said about what the block did so far (PLAN.md M367)', async () => {
+    await ironGripFrom(5); // week six of twelve
+    const card = screen.getByRole('heading', { name: 'What comes next' }).parentElement!;
+    expect(card.textContent).toContain(
+      'In the order the program wrote them, each with its author’s reason. Once the block is over, this list is ordered by what it moved.',
+    );
+    expect(card.textContent).not.toMatch(/left your|went the other way|which did move/);
+  });
+});
+
 /**
  * The sentence at the top against the cards under it: each phrase is there
  * exactly when its section is.

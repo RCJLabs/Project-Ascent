@@ -54,9 +54,21 @@ export interface Metric {
   /** Which ladder a `grade` metric uses. */
   scale?: GradeScale;
   higherIsBetter: boolean;
+  /**
+   * How far two readings can be apart and still be the same strength
+   * (PLAN.md M367). A change inside it reads as *held*: a max hang from 40 to
+   * 40.5 lbs is the same climber on a different day, and was being counted
+   * as an improvement. Absolute, in the stored unit, or a share of the
+   * baseline with a floor. The coach set these. Every `number` metric states
+   * one; `{ abs: 0 }` is "any change counts".
+   */
+  held?: MetricBand;
   description?: string;
   place: TestPlace;
 }
+
+/** A change inside this is noise rather than progress (PLAN.md M367). */
+export type MetricBand = { abs: number } | { pct: number; atLeast: number };
 
 // ── Protocols (timer-able training methods) ───────────────────────────────
 

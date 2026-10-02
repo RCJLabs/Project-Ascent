@@ -359,6 +359,8 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
         candidates: end?.next ?? [],
         report: end?.report ?? null,
         adherence: adherence?.measured ?? null,
+        // No verdict on a block that is still running (PLAN.md M367).
+        running: end?.outcome === 'running',
       }),
     [end, adherence],
   );

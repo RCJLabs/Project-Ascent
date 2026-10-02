@@ -57,7 +57,9 @@ const READINGS = [
   entry('weighted_pullup_3rm', addDays(START, 2), 30),
   // Peak Performance's own baselines, three days after the climber left.
   entry('max_hang_20mm_7s', addDays(NEXT, 2), 48),
-  entry('weighted_pullup_3rm', addDays(NEXT, 2), 25),
+  // Outside the 5 lbs band either way (PLAN.md M367), so uncut they read
+  // as moved.
+  entry('weighted_pullup_3rm', addDays(NEXT, 2), 22.5),
 ];
 
 describe('blockThrough', () => {
@@ -98,7 +100,7 @@ describe('a block left in week six of twelve', () => {
   it('keeps a retest taken on the day it was left', () => {
     const report = blockReport({
       program: IG, startDate: START, today: TODAY, until: LEFT,
-      entries: [...READINGS, entry('max_hang_20mm_7s', LEFT, 45)],
+      entries: [...READINGS, entry('max_hang_20mm_7s', LEFT, 47.5)],
     })!;
     expect(report.results.find((r) => r.metric.id === 'max_hang_20mm_7s')!.moved).toBe('better');
   });

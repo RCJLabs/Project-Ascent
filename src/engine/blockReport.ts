@@ -182,7 +182,7 @@ function resultFor(
 
   const delta = latest.value - baseline.value;
   const signed = metric.higherIsBetter ? delta : -delta;
-  const moved: Movement = signed > 0 ? 'better' : signed < 0 ? 'worse' : 'flat';
+  const moved: Movement = held(metric, baseline.value, delta) ? 'flat' : signed > 0 ? 'better' : 'worse';
 
   return {
     metric,
@@ -199,6 +199,26 @@ function resultFor(
     steps: metric.kind === 'grade' ? signed : null,
     gap: null,
   };
+}
+
+/**
+ * Whether a change is inside the metric's band for noise (PLAN.md M367).
+ *
+ * Every difference used to count: 40 to 40.5 lbs on a max hang *improved*,
+ * 60 to 59 seconds on a dead hang *went the other way*, and the counts, the
+ * share card, the coach's file and the order of what comes next all
+ * followed. The coach's answer was that small changes are held, and the
+ * bands are theirs (`content/metrics.ts`). The edge is inside: a band of 1
+ * rep holds a one-rep change. Grades and pass/fail have no band — one step
+ * on a ladder, or a pass where there was a fail, is already the smallest
+ * real change — and a number metric without one counts any change.
+ */
+export function held(metric: Metric, baseline: number, delta: number): boolean {
+  const size = Math.abs(delta);
+  const band = metric.kind === 'number' ? metric.held : undefined;
+  if (band === undefined) return size === 0;
+  const within = 'abs' in band ? band.abs : Math.max(band.atLeast, (Math.abs(baseline) * band.pct) / 100);
+  return size <= within;
 }
 
 /** When a baseline with no retest can still get one (PLAN.md M366). */

@@ -22,6 +22,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'board',
     higherIsBetter: true,
+    held: { abs: 5 },
     description:
       'Added weight for a 7-second half-crimp hang on a 20mm edge. The standard finger-strength benchmark.',
   },
@@ -32,6 +33,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'board',
     higherIsBetter: true,
+    held: { abs: 5 },
     description: 'Added weight used for 7/3 repeaters at the prescribed RPE.',
   },
   density_hang_bw_20mm: {
@@ -41,6 +43,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'board',
     higherIsBetter: true,
+    held: { pct: 10, atLeast: 2 },
     description: 'Bodyweight half-crimp hang on a 20mm edge held at sub-maximal effort.',
   },
   min_edge: {
@@ -50,6 +53,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'board',
     higherIsBetter: false,
+    held: { abs: 0 },
     description: 'Smallest edge held for 7 seconds at bodyweight.',
   },
   dead_hang: {
@@ -59,6 +63,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'board',
     higherIsBetter: true,
+    held: { pct: 10, atLeast: 2 },
     description: 'Bodyweight hang to failure on a 20mm edge.',
   },
 
@@ -71,6 +76,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'gym',
     higherIsBetter: true,
+    held: { abs: 5 },
   },
   max_pullups: {
     id: 'max_pullups',
@@ -80,6 +86,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'gym',
     higherIsBetter: true,
+    held: { abs: 1 },
   },
   max_pushups: {
     id: 'max_pushups',
@@ -88,6 +95,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'gym',
     higherIsBetter: true,
+    held: { abs: 1 },
   },
   lock_off_90: {
     id: 'lock_off_90',
@@ -96,6 +104,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'gym',
     higherIsBetter: true,
+    held: { pct: 10, atLeast: 2 },
     description: 'Single-arm lock-off hold at 90 degrees of elbow flexion.',
   },
 
@@ -106,6 +115,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'gym',
     higherIsBetter: true,
+    held: { abs: 1 },
     description: 'Protraction/retraction reps in a push-up position, with arms straight throughout.',
   },
   wrist_extensor_curls: {
@@ -115,6 +125,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'gym',
     higherIsBetter: true,
+    held: { abs: 1 },
   },
 
   box_jump_height: {
@@ -124,6 +135,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'gym',
     higherIsBetter: true,
+    held: { abs: 1 },
     description: 'Highest box cleared with a controlled, silent landing.',
   },
   explosive_pullups: {
@@ -133,6 +145,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'gym',
     higherIsBetter: true,
+    held: { abs: 1 },
     description: 'Consecutive chest-to-bar pull-ups performed at speed.',
   },
   landing_control: {
@@ -153,6 +166,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'gym',
     higherIsBetter: true,
+    held: { pct: 10, atLeast: 2 },
     description: 'Front plank held to the first form breakdown.',
   },
   dead_bug_20: {
@@ -171,6 +185,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'gym',
     higherIsBetter: true,
+    held: { pct: 10, atLeast: 2 },
     description: 'Hollow body hold with the lower back pressed into the floor.',
   },
   front_lever_hold: {
@@ -180,6 +195,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'gym',
     higherIsBetter: true,
+    held: { pct: 10, atLeast: 2 },
     description: 'Best front lever hold at your current progression.',
   },
   core_lever: {
@@ -210,6 +226,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'gym',
     higherIsBetter: false,
+    held: { abs: 1 },
     description: 'Distance from fingertips to the floor on a straight-leg forward fold. Lower is better.',
   },
   flexibility: {
@@ -219,6 +236,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'gym',
     higherIsBetter: true,
+    held: { abs: 1 },
     description: 'Self-scored mobility check used by the derived AGI stat.',
   },
 
@@ -230,6 +248,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'wall',
     higherIsBetter: true,
+    held: { pct: 10, atLeast: 0 },
     description: 'Longest continuous ARC round held at RPE 3-4 without pumping out.',
   },
 
@@ -240,6 +259,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'wall',
     higherIsBetter: true,
+    held: { abs: 5 },
     description: 'How far up the project you reached, as a percentage of its full length.',
   },
   linked_laps_continuous: {
@@ -249,6 +269,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'wall',
     higherIsBetter: true,
+    held: { abs: 0 },
     description: 'Routes climbed back to back with no ground rest.',
   },
 
@@ -337,6 +358,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'tally',
     higherIsBetter: true,
+    held: { abs: 0 },
     description: 'Days on real rock across your climbing, counted by you.',
   },
   capacity_4x4_quality: {
@@ -346,6 +368,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'wall',
     higherIsBetter: true,
+    held: { abs: 1 },
     description: 'Self-rated quality of a completed 4x4 interval session.',
   },
   flash_grade: {
@@ -365,6 +388,7 @@ export const METRICS: Record<MetricId, Metric> = {
     kind: 'number',
     place: 'wall',
     higherIsBetter: true,
+    held: { abs: 0 },
     description: 'Completed climbs in a 4x4 interval session — a work-capacity benchmark.',
   },
 };

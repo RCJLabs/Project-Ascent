@@ -70,24 +70,52 @@ export interface NextBlockInput {
   candidates: readonly NextStep[];
   report: BlockReport | null;
   adherence?: BlockAdherence | null;
+  /**
+   * The block is still running (PLAN.md M367). Nothing is said about what
+   * it did: in week six of twelve the list was ordered by the results so
+   * far and said *"This block left your max boulder grade where it was"*
+   * with six weeks to run.
+   */
+  running?: boolean;
 }
 
-/** The metrics that were compared, split by whether they improved. */
-function measured(report: BlockReport | null): { moved: Set<MetricId>; stayed: Set<MetricId> } {
+/**
+ * The metrics that were compared, split three ways.
+ *
+ * `stayed` is everything that did not improve, which is what the ordering
+ * weighs. `fell` is the part of it that went the other way, kept apart for
+ * the sentence (PLAN.md M367): a decline was folded into *"left your X
+ * where it was"*, which said a 30 → 25 lbs pull-up had not moved.
+ */
+function measured(report: BlockReport | null): { moved: Set<MetricId>; stayed: Set<MetricId>; fell: Set<MetricId> } {
   const moved = new Set<MetricId>();
   const stayed = new Set<MetricId>();
+  const fell = new Set<MetricId>();
   for (const result of report?.results ?? []) {
     // A gap is not a reading. `moved` is null for anything with nothing to
-    // compare against, and both sets stay out of it.
+    // compare against, and every set stays out of it.
     if (result.gap !== null || result.moved === null) continue;
     (result.moved === 'better' ? moved : stayed).add(result.metric.id);
+    if (result.moved === 'worse') fell.add(result.metric.id);
   }
-  return { moved, stayed };
+  return { moved, stayed, fell };
+}
+
+/**
+ * A label the way a person says it mid-sentence: lower case, except the
+ * parts that are written in capitals (PLAN.md M367). Lowercasing the whole
+ * label turned *Weighted Pull-Ups 3RM* into *weighted pull-ups 3rm*.
+ */
+function spoken(label: string): string {
+  return label
+    .split(/(\s+|-)/)
+    .map((part) => ((part.match(/[A-Z]/g)?.length ?? 0) >= 2 ? part : part.toLowerCase()))
+    .join('');
 }
 
 /** Two or three things named the way a person says them. */
 function list(metrics: readonly Metric[]): string {
-  const names = metrics.map((m) => m.label.toLowerCase());
+  const names = metrics.map((m) => spoken(m.label));
   if (names.length <= 1) return names[0] ?? '';
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
@@ -100,7 +128,7 @@ function list(metrics: readonly Metric[]): string {
  * what you already improved" on its own reads as a recommendation, and it
  * is not one.
  */
-function because(addresses: Metric[], repeats: Metric[]): string | null {
+function because(addresses: Metric[], fell: ReadonlySet<MetricId>, repeats: Metric[]): string | null {
   if (addresses.length > 0) {
     // "This block left X where it was" rather than "Your X is where it
     // was": half the benchmarks are plural nouns for a single measurement,
@@ -108,9 +136,15 @@ function because(addresses: Metric[], repeats: Metric[]): string | null {
     // out of agreeing with the count instead of with the name. Found in a
     // browser, where three of the four cards read that way. Moving the verb
     // onto the block sidesteps a disagreement English will not let this
-    // have both ways.
-    const one = addresses.length === 1;
-    const held = `This block left your ${list(addresses)} where ${one ? 'it was' : 'they were'}, and this trains ${one ? 'it' : 'them'}.`;
+    // have both ways — and "went", for the ones that fell, agrees with
+    // either.
+    const stayed = addresses.filter((m) => !fell.has(m.id));
+    const down = addresses.filter((m) => fell.has(m.id));
+    const clauses = [
+      ...(stayed.length > 0 ? [`This block left your ${list(stayed)} where ${stayed.length === 1 ? 'it was' : 'they were'}`] : []),
+      ...(down.length > 0 ? [`${stayed.length > 0 ? 'your' : 'Your'} ${list(down)} went the other way${stayed.length > 0 ? '' : ' this block'}`] : []),
+    ];
+    const held = `${clauses.join(' and ')}, and this trains ${addresses.length === 1 ? 'it' : 'them'}.`;
     return repeats.length === 0
       ? held
       : `${held} It also trains ${list(repeats)}, which did move.`;
@@ -131,6 +165,9 @@ function because(addresses: Metric[], repeats: Metric[]): string | null {
  * program made rather than a gap.
  */
 function noteFor(input: NextBlockInput, measurements: number, signal: boolean): string | null {
+  if (input.running) {
+    return 'In the order the program wrote them, each with its author’s reason. Once the block is over, this list is ordered by what it moved.';
+  }
   const done = input.adherence;
   if (done && done.planned >= ENOUGH_PLANNED && done.done / done.planned < LOW_ADHERENCE) {
     return `You did ${done.done} of the ${done.planned} sessions this block placed. A block you did not run is not one to follow — running it again is the honest next step, and these are here for when it is.`;
@@ -149,7 +186,9 @@ function noteFor(input: NextBlockInput, measurements: number, signal: boolean): 
 }
 
 export function chooseNext(input: NextBlockInput): NextBlock {
-  const { moved, stayed } = measured(input.report);
+  // A running block is not read for a verdict: no report, so no ordering and
+  // no sentence per entry about what it did.
+  const { moved, stayed, fell } = measured(input.running ? null : input.report);
 
   const scored = input.candidates.map((step, index) => {
     const declared = step.program.assessments;
@@ -165,7 +204,7 @@ export function chooseNext(input: NextBlockInput): NextBlock {
         program: step.program,
         reason: step.reason,
         addresses,
-        because: because(addresses, repeats),
+        because: because(addresses, fell, repeats),
       } satisfies NextChoice,
     };
   });
