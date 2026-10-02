@@ -15298,6 +15298,17 @@ its label is missing. None of these wants touching.
   and all seven loads use it. Afterwards no store field changes more than once on any of 25 pages.
   The launch clock did not move outside its spread on any of the eight pages measured, so the claim
   is the count, not a speed-up.
+- **M361 — today's card waits for its stores, not behind them.** M351 made the card wait for the
+  log, the profile and the climber's own programs, at a cost of 170–220ms it could not explain.
+  Timed this time with a mark in each store, the card turns out to render within 2ms of its last
+  store landing, and the last store was always the programs. `hydrateAll` asked for them after the
+  log, the metrics, the projects and the templates. IndexedDB answered in that order, and each
+  answer's render ran before the next answer was handled. Asked for second, the programs land
+  first, and the card's final text arrives about 200ms sooner over two rounds of eight launches.
+  Every store's first read had also been waiting for `open()` to finish a `meta` write. That write
+  is now begun before the database is handed over and is not waited for. The flash audit then
+  caught Home's week line saying *"0 of 4 training days done"* before the log landed, on main as
+  well; it now waits for all three stores too.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -27093,3 +27104,142 @@ That is worth having for reasons the clock does not see:
   The comparison is in the stores, and the stores are in both loads. Home's headroom is now the
   smallest it has been. The next change that adds to a cold Home load should expect to cross the
   line or pay for it.
+
+## M361 — today's card waits for its stores, not behind them
+
+M351 made today's card on Home wait for the log, the profile and the climber's own programs, so it
+stopped telling a climber with a block running that *"no program is running"*. It recorded what
+that cost and could not explain it: the final text came 170–220ms later. It ruled out three causes.
+The one it left untested was that the card now mounted its subtree instead of updating it.
+
+### Where the time went
+
+A build with a mark in each of the three stores and one in the card: warm launches, sample climber,
+CPU at a quarter speed, six runs.
+
+```
+profile landed     796–1,030ms
+log landed         936–1,171ms
+programs landed  1,118–1,395ms   always last
+card rendered    0–2ms after the programs
+final text       16–25ms after the programs
+```
+
+So it was not the card, and not the mount. The card waits for the programs, and the programs came
+last.
+
+Marks either side of each read showed both reads requested within about 15ms of each other. The log
+answered at about 1,060ms and the programs at about 1,250ms, for a store holding one program. The
+main thread had idle gaps of 100–200ms in between, so it was not simply busy.
+
+Logging every IndexedDB request showed the rest:
+
+- **The answers come back in the order they were asked.** `hydrateAll` asked for the settings, the
+  profile, the log, the metrics, the projects, the dismissed list, the templates and only then the
+  programs. Each answer's render runs before the next answer is handled. So the programs waited
+  behind the log's render and four more.
+- **Nothing could be asked until about 300ms in.** `open()` resolved only after it had written
+  `meta.appVersion` and read `createdAt` and `createdWith`, one after another, and the write waits
+  for its commit. Every store's first read waited behind that, on every launch.
+
+One variant was tried and dropped. Today's card asked for the programs itself, before the log. That
+changed nothing (1,214 against 1,210ms). The request log says why: the card's read of the programs
+was still queued after `hydrateAll`'s, because Home mounts after `hydrateAll` has asked.
+
+### The change
+
+- **`hydrateAll` asks for the programs second, after the profile.** The comment there says why the
+  order is the behaviour. M351 reported trying this with no effect. Today it is the larger half of
+  the gain. Why it differed then is not known.
+- **`open()` hands the database over before its bookkeeping commits.** The bookkeeping is one
+  `readwrite` transaction on `meta`, created synchronously before `getDb()` resolves and not waited
+  for. IndexedDB supplies the ordering the wait used to:
+  - a later transaction that touches `meta` waits for this one, so anything reading the versions
+    still sees them written;
+  - a transaction on any other store does not wait, because its scope does not overlap.
+- **A failed bookkeeping write no longer fails every read.** It used to reject `open()`, and with
+  it every read in the app. On a full disk, which is the failure that matters here, writes fail and
+  reads do not. The fault is still reported, as `no-room`.
+
+Each part on its own, in timing builds with the same marks:
+
+```
+                card final            programs landed   log landed
+main            1,235 (1,136–1,319)   1,222             1,052
+open() only     1,184 (1,121–1,233)   1,169               968
+both            994 (927–1,093)         862               947
+
+main            1,175 (1,130–1,249)   1,159               996
+order only      1,059 (987–1,105)       971             1,016
+both            990 (940–1,085)         847               944
+```
+
+The order alone moves the card with the ranges apart. The `open()` change starts the first store
+read 270–370ms earlier (536–559ms against 810–930ms), but the log arrives only 70–85ms earlier,
+with the ranges overlapping. The likely reason is that, with the wait gone, IndexedDB's own pace
+sets when answers arrive; that was not measured separately. This part points the same way in both
+rounds, but it is small.
+
+### What the flash audit found
+
+M351's audit, rerun on the new build, found one line on every warm launch of the sample climber:
+*"Week 6 of 12 · The Hammer (Max Hangs) · 0 of 4 training days done, 1 to come"*, shown for
+110–175ms and then corrected. It came from Home's heading, which draws the week strip and its line
+from the plan and the log. With the profile and the programs in and the log not, the week has a
+plan and nothing done in it. **Main shows it too, four launches of four.** M351's audit was clean
+on 22 such launches when it ran, so some change since then uncovered it. Which change was not traced. This change shows it earlier only because the programs
+now land earlier.
+
+`HomeHeadingForToday` now waits for the same three stores as today's card. The date is drawn at
+once; the strip and its line come once the week is known. The strip already arrived after the date,
+so nothing new moves. After: no line shown and then withdrawn in four launches of each of the four
+kinds (sample or empty, warm or cold).
+
+### After
+
+Production builds, main against this one alternating, eight launches each, two rounds:
+
+```
+today's card, final text    main                  this change
+first round                 1,239 (1,099–1,353)   1,022 (945–1,227)
+second round                1,196 (1,097–1,259)   1,011 (936–1,161)
+```
+
+The medians are 185–217ms apart in both rounds, and the ranges overlap only at their edges. The
+heading's final text came at 1,046 (980–1,226) against 1,024 (936–1,099). It is not later for
+waiting on the log, and it has one intermediate state instead of two: the date alone, which is
+true.
+
+### Checked
+
+- **`stamp.test.ts`, 3 tests:**
+  - the database is handed over between the bookkeeping beginning and committing;
+  - the first read of the versions on a fresh database still sees them written;
+  - a bookkeeping write that throws `QuotaExceededError` reports `no-room`, and a session can
+    still be written and read.
+
+  The first version of this file slept 20ms twice. `waiting.test.ts` refused it, and it now waits
+  on the commit event and on the fault.
+- **`launchOrder.test.ts`, 2 tests:** in the transactions `hydrateAll` opens, the programs come
+  before the log, and so does the profile.
+- **`homeWaitsForTheLog.test.tsx`, 4 more (19 in all).** The week under the date waits for the log,
+  for the profile and for the programs, and the date does not. A first test checks the line and all
+  seven days of the strip are there once everything is in. Without it, the first draft would have
+  passed on nothing: its fixture planned no days, so the line never appeared either way.
+- **Mutation battery, two parts:**
+  - **`open()` and the order: 9 mutants, all killed; sanity survived.** They include the
+    bookkeeping waited for again, begun after the hand-over, swallowed when it fails, failing the
+    open, each of the three versions dropped or rewritten, and the programs moved back after the
+    log or to the end.
+  - **The heading: 6 mutants, 5 killed; sanity survived.** *"The week not waiting for the
+    profile"* survived the first round. Without a profile there is no plan, so no wrong line to
+    see, but the strip still drew the log's days. The tests now check the strip as well.
+    *"A held week still counts its days"* survives and is equivalent: that count is only drawn
+    inside the same `outline &&`.
+- **Full suite:** 7,631 passing, M360's 7,622 plus 9, and the one pinned-clock skip.
+- **Layout harness:** clean. **Flash audit:** clean on all four kinds of launch.
+- **Sizes:**
+  - The first load is 114.68KB (+0.08; 0.42 left under 115.1).
+  - Home's cold load is 213.32KB (+0.05; 0.18 left under 213.5), the least headroom yet.
+- **Not measured on a phone.** IndexedDB on a real device may be slower or faster to answer, which
+  changes how much the order matters, but not which order is right.
