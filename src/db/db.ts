@@ -159,29 +159,51 @@ async function open(): Promise<IDBPDatabase<AscentDB>> {
     blocked: OPEN_EVENTS.blocked,
     blocking: (_current, _blocked, event) => OPEN_EVENTS.blocking(event.target),
     terminated: OPEN_EVENTS.terminated,
-  }).then(async (db) => {
-    // `appVersion` is what opened it last; `createdWith` is what made it.
-    //
-    // Only the second can ever differ from the version running, and until
-    // M159 only the first existed — written on *every* open, so it was the
-    // current version by construction and could not answer the one question
-    // it looked like it answered. M154 recorded the symptom (*"a stale
-    // install's stored version is indistinguishable from a current one"*)
-    // without noticing that the write was the reason.
-    await db.put('meta', { key: 'appVersion', value: APP_VERSION });
-    const created = await db.get('meta', 'createdAt');
-    if (!created) {
-      await db.put('meta', { key: 'createdAt', value: new Date().toISOString() });
-    }
-    // Write-once, like `createdAt` above and for the same reason: a fact
-    // about this database's origin, not about this session.
-    const createdWith = await db.get('meta', 'createdWith');
-    if (!createdWith) {
-      await db.put('meta', { key: 'createdWith', value: APP_VERSION });
-    }
+  }).then((db) => {
+    // Begun, not waited for (PLAN.md M361). See `stamp`.
+    stamp(db).catch((error: unknown) => setFault(faultOf(error)));
     setFault(null);
     return db;
   });
+}
+
+/**
+ * What opened the database, and what made it.
+ *
+ * `appVersion` is what opened it last; `createdWith` is what made it.
+ * Only the second can ever differ from the version running, and until M159
+ * only the first existed — written on *every* open, so it was the current
+ * version by construction and could not answer the one question it looked
+ * like it answered. M154 recorded the symptom (*"a stale install's stored
+ * version is indistinguishable from a current one"*) without noticing that
+ * the write was the reason. `createdAt` and `createdWith` are write-once: a
+ * fact about this database's origin, not about this session.
+ *
+ * **One transaction, created before the database is handed to anyone, and
+ * not waited for** (PLAN.md M361). Until then `open` awaited a write and two
+ * reads, one after another, before resolving, so every store's first read
+ * at launch queued behind a commit: about 300ms at a quarter CPU speed,
+ * on every launch, for bookkeeping no launch read needs. IndexedDB orders
+ * this without the wait. A transaction created later that touches `meta`
+ * waits for this one, so whoever reads the versions still sees them
+ * written; one on any other store does not wait, because its scope does not
+ * overlap. The transaction is created synchronously, before the first
+ * `await` here, which is what puts it ahead of every caller's.
+ */
+async function stamp(db: IDBPDatabase<AscentDB>): Promise<void> {
+  const tx = db.transaction('meta', 'readwrite');
+  const meta = tx.objectStore('meta');
+  // A failed request aborts the transaction and `tx.done` says so, which is
+  // the one place this reports from; the requests' own promises are only
+  // kept from going unhandled.
+  const put = (key: string, value: string) => void meta.put({ key, value }).catch(() => {});
+  try {
+    put('appVersion', APP_VERSION);
+    if (!(await meta.get('createdAt'))) put('createdAt', new Date().toISOString());
+    if (!(await meta.get('createdWith'))) put('createdWith', APP_VERSION);
+  } finally {
+    await tx.done;
+  }
 }
 
 export function getDb(): Promise<IDBPDatabase<AscentDB>> {

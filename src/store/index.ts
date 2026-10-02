@@ -82,12 +82,20 @@ export async function hydrateAll(): Promise<void> {
       loadDrills(),
       hydrateSettings(),
       hydrateProfile(),
+      // **The order is the order the answers come back in** (PLAN.md M361).
+      // IndexedDB answers these one after another, and each answer's render
+      // runs before the next answer is handled — so a store asked for after
+      // the log waits for the log's whole render, however small it is.
+      // Today's card on Home needs the profile, the climber's own programs
+      // and the log, so the two small ones go first: asked for after the
+      // log, the programs were the last of the three to land, and the card
+      // waited 150ms for them.
+      useCustomPrograms.getState().load(),
       useSessions.getState().load(),
       useMetrics.getState().load(),
       hydrateGame(),
       useProjects.getState().load(),
       useTemplates.getState().load(),
-      useCustomPrograms.getState().load(),
       useObjectives.getState().load(),
       useAway.getState().load(),
       useCustomDrills.getState().load(),

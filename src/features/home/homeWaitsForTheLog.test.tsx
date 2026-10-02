@@ -5,7 +5,7 @@ import { act, renderHook, screen } from '@testing-library/react';
 import { loadPrograms } from '@/content/programs';
 import { resetDbForTests } from '@/db/db';
 import { putSession, type Session } from '@/db/sessions';
-import { addDays, today } from '@/engine/dates';
+import { addDays, startOfWeek, today } from '@/engine/dates';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { useGame } from '@/store/game';
 import { useLoaded } from '@/store/loaded';
@@ -112,6 +112,74 @@ describe("today's card", () => {
     expect(screen.getByLabelText("Loading today's session")).toBeTruthy();
     act(() => useCustomPrograms.setState({ hydrated: true }));
     expect(screen.queryByLabelText("Loading today's session")).toBeNull();
+  });
+});
+
+describe('the week under the date (PLAN.md M361)', () => {
+  /**
+   * The plan comes from the profile and the programs and what has been done
+   * from the log, so with the first two in and the log not, every warm
+   * launch of the sample climber said *"0 of 4 training days done"* before
+   * correcting itself. The date is drawn at once; the week waits for all
+   * three.
+   */
+  const weekLine = /training days? done/;
+  /** The strip of days under the date: one link per day, to its log. */
+  const strip = () => document.querySelectorAll('header a[href*="/log/"]').length;
+
+  /** A block from the start of this week, with two days of it planned. */
+  async function aWeekPlanned(): Promise<void> {
+    await aClimberMidBlock();
+    useProfile.setState({
+      activeProgramId: 'iron_grip',
+      startDates: { iron_grip: startOfWeek(DAY) },
+      plans: { iron_grip: { 1: 'fp', 3: 'perf' } },
+      weekOverrides: {},
+      adaptations: {},
+    });
+  }
+
+  it('is there once everything is in, so the tests below are not passing on nothing', async () => {
+    await aWeekPlanned();
+    renderAt('/', <HomePage />);
+    expect(body()).toMatch(weekLine);
+    expect(strip()).toBe(7);
+  });
+
+  it('waits for the log, and the date does not', async () => {
+    await aWeekPlanned();
+    const byDate = useSessions.getState().byDate;
+    unloadLog();
+    renderAt('/', <HomePage />);
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBeTruthy();
+    expect(body()).not.toMatch(weekLine);
+    expect(strip()).toBe(0);
+
+    act(() => useSessions.setState({ hydrated: true, byDate }));
+    expect(body()).toMatch(weekLine);
+  });
+
+  it('waits for the profile', async () => {
+    // Without the profile there is no plan, so no line to get wrong — but the
+    // strip would draw the log's days with none of the plan's marks on them.
+    await aWeekPlanned();
+    const loaded = { ...useProfile.getState() };
+    unloadProfile();
+    renderAt('/', <HomePage />);
+    expect(body()).not.toMatch(weekLine);
+    expect(strip()).toBe(0);
+    act(() => useProfile.setState({ ...loaded, hydrated: true }));
+    expect(body()).toMatch(weekLine);
+  });
+
+  it("waits for the climber's own programs", async () => {
+    await aWeekPlanned();
+    act(() => useCustomPrograms.setState({ hydrated: false }));
+    renderAt('/', <HomePage />);
+    expect(body()).not.toMatch(weekLine);
+    expect(strip()).toBe(0);
+    act(() => useCustomPrograms.setState({ hydrated: true }));
+    expect(body()).toMatch(weekLine);
   });
 });
 

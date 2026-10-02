@@ -61,7 +61,12 @@ export function HomeHeading({
   program,
 }: {
   date: string;
-  outline: WeekOutline;
+  /**
+   * The week, or `null` while it cannot be told yet (PLAN.md M361): the
+   * date is drawn at once, and the strip and its line once the week is
+   * known rather than half-known.
+   */
+  outline: WeekOutline | null;
   program: Program | undefined;
 }) {
   const heading = formatDate(fromKey(date), {
@@ -69,14 +74,14 @@ export function HomeHeading({
     month: 'long',
     day: 'numeric',
   });
-  const limit = nextLimitDay(outline);
-  const count = describeWeekDays(outline, date);
+  const limit = outline ? nextLimitDay(outline) : null;
+  const count = outline ? describeWeekDays(outline, date) : null;
   // A week with nothing planned and nothing logged has no shape to draw, and
   // seven empty dots on a first run is a worse first impression than none.
-  const worth = outline.planned > 0 || outline.days.some((d) => d.sessions.length > 0);
+  const worth = outline !== null && (outline.planned > 0 || outline.days.some((d) => d.sessions.length > 0));
 
   const where =
-    outline.week !== null && program
+    outline !== null && outline.week !== null && program
       ? `Week ${outline.week} of ${program.weeks}${outline.phase ? ` · ${outline.phase.name}` : ''}${outline.isDeload ? ' · Deload' : ''}`
       : null;
   const line = [where, count].filter(Boolean).join(' · ');
@@ -94,7 +99,7 @@ export function HomeHeading({
         </Link>
       </div>
 
-      {worth && (
+      {worth && outline && (
         <>
           <div className="flex mt-1">
             {outline.days.map((day, i) => (

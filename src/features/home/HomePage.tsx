@@ -200,7 +200,18 @@ function NumbersSkeleton() {
 function HomeHeadingForToday({ date }: { date: string }) {
   const outline = useWeekOutline(date);
   const { program } = usePlannedDay(date);
-  return <HomeHeading date={date} outline={outline} program={program} />;
+  /**
+   * Not before the log, the profile and the climber's own programs are in
+   * (PLAN.md M361), the same three today's card waits for (M351).
+   *
+   * The week's plan comes from the profile and the programs, and what has
+   * been done in it from the log. With the first two in and the log not,
+   * every warm launch of the sample climber said *"Week 6 of 12 · … · 0 of
+   * 4 training days done, 1 to come"* for a tenth of a second and then
+   * corrected itself. The date is drawn at once; the week waits.
+   */
+  const loaded = useLoaded(useSessions, useProfile, useCustomPrograms);
+  return <HomeHeading date={date} outline={loaded ? outline : null} program={program} />;
 }
 
 /** The training around today: what the coach has to say, the week, the block. */
