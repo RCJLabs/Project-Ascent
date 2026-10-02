@@ -15379,6 +15379,20 @@ its label is missing. None of these wants touching.
 
   The sentence at the top of the review names only the sections the page draws, so a custom
   block with none of them is promised none.
+- **M367 — small changes are held, a decline is named, and a running block gets no verdict.** The
+  user's answer to M365a's question A, with the bands they confirmed, and findings 5 and 6. Every
+  number metric now states how far two readings can be apart and still be the same strength. A
+  change inside that band reads as *held* everywhere the report's counts reach: the review, the
+  chart, the share card, the coach's file, and the order of what comes next. *"What comes next"*
+  also changed:
+  - it says a benchmark that fell *went the other way*, not that the block *left it where it
+    was*;
+  - labels keep their capitals, so *3RM* no longer reads *3rm*;
+  - while a block runs, it lists successors in the program's own order and says nothing about
+    what the block has done so far.
+
+  The edge of the band is inside it, and the sample climber's own max hang (+5 lbs) is exactly on
+  it, so it now reads as held.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -28252,3 +28266,99 @@ way. With nothing below, the sentence ends after its first clause.
 - **Full suite:** 7,709 passing, M365's 7,690 plus 19, and the one pinned-clock skip.
 - **Layout harness:** clean.
 - **Sizes:** unchanged. First load 113.60KB; Home 212.24KB in 38 files.
+
+## M367 — small changes are held, a decline is named, and a running block gets no verdict
+
+### The band
+
+M365a's question A: any difference counted. A max hang from 40 to 40.5 lbs *improved*; a dead
+hang from 60 to 59 seconds *went the other way*. The user, who coaches, answered that small
+changes are held, and confirmed these bands:
+
+```
+added load (20mm max hang, weighted pull-up 3RM, repeater weight)   within 5 lbs
+timed holds (dead hang, lock-off, plank, hollow body, front lever,   within 10%, at least 2 s
+  density hang)
+reps (pull-ups, push-ups, scapular push-ups, wrist curls,            within 1 rep
+  explosive pull-ups)
+box jump, toe touch                                                  within 1 inch
+ARC duration                                                         within 10%
+project high point                                                   within 5 points
+4x4 quality (0–10), flexibility score                                within 1 point
+min edge, linked laps, 4x4 sends, outdoor days                       any change counts
+grades, pass/fail                                                    no band
+```
+
+- **`Metric.held` in `content/types.ts`** is `{ abs }` or `{ pct, atLeast }`. All 24 number
+  metrics state one, and a test holds that every number metric does and no other kind does.
+  Outdoor days were not in the table the user confirmed; they are a count of days rather than a
+  test, so they count any change.
+- **`held(metric, baseline, delta)` in `blockReport.ts`** classifies a change inside the band as
+  `flat`. The edge is inside: *within 5 lbs* holds +5, and *within 1 rep* holds one rep. Grades and
+  pass/fail have no band, because one step on a ladder, or a pass where there was a fail, is
+  already the smallest real change.
+- **Everything that reads `moved` follows with no further change:** the counts and sentence, the
+  chart (a held bar is drawn faded), the share card, the coach's block file, and the order of what
+  comes next. The numbers themselves are unchanged: *"+5 lbs"* is still printed, and is counted as
+  held.
+
+**The sample climber is on the edge.** Its Iron Grip max hang goes 44 → 49 and its repeater
+weight 12.5 → 17.5: +5 lbs each, so both now read as held. Its dead hang (+6 s against a 5.6 s
+band) and push-ups (+2) still improve. `demoTests.test.ts` had asserted the max hang improved. It
+now asserts that something improved and that the max hang is held. The generator was left alone.
+
+### What comes next
+
+- **A decline is named.** `nextBlock.ts` kept everything that did not improve in one set, for the
+  ordering, and the sentence called all of it *"left your X where it was"*. Declines are now kept
+  apart for the sentence: *"Your weighted pull-ups 3RM went the other way this block, and this
+  trains it."* With both kinds: *"This block left your max boulder grade where it was and your
+  weighted pull-ups 3RM went the other way, and this trains them."* The ordering is unchanged:
+  anything that did not improve is a reason to train it next.
+- **Labels keep their capitals.** The label was lowercased whole. Now each part separated by a
+  space or hyphen keeps its case if it has two capitals or more: *ARC duration*, *weighted
+  pull-ups 3RM*, *density hang BW 20mm*, *on-sight grade*.
+- **No verdict on a running block.** `chooseNext` takes `running`. The Finish page sets it when
+  the block's outcome is `running`. The list is then the program's own order, nothing is said per
+  entry, and the note says *"In the order the program wrote them, each with its author's reason.
+  Once the block is over, this list is ordered by what it moved."* The low-adherence note, *"A
+  block you did not run is not one to follow"*, is not said mid-block either.
+
+### Checked
+
+- **`engine/noiseBand.test.ts`, 7 tests:**
+  - every number metric has a band, and no other kind does;
+  - the bands are the confirmed ones;
+  - `held` inside an absolute band, edge included and in both directions;
+  - a share of the baseline, with its floor;
+  - any change counted where the band is zero, and on a grade or a pass;
+  - the report counting 40 → 45 as held and 60 → 67 as improved, and saying so.
+- **`engine/nextBlock.test.ts`, 7 more:**
+  - a fall, a hold, and both;
+  - the ordering unchanged for a fall;
+  - the capitals on six labels;
+  - a running block: authored order, nothing said per entry, the note, and no low-adherence
+    verdict.
+- **`features/finish/blockState.test.tsx`, 1 more:** Iron Grip in week 6 lists what comes next
+  with the running note and no verdict.
+- **Changed tests:**
+  - *ARC duration* where the old test expected *arc*;
+  - the sample climber's max hang, as above;
+  - two fixtures in M365's `leftBlock.test.ts` that used a change of exactly 5 lbs to mean
+    *moved*.
+- **Mutation battery: 14 mutants, all killed; sanity survived.** Two of my own mutants needed
+  fixing:
+  - one added a second `held` key that the real one, declared later, overrode, so it changed
+    nothing;
+  - one had a sanity anchor broken across a line.
+- **Full suite:** 7,724 passing, M366's 7,709 plus 15, and the one pinned-clock skip.
+- **Layout harness:** clean.
+- **Sizes:** the first load is unchanged at 113.60KB. Home is 212.30KB (+0.06KB, the bands in the
+  metric list it loads).
+
+### Not done
+
+- **Other places that call a change an improvement.** The assessments page's last-two-readings
+  change (`changeOf`) and the coach's benchmark tip read their own comparisons and do not use the
+  band. Whether they should is the same question, asked of a different page. It was not asked
+  here.
