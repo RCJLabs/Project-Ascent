@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { Plus, ShieldAlert, Trash2 } from 'lucide-react';
 import { RETURN_DISCLAIMER } from '@/content/returnToClimbing';
-import { fromKey, shortLabel, today } from '@/engine/dates';
+import { formatDate, fromKey, shortLabel, today } from '@/engine/dates';
 import {
   badDays,
   describeInjuryHistory,
@@ -113,7 +113,7 @@ export function InjuryPage({ params }: { params: { id: string } }) {
       <BackLink />
       <PageHeader
         title={injury.part.charAt(0).toUpperCase() + injury.part.slice(1)}
-        subtitle={`${describeInjury(injury)} · since ${fromKey(injury.since).toLocaleDateString(undefined, {
+        subtitle={`${describeInjury(injury)} · since ${formatDate(fromKey(injury.since), {
           month: 'long',
           day: 'numeric',
         })}`}

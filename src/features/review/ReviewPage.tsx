@@ -8,7 +8,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from 'lucide-react';
-import { addDays, fromKey, shortLabel, startOfWeek, today as todayKey } from '@/engine/dates';
+import { addDays, formatDate, fromKey, shortLabel, startOfWeek, today as todayKey } from '@/engine/dates';
 import { describeDayLoad, describeParts } from '@/engine/bodyLoad';
 import { getProgram } from '@/content/programs';
 import { weeklyChallenges, type Challenge } from '@/engine/challenges';
@@ -214,7 +214,7 @@ function NextWeek({ slots }: { slots: PlannedSlot[] }) {
         {slots.map((slot) => (
           <li key={slot.date} className="flex items-baseline gap-2.5 text-sm">
             <span className="text-xs text-ink-soft w-10 shrink-0">
-              {fromKey(slot.date).toLocaleDateString(undefined, { weekday: 'short' })}
+              {formatDate(fromKey(slot.date), { weekday: 'short' })}
             </span>
             <span className="shrink-0">{slot.icon}</span>
             <span className={slot.isRest ? 'text-ink-soft' : 'font-semibold'}>{slot.label}</span>

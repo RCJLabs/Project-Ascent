@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { AlertTriangle, Check, Sparkles, TriangleAlert } from 'lucide-react';
 import { readDbHealth, type DbHealth } from '@/db/health';
 import { sweepOrphanMedia } from '@/db/media';
-import { fromKey } from '@/engine/dates';
+import { formatDate, fromKey } from '@/engine/dates';
 import { elapsedMs, staleSessions } from '@/engine/live';
 import { formatBytes } from '@/engine/formatBytes';
 import {
@@ -128,7 +128,7 @@ export function DataPage() {
                   className="flex items-baseline justify-between gap-3 text-sm py-1"
                 >
                   <span className="font-semibold">
-                    {fromKey(session.date).toLocaleDateString(undefined, {
+                    {formatDate(fromKey(session.date), {
                       weekday: 'long',
                       day: 'numeric',
                       month: 'short',

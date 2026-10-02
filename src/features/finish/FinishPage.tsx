@@ -11,7 +11,7 @@ import { describeBlock } from '@/engine/blockReport';
 import type { LoggedPoint } from '@/engine/exerciseLog';
 import { describeChange, describeLoad, exerciseMovement, exerciseSeries } from '@/engine/exerciseReadings';
 import { formatEntry } from '@/engine/assessments';
-import { fromKey, today } from '@/engine/dates';
+import { formatDate, fromKey, today } from '@/engine/dates';
 import { ProgressionLine } from '@/ui/charts/Charts';
 import { useMetrics } from '@/store/metrics';
 import { useProfile } from '@/store/profile';
@@ -106,7 +106,7 @@ function BlockHistory({ history, current }: { history: BlockRecord[]; current: B
                 <div className="flex items-baseline gap-2">
                   <span className="font-semibold text-sm min-w-0 truncate">{row.name}</span>
                   <span className="text-xs text-ink-soft shrink-0 ml-auto tabular-nums">
-                    {fromKey(from).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                    {formatDate(fromKey(from), { month: 'short', year: 'numeric' })}
                   </span>
                 </div>
                 <p className="text-xs text-ink-soft mt-0.5">
@@ -460,7 +460,7 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
    * date there would assert what the sentence has just disclaimed.
    */
   const ranTo = end.outcome === 'left' && end.record ? end.record.endedAt ?? status.to : status.to;
-  const when = fromKey(ranTo).toLocaleDateString(undefined, {
+  const when = formatDate(fromKey(ranTo), {
     day: 'numeric',
     month: 'short',
     year: 'numeric',

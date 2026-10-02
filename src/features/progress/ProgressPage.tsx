@@ -31,7 +31,7 @@ import { checkInHistory, describeCheckIns, type CheckInHistory } from '@/engine/
 import { describeRestHabits, restHabits } from '@/engine/restReading';
 import { conversionTrend, describeConversion, drawable } from '@/engine/conversion';
 import { FIELD_DAYS, fieldSeries } from '@/engine/sessionFields';
-import { addDays, fromKey, today } from '@/engine/dates';
+import { addDays, formatDate, fromKey, today } from '@/engine/dates';
 import { availableYears } from '@/engine/yearReview';
 import { deriveClimberState, type PersonalRecord } from '@/engine/derive';
 import { deriveStats } from '@/engine/stats';
@@ -94,7 +94,7 @@ function OverCapList({ history }: { history: CheckInHistory }) {
             className="flex items-baseline justify-between gap-3 text-sm py-1"
           >
             <span className="font-semibold">
-              {fromKey(day.date).toLocaleDateString(undefined, {
+              {formatDate(fromKey(day.date), {
                 weekday: 'short',
                 day: 'numeric',
                 month: 'short',
@@ -415,7 +415,7 @@ function RecordList({
               {/* "on rock" only where it distinguishes anything. The list
                   below is all outdoors and saying so on every row is noise. */}
               {showMode && pr.mode === 'outdoor' ? 'first sent on rock ' : 'first sent '}
-              {new Date(`${pr.date}T00:00`).toLocaleDateString(undefined, {
+              {formatDate(new Date(`${pr.date}T00:00`), {
                 month: 'short',
                 day: 'numeric',
               })}

@@ -1,4 +1,4 @@
-import { fromKey } from '@/engine/dates';
+import { formatDate, fromKey } from '@/engine/dates';
 import { ENOUGH_POINTS, type FieldSeries } from '@/engine/sessionFields';
 
 /**
@@ -25,7 +25,7 @@ const PAD_B = 12;
 const R = 3;
 
 function when(date: string): string {
-  return fromKey(date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return formatDate(fromKey(date), { day: 'numeric', month: 'short' });
 }
 
 export function FieldSeriesChart({ series, from, to }: { series: FieldSeries; from: string; to: string }) {

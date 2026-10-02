@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { ChevronLeft, ChevronRight, Minus, TrendingDown, TrendingUp } from 'lucide-react';
-import { fromKey, today as todayKey } from '@/engine/dates';
+import { formatDate, fromKey, today as todayKey } from '@/engine/dates';
 import { isYearKey } from '@/engine/calendarDates';
 import { deriveClimberState } from '@/engine/derive';
 import { displayGrade } from '@/engine/gradeReading';
@@ -202,7 +202,7 @@ function YearReview({ year: requested }: { year?: string }) {
                     <Stat
                       label="Boulder"
                       value={displayGrade('V', review.hardestBoulder.grade, display)}
-                      sub={fromKey(review.hardestBoulder.date).toLocaleDateString(undefined, {
+                      sub={formatDate(fromKey(review.hardestBoulder.date), {
                         month: 'short',
                         day: 'numeric',
                       })}
@@ -212,7 +212,7 @@ function YearReview({ year: requested }: { year?: string }) {
                     <Stat
                       label="Route"
                       value={displayGrade('YDS', review.hardestRoute.grade, display)}
-                      sub={fromKey(review.hardestRoute.date).toLocaleDateString(undefined, {
+                      sub={formatDate(fromKey(review.hardestRoute.date), {
                         month: 'short',
                         day: 'numeric',
                       })}
@@ -233,7 +233,7 @@ function YearReview({ year: requested }: { year?: string }) {
                         <span className="flex-1 min-w-0 truncate font-semibold">{tripName(trip)}</span>
                         <span className="shrink-0 text-ink-soft tabular-nums">
                           {trip.days} days ·{' '}
-                          {fromKey(trip.from).toLocaleDateString(undefined, {
+                          {formatDate(fromKey(trip.from), {
                             month: 'short',
                             day: 'numeric',
                           })}
@@ -259,7 +259,7 @@ function YearReview({ year: requested }: { year?: string }) {
                       <span className="flex-1 min-w-0 truncate font-semibold">{partner.name}</span>
                       <span className="shrink-0 text-ink-soft tabular-nums">
                         {partner.sessions} {partner.sessions === 1 ? 'session' : 'sessions'} &middot;{' '}
-                        {fromKey(partner.last).toLocaleDateString(undefined, {
+                        {formatDate(fromKey(partner.last), {
                           month: 'short',
                           day: 'numeric',
                         })}
@@ -287,7 +287,7 @@ function YearReview({ year: requested }: { year?: string }) {
                       id={photo.id}
                       href={photo.href}
                       title={photo.title}
-                      date={fromKey(photo.date).toLocaleDateString(undefined, {
+                      date={formatDate(fromKey(photo.date), {
                         month: 'short',
                         day: 'numeric',
                       })}
@@ -343,7 +343,7 @@ function YearReview({ year: requested }: { year?: string }) {
                 </ul>
                 {!review.complete && (
                   <p className="text-xs text-ink-soft mt-3 leading-relaxed">
-                    Compared with 1 January to {fromKey(review.to).toLocaleDateString(undefined, {
+                    Compared with 1 January to {formatDate(fromKey(review.to), {
                       month: 'long',
                       day: 'numeric',
                     })}{' '}
@@ -361,7 +361,7 @@ function YearReview({ year: requested }: { year?: string }) {
                     <li key={milestone.id} className="flex items-baseline gap-2 flex-wrap">
                       <span className="text-sm font-semibold">{milestone.label}</span>
                       <span className="text-xs text-ink-soft">
-                        {fromKey(milestone.date).toLocaleDateString(undefined, {
+                        {formatDate(fromKey(milestone.date), {
                           month: 'short',
                           day: 'numeric',
                         })}

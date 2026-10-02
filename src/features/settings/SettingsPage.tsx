@@ -64,6 +64,7 @@ import { readingProblems } from '@/db/sound';
 import { describeProblem } from '@/engine/dataHealth';
 import { downloadFile } from '@/lib/download';
 import { offerUndo } from '@/store/undo';
+import { formatDate } from '@/engine/dates';
 
 /**
  * The five, read from `engine/kit.ts` rather than authored again here
@@ -284,7 +285,7 @@ export function SettingsPage() {
       const on = new Date(parsed.exportedAt);
       setPendingImport({
         bytes,
-        label: `Exported ${on.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })} from app version ${parsed.appVersion || 'unknown'}.`,
+        label: `Exported ${formatDate(on, { day: 'numeric', month: 'long', year: 'numeric' })} from app version ${parsed.appVersion || 'unknown'}.`,
         preview,
       });
       // Said before the import rather than discovered after it.

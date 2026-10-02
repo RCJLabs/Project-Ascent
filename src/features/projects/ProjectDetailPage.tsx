@@ -3,7 +3,7 @@ import { Link, useLocation } from 'wouter';
 import { Check, Plus, Trash2 } from 'lucide-react';
 import type { Project } from '@/db/projects';
 import { OUTCOME_LABEL, highPointOf, summariseProject } from '@/engine/projectSummary';
-import { fromKey, today } from '@/engine/dates';
+import { formatDate, fromKey, today } from '@/engine/dates';
 import { useProjects } from '@/store/projects';
 import { offerUndo } from '@/store/undo';
 import { useSettings } from '@/store/settings';
@@ -241,7 +241,7 @@ export function ProjectDetailPage({ params }: { params: { id: string } }) {
 }
 
 function shortDate(key: string): string {
-  return fromKey(key).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return formatDate(fromKey(key), { month: 'short', day: 'numeric' });
 }
 
 function Stat({ label, value }: { label: string; value: string }) {

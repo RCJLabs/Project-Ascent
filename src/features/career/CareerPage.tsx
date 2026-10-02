@@ -8,7 +8,7 @@ import {
   type CareerCategory,
   type NextMilestone,
 } from '@/engine/career';
-import { fromKey } from '@/engine/dates';
+import { formatDate, fromKey } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { describeVenues } from '@/engine/venues';
 import { venueHref } from '@/ui/routes';
@@ -114,7 +114,7 @@ export function CareerPage() {
               // (PLAN.md M258).
               `${career.achieved.length} ${
                 career.achieved.length === 1 ? 'milestone' : 'milestones'
-              } since ${fromKey(career.first).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}`
+              } since ${formatDate(fromKey(career.first), { month: 'long', year: 'numeric' })}`
         }
       />
 
@@ -254,7 +254,7 @@ export function CareerPage() {
                         <div className="flex items-baseline gap-2 flex-wrap">
                           <span className="font-bold">{milestone.label}</span>
                           <span className="text-xs text-ink-soft">
-                            {fromKey(milestone.date).toLocaleDateString(undefined, {
+                            {formatDate(fromKey(milestone.date), {
                               month: 'short',
                               day: 'numeric',
                             })}

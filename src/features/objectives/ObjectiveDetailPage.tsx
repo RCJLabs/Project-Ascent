@@ -6,7 +6,7 @@ import { METRICS } from '@/content/metrics';
 import type { MetricId } from '@/content/types';
 import { benchmarkFor } from '@/engine/objectives';
 import { V_GRADES, YDS_GRADES } from '@/engine/grades';
-import { fromKey, today } from '@/engine/dates';
+import { formatDate, fromKey, today } from '@/engine/dates';
 import {
   achievedByProject,
   describeProgress,
@@ -166,7 +166,7 @@ export function ObjectiveDetailPage({ params }: { params: { id: string } }) {
           objective.grade,
           objective.location,
           objective.targetDate &&
-            `for ${fromKey(objective.targetDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`,
+            `for ${formatDate(fromKey(objective.targetDate), { month: 'long', day: 'numeric' })}`,
         ]
           .filter(Boolean)
           .join(' · ')}
@@ -636,7 +636,7 @@ function WeekTable({ plan }: { plan: PeakPlan }) {
         {plan.weeks.map((week) => (
           <tr key={week.ends} className="border-t border-line">
             <th scope="row" className="text-left font-normal text-ink-soft py-1.5">
-              {fromKey(week.ends).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+              {formatDate(fromKey(week.ends), { day: 'numeric', month: 'short' })}
             </th>
             <td className="py-1.5">{WEEK_LABEL[week.kind]}</td>
             <td className="py-1.5 text-right font-bold tabular-nums">{Math.round(week.ofNow * 100)}%</td>

@@ -155,6 +155,11 @@ const FORMATTERS = new Map<string, Intl.DateTimeFormat>();
  * 80 to 150ms to `shortLabel`. The text is the same, because a formatter
  * built with `undefined` locale and date options is exactly what
  * `toLocaleDateString` builds, just not thrown away.
+ *
+ * Every call with options goes through here since M359, not only the ones
+ * a profile named: M355's list missed the heat grid's month labels and
+ * eight other lists, and `formatDate.test.ts` now reads the whole tree for
+ * a call that does not.
  */
 export function formatDate(date: Date, options: Intl.DateTimeFormatOptions): string {
   const key = JSON.stringify(options);

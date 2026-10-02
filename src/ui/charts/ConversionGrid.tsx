@@ -1,4 +1,4 @@
-import { fromKey } from '@/engine/dates';
+import { formatDate, fromKey } from '@/engine/dates';
 import type { ConversionTrend, GradeConversion } from '@/engine/conversion';
 import { ENOUGH_TRIES, drawable } from '@/engine/conversion';
 import type { GradeScale } from '@/engine/grades';
@@ -37,7 +37,7 @@ const HEAD = 12;
 const TRACK = 0.12;
 
 function monthOf(date: string): string {
-  return fromKey(date).toLocaleDateString(undefined, { month: 'short' });
+  return formatDate(fromKey(date), { month: 'short' });
 }
 
 export function ConversionGrid({

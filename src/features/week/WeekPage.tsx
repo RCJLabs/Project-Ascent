@@ -17,7 +17,7 @@ import { getProgram } from '@/content/programs';
 import { INTENSITY_LABEL, type DayOfWeek, type Metric } from '@/content/types';
 import { TEST_REASON_LABEL } from '@/engine/testWeeks';
 import { describeDayLoad, describeParts } from '@/engine/bodyLoad';
-import { addDays, dayOfWeek, fromKey, isDateKey, shortLabel, startOfWeek, today } from '@/engine/dates';
+import { addDays, dayOfWeek, formatDate, fromKey, isDateKey, shortLabel, startOfWeek, today } from '@/engine/dates';
 import { isThisWeek } from '@/engine/calendarDates';
 import { blockWindow, DELOAD_STEP } from '@/engine/plan';
 import { effectivePlan } from '@/engine/reschedule';
@@ -484,7 +484,7 @@ function DayRow({
   const status = STATUS[d.status];
   const intensity = training ? intensityOf(type) : null;
   const isToday = d.date === today;
-  const weekday = fromKey(d.date).toLocaleDateString(undefined, { weekday: 'short' });
+  const weekday = formatDate(fromKey(d.date), { weekday: 'short' });
 
   // Folded into one class rather than stacked (the M100 lesson, recorded
   // on the calendar): a landing's tint and a source's tint both set a

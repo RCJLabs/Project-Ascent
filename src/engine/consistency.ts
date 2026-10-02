@@ -2,7 +2,7 @@ import type { Session } from '@/db/sessions';
 import { type AwayPeriod, awayOn } from './away';
 import { isRestSession } from './rest';
 import { coverage, describeCoverage } from './thinLog';
-import { addDays, daysBetween, fromKey, startOfWeek, today as todayKey } from './dates';
+import { addDays, daysBetween, formatDate, fromKey, startOfWeek, today as todayKey } from './dates';
 import { sessionLoad } from './derive';
 
 /**
@@ -250,7 +250,7 @@ export function buildHeatGrid(input: HeatInput): HeatGrid {
 
     // A month is labelled on the first column whose Sunday falls in it, so
     // the label sits over the block it names rather than a week early.
-    const label = fromKey(weekStart).toLocaleDateString(undefined, { month: 'short' });
+    const label = formatDate(fromKey(weekStart), { month: 'short' });
     if (months.length === 0 || months[months.length - 1]!.label !== label) {
       months.push({ label, column: w });
     }

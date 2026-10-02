@@ -12,6 +12,7 @@
  */
 
 import { useState } from 'react';
+import { formatDate } from '@/engine/dates';
 
 const BAR_MAX_THICKNESS = 24;
 const SURFACE_GAP = 2;
@@ -33,7 +34,7 @@ function dateColumn(dates: readonly string[]): (date: string) => string {
     years.size > 1
       ? { year: 'numeric', month: 'short', day: 'numeric' }
       : { month: 'short', day: 'numeric' };
-  return (date) => new Date(`${date}T00:00`).toLocaleDateString(undefined, options);
+  return (date) => formatDate(new Date(`${date}T00:00`), options);
 }
 
 function niceCeil(value: number): number {
@@ -129,7 +130,7 @@ export function LoadBars({
       <figcaption className="sr-only">{label}</figcaption>
       <div className="flex items-baseline justify-between mb-1.5 min-h-5">
         <span className="text-xs text-ink-soft">
-          {shown ? new Date(`${shown.date}T00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
+          {shown ? formatDate(new Date(`${shown.date}T00:00`), { month: 'short', day: 'numeric' }) : ''}
         </span>
         <span className="text-xs font-semibold tabular-nums">{shown ? formatValue(shown.value) : ''}</span>
       </div>
@@ -270,7 +271,7 @@ export function ProgressionLine({
       <div className="flex items-baseline justify-between mb-1.5 min-h-5">
         <span className="text-xs text-ink-soft">
           {shown?.value !== null && shown
-            ? new Date(`${shown.at}T00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+            ? formatDate(new Date(`${shown.at}T00:00`), { month: 'short', day: 'numeric' })
             : ''}
         </span>
         <span className="text-xs font-semibold">{shown?.display ?? ''}</span>

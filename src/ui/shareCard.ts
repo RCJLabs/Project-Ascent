@@ -18,7 +18,7 @@ import type { AltimeterState } from '@/engine/altimeter';
 import { BLOCK_OUTCOME_WORD, type BlockOutcome } from '@/engine/blockOutcome';
 import type { BlockReport } from '@/engine/blockReport';
 import type { AvatarConfig } from '@/engine/avatar';
-import { fromKey, shortLabel } from '@/engine/dates';
+import { formatDate, fromKey, shortLabel } from '@/engine/dates';
 import type { ProjectSummary } from '@/engine/projectSummary';
 import type { WeekReview } from '@/engine/review';
 import type { YearReview } from '@/engine/yearReview';
@@ -280,7 +280,7 @@ export function yearCard(review: YearReview): CardContent {
     // `month` is `YYYY-MM`; the card wants the name of it.
     ...(review.busiest
       ? {
-          footnote: `Busiest month: ${fromKey(`${review.busiest.month}-01`).toLocaleDateString(undefined, { month: 'long' })}`,
+          footnote: `Busiest month: ${formatDate(fromKey(`${review.busiest.month}-01`), { month: 'long' })}`,
         }
       : {}),
   };
@@ -441,7 +441,7 @@ export function achievementCard(input: {
     headline: input.name,
     subhead: input.detail,
     stats: [
-      { label: 'Earned', value: fromKey(input.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) },
+      { label: 'Earned', value: formatDate(fromKey(input.date), { day: 'numeric', month: 'short', year: 'numeric' }) },
       { label: 'Collected', value: `${input.earned} of ${input.total}` },
     ],
     footnote: 'Read from the log. Nothing here was awarded twice.',

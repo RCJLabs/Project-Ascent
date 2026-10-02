@@ -15280,6 +15280,15 @@ its label is missing. None of these wants touching.
   number costs 2ms. A build with `String` in place of `toLocaleString` moved the cost into
   `measure`, and an A/B of six launches on each page saved nothing that held: Game 1,727 to 1,611ms
   with the ranges overlapping, Body 1,166 to 1,184ms. Nothing changed but a comment at `trim`.
+- **M359 — every formatter kept, not the ones a profile named.** The heat grid's build was the
+  other formatter M355 missed. It labels each of its 53 columns with a month, through
+  `toLocaleDateString` with options, so it built and threw away 53 formatters per build. Timed in
+  the page, the labels were 152–157ms of a launch at a quarter CPU speed. M355 had left 45 such calls
+  alone because they "run once per render". Counted on launches of 22 pages, nine of them run once
+  per row: Career's milestones (117 a launch), chart axes, Year's lists, achievements, Review. All
+  48 calls now go through `formatDate`, and a test reads the whole source tree for any that don't.
+  Progress's launch went from 1,859 to 1,556ms with the ranges apart. The other four pages were
+  noise at the sample climber's size.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -26842,3 +26851,124 @@ milestone.
   CI, since a comment changes nothing they test.
 - **Not measured on a phone.** The 14ms is this container's Chromium at full speed. A real phone's
   first call could be longer or shorter, and it is paid once a launch either way.
+
+## M359 — every formatter kept, not the ones a profile named
+
+The list's next item was the Progress heat grid's build, at 116–212ms of self time in M355's
+profiles. After M358, a profile row gets a clock around it before it gets a milestone.
+
+### The premise, timed
+
+A build that timed `buildHeatGrid`, and separately its month labels, on warm launches of Progress
+with the sample climber:
+
+```
+                 each build on the launch         the month labels, all builds
+full speed       21–35ms, then 6–7ms              23–35ms
+quarter speed    105–119ms, then 2–3 of 10–41ms   152–157ms
+```
+
+The labels are nearly all of it. Each of the grid's 53 columns is labelled with its month by
+`fromKey(weekStart).toLocaleDateString(undefined, { month: 'short' })`. With options, that builds a
+new `Intl.DateTimeFormat` on every call. M355 found this and gave the app `formatDate`, one
+formatter per set of options. It then moved only the calls its profile named: the heat grid's
+`title`, but not the label three lines further down the same function.
+
+The first full-speed build also carries the locale's first-call cost from M358, about 14ms. That
+cost does not go away. It moves to whatever formats first.
+
+### M355's other assumption
+
+M355 left the other 45 calls with options alone, because *"they run once per render, where a
+formatter costs nothing anyone could measure."* That was asserted, not counted. A counter wrapped
+around the native methods, on warm launches of 22 pages at full speed, listing every caller with
+ten calls or more:
+
+```
+/career         117 calls   12.1ms   Career's milestone list
+/progress       106         22.5ms   the heat grid's month labels, two builds
+/progress        56          5.4ms   the charts' date column
+/progress        40          3.6ms   the field charts' points
+/year            66          6.4ms   two lists
+/progress        26          2.1ms   the load trend's points
+/achievements    24         17.4ms   the achievement list, carrying the first-call cost
+/review          21          6.1ms   the week's slots
+/altimeter       12          3.4ms   the charts' date column
+```
+
+Nine callers run once per row, not once per render. In Node, one call with options costs 74µs, the
+same through a kept formatter 4.7µs, and `toLocaleDateString()` with no arguments 1.1µs, because V8
+keeps that formatter itself.
+
+### The change
+
+- **Every call with options goes through `formatDate`.** That is 48 calls in 29 files, rewritten by
+  a script: `x.toLocaleDateString(undefined, options)` became `formatDate(x, options)`, receiver
+  and options untouched. One call is `toLocaleTimeString`, an import's time of day. A formatter
+  built with an hour and a minute is what `toLocaleTimeString` builds for those options too.
+- **The text cannot change.** `toLocaleDateString` adds a default year, month and day only when
+  the options name no date field. Every call here names one, so it builds exactly the formatter
+  `formatDate` keeps. The test checks this anyway, below.
+- **Calls with no arguments are left alone.** There is one, the heat grid's `aria-label`, and V8
+  already caches it.
+
+Converting only the nine was considered and rejected. Nine would leave the rule as *"the ones a
+profile caught"*, which is the rule that missed the heat grid's labels. With every call converted,
+a test can hold the whole tree to it.
+
+### After
+
+Main-thread time over a warm launch, main's build and this one alternating, five runs each,
+production builds, sample climber, CPU at a quarter speed:
+
+```
+              main median (range)     this change
+/progress     1,859 (1,822–1,910)     1,556 (1,468–1,586)
+/career       1,129 (1,114–1,165)     1,124 (919–1,145)
+/year         1,162 (1,110–1,242)     1,103 (1,042–1,239)
+/achievements   993 (968–1,105)       1,027 (989–1,090)
+/review       1,163 (1,146–1,274)     1,219 (1,144–1,291)
+```
+
+- **Progress:** 16% less, with the ranges apart.
+- **The other four:** noise. Career's 117 calls should save about 30ms at this speed, which is inside
+  the spread of a 1.1-second launch. A longer log has more rows, and the saving grows with them;
+  that was not measured.
+- **The absolute numbers are not comparable across milestones.** Progress's "before" here is 1,859ms
+  against M355's "after" of 1,443ms. Only runs alternating in the same session are compared.
+
+### Checked
+
+- **`formatDate.test.ts`, 67 tests** (was 27):
+  - **Identical text** for every option set now routed through `formatDate`: 18 sets, was 6. Each
+    is checked against `toLocaleDateString` for 900 consecutive days, in the default zone, New York
+    and Sydney.
+  - **The time of day** checked against `toLocaleTimeString` at 96 times across a day.
+  - **A guard over the whole tree.** No source file but `dates.ts` may call `toLocaleDateString` or
+    `toLocaleTimeString` with arguments. It checks that it read more than 300 files, `.ts` and
+    `.tsx` both, and no tests.
+  - **The guard would catch one.** Its line check runs on sample text, a call with options and one
+    without, and must name exactly the right lines.
+- **Mutation battery: 11 mutants, all killed; sanity survived.** It took three rounds, and both
+  holes were in the guard:
+  - **"The guard forgets the time of day" survived the first round.** The self-test checked its
+    own copy of the pattern, not the one the guard used. They share one constant now.
+  - **"The guard keeps its own pattern" survived the second round.** With no offenders in the tree,
+    any narrower check passes. The line check is now a function, and the self-test runs that
+    function.
+
+  The rest:
+  - the heat grid, Career, the import's time and the chart column each back to a formatter per
+    call;
+  - the formatter never kept;
+  - every option set sharing one;
+  - the formatter pinned to UTC;
+  - the guard reading only `.ts`;
+  - the guard reading the tests too.
+- **Full suite:** 7,608 passing, M357's 7,568 plus 40, and the one pinned-clock skip.
+- **Layout harness:** clean.
+- **Sizes:**
+  - The first load is 114.52KB (−0.02; the line is 115.1).
+  - Home's cold load is 213.10KB (−0.04; the line is 213.5).
+- **Not measured on a phone,** and not with a long log. The sample climber is the only data
+  measured.

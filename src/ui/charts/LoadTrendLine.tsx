@@ -1,5 +1,5 @@
 import { ACWR_BOUNDS } from '@/engine/derive';
-import { fromKey, shortLabel } from '@/engine/dates';
+import { formatDate, fromKey, shortLabel } from '@/engine/dates';
 import { trendCeiling, type LoadTrend } from '@/engine/loadTrend';
 import { WEEK_LABEL, type PeakPlan } from '@/engine/peak';
 
@@ -271,7 +271,7 @@ export function LoadTrendLine({ trend, plan }: { trend: LoadTrend; plan?: PeakPl
               .map((point) => (
                 <tr key={point.date}>
                   <th scope="row">
-                    {fromKey(point.date).toLocaleDateString(undefined, {
+                    {formatDate(fromKey(point.date), {
                       day: 'numeric',
                       month: 'short',
                     })}
@@ -282,7 +282,7 @@ export function LoadTrendLine({ trend, plan }: { trend: LoadTrend; plan?: PeakPl
             {weeks.map((week) => (
               <tr key={week.ends}>
                 <th scope="row">
-                  {fromKey(week.ends).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                  {formatDate(fromKey(week.ends), { day: 'numeric', month: 'short' })}
                 </th>
                 <td>
                   {week.acwr.toFixed(2)} — planned, {WEEK_LABEL[week.kind].toLowerCase()}

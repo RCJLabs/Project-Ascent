@@ -23,7 +23,7 @@ import type { MetricEntry } from '@/db/metrics';
 import type { MetricId } from '@/content/types';
 import { METRICS } from '@/content/metrics';
 import { assessmentStatus } from './assessmentStatus';
-import { addDays, daysBetween, fromKey, shortLabel, today as todayKey } from './dates';
+import { addDays, daysBetween, formatDate, fromKey, shortLabel, today as todayKey } from './dates';
 import { poorRun } from './conditions';
 import { MIN_CHRONIC_DAYS, MIN_RATIO_DAYS, type ClimberState } from './derive';
 import { recoverySentence, type Diagnosis } from './plateau';
@@ -857,7 +857,7 @@ function reliefLine(relief: LoadRelief | null | undefined): string {
   if (!relief?.drop) return '';
   const { session, without } = relief.drop;
   const left = relief.planned.length;
-  const day = fromKey(session.date).toLocaleDateString(undefined, { weekday: 'long' });
+  const day = formatDate(fromKey(session.date), { weekday: 'long' });
   /**
    * *"The week ends at"*, not *"comes to"*.
    *

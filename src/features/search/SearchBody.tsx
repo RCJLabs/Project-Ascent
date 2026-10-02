@@ -7,7 +7,7 @@ import { GUIDES } from '@/content/guides';
 import { sectionText, snippet } from '@/engine/guideText';
 import { METRICS } from '@/content/metrics';
 import { allPrograms } from '@/content/programs';
-import { fromKey } from '@/engine/dates';
+import { formatDate, fromKey } from '@/engine/dates';
 import { displayGrade } from '@/engine/gradeReading';
 import { groupResults, search, type SearchItem } from '@/engine/search';
 import { useCustomPrograms } from '@/store/programs';
@@ -193,7 +193,7 @@ function useIndex(): SearchItem[] {
       items.push({
         id: `session:${session.id}`,
         kind: 'session',
-        title: fromKey(session.date).toLocaleDateString(undefined, {
+        title: formatDate(fromKey(session.date), {
           weekday: 'long',
           day: 'numeric',
           month: 'long',

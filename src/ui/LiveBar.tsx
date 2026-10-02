@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ChevronRight, CircleAlert } from 'lucide-react';
-import { fromKey } from '@/engine/dates';
+import { formatDate, fromKey } from '@/engine/dates';
 import { logHref } from './logHref';
 import { describeSpan, elapsedMs, formatClock, runningSession, staleSessions } from '@/engine/live';
 import type { Session } from '@/db/sessions';
@@ -57,7 +57,7 @@ export function LiveBar({ banner }: { banner: Banner }) {
   // Two clocks on one screen is one too many.
   if (location === href) return null;
 
-  const day = fromKey(banner.session.date).toLocaleDateString(undefined, { weekday: 'long' });
+  const day = formatDate(fromKey(banner.session.date), { weekday: 'long' });
 
   return (
     <Link

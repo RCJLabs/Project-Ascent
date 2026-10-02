@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { BatteryCharging, BatteryLow, BatteryWarning, ChevronDown, HeartPulse } from 'lucide-react';
-import { fromKey, today } from '@/engine/dates';
+import { formatDate, fromKey, today } from '@/engine/dates';
 import { deriveClimberState } from '@/engine/derive';
 import { compareStats } from '@/engine/statHistory';
 import { deriveStats, type Stat, type StatId } from '@/engine/stats';
@@ -143,7 +143,7 @@ export function BodyPage() {
 
 /** "March 2026" — the month is the useful precision for a six-month-old shape. */
 function sixMonthsLabel(asOf: string): string {
-  return fromKey(asOf).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  return formatDate(fromKey(asOf), { month: 'long', year: 'numeric' });
 }
 
 const VITALITY_LOOK: Record<VitalityState, { color: string; Icon: typeof HeartPulse }> = {

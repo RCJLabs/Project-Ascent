@@ -26,7 +26,7 @@ import { drillText } from '@/content/drillText';
 import { getProtocol } from '@/content/protocols';
 import { SCALE_MAX, getField, type FieldSpec } from '@/content/fields';
 import type { Drill, FieldId, SessionType } from '@/content/types';
-import { addDays, fromKey, isDateKey, shortLabel, today } from '@/engine/dates';
+import { addDays, formatDate, fromKey, isDateKey, shortLabel, today } from '@/engine/dates';
 import { clearTimerState, loadTimerState, saveTimerState } from '@/lib/timerState';
 import { ClimbEntry, RepeatLast, type EditedClimb, type Outcome } from './ClimbEntry';
 import { sessionOwner } from '@/db/media';
@@ -255,7 +255,7 @@ export function DayBody({ date }: { date: string }) {
             onDelete={() => {
               const deleted = session;
               void remove(deleted).then(() =>
-                offerUndo(`${fromKey(deleted.date).toLocaleDateString(undefined, { weekday: 'long' })}'s session`, () =>
+                offerUndo(`${formatDate(fromKey(deleted.date), { weekday: 'long' })}'s session`, () =>
                   restore(deleted),
                 ),
               );
@@ -680,7 +680,7 @@ function SessionEditor({
     return {
       // Names are dropped on purpose — see RepeatLast.
       climbs: before.climbs.map(({ name: _name, ...rest }) => rest),
-      label: fromKey(before.date).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' }),
+      label: formatDate(fromKey(before.date), { weekday: 'long', day: 'numeric', month: 'short' }),
     };
   }, [allSessions, session.id, session.date, session.sessionTypeId, session.programId]);
   const stale = isStale(session, now);
@@ -2685,7 +2685,7 @@ function CorrectionCard({
    * three weeks ago is a lie about which day it would move to.
    */
   const dayBefore = addDays(session.date, -1);
-  const dayBeforeName = fromKey(dayBefore).toLocaleDateString(undefined, { weekday: 'long' });
+  const dayBeforeName = formatDate(fromKey(dayBefore), { weekday: 'long' });
 
   const moveTo = (date: string) => {
     void move(session, date).then((moved) => {

@@ -1,4 +1,4 @@
-import { fromKey } from '@/engine/dates';
+import { formatDate, fromKey } from '@/engine/dates';
 import type { CheckInHistory } from '@/engine/checkIns';
 import {
   FINGER_CHIP,
@@ -56,7 +56,7 @@ const SLEEP_TONE: Record<SleepFeel, { className: string; opacity: number }> = {
 };
 
 function when(date: string): string {
-  return fromKey(date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return formatDate(fromKey(date), { day: 'numeric', month: 'short' });
 }
 
 export function CheckInStrip({ history }: { history: CheckInHistory }) {

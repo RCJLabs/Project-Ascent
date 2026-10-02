@@ -8,7 +8,7 @@ import {
   sortAchievements,
 } from '@/engine/achievements';
 import { getProgram } from '@/content/programs';
-import { fromKey } from '@/engine/dates';
+import { formatDate, fromKey } from '@/engine/dates';
 import { useGame } from '@/store/game';
 import { useProjects } from '@/store/projects';
 import { useSessions, allSessions } from '@/store/sessions';
@@ -65,7 +65,7 @@ export function AchievementsCard() {
           </p>
           <p className="text-xs text-ink-soft mt-0.5 truncate">
             {newest
-              ? `Latest: ${newest.name}, ${fromKey(newest.date!).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`
+              ? `Latest: ${newest.name}, ${formatDate(fromKey(newest.date!), { month: 'short', year: 'numeric' })}`
               : 'Days with a shape to them, read from the log.'}
           </p>
         </div>
@@ -108,7 +108,7 @@ export function AchievementList() {
             </span>
             {achievement.date !== null && (
               <span className="text-xs text-ink-soft tabular-nums shrink-0">
-                {fromKey(achievement.date).toLocaleDateString(undefined, {
+                {formatDate(fromKey(achievement.date), {
                   month: 'short',
                   year: 'numeric',
                 })}

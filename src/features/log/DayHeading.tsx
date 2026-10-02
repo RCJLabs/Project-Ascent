@@ -1,6 +1,6 @@
 import { useLocation } from 'wouter';
 import { ArrowLeft } from 'lucide-react';
-import { addDays, fromKey } from '@/engine/dates';
+import { addDays, formatDate, fromKey } from '@/engine/dates';
 import { IconButton } from '@/ui/IconButton';
 import { logHref } from '@/ui/logHref';
 import { usePlannedDay } from './usePlannedDay';
@@ -19,7 +19,7 @@ import { usePlannedDay } from './usePlannedDay';
 export function DayHeading({ date }: { date: string }) {
   const [, navigate] = useLocation();
   const { day } = usePlannedDay(date);
-  const heading = fromKey(date).toLocaleDateString(undefined, {
+  const heading = formatDate(fromKey(date), {
     weekday: 'long',
     month: 'long',
     day: 'numeric',

@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { ArrowRight, X } from 'lucide-react';
 import { PROGRAMS } from '@/content/programs';
 import type { ProgramId } from '@/content/types';
-import { fromKey, today } from '@/engine/dates';
+import { formatDate, fromKey, today } from '@/engine/dates';
 import type { Objective } from '@/engine/objectives';
 import { describeSeason, MAX_BLOCKS, season } from '@/engine/season';
 import { useProfile } from '@/store/profile';
@@ -45,7 +45,7 @@ export function SeasonCard({
   const said = plan === null ? null : describeSeason(plan);
 
   const when = (key: string) =>
-    fromKey(key).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    formatDate(fromKey(key), { month: 'short', day: 'numeric' });
 
   return (
     <Card title="The season">

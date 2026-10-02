@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowRight, ArrowUp } from 'lucide-react';
 import { blockChanges, type BlockCompare as Compare } from '@/engine/blockCompare';
-import { fromKey } from '@/engine/dates';
+import { formatDate, fromKey } from '@/engine/dates';
 import type { Change } from '@/engine/yearReview';
 
 /**
@@ -52,7 +52,7 @@ function Row({ change }: { change: Change }) {
 
 function label(from: string, to: string): string {
   const short = (key: string) =>
-    fromKey(key).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    formatDate(fromKey(key), { day: 'numeric', month: 'short' });
   return `${short(from)} – ${short(to)}`;
 }
 

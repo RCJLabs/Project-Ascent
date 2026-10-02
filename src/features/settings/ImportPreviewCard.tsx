@@ -2,6 +2,7 @@ import { TriangleAlert, Undo2 } from 'lucide-react';
 import { STORE_LABEL, visibleRows, type ImportPreview } from '@/db/importPreview';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { formatDate } from '@/engine/dates';
 
 /**
  * What is about to happen, in records (PLAN.md M20).
@@ -185,8 +186,8 @@ export function UndoImportCard({
     <Card title="Undo the last import">
       <p className="text-sm text-ink-soft leading-relaxed">
         A restore point was saved before importing {replacedWith}, on{' '}
-        {when.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })} at{' '}
-        {when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}. Undoing puts
+        {formatDate(when, { day: 'numeric', month: 'long' })} at{' '}
+        {formatDate(when, { hour: 'numeric', minute: '2-digit' })}. Undoing puts
         your records back as they were. Your photos are left as they are — the restore point does
         not hold photos, so any that Replace already cleared are gone.
       </p>

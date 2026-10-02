@@ -7,7 +7,7 @@ import { Field, Input } from '@/ui/Field';
 import { IconButton } from '@/ui/IconButton';
 import { AWAY_LABELS, type AwayKind, type AwayPeriod, awayLength, cleanNote, newAwayId, NOTE_LIMIT } from '@/engine/away';
 import { AWAY_KINDS } from '@/engine/awayPeriod';
-import { fromKey } from '@/engine/dates';
+import { formatDate, fromKey } from '@/engine/dates';
 import { useAway } from '@/store/away';
 import { offerUndo } from '@/store/undo';
 
@@ -27,9 +27,9 @@ import { offerUndo } from '@/store/undo';
  */
 function span(from: string, to: string): string {
   const short = { day: 'numeric', month: 'short' } as const;
-  const start = fromKey(from).toLocaleDateString(undefined, short);
+  const start = formatDate(fromKey(from), short);
   if (from === to) return start;
-  return `${start} – ${fromKey(to).toLocaleDateString(undefined, { ...short, year: 'numeric' })}`;
+  return `${start} – ${formatDate(fromKey(to), { ...short, year: 'numeric' })}`;
 }
 
 export function AwayCard({ picked, onSaved }: { picked: Set<string>; onSaved: () => void }) {
