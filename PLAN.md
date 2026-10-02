@@ -15344,6 +15344,21 @@ its label is missing. None of these wants touching.
   - letting Home through on every launch made warm launches 170ms slower;
   - letting it through on every first visit drew the heading sooner but the first-session card
     0.7–2.9s later. The trial had timed only the heading, which was the wrong measure.
+- **M365a — the end-of-block report, read against what it says.** The first claims audit since
+  Coach's Corner (M337a), and the same rule: each finding says where it is true and whether it is
+  measured, inferred or a proposal. Nothing built. The biggest finding: **a block the climber left
+  is measured as if they never left.** A climber who did every session Iron Grip placed for six
+  weeks, then switched to Peak Performance, is told *"36 of 48 sessions"*. Peak Performance's
+  baseline tests are reported as Iron Grip's retests, under a sentence that says they moved
+  *"while you were on it"*. Also found:
+  - resuming a stopped block does not resume the week the climber was on;
+  - *"The retests you owe"* asks for a reading that cannot count once the block has ended;
+  - the opening sentence promises sections that a custom block never has;
+  - a decline is called *"left where it was"*;
+  - five copy defects, among them a card drawn twice.
+
+  Two coaching questions go to the user: whether a small change should count as a change, and
+  whether added-load benchmarks need a bodyweight beside them.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -27848,3 +27863,189 @@ warm and cold, six runs each. No line was shown and then withdrawn.
     - `hydrateAll` no longer loading the catalogue.
 - **Full suite:** 7,677 passing, M363's 7,663 plus 14, and the one pinned-clock skip.
 - **Layout harness:** clean.
+
+## The end-of-block report, read against what it says (M365a)
+
+The second claims audit after Coach's Corner. M337a's list of pages never audited was Home, Coach,
+the Train and program pages, Builder, Game, Settings, Finish and Objectives. Coach was done there.
+This is Finish, chosen because it is the page densest in claims about a climber's results, and
+because a coach reads the same claims through the block file (M292) and the comparison (M362). The
+rule is M298a's: each entry says where it is true and whether it is **measured**, **inferred** or
+**a proposal**. Nothing here is built.
+
+### How it was read
+
+- **The code, against its own prose:**
+  - `FinishPage.tsx` (803 lines);
+  - `engine/blockReport.ts`, `blockEnd.ts`, `adherence.ts` and `nextBlock.ts`;
+  - the start and stop paths in `store/profile.ts` and `StartProgramPage.tsx`.
+- **The page rendered, for every block in the sample climber's history:** *My winter block*,
+  finished, and Iron Grip, running in week 6.
+- **Constructed climbers for the states the sample cannot reach,** each rendered and its text
+  read:
+  - Iron Grip run perfectly for six weeks and then left, three ways: switched to Peak Performance,
+    switched to The Long Game, and stopped;
+  - a block stopped in week 6 and resumed four weeks later;
+  - a finished block with a baseline only, and then a retest taken today;
+  - a running block in week 2 with two baselines;
+  - the sample's custom block given the plan a real start would have written.
+
+  The scratch tests were deleted afterwards.
+
+### 1. A block the climber left is measured as if they never left
+
+**Measured.** Every number on the page is computed over the block's planned window, through today
+or its planned last day. `blocks.ts` says why: *"`endedAt` is not the end of the window"*. The
+window is derivable and `endedAt` says whether the climber stayed. The page's own sentence for a
+left block then promises the opposite: *"below is which of its sessions happened, and which of the
+numbers moved **while you were on it**."*
+
+The climber below did all 24 sessions Iron Grip placed in six weeks, then left:
+
+```
+                                  "Did you do the work?"       "What moved"
+switched to Peak Performance      36 of 48 sessions; +12       Up: Max Hang. Down: Weighted Pull-Ups.
+                                  "the plan did not place"
+switched to The Long Game         30 of 48; +18                the same
+stopped                           24 of 48                     nothing to compare; two retests owed
+```
+
+- **Weeks 7–12 count as planned and missed.** That holds whether the climber switched or
+  stopped, so six perfect weeks read as half done.
+- **The next block's sessions count as this one's.** Iron Grip's session types are `fp`, `perf`
+  and `rest`. Peak Performance has `fp` and `perf` too, so twelve of its sessions are counted as
+  Iron Grip sessions done. Peak Performance is the first successor Iron Grip itself suggests.
+- **The next block's baseline is reported as this block's retest.** Peak Performance tests four of
+  Iron Grip's nine assessments. Its week-one readings, three days after the climber left, became
+  *"one of the 2 retested numbers improved, one went the other way"*. That also removed the
+  *"retests you owe"* card that the stopped climber correctly gets.
+- **"What comes next" is then ordered by those false movements.**
+- **Inferred from the code, not rendered:**
+  - the share card and the block file take the same `report` and adherence, so a coach opening
+    the athlete's file (M292), or comparing it beside others (M362), reads the same;
+  - *"What you were lifting"* and *"Where it drifted from the plan"* use the same window;
+  - a block stopped and resumed (finding 2) carries its gap the same way.
+
+**A decision inside the fix,** for the user: whether a reading taken in the days after leaving can
+still be this block's retest. A coach often runs the end test of one block as the baseline of the
+next. The adherence half has no such question: sessions after leaving are not this block's.
+
+### 2. Resuming a stopped block does not resume the week the climber was on
+
+**Measured.** Two pieces of copy make the promise:
+
+- the Stop card: *"starting Iron Grip again later resumes the week you were on rather than
+  beginning it over"*;
+- the start page: *"Resume keeps your place in the program"*.
+
+`startProgram` keeps the original start date, so the week is counted by the calendar. Stopped at
+the end of week 6 and resumed four weeks later, the block is in **week 10**. `openBlock` reopens the
+same history row, because its id is the program and start date. The stop leaves the history, and
+the four weeks away become weeks of the block.
+
+A climber stopped longer than the weeks remaining would resume a block that has already ended.
+This was inferred from the same code and not rendered.
+
+**For the user:** whether *resume* should mean the week they were on, by moving the start date
+forward by the gap, or the copy should say the calendar kept running.
+
+### 3. "The retests you owe" asks for a reading that cannot count
+
+**Measured.** The card shows whenever an assessment has a baseline and no retest, whatever state
+the block is in, and says: *"Taking it now is what turns the block into a measurement."*
+
+- **On a block that has ended,** a reading taken today is outside the window. It changes nothing:
+  with the retest saved, the result stayed `once-only` and the card stayed. The sentence above it
+  is wrong the same way: *"The block's test weeks are the ones to take them in"*, about test weeks
+  already past.
+- **On a running block in week 2,** the card says to retest now, directly under the sentence that
+  says the test weeks are the time. Two instructions, one under the other, opposite.
+
+### 4. The opening sentence promises what the page will not show
+
+**Measured.** A block that ran out reads: *"Below is which of its sessions happened, which of the
+numbers moved, and what it has written down about what comes next."* That is one fixed sentence,
+whatever follows it.
+
+- **The sample climber's only finished block** shows none of the three. Its history row has no
+  plan snapshot, so there is no adherence. Its program has no assessments, graduation or
+  successors.
+- **Every custom program** is made with an empty `graduation` and `nextPrograms: []`
+  (`customProgram.ts`, on creation and on fork). The third promise is never kept for one, and the
+  second only if the builder gave it benchmarks. Given a plan, the sample's custom block shows the
+  adherence card and nothing else.
+
+### 5. A decline is called "left where it was"
+
+**Measured.** `nextBlock.ts` sorts each compared benchmark into improved or `stayed`, and `stayed`
+takes declines too. Weighted pull-ups going 30 → 25 produced *"This block left your weighted
+pull-ups 3rm where it was"*. The label is also lowercased whole, so *3RM* became *3rm*.
+
+### 6. A verdict on a block half run
+
+**Measured, on the sample climber in week 6 of 12.** *"What comes next"* is drawn for a running
+block, ordered by the results so far, and says *"This block left your max boulder grade where it
+was"* with six weeks still to run.
+
+### 7. Copy
+
+All measured:
+
+- **The empty review draws "Coaching somebody?" twice:** `<OpenTheirBlock />` on two consecutive
+  lines. The render counts two.
+- **Raw dates inside sentences.** *"Iron Grip runs to 2026-11-14."* sits under a header reading
+  *Runs to Nov 14, 2026*. The sentence for a block with no record of how it ended prints its start
+  the same way; that case was found in the code.
+- **Agreement:** *"one of the 9 Iron Grip assessments **have** a baseline"*.
+- **Sentences that start in lower case:** *"Down: Weighted Pull-Ups 3RM. seven of the 9 have no
+  comparison this block."*
+- **Session type names not pluralised:** *"You did 9 of 11 Climbing Session"*.
+
+### 8. The fixture cannot reach most of this
+
+**Measured.** The sample climber has no block left early, so finding 1 was out of reach. Its
+finished block has no plan snapshot, so its review has never shown adherence. This is M324's
+theme again: the states the sample climber cannot reach are where the defects are.
+
+### For the user: two coaching questions
+
+These are proposals. Whether they matter is a coaching judgement, not something the code can
+settle.
+
+- **A. No band for noise.** Any difference counts. A max hang from 40 to 40.5 lbs *improved*, a
+  dead hang from 60 to 59 seconds *went the other way*, and the counts, the share card and the
+  ordering of what comes next all follow. Should a small change read as *held*? If so, how wide
+  should the band be for each kind of test?
+- **B. Added load without bodyweight.** Two assessments are recorded as *BW+lbs*: the 20mm max
+  hang and the weighted pull-up 3RM. Iron Grip's own graduation speaks in them (*"usually BW+15-30lbs on a 20mm max hang"*). The app records no
+  bodyweight anywhere. A climber who lost 3kg and held the same added load reads as flat. Should
+  bodyweight be taken at test weeks, so added-load results can be read against it?
+
+### What was checked and is not a gap
+
+- **The arithmetic:**
+  - percent only for ratio-scale numbers with a non-zero baseline;
+  - grades in steps;
+  - pass/fail in words;
+  - the sign flipped for `min_edge` and `toe_touch`.
+- **The header of a left block** reads the day it was left (M253), and its history row says
+  *"6 of 12 weeks · left early"*.
+- **A past block is measured at the length it ran** (`programForRecord`).
+- **Days marked away** leave the adherence count (M279). Read, not exercised.
+- **Two things that appeared only in a constructed climber with no history rows:** a *"Stop this
+  block"* card on a block that had ended, and *"Measured against your current week layout"*. The
+  app writes a row for every block it starts, so neither is a finding.
+
+### Proposed order
+
+1. **Finding 1, the window for a left block.** It is wrong on every block a climber leaves, it
+   reaches the coach, and the adherence half is unambiguous. It needs the user's answer on
+   readings in the days after leaving.
+2. **Findings 3 and 4.** Claims that promise what is not there, worded by the block's state. They
+   are small.
+3. **Findings 5 and 6,** in `nextBlock.ts`.
+4. **Finding 7,** one copy sweep.
+5. **Finding 2,** once the user has said what *resume* should mean.
+6. **The fixture (8),** alongside 1, so the sample climber has a block left early.
+
+A and B wait on the user.
