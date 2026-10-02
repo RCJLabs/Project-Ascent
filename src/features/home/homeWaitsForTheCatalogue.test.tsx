@@ -279,6 +279,27 @@ describe('the router', () => {
     expect(result.current).toBe(false);
   });
 
+  it('waits for both stores, not whichever reads first', async () => {
+    // Each says "nothing" before it has read anything: an unread profile has
+    // no program, an unread log no sessions. A climber between blocks with a
+    // year logged, whose profile lands first, would be let in on the
+    // profile's word alone.
+    await aNewClimber();
+    beforeTheCatalogue();
+    useProfile.setState({ hydrated: true });
+    useSessions.setState({ hydrated: false });
+    const profileOnly = renderHook(() => useHoldsForCatalogue('/'));
+    expect(profileOnly.result.current, 'Home was let in before the log was read').toBe(true);
+    profileOnly.unmount();
+
+    useProfile.setState({ hydrated: false });
+    useSessions.setState({ hydrated: true });
+    const logOnly = renderHook(() => useHoldsForCatalogue('/'));
+    expect(logOnly.result.current, 'Home was let in before the profile was read').toBe(true);
+    act(() => useProfile.setState({ hydrated: true }));
+    expect(logOnly.result.current).toBe(false);
+  });
+
   it('holds Home for a climber with a log until the catalogue is in', async () => {
     await aClimberMidBlock();
     beforeTheCatalogue();
