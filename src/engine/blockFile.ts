@@ -76,6 +76,8 @@ export interface SharedResult {
   percent: number | null;
   steps: number | null;
   gap: Gap | null;
+  /** Exactly the band's width: light progress, or a light decline (PLAN.md M370). */
+  light?: boolean;
 }
 
 export interface SharedBlock {
@@ -91,6 +93,9 @@ export interface SharedBlock {
   better: number;
   worse: number;
   flat: number;
+  /** Light progress and light declines (PLAN.md M370). Zero in a file from before. */
+  lightBetter: number;
+  lightWorse: number;
   untested: number;
   results: SharedResult[];
   /** The sentence their app wrote. Carried, not recomputed — see below. */
@@ -145,6 +150,8 @@ export function buildBlockFile(input: BlockFileInput): BlockFile {
       better: report.better,
       worse: report.worse,
       flat: report.flat,
+      lightBetter: report.lightBetter,
+      lightWorse: report.lightWorse,
       untested: report.untested,
       results: report.results.slice(0, LIMITS.results).map((r) => ({
         metricId: r.metric.id,
@@ -157,6 +164,7 @@ export function buildBlockFile(input: BlockFileInput): BlockFile {
         percent: r.percent,
         steps: r.steps,
         gap: r.gap,
+        ...(r.light ? { light: true } : {}),
       })),
       summary: input.summary,
     },
@@ -214,6 +222,8 @@ export function parseBlockFile(text: string): SharedBlock {
     better: whole(body['better'], 0, LIMITS.results),
     worse: whole(body['worse'], 0, LIMITS.results),
     flat: whole(body['flat'], 0, LIMITS.results),
+    lightBetter: whole(body['lightBetter'], 0, LIMITS.results),
+    lightWorse: whole(body['lightWorse'], 0, LIMITS.results),
     untested: whole(body['untested'], 0, LIMITS.results),
     results,
     summary: str(body['summary'], LIMITS.summary),
@@ -247,6 +257,7 @@ function readResult(value: unknown): SharedResult | null {
     percent: finite(raw['percent']),
     steps: finite(raw['steps']),
     gap: GAPS.includes(raw['gap'] as Gap) ? (raw['gap'] as Gap) : null,
+    ...(raw['light'] === true ? { light: true } : {}),
   };
 }
 

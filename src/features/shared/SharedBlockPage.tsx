@@ -211,6 +211,8 @@ function WriteBack({ block }: { block: SharedBlock }) {
       better: block.better,
       worse: block.worse,
       flat: block.flat,
+      lightBetter: block.lightBetter,
+      lightWorse: block.lightWorse,
       untested: block.untested,
     });
     navigate(`/build/${program.id}`);
@@ -343,8 +345,10 @@ function BlockView({ block }: { block: SharedBlock }) {
           quiet about four untested metrics is a highlight reel". */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs font-bold uppercase tracking-widest text-ink-soft">
         <span>{block.better} improved</span>
+        {block.lightBetter > 0 && <span>{block.lightBetter} light progress</span>}
         <span>{block.flat} held</span>
         <span>{block.worse} down</span>
+        {block.lightWorse > 0 && <span>{block.lightWorse} light decline</span>}
         <span>{block.untested} untested</span>
       </div>
 
@@ -392,7 +396,9 @@ function readingOf(result: SharedResult): string {
         : result.moved === null
           ? ''
           : result.moved;
-  return [from && to ? `${from} → ${to}` : from || to, move].filter(Boolean).join(' · ');
+  // Exactly the band's width, which their app called light (PLAN.md M370).
+  const light = result.light ? (result.moved === 'worse' ? 'light decline' : 'light progress') : '';
+  return [from && to ? `${from} → ${to}` : from || to, move, light].filter(Boolean).join(' · ');
 }
 
 function signed(n: number): string {

@@ -33,6 +33,8 @@ const block = (through: string, results: SharedResult[], over: Partial<SharedBlo
   better: 1,
   worse: 0,
   flat: 0,
+  lightBetter: 0,
+  lightWorse: 0,
   untested: 0,
   results,
   summary: '',

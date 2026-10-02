@@ -16,6 +16,8 @@ const block = (programId: string) => ({
   better: 2,
   worse: 0,
   flat: 1,
+  lightBetter: 0,
+  lightWorse: 0,
   untested: 4,
 });
 

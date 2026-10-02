@@ -500,8 +500,9 @@ function WritingForCard({ programId }: { programId: string }) {
   return (
     <Card title="Answering a block they sent you">
       <p className="text-sm text-ink-soft leading-relaxed">
-        {block.program} · {block.better} improved, {block.flat} held, {block.worse} down,{' '}
-        {block.untested} untested
+        {block.program} · {block.better} improved,
+        {block.lightBetter > 0 ? ` ${block.lightBetter} light progress,` : ''} {block.flat} held, {block.worse}{' '}
+        down,{block.lightWorse > 0 ? ` ${block.lightWorse} light decline,` : ''} {block.untested} untested
       </p>
       {block.summary && (
         <p className="text-sm text-ink-soft mt-2 leading-relaxed">

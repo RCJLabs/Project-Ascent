@@ -33,6 +33,7 @@ const result = (id: MetricId, moved: Movement | null, gap: AssessmentResult['gap
     percent: null,
     steps: null,
     gap,
+    light: false,
   }) as AssessmentResult;
 
 const report = (results: AssessmentResult[]): BlockReport =>
@@ -49,6 +50,8 @@ const report = (results: AssessmentResult[]): BlockReport =>
     better: 0,
     worse: 0,
     flat: 0,
+    lightBetter: 0,
+    lightWorse: 0,
     untested: 0,
   }) as BlockReport;
 

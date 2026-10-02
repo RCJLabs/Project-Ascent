@@ -118,9 +118,11 @@ export function BlockReportChart({ report, units = 'imperial' }: { report: Block
                 height={ROW - 6}
                 rx={2}
                 className={row.moved === 'worse' ? 'fill-danger' : 'fill-positive'}
-                opacity={row.moved === 'flat' ? 0.3 : 0.85}
+                // Held is faint, light is between: exactly the band's
+                // width, called light progress or a light decline (PLAN.md M370).
+                opacity={row.moved === 'flat' ? 0.3 : row.light ? 0.55 : 0.85}
               />
-              <title>{`${row.metric.label}: ${movementLabel(row, units)} (${percent > 0 ? '+' : ''}${percent.toFixed(0)}%)`}</title>
+              <title>{`${row.metric.label}: ${movementLabel(row, units)} (${percent > 0 ? '+' : ''}${percent.toFixed(0)}%)${lightWord(row)}`}</title>
             </g>
           );
         })}
@@ -161,5 +163,11 @@ function restLabel(row: AssessmentResult, units: UnitSystem): string {
   if (row.gap === 'never-tested') return 'not taken';
   if (row.gap === 'once-only') return 'baseline only';
   if (row.gap === 'not-a-number') return 'not a number';
-  return movementLabel(row, units);
+  return movementLabel(row, units) + lightWord(row);
+}
+
+/** " · light progress", " · light decline", or nothing (PLAN.md M370). */
+function lightWord(row: AssessmentResult): string {
+  if (!row.light) return '';
+  return row.moved === 'worse' ? ' · light decline' : ' · light progress';
 }

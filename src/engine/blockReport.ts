@@ -74,6 +74,12 @@ export interface AssessmentResult {
   steps: number | null;
   /** Nothing to compare, and why. Null when there is a comparison. */
   gap: Gap | null;
+  /**
+   * The change is exactly the band's width (PLAN.md M370): one plate, one
+   * rep. `moved` still says which way, so it counts as trained where the
+   * direction is what matters; the counts and the words call it light.
+   */
+  light: boolean;
 }
 
 export interface BlockReport {
@@ -94,9 +100,15 @@ export interface BlockReport {
   results: AssessmentResult[];
   /** Those whose change can share the percent axis. */
   comparable: AssessmentResult[];
+  /** Improved by more than the band. */
   better: number;
+  /** Went the other way by more than the band. */
   worse: number;
   flat: number;
+  /** Improved by exactly the band: light progress (PLAN.md M370). */
+  lightBetter: number;
+  /** Went the other way by exactly the band: a light decline. */
+  lightWorse: number;
   /** Declared assessments with no comparison this block. */
   untested: number;
 }
@@ -155,9 +167,11 @@ export function blockReport(input: BlockInput): BlockReport | null {
     tests: windows,
     results,
     comparable: results.filter((r) => r.percent !== null),
-    better: results.filter((r) => r.moved === 'better').length,
-    worse: results.filter((r) => r.moved === 'worse').length,
+    better: results.filter((r) => r.moved === 'better' && !r.light).length,
+    worse: results.filter((r) => r.moved === 'worse' && !r.light).length,
     flat: results.filter((r) => r.moved === 'flat').length,
+    lightBetter: results.filter((r) => r.moved === 'better' && r.light).length,
+    lightWorse: results.filter((r) => r.moved === 'worse' && r.light).length,
     untested: results.filter((r) => r.gap !== null).length,
   };
 }
@@ -184,14 +198,15 @@ function resultFor(
   const baseline = points[0] ?? null;
   const latest = points.length > 1 ? points[points.length - 1]! : null;
 
-  const empty = { metric, points, baseline, latest, moved: null, percent: null, steps: null };
+  const empty = { metric, points, baseline, latest, moved: null, percent: null, steps: null, light: false };
   if (metric.kind === 'text') return { ...empty, gap: 'not-a-number' };
   if (baseline === null) return { ...empty, gap: 'never-tested' };
   if (latest === null) return { ...empty, gap: 'once-only' };
 
   const delta = latest.value - baseline.value;
   const signed = metric.higherIsBetter ? delta : -delta;
-  const moved: Movement = held(metric, baseline.value, delta) ? 'flat' : signed > 0 ? 'better' : 'worse';
+  const band = bandFor(metric, baseline.value, delta);
+  const moved: Movement = band === 'held' ? 'flat' : signed > 0 ? 'better' : 'worse';
 
   return {
     metric,
@@ -207,27 +222,40 @@ function resultFor(
         : null,
     steps: metric.kind === 'grade' ? signed : null,
     gap: null,
+    light: band === 'edge',
   };
 }
 
 /**
- * Whether a change is inside the metric's band for noise (PLAN.md M367).
+ * Where a change falls against the metric's band for noise (PLAN.md M367,
+ * M370).
  *
  * Every difference used to count: 40 to 40.5 lbs on a max hang *improved*,
  * 60 to 59 seconds on a dead hang *went the other way*, and the counts, the
  * share card, the coach's file and the order of what comes next all
  * followed. The coach's answer was that small changes are held, and the
- * bands are theirs (`content/metrics.ts`). The edge is inside: a band of 1
- * rep holds a one-rep change. Grades and pass/fail have no band — one step
- * on a ladder, or a pass where there was a fail, is already the smallest
- * real change — and a number metric without one counts any change.
+ * bands are theirs (`content/metrics.ts`). Inside the band is `held`.
+ * Exactly the band's width — one plate, one rep — is the `edge`, which the
+ * coach called light progress, or a light decline (M370); M367 had held it.
+ * Grades and pass/fail have no band — one step on a ladder, or a pass where
+ * there was a fail, is already the smallest real change — and a number
+ * metric without one counts any change.
  */
-export function held(metric: Metric, baseline: number, delta: number): boolean {
+export function bandFor(metric: Metric, baseline: number, delta: number): 'held' | 'edge' | 'beyond' {
   const size = Math.abs(delta);
   const band = metric.kind === 'number' ? metric.held : undefined;
-  if (band === undefined) return size === 0;
+  if (band === undefined) return size === 0 ? 'held' : 'beyond';
   const within = 'abs' in band ? band.abs : Math.max(band.atLeast, (Math.abs(baseline) * band.pct) / 100);
-  return size <= within;
+  // Readings are decimals, so the edge is a tolerance rather than equality:
+  // 33 × 10% is 3.3, and 36.3 − 33 is 3.2999999999999972.
+  if (size === 0) return 'held';
+  if (within > 0 && Math.abs(size - within) < 1e-9) return 'edge';
+  return size < within ? 'held' : 'beyond';
+}
+
+/** A change inside the band, which reads as held. */
+export function held(metric: Metric, baseline: number, delta: number): boolean {
+  return bandFor(metric, baseline, delta) === 'held';
 }
 
 /** When a baseline with no retest can still get one (PLAN.md M366). */
@@ -292,7 +320,8 @@ function count(n: number): string {
 }
 
 function names(results: AssessmentResult[], limit = 3): string {
-  return joinCapped(results.map((r) => r.metric.label), limit);
+  // A light one says so, beside the ones that moved by more (PLAN.md M370).
+  return joinCapped(results.map((r) => (r.light ? `${r.metric.label} (light)` : r.metric.label)), limit);
 }
 
 /**
@@ -342,15 +371,19 @@ export function describeBlock(report: BlockReport): string {
   }
 
   const parts: string[] = [];
-  const moved = report.results.filter((r) => r.moved === 'better');
-  const fell = report.results.filter((r) => r.moved === 'worse');
+  // The full changes first, then the light ones (PLAN.md M370).
+  const firm = (a: AssessmentResult, b: AssessmentResult) => Number(a.light) - Number(b.light);
+  const moved = report.results.filter((r) => r.moved === 'better').sort(firm);
+  const fell = report.results.filter((r) => r.moved === 'worse').sort(firm);
 
   parts.push(
     // The noun belongs to `compared`, not to `better`: "one of the 2
     // retested number" is what pluralising on the wrong count gives you.
     opening(`${count(report.better)} of the ${compared} retested ${compared === 1 ? 'number' : 'numbers'} improved${
-      report.flat > 0 ? `, ${count(report.flat)} held` : ''
-    }${report.worse > 0 ? `, ${count(report.worse)} went the other way` : ''}.`),
+      report.lightBetter > 0 ? `, ${count(report.lightBetter)} made light progress` : ''
+    }${report.flat > 0 ? `, ${count(report.flat)} held` : ''}${
+      report.worse > 0 ? `, ${count(report.worse)} went the other way` : ''
+    }${report.lightWorse > 0 ? `, ${count(report.lightWorse)} had a light decline` : ''}.`),
   );
   if (moved.length > 0) parts.push(`Up: ${names(moved)}.`);
   if (fell.length > 0) parts.push(`Down: ${names(fell)}.`);

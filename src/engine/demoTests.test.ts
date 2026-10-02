@@ -141,10 +141,11 @@ describe('the tests inside the running block', () => {
       // The four it measured twice. Which of them moved which way is the
       // generator's to say, and the plateau is part of this climber's story.
       expect(moved, today).toEqual(expect.arrayContaining(['max_hang_20mm_7s', 'repeater_weight', 'dead_hang', 'max_pushups']));
-      // Something improved. Not the max hang since M367: its +5 lbs is on
-      // the edge of the coach's band, which holds it.
+      // Something improved. The max hang's +5 lbs is exactly the coach's
+      // band, which is light progress (PLAN.md M370).
       expect(report.better, today).toBeGreaterThan(0);
-      expect(report.results.find((r) => r.metric.id === 'max_hang_20mm_7s')!.moved, today).toBe('flat');
+      const hang = report.results.find((r) => r.metric.id === 'max_hang_20mm_7s')!;
+      expect([hang.moved, hang.light], today).toEqual(['better', true]);
     }
   });
 });

@@ -373,10 +373,16 @@ export function blockCard(input: {
       // because "0 untested" is a fact worth reading beside the other three.
       { label: 'Untested', value: String(report.untested) },
     ],
+    // Light progress and light declines are their own count (PLAN.md M370),
+    // said under the four rather than as a fifth box the card has no room for.
     footnote:
       compared === 0
         ? `Nothing retested across ${report.results.length} ${report.results.length === 1 ? 'assessment' : 'assessments'}`
-        : `${compared} of ${report.results.length} retested`,
+        : [
+            `${compared} of ${report.results.length} retested`,
+            ...(report.lightBetter > 0 ? [`${report.lightBetter} light progress`] : []),
+            ...(report.lightWorse > 0 ? [`${report.lightWorse} light decline`] : []),
+          ].join(' · '),
   };
 }
 

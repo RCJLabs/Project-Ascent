@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getMetric, METRICS } from '@/content/metrics';
 import type { MetricId } from '@/content/types';
-import { held } from './blockReport';
+import { bandFor, held } from './blockReport';
 
 /**
  * Small changes are held (PLAN.md M367).
@@ -37,47 +37,71 @@ describe('every metric', () => {
   });
 });
 
-describe('held', () => {
-  it('holds a change inside an absolute band, edge included, either way', () => {
-    expect(held(m('max_hang_20mm_7s'), 40, 0.5)).toBe(true);
-    expect(held(m('max_hang_20mm_7s'), 40, 5)).toBe(true);
-    expect(held(m('max_hang_20mm_7s'), 40, -5)).toBe(true);
-    expect(held(m('max_hang_20mm_7s'), 40, 7.5)).toBe(false);
-    expect(held(m('max_pullups'), 10, 1)).toBe(true);
-    expect(held(m('max_pullups'), 10, 2)).toBe(false);
+describe('where a change falls against the band', () => {
+  // M367 held the edge; the coach called it light progress, and its mirror a
+  // light decline (PLAN.md M370). Inside is held, exactly the width is the
+  // edge, past it is beyond.
+  it('reads an absolute band: inside, the edge either way, and past it', () => {
+    expect(bandFor(m('max_hang_20mm_7s'), 40, 0.5)).toBe('held');
+    expect(bandFor(m('max_hang_20mm_7s'), 40, 2.5)).toBe('held');
+    expect(bandFor(m('max_hang_20mm_7s'), 40, 5)).toBe('edge');
+    expect(bandFor(m('max_hang_20mm_7s'), 40, -5)).toBe('edge');
+    expect(bandFor(m('max_hang_20mm_7s'), 40, 7.5)).toBe('beyond');
+    expect(bandFor(m('max_pullups'), 10, 1)).toBe('edge');
+    expect(bandFor(m('max_pullups'), 10, 2)).toBe('beyond');
+    expect(held(m('max_hang_20mm_7s'), 40, 2.5)).toBe(true);
+    expect(held(m('max_hang_20mm_7s'), 40, 5), 'the edge was held, as in M367').toBe(false);
   });
 
   it('reads a share of the baseline, with its floor', () => {
-    expect(held(m('dead_hang'), 60, 6)).toBe(true); // 10%
-    expect(held(m('dead_hang'), 60, 7)).toBe(false);
-    expect(held(m('dead_hang'), 60, -6)).toBe(true);
-    expect(held(m('dead_hang'), 10, 2)).toBe(true); // 10% is 1s; the floor is 2
-    expect(held(m('dead_hang'), 10, 2.5)).toBe(false);
-    expect(held(m('arc_duration'), 20, 2)).toBe(true);
-    expect(held(m('arc_duration'), 20, 3)).toBe(false);
+    expect(bandFor(m('dead_hang'), 60, 5)).toBe('held');
+    expect(bandFor(m('dead_hang'), 60, 6)).toBe('edge'); // 10%
+    expect(bandFor(m('dead_hang'), 60, 7)).toBe('beyond');
+    expect(bandFor(m('dead_hang'), 10, 1.5)).toBe('held'); // 10% is 1s; the floor is 2
+    expect(bandFor(m('dead_hang'), 10, 2)).toBe('edge');
+    expect(bandFor(m('dead_hang'), 10, 2.5)).toBe('beyond');
+    expect(bandFor(m('arc_duration'), 20, 2)).toBe('edge');
   });
 
-  it('counts any change where the band is zero, and on a grade or a pass', () => {
-    expect(held(m('min_edge'), 10, 1)).toBe(false);
-    expect(held(m('min_edge'), 10, 0)).toBe(true);
-    expect(held(m('max_boulder_grade'), 5, 1)).toBe(false);
-    expect(held(m('landing_control'), 0, 1)).toBe(false);
+  it('finds the edge through decimals', () => {
+    // 33 × 10% is 3.3, and 36.3 − 33 is 3.2999999999999972.
+    expect(bandFor(m('dead_hang'), 33, 36.3 - 33)).toBe('edge');
+  });
+
+  it('holds no change at all, and counts any where the band is zero, or on a grade or a pass', () => {
+    expect(bandFor(m('min_edge'), 10, 0)).toBe('held');
+    expect(bandFor(m('min_edge'), 10, 1)).toBe('beyond');
+    expect(bandFor(m('max_hang_20mm_7s'), 40, 0)).toBe('held');
+    expect(bandFor(m('max_boulder_grade'), 5, 1)).toBe('beyond');
+    expect(bandFor(m('max_boulder_grade'), 5, 0)).toBe('held');
+    expect(bandFor(m('landing_control'), 0, 1)).toBe('beyond');
   });
 });
 
 describe('the block report', () => {
-  it('counts a change inside the band as held, and says so', async () => {
+  const report = async (entries: [string, number, number][]) => {
     const { getProgram } = await import('@/content/programs');
-    const { blockReport, describeBlock } = await import('./blockReport');
-    const IG = getProgram('iron_grip')!;
-    const start = '2026-03-01';
-    const at = (day: number, metricId: string, value: number) => ({ id: `${metricId}@${day}`, metricId, date: `2026-03-${String(day).padStart(2, '0')}`, value }) as never;
-    const r = blockReport({
-      program: IG, startDate: start, today: '2026-04-30',
-      entries: [at(2, 'max_hang_20mm_7s', 40), at(29, 'max_hang_20mm_7s', 45), at(2, 'dead_hang', 60), at(29, 'dead_hang', 67)],
-    })!;
-    expect(r.results.find((x) => x.metric.id === 'max_hang_20mm_7s')!.moved).toBe('flat');
-    expect(r.results.find((x) => x.metric.id === 'dead_hang')!.moved).toBe('better');
-    expect(describeBlock(r)).toMatch(/^One of the 2 retested numbers improved, one held\./);
+    const { blockReport } = await import('./blockReport');
+    const at = ([metricId, day, value]: [string, number, number]) =>
+      ({ id: `${metricId}@${day}`, metricId, date: `2026-03-${String(day).padStart(2, '0')}`, value }) as never;
+    return blockReport({ program: getProgram('iron_grip')!, startDate: '2026-03-01', today: '2026-04-30', entries: entries.map(at) })!;
+  };
+
+  it('counts held, light progress and a light decline apart from the rest, and says so', async () => {
+    const { describeBlock } = await import('./blockReport');
+    const r = await report([
+      ['max_hang_20mm_7s', 2, 40], ['max_hang_20mm_7s', 29, 45], // +5: light progress
+      ['dead_hang', 2, 60], ['dead_hang', 29, 67], // +7 against 6: improved
+      ['max_pullups', 2, 10], ['max_pullups', 29, 9], // −1: a light decline
+      ['max_pushups', 2, 30], ['max_pushups', 29, 30], // held
+    ]);
+    const hang = r.results.find((x) => x.metric.id === 'max_hang_20mm_7s')!;
+    expect(hang.moved).toBe('better');
+    expect(hang.light).toBe(true);
+    expect(r.results.find((x) => x.metric.id === 'dead_hang')!.light).toBe(false);
+    expect([r.better, r.lightBetter, r.flat, r.worse, r.lightWorse]).toEqual([1, 1, 1, 0, 1]);
+    expect(describeBlock(r)).toMatch(
+      /^One of the 4 retested numbers improved, one made light progress, one held, one had a light decline\. Up: Dead Hang and Max Hang 20mm 7s \(light\)\. Down: Max Pull-Ups \(light\)\./,
+    );
   });
 });

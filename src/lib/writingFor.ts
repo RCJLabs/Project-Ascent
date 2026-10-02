@@ -46,6 +46,9 @@ export interface WritingFor {
   better: number;
   worse: number;
   flat: number;
+  /** Light progress and light declines (PLAN.md M370). */
+  lightBetter: number;
+  lightWorse: number;
   untested: number;
 }
 
