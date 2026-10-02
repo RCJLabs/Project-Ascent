@@ -15289,6 +15289,15 @@ its label is missing. None of these wants touching.
   48 calls now go through `formatDate`, and a test reads the whole source tree for any that don't.
   Progress's launch went from 1,859 to 1,556ms with the ranges apart. The other four pages were
   noise at the sample climber's size.
+- **M360 — every store a page loads keeps an equal answer.** The item was M353's double game
+  ledger on Home, the Board and the Ascent. A build that counted every store's field replacements
+  across 24 pages found six stores with the same race: the game, the projects, the objectives, the
+  metrics, the templates and the climber's own programs. `hydrateAll` loads each store, a page
+  loads it too in case the page mounted first, and the second read replaced an equal value with a
+  new object. M350 had fixed this for the log alone. Its comparison moves to `store/sameData.ts`,
+  and all seven loads use it. Afterwards no store field changes more than once on any of 25 pages.
+  The launch clock did not move outside its spread on any of the eight pages measured, so the claim
+  is the count, not a speed-up.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -26972,3 +26981,115 @@ production builds, sample climber, CPU at a quarter speed:
   - Home's cold load is 213.10KB (−0.04; the line is 213.5).
 - **Not measured on a phone,** and not with a long log. The sample climber is the only data
   measured.
+
+## M360 — every store a page loads keeps an equal answer
+
+The item was M353's: *"the game ledger loads twice at launch on Home, `/board` and `/ascent`"*,
+measured then at about 12ms at a quarter CPU speed, and left. It turned out to be one case of a
+pattern that six stores share.
+
+### Counted first
+
+A build in which every store counted how often each of its fields was replaced, on warm launches of
+24 pages, three runs each, with the sample climber. Fields replaced more than once per launch:
+
+```
+/ (2 of 3), /board, /ascent       game: ledger, bounties, wallet, ascent
+/projects, /year, /achievements   projects: projects, dismissed
+/objectives                       objectives
+/assessments (1 of 3)             metrics
+```
+
+A later count on a fixed build also showed `templates` twice on `/settings` in every run. The
+first count had not caught it. It is a race, and which load lands second varies.
+
+Every one has the cause M350 found for the log. `hydrateAll` loads every store at launch. A page
+that needs a store also loads it, in case the page mounted first. The two reads race, the second
+answers with an equal value in a new object, and everything that reads the field takes that as a
+change and derives again. M350 gave the sessions store a comparison. The other stores never got
+one.
+
+Seven stores are loaded by a page as well as by `hydrateAll`: the log, the game, the metrics, the
+projects, the objectives, the templates and the climber's own programs. The log already had the
+comparison.
+
+### The change
+
+- **`sameData` moves out of `sessions.ts` into `store/sameData.ts`,** unchanged, beside a new
+  helper. `kept(current, next)` returns what the store has when the read says the same, and the
+  read when it does not.
+- **The six other loads use it,** field by field. The game store compares its ledger, wallet,
+  bounties and records separately, so a new ledger entry replaces the ledger and nothing else.
+- **M350's safety argument carries over unchanged.** Every load still reads the database, so no
+  load is ever answered from before a write (M220). Only an equal answer is dropped. A wrong
+  comparison could replace a value that didn't need it, and nothing worse.
+- **The custom programs register what the store keeps,** so the registry `getProgram` reads holds
+  the same objects as the store.
+- **`useBoard`'s comment,** which recorded the double derivation as measured and left, now says
+  what happens instead.
+
+### After
+
+The same counting build, on the fixed code, over 25 pages with the builder added, three runs each:
+no store field was replaced more than once on any launch.
+
+Main-thread time over a warm launch, main's build and this one alternating, five runs each,
+production builds, sample climber, CPU at a quarter speed:
+
+```
+              main median (range)     this change
+/             1,405 (1,294–1,593)     1,436 (1,373–1,549)
+/board        1,019 (954–1,171)       1,042 (1,012–1,080)
+/ascent       1,311 (1,253–1,399)     1,194 (1,140–1,260)
+/projects     1,055 (1,037–1,115)     1,066 (973–1,115)
+/year         1,122 (1,113–1,219)     1,171 (1,066–1,187)
+/achievements 1,066 (969–1,174)       1,076 (978–1,094)
+/objectives   1,007 (892–1,105)         920 (890–981)
+/settings     1,182 (1,122–1,243)     1,125 (1,106–1,152)
+```
+
+**No page moved by more than its spread.** The Ascent comes closest, and its ranges still overlap.
+M353 put the duplicate board at about 12ms at this speed. The other duplicates were not timed one
+by one. They are probably of the same order, since each feeds a handful of projects, objectives or
+templates, but that is a guess. A whole launch here spreads over 50–300ms, so savings that small
+would not show.
+
+So the claim is the count, not the clock: the second read no longer reaches anything downstream.
+That is worth having for reasons the clock does not see:
+
+- **A larger store pays in proportion.** The ledger and the projects grow with the climber.
+- **The pattern is closed.** The next page that loads its own store, in case it mounted first,
+  cannot reintroduce a duplicate derivation.
+
+### Checked
+
+- **`storesReload.test.ts`, 14 tests:**
+  - `kept` returns what the store has for an equal read and the read for any difference. It is the
+    same comparison the log uses: two `Date`s, and a key swapped for one holding `undefined`, read
+    as different.
+  - **The game store:** an equal read keeps all four objects, also across two loads at once as at
+    launch. A new ledger entry replaces the ledger and leaves the other three. The wallet, the
+    bounties and the records are each replaced on their own when they change.
+  - **The projects:** an equal read keeps both arrays. A renamed project replaces the projects and
+    leaves the dismissed list, and the reverse.
+  - **The objectives, the metrics, the templates and the climber's programs:** an equal read keeps
+    the array, and a changed one replaces it.
+- **M350's `sessionsReload.test.ts`, 13 tests,** unchanged and passing against the moved
+  `sameData`.
+- **Mutation battery: 16 mutants, all killed in the first round; sanity survived.**
+  - a read always replaces;
+  - a read never replaces, which would serve a stale value;
+  - arrays equal by length alone;
+  - a `Date` read as a plain object;
+  - each of the game store's four fields, the projects' two, the objectives, the metrics, the
+    templates, the programs and the log replaced on every load;
+  - the wallet kept whatever the read says.
+- **Full suite:** 7,622 passing, M359's 7,608 plus 14, and the one pinned-clock skip.
+- **Layout harness:** clean.
+- **Sizes:**
+  - The first load is 114.60KB (+0.08; the line is 115.1, with 0.50 left).
+  - Home's cold load is 213.27KB (+0.17; the line is 213.5, with 0.23 left).
+
+  The comparison is in the stores, and the stores are in both loads. Home's headroom is now the
+  smallest it has been. The next change that adds to a cold Home load should expect to cross the
+  line or pay for it.
