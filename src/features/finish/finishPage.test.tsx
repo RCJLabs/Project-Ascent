@@ -313,7 +313,7 @@ describe('did you do the work', () => {
     renderAt('/finish', <FinishPage />);
     expect(screen.getByText('Did you do the work?')).toBeTruthy();
     // Iron Grip's own layout, twelve weeks, and one session logged.
-    expect(screen.getByText(/of \d+ Finger Protocol/)).toBeTruthy();
+    expect(screen.getByText(/Finger Protocol \+ Engine \(1 of \d+\)/)).toBeTruthy();
   });
 
   it('breaks it down by the session type the plan placed', async () => {

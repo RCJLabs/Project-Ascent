@@ -30,6 +30,15 @@ import { outcomeOf, weeksRun, type BlockOutcome } from './blockOutcome';
 import type { MetricEntry } from '@/db/metrics';
 import { blockReport, type AssessmentResult, type BlockReport } from './blockReport';
 import { blockStatus, type BlockStatus } from './planReading';
+import { formatDate, fromKey } from './dates';
+
+/**
+ * A day as the page's header writes it (PLAN.md M368): *"Iron Grip runs to
+ * 2026-11-14."* sat under a header reading *Runs to Nov 14, 2026*.
+ */
+export function blockDay(key: string): string {
+  return formatDate(fromKey(key), { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 export interface NextStep {
   program: Program;
@@ -167,7 +176,7 @@ export function describeBlockEnd(end: BlockEnd, below: Below): string {
     return `${program.name} has not started yet.`;
   }
   if (status.state === 'running') {
-    return `${program.name} runs to ${status.to}.`;
+    return `${program.name} runs to ${blockDay(status.to)}.`;
   }
   const when =
     status.daysSince === 0
@@ -179,7 +188,7 @@ export function describeBlockEnd(end: BlockEnd, below: Below): string {
           : `${Math.round(status.daysSince / 7)} weeks ago`;
 
   if (end.outcome === 'unknown') {
-    return `${program.name} started ${status.from}, and the app has no record of how it ended — it was already running before this version kept a history.${
+    return `${program.name} started ${blockDay(status.from)}, and the app has no record of how it ended — it was already running before this version kept a history.${
       below.numbers ? ' The numbers below are whatever was measured inside its weeks.' : ''
     }`;
   }

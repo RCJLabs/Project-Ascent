@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { ChevronRight, CircleStop, FileText, Ruler, Search } from 'lucide-react';
 import { getProgram } from '@/content/programs';
-import { blockEnd, describeBlockEnd, programForRecord } from '@/engine/blockEnd';
+import { blockDay, blockEnd, describeBlockEnd, programForRecord } from '@/engine/blockEnd';
 import { rowWindow, type BlockRecord } from '@/engine/blocks';
 import { BLOCK_OUTCOME_WORD, findBlock, outcomeOf, sortBlocks, weeksRun } from '@/engine/blockOutcome';
 import { blockFileName, buildBlockFile } from '@/engine/blockFile';
@@ -415,11 +415,10 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
           >
             {chosen === null
               ? 'No program has been run yet, so there is no block to review. Start one and this page fills in as it goes.'
-              : `${chosen.name} ran from ${chosen.startDate}, and the app no longer has the program itself — so there is nothing left to measure it against.`}
+              : `${chosen.name} ran from ${blockDay(chosen.startDate)}, and the app no longer has the program itself — so there is nothing left to measure it against.`}
           </EmptyState>
           <BlockHistory history={history} current={chosen} />
           <OpenTheirBlock />
-        <OpenTheirBlock />
         </PageGrid>
       </>
     );
@@ -492,11 +491,7 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
    * date there would assert what the sentence has just disclaimed.
    */
   const ranTo = end.outcome === 'left' && end.record ? end.record.endedAt ?? status.to : status.to;
-  const when = formatDate(fromKey(ranTo), {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  const when = blockDay(ranTo);
 
   return (
     <>

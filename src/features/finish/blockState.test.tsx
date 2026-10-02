@@ -180,3 +180,40 @@ describe('the sentence at the top', () => {
     );
   });
 });
+
+/**
+ * The copy, on the rendered page in each state (PLAN.md M368): no stored
+ * date in what a climber reads, and one coaching card, not two.
+ */
+describe('the review as read', () => {
+  const ISO = /\b\d{4}-\d{2}-\d{2}\b/;
+  const coaching = () => screen.getAllByRole('heading', { name: 'Coaching somebody?' }).length;
+
+  it('has no stored dates and one coaching card while running and once over', async () => {
+    await ironGripFrom(1);
+    expect(text()).not.toMatch(ISO);
+    expect(coaching()).toBe(1);
+    cleanup();
+    await ironGripFrom(IG().weeks + 2);
+    expect(text()).not.toMatch(ISO);
+    expect(coaching()).toBe(1);
+  });
+
+  it('has one coaching card with no program run, and no stored date for a program that is gone', async () => {
+    await hydrate();
+    renderAt('/finish', <FinishPage />);
+    await screen.findByText(/No program has been run yet/);
+    expect(coaching(), 'the empty review drew the card twice').toBe(1);
+    cleanup();
+
+    const gone: BlockRecord = { id: 'retired_program#2026-03-01', programId: 'retired_program', name: 'Old Block', startDate: '2026-03-01', weeks: 8, endedAt: '2026-04-25' };
+    useProfile.setState({ blocks: [gone] });
+    const id = encodeURIComponent(gone.id);
+    renderAt(`/finish/${id}`, <FinishPage params={{ id }} />);
+    await screen.findByText(/no longer has the program itself/);
+    expect(text()).toContain('Old Block ran from Mar 1, 2026,');
+    expect(text()).not.toMatch(ISO);
+    expect(coaching()).toBe(1);
+  });
+});
+

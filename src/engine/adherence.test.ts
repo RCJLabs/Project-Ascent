@@ -156,7 +156,8 @@ describe('said out loud', () => {
   // and missing the only one you were asked for is the worse week.
   it('leads with what was missed worst, because that is the part worth saying', () => {
     const a = run([did(monday(1), 'fp')], friday(1));
-    expect(describeAdherence(a)).toMatch(/^You did 0 of 1 Climbing Session and 1 of 2 Finger Protocol/);
+    // The type's name labels its count (PLAN.md M368).
+    expect(describeAdherence(a)).toMatch(/^Short of the plan: Climbing Session \(0 of 1\) and Finger Protocol \+ Engine \(1 of 2\)\. /);
   });
 
   it('names both numbers rather than a percentage', () => {
@@ -185,10 +186,10 @@ describe('said out loud', () => {
       today: friday(1),
     })!;
     const said = describeAdherence(a)!;
-    expect(said).toMatch(/and 2 other types short/);
+    expect(said).toMatch(/ and 2 other types\. /);
     // And actually cut: a list of all four followed by "and 2 more" is the
     // bug that counting was supposed to avoid.
-    expect(said.match(/ of 1 /g) ?? []).toHaveLength(2);
+    expect(said.match(/ of 1\)/g) ?? []).toHaveLength(2);
   });
 
   it('has nothing to say about a plan that placed nothing', () => {

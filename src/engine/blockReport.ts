@@ -272,6 +272,11 @@ export function movementLabel(result: AssessmentResult, units: UnitSystem = 'imp
   return signed(delta, metric.unit, units);
 }
 
+/** A sentence starts in capitals, which a count spelled out does not (PLAN.md M368). */
+function opening(sentence: string): string {
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1);
+}
+
 /** "one", "two"… up to a point, because "1 of the 6" reads as a list index. */
 function count(n: number): string {
   return ['none', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'][n] ?? String(n);
@@ -334,15 +339,15 @@ export function describeBlock(report: BlockReport): string {
   parts.push(
     // The noun belongs to `compared`, not to `better`: "one of the 2
     // retested number" is what pluralising on the wrong count gives you.
-    `${count(report.better)} of the ${compared} retested ${compared === 1 ? 'number' : 'numbers'} improved${
+    opening(`${count(report.better)} of the ${compared} retested ${compared === 1 ? 'number' : 'numbers'} improved${
       report.flat > 0 ? `, ${count(report.flat)} held` : ''
-    }${report.worse > 0 ? `, ${count(report.worse)} went the other way` : ''}.`,
+    }${report.worse > 0 ? `, ${count(report.worse)} went the other way` : ''}.`),
   );
   if (moved.length > 0) parts.push(`Up: ${names(moved)}.`);
   if (fell.length > 0) parts.push(`Down: ${names(fell)}.`);
   if (report.untested > 0) {
     parts.push(
-      `${count(report.untested)} of the ${total} ${report.untested === 1 ? 'has' : 'have'} no comparison this block.`,
+      opening(`${count(report.untested)} of the ${total} ${report.untested === 1 ? 'has' : 'have'} no comparison this block.`),
     );
   }
   return parts.join(' ');

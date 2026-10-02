@@ -5,7 +5,7 @@ import type { Program } from '@/content/types';
 import type { MetricEntry } from '@/db/metrics';
 import { addDays } from './dates';
 import { blockWindow } from './plan';
-import { blockEnd, describeBlockEnd, programForRecord, type Below } from './blockEnd';
+import { blockDay, blockEnd, describeBlockEnd, programForRecord, type Below } from './blockEnd';
 
 /** Every section below the sentence, as the page shows for a full block (PLAN.md M366). */
 const ALL: Below = { sessions: true, numbers: true, next: true };
@@ -39,7 +39,9 @@ describe('where the block is', () => {
   it('knows it is running, and says when it runs to', () => {
     const running = end([], addDays(LAST, -7));
     expect(running.status.state).toBe('running');
-    expect(describeBlockEnd(running, ALL)).toContain(LAST);
+    // As the header writes it, not the stored key (PLAN.md M368).
+    expect(describeBlockEnd(running, ALL)).toContain(`runs to ${blockDay(LAST)}.`);
+    expect(describeBlockEnd(running, ALL)).not.toContain(LAST);
   });
 
   it('knows it has ended, and how long ago', () => {

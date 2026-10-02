@@ -224,8 +224,11 @@ export function describeAdherence(a: BlockAdherence): string | null {
     return `You did every session the plan placed — all ${a.planned} of them.${missing}${extra}`;
   }
 
-  const named = joinList(missed.slice(0, 2).map((t) => `${t.done} of ${t.planned} ${t.name}`));
-  const rest =
-    missed.length > 2 ? `, and ${missed.length - 2} other ${missed.length - 2 === 1 ? 'type' : 'types'} short` : '';
-  return `You did ${named}${rest}. That is ${a.done} of ${a.planned} sessions the plan placed.${missing}${extra}`;
+  // The type's name labels its count rather than being the thing counted
+  // (PLAN.md M368): *"You did 9 of 11 Climbing Session"* is what a name
+  // used as a plural noun gives, and four session types end in "Session".
+  const named = missed.slice(0, 2).map((t) => `${t.name} (${t.done} of ${t.planned})`);
+  const others = missed.length - 2;
+  const listed = joinList(others > 0 ? [...named, `${others} other ${others === 1 ? 'type' : 'types'}`] : named);
+  return `Short of the plan: ${listed}. That is ${a.done} of ${a.planned} sessions the plan placed.${missing}${extra}`;
 }

@@ -984,7 +984,9 @@ function skippedType({ adherence }: CoachInput): Tip | null {
     signature: `${worst.planned - worst.done}`,
     tone: 'neutral',
     weight: 65,
-    headline: `${worst.done} of ${worst.planned} ${worst.name} sessions`,
+    // The name labels the count (PLAN.md M368): "3 of 8 Climbing Session
+    // sessions" was what four session types' names made of the old shape.
+    headline: `${worst.name}: ${worst.done} of ${worst.planned} done`,
     // The headline carries the count. The body is for the part a number
     // cannot say.
     body:

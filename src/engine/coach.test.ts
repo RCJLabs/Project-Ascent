@@ -844,7 +844,8 @@ describe('a session type the plan keeps placing and you keep not doing', () => {
 
   it('names the type, the count and the shortfall', () => {
     const tip = skipped([type({ planned: 8, done: 1 })]).find((t) => t.id === 'skipped-type:fp');
-    expect(tip?.headline).toBe('1 of 8 Finger Protocol sessions');
+    // The name labels the count (PLAN.md M368).
+    expect(tip?.headline).toBe('Finger Protocol: 1 of 8 done');
   });
 
   // The headline already carries "1 of 8". A body that repeats it is the

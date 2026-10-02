@@ -78,6 +78,6 @@ describe('the block report', () => {
     })!;
     expect(r.results.find((x) => x.metric.id === 'max_hang_20mm_7s')!.moved).toBe('flat');
     expect(r.results.find((x) => x.metric.id === 'dead_hang')!.moved).toBe('better');
-    expect(describeBlock(r)).toMatch(/^one of the 2 retested numbers improved, one held\./);
+    expect(describeBlock(r)).toMatch(/^One of the 2 retested numbers improved, one held\./);
   });
 });

@@ -303,7 +303,8 @@ describe('what it says out loud', () => {
         entry('max_pushups', '2026-02-02', 15),
       ])!,
     );
-    expect(text).toMatch(/^one of the 2 retested numbers improved, one went the other way\./);
+    // A sentence starts in capitals, count spelled out or not (PLAN.md M368).
+    expect(text).toMatch(/^One of the 2 retested numbers improved, one went the other way\./);
   });
 
   it('never says and twice when the list is cut short', () => {
@@ -340,7 +341,7 @@ describe('what it says out loud', () => {
     const text = describeBlock(
       report(two, [entry('dead_hang', '2026-01-05', 30), entry('dead_hang', '2026-02-02', 40)])!,
     );
-    expect(text).toContain('one of the 2 has no comparison this block');
+    expect(text).toContain('One of the 2 has no comparison this block');
   });
 
   it('says when nothing has been taken at all', () => {
@@ -379,7 +380,7 @@ describe('what it says out loud', () => {
         entry('dead_hang', '2026-02-02', 40),
       ])!,
     );
-    expect(text).toContain('one of the 1 retested number improved');
+    expect(text).toContain('One of the 1 retested number improved');
     expect(text).not.toContain('numbers improved');
   });
 });
@@ -430,7 +431,7 @@ describe('nothing taken, and one of them is a word', () => {
         entry('dead_hang', '2026-02-24', 40),
       ])!,
     );
-    expect(said).toMatch(/one of the 1 retested number improved/);
+    expect(said).toMatch(/One of the 1 retested number improved/);
     expect(said).toMatch(/of the 3 have no comparison this block/);
   });
 });
