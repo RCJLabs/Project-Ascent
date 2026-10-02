@@ -15416,6 +15416,18 @@ its label is missing. None of these wants touching.
   - its first segment is read from the original start, the rest from each moved one;
   - the pause belongs to no segment;
   - the review names it: *"It was paused for 4 weeks from …"*.
+- **M370 — the band's edge is light progress, or a light decline.** M367 held a change of exactly
+  the band's width: one plate on a max hang, one rep. The sample climber's own max hang (+5 lbs) was
+  held by it. Asked, the user called the edge light progress, and its mirror a light decline, and
+  gave each its own count. The report keeps which way a light result went, so the order of what
+  comes next treats light progress as trained. The counts and the words say *light* everywhere
+  they go:
+  - the review's sentence, as *"one made light progress"*;
+  - the chart, where a light bar is drawn between held and full;
+  - the share card's footnote;
+  - the coach's file, and both screens that read it.
+
+  Bodyweight at test weeks moves to M371.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -28557,3 +28569,62 @@ That holds. The row now records each pick-up, and the review reads it as segment
   are measured against the new one.
 - **Resumed in the week it stopped.** Nothing moves and the row reopens as it always did, so the
   days between are not a pause. It is at most six days.
+
+## M370 — the band's edge is light progress, or a light decline
+
+M367 drew the band's edge inside it: *within 5 lbs* held +5, and *within 1 rep* held one rep. The
+sample climber's Iron Grip max hang (44 → 49) and repeater weight (12.5 → 17.5) are each exactly
++5 lbs, so both read as held. Asked whether that was meant, the user answered that exactly the
+band is **light progress**. Asked two more questions, the user chose:
+
+- **its mirror:** a drop of exactly the band is **a light decline**;
+- **its own count:** in the summary it is counted apart from improved and held. For ordering what
+  comes next it counts as trained, like an improvement.
+
+### The change
+
+- **`bandFor(metric, baseline, delta)` in `blockReport.ts`** returns `held`, `edge` or `beyond`.
+  `held()` is now *inside*, the edge excluded.
+  - **The edge is matched within 1e-9, not by equality.** Readings are decimals: 33 × 10% is 3.3,
+    and 36.3 − 33 is 3.2999999999999972.
+  - **No change at all is held whatever the band.** The first draft made a zero change on a
+    zero-width band (min edge) *beyond*, and a test of the zero band found it.
+- **`AssessmentResult.light`** marks a change of exactly the band. `moved` still says which way, so
+  every reader that only asks the direction is unchanged. That includes `nextBlock`, where light
+  progress counts as trained and a light decline as not, and is worded *"went the other way"*.
+- **`BlockReport.lightBetter` and `lightWorse`.** `better` and `worse` now count only the changes
+  beyond the band.
+- **The sentence:** *"One of the 4 retested numbers improved, one made light progress, one held,
+  one had a light decline. Up: Dead Hang and Max Hang 20mm 7s (light). Down: Max Pull-Ups
+  (light)."* Full changes are named before light ones.
+- **The chart** draws a light bar at 0.55 opacity, between held (0.3) and full (0.85). Its tooltip
+  and the list under it end in *· light progress* or *· light decline*.
+- **The share card** keeps its four boxes. *Improved* and *Down* count full changes, and the light
+  ones are said in the footnote: *"3 of 9 retested · 1 light progress · 1 light decline"*. A fifth
+  box would not fit the card.
+- **The coach's file** carries `lightBetter`, `lightWorse` and a `light` flag per result. All three
+  are optional, so a file written before this reads as none. The block a coach opens shows the
+  light counts and marks the light rows, and the builder's *answering* line carries them.
+
+### Checked
+
+- **`engine/noiseBand.test.ts`, rewritten, 7 tests:**
+  - every number metric still states its band, and they are still the ones confirmed;
+  - an absolute band's inside, edge (either way) and beyond;
+  - a share of the baseline, with its floor;
+  - the edge found through decimals;
+  - no change held, any change counted on a zero band, a grade or a pass;
+  - the report's five counts and its sentence, light names last.
+- **`engine/lightProgress.test.ts`, 4 tests:**
+  - the coach's file round-trip, and a file from before;
+  - the share card's boxes and footnote;
+  - light progress ordered as trained, and a light decline worded as one that went the other way.
+- **`features/shared/lightShared.test.tsx`, 2 tests:**
+  - the review's sentence, the chart's tooltips, and a light bar's opacity;
+  - the block a coach opens, with its counts and rows, carried on to the builder.
+- **Changed tests:** the sample climber's max hang is now light progress where M367 had it held.
+  Four hand-built fixtures carry the new fields.
+- **Mutation battery: 23 mutants, all killed on the first pass; sanity survived.**
+- **Full suite:** 7,760 passing, M369's 7,753 plus 7, and the one pinned-clock skip.
+- **Layout harness:** clean.
+- **Sizes:** first load 113.82KB (+0.02); Home 212.20KB in 37 files.
