@@ -37,6 +37,9 @@
  *   the whole board page, and through it the back link, the route table,
  *   the skills store and the stats — seven files, 11.94KB, for a card that
  *   draws one line. The first measurement this script printed named it.
+ * - **213.0 at M363**, measured 211.94 in 38. Fifteen milestones had spent
+ *   the line down to 0.15KB; the eight palettes nobody on the default theme
+ *   paints left the first load, which this total contains.
  *
  * Run:  npm run build && npm run preview &
  *       npm run homeload [-- --port 4173]
@@ -53,7 +56,7 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
 /** Kilobytes, gzipped, for everything a cold Home load fetches. */
-export const HOME_BUDGET = 213.5;
+export const HOME_BUDGET = 213.0;
 
 /** How far under the line a measurement may sit before the line has to come down. */
 export const HOME_SLACK = 1.5;

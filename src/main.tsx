@@ -6,6 +6,7 @@ import { watchForFullDisk } from './db/db';
 import { trackAppHeight } from './lib/appHeight';
 import { applyUpdate, watchForUpdates } from './lib/swUpdate';
 import { useAppUpdate } from './store/appUpdate';
+import { paintDeviceSettings } from './store/settings';
 import './index.css';
 
 /**
@@ -75,6 +76,10 @@ if (navigator.storage?.persist) {
     if (!p) void navigator.storage.persist();
   });
 }
+
+// The device's theme and text size before the first frame, not after the
+// database opens (PLAN.md M363).
+paintDeviceSettings();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

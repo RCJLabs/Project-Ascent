@@ -52,7 +52,7 @@ import { Card } from '@/ui/Card';
 import { Meter } from '@/ui/Meter';
 import { Palette, Plus } from 'lucide-react';
 import { CHIP_LINK, Chip, SelectableCard } from '@/ui/Chip';
-import { getTheme } from '@/ui/themes';
+import { getTheme } from '@/ui/palettes';
 import { PageGrid } from '@/ui/PageGrid';
 import { Wide } from '@/ui/Wide';
 import { CalendarExportCard } from './CalendarExportCard';

@@ -6,7 +6,7 @@ import { addDays, dayOfWeek, today } from '@/engine/dates';
 import { useProfile } from '@/store/profile';
 import { useSettings } from '@/store/settings';
 import { hydrate, renderAt, reset } from '@/test/render';
-import { getTheme, THEMES } from '@/ui/themes';
+import { getTheme, THEMES } from '@/ui/palettes';
 import { SettingsPage } from './SettingsPage';
 
 /**

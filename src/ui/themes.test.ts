@@ -8,11 +8,10 @@ import {
   DEFAULT_THEME_ID,
   FOREGROUNDS,
   SURFACES,
-  THEMES,
   heatRamp,
-  getTheme,
   type Palette,
 } from './themes';
+import { THEMES, getTheme } from './palettes';
 import { CVD, contrast, distance, luminance, rgb } from './contrast';
 import { checkTheme, failed } from './paletteRules';
 import type { Theme } from './themes';

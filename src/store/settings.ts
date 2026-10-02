@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { getDb } from '@/db/db';
 import { DEFAULT_DISPLAY, type BoulderDisplay, type GradeDisplay, type RouteDisplay } from '@/engine/grades';
 import { setCuesEnabled } from '@/lib/cues';
-import { CONTRAST_THEME_ID, DEFAULT_THEME_ID, applyPalette, getTheme } from '@/ui/themes';
+import { CONTRAST, DEFAULT_THEME_ID, applyPalette, type Palette } from '@/ui/themes';
 import type { UnitSystem } from '@/engine/units';
 import { enqueueWrite } from './writes';
 
@@ -129,6 +129,43 @@ function readDevice(): Partial<DeviceSettings> | null {
   }
 }
 
+/**
+ * Device settings as stored, made sound: anything missing or unknown is the
+ * default. One function for the two places that read them — the store's
+ * first state, synchronously, and `hydrateSettings` — so they cannot read the
+ * same record two ways.
+ */
+function deviceFrom(device: Partial<DeviceSettings>): DeviceSettings {
+  return {
+    cues: device.cues !== false,
+    themeId: typeof device.themeId === 'string' ? device.themeId : DEFAULT_THEME_ID,
+    textSize:
+      typeof device.textSize === 'string' && device.textSize in TEXT_SCALE
+        ? (device.textSize as TextSize)
+        : 'normal',
+    theme:
+      device.theme === 'light' || device.theme === 'dark' || device.theme === 'system'
+        ? device.theme
+        : 'system',
+    progressView: PROGRESS_VIEWS.includes(device.progressView as ProgressView)
+      ? (device.progressView as ProgressView)
+      : 'block',
+    logView: device.logView === 'full' ? 'full' : 'quick',
+  };
+}
+
+/**
+ * What this device chose, before anything else has run (PLAN.md M363).
+ *
+ * The store used to start on the defaults and learn the device's choices
+ * only when `hydrateSettings` had opened the database. The theme and the
+ * text size are in `localStorage`, which is synchronous, so a climber on
+ * Midnight saw Home drawn in Alpine for three to five frames on every
+ * launch, and one on the largest text saw it reflow. Read here, the first
+ * frame is already theirs.
+ */
+const ON_THIS_DEVICE = deviceFrom(readDevice() ?? {});
+
 function writeDevice(value: DeviceSettings): void {
   try {
     localStorage.setItem(DEVICE_KEY, JSON.stringify(value));
@@ -139,21 +176,21 @@ function writeDevice(value: DeviceSettings): void {
 
 export const useSettings = create<SettingsState>((set, get) => ({
   hydrated: false,
-  theme: 'system',
-  themeId: DEFAULT_THEME_ID,
-  textSize: 'normal',
+  theme: ON_THIS_DEVICE.theme,
+  themeId: ON_THIS_DEVICE.themeId,
+  textSize: ON_THIS_DEVICE.textSize,
   display: DEFAULT_DISPLAY,
   // Imperial, matching the V/YDS grade defaults and the content as it is
   // authored, so the app is self-consistent out of the box. One line to
   // flip if the audience says otherwise.
   units: 'imperial',
-  cues: true,
-  progressView: 'block',
+  cues: ON_THIS_DEVICE.cues,
+  progressView: ON_THIS_DEVICE.progressView,
   setProgressView: (view) => {
     set({ progressView: view });
     writeDevice(deviceSettings(get()));
   },
-  logView: 'quick',
+  logView: ON_THIS_DEVICE.logView,
   setLogView: (view) => {
     set({ logView: view });
     writeDevice(deviceSettings(get()));
@@ -209,24 +246,8 @@ export async function hydrateSettings(): Promise<void> {
     // moves them. `stored === null` means this device has not been here
     // before — and at boot that is the only moment it can be true, so an
     // imported backup can never be the thing that gets migrated.
-    const device: Partial<DeviceSettings> = stored ?? value;
-    const cues = device.cues !== false;
-    const next: DeviceSettings = {
-      cues,
-      themeId: typeof device.themeId === 'string' ? device.themeId : DEFAULT_THEME_ID,
-      textSize:
-        typeof device.textSize === 'string' && device.textSize in TEXT_SCALE
-          ? (device.textSize as TextSize)
-          : 'normal',
-      theme:
-        device.theme === 'light' || device.theme === 'dark' || device.theme === 'system'
-          ? device.theme
-          : 'system',
-      progressView: PROGRESS_VIEWS.includes(device.progressView as ProgressView)
-        ? (device.progressView as ProgressView)
-        : 'block',
-      logView: device.logView === 'full' ? 'full' : 'quick',
-    };
+    const next = deviceFrom(stored ?? value);
+    const cues = next.cues;
 
     useSettings.setState({
       hydrated: true,
@@ -282,9 +303,11 @@ export function applyTheme(theme: ThemePreference, themeId: string = DEFAULT_THE
   // choice outranks a system preference.
   const wantsContrast =
     themeId === DEFAULT_THEME_ID && window.matchMedia('(prefers-contrast: more)').matches;
-  if (wantsContrast) {
-    const high = getTheme(CONTRAST_THEME_ID);
-    applyPalette(root, dark ? high.dark : high.light, dark ? 'dark' : 'light');
+  const mode = dark ? 'dark' : 'light';
+  // Whatever is still on its way for an earlier choice is now stale.
+  const ticket = ++asked;
+  if (wantsContrast || themeId === CONTRAST.id) {
+    applyPalette(root, dark ? CONTRAST.dark : CONTRAST.light, mode);
     return;
   }
 
@@ -296,8 +319,63 @@ export function applyTheme(theme: ThemePreference, themeId: string = DEFAULT_THE
     }
     return;
   }
-  const chosen = getTheme(themeId);
-  applyPalette(root, dark ? chosen.dark : chosen.light, dark ? 'dark' : 'light');
+
+  // One of the eight the first load does not carry (PLAN.md M363). Painted
+  // from the copy kept the last time it was applied, so the first frame is
+  // theirs; then the palette itself, which wins if the two differ.
+  const kept = readSnapshot(themeId);
+  if (kept !== null) applyPalette(root, dark ? kept.dark : kept.light, mode);
+  void import('@/ui/palettes')
+    .then(({ getTheme }) => {
+      if (ticket !== asked) return;
+      const chosen = getTheme(themeId);
+      applyPalette(root, dark ? chosen.dark : chosen.light, mode);
+      writeSnapshot({ id: chosen.id, light: chosen.light, dark: chosen.dark });
+    })
+    // Offline with the chunk not cached: the copy, or Alpine, stays up.
+    .catch(() => {});
+}
+
+/** How many times a theme has been asked for, so a late palette cannot undo a later choice. */
+let asked = 0;
+
+/** The last non-default palette applied, kept for the next launch's first frame. */
+interface Snapshot {
+  id: string;
+  light: Palette;
+  dark: Palette;
+}
+
+const SNAPSHOT_KEY = 'project-ascent:palette';
+
+function readSnapshot(id: string): Snapshot | null {
+  try {
+    const raw = localStorage.getItem(SNAPSHOT_KEY);
+    if (raw === null) return null;
+    const value = JSON.parse(raw) as Partial<Snapshot> | null;
+    // A copy of another palette is not this one; nor is one missing a mode.
+    return value && value.id === id && value.light && value.dark ? (value as Snapshot) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSnapshot(value: Snapshot): void {
+  try {
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(value));
+  } catch {
+    // The palette is on screen; only the next first frame goes without it.
+  }
+}
+
+/**
+ * The device's theme and text size on the page, before the app draws
+ * (PLAN.md M363). Called once from `main.tsx`, ahead of the first render.
+ */
+export function paintDeviceSettings(): void {
+  const { theme, themeId, textSize } = useSettings.getState();
+  applyTheme(theme, themeId);
+  applyTextSize(textSize);
 }
 
 /**

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { CONTRAST_THEME_ID, CSS_VAR, DEFAULT_THEME_ID, getTheme } from './themes';
+import { CONTRAST_THEME_ID, CSS_VAR, DEFAULT_THEME_ID } from './themes';
+import { getTheme } from './palettes';
 import { applyTheme } from '@/store/settings';
 
 /**
@@ -50,10 +51,11 @@ describe('a system asking for more contrast', () => {
   });
 
   // An explicit choice outranks a system preference.
-  it('does not overrule a theme the climber picked', () => {
+  it('does not overrule a theme the climber picked', async () => {
     prefers(true);
     applyTheme('light', 'gritstone');
-    expect(painted('accent')).toBe(getTheme('gritstone').light.accent);
+    // Gritstone is not in the first load, so it arrives (PLAN.md M363).
+    await vi.waitFor(() => expect(painted('accent')).toBe(getTheme('gritstone').light.accent));
   });
 
   it('leaves the default alone when the system asks for nothing', () => {

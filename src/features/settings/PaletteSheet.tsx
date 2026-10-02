@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import { useSettings } from '@/store/settings';
 import { SelectableCard } from '@/ui/Chip';
 import { IconButton } from '@/ui/IconButton';
-import { THEMES as PALETTES } from '@/ui/themes';
+import { THEMES as PALETTES } from '@/ui/palettes';
 import { useDialog } from '@/ui/useDialog';
 
 /**

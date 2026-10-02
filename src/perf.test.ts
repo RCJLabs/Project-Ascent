@@ -640,6 +640,19 @@ describe('the bundle stays small', () => {
    * 114.03 to 114.05 — wider than the hundredth quoted at M320 — so that
    * upper edge moves by as much from one build to the next; 115.1 is well
    * inside it on every one. At 115.1 a rebuild under 113.6 fails.
+   *
+   * ## 115.1 → 114.4 at M363, measured 114.70 → 113.31
+   *
+   * Seventeen milestones had spent M345's kilobyte down to 0.40, about
+   * 0.04KB each, none of it large. The saving is the eight palettes a
+   * climber on Alpine never paints: they moved to `ui/palettes.ts`, which
+   * loads when a climber has picked one, and a snapshot in `localStorage`
+   * paints a picked one on the first frame. 1.39KB, against the 1.61 a
+   * trial build that simply deleted them measured; the difference is the
+   * loader and the snapshot.
+   *
+   * 1.09KB of slack, the 1.00 target with room for the hash churn above.
+   * The floor moves with it: at 114.4 a rebuild under 112.9 fails.
    */
   //
   // **The number itself is in `scripts/firstLoad.mjs` since M328**, with the
