@@ -91,23 +91,36 @@ describe('before the library lands', () => {
 
   /**
    * Which is why the router waits. `App.tsx` holds every route behind
-   * `loadPrograms` and `loadDrills` together, because Home is eager and
-   * `engine/fingerGap.ts` calls `getDrill` on mount — a page rendered in
-   * this window would read a climber's hangboard session as no finger work
-   * at all, once, with nothing to correct it.
+   * `loadPrograms` and `loadDrills` together, because `engine/fingerGap.ts`
+   * calls `getDrill` on mount — a page rendered in this window would read a
+   * climber's hangboard session as no finger work at all, once, with
+   * nothing to correct it.
+   *
+   * Every route but Home for a new climber on a first visit, since M364.
+   * Home draws at once there, and every card on it that reads a drill
+   * waits for `useCatalogueIfNeeded` itself; the risk this paragraph names
+   * is what `homeWaitsForTheCatalogue.test.tsx` counts.
    */
   it('is a window the router closes', async () => {
-    const app = readFileSync('src/App.tsx', 'utf8');
-    expect(app, 'the gate stopped waiting for the drills').toMatch(
+    // Since M364 the gate is a store, `useCatalogue`, which the router waits
+    // on for every route but Home for a new climber on a first visit, and
+    // Home's cards wait on themselves — `homeWaitsForTheCatalogue.test.tsx`
+    // counts any drill read before it.
+    const catalogue = readFileSync('src/store/contentLoaded.ts', 'utf8');
+    expect(catalogue, 'the gate stopped waiting for the drills').toMatch(
       /Promise\.all\(\[loadPrograms\(\), loadDrills\(\)\]\)/,
     );
-    expect(app, 'the gate no longer starts closed').toMatch(
-      /useState\(\(\) => programsLoaded\(\) && drillsLoaded\(\)\)/,
+    expect(catalogue, 'the gate no longer starts closed').toMatch(
+      /hydrated: programsLoaded\(\) && drillsLoaded\(\)/,
     );
+    const app = readFileSync('src/App.tsx', 'utf8');
+    expect(app, 'the router stopped waiting').toMatch(/\{holds \? \(/);
+    const gate = readFileSync('src/store/contentLoaded.ts', 'utf8');
+    expect(gate, 'the router stopped asking the catalogue').toMatch(/return !catalogue && holdsForCatalogue\(/);
     // And `hydrateAll` asks too, so an import that replaces the database
     // refills the registry rather than leaving the old one standing.
     const store = readFileSync('src/store/index.ts', 'utf8');
-    expect(store).toMatch(/loadDrills\(\),/);
+    expect(store).toMatch(/loadCatalogue\(\),/);
   });
 
   it('fills on demand, from empty', async () => {

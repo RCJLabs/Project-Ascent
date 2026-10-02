@@ -3,6 +3,7 @@ import { getProgram } from '@/content/programs';
 import type { Program } from '@/content/types';
 import { plannedDay, type PlannedDay } from '@/engine/plan';
 import { useProfile } from '@/store/profile';
+import { useCatalogue } from '@/store/contentLoaded';
 
 /**
  * What the running block says about one date (PLAN.md M117).
@@ -28,8 +29,11 @@ export function usePlannedDay(date: string): {
   const plans = useProfile((s) => s.plans);
   const weekOverrides = useProfile((s) => s.weekOverrides);
   const tracks = useProfile((s) => s.tracks);
+  // Not before the catalogue: Home can draw before it lands since M364, and
+  // a lookup then reads the running block as no block at all.
+  const catalogue = useCatalogue((s) => s.hydrated);
 
-  const program = activeProgramId ? getProgram(activeProgramId) : undefined;
+  const program = activeProgramId && catalogue ? getProgram(activeProgramId) : undefined;
   const startDate = activeProgramId ? startDates[activeProgramId] : undefined;
   const plan = activeProgramId ? plans[activeProgramId] : undefined;
   const overrides = activeProgramId ? weekOverrides[activeProgramId] : undefined;

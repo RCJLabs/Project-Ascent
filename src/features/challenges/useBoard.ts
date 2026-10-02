@@ -19,6 +19,7 @@ import { allSessions, useSessions } from '@/store/sessions';
 import { useDeloadDates } from '@/store/deload';
 import { useLoaded } from '@/store/loaded';
 import { useCustomPrograms } from '@/store/programs';
+import { useCatalogueIfNeeded } from '@/store/contentLoaded';
 
 /**
  * The board, or that it is not ready to be read (PLAN.md M351).
@@ -74,7 +75,9 @@ export function useBoard(): BoardReading {
   );
 
   const deloadDates = useDeloadDates();
-  const ready = useLoaded(useSessions, useProfile, useSettings, useCustomPrograms) && hydrated;
+  // And the catalogue, if the climber has anything to look up in it: Home
+  // can draw before it lands since PLAN.md M364.
+  const ready = useLoaded(useSessions, useProfile, useSettings, useCustomPrograms, useCatalogueIfNeeded) && hydrated;
   return useMemo((): BoardReading => {
     if (!ready) return NOT_READY;
     const sessions = allSessions(byDate);

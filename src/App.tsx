@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect } from 'react';
 import { reportDbError } from '@/db/db';
 import { Route, Router, Switch, useLocation } from 'wouter';
 import { RouteBoundary } from '@/ui/ErrorBoundary';
@@ -212,8 +212,7 @@ const AttachPage = lazyRoute(
 
 import { sweepOrphanMedia } from '@/db/media';
 import { hydrateAll } from '@/store';
-import { loadPrograms, programsLoaded } from '@/content/programs';
-import { drillsLoaded, loadDrills } from '@/content/drills';
+import { loadCatalogue, useCatalogue, useHoldsForCatalogue } from '@/store/contentLoaded';
 import { applyTextSize, applyTheme, useSettings } from '@/store/settings';
 import { AppShell } from '@/ui/AppShell';
 
@@ -323,29 +322,26 @@ interface LaunchQueue {
 }
 
 /**
- * The router waits for the catalogue; the shell does not (PLAN.md M78).
+ * The router waits for the catalogue, except on Home for a new climber
+ * (PLAN.md M78, M364).
  *
  * Twenty-two call sites read a program synchronously at render, and eight
  * pages do it with no hydration gate at all — a climber cold-loading
  * `#/train` would get an empty catalogue that never re-rendered. Gating
  * those eight one by one is eight chances to miss one. Gating the routes
  * here is one, and the nav still paints while the bodies are parsed.
+ *
+ * The exception since M364 is a launch the worker did not serve, on Home,
+ * once the stores say the climber has no program and nothing logged: a new
+ * climber's first launch, which reads nothing from the catalogue and was
+ * measured waiting 0.4s on Slow 4G and 1.1s on Fast 3G for it before the
+ * first-session card. `useHoldsForCatalogue` has the rule and what the
+ * versions of it that were tried first cost.
  */
-function useCatalogue(): boolean {
-  const [ready, setReady] = useState(() => programsLoaded() && drillsLoaded());
+function useCatalogueLoading(): boolean {
+  const ready = useCatalogue((s) => s.hydrated);
   useEffect(() => {
-    if (ready) return;
-    let live = true;
-    // Both, because the drills are fetched too since M185 and a page that
-    // reads `getDrill` on mount would otherwise render an empty library
-    // once and never hear about it. One gate for the same reason there was
-    // one before: gating the pages one by one is a chance to miss one.
-    void Promise.all([loadPrograms(), loadDrills()]).then(() => {
-      if (live) setReady(true);
-    });
-    return () => {
-      live = false;
-    };
+    if (!ready) void loadCatalogue();
   }, [ready]);
   return ready;
 }
@@ -353,7 +349,8 @@ function useCatalogue(): boolean {
 function Shell() {
   useOpenedFile();
   const [location] = useLocation();
-  const catalogue = useCatalogue();
+  useCatalogueLoading();
+  const holds = useHoldsForCatalogue(location);
   return (
       <AppShell>
         {/* Inside the shell, so a page that throws leaves the nav — and so a
@@ -365,7 +362,7 @@ function Shell() {
             quiet rather than a spinner: on a warm cache it is never seen,
             and a spinner that flashes for 20ms is worse than nothing. */}
         <Suspense fallback={<div className="min-h-40" aria-busy="true" />}>
-        {!catalogue ? (
+        {holds ? (
           <div className="min-h-40" aria-busy="true" />
         ) : (
         <Switch>

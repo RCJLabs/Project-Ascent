@@ -10,8 +10,7 @@ import { useSessions } from './sessions';
 import { hydrateSettings } from './settings';
 import { beginHydration, endHydration } from './hydrating';
 import { writesSettled } from './writes';
-import { loadPrograms } from '@/content/programs';
-import { loadDrills } from '@/content/drills';
+import { loadCatalogue } from './contentLoaded';
 
 /**
  * The game's store, fetched rather than imported (PLAN.md M320).
@@ -78,8 +77,7 @@ export async function hydrateAll(): Promise<void> {
       // The catalogue is fetched, not imported (PLAN.md M78), and so is the
       // drill library (M185). Idempotent, so the boot path and the
       // after-import path can both ask for them.
-      loadPrograms(),
-      loadDrills(),
+      loadCatalogue(),
       hydrateSettings(),
       hydrateProfile(),
       // **The order is the order the answers come back in** (PLAN.md M361).

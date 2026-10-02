@@ -44,6 +44,14 @@ export function loadPrograms(): Promise<void> {
   return loading;
 }
 
+/** Test hook: the registry as it is at launch, before the catalogue arrives. */
+export function forgetProgramsForTests(): void {
+  PROGRAMS.splice(0, PROGRAMS.length);
+  BY_ID.clear();
+  loading = null;
+  readsBeforeLoad = 0;
+}
+
 /** True once the shipped programs are in the registry. */
 export function programsLoaded(): boolean {
   return BY_ID.size > 0;
@@ -88,9 +96,25 @@ export function registerAdaptations(weeksById: Record<string, number>): void {
   }
 }
 
+/**
+ * Lookups of a shipped program made before the catalogue had arrived
+ * (PLAN.md M364).
+ *
+ * Since M364 the router lets Home draw before the catalogue lands, so every
+ * card there that reads a program has to wait for it. One that does not gets
+ * `undefined` for the program a climber is running, and says something
+ * false. This is how the tests find one, whichever card it is in.
+ */
+let readsBeforeLoad = 0;
+
+export function catalogueReadsBeforeLoad(): number {
+  return readsBeforeLoad;
+}
+
 /** Custom first: a fork keeps its own id, but this is the safe precedence. */
 export function getProgram(id: ProgramId): Program | undefined {
   const base = CUSTOM.get(id) ?? BY_ID.get(id);
+  if (!base && BY_ID.size === 0) readsBeforeLoad += 1;
   if (!base) return undefined;
   const weeks = ADAPTED.get(id);
   if (weeks === undefined || weeks === base.weeks) return base;

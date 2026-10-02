@@ -97,8 +97,25 @@ export function offWallDrills(): Drill[] {
   return filterDrills({ equipment: [] });
 }
 
+/** The same count as `catalogueReadsBeforeLoad`, for the library (PLAN.md M364). */
+let readsBeforeLoad = 0;
+
+export function libraryReadsBeforeLoad(): number {
+  return readsBeforeLoad;
+}
+
+/** Test hook: the library as it is at launch, before it arrives. */
+export function forgetDrillsForTests(): void {
+  DRILLS.splice(0, DRILLS.length);
+  BY_ID.clear();
+  loading = null;
+  readsBeforeLoad = 0;
+}
+
 export function getDrill(id: DrillId): Drill | undefined {
-  return BY_ID.get(id) ?? CUSTOM.get(id);
+  const drill = BY_ID.get(id) ?? CUSTOM.get(id);
+  if (drill === undefined && BY_ID.size === 0) readsBeforeLoad += 1;
+  return drill;
 }
 
 export interface DrillFilter {

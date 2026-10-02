@@ -29,6 +29,7 @@ import { useDeloadDates } from '@/store/deload';
 import { useSettings } from '@/store/settings';
 import { useCustomPrograms } from '@/store/programs';
 import { useLoaded } from '@/store/loaded';
+import { useCatalogueIfNeeded } from '@/store/contentLoaded';
 
 export interface Tips {
   all: Tip[];
@@ -67,6 +68,10 @@ function useCoachInputsLoaded(): boolean {
     useAway,
     useSettings,
     useCustomPrograms,
+    // The catalogue too, for a climber with something to look up in it:
+    // Home can draw before it lands since PLAN.md M364, and a tip about the
+    // running block needs the block.
+    useCatalogueIfNeeded,
   );
 }
 

@@ -8,6 +8,7 @@ import { gymSummary } from '@/engine/gym';
 import { DayNudges, PreSessionCard } from '@/features/log/PreSession';
 import { usePlannedDay } from '@/features/log/usePlannedDay';
 import { useWeekOutline } from '@/features/week/useWeekOutline';
+import { useCatalogueIfNeeded } from '@/store/contentLoaded';
 import { useLoaded } from '@/store/loaded';
 import { useProfile } from '@/store/profile';
 import { useCustomPrograms } from '@/store/programs';
@@ -208,9 +209,10 @@ function HomeHeadingForToday({ date }: { date: string }) {
    * been done in it from the log. With the first two in and the log not,
    * every warm launch of the sample climber said *"Week 6 of 12 · … · 0 of
    * 4 training days done, 1 to come"* for a tenth of a second and then
-   * corrected itself. The date is drawn at once; the week waits.
+   * corrected itself. The date is drawn at once; the week waits — for the
+   * catalogue too, when there is a program to look up in it (M364).
    */
-  const loaded = useLoaded(useSessions, useProfile, useCustomPrograms);
+  const loaded = useLoaded(useSessions, useProfile, useCustomPrograms, useCatalogueIfNeeded);
   return <HomeHeading date={date} outline={loaded ? outline : null} program={program} />;
 }
 
@@ -272,9 +274,10 @@ function TodayCard({ date }: { date: string }) {
    * *"Nothing planned — no program is running"* to a climber with a block
    * running, for a third of a second at a quarter speed, and then changed
    * its mind. A card the same size says it is loading instead; the layout
-   * holds, which is the rule `polish.test.ts` keeps.
+   * holds, which is the rule `polish.test.ts` keeps. And the catalogue, for
+   * a climber with a program to look up in it (M364).
    */
-  const loaded = useLoaded(useSessions, useProfile, useCustomPrograms);
+  const loaded = useLoaded(useSessions, useProfile, useCustomPrograms, useCatalogueIfNeeded);
   if (!loaded) {
     return (
       <div className="mt-3" aria-busy="true" aria-live="polite" aria-label="Loading today's session">
@@ -412,11 +415,13 @@ function FirstRunCards() {
    * `'safety'` matches neither key, so the note is shown once more and then
    * settles against whichever half is true.
    */
+  const loaded = useLoaded(useSessions, useProfile, useCustomPrograms, useCatalogueIfNeeded);
+  // Only once it can be answered: every session's program is looked up, and
+  // before the catalogue lands that is a lookup of nothing (PLAN.md M364).
   const fingerPhase = useMemo(
-    () => (allSessions(byDate).some(loadsFingersDirectly) ? 'loading' : 'before'),
-    [byDate],
+    () => (loaded && allSessions(byDate).some(loadsFingersDirectly) ? 'loading' : 'before'),
+    [byDate, loaded],
   );
-  const loaded = useLoaded(useSessions, useProfile, useCustomPrograms);
   const gone = (id: string) => dismissed.includes(id);
   /**
    * Nothing, not a placeholder, until the log and the profile are in

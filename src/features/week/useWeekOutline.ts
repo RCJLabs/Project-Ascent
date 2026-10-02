@@ -5,6 +5,7 @@ import { concerning, injuryPolicy } from '@/engine/injury';
 import { weekOutline, type WeekOutline } from '@/engine/week';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
+import { useCatalogue } from '@/store/contentLoaded';
 
 /**
  * The week containing `date`, read from the stores (PLAN.md M135).
@@ -32,8 +33,10 @@ export function useWeekOutline(date: string): WeekOutline {
   useEffect(() => {
     if (!hydrated) void load();
   }, [hydrated, load]);
+  // Not before the catalogue (PLAN.md M364): see `usePlannedDay`.
+  const catalogue = useCatalogue((s) => s.hydrated);
 
-  const program = activeProgramId ? getProgram(activeProgramId) : undefined;
+  const program = activeProgramId && catalogue ? getProgram(activeProgramId) : undefined;
   const startDate = activeProgramId ? startDates[activeProgramId] : undefined;
   const plan = activeProgramId ? plans[activeProgramId] : undefined;
   const overrides = activeProgramId ? weekOverrides[activeProgramId] : undefined;
