@@ -6,6 +6,7 @@ import { weekOutline, type WeekOutline } from '@/engine/week';
 import { useProfile } from '@/store/profile';
 import { useSessions } from '@/store/sessions';
 import { useCatalogue } from '@/store/contentLoaded';
+import { useRunningRow } from '@/features/log/useRunningRow';
 
 /**
  * The week containing `date`, read from the stores (PLAN.md M135).
@@ -26,6 +27,8 @@ export function useWeekOutline(date: string): WeekOutline {
   const weekOverrides = useProfile((s) => s.weekOverrides);
   const tracks = useProfile((s) => s.tracks);
   const injuries = useProfile((s) => s.injuries);
+  // The running block's row, for the days before a pick-up (PLAN.md M374).
+  const row = useRunningRow();
   const byDate = useSessions((s) => s.byDate);
   const hydrated = useSessions((s) => s.hydrated);
   const load = useSessions((s) => s.load);
@@ -55,7 +58,8 @@ export function useWeekOutline(date: string): WeekOutline {
         overrides,
         trackId,
         injured,
+        row,
       }),
-    [date, byDate, program, startDate, plan, overrides, trackId, injured],
+    [date, byDate, program, startDate, plan, overrides, trackId, injured, row],
   );
 }

@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { BookOpen, CalendarDays, CheckCheck, ChevronLeft, ChevronRight, Plane, Rows3 } from 'lucide-react';
 import { AwayCard } from './AwayCard';
 import { getProgram } from '@/content/programs';
-import { fromKey, shortLabel, toKey, today } from '@/engine/dates';
+import { addDays, fromKey, shortLabel, today, toKey } from '@/engine/dates';
 import { isThisMonth, monthGrid, monthLabel } from '@/engine/calendarDates';
 import { blockWindow, plannedDay } from '@/engine/plan';
 import { activeObjectives } from '@/engine/objectives';
@@ -16,6 +16,8 @@ import { monthMarks, worthExplaining } from '@/engine/monthMarks';
 import { weekTally, type WeekTally } from '@/engine/weekTally';
 import { tallied, weekTense } from '@/engine/weekTense';
 import { intensityOf } from '@/engine/scheduler';
+import { useRunningRow } from '@/features/log/useRunningRow';
+import { startOn } from '@/engine/runStart';
 import { useProfile } from '@/store/profile';
 import type { Session } from '@/db/sessions';
 import { useSessions } from '@/store/sessions';
@@ -167,6 +169,13 @@ export function CalendarPage() {
   const weekOverrides = useProfile((s) => s.weekOverrides);
   const injuries = useProfile((s) => s.injuries);
   const overrides = activeProgramId ? weekOverrides[activeProgramId] : undefined;
+  /**
+   * The running block's row, so a day before a pick-up is numbered from the
+   * start it had then and a day in a pause gets no plan (PLAN.md M374).
+   * Without it the weeks the climber trained before stopping drew nothing,
+   * and the weeks they were stopped drew as weeks one to three, missed.
+   */
+  const row = useRunningRow();
 
   /**
    * Days being marked as trained-but-unlogged (PLAN.md M100).
@@ -240,10 +249,14 @@ export function CalendarPage() {
    * actually running. The window is a fact either way; only the sessions
    * inside it are unscheduled.
    */
-  const running = useMemo(
-    () => (program && startDate ? blockWindow(program, startDate) : null),
-    [program, startDate],
-  );
+  const running = useMemo(() => {
+    if (!program || !startDate) return null;
+    const window = blockWindow(program, startDate);
+    // From the run's first day, not the moved start (PLAN.md M374): the
+    // start before every pick-up moved it.
+    const moved = (row?.resumed ?? []).reduce((sum, r) => sum + r.weeks, 0);
+    return moved > 0 ? { ...window, from: blockWindow(program, addDays(row!.startDate, -7 * moved)).from } : window;
+  }, [program, startDate, row]);
 
   const ghostSeason = useMemo(() => {
     const chosen = soonestSeason(activeObjectives(objectives));
@@ -303,7 +316,8 @@ export function CalendarPage() {
   const cells = useMemo(
     () =>
       days.map((date) => {
-        const day = planning ? plannedDay(program!, startDate!, plan!, date, overrides) : null;
+        const from = planning ? startOn(row, startDate!, date) : null;
+        const day = from !== null ? plannedDay(program!, from, plan!, date, overrides) : null;
         const logged = byDate[date] ?? [];
         const type = day?.isRest ? undefined : day?.sessionType;
         return {
@@ -321,7 +335,7 @@ export function CalendarPage() {
           test: day?.test,
         };
       }),
-    [days, planning, program, startDate, plan, overrides, byDate, month],
+    [days, planning, program, startDate, plan, overrides, byDate, month, row],
   );
 
   const marks = useMemo(() => monthMarks(cells), [cells]);

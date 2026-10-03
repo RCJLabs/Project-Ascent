@@ -4,6 +4,8 @@ import type { Program } from '@/content/types';
 import { plannedDay, type PlannedDay } from '@/engine/plan';
 import { useProfile } from '@/store/profile';
 import { useCatalogue } from '@/store/contentLoaded';
+import { startOn } from '@/engine/runStart';
+import { useRunningRow } from './useRunningRow';
 
 /**
  * What the running block says about one date (PLAN.md M117).
@@ -23,6 +25,11 @@ export function usePlannedDay(date: string): {
   day: PlannedDay | undefined;
   trackId: string | undefined;
   activeProgramId: string | null;
+  /**
+   * The start this date is numbered from: the live one, an earlier one before
+   * a pick-up, or undefined on a day the block was paused (PLAN.md M374).
+   */
+  startDate: string | undefined;
 } {
   const activeProgramId = useProfile((s) => s.activeProgramId);
   const startDates = useProfile((s) => s.startDates);
@@ -34,7 +41,9 @@ export function usePlannedDay(date: string): {
   const catalogue = useCatalogue((s) => s.hydrated);
 
   const program = activeProgramId && catalogue ? getProgram(activeProgramId) : undefined;
-  const startDate = activeProgramId ? startDates[activeProgramId] : undefined;
+  const live = activeProgramId ? startDates[activeProgramId] : undefined;
+  const row = useRunningRow();
+  const startDate = live ? (startOn(row, live, date) ?? undefined) : undefined;
   const plan = activeProgramId ? plans[activeProgramId] : undefined;
   const overrides = activeProgramId ? weekOverrides[activeProgramId] : undefined;
   const trackId = activeProgramId ? tracks[activeProgramId] : undefined;
@@ -45,5 +54,5 @@ export function usePlannedDay(date: string): {
     [program, startDate, plan, date, overrides],
   );
 
-  return { program, day, trackId, activeProgramId };
+  return { program, day, trackId, activeProgramId, startDate };
 }

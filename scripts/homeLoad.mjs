@@ -40,6 +40,13 @@
  * - **213.0 at M363**, measured 211.94 in 38. Fifteen milestones had spent
  *   the line down to 0.15KB; the eight palettes nobody on the default theme
  *   paints left the first load, which this total contains.
+ * - **213.3 at M374**, measured 213.13 in 37 — the line's first rise, and
+ *   the user's call. M373 put the review's verdict on the coach's tip
+ *   (+0.51KB) and left 0.08KB; M374 taught Home's week strip about a
+ *   paused block, so the days between a stop and a resume stop reading as
+ *   missed, and that walk is in the first load. Nothing in the entry was
+ *   left to cut for it, and the alternative was a strip that disagrees
+ *   with the week page in the one week a block is picked up.
  *
  * Run:  npm run build && npm run preview &
  *       npm run homeload [-- --port 4173]
@@ -56,7 +63,7 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
 /** Kilobytes, gzipped, for everything a cold Home load fetches. */
-export const HOME_BUDGET = 213.0;
+export const HOME_BUDGET = 213.3;
 
 /** How far under the line a measurement may sit before the line has to come down. */
 export const HOME_SLACK = 1.5;

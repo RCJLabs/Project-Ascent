@@ -31,6 +31,8 @@
  * two numbers are labelled differently so they cannot be read as the same.
  */
 
+import type { BlockRecord } from './blocks';
+import { startOn } from './runStart';
 import type { Drill, Phase, Program, SessionType } from '@/content/types';
 import type { BodyPart } from '@/content/bodyParts';
 import type { Session } from '@/db/sessions';
@@ -58,6 +60,12 @@ export interface WeekDay {
   spent: string | null;
   /** What the planned day loads of what is hurt (PLAN.md M89). */
   load: DayLoad;
+  /**
+   * The block was stopped on this day and picked up again later (PLAN.md
+   * M374): nothing is planned on it and nothing it would have placed is a
+   * miss, which is the coach's rule for a pause (M369).
+   */
+  paused?: true;
 }
 
 export interface WeekStepLine {
@@ -79,6 +87,8 @@ export interface WeekOutline {
   before: boolean;
   /** The block finished before this week. */
   over: boolean;
+  /** Every day of the week fell in a pause (PLAN.md M374). */
+  paused: boolean;
   days: WeekDay[];
   /** Days the plan places a training session on. */
   planned: number;
@@ -108,6 +118,11 @@ export interface WeekInput {
   trackId?: string | undefined;
   /** The parts to count load against. Empty when nothing is hurt. */
   injured?: readonly BodyPart[];
+  /**
+   * The running block's row, so a day before a pick-up is numbered from the
+   * start it had then and a day in a pause from none (PLAN.md M374).
+   */
+  row?: BlockRecord | null;
 }
 
 function statusOf(date: string, today: string, planned: boolean, sessions: readonly Session[]): DayStatus {
@@ -126,14 +141,18 @@ export function weekOutline(input: WeekInput): WeekOutline {
   const injured = input.injured ?? [];
 
   const days: WeekDay[] = dates.map((date) => {
-    const day = planning
-      ? plannedDay(input.program!, input.startDate!, input.plan!, date, input.overrides)
+    // The start this day was numbered from: the live one, an earlier one
+    // before a pick-up, or none in a pause (PLAN.md M374).
+    const from = planning ? startOn(input.row, input.startDate!, date) : null;
+    const day = planning && from !== null
+      ? plannedDay(input.program!, from, input.plan!, date, input.overrides)
       : undefined;
     const sessions = input.sessions.filter((s) => s.date === date);
     const training = day !== undefined && day.sessionType !== undefined && !day.isRest;
     return {
       date,
       ...(day ? { day } : {}),
+      ...(planning && from === null ? { paused: true as const } : {}),
       training,
       status: statusOf(date, input.today, training, sessions),
       sessions,
@@ -153,9 +172,9 @@ export function weekOutline(input: WeekInput): WeekOutline {
   });
 
   // The week's facts are the same on every day of it — `plannedDay` derives
-  // them from the week — so any day will do, and the first is as good as
-  // the rest.
-  const first = days[0]!.day;
+  // them from the week — so any day will do: the first that has one, since
+  // a pause can take the first few (PLAN.md M374).
+  const first = days.find((d) => d.day !== undefined)?.day;
   const week = first?.week ?? null;
   const over = first?.over === true;
   // The named fact rather than the absence of two others (PLAN.md M259).
@@ -197,6 +216,7 @@ export function weekOutline(input: WeekInput): WeekOutline {
     ...(first?.test !== undefined ? { test: first.test } : {}),
     before,
     over,
+    paused: days.every((d) => d.paused === true),
     days,
     planned,
     done,

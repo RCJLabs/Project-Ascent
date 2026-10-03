@@ -154,7 +154,8 @@ function DayMark({
   const done = day.status === 'done';
   const started = day.status === 'started';
   const name = formatDate(fromKey(day.date), { weekday: 'long', day: 'numeric' });
-  const label = `${name} — ${isToday ? 'today, ' : ''}${STATE[day.status]}${isLimit ? ', the limit day' : ''}`;
+  // A day in a pause says so rather than "rest day" (PLAN.md M374).
+  const label = `${name} — ${isToday ? 'today, ' : ''}${day.paused ? 'paused' : STATE[day.status]}${isLimit ? ', the limit day' : ''}`;
 
   return (
     <Link

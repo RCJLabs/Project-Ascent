@@ -25,6 +25,7 @@ import { previewMove, type MovePreview } from '@/engine/movePreview';
 import { intensityOf } from '@/engine/scheduler';
 import { testsOn } from '@/engine/testDays';
 import { describeWeekDays, type WeekDay, type WeekOutline } from '@/engine/week';
+import { useRunningRow } from '@/features/log/useRunningRow';
 import { useProfile } from '@/store/profile';
 import { BackLink } from '@/ui/BackLink';
 import { Button } from '@/ui/Button';
@@ -78,7 +79,20 @@ export function WeekPage({ params }: { params?: { start?: string } } = {}) {
   const planning = program !== undefined && startDate !== undefined && plan !== undefined;
 
   const outline = useWeekOutline(start);
-  const battery = useTestWeek(start);
+  /**
+   * The pause this week touches, if it touches one (PLAN.md M374): the stop
+   * and the resume, for the sentence that says so. Read here rather than by
+   * the outline, which Home's strip carries in the first load.
+   */
+  const row = useRunningRow();
+  const pause = useMemo(() => {
+    const r = (row?.resumed ?? []).find((p) => p.stoppedOn !== undefined && p.stoppedOn < end && p.on > start);
+    return r ? { stoppedOn: r.stoppedOn!, on: r.on } : null;
+  }, [row, start, end]);
+  // From the week's first day the block was running, not its Sunday: a
+  // pause can take the first few, and a test week is read off a day that
+  // has a start (PLAN.md M374).
+  const battery = useTestWeek(outline.days.find((d) => d.day !== undefined)?.date ?? start);
 
   /**
    * Pick-then-place, as the calendar did it from §5.3 to M134, and for the
@@ -171,6 +185,7 @@ export function WeekPage({ params }: { params?: { start?: string } } = {}) {
         planning={planning}
         count={count}
         spread={(battery?.days.length ?? 0) > 0}
+        pause={pause}
       />
 
       {movable && !rearranging && (
@@ -335,7 +350,10 @@ function WeekFacts({
   planning,
   count,
   spread,
+  pause,
 }: {
+  /** The pause the week touches: the stop, and the resume (PLAN.md M374). */
+  pause: { stoppedOn: string; on: string } | null;
   outline: WeekOutline;
   /** The week's tests have sessions to go to (PLAN.md M325). */
   spread: boolean;
@@ -367,6 +385,18 @@ function WeekFacts({
       </Card>
     );
   }
+  if (outline.paused && pause) {
+    // A week the block was stopped through (PLAN.md M374). It used to be
+    // drawn as weeks one to three of the block, planned and so missed.
+    return (
+      <Card className="mb-3">
+        <p className="text-sm text-ink-soft">
+          {program!.name} was paused this week — stopped on {shortLabel(pause.stoppedOn)} and picked up
+          again on {shortLabel(pause.on)}. Nothing it would have placed here counts as missed.
+        </p>
+      </Card>
+    );
+  }
   if (outline.over) {
     return (
       <Card className="mb-3">
@@ -382,6 +412,13 @@ function WeekFacts({
   return (
     <Card className="mb-3">
       {count && <p className="text-sm font-semibold mb-2">{count}.</p>}
+      {/* A week the pause began or ended in (PLAN.md M374). */}
+      {pause && (
+        <p className="text-sm text-ink-soft leading-relaxed mb-2">
+          Paused from {shortLabel(addDays(pause.stoppedOn, 1))} to{' '}
+          {shortLabel(addDays(pause.on, -1))}; those days are not counted.
+        </p>
+      )}
       {outline.isDeload && (
         <p className="text-sm text-ink-soft leading-relaxed mb-2 flex items-start gap-1.5">
           <TrendingDown size={14} className="text-accent shrink-0 mt-0.5" />
@@ -517,7 +554,8 @@ function DayRow({
       </span>
       <span className="flex-1 min-w-0 text-left">
         <span className={`block text-sm ${training ? 'font-semibold' : 'text-ink-soft'}`}>
-          {training ? type.name : 'Rest'}
+          {/* A day in a pause is not a rest the plan gave (PLAN.md M374). */}
+          {training ? type.name : d.paused ? 'Paused' : 'Rest'}
         </span>
         {training && (
           <span className="block text-xs text-ink-soft">

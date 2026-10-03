@@ -13,12 +13,12 @@ import { useProfile } from '@/store/profile';
  * and the tests cannot be about different weeks.
  */
 export function useTestWeek(date: string): TestWeek | null {
-  const { program, day, activeProgramId } = usePlannedDay(date);
-  const startDates = useProfile((s) => s.startDates);
+  // The day's own start, so a week before a pick-up is tested as the week it
+  // was, and a paused one not at all (PLAN.md M374).
+  const { program, day, activeProgramId, startDate } = usePlannedDay(date);
   const plans = useProfile((s) => s.plans);
   const weekOverrides = useProfile((s) => s.weekOverrides);
 
-  const startDate = activeProgramId ? startDates[activeProgramId] : undefined;
   const plan = activeProgramId ? plans[activeProgramId] : undefined;
   const overrides = activeProgramId ? weekOverrides[activeProgramId] : undefined;
 

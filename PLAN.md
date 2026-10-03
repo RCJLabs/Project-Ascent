@@ -15458,6 +15458,14 @@ its label is missing. None of these wants touching.
 
   The screenshots found the longer labels breaking both rows at 360px, so the list now wraps the
   benchmark's name rather than truncating it.
+- **M374 — the days before a pick-up keep their weeks.** M369 left one gap: every page that
+  numbers a day read the block's live start, which a resume moves. So a block stopped after three
+  weeks and picked up three weeks later drew the weeks trained with nothing planned. The weeks
+  stopped drew as weeks one to three, planned and missed, with the baseline tests listed on them.
+
+  Now Home's strip, the week page, the calendar, the logger's day and the test battery number each
+  day from the start it had. A day in a pause has no plan, and says *Paused*. The first load had
+  no room for this, so Home's line rose from 213.0 to 213.3, on the user's call.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -28950,3 +28958,90 @@ The layout harness could not see either: the sample climber has no weighed resul
   - **Home:** 212.88 to 212.92KB across three builds of this source, **0.08KB under the 213.0
     line**. The `assessmentStatus` chunk Home loads for the coach grew 0.51KB, which is the
     verdict. The next addition to Home needs a saving or a decision on the line.
+
+## M374 — the days before a pick-up keep their weeks
+
+M369 recorded this under *Not done*: *"The calendar and week pages read the live start, which a
+pick-up moves."* Measured on a block run three weeks, stopped, and resumed three weeks later:
+
+- **The three weeks trained** drew nothing planned: they were before the moved start. The
+  calendar's gutter read *"3 sessions logged, none planned"*.
+- **The three weeks stopped** drew as weeks one to three. Their sessions were planned, and so
+  *missed*, which is the opposite of M369's answer that a pause is not missed.
+- **The paused weeks also listed the block's baseline tests.** The first screenshot of the fix
+  found this: the test battery read the live start through `usePlannedDay`, which also drives the
+  logger's view of a past day.
+
+### The change
+
+- **`engine/runStart.ts` holds `startOn(row, live, date)`.** It returns the start a day is
+  numbered from: an earlier one before a pick-up, null in a pause, and the live start otherwise.
+  - It returns the live start for a row never picked up, for no row, and for the stretch running
+    now, so a climber who never stopped a block sees exactly what they saw before.
+  - It walks `resumed` instead of building M369's segments, because it is in the first load.
+    A test holds the two to the same answer on every day of four shapes: one stop, a mid-week
+    stop, two stops, and a pick-up without a stop.
+  - A pick-up without a stop (M149) leaves its gap in the stretch before it, missed, as M149
+    counted it.
+- **`weekOutline` takes the row** and numbers each day from its own start.
+  - A paused day has no plan and is marked `paused`, and a week entirely inside a pause is
+    `paused`.
+  - The week's facts (number, phase, deload, test) come from its first day that has a start, not
+    its Sunday, because a pause can take the first few days.
+- **`useRunningRow`** gives the running program's open row, and only that program's. The
+  logger, the week and the calendar all read it.
+- **`usePlannedDay` returns the day's start**, so the logger, the day heading and `useTestWeek`
+  read a day before a pick-up as the week it was, and a paused day as no block at all.
+- **The screens:**
+  - **The week page:** a paused day reads *Paused* where it read *Rest*. A paused week opens on
+    *"Iron Grip was paused this week — stopped on Aug 26 and picked up again on Sep 20. Nothing
+    it would have placed here counts as missed."* A week the pause began or ended in says which
+    days it took. The week's tests are read off its first running day.
+  - **The calendar** numbers each day from its own start. The block's tint begins at the run's
+    first day.
+  - **Home's strip** labels a paused day *paused*.
+
+### The Home line
+
+The first draft put `segmentsOf` into the first load and cost 0.39KB, which left the first load
+0.06KB under budget and took Home over its line. A walk instead of segments, and the pause's dates
+read on the week page instead of in the outline, brought that to 0.26KB.
+
+Home still measured **213.13KB against its 213.0 line**, and nothing in the entry was left to cut.
+The user chose to raise the line to **213.3**, its first rise; the reason is in `homeLoad.mjs`'s
+history.
+
+### Not done
+
+- **One layout per row**, from M369, is unchanged. A climber who changes the week's layout on
+  resuming has the weeks before measured against the new one, on these screens as in the review.
+- **The calendar does not mark a paused day.** It just draws no plan on it. The week page names
+  the pause.
+
+### Checked
+
+- **`engine/runStart.test.ts`, 12 tests.** The fixture is built by the app's own `pickUp`:
+  - a day before the stop, on the stop, in the pause, and on and after the resume;
+  - no row, and a row never picked up;
+  - a pick-up without a stop;
+  - the outline: a week trained, a week paused, the week after, a week the stop fell in, and a
+    week the resume fell in;
+  - the walk against the segments on every day of four shapes.
+- **`features/resumedWeeks.test.tsx`, 11 tests:**
+  - **calendar:** the gutter of the weeks trained, and of the weeks stopped;
+  - **week page:** a week before the stop, a paused week's card and days, a mid-week stop's line,
+    the week after the resume, and another program's row ignored;
+  - **Home's strip:** a paused day's label;
+  - **tests and the logger:** no tests on a paused week, a baseline on the first, a test week the
+    resume fell in, and the logger's day heading before, during and after.
+- **Mutation battery:**
+  - 20 mutants on the first pass: 17 killed, 3 survived, and tests were added for those three;
+  - 4 more on the hooks: 3 killed, and 1 killed after its test was added;
+  - sanity survived every pass.
+- **Full suite:** 7,849 passing, M373's 7,826 plus 23, and the one pinned-clock skip.
+- **Layout harness:** clean.
+- **In the browser at 360px,** with a resumed block written to the database: a paused week and a
+  mid-week stop. Nothing overflows, and no tests appear on paused days.
+- **Sizes:**
+  - **first load:** 114.21KB, 0.19KB under budget;
+  - **Home:** 213.16KB, 0.14KB under the new 213.3 line.
