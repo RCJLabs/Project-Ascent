@@ -21,6 +21,8 @@ export interface MetricsState {
   load: () => Promise<void>;
   record: (entry: MetricEntry) => Promise<void>;
   remove: (metricId: MetricId, date: string) => Promise<void>;
+  /** Take every stored bodyweight off the result it came with (PLAN.md M371). */
+  dropBodyweights: () => Promise<void>;
 }
 
 export const useMetrics = create<MetricsState>((set, get) => ({
@@ -47,6 +49,16 @@ export const useMetrics = create<MetricsState>((set, get) => ({
     // store key says so, so the cache must agree.
     const rest = get().entries.filter((e) => !(e.metricId === entry.metricId && e.date === entry.date));
     set({ entries: [...rest, entry].sort((a, b) => (a.date < b.date ? -1 : 1)) });
+  },
+
+  dropBodyweights: async () => {
+    // Every weight stored with a test, taken off the result it was given
+    // with; the results themselves stay (PLAN.md M371).
+    const weighed = get().entries.filter((e) => e.bodyweight !== undefined);
+    const bare = weighed.map(({ bodyweight: _w, ...rest }) => rest);
+    for (const entry of bare) await putMetricEntry(entry);
+    const bareBy = new Map(bare.map((e) => [`${e.metricId}@${e.date}`, e]));
+    set({ entries: get().entries.map((e) => bareBy.get(`${e.metricId}@${e.date}`) ?? e) });
   },
 
   remove: async (metricId, date) => {

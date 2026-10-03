@@ -277,18 +277,21 @@ export function FinishPage({ params }: { params?: { id?: string } } = {}) {
    */
   const cutoff = chosen?.endedAt ?? null;
 
+  /** Added-load tests read against bodyweight, if the climber turned that on (PLAN.md M371). */
+  const weighIn = useSettings((s) => s.weighIn);
+
   const end = useMemo(() => {
     if (chosen === null) {
       // No history at all: fall back to the live program, which is what a
       // climber who started one before this version kept records has.
       const live = activeProgramId ? getProgram(activeProgramId) : undefined;
       const from = activeProgramId ? startDates[activeProgramId] : undefined;
-      return live && from ? blockEnd({ program: live, startDate: from, entries, today: today() }) : null;
+      return live && from ? blockEnd({ program: live, startDate: from, entries, today: today(), bodyweight: weighIn }) : null;
     }
     const program = programForRecord(chosen);
     if (!program) return null;
-    return blockEnd({ program, startDate: chosen.startDate, entries, today: today(), record: chosen });
-  }, [chosen, activeProgramId, startDates, entries]);
+    return blockEnd({ program, startDate: chosen.startDate, entries, today: today(), record: chosen, bodyweight: weighIn });
+  }, [chosen, activeProgramId, startDates, entries, weighIn]);
 
   /**
    * Which of the sessions the plan placed actually happened (PLAN.md M91).

@@ -81,6 +81,8 @@ export interface BlockEndInput {
   today: string;
   /** The history row, when describing a block that is not the live one. */
   record?: BlockRecord;
+  /** Read added-load tests against the bodyweights stored with them (PLAN.md M371). */
+  bodyweight?: boolean;
 }
 
 /**

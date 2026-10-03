@@ -36,8 +36,8 @@ const CONVERSIONS: Record<string, { label: string; perImperial: number }> = {
  *
  * `BW+lbs` is the unit of the two benchmarks this app calls standard — the
  * 20mm max hang and the weighted pull-up 3RM — and what it stores is the
- * plate, not the load. The climber is the rest of the load and the app has
- * never known what the climber weighs.
+ * plate, not the load. The climber is the rest of the load, which the app
+ * knows only for a climber who opted in to giving it at test weeks (M371).
  *
  * That is fine for the thing the number is actually used for: what to load
  * next session reads off added weight either way, and nothing in this app
@@ -48,7 +48,8 @@ const CONVERSIONS: Record<string, { label: string; perImperial: number }> = {
  * thirty-three is ten per cent of the plate and under two per cent of what
  * the fingers hold, and the app reported the first as a gain. See `changeOf`
  * in `engine/assessments.ts`, which now declines to give one, and the note
- * this drives on the assessment page.
+ * this drives on the assessment page. The block report declined too, from
+ * M371, and gives one of the whole load when both readings carry a weight.
  *
  * A set rather than a flag on `Metric`, because the unit already says it and
  * a second marker is a second thing to drift. `assessments.test.ts` pins

@@ -42,7 +42,7 @@ import { blockThrough, blockWindow } from './plan';
 import { seriesFor } from './assessments';
 import { testWeeks, type TestReason } from './testWeeks';
 import { signed } from './assessmentStatus';
-import type { UnitSystem } from './units';
+import { isAddedWeight, type UnitSystem } from './units';
 import { joinCapped } from './phrase';
 
 export type Movement = 'better' | 'worse' | 'flat';
@@ -80,6 +80,12 @@ export interface AssessmentResult {
    * direction is what matters; the counts and the words call it light.
    */
   light: boolean;
+  /**
+   * What was added, as a share of bodyweight at each reading — *BW+25%* —
+   * when both readings carry a weight the climber chose to give (PLAN.md
+   * M371). The change is then judged on this rather than on the plate.
+   */
+  relative?: { from: number; to: number };
 }
 
 export interface BlockReport {
@@ -122,6 +128,11 @@ export interface BlockInput {
   /** The day the climber left it, if they did; nothing after counts (PLAN.md M365). */
   until?: string | null | undefined;
   /**
+   * Read the bodyweights stored with added-load tests (PLAN.md M371): the
+   * climber's switch. Off, they are ignored even where they exist.
+   */
+  bodyweight?: boolean;
+  /**
    * The first day it covers, when that is not its window's (PLAN.md M369):
    * a run picked up again moved its start, and its first weeks — the
    * baseline among them — are before its window now.
@@ -154,7 +165,7 @@ export function blockReport(input: BlockInput): BlockReport | null {
   });
 
   const results = input.program.assessments.map((id) =>
-    resultFor(id, [...input.entries], from, through),
+    resultFor(id, [...input.entries], from, through, input.bodyweight === true),
   );
 
   return {
@@ -181,6 +192,7 @@ function resultFor(
   entries: MetricEntry[],
   from: string,
   through: string,
+  weighed: boolean,
 ): AssessmentResult {
   // A metric the catalogue no longer carries: named by the program and
   // unresolvable, which a stale content edit can produce.
@@ -203,6 +215,13 @@ function resultFor(
   if (baseline === null) return { ...empty, gap: 'never-tested' };
   if (latest === null) return { ...empty, gap: 'once-only' };
 
+  const added = isAddedWeight(metric.unit);
+  const weightThen = weighed && added ? baseline.bodyweight : undefined;
+  const weightNow = weighed && added ? latest.bodyweight : undefined;
+  if (weightThen !== undefined && weightNow !== undefined && weightThen > 0 && weightNow > 0) {
+    return weighedResult(metric, points, baseline, latest, weightThen, weightNow);
+  }
+
   const delta = latest.value - baseline.value;
   const signed = metric.higherIsBetter ? delta : -delta;
   const band = bandFor(metric, baseline.value, delta);
@@ -215,14 +234,56 @@ function resultFor(
     latest,
     moved,
     // Ordinal and pass/fail scales have no percentage, and neither does a
-    // baseline of zero — see the note at the top.
+    // baseline of zero — see the note at the top. Nor added weight: a
+    // percentage of the plate is not a percentage of the load, which M234
+    // took out of the assessment page and this report had kept — 40 to 45
+    // lbs read as +12.5% on the chart (PLAN.md M371).
     percent:
-      metric.kind === 'number' && baseline.value !== 0
+      metric.kind === 'number' && baseline.value !== 0 && !added
         ? (signed / Math.abs(baseline.value)) * 100
         : null,
     steps: metric.kind === 'grade' ? signed : null,
     gap: null,
     light: band === 'edge',
+  };
+}
+
+/**
+ * An added-load test read against bodyweight (PLAN.md M371), when both
+ * readings carry one.
+ *
+ * What the fingers held is the climber plus the plate, so the measure is
+ * that load over bodyweight. The change is judged in pounds at the
+ * baseline's weight — the change in that ratio times the first bodyweight —
+ * because that is what the coach's band is in: five pounds is still five
+ * pounds, now of a climber who may weigh something else. The plate stays the
+ * working number in the label; the percentage is of the ratio, which is a
+ * real share of what was held.
+ */
+function weighedResult(
+  metric: Metric,
+  points: MetricEntry[],
+  baseline: MetricEntry,
+  latest: MetricEntry,
+  from: number,
+  to: number,
+): AssessmentResult {
+  const before = (from + baseline.value) / from;
+  const after = (to + latest.value) / to;
+  const delta = (after - before) * from;
+  const band = bandFor(metric, baseline.value, delta);
+  const signed = metric.higherIsBetter ? delta : -delta;
+  return {
+    metric,
+    points,
+    baseline,
+    latest,
+    moved: band === 'held' ? 'flat' : signed > 0 ? 'better' : 'worse',
+    percent: (((after - before) / before) * 100) * (metric.higherIsBetter ? 1 : -1),
+    steps: null,
+    gap: null,
+    light: band === 'edge',
+    relative: { from: (baseline.value / from) * 100, to: (latest.value / to) * 100 },
   };
 }
 

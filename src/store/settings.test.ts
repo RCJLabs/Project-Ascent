@@ -193,3 +193,26 @@ describe('when the device will not remember anything', () => {
     }
   });
 });
+
+/**
+ * Bodyweight at test weeks is the climber's (PLAN.md M371): it goes in the
+ * backup, and the one-time move of device settings off the record keeps it.
+ */
+describe('the weigh-in switch', () => {
+  it('survives the move off a record that still carried device settings', async () => {
+    const db = await getDb();
+    await db.put('profile', { key: 'settings', value: { theme: 'dark', units: 'metric', weighIn: true } });
+    await hydrateSettings();
+    expect(useSettings.getState().weighIn).toBe(true);
+    const saved = await record();
+    expect(saved['theme']).toBeUndefined();
+    expect(saved['weighIn']).toBe(true);
+  });
+
+  it('is left off the record while it is off', async () => {
+    await hydrateSettings();
+    useSettings.getState().setUnits('metric');
+    await writesSettled();
+    expect('weighIn' in (await record())).toBe(false);
+  });
+});

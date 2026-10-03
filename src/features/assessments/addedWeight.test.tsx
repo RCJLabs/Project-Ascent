@@ -13,10 +13,12 @@ import { AssessmentsPage } from './AssessmentsPage';
  * What the two added-weight benchmarks say about themselves (PLAN.md M234).
  *
  * The milestone this came from wanted the app to store a bodyweight so that
- * strength-to-weight could be computed. It does not, and the reason is in
- * PLAN.md. What it does instead is stop the number being read as something it
+ * strength-to-weight could be computed. It did not, and the reason is in
+ * PLAN.md. What it did instead was stop the number being read as something it
  * is not — which is the half of the problem that was a *defect* rather than a
- * missing feature.
+ * missing feature. M371 added the weight as an opt-in, off by default, and
+ * `weighIn.test.tsx` holds that; everything here is the climber who never
+ * switched it on.
  */
 
 async function open(label: string): Promise<void> {
@@ -95,7 +97,7 @@ describe('a benchmark measured in added weight', () => {
     expect(screen.queryByText('40 BW+lbs'), 'pounds, to a climber reading kilos').toBeNull();
   });
 
-  /** The app never asks what a climber weighs, which is the whole decision. */
+  /** The app never asks what a climber weighs unless they asked it to (M371). */
   it('asks for no bodyweight anywhere on the page', async () => {
     await open('Max Hang 20mm 7s');
     const page = document.body.textContent ?? '';

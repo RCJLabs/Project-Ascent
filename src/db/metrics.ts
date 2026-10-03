@@ -29,6 +29,13 @@ export interface MetricEntry {
   display?: string;
   note?: string;
   /**
+   * The climber's bodyweight on the day, in pounds, given with an added-load
+   * test when they have turned that on (PLAN.md M371). Kept with this one
+   * result and nowhere else, so deleting the result deletes it; never
+   * charted, never listed, and left out of a block file sent to a coach.
+   */
+  bodyweight?: number;
+  /**
    * Written by the demo climber, and the only thing the wipe deletes
    * (PLAN.md M110).
    *

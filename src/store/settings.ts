@@ -41,6 +41,16 @@ export interface SettingsState {
    * millimetres to every climber alive.
    */
   units: UnitSystem;
+  /**
+   * Ask for a bodyweight with the two added-load tests (PLAN.md M371).
+   *
+   * Off unless the climber turns it on. M234 refused a bodyweight field
+   * because the version that fixes anything is a weight logged at the moment
+   * of a performance test; the coach chose to offer it anyway, opt-in and
+   * never charted. It travels with the climber, like the units.
+   */
+  weighIn: boolean;
+  setWeighIn: (value: boolean) => void;
   /** Timer beeps, game sounds and haptics. */
   cues: boolean;
   progressView: ProgressView;
@@ -77,6 +87,8 @@ const DEVICE_KEY = 'project-ascent:device';
 interface ClimberSettings {
   display: GradeDisplay;
   units: UnitSystem;
+  /** Absent means off, which is every record written before M371. */
+  weighIn?: boolean;
 }
 
 /** Which of Progress's views is showing (PLAN.md M119). */
@@ -99,7 +111,7 @@ interface DeviceSettings {
 }
 
 function climberSettings(state: SettingsState): ClimberSettings {
-  return { display: state.display, units: state.units };
+  return { display: state.display, units: state.units, ...(state.weighIn ? { weighIn: true } : {}) };
 }
 
 function deviceSettings(state: SettingsState): DeviceSettings {
@@ -184,6 +196,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
   // authored, so the app is self-consistent out of the box. One line to
   // flip if the audience says otherwise.
   units: 'imperial',
+  weighIn: false,
+  setWeighIn: (value) => {
+    set({ weighIn: value });
+    enqueueWrite(() => saveClimber(climberSettings(get())));
+  },
   cues: ON_THIS_DEVICE.cues,
   progressView: ON_THIS_DEVICE.progressView,
   setProgressView: (view) => {
@@ -254,6 +271,7 @@ export async function hydrateSettings(): Promise<void> {
       ...next,
       display: { ...DEFAULT_DISPLAY, ...value.display },
       units: value.units === 'metric' ? 'metric' : 'imperial',
+      weighIn: value.weighIn === true,
     });
     setCuesEnabled(cues);
 
@@ -263,7 +281,11 @@ export async function hydrateSettings(): Promise<void> {
       if (record !== undefined) {
         await db.put('profile', {
           key: SETTINGS_KEY,
-          value: { display: value.display ?? DEFAULT_DISPLAY, units: value.units ?? 'imperial' },
+          value: {
+            display: value.display ?? DEFAULT_DISPLAY,
+            units: value.units ?? 'imperial',
+            ...(value.weighIn === true ? { weighIn: true } : {}),
+          },
         });
       }
     }

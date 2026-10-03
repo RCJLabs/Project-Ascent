@@ -104,6 +104,62 @@ interface StorageStatus {
   quota?: number;
 }
 
+/**
+ * Bodyweight at test weeks, off unless the climber turns it on (PLAN.md M371).
+ *
+ * The max hang and weighted pull-up record the plate, and a plate means
+ * different things at different weights (M234). With this on, those two ask
+ * what the climber weighed that day and the block review reads the result as
+ * total load against bodyweight. Each weight stays with its one result: no
+ * chart, no trend, nothing in the file a coach is sent.
+ */
+function WeighIn() {
+  const weighIn = useSettings((s) => s.weighIn);
+  const setWeighIn = useSettings((s) => s.setWeighIn);
+  const entries = useMetrics((s) => s.entries);
+  const dropBodyweights = useMetrics((s) => s.dropBodyweights);
+  const stored = useMemo(() => entries.filter((e) => e.bodyweight !== undefined).length, [entries]);
+
+  return (
+    <>
+      <div className="text-xs font-semibold text-ink-soft mt-4 mb-1.5">Bodyweight at test weeks</div>
+      <p className="text-xs text-ink-soft mb-2 leading-relaxed">
+        The max hang and weighted pull-up record what you added, not what you held. Turn this on and
+        they ask what you weighed that day, so the block review judges the result by your whole load
+        against your bodyweight. Each weight is kept with its one result — never charted, and never in
+        a file you send a coach.
+      </p>
+      <div className="flex gap-2">
+        <Button variant={weighIn ? 'primary' : 'outline'} size="sm" onClick={() => setWeighIn(true)}>
+          On
+        </Button>
+        <Button variant={weighIn ? 'outline' : 'primary'} size="sm" onClick={() => setWeighIn(false)}>
+          Off
+        </Button>
+      </div>
+      {stored > 0 && (
+        <div className="mt-3">
+          <p className="text-xs text-ink-soft mb-2 leading-relaxed">
+            {stored === 1 ? 'One result has' : `${stored} results have`} a bodyweight stored with{' '}
+            {stored === 1 ? 'it' : 'them'}.{' '}
+            {weighIn ? '' : 'Switched off, the review no longer reads them. '}
+            Removing them keeps the results.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            // No busy state to set afterwards: the button goes when the
+            // count reaches zero, and a second tap puts back the same rows.
+            onClick={() => void dropBodyweights()}
+          >
+            Remove {stored === 1 ? 'the stored bodyweight' : `all ${stored} stored bodyweights`}
+          </Button>
+        </div>
+      )}
+    </>
+  );
+}
+
 export function SettingsPage() {
   const theme = useSettings((s) => s.theme);
   const setTheme = useSettings((s) => s.setTheme);
@@ -686,6 +742,7 @@ export function SettingsPage() {
             value={units}
             onChange={setUnits}
           />
+          <WeighIn />
         </Card>
 
         <Card title="What you can train on">

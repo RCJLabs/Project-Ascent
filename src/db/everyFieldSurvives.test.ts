@@ -104,6 +104,7 @@ const METRIC = {
   value: 32.5,
   display: 'kg',
   note: 'half crimp, 20mm',
+  bodyweight: 151.5,
   demo: true,
 };
 

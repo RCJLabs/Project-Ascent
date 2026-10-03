@@ -48,6 +48,7 @@ import type { MetricId } from '@/content/types';
 import { SCHEMA_VERSION } from '@/db/schema';
 import { BLOCK_OUTCOME_WORD, type BlockOutcome } from './blockOutcome';
 import type { BlockReport, Gap, Movement } from './blockReport';
+import { isAddedWeight } from './units';
 
 /** Caps, so a hand-edited file is a sentence rather than a frozen tab. */
 const LIMITS = {
@@ -161,7 +162,10 @@ export function buildBlockFile(input: BlockFileInput): BlockFile {
         ...(r.baseline?.display ? { baselineDisplay: r.baseline.display } : {}),
         ...(r.latest?.display ? { latestDisplay: r.latest.display } : {}),
         moved: r.moved,
-        percent: r.percent,
+        // Never a share of bodyweight (PLAN.md M371): the athlete's own review
+        // may read an added-load test against their weight, and that ratio
+        // beside the plate is their weight. The coach gets the plate.
+        percent: isAddedWeight(r.metric.unit) ? null : r.percent,
         steps: r.steps,
         gap: r.gap,
         ...(r.light ? { light: true } : {}),

@@ -47,12 +47,15 @@ describe('the block review', () => {
       'None of the 2 retested numbers improved, one made light progress, one had a light decline.',
     );
     const titles = [...document.querySelectorAll('svg title')].map((t) => t.textContent);
-    expect(titles.find((t) => t?.startsWith('Max Hang 20mm 7s'))).toMatch(/ · light progress$/);
     expect(titles.find((t) => t?.startsWith('Max Pull-Ups'))).toMatch(/ · light decline$/);
+    // The max hang is listed under the chart rather than on it: added load
+    // has no percentage of its own (PLAN.md M371).
+    const listed = [...document.querySelectorAll('li')].map((li) => li.textContent ?? '');
+    expect(listed.find((t) => t.startsWith('Max Hang 20mm 7s'))).toMatch(/\+5 BW\+lbs · light progress$/);
     // Drawn between held and a full change.
     const bar = (label: string) =>
       [...document.querySelectorAll('svg title')].find((t) => t.textContent?.startsWith(label))!.parentElement!.querySelector('rect')!;
-    expect(bar('Max Hang 20mm 7s').getAttribute('opacity')).toBe('0.55');
+    expect(bar('Max Pull-Ups').getAttribute('opacity')).toBe('0.55');
   });
 });
 

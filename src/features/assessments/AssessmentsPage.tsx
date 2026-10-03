@@ -30,7 +30,7 @@ import { Input, Select } from '@/ui/Field';
 import { BackLink } from '@/ui/BackLink';
 import { PageHeader } from '@/ui/PageHeader';
 import { BlockReportChart, BlockReportRest } from '@/ui/charts/BlockReportChart';
-import { isAddedWeight, unitLabel } from '@/engine/units';
+import { fromInput, isAddedWeight, unitLabel, type UnitSystem } from '@/engine/units';
 
 export function AssessmentsPage() {
   const entries = useMetrics((s) => s.entries);
@@ -72,9 +72,11 @@ export function AssessmentsPage() {
   // The block report is about the *program's* declared battery, so it is
   // built from the program rather than from the battery rows, which also
   // carry benchmarks the climber added for themselves.
+  // Read against bodyweight where the climber gave one (PLAN.md M371).
+  const weighIn = useSettings((s) => s.weighIn);
   const report = useMemo(
-    () => (program && startDate ? blockReport({ program, startDate, entries, today: today() }) : null),
-    [program, startDate, entries],
+    () => (program && startDate ? blockReport({ program, startDate, entries, today: today(), bodyweight: weighIn }) : null),
+    [program, startDate, entries, weighIn],
   );
 
   const due = battery.filter((s) => s.due !== null);
@@ -272,6 +274,18 @@ function MetricRow({
   );
 }
 
+/**
+ * A typed bodyweight, in pounds: `undefined` for an empty box, `null` for one
+ * that does not hold a weight (PLAN.md M371).
+ */
+function weightOf(text: string, units: UnitSystem): number | undefined | null {
+  const trimmed = text.trim();
+  if (trimmed === '') return undefined;
+  const n = Number(trimmed);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return fromInput(n, 'lbs', units);
+}
+
 export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => void }) {
   const units = useSettings((st) => st.units);
   const gradeOptions = useGradeOptions();
@@ -280,6 +294,11 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
   const [date, setDate] = useState(today());
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  // What the climber weighed, for the two benchmarks that record the plate,
+  // and only for a climber who switched it on in Settings (PLAN.md M371).
+  const weighIn = useSettings((st) => st.weighIn);
+  const weighs = weighIn && metric.kind === 'number' && isAddedWeight(metric.unit);
+  const [weight, setWeight] = useState('');
   // Seven of the assessed benchmarks are a hold rather than a number, and
   // the app's answer was a text box you filled from your phone's clock app
   // (PLAN.md M99b).
@@ -293,15 +312,22 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
       setError(parsed.error);
       return;
     }
+    const bodyweight = weighs ? weightOf(weight, units) : undefined;
+    if (bodyweight === null) {
+      setError(`Bodyweight needs to be a number of ${unitLabel('lbs', units)} above zero, or left empty.`);
+      return;
+    }
     await record({
       metricId: metric.id,
       date,
       value: parsed.value,
       ...(parsed.display ? { display: parsed.display } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
+      ...(bodyweight !== undefined ? { bodyweight } : {}),
     });
     setRaw('');
     setNote('');
+    setWeight('');
     setError(null);
     onDone();
   }
@@ -386,6 +412,16 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
           className="flex-1 min-w-0 bg-surface" size="compact"
         />
       </div>
+      {weighs && (
+        <Input
+          value={weight}
+          onChange={(e) => setWeight(e.target.value)}
+          inputMode="decimal"
+          placeholder={`Bodyweight today, ${unitLabel('lbs', units)} (optional)`}
+          aria-label="Bodyweight"
+          className="mt-2 bg-surface" size="compact"
+        />
+      )}
       {error && <p className="text-sm text-danger mt-2">{error}</p>}
       {/* How to type it, which the registry's description cannot say and
           which used to exist only during onboarding (PLAN.md M99b). Until
@@ -396,19 +432,27 @@ export function ResultForm({ metric, onDone }: { metric: Metric; onDone: () => v
         <p className="text-xs text-ink-soft mt-2">
           Measured in {unitLabel(metric.unit, units)}.
           {/* What the number is, for the two benchmarks that record the plate
-              rather than the load (PLAN.md M234). The app has never known
-              what a climber weighs and is not going to start: what it can do
-              is stop letting the number be read as something it is not. The
-              percentage went with it — `changeOf` gives none here, because a
-              percentage of the plate is not a percentage of the load. */}
-          {isAddedWeight(metric.unit) && (
-            <>
-              {' '}
-              This is what you <em>added</em>, not what you held — so it reads
-              against your own results at a similar bodyweight, and a change in
-              weight changes what it means.
-            </>
-          )}
+              rather than the load (PLAN.md M234). The percentage went with it
+              — `changeOf` gives none here, because a percentage of the plate
+              is not a percentage of the load. A climber who opted in to
+              weighing in can give the rest of the load (PLAN.md M371); one
+              who did not is told what the number cannot say. */}
+          {isAddedWeight(metric.unit) &&
+            (weighs ? (
+              <>
+                {' '}
+                This is what you <em>added</em>. With your bodyweight beside it,
+                the block review reads the result against what you weighed —
+                kept with this result only, never charted.
+              </>
+            ) : (
+              <>
+                {' '}
+                This is what you <em>added</em>, not what you held — so it reads
+                against your own results at a similar bodyweight, and a change in
+                weight changes what it means.
+              </>
+            ))}
         </p>
       )}
       {/* The clock fills the box; it never saves. Nothing here records a

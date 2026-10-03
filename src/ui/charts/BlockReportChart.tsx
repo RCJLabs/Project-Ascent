@@ -122,7 +122,7 @@ export function BlockReportChart({ report, units = 'imperial' }: { report: Block
                 // width, called light progress or a light decline (PLAN.md M370).
                 opacity={row.moved === 'flat' ? 0.3 : row.light ? 0.55 : 0.85}
               />
-              <title>{`${row.metric.label}: ${movementLabel(row, units)} (${percent > 0 ? '+' : ''}${percent.toFixed(0)}%)${lightWord(row)}`}</title>
+              <title>{`${row.metric.label}: ${movementLabel(row, units)} (${percent > 0 ? '+' : ''}${percent.toFixed(0)}%)${relativeWord(row)}${lightWord(row)}`}</title>
             </g>
           );
         })}
@@ -164,6 +164,20 @@ function restLabel(row: AssessmentResult, units: UnitSystem): string {
   if (row.gap === 'once-only') return 'baseline only';
   if (row.gap === 'not-a-number') return 'not a number';
   return movementLabel(row, units) + lightWord(row);
+}
+
+/**
+ * " · BW+25% → BW+28%": an added-load test read against bodyweight, the
+ * figure its percentage is a change in (PLAN.md M371). A hang with weight
+ * taken off reads *BW−13%*, never *BW+-13%*.
+ */
+function relativeWord(row: AssessmentResult): string {
+  if (!row.relative) return '';
+  const pct = (n: number) => {
+    const whole = Math.round(n);
+    return `BW${whole < 0 ? '−' : '+'}${Math.abs(whole)}%`;
+  };
+  return ` · ${pct(row.relative.from)} → ${pct(row.relative.to)}`;
 }
 
 /** " · light progress", " · light decline", or nothing (PLAN.md M370). */

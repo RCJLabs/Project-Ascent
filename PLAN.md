@@ -15428,6 +15428,17 @@ its label is missing. None of these wants touching.
   - the coach's file, and both screens that read it.
 
   Bodyweight at test weeks moves to M371.
+- **M371 — bodyweight at test weeks, for a climber who asks for it.** M234 decided the app would
+  not store a weight. The user, as coach, reversed that for the two added-load tests and chose:
+  - **opt-in, never charted:** a switch in Settings, off by default, and each weight kept with its
+    one result;
+  - **judged by total load over bodyweight:** the change is measured in pounds at the first
+    reading's weight, against the same band as the plate;
+  - **left out of the coach's file:** no weight, no ratio, no percentage.
+
+  Found while building it: the block report still gave a percentage of the plate, which M234 had
+  taken off the assessment page. It gives none now, so without weights the two tests leave the
+  chart's axis for the list under it.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -28628,3 +28639,99 @@ band is **light progress**. Asked two more questions, the user chose:
 - **Full suite:** 7,760 passing, M369's 7,753 plus 7, and the one pinned-clock skip.
 - **Layout harness:** clean.
 - **Sizes:** first load 113.82KB (+0.02); Home 212.20KB in 37 files.
+
+## M371 — bodyweight at test weeks
+
+M234 kept bodyweight out: the app recorded the plate, said so beside the field, and declined to
+give a percentage of it. M365a's fourth question asked whether a test week should take a
+bodyweight, and the user answered yes. Asked three more questions, they chose:
+
+- **opt-in, never charted.** The app asks only a climber who switched it on. A weight is kept with
+  the result it came with: no chart, no trend, no screen that lists them.
+- **judged by total load over bodyweight.** What the fingers held is the climber plus the plate.
+- **left out of the coach's file.**
+
+### The change
+
+- **The switch** is a climber setting, `weighIn`, in the Weight & height card. It is off by
+  default, travels in the backup, and survives the one-time move of device settings off the
+  record. Under it, when any are stored: *"2 results have a bodyweight stored with them"*, and a
+  button that takes every weight off and keeps the results.
+- **`MetricEntry.bodyweight`**, in pounds. The entry form asks for it only when the switch is on
+  and the test is added load (`BW+lbs`). It is typed in the climber's units: 70 kg is stored as
+  154.3 lbs. Left empty, nothing is stored. Zero, a negative or a word is refused, and nothing is
+  saved.
+- **`blockReport({ bodyweight })`.** When both readings of an added-load test carry a weight above
+  zero:
+  - the measure is *(bodyweight + plate) / bodyweight*;
+  - the change is that ratio's change times the first bodyweight, so the band is still in pounds.
+    Thirty added at 150 lbs and thirty at 120 is 7.5 lbs better. Ten more plate carried by 35 lbs
+    more climber is 2.4 lbs, inside the max hang's five, and held;
+  - the percentage is of the ratio, a real share of what was held;
+  - `relative` carries the plate as a share of bodyweight. The chart's tooltip ends
+    *"· BW+20% → BW+25%"*.
+
+  With one reading weighed, or the switch off, the plate is judged as before.
+- **The plate's percentage is gone from the review.** `resultFor` gave 40 → 45 lbs as +12.5%. That
+  is the defect M234 fixed on the assessment page and missed here. Without weights, the max hang
+  and weighted pull-up leave the chart's axis and are listed under it, like a grade.
+- **The coach's file** never carries a percentage for added load, nor a weight or a ratio.
+- **Finish and Assessments** pass the switch to the review, for a running block and for one from
+  the history.
+
+### What the coach can still infer
+
+The file carries `moved` and `light`, and with the switch on they were judged with the weights. A
+plate that rose while the result reads *held* tells a coach the climber got heavier. It does not
+say by how much. The user's answer was about the weight, and a verdict is not one, so this stays.
+
+### Not done
+
+- **`changeOf` on the assessment page and the coach's benchmark tip** still read the plate. They
+  show a delta of the plate and no percentage, which M234 made true of them.
+- **The spreadsheet export** has no bodyweight column. The JSON backup keeps it, and
+  `everyFieldSurvives.test.ts` now proves that.
+- **Onboarding** does not ask. The switch is in Settings only.
+- **A lower-is-better added-load test** does not exist, so the sign flip for one is never run. The
+  battery's one survivor is that flip.
+
+### Checked
+
+- **`engine/bodyweight.test.ts`, 14 tests:**
+  - the weighed judgement: held, better at the same plate, the band's edge, a decline, and a plate
+    below zero;
+  - the plate judged with one reading weighed, a weight of zero either side, or the switch off;
+  - no percentage of the plate;
+  - a weight on a test that is not added load ignored;
+  - the coach's file: the plate and the verdict, and none of the weights or ratios.
+- **`features/assessments/weighIn.test.tsx`, 17 tests:**
+  - the switch: off by default, into the backup, back on the next boot, and no count when none
+    are stored;
+  - the form: no field while off, none on a dead hang, kilos stored as pounds, an empty box, and
+    three refusals;
+  - stored weights: none on the benchmark's own page, all removed with the results kept, and the
+    singular;
+  - Assessments, Finish, and Finish from the history, each with the switch on and off;
+  - the chart's ratio for a hang with weight taken off. The first draft printed *BW+-13%*. A
+    review of the diff found it, and the tooltip now reads *BW−13%*.
+- **`store/settings.test.ts`, 2 more:** the switch survives the move off an old record, and is
+  left off the record while it is off.
+- **Changed tests:**
+  - `blockReport.test.ts`: a pull-up's percentage is null;
+  - `blockReportChart.test.tsx`: the long-label test uses a test in laps;
+  - `lightShared.test.tsx`: the max hang is in the list under the chart;
+  - `everyFieldSurvives.test.ts`: the fixture carries a weight;
+  - `addedWeight.test.tsx`: comments only.
+- **Mutation battery: 28 mutants.**
+  - **24 killed on the first pass.**
+  - **3 killed after a fix:** one mutant was re-anchored to both lines it needed, and two were
+    killed by new tests (a later weight of zero, and Finish from the history).
+  - **1 survivor, equivalent:** the lower-is-better sign.
+  - **Sanity survived.**
+  - **The sign fix: its mutant killed, and sanity survived.**
+- **Full suite:** 7,793 passing, which is M370's 7,760 plus 33, and the one pinned-clock skip.
+- **Layout harness:** clean. The switch and the form field were checked at 360px by hand, since
+  the harness never turns the switch on. Neither overflows.
+- **Sizes:**
+  - **first load:** 113.94KB (+0.12), 0.46KB under the 114.4 budget;
+  - **Home:** 212.34KB in 37 files (+0.14), 0.66KB under the line.

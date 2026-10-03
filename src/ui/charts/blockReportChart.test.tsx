@@ -101,12 +101,14 @@ describe('the shared axis', () => {
   it('keeps a long label inside the gutter', () => {
     // SVG text does not clip, it overflows: "Weighted Pull-Ups 3RM" ran off
     // the left edge of the viewBox and rendered as "/eighted Pull-Ups 3RM".
-    const report = build(['weighted_pullup_3rm'], [['weighted_pullup_3rm', 20, 30]]);
+    // That one is off the axis since M371 — added load has no percentage of
+    // its own — so a label as long that is still on it.
+    const report = build(['linked_laps_continuous'], [['linked_laps_continuous', 20, 30]]);
     const { container } = render(<BlockReportChart report={report} />);
-    const label = [...container.querySelectorAll('text')].find((t) => t.textContent?.includes('eight'))!;
+    const label = [...container.querySelectorAll('text')].find((t) => t.textContent?.includes('Linked'))!;
     expect(label.textContent!.length).toBeLessThanOrEqual(19);
     // The full name is still reachable.
-    expect(container.querySelector('title')!.textContent).toContain('Weighted Pull-Ups 3RM');
+    expect(container.querySelector('title')!.textContent).toContain('Linked Laps Continuous');
   });
 
   it('leaves a short label alone', () => {

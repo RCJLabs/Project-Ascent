@@ -178,7 +178,9 @@ describe('direction, not magnitude', () => {
       entry('weighted_pullup_3rm', '2026-02-02', -5),
     ])!;
     expect(r.results[0]!.moved).toBe('better');
-    expect(r.results[0]!.percent).toBeCloseTo(75, 1);
+    // And no percentage of it at all since M371: a share of the plate is not
+    // a share of what was held (M234's rule, which this report had missed).
+    expect(r.results[0]!.percent).toBeNull();
   });
 
   it('calls no change flat', () => {
