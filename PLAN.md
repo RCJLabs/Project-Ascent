@@ -15471,6 +15471,11 @@ its label is missing. None of these wants touching.
   run to its end, and M372's block left early, were laid out at no size. `/finish/:id` now opens
   every block in the history. A wide header planted on the left block's review alone was reported
   at three sizes, against that block's address.
+- **M376 — the sample's run to the end shows its work.** M372 gave the run the climber left a plan
+  and stamped its sessions. The run they finished, of the same program, kept neither, so its review
+  was one sentence beside the first run's full one. It now carries the same plan, and its 32
+  sessions are stamped by the same rule, with no new draws. Its review reads *"Short of the plan:
+  Volume day (13 of 16). That is 21 of 24 sessions the plan placed."*
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -29086,3 +29091,62 @@ Neither had been laid out at any size. M372 checked the left one by hand at 360p
   the build redone. The harness before this never opened that page.
 - **No unit tests.** The harness has none: it is a script CI runs against a live preview, so the
   planted run above is its test.
+
+## M376 — the sample's run to the end shows its work
+
+The fourth gap from the list after M372. The sample climber ran their own program twice:
+
+- **the first run,** left after five weeks. M372 gave it a plan and stamped its sessions;
+- **the second,** eight weeks to the end (M282). It had no plan and its sessions were unlinked,
+  so its review was *"My winter block ran out 6 weeks ago."* and nothing under it.
+
+It was the same program, run twice, and only the run they left showed its work.
+
+### The change
+
+- **`finishedBlock` carries `OWN_PLAN`:** M372's plan, renamed now that both runs use it. Board on
+  Monday, volume on Wednesday and Friday, which is the week the log already trained.
+- **`ownOn(date)`** finds the run a date falls in, either one, and gives that run's planned day.
+  Training days, route nights and rest days inside it are stamped through `trainingStart` and
+  `restStart`, as M372 did for the first run.
+- **No new draws.** Dumps of the sample at three todays, before and after, differ only in the
+  finished row's `plan` and in `programId`, `sessionTypeId` and `planned` on the 32 sessions inside
+  its window. The first run's row and everything outside the window are identical.
+
+### What the review says
+
+*"My winter block ran out 6 weeks ago. Below is which of its sessions happened."* Then, under
+*Did you do the work?*: *"Short of the plan: Volume day (13 of 16). That is 21 of 24 sessions the
+plan placed. You also logged 4 sessions the plan did not place."* The shortfall is the weeks
+`freeDays` drew two days instead of three, so it is the log's own, not arranged.
+
+### Changed tests, deliberately
+
+- **`demoPlanned.test.ts`:** `planned` is read against every run's plan, and the log before Iron
+  Grip is unlinked outside both runs.
+- **`blockState.test.tsx`:** *"promises nothing over the sample's custom block"* rested on the
+  finished run having no plan. It now takes the plan off that row to keep the case, a custom block
+  with no plan. A new test holds that the sample's own finished run promises its sessions.
+
+### Checked
+
+- **`engine/demoLeft.test.ts`, 8 more:** the finished run carries the left run's plan, and its
+  adherence on seven todays:
+  - eight weeks and 24 placed;
+  - done equals the typed sessions in its window;
+  - done is under 24 and over three quarters of it.
+- **`features/finish/sampleLeft.test.tsx`, 1 more:** the finished review, loaded through Settings,
+  with its opening, the *Did you do the work?* heading and the *Short of the plan* line.
+- **Mutation battery:** 5 mutants, all killed on the first pass, and sanity survived:
+  - no plan on the row;
+  - either run left unstamped;
+  - stamping past the end;
+  - the wrong run's start.
+- **Full suite:** 7,859 passing, M374's 7,849 plus 10, and the one pinned-clock skip.
+- **Layout harness:** clean. Since M375 it opens this review at every size, now with its sessions
+  on it.
+- **Sizes:**
+  - **first load:** 114.22KB;
+  - **Home:** 213.14KB.
+
+  Both are unchanged within a build's noise: the generator is not in either.

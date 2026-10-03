@@ -116,3 +116,36 @@ describe('the catalogue', () => {
     expect(getProgram('iron_grip')).toBeTruthy();
   });
 });
+
+/**
+ * The run that went to the end, given the same treatment (PLAN.md M376):
+ * its plan on the row and its sessions stamped from it, so its review counts
+ * them rather than saying one sentence beside the first run's full one.
+ */
+describe('the run to the end', () => {
+  it('carries the same plan as the run they left', () => {
+    const [left, finished] = demoClimber('2026-09-22').blocks;
+    expect(finished!.plan).toEqual(left!.plan);
+  });
+
+  for (const today of WEEK) {
+    it(`counts its eight weeks, short where a week was, on ${today}`, () => {
+      const made = demoClimber(today);
+      const finished = made.blocks[1]!;
+      const score = blockAdherence({
+        program: made.program, startDate: finished.startDate, plan: finished.plan!,
+        sessions: made.sessions, away: made.away, today, until: finished.endedAt!,
+      })!;
+      const typed = made.sessions.filter(
+        (s) => s.date >= finished.startDate && s.date <= finished.endedAt! && s.sessionTypeId !== undefined,
+      );
+      expect(score.weeks).toBe(8);
+      expect(score.planned).toBe(24);
+      // Every typed session was placed, and the weeks of two days are the
+      // shortfall: a block kept, not a perfect one.
+      expect(score.done).toBe(typed.length);
+      expect(score.done).toBeLessThan(score.planned);
+      expect(score.done).toBeGreaterThan(score.planned * 0.75);
+    });
+  }
+});

@@ -52,3 +52,17 @@ describe('the block the sample climber left', () => {
     expect(screen.getByText(/You did every session the plan placed — all 15 of them\./)).toBeTruthy();
   });
 });
+
+/** And the run to the end, which now shows its work too (PLAN.md M376). */
+describe('the run the sample climber finished', () => {
+  it('opens on a review that counts its sessions', async () => {
+    await sample();
+    const finished = useProfile.getState().blocks.find((b) => b.reason === 'ran-out')!;
+    const id = encodeURIComponent(finished.id);
+    renderAt(`/finish/${id}`, <FinishPage params={{ id }} />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'My winter block' })).toBeTruthy();
+    expect(screen.getByText(/^My winter block ran out .*\. Below is which of its sessions happened\.$/)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Did you do the work?' })).toBeTruthy();
+    expect(screen.getByText(/^Short of the plan: Volume day \(\d+ of 16\)/)).toBeTruthy();
+  });
+});

@@ -132,10 +132,25 @@ describe('the sentence at the top', () => {
     await screen.findByRole('heading', { level: 1 });
   }
 
-  it("promises nothing over the sample's custom block, which shows none of the three", async () => {
+  /**
+   * A custom block with no plan on its row — one recorded before rows kept
+   * the plan — shows none of the three. The sample's own runs carry a plan
+   * since M376, so the plan is taken off this one to keep the case.
+   */
+  it('promises nothing over a custom block with no plan, which shows none of the three', async () => {
     const custom = await sample();
-    await open(custom);
+    const { plan: _plan, ...bare } = custom;
+    useProfile.setState({ blocks: useProfile.getState().blocks.map((b) => (b.id === custom.id ? bare : b)) });
+    await open(bare);
     expect(promisesMatchSections()).not.toMatch(/Below is/);
+  });
+
+  /** And the sample's run to the end, with its plan, promises its sessions (PLAN.md M376). */
+  it("promises the sessions over the sample's run to the end", async () => {
+    const custom = await sample();
+    expect(custom.plan).toBeDefined();
+    await open(custom);
+    expect(promisesMatchSections()).toMatch(/Below is which of its sessions happened\.$/);
   });
 
   it('promises the sessions alone when they are all a custom block has', async () => {

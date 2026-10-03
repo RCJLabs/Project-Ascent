@@ -196,6 +196,11 @@ function finishedBlock(ironGripStart: string, program: Program): BlockRecord {
     name: program.name,
     startDate,
     weeks: program.weeks,
+    // The week the first run asked for, and its sessions stamped from it as
+    // the logger stamps a running block's (PLAN.md M376). Without it this
+    // review was one sentence beside the first run's full one: the same
+    // program, run twice, and only the run they left showed its work.
+    plan: OWN_PLAN,
     endedAt: addDays(ironGripStart, -1),
     reason: 'ran-out',
   };
@@ -207,7 +212,7 @@ function finishedBlock(ironGripStart: string, program: Program): BlockRecord {
  * exactly that — the board on Monday, the wall on the other two — which is
  * the program's own pitch, and a plan nobody would write against their habit.
  */
-const LEFT_PLAN: WeekPlan = { 1: 'own_board', 3: 'own_volume', 5: 'own_volume' } as WeekPlan;
+const OWN_PLAN: WeekPlan = { 1: 'own_board', 3: 'own_volume', 5: 'own_volume' } as WeekPlan;
 
 /** Whole weeks the first run lasted, before the week off ended it. */
 const LEFT_RAN = 5;
@@ -235,7 +240,7 @@ function leftBlock(start: string, program: Program): BlockRecord {
     name: program.name,
     startDate,
     weeks: program.weeks,
-    plan: LEFT_PLAN,
+    plan: OWN_PLAN,
     // The Saturday before the week off begins.
     endedAt: addDays(startDate, LEFT_RAN * 7 - 1),
     reason: 'stopped',
@@ -926,8 +931,12 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
    * byte-identical after it apart from the stamps themselves.
    */
   const left = leftBlock(start, written);
-  const leftOn = (date: string) =>
-    date >= left.startDate && date <= left.endedAt! ? plannedDay(written, left.startDate, LEFT_PLAN, date) : undefined;
+  /** And the run that went to the end, stamped the same way (PLAN.md M376). */
+  const finished = finishedBlock(ironGripStart, written);
+  const ownOn = (date: string) => {
+    const run = [left, finished].find((r) => date >= r.startDate && date <= r.endedAt!);
+    return run ? plannedDay(written, run.startDate, OWN_PLAN, date) : undefined;
+  };
 
   const sessions: Session[] = [];
   const metrics: MetricEntry[] = [];
@@ -1008,7 +1017,7 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
        */
       const minutes = day ? Math.floor(next(logbook) * 90) : 0;
       const started = day && date < today ? evening(date, minutes) : undefined;
-      const earlier = day ? undefined : leftOn(date);
+      const earlier = day ? undefined : ownOn(date);
       const stamped = day
         ? trainingStart({
             startedAt: started,
@@ -1130,7 +1139,7 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
         const minutes = underPlan(date) ? Math.floor(next(logbook) * 90) : 0;
         // No clock on today's, for the reason the training sessions give.
         const started = underPlan(date) && date < today ? evening(date, minutes) : undefined;
-        const earlier = underPlan(date) ? undefined : leftOn(date);
+        const earlier = underPlan(date) ? undefined : ownOn(date);
         const stamped = underPlan(date)
           ? trainingStart({
               startedAt: started,
@@ -1190,7 +1199,7 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
          */
         const stamped = underPlan(date)
           ? restStart({ programId: running.id, trackId: DEMO_TRACK, restDrill: restDrillOn(date) })
-          : leftOn(date)
+          : ownOn(date)
             ? restStart({ programId: written.id })
             : {};
         const drillDone = stamped.drillId === undefined ? undefined : chance(logbook, 0.3);
@@ -1307,7 +1316,7 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
     plan,
     trackId: DEMO_TRACK,
     program: written,
-    blocks: [left, finishedBlock(ironGripStart, written)],
+    blocks: [left, finished],
   };
 }
 

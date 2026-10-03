@@ -92,34 +92,40 @@ describe('the sessions inside the running block', () => {
     // the writer, so this test moved rather than the code.
     const made = demoClimber('2026-09-22');
     const program = getProgram('iron_grip')!;
-    // And inside the block the climber left, by that block's plan (PLAN.md M372).
-    const left = made.blocks[0]!;
+    // And inside each run of their own program, by that run's plan (PLAN.md
+    // M372, M376).
     for (const session of made.sessions) {
       const placed =
         (session.date >= made.startDate &&
           plannedDay(program, made.startDate, made.plan, session.date).sessionType !== undefined) ||
-        (session.date >= left.startDate &&
-          session.date <= left.endedAt! &&
-          plannedDay(made.program, left.startDate, left.plan!, session.date).sessionType !== undefined);
+        made.blocks.some(
+          (run) =>
+            session.date >= run.startDate &&
+            session.date <= run.endedAt! &&
+            plannedDay(made.program, run.startDate, run.plan!, session.date).sessionType !== undefined,
+        );
       expect(session.planned, session.date).toBe(placed);
     }
   });
 
-  it('leave the log before the block unlinked, bar the block the climber left', () => {
+  it('leave the log before the block unlinked, bar the runs of their own program', () => {
     // A session from before the block carries no program link because nothing
     // placed it — which is a different statement from the one this milestone
-    // fixed, and the honest one. The exception is the five weeks of the block
-    // the climber left (PLAN.md M372): every session logged while it ran
-    // carries it, as the logger stamps one, and nothing outside them does.
+    // fixed, and the honest one. The exceptions are the two runs of the
+    // program the climber wrote: the five weeks they left (PLAN.md M372) and
+    // the eight they ran to the end (M376). Every session logged while one
+    // ran carries it, as the logger stamps one, and nothing outside them does.
     const made = demoClimber('2026-09-22');
-    const left = made.blocks[0]!;
-    const inLeft = (date: string) => date >= left.startDate && date <= left.endedAt!;
+    expect(made.blocks.map((b) => b.reason)).toEqual(['stopped', 'ran-out']);
+    const inRun = (date: string) => made.blocks.some((b) => date >= b.startDate && date <= b.endedAt!);
     const before = made.sessions.filter((s) => s.date < made.startDate);
     expect(before.length).toBeGreaterThan(300);
-    expect(before.filter((s) => !inLeft(s.date)).every((s) => s.programId === undefined)).toBe(true);
-    const during = before.filter((s) => inLeft(s.date));
-    expect(during.length).toBeGreaterThan(15);
-    expect(during.every((s) => s.programId === made.program.id)).toBe(true);
+    expect(before.filter((s) => !inRun(s.date)).every((s) => s.programId === undefined)).toBe(true);
+    for (const run of made.blocks) {
+      const during = before.filter((s) => s.date >= run.startDate && s.date <= run.endedAt!);
+      expect(during.length, run.reason).toBeGreaterThan(15);
+      expect(during.every((s) => s.programId === made.program.id), run.reason).toBe(true);
+    }
   });
 
   it('come out of the generator in date order', () => {
