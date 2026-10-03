@@ -53,6 +53,7 @@ const LABEL: Record<ColumnKind, string> = {
   metric: 'Benchmark',
   value: 'Result',
   unit: 'Unit',
+  bodyweight: 'Bodyweight',
   notes: 'Notes',
   skip: "Don't import",
 };

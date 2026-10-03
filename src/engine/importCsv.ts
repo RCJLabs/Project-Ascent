@@ -75,7 +75,7 @@ import { isDateKey, toKey } from './dates';
 import { CSV_FILES } from './exportCsv';
 import type { GradeScale } from './grades';
 import { parseGrade } from './gradeReading';
-import { unitLabel, type UnitSystem } from './units';
+import { fromInput, isAddedWeight, unitLabel, type UnitSystem } from './units';
 
 export type Discipline = 'boulder' | 'route';
 
@@ -107,7 +107,9 @@ export type ColumnKind =
   // A benchmark reading.
   | 'metric'
   | 'value'
-  | 'unit';
+  | 'unit'
+  // What the climber weighed, beside an added-load test (PLAN.md M377).
+  | 'bodyweight';
 
 /**
  * Which columns each kind can hold, in the order the picker offers them.
@@ -120,7 +122,7 @@ export type ColumnKind =
 export const COLUMNS: Record<CsvKind, ColumnKind[]> = {
   climbs: ['date', 'grade', 'result', 'count', 'discipline', 'mode', 'place', 'name', 'angle', 'rope', 'style', 'notes', 'skip'],
   exercises: ['date', 'exercise', 'sets', 'reps', 'hold', 'load', 'notes', 'skip'],
-  benchmarks: ['date', 'metric', 'value', 'unit', 'notes', 'skip'],
+  benchmarks: ['date', 'metric', 'value', 'unit', 'bodyweight', 'notes', 'skip'],
 };
 
 /** The columns a kind cannot be read without. */
@@ -197,6 +199,7 @@ const HEADERS: Record<Exclude<ColumnKind, 'skip'>, string[]> = {
   metric: ['metric', 'benchmark', 'test', 'assessment', 'measure'],
   value: ['value', 'result', 'score', 'number', 'reading'],
   unit: ['unit', 'units'],
+  bodyweight: ['bodyweight (lbs)', 'bodyweight (kg)', 'bodyweight', 'body weight', 'bw'],
   notes: ['notes', 'note', 'comment', 'comments', 'description'],
 };
 
@@ -538,6 +541,20 @@ export function importCsv(input: ImportCsvInput): ImportedCsv {
         refuse(`${metric.label}: ${parsed.error}`);
         return;
       }
+      // The weight beside an added-load test, in the same units as the row
+      // (PLAN.md M377): the archive writes pounds beside its pounds, and a
+      // sheet in kilos is in kilos throughout. Beside any other test it is
+      // a weight the app does not keep, as the form does not ask for one.
+      const weighed = at(row, 'bodyweight').trim();
+      let bodyweight: number | undefined;
+      if (weighed !== '' && isAddedWeight(metric.unit)) {
+        const n = Number(weighed);
+        if (!Number.isFinite(n) || n <= 0) {
+          refuse(`${metric.label}: "${weighed}" is not a bodyweight.`);
+          return;
+        }
+        bodyweight = fromInput(n, 'lbs', units);
+      }
       const note = at(row, 'notes').trim();
       metrics.push({
         metricId: metric.id,
@@ -545,6 +562,7 @@ export function importCsv(input: ImportCsvInput): ImportedCsv {
         value: parsed.value,
         ...(parsed.display ? { display: parsed.display } : {}),
         ...(note ? { note } : {}),
+        ...(bodyweight !== undefined ? { bodyweight } : {}),
       });
       return;
     }

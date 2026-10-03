@@ -503,3 +503,75 @@ describe('every benchmark reading', () => {
     expect(rows(metricsCsv(gone))[1]![1]).toBe('gone_metric');
   });
 });
+
+/**
+ * Bodyweight, out and back (PLAN.md M377).
+ *
+ * M371 kept the weight with its result and the backup carried it, but the
+ * results sheet had no column for it: a climber who moved their history
+ * through a spreadsheet lost every weight they had given. It is the last
+ * column, in pounds as stored, and comes back in the units of its row.
+ */
+describe('the bodyweight beside an added-load test', () => {
+  const entries: MetricEntry[] = [
+    { metricId: 'max_hang_20mm_7s', date: '2026-01-09', value: 40, bodyweight: 154.3 },
+    { metricId: 'max_hang_20mm_7s', date: '2026-02-09', value: 45 },
+    { metricId: 'dead_hang', date: '2026-02-10', value: 60 },
+  ];
+  const sheet = () => parseCsv(metricsCsv(entries));
+  const back = (rows: string[][], units: 'metric' | 'imperial' = 'imperial') => {
+    const [header = [], ...body] = rows;
+    return importCsv({ kind: 'benchmarks', rows: body, columns: guessColumns(header, 'benchmarks'), units });
+  };
+
+  it('is the last column, in pounds, and empty where none was given', () => {
+    const [header, first, second, third] = sheet();
+    expect(header!.at(-1)).toBe('Bodyweight (lbs)');
+    expect(header!.slice(0, 6)).toEqual(['Date', 'Metric', 'Value', 'Unit', 'Shown as', 'Note']);
+    expect([first!.at(-1), second!.at(-1), third!.at(-1)]).toEqual(['154.3', '', '']);
+  });
+
+  it('comes back exactly, whatever units the climber reads in', () => {
+    for (const units of ['imperial', 'metric'] as const) {
+      const out = back(sheet(), units);
+      expect(out.refused, units).toEqual([]);
+      expect(out.metrics.map((m) => m.bodyweight), units).toEqual([154.3, undefined, undefined]);
+      expect(out.metrics.every((m) => m.bodyweight !== undefined || !('bodyweight' in m)), units).toBe(true);
+    }
+  });
+
+  it('reads a sheet written in kilos as kilos, weight and plate alike', () => {
+    const out = back([
+      ['Date', 'Benchmark', 'Result', 'Unit', 'Bodyweight (kg)'],
+      ['2026-03-02', 'Max Hang 20mm 7s', '15', 'BW+kg', '70'],
+    ]);
+    expect(out.refused).toEqual([]);
+    expect(out.metrics[0]).toMatchObject({ value: 33.1, bodyweight: 154.3 });
+  });
+
+  it('keeps no weight beside a test that does not ask for one', () => {
+    const out = back([
+      ['Date', 'Metric', 'Value', 'BW'],
+      ['2026-03-02', 'Dead Hang', '60', '150'],
+    ]);
+    expect(out.refused).toEqual([]);
+    expect('bodyweight' in out.metrics[0]!).toBe(false);
+  });
+
+  it('refuses a weight that is not one, naming the cell', () => {
+    for (const cell of ['0', '-150', 'heavy']) {
+      const out = back([
+        ['Date', 'Metric', 'Value', 'Bodyweight'],
+        ['2026-03-02', 'Max Hang 20mm 7s', '30', cell],
+      ]);
+      expect(out.metrics, cell).toEqual([]);
+      expect(out.refused[0]?.because, cell).toBe(`Max Hang 20mm 7s: "${cell}" is not a bodyweight.`);
+    }
+  });
+
+  it('finds the column by the names a climber would give it', () => {
+    for (const name of ['Bodyweight (lbs)', 'Bodyweight (kg)', 'Bodyweight', 'Body weight', 'BW']) {
+      expect(guessColumns(['Date', 'Metric', 'Value', name], 'benchmarks')[3], name).toBe('bodyweight');
+    }
+  });
+});

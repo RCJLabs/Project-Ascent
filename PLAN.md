@@ -15476,6 +15476,13 @@ its label is missing. None of these wants touching.
   was one sentence beside the first run's full one. It now carries the same plan, and its 32
   sessions are stamped by the same rule, with no new draws. Its review reads *"Short of the plan:
   Volume day (13 of 16). That is 21 of 24 sessions the plan placed."*
+- **M377 — bodyweight in the results spreadsheet, and the coach's verdict as it is.** Two answers
+  from the user:
+  - **The coach's file keeps the verdict judged with bodyweight,** as M371 shipped it. It carries
+    no weight and no ratio.
+  - **The results sheet gets the weight.** *Bodyweight (lbs)* is its last column, so no other
+    column moves. The import reads it back in the units of its row, for the two added-load tests
+    only, and a cell that is not a weight refuses the row.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -29150,3 +29157,42 @@ plan placed. You also logged 4 sessions the plan did not place."* The shortfall 
   - **Home:** 213.14KB.
 
   Both are unchanged within a build's noise: the generator is not in either.
+
+## M377 — bodyweight in the results spreadsheet, and the coach's verdict as it is
+
+Two decisions M371 left open, answered *"yes to both"*:
+
+- **Should the coach's file carry a verdict judged with bodyweight?** Yes. It does already: with the
+  switch on, `moved` and `light` in the file are read for the climber's weight, and the file holds
+  no weight, no ratio and no percentage for added load. A coach can tell a heavier climber held a
+  heavier plate, not by how much, and that is accepted. Nothing changes.
+- **Should bodyweight reach the spreadsheet, and onboarding?** Yes. This milestone is the
+  spreadsheet and M378 is onboarding.
+
+### The change
+
+- **`METRIC_HEADER` ends in *Bodyweight (lbs)*.** It is last so every existing column stays where a
+  spreadsheet built on this file expects it. The cell holds the stored pounds, as *Value* holds the
+  stored unit, and is empty where no weight was given.
+- **The import has a `bodyweight` column.** It recognises *Bodyweight (lbs)*, *Bodyweight (kg)*,
+  *Bodyweight*, *Body weight* and *BW*, and the column picker labels it *Bodyweight*.
+  - **Units:** it is read in the units of its row, the same rule as the value. The archive's
+    `BW+lbs` row is pounds, and a sheet whose unit is `BW+kg` is kilos throughout, so 70 becomes
+    154.3 lbs.
+  - **Scope:** only beside the two added-load tests. Beside any other test the weight is not
+    kept, as the form does not ask for one there.
+  - **Bad cells:** zero, a negative or a word refuses the row: *"Max Hang 20mm 7s: "heavy" is not
+    a bodyweight."* That is the import's rule for numbers it cannot read.
+- **The Settings import saves it.** Rows go through the backup's `importAll`, which keeps every
+  field; `everyFieldSurvives.test.ts` has held the weight since M371.
+
+### Checked
+
+- **`engine/exportCsv.test.ts`, 6 more:**
+  - the header, with the first six columns where they were;
+  - the round trip in both unit systems;
+  - a sheet in kilos;
+  - no weight kept beside a dead hang;
+  - three refusals with their sentence;
+  - the five header names.
+- **Mutation battery:** 9 mutants, all killed on the first pass, and sanity survived.

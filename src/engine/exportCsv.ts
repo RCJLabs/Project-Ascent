@@ -131,7 +131,13 @@ export const ATTEMPT_HEADER = [
   'Note',
 ] as const;
 
-export const METRIC_HEADER = ['Date', 'Metric', 'Value', 'Unit', 'Shown as', 'Note'] as const;
+/**
+ * The results sheet's columns. *Bodyweight (lbs)* last (PLAN.md M377), so
+ * every column before it is where a spreadsheet already built on this file
+ * expects it: the weight a climber gave beside an added-load test, in the
+ * pounds it is stored in, as the value beside it is in its stored unit.
+ */
+export const METRIC_HEADER = ['Date', 'Metric', 'Value', 'Unit', 'Shown as', 'Note', 'Bodyweight (lbs)'] as const;
 
 const yesNo = (value: boolean | undefined): string => (value === undefined ? '' : value ? 'yes' : 'no');
 const num = (value: number | undefined): string => (value === undefined ? '' : String(value));
@@ -310,6 +316,7 @@ export function metricsCsv(entries: readonly MetricEntry[]): string {
       cell(metric?.unit),
       cell(entry.display),
       cell(entry.note),
+      cell(entry.bodyweight),
     ]);
   }
   return toCsv(rows);
