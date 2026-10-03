@@ -2,10 +2,11 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadPrograms } from '@/content/programs';
 import type { MetricEntry } from '@/db/metrics';
 import type { Session } from '@/db/sessions';
-import { GAIN_ADDED_LBS, GAIN_PERCENT, GAIN_WINDOW_DAYS, buildTips, type Tip } from './coach';
+import { GAIN_PERCENT, GAIN_WINDOW_DAYS, buildTips, type Tip } from './coach';
 import { deriveClimberState } from './derive';
 import { addDays } from './dates';
 import { diagnose } from './plateau';
+import { getMetric } from '@/content/metrics';
 
 /**
  * The good news the coach was already holding (PLAN.md M178).
@@ -77,7 +78,7 @@ const reading = (
     createdAt: `${addDays(DAY, -daysAgo)}T10:00:00.000Z`,
   }) as MetricEntry;
 
-function tipsFor(metrics: MetricEntry[], days = 60, units?: 'metric' | 'imperial'): Tip[] {
+function tipsFor(metrics: MetricEntry[], days = 60, units?: 'metric' | 'imperial', bodyweight?: boolean): Tip[] {
   const sessions = log(days);
   const state = deriveClimberState(sessions, { today: DAY });
   return buildTips({
@@ -89,6 +90,7 @@ function tipsFor(metrics: MetricEntry[], days = 60, units?: 'metric' | 'imperial
     programMetrics: [],
     today: DAY,
     ...(units ? { units } : {}),
+    ...(bodyweight !== undefined ? { bodyweight } : {}),
   } as never);
 }
 
@@ -113,7 +115,9 @@ const TEN_PERCENT = [
 describe('a number that moved', () => {
   it('names the number, the size and the window', () => {
     const tip = gain(TEN_PERCENT)!;
-    expect(tip.headline).toBe('Dead Hang improved: +3 sec (10%)');
+    // Ten per cent is the dead hang's band, exactly, so this is the review's
+    // light progress and is said so (PLAN.md M373).
+    expect(tip.headline).toBe('Dead Hang made light progress: +3 sec (10%)');
     expect(tip.body).toMatch(/over 8 weeks/);
     expect(tip.tone).toBe('good');
     expect(tip.action?.href).toBe('/assessments');
@@ -161,17 +165,20 @@ describe('a number that moved', () => {
 
 describe('the gate, which is the whole rule', () => {
   /**
-   * Derived from the constant rather than written out, so moving the
-   * threshold moves the test with it and a mutation of either shows.
+   * The coach's band, read off the registry rather than written out, so
+   * moving the band moves the test with it (PLAN.md M373). It used to be the
+   * tip's own five per cent, which disagreed with the review.
    */
-  const from = (percent: number): MetricEntry[] => [
+  const band = (getMetric('repeater_weight')!.held as { abs: number }).abs;
+  const from = (lbs: number): MetricEntry[] => [
     reading('repeater_weight', 56, 100),
-    reading('repeater_weight', 7, 100 + percent),
+    reading('repeater_weight', 7, 100 + lbs),
   ];
 
-  it('fires at the threshold and not below it', () => {
-    expect(gain(from(GAIN_PERCENT))?.id, 'exactly the threshold').toBe('benchmark-gain');
-    expect(gain(from(GAIN_PERCENT - 1)), 'a hair under').toBeUndefined();
+  it('fires on the band and not inside it', () => {
+    expect(gain(from(band))?.headline, 'exactly the band').toMatch(/made light progress/);
+    expect(gain(from(band + 1))?.headline, 'past it').toMatch(/improved/);
+    expect(gain(from(band - 1)), 'a hair under').toBeUndefined();
   });
 
   /** Two per cent is the same hand on the same edge on a different day. */
@@ -326,10 +333,12 @@ describe('a benchmark measured in added weight', () => {
    * can add and past the noise of a retest on the same hand and the same
    * edge; three is the retest.
    */
-  it('stays quiet under the smallest plate there is', () => {
-    expect(GAIN_ADDED_LBS).toBe(5);
+  it('stays quiet inside the band, and calls the band light', () => {
+    // The max hang's band is the smallest plate, five pounds (M367); the tip
+    // had its own five, which is now the band's (PLAN.md M373).
+    expect(getMetric('max_hang_20mm_7s')!.held).toEqual({ abs: 5 });
     expect(gain(added(30, 33)), '+3 lbs is a retest').toBeUndefined();
-    expect(gain(added(30, 35)), '+5 lbs is a block').toBeDefined();
+    expect(gain(added(30, 35))!.headline).toBe('Max Hang 20mm 7s made light progress: +5 BW+lbs');
   });
 
   /**
@@ -371,7 +380,7 @@ describe('a benchmark measured in added weight', () => {
    */
   it('says one rep, and says the plate in the units the climber reads', () => {
     expect(gain([reading('max_pullups', 40, 9), reading('max_pullups', 5, 10)])!.headline).toBe(
-      'Max Pull-Ups improved: +1 rep (11%)',
+      'Max Pull-Ups made light progress: +1 rep (11%)',
     );
     const plate = [reading('weighted_pullup_3rm', 50, 20), reading('weighted_pullup_3rm', 5, 30)];
     expect(gain(plate, 60, 'metric')!.headline).toBe('Weighted Pull-Ups 3RM improved: +4.5 BW+kg');
@@ -438,5 +447,60 @@ describe('where it sits on the board', () => {
     expect(not[0]!.tone, 'good news for a climber who measured nothing').not.toBe('good');
     expect(not.some((t) => t.tone === 'good'), 'the streak still says its piece').toBe(true);
     expect(not.at(-1)!.id, 'and still says it last').toBe('streak');
+  });
+});
+
+/**
+ * The verdict the block review gives, said by the coach (PLAN.md M373).
+ *
+ * The tip had its own floor — five per cent, or five pounds of plate — and
+ * the review had the coach's bands, so the same pair of readings could be
+ * *"improved"* on Home and *light progress* or *held* on the review. These
+ * hold the parts the bands change: the order, the scale a zero band is
+ * ranked in, and bodyweight.
+ */
+describe('the review\'s verdict, in the coach\'s mouth', () => {
+  it('puts a full gain before light progress, however the sizes compare', () => {
+    // Laps have a band of nothing, so 40 to 41 is a full gain at a size of
+    // half a band; the dead hang's 30 to 33 is exactly its band, light.
+    const tip = gain([...TEN_PERCENT, reading('linked_laps_continuous', 50, 40), reading('linked_laps_continuous', 5, 41)])!;
+    expect(tip.headline).toBe('Linked Laps Continuous improved: +1 lap (3%)');
+  });
+
+  /**
+   * A zero band has no width to count in, so it is ranked by its percentage,
+   * `GAIN_PERCENT` to a band — derived from the constant, so moving it moves
+   * the test.
+   */
+  it('ranks a zero band by its percentage, five per cent to a band', () => {
+    const laps = (bands: number) => [
+      reading('linked_laps_continuous', 50, 100),
+      reading('linked_laps_continuous', 5, 100 + bands * GAIN_PERCENT),
+    ];
+    const pullups = [reading('max_pullups', 50, 10), reading('max_pullups', 5, 13)]; // three bands
+    expect(gain([...laps(2), ...pullups])!.headline).toMatch(/^Max Pull-Ups/);
+    expect(gain([...laps(4), ...pullups])!.headline).toMatch(/^Linked Laps/);
+  });
+
+  describe('with bodyweight', () => {
+    const weighed = (from: [number, number], to: [number, number]): MetricEntry[] => [
+      { ...reading('max_hang_20mm_7s', 50, from[0]), bodyweight: from[1] },
+      { ...reading('max_hang_20mm_7s', 5, to[0]), bodyweight: to[1] },
+    ];
+
+    it('praises the same plate at thirty pounds lighter, and says it is for their weight', () => {
+      const same = weighed([30, 150], [30, 120]);
+      expect(tipsFor(same, 60, undefined, true).find((t) => t.id === 'benchmark-gain')!.headline).toBe(
+        'Max Hang 20mm 7s improved for your weight: same plate',
+      );
+      // Switched off, the plate did not move and there is nothing to say.
+      expect(tipsFor(same, 60, undefined, false).find((t) => t.id === 'benchmark-gain')).toBeUndefined();
+    });
+
+    it('holds ten more pounds of plate carried by thirty-five more of climber', () => {
+      const heavier = weighed([30, 150], [40, 185]);
+      expect(tipsFor(heavier, 60, undefined, true).find((t) => t.id === 'benchmark-gain')).toBeUndefined();
+      expect(gain(heavier)!.headline).toBe('Max Hang 20mm 7s improved: +10 BW+lbs');
+    });
   });
 });

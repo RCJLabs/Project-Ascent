@@ -64,16 +64,17 @@ export function AssessmentsPage() {
     for (const day of week?.days ?? []) for (const m of day.metrics) out.set(m.id, day.date);
     return out;
   }, [program, startDate, plan, overrides]);
+  // Read against bodyweight where the climber gave one (PLAN.md M371): the
+  // change beside each benchmark as well as the block report (M373).
+  const weighIn = useSettings((s) => s.weighIn);
   const battery = useMemo(
-    () => assessmentBattery(entries, { program, startDate, units }),
-    [entries, program, startDate, units],
+    () => assessmentBattery(entries, { program, startDate, units, bodyweight: weighIn }),
+    [entries, program, startDate, units, weighIn],
   );
 
   // The block report is about the *program's* declared battery, so it is
   // built from the program rather than from the battery rows, which also
   // carry benchmarks the climber added for themselves.
-  // Read against bodyweight where the climber gave one (PLAN.md M371).
-  const weighIn = useSettings((s) => s.weighIn);
   const report = useMemo(
     () => (program && startDate ? blockReport({ program, startDate, entries, today: today(), bodyweight: weighIn }) : null),
     [program, startDate, entries, weighIn],
@@ -212,7 +213,11 @@ function MetricRow({
     <li className="bg-sunken rounded-xl">
       <DisclosureButton open={open} onToggle={onToggle} className="flex items-center gap-3 px-3 py-2.5">
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-sm truncate">{metric.label}</div>
+          {/* Wraps rather than truncates (PLAN.md M373): beside a change that
+              says what it amounts to, a one-line name lost its last word —
+              "Max Hang 20m…" — and "Weighted Pull-Ups 3RM" had always lost
+              "3RM" at 360px. */}
+          <div className="font-semibold text-sm break-words">{metric.label}</div>
           <p className="text-xs text-ink-soft mt-0.5">
             {latest ? `${shortLabel(latest.date)}` : 'Never tested'}
             {status.dueLabel ? ` · ${status.dueLabel}` : ''}
@@ -221,7 +226,12 @@ function MetricRow({
           {/* One line, closed — enough to decide not to open it (M161). */}
           <TestSafety metric={metric} injured={hurt} compact />
         </div>
-        <div className="text-right shrink-0">
+        {/* Capped rather than `shrink-0` (PLAN.md M373): the change beside
+            the reading can say *"same plate · better for your weight"*, and
+            unbounded it took the row and left the benchmark's name as "M.".
+            The amount and the verdict take a line each, so the column is no
+            wider than the reading for most changes; a long one wraps. */}
+        <div className="text-right min-w-0 max-w-[45%]">
           {/* `units`, which this one call was missing (PLAN.md M234).
               `formatEntry` takes it fourth and defaults it to imperial, so
               the omission did not fail — it just read every weight in pounds
@@ -229,7 +239,7 @@ function MetricRow({
               the detail page for the same metric read kilos. Found in the
               browser, on the wall M48 exists to stop: *the number and its
               label have to move together*. */}
-          <div className="font-bold text-sm tabular-nums">
+          <div className="font-bold text-sm tabular-nums whitespace-nowrap">
             {latest ? formatEntry(metric, latest, display, units) : '—'}
           </div>
           {change && (
@@ -238,7 +248,8 @@ function MetricRow({
                 change.improved === true ? 'text-positive' : change.improved === false ? 'text-danger' : 'text-ink-soft'
               }`}
             >
-              {change.label}
+              <div className="whitespace-nowrap">{change.amount}</div>
+              {change.verdict && <div>{change.verdict}</div>}
             </div>
           )}
         </div>

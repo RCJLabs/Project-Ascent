@@ -15448,6 +15448,16 @@ its label is missing. None of these wants touching.
     log changed.
 
   It also found that the written program's two icons were the words *grid* and *repeat*.
+- **M373 — the card and the coach give the review's verdict.** The benchmark card's change
+  coloured every difference green or red, and the coach's praise tip had its own five per cent or
+  five pounds. So 60 → 62 seconds was green on the card and held in the review, and one more
+  pull-up was *"improved"* on Home and light progress on the review. One module, `verdict.ts`, now
+  answers for all three, bodyweight included:
+  - the card says *held*, *light progress* or *better for your weight* beside the amount;
+  - the tip praises what the review calls better or light progress, ranked in bands.
+
+  The screenshots found the longer labels breaking both rows at 360px, so the list now wraps the
+  benchmark's name rather than truncating it.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -28834,3 +28844,109 @@ the sample's *"Session types trained"* stat reads 4 where it read 2, which is wh
 - **Sizes:**
   - **first load:** 113.93KB;
   - **Home:** 212.30KB in 37 files, 0.70KB under the line.
+
+## M373 — the card and the coach give the review's verdict
+
+The first gap from the list after M372. Three places judged the same two readings:
+
+- **the block review**, against the coach's bands (M367, M370) and, with a weight at both
+  readings, against bodyweight (M371);
+- **the change beside a benchmark** (`changeOf`, on the list and on the benchmark's own page). It
+  called any difference better or worse, in green or red;
+- **the coach's praise tip** (`benchmarkGain`). It had its own floor: five per cent, or five
+  pounds for added weight.
+
+Measured disagreements:
+
+| Readings | Card | Coach | Review |
+|---|---|---|---|
+| Dead hang 60 → 62 s | green *+2 sec* | silent | held |
+| Pull-ups 10 → 11 | green *+1 rep* | *"improved: +1 rep (10%)"* | light progress |
+| Max hang 30 → 30, at 150 then 120 lbs, weighed | *no change* | silent | better |
+
+### The change
+
+- **`engine/verdict.ts`** holds `bandFor`, `held`, `bandWidth` and `verdictOf`. `verdictOf`
+  returns the band, the direction, whether it was light, the size in bands, and the weighed
+  reading when there is one. The review reads it and is unchanged, which its seven suites prove.
+  A module of its own because `blockReport` already imports `assessmentStatus`.
+- **`changeOf`** takes the switch, and `Change` gains five fields: `light`, `weighed`, `bands`,
+  `amount` and `verdict`.
+  - `improved` is null inside the band, so the card shows it in neither colour.
+  - The verdict is *held*, *light progress* or *light decline*, or nothing past the band.
+  - A weighed result always names a verdict, *"… for your weight"*. Otherwise a same-plate result
+    read as better would say *"no change"* in green. The amount for it is *"same plate"*.
+- **The tip** fires on what the review calls better or light progress, and is silent inside the
+  band.
+  - **Headlines:** *"Max Pull-Ups made light progress: +1 rep (11%)"*, and *"Max Hang 20mm 7s improved
+    for your weight: same plate"*.
+  - **Order:** a full gain comes before light progress. Within those, gains rank by size in bands;
+    a zero band (min edge, laps, sends, days outside) is ranked by its percentage, at
+    `GAIN_PERCENT` (5%) to a band.
+  - **Removed:** `GAIN_ADDED_LBS`. The max hang's band is the same five pounds.
+- **The switch reaches all of them:** Home's `useTips`, the benchmark list, and the benchmark's
+  own page. Before, only the review read it.
+
+**A judgement call, made to the M370 answers:** light progress earns the praise tip, worded as
+light progress, because the coach called it progress. That is the line to change if it should
+not.
+
+### Found on the way: the rows did not fit
+
+The first screenshots, at 360px with a weighed result:
+
+- **The list:** the change column was `shrink-0`, so *"same plate · better for your weight"*
+  crushed the benchmark's name to **"M."**.
+- **The benchmark's own page:** the change sat beside the reading, overlapped it, and ran under
+  the delete button.
+
+The layout harness could not see either: the sample climber has no weighed results.
+
+- **The list** now puts the amount and the verdict on a line each, in a column capped at 45%, and
+  the **name wraps** instead of truncating. *"Weighted Pull-Ups 3RM"* had always lost *"3RM"* at
+  360px, before any of this.
+- **The detail page** puts the change under the reading.
+
+### Not done
+
+- **Block compare and the year page** compare totals between blocks and years, not retests.
+  Block compare is neutral by design (M305), and neither was touched.
+- **The card gives no percentage for added weight, even when weighed.** The review gives one of
+  the whole load. The card keeps to the plate it shows.
+
+### Checked
+
+- **`engine/assessments.test.ts`, 5 more:**
+  - held, in neither colour;
+  - light, both ways;
+  - past the band;
+  - weighed, with the switch on and off, held, light and worse;
+  - the switch through a status.
+- **`engine/benchmarkGain.test.ts`, 4 more:**
+  - full before light;
+  - a zero band ranked by percentage, from `GAIN_PERCENT`;
+  - the weighed same plate, praised with the switch on and silent with it off;
+  - ten more plate on thirty-five more pounds held.
+- **`features/coach/benchmarkGain.test.tsx`, 2 more:** the switch in Settings, through `useTips`,
+  to the sentence on the coach's page.
+- **`features/assessments/verdictRow.test.tsx`, 5:**
+  - the list's held line, in neither colour;
+  - the list's light decline, in red;
+  - the weighed line on the detail page, with the switch on and off;
+  - the list, weighed.
+- **Changed, deliberately.** The six that pinned the old judgement: one rep, a dead hang of
+  +3, a max hang of +3 (now held), the tip's headline on 30 → 33 s (now light progress), its
+  five-pound floor, and *"+1 rep (11%)"*. The gate test is now derived from the band, not from
+  `GAIN_PERCENT`.
+- **Mutation battery:**
+  - 23 mutants, all killed on the first pass;
+  - 2 more for the list's two lines, both killed;
+  - sanity survived both times.
+- **Full suite:** 7,826 passing, M372's 7,810 plus 16, and the one pinned-clock skip.
+- **Layout harness:** clean. The list and the detail page were checked by hand at 360px, with a
+  weighed result, a held one, a light decline and kilos. Nothing overflows or overlaps.
+- **Sizes:**
+  - **first load:** 113.95KB, 0.45KB under budget;
+  - **Home:** 212.88 to 212.92KB across three builds of this source, **0.08KB under the 213.0
+    line**. The `assessmentStatus` chunk Home loads for the coach grew 0.51KB, which is the
+    verdict. The next addition to Home needs a saving or a decision on the line.

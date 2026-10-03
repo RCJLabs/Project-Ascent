@@ -38,7 +38,7 @@ import { tripNow } from './trip';
 import { comedownNow, type Comedown } from './comedown';
 import { type AwayPeriod, awayName, explainsGap, wasClimbing } from './away';
 import { isRestSession } from './rest';
-import { isAddedWeight, type UnitSystem } from './units';
+import type { UnitSystem } from './units';
 import { counted } from './phrase';
 
 export type TipTone = 'good' | 'neutral' | 'caution';
@@ -67,6 +67,8 @@ export interface CoachInput {
   metrics?: MetricEntry[];
   /** What a benchmark's change is said in (PLAN.md M341). Imperial, as stored, when absent. */
   units?: UnitSystem;
+  /** Whether the climber gives a bodyweight with added-load tests (PLAN.md M371, M373). */
+  bodyweight?: boolean;
   diagnosis?: Diagnosis;
   /** Program assessment ids, so staleness is judged on what you were asked. */
   programMetrics?: MetricId[];
@@ -154,29 +156,22 @@ export const OUTDOOR_GAP_DAYS = 21;
 export const BACKUP_INTERVAL_DAYS = 30;
 
 /**
- * How far a benchmark has to move, and how recently, to earn a sentence
- * (PLAN.md M178).
- *
- * Five per cent because that is past the noise of a retest — the same hand,
- * the same edge, a different day — and under what a real block moves. A
- * grade metric needs no percentage: a step up a ladder is the size.
+ * How recently a benchmark has to move to earn a sentence (PLAN.md M178).
  *
  * A hundred and twenty days because a gain is news about *training*. Two
  * readings three years apart say a climber got better at climbing, which they
  * knew; two readings eleven weeks apart say the block worked.
+ *
+ * How *far* it has to move is no longer this file's to say (PLAN.md M373).
+ * It said five per cent, or five pounds of plate, and the block review said
+ * the coach's bands: one extra pull-up from ten was *"improved"* here and
+ * light progress there. The verdict is `verdict.ts`'s now, for both.
+ *
+ * Five per cent survives as the one thing it is still needed for: ranking a
+ * gain on a metric whose band is zero wide — min edge, laps, sends, days
+ * outside, where any change counts — against gains counted in bands.
  */
 export const GAIN_PERCENT = 5;
-
-/**
- * The same floor for a metric that carries no percentage because it measures
- * added weight (PLAN.md M234).
- *
- * Five pounds: the smallest plate most climbers can actually add, and past
- * the noise of a retest on the same hand and the same edge. A block moves a
- * max hang by five to ten, so this is the bottom of "the block worked" and
- * not the top of it.
- */
-export const GAIN_ADDED_LBS = 5;
 export const GAIN_WINDOW_DAYS = 120;
 
 /**
@@ -1155,17 +1150,22 @@ function benchmarks(input: CoachInput, today: string): Tip | null {
  * news rather than a standing fact: a gain happened on a day, and *no rest
  * days logged, ever* will still be true tomorrow.
  */
-function benchmarkGain({ metrics, units }: CoachInput, today: string): Tip | null {
+function benchmarkGain({ metrics, units, bodyweight }: CoachInput, today: string): Tip | null {
   const entries = metrics ?? [];
   // No registry filter: `assessmentStatus` already returns null for an id the
   // catalogue does not know, and the null filter below is the one that drops it.
   const ids = [...new Set(entries.map((entry) => entry.metricId))];
 
   const gains = ids
-    .map((id) => assessmentStatus(id, entries, { today, ...(units ? { units } : {}) }))
+    .map((id) =>
+      assessmentStatus(id, entries, { today, ...(units ? { units } : {}), bodyweight: bodyweight === true }),
+    )
     .filter((status): status is NonNullable<typeof status> => status !== null)
     .flatMap((status) => {
       const { change, series, metric } = status;
+      // Better past the coach's band, or exactly on it — light progress — as
+      // the block review would say it (PLAN.md M373). Inside the band is
+      // held, and held is not news.
       if (change?.improved !== true) return [];
       const latest = series.at(-1)!;
       const previous = series.at(-2)!;
@@ -1173,41 +1173,37 @@ function benchmarkGain({ metrics, units }: CoachInput, today: string): Tip | nul
       // close enough together to be about a block rather than a decade.
       const span = daysBetween(previous.date, latest.date);
       if (span > GAIN_WINDOW_DAYS || daysBetween(latest.date, today) > GAIN_WINDOW_DAYS) return [];
-      // A grade, a pass, or a number that used to be zero carries no
-      // percentage and needs none — a step up a ladder is already the size,
-      // and off zero is every percentage there is. The rest clear the noise.
-      //
-      // **Added weight carries none either, and does need one** (PLAN.md
-      // M234). It used to carry a percentage and the percentage was wrong —
-      // of the plate rather than of the load — and taking it away left the
-      // metric on `Infinity`, where a one-pound retest outranked a grade.
-      //
-      // So both are ranked as multiples of their own noise floor, which is
-      // the only scale the two share: five per cent for the things that
-      // carry a percentage, five pounds for the things that cannot.
+      // How big, in the one scale every metric shares: its own band. A
+      // grade, a pass, or a number whose band is zero wide has none — a
+      // step up a ladder is already the size, and a zero band is ranked by
+      // its percentage, five per cent to a band, where it has one.
       const size =
-        change.percent === null
-          ? isAddedWeight(metric.unit)
-            ? (Math.abs(change.delta) / GAIN_ADDED_LBS) * GAIN_PERCENT
-            : Infinity
-          : Math.abs(change.percent);
-      if (size < GAIN_PERCENT) return [];
+        change.bands ?? (change.percent === null ? Infinity : Math.abs(change.percent) / GAIN_PERCENT);
       return [{ metric, change, latest, span, size }];
     })
-    // Biggest first, and among the percentless ones — all of them Infinity —
-    // the one that moved the most rungs.
-    .sort((a, b) => b.size - a.size || Math.abs(b.change.delta) - Math.abs(a.change.delta));
+    // A full gain before light progress, then the biggest, and among the
+    // sizeless ones — all of them Infinity — the one that moved the most rungs.
+    .sort(
+      (a, b) =>
+        Number(a.change.light) - Number(b.change.light) ||
+        b.size - a.size ||
+        Math.abs(b.change.delta) - Math.abs(a.change.delta),
+    );
 
   const best = gains[0];
   if (best === undefined) return null;
   const weeks = Math.max(1, Math.round(best.span / 7));
   // "improved", not "is up": `min_edge` gets better by going down, and a
   // headline reading *Min Edge Achievable is up: −2 mm* would be a lie told
-  // by a rule whose whole job is saying something true and nice.
+  // by a rule whose whole job is saying something true and nice. And
+  // "made light progress" on the band's edge, which is the review's word
+  // for it (M370), and "for your weight" where the plate alone would say
+  // something else (M371).
   const size =
     best.change.percent === null
-      ? best.change.label
-      : `${best.change.label} (${Math.round(Math.abs(best.change.percent))}%)`;
+      ? best.change.amount
+      : `${best.change.amount} (${Math.round(Math.abs(best.change.percent))}%)`;
+  const verb = best.change.light ? 'made light progress' : 'improved';
   return {
     id: 'benchmark-gain',
     // The reading it is about, so it is said once and the next retest earns
@@ -1215,7 +1211,7 @@ function benchmarkGain({ metrics, units }: CoachInput, today: string): Tip | nul
     signature: `${best.metric.id}:${best.latest.date}`,
     tone: 'good',
     weight: 56,
-    headline: `${best.metric.label} improved: ${size}`,
+    headline: `${best.metric.label} ${verb}${best.change.weighed ? ' for your weight' : ''}: ${size}`,
     body: `Measured, over ${weeks} week${weeks === 1 ? '' : 's'}, by you — which is the only kind of progress this app will claim. Nothing to do about it; the number is here because a training log that only ever reports faults is a log nobody reads for long.`,
     action: { label: 'See the curve', href: '/assessments' },
   };

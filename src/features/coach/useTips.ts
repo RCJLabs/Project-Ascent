@@ -94,6 +94,7 @@ export function useTips(): Tips {
   const away = useAway((s) => s.periods);
   const display = useSettings((s) => s.display);
   const units = useSettings((s) => s.units);
+  const weighIn = useSettings((s) => s.weighIn);
 
   const deloadDates = useDeloadDates();
   return useMemo(() => {
@@ -170,6 +171,8 @@ export function useTips(): Tips {
       metrics,
       // So a benchmark's gain is said in the units its reading is (PLAN.md M341).
       units,
+      // And judged against bodyweight where the climber gives one (M373).
+      bodyweight: weighIn,
       adherence,
       findings,
       lastExportAt,
@@ -210,7 +213,7 @@ export function useTips(): Tips {
     });
     const visible = visibleTips(all, dismissed);
     return { all, visible, hidden: all.length - visible.length, ready: true };
-  }, [ready, byDate, projects, metrics, injuries, equipment, activeProgramId, startDates, plans, weekOverrides, tracks, lastExportAt, dismissed, display, units, objectives, away, deloadDates]);
+  }, [ready, byDate, projects, metrics, injuries, equipment, activeProgramId, startDates, plans, weekOverrides, tracks, lastExportAt, dismissed, display, units, weighIn, objectives, away, deloadDates]);
 }
 
 /**

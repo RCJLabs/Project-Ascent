@@ -43,6 +43,7 @@ import { seriesFor } from './assessments';
 import { testWeeks, type TestReason } from './testWeeks';
 import { signed } from './assessmentStatus';
 import { isAddedWeight, type UnitSystem } from './units';
+import { verdictOf } from './verdict';
 import { joinCapped } from './phrase';
 
 export type Movement = 'better' | 'worse' | 'flat';
@@ -215,24 +216,35 @@ function resultFor(
   if (baseline === null) return { ...empty, gap: 'never-tested' };
   if (latest === null) return { ...empty, gap: 'once-only' };
 
-  const added = isAddedWeight(metric.unit);
-  const weightThen = weighed && added ? baseline.bodyweight : undefined;
-  const weightNow = weighed && added ? latest.bodyweight : undefined;
-  if (weightThen !== undefined && weightNow !== undefined && weightThen > 0 && weightNow > 0) {
-    return weighedResult(metric, points, baseline, latest, weightThen, weightNow);
+  // The verdict the card and the coach's tip read too (PLAN.md M373).
+  const verdict = verdictOf(metric, baseline, latest, weighed);
+  if (verdict.weighed !== null) {
+    // The plate stays the working number in the label; the percentage is of
+    // what was held over bodyweight, which is a real share of it (M371).
+    return {
+      metric,
+      points,
+      baseline,
+      latest,
+      moved: verdict.moved,
+      percent: verdict.weighed.percent,
+      steps: null,
+      gap: null,
+      light: verdict.light,
+      relative: verdict.weighed.relative,
+    };
   }
 
+  const added = isAddedWeight(metric.unit);
   const delta = latest.value - baseline.value;
   const signed = metric.higherIsBetter ? delta : -delta;
-  const band = bandFor(metric, baseline.value, delta);
-  const moved: Movement = band === 'held' ? 'flat' : signed > 0 ? 'better' : 'worse';
 
   return {
     metric,
     points,
     baseline,
     latest,
-    moved,
+    moved: verdict.moved,
     // Ordinal and pass/fail scales have no percentage, and neither does a
     // baseline of zero — see the note at the top. Nor added weight: a
     // percentage of the plate is not a percentage of the load, which M234
@@ -244,80 +256,12 @@ function resultFor(
         : null,
     steps: metric.kind === 'grade' ? signed : null,
     gap: null,
-    light: band === 'edge',
+    light: verdict.light,
   };
 }
 
-/**
- * An added-load test read against bodyweight (PLAN.md M371), when both
- * readings carry one.
- *
- * What the fingers held is the climber plus the plate, so the measure is
- * that load over bodyweight. The change is judged in pounds at the
- * baseline's weight — the change in that ratio times the first bodyweight —
- * because that is what the coach's band is in: five pounds is still five
- * pounds, now of a climber who may weigh something else. The plate stays the
- * working number in the label; the percentage is of the ratio, which is a
- * real share of what was held.
- */
-function weighedResult(
-  metric: Metric,
-  points: MetricEntry[],
-  baseline: MetricEntry,
-  latest: MetricEntry,
-  from: number,
-  to: number,
-): AssessmentResult {
-  const before = (from + baseline.value) / from;
-  const after = (to + latest.value) / to;
-  const delta = (after - before) * from;
-  const band = bandFor(metric, baseline.value, delta);
-  const signed = metric.higherIsBetter ? delta : -delta;
-  return {
-    metric,
-    points,
-    baseline,
-    latest,
-    moved: band === 'held' ? 'flat' : signed > 0 ? 'better' : 'worse',
-    percent: (((after - before) / before) * 100) * (metric.higherIsBetter ? 1 : -1),
-    steps: null,
-    gap: null,
-    light: band === 'edge',
-    relative: { from: (baseline.value / from) * 100, to: (latest.value / to) * 100 },
-  };
-}
-
-/**
- * Where a change falls against the metric's band for noise (PLAN.md M367,
- * M370).
- *
- * Every difference used to count: 40 to 40.5 lbs on a max hang *improved*,
- * 60 to 59 seconds on a dead hang *went the other way*, and the counts, the
- * share card, the coach's file and the order of what comes next all
- * followed. The coach's answer was that small changes are held, and the
- * bands are theirs (`content/metrics.ts`). Inside the band is `held`.
- * Exactly the band's width — one plate, one rep — is the `edge`, which the
- * coach called light progress, or a light decline (M370); M367 had held it.
- * Grades and pass/fail have no band — one step on a ladder, or a pass where
- * there was a fail, is already the smallest real change — and a number
- * metric without one counts any change.
- */
-export function bandFor(metric: Metric, baseline: number, delta: number): 'held' | 'edge' | 'beyond' {
-  const size = Math.abs(delta);
-  const band = metric.kind === 'number' ? metric.held : undefined;
-  if (band === undefined) return size === 0 ? 'held' : 'beyond';
-  const within = 'abs' in band ? band.abs : Math.max(band.atLeast, (Math.abs(baseline) * band.pct) / 100);
-  // Readings are decimals, so the edge is a tolerance rather than equality:
-  // 33 × 10% is 3.3, and 36.3 − 33 is 3.2999999999999972.
-  if (size === 0) return 'held';
-  if (within > 0 && Math.abs(size - within) < 1e-9) return 'edge';
-  return size < within ? 'held' : 'beyond';
-}
-
-/** A change inside the band, which reads as held. */
-export function held(metric: Metric, baseline: number, delta: number): boolean {
-  return bandFor(metric, baseline, delta) === 'held';
-}
+/** Where the bands live now, for the readers that found them here (PLAN.md M373). */
+export { bandFor, held } from './verdict';
 
 /** When a baseline with no retest can still get one (PLAN.md M366). */
 export type RetestWhen =

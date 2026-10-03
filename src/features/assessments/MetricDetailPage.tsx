@@ -23,6 +23,9 @@ import { unitLabel } from '@/engine/units';
 
 export function MetricDetailPage({ params }: { params: { id: string } }) {
   const units = useSettings((st) => st.units);
+  // The change beside the latest result, judged as the block review judges
+  // it (PLAN.md M373).
+  const weighIn = useSettings((st) => st.weighIn);
   const display = useSettings((s) => s.display);
   const entries = useMetrics((s) => s.entries);
   const hydrated = useMetrics((s) => s.hydrated);
@@ -50,7 +53,7 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
     );
   }
 
-  const change = changeOf(metric, series, units);
+  const change = changeOf(metric, series, units, weighIn);
   const first = series[0];
   const latest = series.at(-1);
   /**
@@ -142,21 +145,25 @@ export function MetricDetailPage({ params }: { params: { id: string } }) {
                   <span className="text-xs text-ink-soft w-16 shrink-0 mt-0.5">{shortLabel(entry.date)}</span>
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-sm">{formatEntry(metric, entry, display, units)}</div>
+                    {/* Under the reading, not beside it (PLAN.md M373): it can
+                        say *"same plate · better for your weight"*, and beside
+                        the reading it ran over the reading and the delete
+                        button at 360px. */}
+                    {i === 0 && change && (
+                      <div
+                        className={`text-xs font-semibold mt-0.5 ${
+                          change.improved === true
+                            ? 'text-positive'
+                            : change.improved === false
+                              ? 'text-danger'
+                              : 'text-ink-soft'
+                        }`}
+                      >
+                        {change.label}
+                      </div>
+                    )}
                     {entry.note && <p className="text-xs text-ink-soft mt-0.5 leading-relaxed">{entry.note}</p>}
                   </div>
-                  {i === 0 && change && (
-                    <span
-                      className={`text-xs font-semibold shrink-0 mt-0.5 ${
-                        change.improved === true
-                          ? 'text-positive'
-                          : change.improved === false
-                            ? 'text-danger'
-                            : 'text-ink-soft'
-                      }`}
-                    >
-                      {change.label}
-                    </span>
-                  )}
                   <IconButton
                     onClick={() => {
                       // `record` is an upsert keyed on metric and day, so the

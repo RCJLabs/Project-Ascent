@@ -94,8 +94,9 @@ describe('changeOf, as it is read', () => {
   ];
 
   it('says one rep, up or down', () => {
-    expect(changeOf(getMetric('max_pullups')!, pair('max_pullups', 9, 10))!.label).toBe('+1 rep');
-    expect(changeOf(getMetric('max_pullups')!, pair('max_pullups', 10, 9))!.label).toBe('−1 rep');
+    // One rep is the pull-ups' band, so it is light either way (PLAN.md M373).
+    expect(changeOf(getMetric('max_pullups')!, pair('max_pullups', 9, 10))!.amount).toBe('+1 rep');
+    expect(changeOf(getMetric('max_pullups')!, pair('max_pullups', 10, 9))!.amount).toBe('−1 rep');
     expect(changeOf(getMetric('max_pullups')!, pair('max_pullups', 9, 12))!.label).toBe('+3 reps');
   });
 
@@ -106,13 +107,69 @@ describe('changeOf, as it is read', () => {
     // Beside the reading, which has always been converted.
     expect(formatEntry(plate, entry('weighted_pullup_3rm', TODAY, 30), undefined, 'metric')).toBe('13.6 BW+kg');
     // And a unit with nothing to convert is the same either way.
-    expect(changeOf(getMetric('dead_hang')!, pair('dead_hang', 30, 33), 'metric')!.label).toBe('+3 sec');
+    expect(changeOf(getMetric('dead_hang')!, pair('dead_hang', 30, 40), 'metric')!.label).toBe('+10 sec');
   });
 
   it('carries the units through a status', () => {
     const entries = pair('weighted_pullup_3rm', 20, 30);
     expect(assessmentStatus('weighted_pullup_3rm', entries, { today: TODAY, units: 'metric' })!.change!.label).toBe('+4.5 BW+kg');
     expect(assessmentStatus('weighted_pullup_3rm', entries, { today: TODAY })!.change!.label).toBe('+10 BW+lbs');
+  });
+});
+
+/**
+ * The change beside a result, judged as the block review judges it
+ * (PLAN.md M373): inside the coach's band is held, exactly on it is light,
+ * and a weighed result says which way it went for the climber's weight.
+ */
+describe('changeOf, against the band', () => {
+  const pair = (metricId: string, a: number, b: number, weights?: [number, number]) => [
+    { ...entry(metricId, addDays(TODAY, -30), a), ...(weights ? { bodyweight: weights[0] } : {}) },
+    { ...entry(metricId, TODAY, b), ...(weights ? { bodyweight: weights[1] } : {}) },
+  ];
+
+  it('calls a change inside the band held, and colours it neither way', () => {
+    const change = changeOf(getMetric('dead_hang')!, pair('dead_hang', 60, 62))!;
+    expect(change).toMatchObject({ improved: null, light: false, amount: '+2 sec', label: '+2 sec · held' });
+  });
+
+  it('calls the band itself light, with its direction', () => {
+    expect(changeOf(getMetric('max_pullups')!, pair('max_pullups', 9, 10))).toMatchObject({
+      improved: true, light: true, label: '+1 rep · light progress',
+    });
+    expect(changeOf(getMetric('max_pullups')!, pair('max_pullups', 10, 9))).toMatchObject({
+      improved: false, light: true, label: '−1 rep · light decline',
+    });
+  });
+
+  it('says nothing more past the band', () => {
+    expect(changeOf(getMetric('max_pullups')!, pair('max_pullups', 9, 12))).toMatchObject({
+      improved: true, light: false, label: '+3 reps', bands: 3,
+    });
+  });
+
+  it('reads a weighed result for the climber\'s weight, only with the switch on', () => {
+    const hang = getMetric('max_hang_20mm_7s')!;
+    const lighter = pair('max_hang_20mm_7s', 30, 30, [150, 120]);
+    expect(changeOf(hang, lighter, 'imperial', true)).toMatchObject({
+      improved: true, weighed: true, amount: 'same plate', label: 'same plate · better for your weight',
+    });
+    expect(changeOf(hang, lighter, 'imperial', false)).toMatchObject({ improved: null, weighed: false, label: 'no change' });
+    expect(changeOf(hang, pair('max_hang_20mm_7s', 30, 40, [150, 185]), 'imperial', true)!.label).toBe(
+      '+10 BW+lbs · held for your weight',
+    );
+    expect(changeOf(hang, pair('max_hang_20mm_7s', 30, 30, [150, 180]), 'imperial', true)!.label).toBe(
+      'same plate · light decline for your weight',
+    );
+    expect(changeOf(hang, pair('max_hang_20mm_7s', 30, 25, [150, 180]), 'imperial', true)!.label).toBe(
+      '−5 BW+lbs · worse for your weight',
+    );
+  });
+
+  it('carries the switch through a status', () => {
+    const lighter = pair('max_hang_20mm_7s', 30, 30, [150, 120]);
+    expect(assessmentStatus('max_hang_20mm_7s', lighter, { today: TODAY, bodyweight: true })!.change!.improved).toBe(true);
+    expect(assessmentStatus('max_hang_20mm_7s', lighter, { today: TODAY })!.change!.improved).toBeNull();
   });
 });
 
@@ -152,7 +209,8 @@ describe('changeOf', () => {
    * load and this app has never known what they weigh. It reported the first
    * — *"Max Hang 20mm 7s improved: +3 BW+lbs (10%)"* — six times over.
    *
-   * The delta stays, because the delta is right either way.
+   * The delta stays, because the delta is right either way. Three pounds is
+   * inside the max hang's five, so it is held (PLAN.md M373).
    */
   it('gives no percentage for a benchmark measured in added weight', () => {
     const hang = getMetric('max_hang_20mm_7s')!;
@@ -160,7 +218,7 @@ describe('changeOf', () => {
       entry('max_hang_20mm_7s', '2026-08-01', 30),
       entry('max_hang_20mm_7s', TODAY, 33),
     ]);
-    expect(change).toMatchObject({ delta: 3, improved: true, percent: null, label: '+3 BW+lbs' });
+    expect(change).toMatchObject({ delta: 3, improved: null, percent: null, label: '+3 BW+lbs · held' });
   });
 
   /**

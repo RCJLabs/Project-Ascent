@@ -9,6 +9,7 @@ import { putSession, type Session } from '@/db/sessions';
 import { addDays, today } from '@/engine/dates';
 import { hydrate, renderAt, reset } from '@/test/render';
 import { useProfile } from '@/store/profile';
+import { useSettings } from '@/store/settings';
 import { HomePage } from '@/features/home/HomePage';
 import { CoachPage } from './CoachPage';
 
@@ -155,5 +156,36 @@ describe('a benchmark that went up', () => {
     renderAt('/coach', <CoachPage />);
     await screen.findByText('How this works');
     expect(body()).not.toMatch(/improved:/);
+  });
+});
+
+/**
+ * Bodyweight, from the switch in Settings to the sentence on the board
+ * (PLAN.md M373). The engine test proves the rule reads it; this proves
+ * `useTips` hands it over.
+ */
+describe('a benchmark read for the climber\'s weight', () => {
+  async function weighed(weighIn: boolean): Promise<void> {
+    await withAGain();
+    // The same plate both times, at thirty pounds lighter the second.
+    for (const [daysAgo, bodyweight] of [[56, 150], [7, 120]] as const) {
+      await putMetricEntry({ metricId: 'max_hang_20mm_7s', date: addDays(DAY, -daysAgo), value: 30, bodyweight });
+    }
+    await hydrate();
+    useProfile.setState({ activeProgramId: null, startDates: {}, injuries: [], dismissedTips: {} });
+    useSettings.setState({ weighIn });
+  }
+
+  it('says it improved for their weight when they give one', async () => {
+    await weighed(true);
+    renderAt('/coach', <CoachPage />);
+    expect(await screen.findByText('Max Hang 20mm 7s improved for your weight: same plate')).toBeTruthy();
+  });
+
+  it('says nothing about a plate that did not move when they do not', async () => {
+    await weighed(false);
+    renderAt('/coach', <CoachPage />);
+    await screen.findByText(/sessions logged and never exported/);
+    expect(body()).not.toMatch(/Max Hang 20mm 7s (improved|made light progress)/);
   });
 });

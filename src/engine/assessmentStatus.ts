@@ -14,6 +14,7 @@ import type { MetricEntry } from '@/db/metrics';
 import { STALE_DAYS, seriesFor } from './assessments';
 import { addDays, daysBetween, programWeek, today as todayKey } from './dates';
 import { isAddedWeight, toDisplay, unitWord, type UnitSystem } from './units';
+import { verdictOf, type Verdict } from './verdict';
 
 export interface Change {
   delta: number;
@@ -31,8 +32,28 @@ export interface Change {
    * three pounds more however much the climber weighs.
    */
   percent: number | null;
-  /** Null when the metric cannot improve in a numeric sense (text). */
+  /**
+   * Better or worse past the coach's band, or null: inside it, no change at
+   * all, or a metric that cannot improve in a numeric sense (text). Exactly
+   * the band is still a direction — light progress or a light decline — and
+   * `light` says so (PLAN.md M373).
+   */
   improved: boolean | null;
+  /** Exactly the band's width (M370). */
+  light: boolean;
+  /** Read against bodyweight, because the climber gave one at both tests (M371). */
+  weighed: boolean;
+  /** How many bands it moved, for ranking one change against another. */
+  bands: number | null;
+  /** The difference alone: *"+5 BW+lbs"*, *"−1 rep"*, *"same plate"*. */
+  amount: string;
+  /**
+   * What it amounts to, in the review's words — *"held"*, *"light
+   * progress"*, *"better for your weight"* — or empty where the colour and
+   * the sign already say it all.
+   */
+  verdict: string;
+  /** The two together: *"+2 sec · held"*. */
   label: string;
 }
 
@@ -44,40 +65,66 @@ export interface Change {
  * *"the number and its label have to move together"*, broken one line
  * below the number that keeps it. And *"+1 reps"*.
  */
-export function changeOf(metric: Metric, series: MetricEntry[], units: UnitSystem = 'imperial'): Change | null {
+export function changeOf(
+  metric: Metric,
+  series: MetricEntry[],
+  units: UnitSystem = 'imperial',
+  /** Read added-load tests against the bodyweights stored with them (M371). */
+  bodyweight = false,
+): Change | null {
   if (series.length < 2 || metric.kind === 'text') return null;
   const latest = series.at(-1)!;
   const previous = series.at(-2)!;
   const delta = latest.value - previous.value;
-  if (delta === 0) return { delta: 0, percent: 0, improved: null, label: 'no change' };
-
-  const better = metric.higherIsBetter ? delta > 0 : delta < 0;
+  // The review's verdict, so the card cannot call green what the review
+  // calls held (PLAN.md M373).
+  const verdict = verdictOf(metric, previous, latest, bodyweight);
+  const weighed = verdict.weighed !== null;
+  const improved = verdict.moved === 'flat' ? null : verdict.moved === 'better';
+  const common = { delta, improved, light: verdict.light, weighed, bands: verdict.bands };
+  if (delta === 0 && !weighed) return { ...common, percent: 0, amount: 'no change', verdict: '', label: 'no change' };
 
   if (metric.kind === 'grade') {
     const steps = Math.abs(delta);
-    return {
-      delta,
-      percent: null,
-      improved: better,
-      label: `${delta > 0 ? '+' : '−'}${steps} grade${steps === 1 ? '' : 's'}`,
-    };
+    const amount = `${delta > 0 ? '+' : '−'}${steps} grade${steps === 1 ? '' : 's'}`;
+    return { ...common, percent: null, amount, verdict: '', label: amount };
   }
   if (metric.kind === 'passfail') {
-    return { delta, percent: null, improved: better, label: delta > 0 ? 'now passing' : 'now failing' };
+    const amount = delta > 0 ? 'now passing' : 'now failing';
+    return { ...common, percent: null, amount, verdict: '', label: amount };
   }
 
   // A percentage of added weight is a percentage of the wrong number: the
-  // climber is most of the load and this app has never known their weight.
+  // climber is most of the load. With a weight at both readings the review
+  // gives one of the whole load; the card keeps to the plate it shows.
   const percent =
     previous.value === 0 || isAddedWeight(metric.unit)
       ? null
       : (delta / Math.abs(previous.value)) * 100;
-  return {
-    delta,
-    percent,
-    improved: better,
-    label: signed(delta, metric.unit, units),
-  };
+  const amount = delta === 0 ? 'same plate' : signed(delta, metric.unit, units);
+  const word = verdictWord(verdict, weighed);
+  return { ...common, percent, amount, verdict: word, label: word === '' ? amount : `${amount} · ${word}` };
+}
+
+/**
+ * What the change amounts to, in the review's words (PLAN.md M373): nothing
+ * past the band, *held* inside it, *light progress* or *light decline* on
+ * its edge. A weighed one always says which way it went for the climber's
+ * weight, because the plate beside it can say the opposite.
+ */
+function verdictWord(verdict: Verdict, weighed: boolean): string {
+  const word =
+    verdict.band === 'held'
+      ? 'held'
+      : verdict.light
+        ? verdict.moved === 'better'
+          ? 'light progress'
+          : 'light decline'
+        : weighed
+          ? verdict.moved
+          : '';
+  if (word === '') return '';
+  return `${word}${weighed ? ' for your weight' : ''}`;
 }
 
 /** A difference with its sign and unit: *"+1.4 BW+kg"*, *"−1 rep"*. */
@@ -110,6 +157,8 @@ export interface AssessmentContext {
   today?: string;
   /** What the change is said in (PLAN.md M341). Imperial, as stored, when absent. */
   units?: UnitSystem;
+  /** Whether the climber gives a bodyweight with added-load tests (M371). */
+  bodyweight?: boolean;
 }
 
 /**
@@ -131,7 +180,7 @@ export function assessmentStatus(
   const today = context.today ?? todayKey();
   const series = seriesFor(entries, metricId);
   const latest = series.at(-1) ?? null;
-  const change = changeOf(metric, series, context.units);
+  const change = changeOf(metric, series, context.units, context.bodyweight === true);
 
   if (latest === null) {
     return { metric, series, latest, change, due: 'baseline', dueLabel: 'No baseline yet', daysSince: null };
