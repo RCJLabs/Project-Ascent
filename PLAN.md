@@ -15483,6 +15483,11 @@ its label is missing. None of these wants touching.
   - **The results sheet gets the weight.** *Bodyweight (lbs)* is its last column, so no other
     column moves. The import reads it back in the units of its row, for the two added-load tests
     only, and a cell that is not a weight refuses the row.
+- **M378 — onboarding asks about bodyweight, once, and only to opt in.** The baseline step has one
+  optional box beside the added-load tests it is for: *"Your bodyweight (optional)"*.
+  - **Filled,** the weight is kept with those baseline results and the Settings switch turns on.
+  - **Empty,** nothing changes and the climber is not asked again.
+  - **Not a weight,** the step holds, with a sentence saying why.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -29196,3 +29201,55 @@ Two decisions M371 left open, answered *"yes to both"*:
   - three refusals with their sentence;
   - the five header names.
 - **Mutation battery:** 9 mutants, all killed on the first pass, and sanity survived.
+
+## M378 — onboarding asks about bodyweight, once, and only to opt in
+
+The second half of M377's *"yes to both"*. M371 left onboarding unchanged: the switch was in
+Settings only, so a climber who would have said yes on day one first met the question weeks
+later, after their baseline was already recorded without a weight.
+
+### The change
+
+- **The baseline step shows a card,** *"Your bodyweight (optional)"*, when the battery holds an
+  added-load test. That is the max hang with a hangboard declared, and the weighted pull-up with a
+  gym. With neither there is nothing to read a weight against, so there is no card.
+- **It names the tests it is for,** in the singular or plural: *"Max Hang 20mm 7s and Weighted
+  Pull-Ups 3RM record what you add, not what you hold. Give your weight and your block review
+  reads those results against it. It is kept with those results only — never charted, and never in
+  a file you send a coach. Leave it empty and you will not be asked; you can switch it on in
+  Settings any time."*
+- **Filled:** the weight goes onto the added-load baseline results, not onto any other, and
+  `setWeighIn(true)`. Saying it is the opt-in.
+- **Empty:** nothing is stored and the switch stays off. Only filling the box opts in, which keeps
+  M371's *"opt-in, never charted"*.
+- **Not a weight:** zero, a negative or a word disables *Next* and says *"A weight above zero, in
+  pounds — or leave it empty."* That beats dropping it unsaid.
+- **Pounds,** as everything on this screen is: the max hang beside it is typed in `BW+lbs`.
+
+### Not done
+
+- **Onboarding is pounds throughout.** `baselineEntries` parses with no units and the boxes show
+  the stored unit, so a climber who thinks in kilos converts on the first day. That was true before
+  this, and the bodyweight follows the screen rather than splitting it.
+- **The count on the last step,** *"N of M questions answered"*, does not count the weight. It is
+  optional and stored apart from the answers the finder reads.
+
+### Checked
+
+- **`features/onboarding/welcomeWeight.test.tsx`, 6 tests**, walking the real steps:
+  - the card and its words;
+  - a weight kept on the max hang and not on the pull-ups, with the switch on;
+  - left empty, nothing stored and the switch off;
+  - three bad weights holding *Next*, released when emptied;
+  - no card with only a wall;
+  - the singular with only a hangboard.
+- **Mutation battery:** 8 mutants, all killed on the first pass, and sanity survived.
+- **Full suite:** 7,871 passing, M376's 7,859 plus 12 across M377 and M378, and the one
+  pinned-clock skip.
+- **Layout harness:** clean. The baseline step was checked by hand at 360px with a bad weight
+  typed: no overflow, and *Next* disabled.
+- **Sizes:**
+  - **first load:** 114.21KB;
+  - **Home:** 213.17KB, 0.13KB under the 213.3 line.
+
+  The welcome page is its own chunk.

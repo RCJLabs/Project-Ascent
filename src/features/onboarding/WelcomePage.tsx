@@ -13,6 +13,8 @@ import { answeredCount, baselineEntries, benchmarksFor } from '@/engine/baseline
 import { deriveClimberState } from '@/engine/derive';
 import { deriveStats, STAT_LABELS, type StatId } from '@/engine/stats';
 import { useMetrics } from '@/store/metrics';
+import { useSettings } from '@/store/settings';
+import { isAddedWeight } from '@/engine/units';
 import { useProfile } from '@/store/profile';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -69,6 +71,14 @@ export function WelcomePage() {
   const removeInjury = useProfile((s) => s.removeInjury);
   const completeOnboarding = useProfile((s) => s.completeOnboarding);
   const recordEntry = useMetrics((s) => s.record);
+  const setWeighIn = useSettings((s) => s.setWeighIn);
+  /**
+   * What the climber weighs, if they say (PLAN.md M378). Pounds, as every
+   * other number on this screen is: the max hang beside it is typed in
+   * BW+lbs. Empty is the answer that changes nothing — the switch stays off
+   * and nothing is asked again until they turn it on in Settings.
+   */
+  const [weight, setWeight] = useState('');
 
   const gradeOptions = useGradeOptions();
   const set = (patch: Partial<BaselineAnswers>) => setAnswers((a) => ({ ...a, ...patch }));
@@ -76,6 +86,10 @@ export function WelcomePage() {
     setAnswers((a) => ({ ...a, benchmarks: { ...a.benchmarks, [id]: value } }));
 
   const battery = useMemo(() => benchmarksFor(equipment), [equipment]);
+  /** The added-load tests this baseline asks for, which are the ones a weight is for. */
+  const loaded = battery.filter((b) => isAddedWeight(METRICS[b.metricId]?.unit ?? ''));
+  const typed = weight.trim() === '' ? undefined : Number(weight.trim());
+  const badWeight = typed !== undefined && (!Number.isFinite(typed) || typed <= 0);
   const entries = useMemo(() => baselineEntries(answers, today()), [answers]);
   /**
    * The one derivation in the app that takes no `deloadDates` (PLAN.md M306).
@@ -91,7 +105,14 @@ export function WelcomePage() {
   );
 
   async function finish() {
-    for (const entry of entries) await recordEntry(entry);
+    // Given, it is kept with the added-load results it was given beside and
+    // turns the switch on, which is what saying it means (PLAN.md M378).
+    const bodyweight = loaded.length > 0 && typed !== undefined && !badWeight ? typed : undefined;
+    for (const entry of entries) {
+      const weighed = bodyweight !== undefined && isAddedWeight(METRICS[entry.metricId]?.unit ?? '');
+      await recordEntry(weighed ? { ...entry, bodyweight } : entry);
+    }
+    if (bodyweight !== undefined) setWeighIn(true);
     completeOnboarding(answers);
     navigate('/find');
   }
@@ -296,6 +317,32 @@ export function WelcomePage() {
                 </Card>
               );
             })}
+            {loaded.length > 0 && (
+              <Card title="Your bodyweight (optional)">
+                <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+                  {loaded.map((b) => METRICS[b.metricId]!.label).join(' and ')}{' '}
+                  {loaded.length === 1 ? 'records' : 'record'} what you add, not what you hold. Give
+                  your weight and your block review reads {loaded.length === 1 ? 'that result' : 'those results'}{' '}
+                  against it. It is kept with {loaded.length === 1 ? 'that result' : 'those results'} only
+                  — never charted, and never in a file you send a coach. Leave it empty and you will not
+                  be asked; you can switch it on in Settings any time.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    placeholder="150"
+                    inputMode="decimal"
+                    aria-label="Bodyweight"
+                    className="flex-1"
+                  />
+                  <span className="text-sm text-ink-soft w-16">lbs</span>
+                </div>
+                {badWeight && (
+                  <p className="text-sm text-danger mt-2">A weight above zero, in pounds — or leave it empty.</p>
+                )}
+              </Card>
+            )}
           </>
         )}
 
@@ -353,7 +400,9 @@ export function WelcomePage() {
         )}
         <div className="flex-1" />
         {step < STEPS.length - 1 ? (
-          <Button size="lg" onClick={() => setStep(step + 1)}>
+          // Held on the baseline while the weight is not one, rather than
+          // dropping it unsaid (PLAN.md M378).
+          <Button size="lg" onClick={() => setStep(step + 1)} disabled={step === 4 && badWeight}>
             {step === 0 ? 'Start' : 'Next'} <ArrowRight size={16} />
           </Button>
         ) : (
