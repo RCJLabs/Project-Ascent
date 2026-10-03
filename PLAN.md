@@ -15466,6 +15466,11 @@ its label is missing. None of these wants touching.
   Now Home's strip, the week page, the calendar, the logger's day and the test battery number each
   day from the start it had. A day in a pause has no plan, and says *Paused*. The first load had
   no room for this, so Home's line rose from 213.0 to 213.3, on the user's call.
+- **M375 — the layout harness opens every block review.** It took the first `/finish/:id` link on
+  `/finish`, which is the running block, a page `/finish` already draws. So the review of a block
+  run to its end, and M372's block left early, were laid out at no size. `/finish/:id` now opens
+  every block in the history. A wide header planted on the left block's review alone was reported
+  at three sizes, against that block's address.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -29045,3 +29050,39 @@ history.
 - **Sizes:**
   - **first load:** 114.21KB, 0.19KB under budget;
   - **Home:** 213.16KB, 0.14KB under the new 213.3 line.
+
+## M375 — the layout harness opens every block review
+
+The third gap from the list after M372. `scripts/layout.mjs` finds a detail route's address by
+opening the page that lists it and taking the **first** matching link. On `/finish` the first
+block is the running one: Iron Grip, the page `/finish` itself draws. The sample climber's history
+has two more:
+
+- the run of their own program that went to the end;
+- the run M372 added, left early.
+
+Neither had been laid out at any size. M372 checked the left one by hand at 360px.
+
+### The change
+
+- **`EVERY_RECORD`,** a set holding only `/finish/:id`. For these routes discovery keeps every
+  matching link on the listing, once each, in page order. The first works as before, so doors,
+  listings and descendants are unchanged, and the rest are checked after it at every seeded size.
+  Only this route, because every other detail route's records are one page drawn from different
+  data, and opening all of them would multiply the run.
+- **Each extra record is labelled with its address,** so a failure names the block:
+  *"phone /finish/:id /finish/custom_demo-own%232025-03-02: `main` scrolls sideways"*. File
+  inputs are still keyed by route, which is how the door check matches them; keying them by label
+  would have reported the review's *"Open a block they sent you"* as a file input no door opens.
+- **The summary names them:** *"and 2 more for /finish/:id: …"*.
+
+### Checked
+
+- **Clean:** the run opens both reviews at all four seeded sizes and reports *layout OK*.
+- **Planted:** the left review alone was given a 900px-wide header, built, and the harness run.
+  It reported `main` scrolling sideways, and the header off the side, at the phone, small and
+  large-text sizes, each against
+  `/finish/:id /finish/custom_demo-own%232025-03-02`, and exited 1. The plant was removed and
+  the build redone. The harness before this never opened that page.
+- **No unit tests.** The harness has none: it is a script CI runs against a live preview, so the
+  planted run above is its test.

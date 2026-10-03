@@ -101,6 +101,21 @@ function listingFor(path, found) {
  * the registry's order is the router's (longest pattern first, so the more
  * specific route wins) — the exact opposite of what discovery needs.
  */
+/**
+ * Routes whose every record is opened, not just the first (PLAN.md M375).
+ *
+ * `/finish/:id` is one route and several different pages: a running block,
+ * one run to its end, one left early (M372), each drawing different cards.
+ * Discovery took the first link on `/finish`, which is the running block —
+ * the page `/finish` itself already draws — so the two reviews the sample
+ * climber's history exists to show were laid out at no size at all. M372
+ * checked the left one by hand at 360px and said so.
+ *
+ * Only here, because every other detail route's records are one page drawn
+ * from different data, and opening all of them would multiply the run.
+ */
+const EVERY_RECORD = new Set(['/finish/:id']);
+
 const BY_DEPTH = (a, b) => a.split('/').length - b.split('/').length || a.localeCompare(b);
 
 /**
@@ -566,6 +581,8 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM ?? 
 const failures = [];
 /** Detail-route addresses, found once and reused at every size. */
 let discovered = null;
+/** The records after the first, for the routes in `EVERY_RECORD` (PLAN.md M375). */
+const alsoDiscovered = new Map();
 /** And the ones that could not be reached, with why. */
 let unreachable = new Map();
 /**
@@ -668,14 +685,16 @@ for (const size of SIZES) {
   if (discovered === null && size.seeded !== false) {
     discovered = new Map();
     unreachable = new Map();
-    /** The first link on the open page whose address matches the pattern. */
-    const linkMatching = (pattern) =>
+    /** Every link on the open page whose address matches the pattern, once each, in page order. */
+    const linksMatching = (pattern) =>
       page.evaluate((src) => {
         const re = new RegExp(src);
-        return [...document.querySelectorAll('a[href]')]
+        return [...new Set([...document.querySelectorAll('a[href]')]
           .map((a) => a.getAttribute('href'))
-          .find((h) => h !== null && re.test(h)) ?? null;
+          .filter((h) => h !== null && re.test(h)))];
       }, pattern);
+    /** The first of them, or null. */
+    const linkMatching = async (pattern) => (await linksMatching(pattern))[0] ?? null;
 
     for (const path of [...NEEDS_RECORD].sort(BY_DEPTH)) {
       const pattern = patternOf(path);
@@ -685,7 +704,11 @@ for (const size of SIZES) {
       if (listing !== null) {
         await page.evaluate((h) => { location.hash = `#${h}`; }, listing);
         await page.waitForTimeout(700);
-        href = await linkMatching(pattern);
+        const all = await linksMatching(pattern);
+        href = all[0] ?? null;
+        if (EVERY_RECORD.has(path) && all.length > 1) {
+          alsoDiscovered.set(path, all.slice(1).map((h) => h.replace(/^#/, '')));
+        }
       }
 
       /**
@@ -729,9 +752,15 @@ for (const size of SIZES) {
   const checking = [
     ...STATIC.map((path) => [path, fill(path)]),
     ...(size.seeded === false ? [] : [...discovered].map(([path, href]) => [path, href])),
+    // The rest of an `EVERY_RECORD` route's records, each named by its
+    // address so a failure says which block it was (PLAN.md M375).
+    ...(size.seeded === false
+      ? []
+      : [...alsoDiscovered].flatMap(([path, hrefs]) => hrefs.map((href) => [path, href, `${path} ${href}`]))),
   ];
 
-  for (const [path, href] of checking) {
+  // The route, for what is keyed by route; the label, for what is said.
+  for (const [path, href, label = path] of checking) {
     errors.length = 0;
     await page.evaluate((h) => { location.hash = `#${h}`; }, href);
     await page.waitForTimeout(500);
@@ -745,7 +774,7 @@ for (const size of SIZES) {
       // one rename from silently changing what it checks.
       target: size.pointer === 'mouse' ? 0 : TARGET,
     });
-    const at = `${size.name} ${path}`;
+    const at = `${size.name} ${label}`;
     judge(at, r, errors);
     if (r.fatal) continue;
     for (const accept of r.files) fileInputs.add(`${path}\t${accept}`);
@@ -907,6 +936,7 @@ console.log(
     `, plus the banner squeeze and ${doorsMeasured} screens opened with a file.`,
 );
 if (found.size) console.log(`found a record for: ${[...found.keys()].join(' ')}`);
+for (const [path, hrefs] of alsoDiscovered) console.log(`and ${hrefs.length} more for ${path}: ${hrefs.join(' ')}`);
 /**
  * Named with a reason, not just listed (PLAN.md M280).
  *
