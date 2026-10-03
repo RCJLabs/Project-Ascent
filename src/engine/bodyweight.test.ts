@@ -143,8 +143,16 @@ describe('the coach’s file', () => {
     const hangRow = file.block.results.find((r) => r.metricId === 'max_hang_20mm_7s')!;
     expect(hangRow).toMatchObject({ baseline: 30, latest: 30, moved: 'better', percent: null });
     expect(text).not.toMatch(/relative|bodyweight/);
-    // Neither weight, nor either ratio, anywhere in it.
-    for (const n of ['150', '120', '151', '121', '"20"', '25']) expect(text).not.toContain(n);
+    // Neither weight, nor either ratio, as any number in it. Compared as
+    // numbers: a substring check also matched the export time, and failed
+    // CI at 00:51:25.
+    const numbers: number[] = [];
+    JSON.parse(text, (_key, value: unknown) => {
+      if (typeof value === 'number') numbers.push(value);
+      return value;
+    });
+    expect(numbers).toContain(30);
+    for (const n of [150, 120, 151, 121, 20, 25]) expect(numbers).not.toContain(n);
   });
 
   it('keeps the percentage of a test that is not added load', () => {
