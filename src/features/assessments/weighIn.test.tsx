@@ -121,8 +121,9 @@ describe('the entry form', () => {
 describe('a weight once stored', () => {
   async function seed(): Promise<void> {
     await reset();
-    await putMetricEntry({ metricId: 'max_hang_20mm_7s', date: '2026-03-02', value: 30, bodyweight: 150 });
-    await putMetricEntry({ metricId: 'weighted_pullup_3rm', date: '2026-03-02', value: 45, bodyweight: 150 });
+    // A weight no count of days or sessions can spell.
+    await putMetricEntry({ metricId: 'max_hang_20mm_7s', date: '2026-03-02', value: 30, bodyweight: 163.7 });
+    await putMetricEntry({ metricId: 'weighted_pullup_3rm', date: '2026-03-02', value: 45, bodyweight: 163.7 });
     await putMetricEntry({ metricId: 'max_hang_20mm_7s', date: '2026-03-30', value: 35 });
     await hydrate();
   }
@@ -132,7 +133,7 @@ describe('a weight once stored', () => {
     useSettings.setState({ weighIn: true });
     renderAt('/assessments/max_hang_20mm_7s', <MetricDetailPage params={{ id: 'max_hang_20mm_7s' }} />);
     await screen.findAllByText(/35 BW\+lbs/);
-    expect(document.body.textContent).not.toMatch(/150/);
+    expect(document.body.textContent).not.toContain('163.7');
   });
 
   it('comes off every result at once, and the results stay', async () => {
