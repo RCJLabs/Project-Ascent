@@ -92,22 +92,34 @@ describe('the sessions inside the running block', () => {
     // the writer, so this test moved rather than the code.
     const made = demoClimber('2026-09-22');
     const program = getProgram('iron_grip')!;
+    // And inside the block the climber left, by that block's plan (PLAN.md M372).
+    const left = made.blocks[0]!;
     for (const session of made.sessions) {
       const placed =
-        session.date >= made.startDate &&
-        plannedDay(program, made.startDate, made.plan, session.date).sessionType !== undefined;
+        (session.date >= made.startDate &&
+          plannedDay(program, made.startDate, made.plan, session.date).sessionType !== undefined) ||
+        (session.date >= left.startDate &&
+          session.date <= left.endedAt! &&
+          plannedDay(made.program, left.startDate, left.plan!, session.date).sessionType !== undefined);
       expect(session.planned, session.date).toBe(placed);
     }
   });
 
-  it('leave the log before the block unlinked', () => {
+  it('leave the log before the block unlinked, bar the block the climber left', () => {
     // A session from before the block carries no program link because nothing
     // placed it — which is a different statement from the one this milestone
-    // fixed, and the honest one.
+    // fixed, and the honest one. The exception is the five weeks of the block
+    // the climber left (PLAN.md M372): every session logged while it ran
+    // carries it, as the logger stamps one, and nothing outside them does.
     const made = demoClimber('2026-09-22');
+    const left = made.blocks[0]!;
+    const inLeft = (date: string) => date >= left.startDate && date <= left.endedAt!;
     const before = made.sessions.filter((s) => s.date < made.startDate);
     expect(before.length).toBeGreaterThan(300);
-    expect(before.every((s) => s.programId === undefined)).toBe(true);
+    expect(before.filter((s) => !inLeft(s.date)).every((s) => s.programId === undefined)).toBe(true);
+    const during = before.filter((s) => inLeft(s.date));
+    expect(during.length).toBeGreaterThan(15);
+    expect(during.every((s) => s.programId === made.program.id)).toBe(true);
   });
 
   it('come out of the generator in date order', () => {
@@ -235,7 +247,8 @@ describe('what the engines read off it', () => {
 
   it('fills sessionsByType', () => {
     const state = deriveClimberState(demoClimber('2026-09-22').sessions, {});
-    expect(Object.keys(state.sessionsByType).sort()).toEqual(['fp', 'perf']);
+    // Iron Grip's two, and the two of the block the climber left (PLAN.md M372).
+    expect(Object.keys(state.sessionsByType).sort()).toEqual(['fp', 'own_board', 'own_volume', 'perf']);
     expect(state.sessionsByType['fp']).toBeGreaterThan(5);
   });
 
@@ -285,13 +298,23 @@ describe('what gets logged on each kind of day', () => {
   it('keeps every placed session on a day the plan asks for, bar a make-up', () => {
     const made = demoClimber('2026-09-22');
     const plan = made.plan;
-    const placed = made.sessions.filter((s) => s.sessionTypeId !== undefined);
+    const placed = made.sessions.filter((s) => s.sessionTypeId !== undefined && s.date >= made.startDate);
     const offPlan = placed.filter((s) => plan[dayOfWeek(s.date) as DayOfWeek] !== s.sessionTypeId);
     // A session moved is not a session lost: `blockAdherence` scores the week
     // and not the day, and the fixture exercises that rule rather than sitting
     // exactly on the plan's days.
     expect(offPlan.length).toBeGreaterThan(0);
     expect(offPlan.length).toBeLessThan(placed.length / 3);
+  });
+
+  it('keeps the left block\'s sessions on the days its plan asks for', () => {
+    // Its plan is the week the climber already trained (PLAN.md M372), so
+    // every type it stamped is the one that day asks for.
+    const made = demoClimber('2026-09-22');
+    const left = made.blocks[0]!;
+    const typed = made.sessions.filter((s) => s.sessionTypeId !== undefined && s.date < made.startDate);
+    expect(typed.length).toBeGreaterThanOrEqual(10);
+    for (const s of typed) expect(left.plan![dayOfWeek(s.date) as DayOfWeek], s.date).toBe(s.sessionTypeId);
   });
 
   it('logs a rest day the plan never placed', () => {

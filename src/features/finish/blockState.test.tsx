@@ -123,7 +123,8 @@ describe('the sentence at the top', () => {
     await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy(), { timeout: 10000 });
     cleanup();
     await hydrate();
-    return useProfile.getState().blocks.find((b) => b.programId !== 'iron_grip')!;
+    // The one it ran to the end; the one it left has a plan (PLAN.md M372).
+    return useProfile.getState().blocks.find((b) => b.reason === 'ran-out')!;
   }
   async function open(row: BlockRecord) {
     const id = encodeURIComponent(row.id);

@@ -456,13 +456,14 @@ describe('the history after the sample climber has gone', () => {
     await waitFor(() => expect(screen.getByText(/Sample data loaded/)).toBeTruthy());
     const blocks = useProfile.getState().blocks;
     expect(blocks.length).toBeGreaterThan(1);
-    // One finished and one running, which is what the card is comparing.
+    // One running, and the two ended ones the card compares it with: run to
+    // the end, and left (PLAN.md M372), oldest first.
     expect(blocks.filter((b) => b.endedAt === null)).toHaveLength(1);
     // Recorded, not rebuilt: a reconstructed row carries no reason, and the
     // reason is most of what that screen is for.
-    const done = blocks.find((b) => b.endedAt !== null);
-    expect(done?.reason).toBe('ran-out');
-    expect(done?.reconstructed).toBeUndefined();
+    const ended = blocks.filter((b) => b.endedAt !== null);
+    expect(ended.map((b) => b.reason)).toEqual(['stopped', 'ran-out']);
+    expect(ended.every((b) => b.reconstructed === undefined)).toBe(true);
   });
 
   it('takes every one of them back out', async () => {

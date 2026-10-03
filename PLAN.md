@@ -15439,6 +15439,15 @@ its label is missing. None of these wants touching.
   Found while building it: the block report still gave a percentage of the plate, which M234 had
   taken off the assessment page. It gives none now, so without weights the two tests leave the
   chart's axis for the list under it.
+- **M372 — the sample climber leaves a block.** M365a's last item. The review of a block left
+  early, measured to the day it was left, was on no screen the sample climber could open. Their
+  own program now has an earlier run:
+  - it was stopped after five of its eight weeks, the Saturday before the week they moved house;
+  - its plan is the week they already trained;
+  - its 21 sessions are stamped as the logger stamps a running block's, and nothing else in the
+    log changed.
+
+  It also found that the written program's two icons were the words *grid* and *repeat*.
 ## M229 — twenty-six achievements, and not one moment
 
 `engine/achievements.ts` has been imported by exactly two files since M32: `AchievementsCard`, which
@@ -28735,3 +28744,93 @@ say by how much. The user's answer was about the weight, and a verdict is not on
 - **Sizes:**
   - **first load:** 113.94KB (+0.12), 0.46KB under the 114.4 budget;
   - **Home:** 212.34KB in 37 files (+0.14), 0.66KB under the line.
+
+## M372 — the sample climber leaves a block
+
+The last item of M365a's queue. Before this, the sample climber's history was two blocks:
+
+- **My winter block,** their own program, run to the end. It carries no plan, so its review is
+  one sentence.
+- **Iron Grip,** running.
+
+Nothing reached the review of a block left early: the *"Ran to"* header, the measure that stops
+at the day it was left (M365), the history row that says *left early*. No browser check,
+screenshot or layout run had ever drawn it.
+
+### The block
+
+- **The first run of the written program.** A catalogue program would not do: the clear unpicks
+  every program a sample block names, by id (M282), and would take a real climber's blocks of that
+  program with it. `demoProgramIds` still names only the written program and Iron Grip.
+- **Stopped after five of eight weeks,** on the Saturday before the week off. The log already had
+  that week, and M305's away record says why: *"Moving house"*. `stopped`, not `switched`,
+  because nothing was started in its place. The climber went back to training on their own,
+  which is what the log after it says.
+- **Its plan is the week the climber already trained.** `freeDays` writes Monday, Wednesday and
+  sometimes Friday, so the plan is the board on Monday and volume on Wednesday and Friday. That
+  is also the program's own pitch.
+- **Its sessions are stamped through `trainingStart` and `restStart`,** as the running block's
+  are:
+  - training days get the program and the type the plan places;
+  - route nights get the program and are unplanned;
+  - rest days get the program.
+
+  **No draws were added.** A dump of the sample at three different todays, before and after,
+  differs only in the blocks and in `programId`, `sessionTypeId` and `planned` on the 21 sessions
+  inside the window. Nothing outside it changed.
+
+What the review says: *"Ran to Apr 5, 2025"*; *"You left My winter block after 5 of its 8
+weeks…"*; *"You did every session the plan placed — all 15 of them. You also logged 3 sessions
+the plan did not place."* The history row reads *"5 of 8 weeks · left early"*.
+
+### Found on the way
+
+**The written program's icons were words.** `writtenProgram()` gave its types `'grid'` and
+`'repeat'`, where every catalogue type and everything the builder writes (`ICONS`) is a picture.
+Nothing had drawn those types before this, so it never showed. The first screenshot read *"repeat
+Volume day"*. They are now ⚡ and 🔁, both from the builder's set, and a test holds that the
+program's icons are pictures.
+
+### What else reads it
+
+`deriveClimberState.sessionsByType` now has the left block's two types beside Iron Grip's two. So
+the sample's *"Session types trained"* stat reads 4 where it read 2, which is what the log says.
+
+### Not done
+
+- **The second run, the one that went to the end,** still carries no plan, and the sessions of
+  its eight weeks are unlinked. So the first run shows *Did you do the work?* and the second shows
+  one sentence. Giving it the same treatment is the same change over another window, and it
+  changes what `demoPlanned.test.ts` holds about the log before Iron Grip.
+- **The layout harness opens the first block link on `/finish`,** which is Iron Grip. The left
+  block's review was checked at 360px by hand, with no overflow, and the harness does not open it.
+- **The sample's left block did every session it placed,** so the wording for a left block that
+  fell short is still only in `leftBlock.test.tsx`'s fixtures.
+
+### Checked
+
+- **`engine/demoLeft.test.ts`, 14 tests:**
+  - the block's shape on every weekday as today;
+  - its end against the week off;
+  - its plan;
+  - the icons;
+  - no new program for the clear;
+  - its adherence on seven todays: 15 of 15, route nights unplanned and linked;
+  - the opening sentence.
+- **`features/finish/sampleLeft.test.tsx`, 2 tests:** the sample loaded through Settings. Its
+  history shows both runs, one as left early. The left one's review is headed *Ran to* its last
+  day and counts its sessions.
+- **Changed tests, all deliberately:**
+  - `demoPlanned.test.ts`: `planned` is read against whichever block placed the session. The log
+    before Iron Grip is unlinked outside the left block's window. `sessionsByType` has four types.
+    The off-plan count is scoped to Iron Grip, and a new test holds the left block's sessions on
+    its plan's days.
+  - `demoClimber.test.tsx`: the ended rows are `stopped` then `ran-out`.
+  - `blockState.test.tsx`: its sample block is the run that went to the end, picked by reason.
+- **Mutation battery:** 12 mutants, all killed on the first pass, and the icon mutant killed
+  after it. Sanity survived both times.
+- **Full suite:** 7,810 passing, M371's 7,793 plus 17, and the one pinned-clock skip.
+- **Layout harness:** clean.
+- **Sizes:**
+  - **first load:** 113.93KB;
+  - **Home:** 212.30KB in 37 files, 0.70KB under the line.

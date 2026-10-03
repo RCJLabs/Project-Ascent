@@ -145,14 +145,17 @@ function writtenProgram(): Program {
       {
         id: 'own_board',
         name: 'Board night',
-        icon: 'grid',
+        // From the builder's own set (`ICONS`), which is all a written
+        // program can hold: these were the words *grid* and *repeat*, and
+        // printed as words the first time a screen drew them (PLAN.md M372).
+        icon: '⚡',
         description: 'Hard moves on the board, short and angry.',
         duration: '60-75 min',
       },
       {
         id: 'own_volume',
         name: 'Volume day',
-        icon: 'repeat',
+        icon: '🔁',
         description: 'Everything two grades down, until the feet stop being tidy.',
         duration: '90 min',
       },
@@ -195,6 +198,47 @@ function finishedBlock(ironGripStart: string, program: Program): BlockRecord {
     weeks: program.weeks,
     endedAt: addDays(ironGripStart, -1),
     reason: 'ran-out',
+  };
+}
+
+/**
+ * The week the climber trained on before any block: Monday, Wednesday and
+ * sometimes Friday (`freeDays`). The first run of their own program asked for
+ * exactly that — the board on Monday, the wall on the other two — which is
+ * the program's own pitch, and a plan nobody would write against their habit.
+ */
+const LEFT_PLAN: WeekPlan = { 1: 'own_board', 3: 'own_volume', 5: 'own_volume' } as WeekPlan;
+
+/** Whole weeks the first run lasted, before the week off ended it. */
+const LEFT_RAN = 5;
+
+/**
+ * The first time they ran their own program, and left it (PLAN.md M372).
+ *
+ * The sample climber had never left a block, so the review of one — measured
+ * to the day it was left (M365), with *"Ran to"* at the top and *"You left
+ * it"* under that — was in nobody's screenshot and no layout run. This is
+ * the block that ends at the week off: five weeks in, the climber moved house
+ * (`awayFor`) and did not pick it up again. The second run, a year and more
+ * later, is `finishedBlock`, and went to the end.
+ *
+ * `stopped`, because nothing was started in its place: the climber went back
+ * to training on their own, which is what the log after it says. The same
+ * written program rather than a catalogue one, for the reason
+ * `finishedBlock` gives — the clear unpicks programs by id.
+ */
+function leftBlock(start: string, program: Program): BlockRecord {
+  const startDate = addDays(start, (WEEK_OFF - LEFT_RAN) * 7);
+  return {
+    id: `${program.id}#${startDate}`,
+    programId: program.id,
+    name: program.name,
+    startDate,
+    weeks: program.weeks,
+    plan: LEFT_PLAN,
+    // The Saturday before the week off begins.
+    endedAt: addDays(startDate, LEFT_RAN * 7 - 1),
+    reason: 'stopped',
   };
 }
 
@@ -874,6 +918,16 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
   };
   /** Inside the running block, which is where anything was stamped by a plan. */
   const underPlan = (date: string) => date >= ironGripStart;
+  /**
+   * The block they left (PLAN.md M372), and its plan's day for a date inside
+   * it. Stamped through the same `trainingStart` and `restStart` as the
+   * running block, and off no stream: no clock, no drill and so no
+   * `drillDone` to draw, so every record this file produced before M372 is
+   * byte-identical after it apart from the stamps themselves.
+   */
+  const left = leftBlock(start, written);
+  const leftOn = (date: string) =>
+    date >= left.startDate && date <= left.endedAt! ? plannedDay(written, left.startDate, LEFT_PLAN, date) : undefined;
 
   const sessions: Session[] = [];
   const metrics: MetricEntry[] = [];
@@ -954,6 +1008,7 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
        */
       const minutes = day ? Math.floor(next(logbook) * 90) : 0;
       const started = day && date < today ? evening(date, minutes) : undefined;
+      const earlier = day ? undefined : leftOn(date);
       const stamped = day
         ? trainingStart({
             startedAt: started,
@@ -963,7 +1018,9 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
             day,
             restDrill: restDrillOn(date),
           })
-        : { planned: false };
+        : earlier
+          ? trainingStart({ programId: written.id, sessionTypeId: earlier.sessionType?.id, day: earlier })
+          : { planned: false };
       /**
        * A deload week is lighter, which is the only thing that makes it one.
        *
@@ -1073,6 +1130,7 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
         const minutes = underPlan(date) ? Math.floor(next(logbook) * 90) : 0;
         // No clock on today's, for the reason the training sessions give.
         const started = underPlan(date) && date < today ? evening(date, minutes) : undefined;
+        const earlier = underPlan(date) ? undefined : leftOn(date);
         const stamped = underPlan(date)
           ? trainingStart({
               startedAt: started,
@@ -1081,7 +1139,9 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
               day: planOn(date),
               restDrill: restDrillOn(date),
             })
-          : { planned: false };
+          : earlier
+            ? trainingStart({ programId: written.id, day: earlier })
+            : { planned: false };
         const drillDone = stamped.drillId === undefined ? undefined : chance(logbook, 0.3);
         sessions.push(
           newSession(date, 0, {
@@ -1130,7 +1190,9 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
          */
         const stamped = underPlan(date)
           ? restStart({ programId: running.id, trackId: DEMO_TRACK, restDrill: restDrillOn(date) })
-          : {};
+          : leftOn(date)
+            ? restStart({ programId: written.id })
+            : {};
         const drillDone = stamped.drillId === undefined ? undefined : chance(logbook, 0.3);
         sessions.push(
           newSession(date, 0, {
@@ -1245,7 +1307,7 @@ export function demoClimber(today: string, seed = DEMO_SEED): DemoClimber {
     plan,
     trackId: DEMO_TRACK,
     program: written,
-    blocks: [finishedBlock(ironGripStart, written)],
+    blocks: [left, finishedBlock(ironGripStart, written)],
   };
 }
 
